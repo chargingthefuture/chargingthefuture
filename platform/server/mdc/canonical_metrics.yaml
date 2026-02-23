@@ -1,0 +1,75 @@
+canonical_metrics:
+  - id: "active_users_daily"
+    name: "Daily Active Users"
+    description: "Count of unique users who performed at least one authenticated action within a calendar day (UTC)."
+    owner: "platform-metrics@chargingthefuture.io"
+    data_type: "integer"
+    unit: "users"
+    calculation: |
+      SELECT COUNT(DISTINCT user_id)
+      FROM user_events
+      WHERE event_date = :date
+        AND event_type IN ('login', 'action', 'session_heartbeat')
+    inputs:
+      - name: "user_id"
+        type: "string (UUID)"
+      - name: "event_date"
+        type: "date (YYYY-MM-DD)"
+      - name: "event_type"
+        type: "string (enum)"
+    example_values:
+      - input: { date: "2025-01-15" }
+        output: 4823910
+      - input: { date: "2025-01-16" }
+        output: 4901245
+    last_updated: "2025-10-01T00:00:00Z"
+    allowed_thresholds:
+      min: 1000000
+      max: 5500000
+      alert_rules:
+        - condition: "value < 3000000"
+          severity: "critical"
+          message: "DAU dropped below 3 million — investigate immediately."
+        - condition: "value > 5200000"
+          severity: "warning"
+          message: "DAU exceeds expected ceiling — verify data pipeline."
+
+  - id: "charge_session_revenue_usd"
+    name: "Charge Session Revenue (USD)"
+    description: "Total USD revenue collected from completed EV charging sessions in a billing period, after refunds and excluding tax."
+    owner: "billing-metrics@chargingthefuture.io"
+    data_type: "currency"
+    unit: "USD"
+    calculation: |
+      SELECT SUM(amount_usd - refunded_usd)
+      FROM charge_sessions
+      WHERE session_status = 'completed'
+        AND billed_at >= :period_start
+        AND billed_at < :period_end
+        AND tax_included = false
+    inputs:
+      - name: "amount_usd"
+        type: "float (2 decimal places)"
+      - name: "refunded_usd"
+        type: "float (2 decimal places, default 0.00)"
+      - name: "session_status"
+        type: "string (enum: pending|completed|failed|refunded)"
+      - name: "billed_at"
+        type: "datetime (UTC ISO-8601)"
+      - name: "tax_included"
+        type: "boolean"
+    example_values:
+      - input: { period_start: "2025-01-01T00:00:00Z", period_end: "2025-02-01T00:00:00Z" }
+        output: 12847392.50
+      - input: { period_start: "2025-02-01T00:00:00Z", period_end: "2025-03-01T00:00:00Z" }
+        output: 13104820.75
+    last_updated: "2025-11-15T00:00:00Z"
+    allowed_thresholds:
+      min: 0
+      alert_rules:
+        - condition: "value < 500000"
+          severity: "critical"
+          message: "Monthly revenue below $500k — possible billing pipeline failure."
+        - condition: "month_over_month_change < -0.20"
+          severity: "warning"
+          message: "Revenue declined more than 20% month-over-month."
