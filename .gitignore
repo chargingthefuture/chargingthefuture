@@ -11,6 +11,10 @@ pnpm-lock.yaml
 # Platform build output
 platform/dist/
 
+# Next.js build output
+.next/
+out/
+
 # OS / editor junk
 .DS_Store
 *.log
