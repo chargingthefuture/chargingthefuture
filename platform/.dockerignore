@@ -1,0 +1,45 @@
+# Node
+node_modules/
+dist/
+build/
+
+# Test outputs
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+.vitest/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.sentry-build-plugin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Database
+*.db
+*.sqlite
+
+# Git
+.git/
+.gitignore
