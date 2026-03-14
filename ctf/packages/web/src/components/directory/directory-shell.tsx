@@ -1,11 +1,23 @@
-import Link from 'next/link';
 import {
   getOwnProfile,
   listAdminProfiles,
   listDirectoryAnnouncements,
   listDirectoryForMember,
-} from '@/src/lib/directory/repository';
-import type { DirectoryAnnouncement, DirectoryProfile } from '@/src/lib/directory/types';
+} from "@/src/lib/directory/repository";
+import type {
+  DirectoryAnnouncement,
+  DirectoryProfile,
+} from "@/src/lib/directory/types";
+import {
+  PluginShell,
+  PluginCard,
+  PluginStat,
+  PluginGrid,
+  PluginList,
+  PluginListItem,
+  PluginEmptyState,
+  PluginAlert,
+} from "@/src/components/plugin-shell/plugin-shell";
 
 type DirectoryShellProps = {
   userId: string;
@@ -16,97 +28,6 @@ type MemberListPayload = {
   items: DirectoryProfile[];
   pagination: { page: number; pageSize: number; total: number };
 };
-
-function OwnProfileSection({ ownProfile }: { ownProfile: DirectoryProfile | null }) {
-  return (
-    <section className="rounded-lg border bg-card p-5 space-y-3">
-      <h2 className="text-lg font-medium">Your Profile</h2>
-      {ownProfile ? (
-        <div className="text-sm space-y-1">
-          <p><span className="font-medium">Display:</span> {ownProfile.displayName}</p>
-          <p><span className="font-medium">Visibility:</span> {ownProfile.isPublic ? 'Public' : 'Workspace'}</p>
-          <p><span className="font-medium">Selectors:</span> {ownProfile.sectorName ?? '—'} / {ownProfile.jobTitleName ?? '—'} / {ownProfile.skills.length} skills</p>
-        </div>
-      ) : (
-        <div className="text-sm space-y-2">
-          <p>No profile yet. Create your directory profile to unlock member directory browsing.</p>
-          <p className="text-muted-foreground">API behavior is locked: `GET /api/directory/list` returns `404` until profile exists.</p>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function MemberDirectorySection({ listPayload }: { listPayload: MemberListPayload }) {
-  return (
-    <section className="rounded-lg border bg-card p-5 space-y-3">
-      <h2 className="text-lg font-medium">Member Directory</h2>
-      <p className="text-sm text-muted-foreground">Showing {listPayload.items.length} of {listPayload.pagination.total} records.</p>
-      <ul className="space-y-2 text-sm">
-        {listPayload.items.map((profile) => (
-          <li key={profile.id} className="rounded border p-3">
-            <p className="font-medium">{profile.displayName}</p>
-            <p className="text-muted-foreground">{profile.headline ?? 'No headline'}</p>
-          </li>
-        ))}
-        {listPayload.items.length === 0 ? (
-          <li className="text-sm text-muted-foreground">No visible directory profiles yet.</li>
-        ) : null}
-      </ul>
-    </section>
-  );
-}
-
-function AnnouncementSection({ announcements }: { announcements: DirectoryAnnouncement[] }) {
-  return (
-    <section className="rounded-lg border bg-card p-5 space-y-3">
-      <h2 className="text-lg font-medium">Announcements</h2>
-      <ul className="space-y-2 text-sm">
-        {announcements.map((announcement) => (
-          <li key={announcement.id} className="rounded border p-3">
-            <p className="font-medium">{announcement.title}</p>
-            <p className="text-muted-foreground">{announcement.body}</p>
-          </li>
-        ))}
-        {announcements.length === 0 ? (
-          <li className="text-sm text-muted-foreground">No active announcements.</li>
-        ) : null}
-      </ul>
-    </section>
-  );
-}
-
-function AdminSection({
-  adminProfiles,
-  adminAnnouncements,
-}: {
-  adminProfiles: MemberListPayload;
-  adminAnnouncements: DirectoryAnnouncement[];
-}) {
-  return (
-    <section className="rounded-lg border bg-card p-5 space-y-4">
-      <h2 className="text-lg font-medium">Admin Controls (Role-gated)</h2>
-      <p className="text-sm text-muted-foreground">
-        Admin write routes require role + CSRF and enforce unclaimed-only delete guardrails.
-      </p>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <article className="rounded border p-3 text-sm space-y-2">
-          <p className="font-medium">Profiles</p>
-          <p>Total loaded: {adminProfiles.pagination.total}</p>
-          <p>First page records: {adminProfiles.items.length}</p>
-          <p className="text-muted-foreground">Use `/api/directory/admin/profiles` and `/assign` to manage claimed/unclaimed lifecycle.</p>
-        </article>
-
-        <article className="rounded border p-3 text-sm space-y-2">
-          <p className="font-medium">Announcements</p>
-          <p>Total loaded: {adminAnnouncements.length}</p>
-          <p className="text-muted-foreground">Use `/api/directory/admin/announcements` for create/update/deactivate.</p>
-        </article>
-      </div>
-    </section>
-  );
-}
 
 export async function DirectoryShell({ userId, isAdmin }: DirectoryShellProps) {
   const ownProfile = await getOwnProfile(userId);
@@ -124,24 +45,229 @@ export async function DirectoryShell({ userId, isAdmin }: DirectoryShellProps) {
     : null;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Directory</h1>
-        <p className="text-sm text-muted-foreground">
-          Unified member/admin surface with role-gated controls and policy-backed routes.
+    <PluginShell
+      title="Directory"
+      subtitle="Connect with verified community members, mentors, and support providers."
+      accentColor="orange"
+    >
+      {/* Your Profile */}
+      <PluginCard title="Your Profile">
+        {ownProfile ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "16px",
+              }}
+            >
+              <div
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "var(--radius-lg)",
+                  background: "var(--accent-orange-soft)",
+                  border: "2px solid var(--accent-orange)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  color: "var(--accent-orange)",
+                }}
+              >
+                {ownProfile.displayName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 style={{ margin: 0, color: "var(--text-primary)" }}>
+                  {ownProfile.displayName}
+                </h3>
+                <p style={{ margin: "4px 0 0", color: "var(--text-muted)" }}>
+                  {ownProfile.isPublic ? "Public Profile" : "Workspace Only"}
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "12px",
+                marginTop: "8px",
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px",
+                  background: "var(--background-elevated)",
+                  borderRadius: "var(--radius-md)",
+                  textAlign: "center",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Sector
+                </p>
+                <p style={{ margin: "4px 0 0", fontWeight: "500" }}>
+                  {ownProfile.sectorName ?? "Not set"}
+                </p>
+              </div>
+              <div
+                style={{
+                  padding: "12px",
+                  background: "var(--background-elevated)",
+                  borderRadius: "var(--radius-md)",
+                  textAlign: "center",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Job Title
+                </p>
+                <p style={{ margin: "4px 0 0", fontWeight: "500" }}>
+                  {ownProfile.jobTitleName ?? "Not set"}
+                </p>
+              </div>
+              <div
+                style={{
+                  padding: "12px",
+                  background: "var(--background-elevated)",
+                  borderRadius: "var(--radius-md)",
+                  textAlign: "center",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Skills
+                </p>
+                <p style={{ margin: "4px 0 0", fontWeight: "500" }}>
+                  {ownProfile.skills.length} listed
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <PluginAlert type="warning">
+              Create your directory profile to unlock member browsing and connect with
+              the community.
+            </PluginAlert>
+          </div>
+        )}
+      </PluginCard>
+
+      {/* Stats */}
+      <PluginGrid>
+        <PluginStat
+          label="Total Members"
+          value={listPayload.pagination.total}
+          accentColor="orange"
+        />
+        <PluginStat
+          label="Showing"
+          value={listPayload.items.length}
+          accentColor="blue"
+        />
+        <PluginStat
+          label="Announcements"
+          value={announcements.length}
+          accentColor="green"
+        />
+      </PluginGrid>
+
+      {/* Member Directory */}
+      <PluginCard title="Member Directory">
+        <p style={{ marginBottom: "16px", color: "var(--text-muted)" }}>
+          Showing {listPayload.items.length} of {listPayload.pagination.total}{" "}
+          community members.
         </p>
-      </header>
+        {listPayload.items.length > 0 ? (
+          <PluginList>
+            {listPayload.items.map((profile) => (
+              <PluginListItem
+                key={profile.id}
+                title={profile.displayName}
+                subtitle={profile.headline ?? "Community member"}
+                accentColor="orange"
+              />
+            ))}
+          </PluginList>
+        ) : (
+          <PluginEmptyState message="No visible directory profiles yet. Create your profile to start connecting." />
+        )}
+      </PluginCard>
 
-      <OwnProfileSection ownProfile={ownProfile} />
-      <MemberDirectorySection listPayload={listPayload} />
-      <AnnouncementSection announcements={announcements} />
-      {isAdmin && adminProfiles && adminAnnouncements ? (
-        <AdminSection adminProfiles={adminProfiles} adminAnnouncements={adminAnnouncements} />
-      ) : null}
+      {/* Announcements */}
+      <PluginCard title="Community Announcements">
+        {announcements.length > 0 ? (
+          <PluginList>
+            {announcements.map((announcement) => (
+              <PluginListItem
+                key={announcement.id}
+                title={announcement.title}
+                subtitle={announcement.body}
+                accentColor="green"
+              />
+            ))}
+          </PluginList>
+        ) : (
+          <PluginEmptyState message="No active announcements." />
+        )}
+      </PluginCard>
 
-      <p className="text-sm">
-        <Link className="underline underline-offset-4" href="/">Return to home</Link>
-      </p>
-    </main>
+      {/* Admin Section */}
+      {isAdmin && adminProfiles && adminAnnouncements && (
+        <PluginCard title="Admin Controls">
+          <PluginAlert type="info">
+            Admin access enabled. Manage profiles and announcements below.
+          </PluginAlert>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+              marginTop: "16px",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px",
+                background: "var(--background-elevated)",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <h4 style={{ margin: "0 0 8px", color: "var(--text-primary)" }}>
+                Profiles
+              </h4>
+              <p style={{ margin: "0 0 8px", color: "var(--text-muted)" }}>
+                Total: {adminProfiles.pagination.total}
+              </p>
+              <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--text-muted)" }}>
+                First page: {adminProfiles.items.length} records
+              </p>
+            </div>
+            <div
+              style={{
+                padding: "16px",
+                background: "var(--background-elevated)",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <h4 style={{ margin: "0 0 8px", color: "var(--text-primary)" }}>
+                Announcements
+              </h4>
+              <p style={{ margin: "0 0 8px", color: "var(--text-muted)" }}>
+                Total: {adminAnnouncements.length}
+              </p>
+              <a
+                href="/admin/directory"
+                style={{
+                  color: "var(--brand-primary)",
+                  fontSize: "0.8125rem",
+                }}
+              >
+                Manage in Admin Panel
+              </a>
+            </div>
+          </div>
+        </PluginCard>
+      )}
+    </PluginShell>
   );
 }

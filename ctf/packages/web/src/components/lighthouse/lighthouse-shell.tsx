@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import {
   getLighthouseAdminStats,
   getProfile,
@@ -7,7 +6,20 @@ import {
   listMatches,
   listMyProperties,
   listProperties,
-} from '@/src/lib/lighthouse/repository';
+} from "@/src/lib/lighthouse/repository";
+import {
+  PluginShell,
+  PluginCard,
+  PluginStat,
+  PluginGrid,
+  PluginSection,
+  PluginList,
+  PluginListItem,
+  PluginEmptyState,
+  PluginAlert,
+  PluginButton,
+  PluginInput,
+} from "@/src/components/plugin-shell/plugin-shell";
 
 type LighthouseShellProps = {
   userId: string;
@@ -15,8 +27,19 @@ type LighthouseShellProps = {
   role: string | null;
 };
 
-export async function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps) {
-  const [profile, properties, myProperties, matches, blocks, announcements] = await Promise.all([
+export async function LighthouseShell({
+  userId,
+  isAdmin,
+  role,
+}: LighthouseShellProps) {
+  const [
+    profile,
+    properties,
+    myProperties,
+    matches,
+    blocks,
+    announcements,
+  ] = await Promise.all([
     getProfile(userId),
     listProperties({ page: 1, pageSize: 8 }),
     listMyProperties(userId),
@@ -28,149 +51,219 @@ export async function LighthouseShell({ userId, isAdmin, role }: LighthouseShell
   const adminStats = isAdmin ? await getLighthouseAdminStats() : null;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">LightHouse</h1>
-        <p className="text-sm text-muted-foreground">
-          Housing profile, property listing, matching, blocking, and announcement visibility flows.
-        </p>
-      </header>
+    <PluginShell
+      title="Lighthouse"
+      subtitle="Safe housing connections for survivors. Find secure, vetted accommodations."
+      accentColor="teal"
+    >
+      {/* Stats Overview */}
+      <PluginGrid>
+        <PluginStat
+          label="Available Properties"
+          value={properties.total}
+          accentColor="teal"
+        />
+        <PluginStat
+          label="My Listings"
+          value={myProperties.length}
+          accentColor="blue"
+        />
+        <PluginStat
+          label="Active Matches"
+          value={matches.length}
+          accentColor="green"
+        />
+        <PluginStat
+          label="Blocked Users"
+          value={blocks.length}
+          accentColor="orange"
+        />
+      </PluginGrid>
 
-      {/* Service Credits Section */}
-      <section className="rounded-lg border bg-card p-5 text-sm space-y-2">
-        <h2 className="text-lg font-medium">Send Service Credits</h2>
+      {/* Two Column Layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        {/* Profile Section */}
+        <PluginCard title="Your Housing Profile">
+          {profile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <p>
+                <strong>Type:</strong> {profile.profileType}
+              </p>
+              <p>
+                <strong>Status:</strong>{" "}
+                {profile.isActive ? (
+                  <span style={{ color: "var(--accent-green)" }}>Active</span>
+                ) : (
+                  <span style={{ color: "var(--text-muted)" }}>Inactive</span>
+                )}
+              </p>
+              <p>
+                <strong>Has Property:</strong>{" "}
+                {profile.hasProperty ? "Yes" : "No"}
+              </p>
+              <p style={{ color: "var(--text-muted)", marginTop: "8px" }}>
+                {profile.bio ?? "No bio set. Add one to help others learn about you."}
+              </p>
+            </div>
+          ) : (
+            <PluginEmptyState message="No profile created yet. Create your housing profile to start connecting with safe accommodations." />
+          )}
+        </PluginCard>
+
+        {/* Announcements */}
+        <PluginCard title="Announcements">
+          {announcements.items.length > 0 ? (
+            <PluginList>
+              {announcements.items.map((item) => (
+                <PluginListItem
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.body}
+                  accentColor="teal"
+                />
+              ))}
+            </PluginList>
+          ) : (
+            <PluginEmptyState message="No announcements at this time." />
+          )}
+        </PluginCard>
+      </div>
+
+      {/* Properties and Matches */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <PluginCard title="Browse Properties">
+          {properties.items.length > 0 ? (
+            <PluginList>
+              {properties.items.map((property) => (
+                <PluginListItem
+                  key={property.id}
+                  title={property.title}
+                  subtitle={`${property.city ?? "Unknown city"}, ${property.country ?? "Unknown country"}`}
+                  accentColor="blue"
+                />
+              ))}
+            </PluginList>
+          ) : (
+            <PluginEmptyState message="No active properties listed." />
+          )}
+        </PluginCard>
+
+        <PluginCard title="Your Matches">
+          {matches.length > 0 ? (
+            <PluginList>
+              {matches.map((match) => (
+                <PluginListItem
+                  key={match.id}
+                  title={`Match ${match.id.slice(0, 8)}...`}
+                  subtitle={`Status: ${match.status}`}
+                  accentColor="green"
+                />
+              ))}
+            </PluginList>
+          ) : (
+            <PluginEmptyState message="No matches yet. Browse properties to find your next safe space." />
+          )}
+        </PluginCard>
+      </div>
+
+      {/* Service Credits Form */}
+      <PluginCard title="Send Service Credits">
+        <p style={{ marginBottom: "16px", color: "var(--text-secondary)" }}>
+          Support another community member by sending service credits.
+        </p>
         <form
-          className="space-y-2"
           action="/api/lighthouse/service-credits"
           method="POST"
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           onSubmit={async (e) => {
             e.preventDefault();
             const form = e.currentTarget;
-            const toUserId = form.toUserId.value;
-            const amount = Number(form.amount.value);
-            const reason = form.reason.value;
-            const res = await fetch('/api/lighthouse/service-credits', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ toUserId, amount, reason }),
+            const formData = new FormData(form);
+            const res = await fetch("/api/lighthouse/service-credits", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                toUserId: formData.get("toUserId"),
+                amount: Number(formData.get("amount")),
+                reason: formData.get("reason"),
+              }),
             });
             if (res.ok) {
-              alert('Service credits sent!');
+              alert("Service credits sent!");
               form.reset();
             } else {
               const data = await res.json();
-              alert(data.message || 'Failed to send service credits.');
+              alert(data.message || "Failed to send service credits.");
             }
           }}
         >
-          <div>
-            <label htmlFor="toUserId" className="block font-medium">Recipient User ID</label>
-            <input name="toUserId" id="toUserId" required className="border rounded px-2 py-1 w-full" />
-          </div>
-          <div>
-            <label htmlFor="amount" className="block font-medium">Amount</label>
-            <input name="amount" id="amount" type="number" min="1" required className="border rounded px-2 py-1 w-full" />
-          </div>
-          <div>
-            <label htmlFor="reason" className="block font-medium">Reason (optional)</label>
-            <input name="reason" id="reason" className="border rounded px-2 py-1 w-full" />
-          </div>
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Send</button>
+          <PluginInput
+            label="Recipient User ID"
+            id="toUserId"
+            name="toUserId"
+            required
+            placeholder="Enter recipient ID"
+          />
+          <PluginInput
+            label="Amount"
+            id="amount"
+            name="amount"
+            type="number"
+            min={1}
+            required
+            placeholder="Enter amount"
+          />
+          <PluginInput
+            label="Reason (optional)"
+            id="reason"
+            name="reason"
+            placeholder="Why are you sending credits?"
+          />
+          <PluginButton type="submit">Send Credits</PluginButton>
         </form>
-      </section>
-      <section className="grid gap-4 md:grid-cols-4">
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Public properties</p>
-          <p className="text-2xl font-semibold">{properties.total}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">My properties</p>
-          <p className="text-2xl font-semibold">{myProperties.length}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">My matches</p>
-          <p className="text-2xl font-semibold">{matches.length}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">My blocks</p>
-          <p className="text-2xl font-semibold">{blocks.length}</p>
-        </article>
-      </section>
+      </PluginCard>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-lg border bg-card p-5 space-y-3">
-          <h2 className="text-lg font-medium">My profile</h2>
-          {profile ? (
-            <div className="text-sm space-y-1">
-              <p>Type: {profile.profileType}</p>
-              <p>Active: {profile.isActive ? 'yes' : 'no'}</p>
-              <p>Has property: {profile.hasProperty ? 'yes' : 'no'}</p>
-              <p className="text-muted-foreground">{profile.bio ?? 'No bio set.'}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No profile created yet.</p>
-          )}
-        </article>
-
-        <article className="rounded-lg border bg-card p-5 space-y-3">
-          <h2 className="text-lg font-medium">Announcements</h2>
-          <ul className="space-y-2 text-sm">
-            {announcements.items.map((item) => (
-              <li key={item.id} className="rounded border p-2">
-                <p className="font-medium">{item.title}</p>
-                <p className="text-muted-foreground">{item.body}</p>
-              </li>
-            ))}
-            {announcements.items.length === 0 ? <li className="text-muted-foreground">No announcements.</li> : null}
-          </ul>
-        </article>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-lg border bg-card p-5 space-y-3">
-          <h2 className="text-lg font-medium">Property browse</h2>
-          <ul className="space-y-2 text-sm">
-            {properties.items.map((property) => (
-              <li key={property.id} className="rounded border p-2">
-                <p className="font-medium">{property.title}</p>
-                <p className="text-muted-foreground">{property.city ?? 'Unknown city'}, {property.country ?? 'Unknown country'}</p>
-              </li>
-            ))}
-            {properties.items.length === 0 ? <li className="text-muted-foreground">No active properties listed.</li> : null}
-          </ul>
-        </article>
-
-        <article className="rounded-lg border bg-card p-5 space-y-3">
-          <h2 className="text-lg font-medium">Matches</h2>
-          <ul className="space-y-2 text-sm">
-            {matches.map((match) => (
-              <li key={match.id} className="rounded border p-2">
-                <p className="font-medium">Match {match.id.slice(0, 8)}…</p>
-                <p className="text-muted-foreground">Status: {match.status}</p>
-              </li>
-            ))}
-            {matches.length === 0 ? <li className="text-muted-foreground">No matches yet.</li> : null}
-          </ul>
-        </article>
-      </section>
-
-      {adminStats ? (
-        <section className="rounded-lg border bg-card p-5 text-sm space-y-2">
-          <h2 className="text-lg font-medium">Admin snapshot</h2>
-          <p>Total seekers: {adminStats.seekers}</p>
-          <p>Total hosts: {adminStats.hosts}</p>
-          <p>Total properties: {adminStats.properties}</p>
-          <p>Active matches: {adminStats.activeMatches}</p>
-          <p>Completed matches: {adminStats.completedMatches}</p>
-          <p>
-            <Link className="underline underline-offset-4" href="/admin/lighthouse">Open /admin/lighthouse</Link>
-          </p>
-        </section>
-      ) : null}
-
-      <p className="text-sm">
-        <Link className="underline underline-offset-4" href="/">Return to home</Link>
-      </p>
-    </main>
+      {/* Admin Section */}
+      {adminStats && (
+        <PluginCard title="Admin Dashboard">
+          <PluginAlert type="info">
+            You have admin access. View detailed statistics below.
+          </PluginAlert>
+          <PluginGrid>
+            <PluginStat
+              label="Total Seekers"
+              value={adminStats.seekers}
+              accentColor="purple"
+            />
+            <PluginStat
+              label="Total Hosts"
+              value={adminStats.hosts}
+              accentColor="blue"
+            />
+            <PluginStat
+              label="Total Properties"
+              value={adminStats.properties}
+              accentColor="teal"
+            />
+            <PluginStat
+              label="Active Matches"
+              value={adminStats.activeMatches}
+              accentColor="green"
+            />
+          </PluginGrid>
+          <div style={{ marginTop: "16px" }}>
+            <a
+              href="/admin/lighthouse"
+              style={{
+                color: "var(--brand-primary)",
+                textDecoration: "underline",
+              }}
+            >
+              Open Admin Panel
+            </a>
+          </div>
+        </PluginCard>
+      )}
+    </PluginShell>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import {
   getClerkPublishableKey,
@@ -7,8 +7,14 @@ import {
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CTF Survivor Hub',
-  description: 'Dark theme plugin-first community shell for survivor-centered support.',
+  title: 'CTF Survivor Hub | From Survivor to Thriver',
+  description: 'A trauma-informed, invite-only community platform for human trafficking survivors. Access support, resources, and opportunities designed for your journey forward.',
+  keywords: ['survivor support', 'community', 'healing', 'resources', 'safe space'],
+};
+
+export const viewport: Viewport = {
+  themeColor: '#c5f82a',
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({
