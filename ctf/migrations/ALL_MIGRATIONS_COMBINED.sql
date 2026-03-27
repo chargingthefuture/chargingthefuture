@@ -1544,8 +1544,18 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created
   ON skills_hunt_submissions (submitter_user_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup
-  ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
+ALTER TABLE IF EXISTS skills_hunt_leaderboard
+  ADD COLUMN IF NOT EXISTS mode TEXT;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'skills_hunt_leaderboard' AND column_name = 'mode'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC)';
+  END IF;
+END
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_notifications_user_unread
   ON skills_hunt_notifications (user_id, is_read, created_at DESC);
