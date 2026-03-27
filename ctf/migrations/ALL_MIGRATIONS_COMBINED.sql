@@ -1,5 +1,5 @@
--- GENERATED: ALL_MIGRATIONS_COMBINED.sql - concatenated on 2026-03-27T00:09:53Z
--- ==== FILE: 2026-03-01-chyme-core-phase0.sql ====
+-- GENERATED: ALL_MIGRATIONS_COMBINED.sql - concatenated on 2026-03-27T00:24:28Z
+\n-- ==== FILE: 2026-03-01-chyme-core-phase0.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -141,9 +141,7 @@ END
 $$;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-01-clerk-username-handle-baseline.sql ====
+\n-- ==== FILE: 2026-03-01-clerk-username-handle-baseline.sql" ====
 -- Migration: Clerk username handle baseline propagation
 -- Date: 2026-03-01
 -- Scope: Shared DB used by platform + ctf (additive, idempotent)
@@ -274,9 +272,7 @@ BEGIN
   END IF;
 END
 $$;
-
-
--- ==== FILE: 2026-03-02-directory-core-phase0.sql ====
+\n-- ==== FILE: 2026-03-02-directory-core-phase0.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -483,9 +479,7 @@ BEGIN
 END $$;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-02-feed-announcements-core-phase0.sql ====
+\n-- ==== FILE: 2026-03-02-feed-announcements-core-phase0.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -757,9 +751,7 @@ WHERE fi.is_active = TRUE
   AND (fi.expires_at IS NULL OR fi.expires_at > NOW());
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-02-skills-taxonomy-core-phase0.sql ====
+\n-- ==== FILE: 2026-03-02-skills-taxonomy-core-phase0.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -887,9 +879,7 @@ FROM skills_taxonomy_consumer_bindings
 GROUP BY target_type, target_id;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-foundation-core-phase1.sql ====
+\n-- ==== FILE: 2026-03-03-foundation-core-phase1.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -1115,9 +1105,7 @@ VALUES (
 ON CONFLICT (singleton_key) DO NOTHING;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-lighthouse-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-03-lighthouse-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -1316,9 +1304,7 @@ CREATE INDEX IF NOT EXISTS idx_lighthouse_audit_lookup
   ON lighthouse_admin_audit_trail (created_at DESC, actor_id, command);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-plugin-registry-hub-phase2.sql ====
+\n-- ==== FILE: 2026-03-03-plugin-registry-hub-phase2.sql" ====
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS ctf_plugin_registry (
@@ -1403,9 +1389,7 @@ SET
   is_visible = EXCLUDED.is_visible,
   updated_at = NOW();
 
-COMMIT;
-
--- ==== FILE: 2026-03-03-plugin-registry-phase2-availability-update.sql ====
+COMMIT;\n-- ==== FILE: 2026-03-03-plugin-registry-phase2-availability-update.sql" ====
 BEGIN;
 
 UPDATE ctf_plugin_registry
@@ -1413,9 +1397,7 @@ SET availability_state = 'implemented_shell', updated_at = NOW()
 WHERE plugin_slug IN ('lighthouse', 'socketrelay', 'trusttransport');
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-skills-hunt-core-phase1.sql ====
+\n-- ==== FILE: 2026-03-03-skills-hunt-core-phase1.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -1583,9 +1565,7 @@ ON CONFLICT (singleton_key)
 DO NOTHING;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-socketrelay-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-03-socketrelay-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -1737,9 +1717,7 @@ CREATE INDEX IF NOT EXISTS idx_socketrelay_messages_fulfillment ON socketrelay_m
 CREATE INDEX IF NOT EXISTS idx_socketrelay_audit_created ON socketrelay_admin_audit_trail (created_at DESC, actor_id, command);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-trusttransport-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-03-trusttransport-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -1933,7 +1911,19 @@ VALUES (1, '{"maxConcurrentTrips": 3, "requireProofOnDelivery": true}'::jsonb, '
 ON CONFLICT (id) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_tt_requests_requester_created ON trusttransport_requests (requester_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_tt_requests_mode_status ON trusttransport_requests (mode, status, created_at DESC);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'trusttransport_requests'
+      AND column_name = 'mode'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_tt_requests_mode_status ON trusttransport_requests (mode, status, created_at DESC);
+  END IF;
+END
+$$;
 CREATE INDEX IF NOT EXISTS idx_tt_offers_request_status ON trusttransport_offers (request_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tt_trips_participants ON trusttransport_trips (requester_user_id, provider_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tt_trips_status ON trusttransport_trips (status, updated_at DESC);
@@ -1944,9 +1934,7 @@ CREATE INDEX IF NOT EXISTS idx_tt_payout_provider_requested ON trusttransport_pa
 CREATE INDEX IF NOT EXISTS idx_tt_risk_signal_resolved ON trusttransport_risk_signals (is_resolved, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tt_audit_created_actor ON trusttransport_admin_audit_trail (created_at DESC, actor_id, command);
 
-COMMIT;
-
--- ==== FILE: 2026-03-03-workforce-core-phase1.sql ====
+COMMIT;\n-- ==== FILE: 2026-03-03-workforce-core-phase1.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2090,9 +2078,7 @@ ON CONFLICT (singleton_key)
 DO NOTHING;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-03-workforce-incremental-sync.sql ====
+\n-- ==== FILE: 2026-03-03-workforce-incremental-sync.sql" ====
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
@@ -2107,9 +2093,7 @@ ON CONFLICT (singleton_key)
 DO NOTHING;
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-gdp-core-phase3.sql ====
+\n-- ==== FILE: 2026-03-04-gdp-core-phase3.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2165,9 +2149,7 @@ CREATE INDEX IF NOT EXISTS idx_gdp_metrics_week ON gdp_metric_snapshots (week_st
 CREATE INDEX IF NOT EXISTS idx_gdp_publications_week ON gdp_publications (week_start_date, status, updated_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-gentlepulse-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-04-gentlepulse-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2222,9 +2204,7 @@ CREATE INDEX IF NOT EXISTS idx_gentlepulse_library_active ON gentlepulse_library
 CREATE INDEX IF NOT EXISTS idx_gentlepulse_play_events_item_started ON gentlepulse_play_events (item_id, started_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-mood-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-04-mood-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2254,9 +2234,7 @@ CREATE INDEX IF NOT EXISTS idx_mood_submissions_user_submitted ON mood_submissio
 CREATE INDEX IF NOT EXISTS idx_mood_submissions_client_submitted ON mood_submissions (client_id, submitted_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-peer-programming-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-04-peer-programming-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2346,9 +2324,7 @@ CREATE INDEX IF NOT EXISTS idx_pp_messages_cohort_created ON peer_programming_me
 CREATE INDEX IF NOT EXISTS idx_pp_feedback_created ON peer_programming_feedback (created_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-plugin-registry-phase3-availability-update.sql ====
+\n-- ==== FILE: 2026-03-04-plugin-registry-phase3-availability-update.sql" ====
 BEGIN;
 
 UPDATE ctf_plugin_registry
@@ -2363,9 +2339,7 @@ WHERE plugin_slug IN (
 );
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-service-credits-core-phase3.sql ====
+\n-- ==== FILE: 2026-03-04-service-credits-core-phase3.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2452,9 +2426,7 @@ CREATE INDEX IF NOT EXISTS idx_service_credits_transfers_sender_created ON servi
 CREATE INDEX IF NOT EXISTS idx_service_credits_disputes_status_created ON service_credits_disputes (status, created_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-service-credits-formance-adapter-phase3.sql ====
+\n-- ==== FILE: 2026-03-04-service-credits-formance-adapter-phase3.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2570,9 +2542,7 @@ CREATE INDEX IF NOT EXISTS idx_service_credits_governance_events_created
   ON service_credits_governance_events (event_type, created_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-04-weekly-performance-core-phase2.sql ====
+\n-- ==== FILE: 2026-03-04-weekly-performance-core-phase2.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2617,9 +2587,7 @@ ON CONFLICT (week_start_date) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_weekly_perf_metrics_week ON weekly_performance_metrics (week_start_date, metric_key);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-05-chyme-service-credits.sql ====
+\n-- ==== FILE: 2026-03-05-chyme-service-credits.sql" ====
 -- Add chyme_service_credits_transactions table for service credits support in Chyme
 CREATE TABLE IF NOT EXISTS chyme_service_credits_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2634,9 +2602,7 @@ CREATE TABLE IF NOT EXISTS chyme_service_credits_transactions (
 
 CREATE INDEX IF NOT EXISTS idx_chyme_service_credits_from_user ON chyme_service_credits_transactions (from_user_id);
 CREATE INDEX IF NOT EXISTS idx_chyme_service_credits_to_user ON chyme_service_credits_transactions (to_user_id);
-
-
--- ==== FILE: 2026-03-05-directory-profile-payment-addresses.sql ====
+\n-- ==== FILE: 2026-03-05-directory-profile-payment-addresses.sql" ====
 -- Directory profile payment address fields migration
 -- Adds optional fields for Venmo, Monero, Bitcoin, and ServiceCredits addresses
 
@@ -2645,9 +2611,7 @@ ALTER TABLE directory_profiles
   ADD COLUMN monero_address TEXT NULL,
   ADD COLUMN bitcoin_address TEXT NULL,
   ADD COLUMN service_credits_address TEXT NULL;
-
-
--- ==== FILE: 2026-03-05-skills-hunt-service-credits.sql ====
+\n-- ==== FILE: 2026-03-05-skills-hunt-service-credits.sql" ====
 -- Skills Hunt Service Credits Transactions Table
 CREATE TABLE IF NOT EXISTS skills_hunt_service_credits_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2661,9 +2625,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_service_credits_transactions (
 
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_from_user ON skills_hunt_service_credits_transactions (from_user_id);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_to_user ON skills_hunt_service_credits_transactions (to_user_id);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_submission_id ON skills_hunt_service_credits_transactions (submission_id);
-
--- ==== FILE: 2026-03-24-levelup-core-phase3.sql ====
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_submission_id ON skills_hunt_service_credits_transactions (submission_id);\n-- ==== FILE: 2026-03-24-levelup-core-phase3.sql" ====
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -2894,9 +2856,7 @@ CREATE INDEX IF NOT EXISTS idx_levelup_disputes_status_created ON levelup_disput
 CREATE INDEX IF NOT EXISTS idx_levelup_disbursements_enrollment_created ON levelup_disbursements (enrollment_id, created_at DESC);
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-25-legacy-profile-redirects.sql ====
+\n-- ==== FILE: 2026-03-25-legacy-profile-redirects.sql" ====
 -- ========================================
 -- LEGACY PROFILE REDIRECT MAPPING TABLE
 -- ========================================
@@ -2940,9 +2900,7 @@ COMMENT ON COLUMN legacy_profile_redirects.legacy_entity_id IS
 
 COMMENT ON COLUMN legacy_profile_redirects.current_entity_id IS 
   'The corresponding new UUID in the ctf rewrite database';
-
-
--- ==== FILE: 2026-03-25-trust-core-phase1.sql ====
+\n-- ==== FILE: 2026-03-25-trust-core-phase1.sql" ====
 BEGIN;
 
 -- Trust plugin: user extension table
@@ -3013,9 +2971,7 @@ SET
   updated_at = NOW();
 
 COMMIT;
-
-
--- ==== FILE: 2026-03-25-unlock-core-phase1.sql ====
+\n-- ==== FILE: 2026-03-25-unlock-core-phase1.sql" ====
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS unlock_runtime_config (
@@ -3102,5 +3058,3 @@ SET
   updated_at = NOW();
 
 COMMIT;
-
-
