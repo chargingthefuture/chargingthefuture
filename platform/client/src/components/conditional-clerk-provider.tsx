@@ -121,11 +121,12 @@ export function ConditionalClerkProvider({ children }: { children: ReactNode }) 
       signUpUrl = `https://${stagingCustomDomain}/sign-up`;
       unauthorizedSignInUrl = `https://${stagingCustomDomain}/unauthorized-sign-in`;
     } else {
-      // Use absolute URLs with baseUrl - Clerk will route to correct instance based on publishable key
-      // When using live keys with a separate Clerk project, Clerk automatically determines the instance
-      signInUrl = `${baseUrl}/sign-in`;
-      signUpUrl = `${baseUrl}/sign-up`;
-      unauthorizedSignInUrl = `${baseUrl}/unauthorized-sign-in`;
+      // Use a stable external accounts domain for staging instead of relying on baseUrl.
+      // This prevents Clerk from generating redirect_url back to the app origin.
+      const fallbackStagingAccounts = 'accounts.the-comic.com';
+      signInUrl = `https://${fallbackStagingAccounts}/sign-in`;
+      signUpUrl = `https://${fallbackStagingAccounts}/sign-up`;
+      unauthorizedSignInUrl = `https://${fallbackStagingAccounts}/unauthorized-sign-in`;
     }
   } else {
     // Local development - use dev instance

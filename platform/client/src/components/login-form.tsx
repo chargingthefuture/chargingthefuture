@@ -46,11 +46,12 @@ const getAccountUrls = () => {
         unauthorized: `https://${stagingCustomDomain}/unauthorized-sign-in`,
       };
     }
-    // Otherwise use absolute URLs with baseUrl - Clerk will route based on publishable key
+    // Otherwise use a stable external accounts domain for staging/local fallback
+    const fallbackStagingAccounts = 'accounts.the-comic.com';
     return {
-      signIn: `${baseUrl}/sign-in`,
-      signUp: `${baseUrl}/sign-up`,
-      unauthorized: `${baseUrl}/unauthorized-sign-in`,
+      signIn: `https://${fallbackStagingAccounts}/sign-in`,
+      signUp: `https://${fallbackStagingAccounts}/sign-up`,
+      unauthorized: `https://${fallbackStagingAccounts}/unauthorized-sign-in`,
     };
   }
   
