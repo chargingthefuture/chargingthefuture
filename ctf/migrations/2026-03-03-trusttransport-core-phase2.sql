@@ -191,7 +191,19 @@ VALUES (1, '{"maxConcurrentTrips": 3, "requireProofOnDelivery": true}'::jsonb, '
 ON CONFLICT (id) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_tt_requests_requester_created ON trusttransport_requests (requester_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_tt_requests_mode_status ON trusttransport_requests (mode, status, created_at DESC);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'trusttransport_requests'
+      AND column_name = 'mode'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_tt_requests_mode_status ON trusttransport_requests (mode, status, created_at DESC);
+  END IF;
+END
+$$;
 CREATE INDEX IF NOT EXISTS idx_tt_offers_request_status ON trusttransport_offers (request_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tt_trips_participants ON trusttransport_trips (requester_user_id, provider_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tt_trips_status ON trusttransport_trips (status, updated_at DESC);
