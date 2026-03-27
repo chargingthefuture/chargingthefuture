@@ -1923,6 +1923,8 @@ VALUES (1, '{"maxConcurrentTrips": 3, "requireProofOnDelivery": true}'::jsonb, '
 ON CONFLICT (id) DO NOTHING;
 
 CREATE INDEX IF NOT EXISTS idx_tt_requests_requester_created ON trusttransport_requests (requester_user_id, created_at DESC);
+ALTER TABLE IF EXISTS trusttransport_requests
+  ADD COLUMN IF NOT EXISTS mode TEXT;
 DO $$
 BEGIN
   IF EXISTS (
