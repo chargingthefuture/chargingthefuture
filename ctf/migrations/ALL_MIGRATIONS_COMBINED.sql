@@ -1,4 +1,4 @@
--- GENERATED: ALL_MIGRATIONS_COMBINED.sql - concatenated on 2026-03-27T00:30:55Z
+-- GENERATED: ALL_MIGRATIONS_COMBINED.sql - concatenated on 2026-03-27T00:35:14Z
 
 -- ==== FILE: 2026-03-01-chyme-core-phase0.sql ====
 BEGIN;
@@ -1932,7 +1932,7 @@ BEGIN
       AND table_name = 'trusttransport_requests'
       AND column_name = 'mode'
   ) THEN
-    CREATE INDEX IF NOT EXISTS idx_tt_requests_mode_status ON trusttransport_requests (mode, status, created_at DESC);
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_tt_requests_mode_status ON trusttransport_requests (mode, status, created_at DESC)';
   END IF;
 END
 $$;
