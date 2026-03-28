@@ -27,7 +27,7 @@ jobs:
 
       - name: Run Drizzle Migrations
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          DATABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.NEON_DATABASE_URL_PROD || secrets.NEON_DATABASE_URL_STAGING }}
         run: |
           cd ctf
           pnpm drizzle-kit push:pg
