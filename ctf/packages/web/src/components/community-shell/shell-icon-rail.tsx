@@ -44,7 +44,7 @@ export function ShellIconRail({ section, onSectionChange }: IconRailProps) {
         <UserButton />
       </SignedIn>
       <SignedOut>
-        <SignInButton mode="modal">
+        <SignInButton>
           <button type="button" className={styles.iconRailBtn} aria-label="Sign in"><User size={18} /></button>
         </SignInButton>
       </SignedOut>
