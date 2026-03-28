@@ -15,18 +15,18 @@ CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
 
 CREATE TABLE IF NOT EXISTS socketrelay_requests (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  owner_user_id TEXT NOT NULL,
-  title TEXT NOT NULL,
-  details TEXT NOT NULL,
-  category TEXT NOT NULL,
-  city TEXT NULL,
-  is_public BOOLEAN NOT NULL DEFAULT FALSE,
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'claimed', 'closed', 'cancelled')),
-  idempotency_key TEXT NOT NULL,
-  reopened_count INTEGER NOT NULL DEFAULT 0,
-  claimed_fulfillment_id TEXT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  owner_user_id TEXT,
+  title TEXT,
+  details TEXT,
+  category TEXT,
+  city TEXT,
+  is_public BOOLEAN DEFAULT FALSE,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'claimed', 'closed', 'cancelled')),
+  idempotency_key TEXT,
+  reopened_count INTEGER DEFAULT 0,
+  claimed_fulfillment_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (owner_user_id, idempotency_key)
 );
 
@@ -36,10 +36,13 @@ ALTER TABLE IF EXISTS socketrelay_requests
   ADD COLUMN IF NOT EXISTS details TEXT,
   ADD COLUMN IF NOT EXISTS category TEXT,
   ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open',
   ADD COLUMN IF NOT EXISTS idempotency_key TEXT,
-  ADD COLUMN IF NOT EXISTS reopened_count INTEGER,
+  ADD COLUMN IF NOT EXISTS reopened_count INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS claimed_fulfillment_id TEXT,
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 DO $socketrelay_requests$
 BEGIN
@@ -100,14 +103,24 @@ CREATE TABLE IF NOT EXISTS socketrelay_request_events (
 
 CREATE TABLE IF NOT EXISTS socketrelay_fulfillments (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  request_id TEXT NOT NULL REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
-  requester_user_id TEXT NOT NULL,
-  fulfiller_user_id TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed', 'cancelled')),
-  close_reason TEXT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  request_id TEXT REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
+  requester_user_id TEXT,
+  fulfiller_user_id TEXT,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'closed', 'cancelled')),
+  close_reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (request_id, fulfiller_user_id)
+  
+ALTER TABLE IF EXISTS socketrelay_fulfillments
+  ADD COLUMN IF NOT EXISTS id TEXT,
+  ADD COLUMN IF NOT EXISTS request_id TEXT,
+  ADD COLUMN IF NOT EXISTS requester_user_id TEXT,
+  ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT,
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS close_reason TEXT,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 );
 
 CREATE TABLE IF NOT EXISTS socketrelay_fulfillment_participants (

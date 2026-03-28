@@ -68,3 +68,15 @@ If two rules conflict, choose the stricter rule and document the decision.
 - After every code change, always run the local build (e.g., `pnpm build` or project-specific build command) and check for errors.
 - If any errors are found, fix them before marking the work as complete.
 - This is mandatory to prevent pushing broken code, especially for users without local development environments.
+
+## Database Migration Best Practices (REQUIRED)
+
+- Every migration that adds or changes a table or column MUST:
+	- Use `CREATE TABLE IF NOT EXISTS ...` for new tables, listing all current columns.
+	- Use `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS ...` for every new/changed column, even if the column is in the CREATE TABLE above.
+	- This ensures both fresh DBs and legacy DBs are always brought up to date.
+- When a table or column is renamed or removed, always use guarded DDL and provide data migration steps if needed.
+- The file `ctf/migrations/ALL_MIGRATIONS_COMBINED.sql` MUST be kept in sync with all individual migrations, so a fresh DB is always correct.
+- When creating a new table, always include both the full CREATE TABLE and ALTER TABLE for every column, even if redundant.
+- When adding a new column, always add a new migration with ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...
+- When reviewing or updating old migrations, ensure all columns are present in both CREATE TABLE and ALTER TABLE blocks.
