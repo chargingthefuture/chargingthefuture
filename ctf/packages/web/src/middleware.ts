@@ -8,15 +8,17 @@ import { NextResponse } from 'next/server';
 
 // Always export a top-level middleware function. The runtime behavior (no-op vs Clerk middleware) is chosen at runtime
 // based on NEXT_PUBLIC_DISABLE_AUTH. Exporting conditionally caused compilation errors because exports must be top-level.
+
+import type { NextRequest } from 'next/server';
 const actualMiddleware = (process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true')
-  ? (req: any) => NextResponse.next()
-  : clerkMiddleware((auth, req) => {
+  ? (req: NextRequest) => NextResponse.next()
+  : clerkMiddleware((auth, req: NextRequest) => {
       if (isProtectedWebRoute(req)) {
         auth().protect();
       }
     }, clerkRuntimeOptions);
 
-export default function middleware(req: any) {
+export default function middleware(req: import('next/server').NextRequest) {
   return actualMiddleware(req);
 }
 
