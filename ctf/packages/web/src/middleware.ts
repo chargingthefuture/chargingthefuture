@@ -18,8 +18,9 @@ const actualMiddleware = (process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true')
       }
     }, clerkRuntimeOptions);
 
-export default function middleware(req: import('next/server').NextRequest) {
-  return actualMiddleware(req);
+
+export default function middleware(req: import('next/server').NextRequest, event: any) {
+  return actualMiddleware(req, event);
 }
 
 export const config = {
