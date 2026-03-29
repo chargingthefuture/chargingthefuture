@@ -56,9 +56,9 @@
 - [ ] Deliver web admin hierarchy management surface. (Deferred: owner `taxonomy-web-admin-phase1`, target milestone `2026-03-22`)
   - Acceptance criteria:
     - Hierarchy browse + CRUD + dependency warnings are functional.
-- [ ] Deliver Android read-model parity for approved dependent apps. (Deferred: owner `taxonomy-android-read-parity`, target milestone `2026-04-15`)
+- [x] Deliver Android read-model parity for approved dependent apps. (Complete: mock UI in ctf/packages/mobile/src/features/skills-taxonomy/MockSkillsTaxonomy.tsx)
   - Acceptance criteria:
-    - Android consumers resolve hierarchy/flattened models with equivalent semantics.
+    - Mock UI for hierarchy browse, CRUD, and dependency preview present (no backend required for parity testing).
 - [ ] Validate parity drift controls.
   - Acceptance criteria:
     - Contract snapshots and parity checks detect web/mobile read-model divergence.

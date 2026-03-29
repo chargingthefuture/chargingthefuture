@@ -29,6 +29,7 @@ Client-side mocks added (ctf/packages/mobile/src/features)
 - mood
 - socketrelay
 - trusttransport
+- skills-taxonomy (added: MockSkillsTaxonomy.tsx)
 
 What is implemented
 
