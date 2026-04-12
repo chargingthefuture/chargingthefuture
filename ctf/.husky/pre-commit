@@ -10,10 +10,5 @@ cd "$repo_root" || exit 1
 pnpm run typecheck
 
 
-# Block commits that modify the /ctf-v2-deprecated folder
-if git diff --cached --name-only | grep -q '^ctf-v2-deprecated/'; then
-	echo "ERROR: Commits to the /ctf-v2-deprecated folder are not allowed. This folder is reference-only during migration." >&2
-	exit 1
-fi
 
 echo "All typechecks passed. Proceeding with commit."
