@@ -388,19 +388,13 @@ export function registerChymeRoutes(app: Express) {
       code = code.replace(/[^A-F0-9]/g, '');
     }
     
-    // Enforce exact 8-character length - truncate if longer, reject if invalid format
+    // Enforce exact 8-character length - reject if not exactly 8 hex characters
     if (!code || code.length === 0) {
       logWarning(`[Mobile Auth] Empty or null code received`, req);
       return res.status(400).json({ message: "Invalid code format" });
     }
     
-    // Truncate if longer than 8 characters (defensive)
-    if (code.length > 8) {
-      logWarning(`[Mobile Auth] Code too long (${code.length} chars), truncating to 8. Original: ${code.substring(0, 20)}...`, req);
-      code = code.substring(0, 8);
-    }
-    
-    // Validate format: must be exactly 8 alphanumeric characters
+    // Validate format: must be exactly 8 uppercase hex characters (input is normalized to uppercase above)
     if (code.length !== 8 || !/^[A-F0-9]{8}$/.test(code)) {
       logWarning(`[Mobile Auth] Invalid code format. Length: ${code.length}, Code: ${code.substring(0, 8)}`, req);
       return res.status(400).json({ message: "Invalid code format" });

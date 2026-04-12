@@ -274,8 +274,12 @@ export function registerSupportMatchRoutes(app: Express) {
   app.put('/api/supportmatch/admin/partnerships/:id/status', isAuthenticated, isAdmin, validateCsrfToken, asyncHandler(async (req: any, res) => {
     const userId = getUserId(req);
     const { status } = req.body;
+    const validStatuses = ['pending', 'active', 'ended', 'paused'];
     if (!status) {
       return res.status(400).json({ message: "Status is required" });
+    }
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
     }
     const partnership = await withDatabaseErrorHandling(
       () => storage.updatePartnershipStatus(req.params.id, status),

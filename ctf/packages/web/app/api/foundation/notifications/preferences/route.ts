@@ -51,7 +51,8 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({ ok: true, ...preferences }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Notification preferences update failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Notification preferences unavailable.' },
       { status: 503 },

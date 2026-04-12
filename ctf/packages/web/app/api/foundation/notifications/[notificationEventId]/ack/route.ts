@@ -46,7 +46,8 @@ export async function POST(request: Request, context: { params: Promise<{ notifi
     });
 
     return NextResponse.json({ ok: true, notification: updated }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Notification ack failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Notification ack unavailable.' },
       { status: 503 },

@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
     const unreadOnly = request.nextUrl.searchParams.get('unreadOnly') === 'true';
     const notifications = await listNotificationEvents(gate.auth.userId, unreadOnly);
     return NextResponse.json({ ok: true, items: notifications }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Notifications list failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Notifications unavailable.' },
       { status: 503 },

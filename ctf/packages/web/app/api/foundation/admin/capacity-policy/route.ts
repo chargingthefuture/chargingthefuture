@@ -12,7 +12,8 @@ export async function GET() {
   try {
     const policy = await getCapacityPolicy();
     return NextResponse.json({ ok: true, policy }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Capacity policy read failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy unavailable.' },
       { status: 503 },
@@ -97,7 +98,8 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({ ok: true, policy }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Capacity policy update failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy update unavailable.' },
       { status: 503 },

@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ ok: true, ...history }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Connection history list failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Connection history unavailable.' },
       { status: 503 },

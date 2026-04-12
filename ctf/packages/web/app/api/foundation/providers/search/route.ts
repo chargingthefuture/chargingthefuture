@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ ok: true, ...providers }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Provider search failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Provider search unavailable.' },
       { status: 503 },

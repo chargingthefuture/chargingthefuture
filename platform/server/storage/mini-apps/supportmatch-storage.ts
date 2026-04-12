@@ -236,8 +236,8 @@ export class SupportMatchStorage {
     
     const matchedUserIds = new Set<string>();
     activePartnerships.forEach(p => {
-      matchedUserIds.add(p.user1Id);
-      matchedUserIds.add(p.user2Id);
+      if (p.user1Id) matchedUserIds.add(p.user1Id);
+      if (p.user2Id) matchedUserIds.add(p.user2Id);
     });
     
     // Filter to only unmatched users

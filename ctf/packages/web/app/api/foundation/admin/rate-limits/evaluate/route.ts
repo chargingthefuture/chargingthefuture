@@ -50,7 +50,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, ...evaluation }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Foundation] Rate-limit evaluation failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Rate-limit evaluation unavailable.' },
       { status: 503 },
