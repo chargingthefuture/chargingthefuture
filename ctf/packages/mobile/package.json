@@ -4,30 +4,29 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "pnpm exec expo start",
-    "android": "pnpm exec expo start --android",
-    "ios": "pnpm exec expo start --ios",
-    "web": "pnpm exec expo start --web",
+    "start": "npx expo start",
+    "android": "npx expo start --android",
+    "ios": "npx expo start --ios",
+    "web": "npx expo start --web",
     "build": "pnpm run build:android:ci",
-    "build:android:ci": "CI=1 pnpm exec expo export --platform android --output-dir dist/android",
+    "build:android:ci": "CI=1 npx expo export --platform android --output-dir dist/android",
     "lint": "pnpm exec eslint --config eslint.config.mjs App.tsx src --max-warnings 0",
     "typecheck": "pnpm exec tsc --noEmit -p tsconfig.json",
     "test": "echo \"@ctf/mobile test ok\"",
     "check:mobile-env": "node ./scripts/check-mobile-env.mjs"
   },
   "dependencies": {
+    "@ctf/shared": "workspace:*",
     "@expo/vector-icons": "^15.1.1",
     "expo-constants": "^55.0.7",
     "expo-status-bar": "^55.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.84.0",
-    "react-native-web": "^0.21.2",
-    "@ctf/shared": "workspace:*"
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "eslint-plugin-react-hooks": "^7.0.1",
-    "expo": "^55.0.4",
-    "expo-cli": "^6.3.10"
+    "expo": "^55.0.4"
   }
 }

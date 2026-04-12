@@ -1,5 +1,0 @@
---- waitlist-landing-page/.agents/skills/vercel-cli-with-tokens/SKILL.md
-+++ waitlist-landing-page/.agents/skills/vercel-cli-with-tokens/SKILL.md
-@@ -225 +225 @@
--- `.vercel/project.json` â from `vercel link`. Contains `projectId` and `orgId`.
-+

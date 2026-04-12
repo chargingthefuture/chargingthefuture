@@ -4,3 +4,15 @@
 [submodule "wiki"]
 	path = wiki
 	url = https://github.com/chargingthefuture/chargingthefuture.wiki.git
+[submodule "ctf-v2-deprecated"]
+	path = ctf-v2-deprecated
+	url = https://github.com/chargingthefuture/ctf-v2-deprecated.git
+[submodule "wiki-site"]
+	path = wiki-site
+	url = https://github.com/chargingthefuture/wiki-site.git
+[submodule "waitlist-landing-page"]
+	path = waitlist-landing-page
+	url = https://github.com/chargingthefuture/waitlist-landing-page.git
+[submodule "landing-page"]
+	path = landing-page
+	url = https://github.com/chargingthefuture/landing-page.git
