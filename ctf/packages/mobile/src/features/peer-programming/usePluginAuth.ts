@@ -2,7 +2,7 @@
 // Uses the canonical shared logic for plugin auth
 
 import { useEffect, useState } from 'react';
-import { authenticatePluginUser, PluginAuthContext, PluginAuthResult } from '@ctf/shared';
+// import { authenticatePluginUser, PluginAuthContext, PluginAuthResult } from '@ctf/shared';
 
 export function usePluginAuth(provider: PluginAuthContext['provider'], token?: string) {
   const [auth, setAuth] = useState<PluginAuthResult | null>(null);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { authenticatePluginUser, type AuthProvider as SharedAuthProvider } from '@ctf/shared';
+// import { authenticatePluginUser, type AuthProvider as SharedAuthProvider } from '@ctf/shared';
 
 export interface AuthUser {
   id: string;
