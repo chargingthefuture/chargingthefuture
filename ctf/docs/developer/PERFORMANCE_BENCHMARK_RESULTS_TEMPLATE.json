@@ -73,6 +73,21 @@
       "metrics": {
         "coldStartMsP50": null,
         "coldStartMsP75": null,
+        "jankyFramePercentP75": null,
+        "totalBytes": null,
+        "jsBundleBytes": null
+      },
+      "notes": ""
+    },
+    {
+      "scenarioId": "android-native-warm-start",
+      "surface": "android-native",
+      "device": "low-end android",
+      "browserOrRuntime": "expo-export-artifact",
+      "buildSha": "",
+      "date": "",
+      "runCount": 20,
+      "metrics": {
         "warmStartMsP50": null,
         "warmStartMsP75": null,
         "jankyFramePercentP75": null,
