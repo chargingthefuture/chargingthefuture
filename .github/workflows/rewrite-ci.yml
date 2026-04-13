@@ -336,6 +336,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check lockfile/package.json sync
+        run: bash ctf/scripts/check-lockfile-sync.sh
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
