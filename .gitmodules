@@ -1,6 +1,3 @@
-[submodule "design/mockups"]
-	path = design/mockups
-	url = https://github.com/chargingthefuture/mockups.git
 [submodule "wiki"]
 	path = wiki
 	url = https://github.com/chargingthefuture/chargingthefuture.wiki.git
