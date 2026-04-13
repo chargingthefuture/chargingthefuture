@@ -6,6 +6,16 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
 -- Combined schema.sql for CTF (rewrite, no /platform)
 
 BEGIN;
+-- === clicklog_incidents ===
+CREATE TABLE IF NOT EXISTS clicklog_incidents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, created_at)
+);
+CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(user_id);
+CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === weekly_performance_weeks ===

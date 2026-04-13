@@ -134,6 +134,12 @@ export const pluginCatalog: PluginCatalogItem[] = [
     kind: 'plugin',
     summary: 'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.',
   },
+  {
+    id: 'clicklog',
+    name: 'ClickLog',
+    kind: 'plugin',
+    summary: 'Incident counter and logging with optional location/notes, for user event tracking and history.',
+  },
 ];
 
 export const baselinePluginCount = pluginCatalog.filter((plugin) => plugin.kind === 'baseline').length;

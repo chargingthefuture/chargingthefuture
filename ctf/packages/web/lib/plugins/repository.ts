@@ -171,6 +171,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 170,
     isVisible: true,
   },
+  {
+    slug: 'clicklog',
+    name: 'ClickLog',
+    summary: 'Incident counter and logging with optional location/notes, for user event tracking and history.',
+    availabilityState: 'implemented_shell',
+    navRank: 180,
+    isVisible: true,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {

@@ -1,0 +1,13 @@
+auditEvents:
+  - eventId: clicklog.incident.create
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - eventId: clicklog.incident.list
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - eventId: clicklog.incident.delete
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user

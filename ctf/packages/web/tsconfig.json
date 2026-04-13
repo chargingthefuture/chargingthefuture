@@ -33,7 +33,6 @@
     "noEmit": true,
     "isolatedModules": true,
     "types": [],
-    "types": []
   },
   "include": [
     "next-env.d.ts",

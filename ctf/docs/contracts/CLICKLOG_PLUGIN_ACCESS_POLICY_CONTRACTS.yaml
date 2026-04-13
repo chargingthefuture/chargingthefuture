@@ -1,0 +1,19 @@
+policies:
+  - command: clicklog.incident.create
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - command: clicklog.incident.list
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - command: clicklog.incident.delete
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+    consentRequirements: []

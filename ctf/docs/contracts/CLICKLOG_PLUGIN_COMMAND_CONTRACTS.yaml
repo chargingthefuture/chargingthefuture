@@ -1,0 +1,76 @@
+commands:
+  - id: clicklog.incident.create
+    inputSchema:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/definitions/IncidentMetadata'
+      # metadata is not required, matches implementation
+    outputSchema:
+      $ref: '#/definitions/ClicklogIncident'
+    dataAccess:
+      - clicklog_incidents (insert)
+    purpose: Log a new incident for the authenticated user
+    retentionClass: user_event
+  - id: clicklog.incident.list
+    inputSchema:
+      type: object
+      properties:
+        userId:
+          type: string
+      required: [userId]
+    outputSchema:
+      type: object
+      properties:
+        incidents:
+          type: array
+          items:
+            $ref: '#/definitions/ClicklogIncident'
+        count:
+          type: integer
+    dataAccess:
+      - clicklog_incidents (select)
+    purpose: List incidents for a user
+    retentionClass: user_event
+  - id: clicklog.incident.delete
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required: [id]
+    outputSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+    dataAccess:
+      - clicklog_incidents (delete)
+    purpose: Delete an incident by id
+    retentionClass: user_event
+
+definitions:
+  IncidentMetadata:
+    type: object
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+      notes:
+        type: string
+    additionalProperties: false
+  ClicklogIncident:
+    type: object
+    properties:
+      id:
+        type: string
+      user_id:
+        type:
+          - string
+          - 'null'
+      metadata:
+        $ref: '#/definitions/IncidentMetadata'
+      created_at:
+        type: string
+    required: [id, user_id, metadata, created_at]

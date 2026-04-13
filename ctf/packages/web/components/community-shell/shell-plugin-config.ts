@@ -22,6 +22,7 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   'feed-announcements': { emoji: '📢', color: '#FB923C', bg: '#1c0e03' },
   'skills-taxonomy': { emoji: '🧩', color: '#10B981', bg: '#041a0f' },
   'weekly-performance': { emoji: '📊', color: '#38BDF8', bg: '#01162e' },
+  clicklog: { emoji: '📍', color: '#6366F1', bg: '#f5f5fa' },
 };
 
 const FALLBACK: PluginVisuals = { emoji: '🔌', color: '#9CA3AF', bg: '#1a1a2e' };

@@ -1,3 +1,4 @@
+// ...existing code...
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { canonicalizePluginSlug, getPluginBySlug } from 'lib/plugins/repository';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
@@ -16,6 +17,7 @@ import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
 import { TrustTransportShell } from '@/components/trusttransport/trusttransport-shell';
 import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
+import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -155,6 +157,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
         requestedPluginSlug={selectedPlugin.slug}
       />
     );
+  }
+
+  if (selectedPlugin.slug === 'clicklog') {
+    return <ClicklogShell userId={decision.userId} />;
   }
 
   if (selectedPlugin.slug === 'chyme') {

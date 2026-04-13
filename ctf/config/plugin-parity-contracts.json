@@ -108,6 +108,12 @@
       "mobileFeatureDirs": ["levelup"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
+    },
+    {
+      "slug": "clicklog",
+      "mobileFeatureDirs": ["clicklog"],
+      "requiresMobileSurface": true,
+      "requiresExplicitWebShell": true
     }
   ]
 }

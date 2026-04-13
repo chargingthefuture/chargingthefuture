@@ -10,6 +10,7 @@ export type RequestIdentity = {
   userId: string | null;
   username: string | null;
   role: string | null;
+  isAdmin: boolean;
   isApproved: boolean;
   unlockAccessTier: UnlockAccessTier | null;
 };
@@ -102,6 +103,7 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
     userId: isAuthenticated ? authResult.userId || userId : null,
     username: isAuthenticated ? username : null,
     role: isAuthenticated ? role : null,
+    isAdmin: isAuthenticated ? role === 'admin' : false,
     isApproved: isAuthenticated ? isApproved : false,
     unlockAccessTier: isAuthenticated ? unlockAccessTier : null,
   };
