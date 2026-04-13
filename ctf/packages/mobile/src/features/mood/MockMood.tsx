@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Button, ActivityIndicator } from 'react-native';
-// import { useMoodEligibility, useSubmitMoodCheck } from '@ctf/shared';
+import { useMoodEligibility, useSubmitMoodCheck } from '@ctf/shared';
 
 // TODO: Replace with real clientId from auth context
 
