@@ -27,5 +27,12 @@
       "label": "Expo DevTools",
       "onAutoForward": "notify"
     }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "coderabbit.coderabbit-vscode"
+      ]
+    }
   }
 }
