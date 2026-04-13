@@ -3,12 +3,15 @@ import { resolveRequestIdentity } from 'lib/auth/request-identity';
 import { deleteIncident, getIncidentById } from 'lib/clicklog/repository';
 import { canDeleteIncident } from 'lib/clicklog/policy';
 
-export default async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const identity = await resolveRequestIdentity();
   if (!identity.userId) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
-  const { id } = await params;
+  const { id } = await context.params;
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
+  }
   // Fetch the incident directly by id
   const incident = await getIncidentById(id);
   if (!incident) {
