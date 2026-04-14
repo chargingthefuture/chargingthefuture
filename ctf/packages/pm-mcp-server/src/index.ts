@@ -1,9 +1,14 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { Server, ToolRequest } from './server-types';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { Tool, TextContent } from '@modelcontextprotocol/sdk/types.js';
 import { initializeDb, closeDb } from './db.js';
 import * as feedbackTools from './tools/feedback.js';
 import * as implementationTools from './tools/implementation.js';
+
+type ToolRequest = {
+  name: string;
+  arguments: Record<string, any>;
+};
 
 const server = new Server({
   name: 'pm-mcp-server',

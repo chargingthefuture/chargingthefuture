@@ -208,7 +208,8 @@ const tools = [
     },
 ];
 // Register tools
-server.setRequestHandler(CallToolRequest, async (request) => {
+// Use the correct string key for the handler registration
+server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
     try {
         let result;
@@ -263,7 +264,8 @@ server.setRequestHandler(CallToolRequest, async (request) => {
     }
 });
 // List tools
-server.setRequestHandler({ method: 'tools/list' }, async () => {
+// Use the correct string key for the handler registration
+server.setRequestHandler('tools/list', async () => {
     return { tools };
 });
 async function main() {
