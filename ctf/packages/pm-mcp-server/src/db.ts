@@ -24,7 +24,8 @@ export async function initializeDb(): Promise<void> {
   }
 }
 
-export function getClient(): typeof client {
+
+export function getClient(): InstanceType<typeof Client> {
   if (!client) {
     throw new Error('Database not initialized. Call initializeDb() first.');
   }

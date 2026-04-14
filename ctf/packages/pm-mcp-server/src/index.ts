@@ -1,6 +1,6 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequest, Tool, TextContent } from '@modelcontextprotocol/sdk/types.js';
+import { Server, ToolRequest } from './server-types';
+import { Tool, TextContent } from '@modelcontextprotocol/sdk/types.js';
 import { initializeDb, closeDb } from './db.js';
 import * as feedbackTools from './tools/feedback.js';
 import * as implementationTools from './tools/implementation.js';
@@ -212,7 +212,9 @@ const tools: Tool[] = [
 ];
 
 // Register tools
-server.setRequestHandler(CallToolRequest, async (request) => {
+
+// Use the correct string key for the handler registration
+server.setRequestHandler('tools/call', async (request: { params: ToolRequest }) => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -318,7 +320,9 @@ server.setRequestHandler(CallToolRequest, async (request) => {
 });
 
 // List tools
-server.setRequestHandler({ method: 'tools/list' }, async () => {
+
+// Use the correct string key for the handler registration
+server.setRequestHandler('tools/list', async () => {
   return { tools };
 });
 
