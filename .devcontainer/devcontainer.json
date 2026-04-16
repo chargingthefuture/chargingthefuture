@@ -31,7 +31,8 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "coderabbit.coderabbit-vscode"
+        "coderabbit.coderabbit-vscode",
+        "smallcloud.codify"
       ]
     }
   }
