@@ -7,19 +7,7 @@
   "module": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "dependencies": {
-    "@expo/vector-icons": "^15.1.1",
-    "@react-navigation/bottom-tabs": "^7.15.9",
-    "@react-navigation/native": "^7.2.2",
-    "@types/expo": "^33.0.3",
-    "@types/react-native": "^0.73.0",
-    "@types/react-navigation": "^3.4.0",
-    "expo-haptics": "^55.0.14",
-    "expo-location": "^55.1.8",
     "react": "^19.1.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.84.0",
-    "react-native-config": "^1.6.1",
-    "react-native-vector-icons": "^10.3.0",
     "stream-chat": "^8.60.0"
   },
   "scripts": {
@@ -28,7 +16,5 @@
     "typecheck": "pnpm exec tsc --noEmit -p tsconfig.json",
     "test": "echo \"@ctf/shared test ok\""
   },
-  "devDependencies": {
-    "@types/react": "^19.0.0"
-  }
+  "devDependencies": {}
 }

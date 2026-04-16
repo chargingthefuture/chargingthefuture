@@ -209,52 +209,13 @@ importers:
 
   packages/shared:
     dependencies:
-      '@expo/vector-icons':
-        specifier: ^15.1.1
-        version: 15.1.1(expo-font@55.0.6(expo@55.0.14)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
-      '@react-navigation/bottom-tabs':
-        specifier: ^7.15.9
-        version: 7.15.9(@react-navigation/native@7.2.2(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5))(react-native-safe-area-context@5.7.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5))(react-native-screens@4.24.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
-      '@react-navigation/native':
-        specifier: ^7.2.2
-        version: 7.2.2(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
-      '@types/expo':
-        specifier: ^33.0.3
-        version: 33.0.3(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(react-dom@19.0.0(react@19.2.5))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)(typescript@5.9.3)
-      '@types/react-native':
-        specifier: ^0.73.0
-        version: 0.73.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5)
-      '@types/react-navigation':
-        specifier: ^3.4.0
-        version: 3.4.0
-      expo-haptics:
-        specifier: ^55.0.14
-        version: 55.0.14(expo@55.0.14)
-      expo-location:
-        specifier: ^55.1.8
-        version: 55.1.8(expo@55.0.14)(typescript@5.9.3)
       react:
         specifier: ^19.1.0
         version: 19.2.5
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.2.5)
-      react-native:
-        specifier: 0.81.5
-        version: 0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5)
-      react-native-config:
-        specifier: ^1.6.1
-        version: 1.6.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
-      react-native-vector-icons:
-        specifier: ^10.3.0
-        version: 10.3.0
       stream-chat:
         specifier: ^8.60.0
         version: 8.60.0
-    devDependencies:
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.14
+    devDependencies: {}
 
   packages/web:
     dependencies:
