@@ -16,5 +16,8 @@
     "typecheck": "pnpm exec tsc --noEmit -p tsconfig.json",
     "test": "echo \"@ctf/shared test ok\""
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
 }
