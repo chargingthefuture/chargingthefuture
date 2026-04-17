@@ -4,14 +4,8 @@ chyme-android/sentry-wizard
 node_modules/
 npm-debug.log*
 yarn.lock
-pnpm-lock.yaml
-# package-lock.json
-!platform/package-lock.json
-!ctf/pnpm-lock.yaml
-!wiki-blog/pnpm-lock.yaml
+package-lock.json
 
-# Platform build output
-platform/dist/
 
 # ctf rewrite build artifacts and local env
 ctf/packages/web/.next/
@@ -28,5 +22,3 @@ ctf/packages/mobile/.env.local
 
 # Local AI prompt scratch notes
 .ai/
-
-
