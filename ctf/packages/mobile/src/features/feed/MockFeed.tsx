@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { mobileFeedItems } from './feedDemoData';
+import { mobileFeedItems } from '../../mocks/feedDemoData';
 
 type Filter = 'all' | 'announcement' | 'question' | 'community';
 

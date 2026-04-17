@@ -39,7 +39,7 @@ export async function closeDb(): Promise<void> {
   }
 }
 
-export async function query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
+export async function query<T extends object = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
   const c = getClient();
   return c.query(sql, params);
 }

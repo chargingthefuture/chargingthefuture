@@ -5,7 +5,7 @@ import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { ShellCurrentUser } from './shell-types';
 import { getPluginVisuals } from './shell-plugin-config';
-import { TrustRightRailCard } from '../trust/TrustRightRailCard';
+import { TrustRightRailCard } from '../shared/trust/TrustRightRailCard';
 import styles from './community-shell.module.css';
 
 type ShellRightRailProps = {

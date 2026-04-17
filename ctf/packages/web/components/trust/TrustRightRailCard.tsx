@@ -1,15 +1,1 @@
-import React from "react";
-import { TrustEvidencePanel } from "./TrustEvidencePanel";
-import type { TrustUserExtension } from "../../lib/trust/types";
-
-export interface TrustRightRailCardProps {
-  trust: TrustUserExtension;
-}
-
-export const TrustRightRailCard: React.FC<TrustRightRailCardProps> = ({ trust }) => {
-  return (
-    <div className="mb-4">
-      <TrustEvidencePanel trust={trust} compact />
-    </div>
-  );
-};
+export { TrustRightRailCard, type TrustRightRailCardProps } from '../shared/trust/TrustRightRailCard';

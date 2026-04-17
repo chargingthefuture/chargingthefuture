@@ -1,10 +1,6 @@
 
 import { query } from '../db.js';
-import { ImplementationQueueRow } from '../types.js';
-
-interface CountRow {
-  count: string;
-}
+import { ImplementationQueueRow, CountRow } from '../types.js';
 
 export async function getImplementationQueue(
   status?: string,
@@ -96,11 +92,16 @@ export async function setImplementationStatus(
 
   sql += ` WHERE id = $1 RETURNING id as implementation_id, implementation_status as status, completed_at`;
 
-  const result = await query(sql, params);
+  interface ImplResultRow {
+    implementation_id: string;
+    status: string;
+    completed_at?: string;
+  }
+  const result = await query<ImplResultRow>(sql, params);
   const implementation = result.rows[0];
 
   // Get feedback_id
-  const feedbackResult = await query(
+  const feedbackResult = await query<{ feedback_id: string }>(
     'SELECT feedback_id FROM implementation_queue WHERE id = $1',
     [implementationId]
   );

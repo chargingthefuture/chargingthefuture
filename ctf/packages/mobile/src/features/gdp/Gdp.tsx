@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Button } from 'react-native';
-import { useAuth } from '../trusttransport/auth-context';
+import { useAuth } from '../../auth/auth-context';
 
 // Types matching backend contract
 interface GdpMetric {

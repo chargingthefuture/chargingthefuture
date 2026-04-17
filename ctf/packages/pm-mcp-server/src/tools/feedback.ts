@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { FeedbackItem, ApprovalQueueRow } from '../types.js';
+import { FeedbackItem, ApprovalQueueRow, CountRow } from '../types.js';
 
 export async function listFeedback(
   status?: string,
@@ -43,7 +43,7 @@ export async function listFeedback(
   sql += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   params.push(pageSize, offset);
 
-  const result = await query(sql, params);
+  const result = await query<FeedbackItem>(sql, params);
 
   // Get total count
   let countSql = 'SELECT COUNT(*) as count FROM feedback_items WHERE 1=1';
@@ -74,7 +74,7 @@ export async function listFeedback(
     countParamIndex++;
   }
 
-  const countResult = await query(countSql, countParams);
+  const countResult = await query<CountRow>(countSql, countParams);
   const totalCount = parseInt(countResult.rows[0].count, 10);
 
   return {
@@ -114,7 +114,7 @@ export async function triageFeedback(
   sql += ` WHERE id = $${paramIndex} RETURNING *`;
   params.push(feedbackId);
 
-  const result = await query(sql, params);
+  const result = await query<FeedbackItem>(sql, params);
   return result.rows[0];
 }
 
@@ -125,6 +125,10 @@ export async function createInventoryMatch(
   suggestedUpdates: Record<string, any>,
   matcherReasoning?: string
 ): Promise<{ matchId: string; feedbackId: string }> {
+  interface MatchRow {
+    match_id: string;
+    feedback_id: string;
+  }
   const sql = `
     INSERT INTO feedback_inventory_matches 
       (feedback_id, inventory_file_path, match_confidence, suggested_updates, matcher_reasoning)
@@ -132,7 +136,7 @@ export async function createInventoryMatch(
     RETURNING id as match_id, feedback_id
   `;
 
-  const result = await query(sql, [
+  const result = await query<MatchRow>(sql, [
     feedbackId,
     inventoryFilePath,
     matchConfidence,
@@ -153,7 +157,7 @@ export async function createInventoryMatch(
     [feedbackId, matchId]
   );
 
-  return result.rows[0];
+  return { matchId: result.rows[0].match_id, feedbackId: result.rows[0].feedback_id };
 }
 
 export async function getApprovalQueue(
@@ -199,7 +203,7 @@ export async function getApprovalQueue(
     countParamIndex++;
   }
 
-  const countResult = await query(countSql, countParams);
+  const countResult = await query<CountRow>(countSql, countParams);
   const totalCount = parseInt(countResult.rows[0].count, 10);
 
   return {
@@ -214,6 +218,11 @@ export async function approveMatch(
   approverFeedback?: string,
   approvedArtifactChanges?: Record<string, any>
 ): Promise<{ approvalId: string; status: string; approvedAt: string }> {
+  interface ApprovalRow {
+    approval_id: string;
+    status: string;
+    approved_at: string;
+  }
   // Update approval queue
   const sql = `
     UPDATE approval_queue 
@@ -223,24 +232,23 @@ export async function approveMatch(
     RETURNING id as approval_id, status, approved_at
   `;
 
-  const result = await query(sql, [
+  const result = await query<ApprovalRow>(sql, [
     approvalId,
     approverId,
     approverFeedback,
     approvedArtifactChanges ? JSON.stringify(approvedArtifactChanges) : null,
   ]);
-
   const approval = result.rows[0];
 
   // Get feedback_id and create implementation queue entry
-  const feedbackResult = await query(
+  const feedbackResult = await query<{ feedback_id: string }>(
     'SELECT feedback_id FROM approval_queue WHERE id = $1',
     [approvalId]
   );
   const feedbackId = feedbackResult.rows[0].feedback_id;
 
   // Get inventory file path
-  const matchResult = await query(
+  const matchResult = await query<{ inventory_file_path: string }>(
     `SELECT inventory_file_path FROM feedback_inventory_matches 
      WHERE id = (SELECT matcher_id FROM approval_queue WHERE id = $1)`,
     [approvalId]
@@ -266,14 +274,21 @@ export async function approveMatch(
     [feedbackId]
   );
 
-  return approval;
+  return {
+    approvalId: approval.approval_id,
+    status: approval.status,
+    approvedAt: approval.approved_at,
+  };
 }
 
-export async function rejectMatch(
   approvalId: string,
   approverId: string,
   rejectionReason: string
 ): Promise<{ approvalId: string; status: string }> {
+  interface RejectRow {
+    approval_id: string;
+    status: string;
+  }
   const sql = `
     UPDATE approval_queue 
     SET status = 'rejected', approver_id = $2, approver_feedback = $3
@@ -281,10 +296,10 @@ export async function rejectMatch(
     RETURNING id as approval_id, status
   `;
 
-  const result = await query(sql, [approvalId, approverId, rejectionReason]);
+  const result = await query<RejectRow>(sql, [approvalId, approverId, rejectionReason]);
 
   // Mark feedback as dismissed
-  const feedbackResult = await query(
+  const feedbackResult = await query<{ feedback_id: string }>(
     'SELECT feedback_id FROM approval_queue WHERE id = $1',
     [approvalId]
   );
@@ -295,5 +310,8 @@ export async function rejectMatch(
     [feedbackId]
   );
 
-  return result.rows[0];
+  return {
+    approvalId: result.rows[0].approval_id,
+    status: result.rows[0].status,
+  };
 }

@@ -1,7 +1,7 @@
 # External Link Handling Feature - Implementation Summary
 
 ## Overview
-Implemented the `useExternalLink` hook and UI components in `/ctf/packages/web` to mirror the redirect detection feature from `/platform`. This ensures proper handling of internal vs. external URLs, including support for `beta.chargingthefuture.com`.
+Implemented the `useExternalLink` hook and UI components in `/ctf/packages/web` to mirror the redirect detection feature from `/ctf-v2-deprecated`. This ensures proper handling of internal vs. external URLs, including support for `beta.chargingthefuture.com`.
 
 ## Files Created
 
@@ -67,9 +67,9 @@ export function MyComponent() {
 ## Domain Support
 
 ### beta.chargingthefuture.com
-When deployed to `https://beta.chargingthefuture.com`:
-- Links to `https://beta.chargingthefuture.com/page` → Internal (same origin)
-- Links to `https://beta.chargingthefuture.com:3000/page` → External (different port)
+When deployed to `https://the-comic.com`:
+- Links to `https://the-comic.com/page` → Internal (same origin)
+- Links to `https://the-comic.com:3000/page` → External (different port)
 - Links to relative paths `/page` → Internal
 
 ### Production Domain

@@ -36,7 +36,7 @@ import type {
   FeedQuestionInput,
   FeedTimelineItem,
   MembershipEventType,
-} from './types';
+} from 'lib/shared/feed-primitives/types';
 
 type FeedConfigRow = {
   render_mode: 'card_only' | 'card_toast';

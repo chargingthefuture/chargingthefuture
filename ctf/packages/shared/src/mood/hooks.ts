@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback } from 'react';
-import { submitMoodCheck, fetchMoodEligibility, MoodCheck, MoodEligibility } from '@ctf/shared';
+import { submitMoodCheck, fetchMoodEligibility, MoodCheck, MoodEligibility } from './index';
 
 export function useMoodEligibility(clientId: string) {
   const [eligibility, setEligibility] = useState<MoodEligibility | null>(null);

@@ -27,7 +27,7 @@ import {
   publishAnnouncement,
   updateAnnouncementDraft,
 } from 'lib/feed/repository';
-import type { Announcement, AnnouncementDraftInput, FeedTimelineItem } from 'lib/feed/types';
+import type { Announcement, AnnouncementDraftInput, FeedTimelineItem } from 'lib/shared/feed-primitives/types';
 
 type CountRow = { total: string };
 

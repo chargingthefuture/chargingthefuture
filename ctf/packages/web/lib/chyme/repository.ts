@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { createTransfer } from 'lib/service-credits/repository';
+import { createTransfer } from 'lib/shared/service-credits/createTransfer';
 import type { ChymeServiceCreditsTransaction } from './types';
 import { sendChymeStreamMessage } from './stream';
 

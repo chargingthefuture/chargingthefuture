@@ -1,3 +1,8 @@
+
+// Centralized CountRow type for all DB count queries
+export interface CountRow {
+  count: string;
+}
 import type { JSONSchema7 } from './json-schema';
 // ApprovalQueueRow: all approval_queue columns plus joined fields
 export interface ApprovalQueueRow {

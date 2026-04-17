@@ -1,6 +1,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { Tool, TextContent } from '@modelcontextprotocol/sdk/types.js';
+import { Tool, TextContent, ServerCapabilities } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { initializeDb, closeDb } from './db.js';
 import * as feedbackTools from './tools/feedback.js';
 import * as implementationTools from './tools/implementation.js';
@@ -13,6 +14,9 @@ type ToolRequest = {
 const server = new Server({
   name: 'pm-mcp-server',
   version: '1.0.0',
+  capabilities: {
+    tools: {},
+  } satisfies ServerCapabilities['capabilities'],
 });
 
 // Define MCP Tools
@@ -219,7 +223,7 @@ const tools: Tool[] = [
 // Register tools
 
 // Use the correct string key for the handler registration
-server.setRequestHandler('tools/call', async (request: { params: ToolRequest }) => {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -245,8 +249,7 @@ server.setRequestHandler('tools/call', async (request: { params: ToolRequest }) 
         );
         break;
 
-      case 'triageFeedback':
-        result = await feedbackTools.triageFeedback(
+      server.setRequestHandler(ListToolsRequestSchema, async () => {
           args.feedbackId,
           args.priority,
           args.category,

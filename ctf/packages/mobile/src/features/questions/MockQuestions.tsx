@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { mobileFeedItems } from '../feed/feedDemoData';
+import { mobileFeedItems } from '../../mocks/feedDemoData';
 
 const questions = mobileFeedItems.filter((item) => item.channel === 'question');
 

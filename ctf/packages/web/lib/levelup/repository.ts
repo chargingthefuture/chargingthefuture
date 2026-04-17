@@ -4,12 +4,12 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   applyDisputeAdjustment,
   createEscrowHold,
-  createTransfer,
   getOrCreateWallet,
   mintGrant,
   refundEscrow,
   releaseEscrow,
 } from 'lib/service-credits/repository';
+import { createTransfer } from 'lib/shared/service-credits/createTransfer';
 import { LEVELUP_DEFAULT_TRAINER_SPLIT_PERCENT, LEVELUP_PLUGIN_SLUG } from 'lib/levelup/constants';
 
 function toNumber(value: string | number): number {

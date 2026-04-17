@@ -1,3 +1,23 @@
+# Intra-Package Plugin Isolation Rules
+
+- `lib/<plugin-a>/` must not import from `lib/<plugin-b>/` directly
+- `components/<plugin-a>/` must not import from `components/<plugin-b>/` directly
+- `mobile/src/features/<feature-a>/` must not import from `features/<feature-b>/` directly
+
+# Designated Shared Directories
+
+Cross-plugin shared functionality must live in:
+- `lib/shared/`
+- `components/shared/`
+- `mobile/src/mocks/`
+- `mobile/src/auth/`
+
+Legitimate shared infrastructure modules (all plugins may import):
+- `lib/db/`
+- `lib/auth/`
+- `lib/plugins/`
+
+See also: plugin modularity rules in ctf/docs/ and copilot-instructions.md
 # Monorepo & Boundary Guardian
 
 ## Purpose
