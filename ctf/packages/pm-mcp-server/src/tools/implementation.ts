@@ -1,9 +1,12 @@
-interface CountRow {
-  count: string;
-}
+
 import { query } from '../db.js';
 import { ImplementationQueueRow } from '../types.js';
 
+interface CountRow {
+  count: string;
+}
+
+export async function getImplementationQueue(
   status?: string,
   page: number = 1,
   pageSize: number = 20
