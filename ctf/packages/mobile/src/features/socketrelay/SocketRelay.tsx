@@ -1,14 +1,16 @@
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Platform } from 'react-native';
+import type { SocketRequest } from './types';
 
 const COLOR = '#F43F5E';
 
 // API endpoints (update if needed)
-const API_BASE = 'https://chargingthefuture.com/api/socketrelay';
+const API_BASE = '/api/socketrelay';
 
 export function SocketRelay() {
   const [tab, setTab] = useState<'feed' | 'post' | 'chat'>('feed');
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<SocketRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -63,11 +65,11 @@ export function SocketRelay() {
   return (
     <View style={styles.container}>
       <View style={styles.tabBar}>
-        {['feed', 'post', 'chat'].map((t) => (
-          <TouchableOpacity onPress={() => setTab(t as any)} style={[styles.tab, tab === t && styles.tabActive]}>
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t.toUpperCase()}</Text>
-          </TouchableOpacity>
-        ))}
+{['feed', 'post', 'chat'].map((t) => (
+  <TouchableOpacity key={t} onPress={() => setTab(t as 'feed' | 'post' | 'chat')} style={[styles.tab, tab === t && styles.tabActive]}>
+    <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t.toUpperCase()}</Text>
+  </TouchableOpacity>
+))}
       </View>
       {tab === 'feed' && (
         loading ? <ActivityIndicator color={COLOR} style={{ marginTop: 32 }} /> :

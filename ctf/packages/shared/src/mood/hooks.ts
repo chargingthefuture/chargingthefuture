@@ -13,8 +13,8 @@ export function useMoodEligibility(clientId: string) {
     try {
       const result = await fetchMoodEligibility(clientId);
       setEligibility(result);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -34,8 +34,8 @@ export function useSubmitMoodCheck(clientId: string) {
     try {
       const res = await submitMoodCheck(clientId, moodValue);
       setResult(res);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }

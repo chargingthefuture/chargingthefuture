@@ -223,7 +223,15 @@ server.setRequestHandler('tools/call', async (request: { params: ToolRequest }) 
   const { name, arguments: args } = request.params;
 
   try {
-    let result: any;
+    let result:
+      | Awaited<ReturnType<typeof feedbackTools.listFeedback>>
+      | Awaited<ReturnType<typeof feedbackTools.triageFeedback>>
+      | Awaited<ReturnType<typeof feedbackTools.createInventoryMatch>>
+      | Awaited<ReturnType<typeof feedbackTools.getApprovalQueue>>
+      | Awaited<ReturnType<typeof feedbackTools.approveMatch>>
+      | Awaited<ReturnType<typeof feedbackTools.rejectMatch>>
+      | Awaited<ReturnType<typeof implementationTools.getImplementationQueue>>
+      | Awaited<ReturnType<typeof implementationTools.setImplementationStatus>>;
 
     switch (name) {
       case 'listFeedback':

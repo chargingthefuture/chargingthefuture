@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { View, Text, Button, StyleSheet, Switch, Alert } from 'react-native';
 import { Trust } from '../trust';
+import type { Profile } from './types';
 
-export const DirectoryProfile = ({ profile }: { profile?: any }) => {
+export const DirectoryProfile = ({ profile }: { profile?: Profile }) => {
   const p = profile ?? { id: 'p1', name: 'Alice', title: 'Engineer', isPublic: true, description: 'Mobile-first engineer' };
   const [isPublic, setIsPublic] = useState<boolean>(p.isPublic);
 

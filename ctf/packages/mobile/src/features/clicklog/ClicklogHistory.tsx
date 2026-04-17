@@ -23,8 +23,8 @@ export function ClicklogHistory() {
     try {
       const data = await fetchIncidents();
       setIncidents(data.incidents);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -49,9 +49,10 @@ export function ClicklogHistory() {
             try {
               await deleteIncident(id);
               await refresh();
-            } catch (e: any) {
-              setError(e.message);
-              Alert.alert('Error', e.message);
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              setError(msg);
+              Alert.alert('Error', msg);
             } finally {
               setLoading(false);
             }

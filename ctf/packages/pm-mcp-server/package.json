@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "clean": "rm -rf dist node_modules",
+    "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",

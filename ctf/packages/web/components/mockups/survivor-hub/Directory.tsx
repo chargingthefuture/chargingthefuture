@@ -1,4 +1,5 @@
-/* eslint-disable */
+'/* eslint-disable */'
+import type { ChatMessage } from './types';
 'use client';
 
 import { useState } from "react";
@@ -25,7 +26,7 @@ const PROFILES = [
 
 const FILTERS = ["All", "Therapists", "Housing", "Legal", "Employment", "Finance", "Tech"];
 
-const CHAT = [
+const CHAT: ChatMessage[] = [
   { id: 1, from: "hub", text: "Directory connects you with 47,000 verified providers. Who are you looking for?" },
   { id: 2, from: "user", text: "I need a trauma therapist who accepts Service Credits" },
   { id: 3, from: "hub", text: "Found 12 verified trauma therapists accepting Service Credits within 25 miles. Maria Gonzalez is available now.", action: "View Maria's Profile" },
@@ -36,7 +37,7 @@ export function Directory() {
   const [selected, setSelected] = useState<number | null>(null);
   const [tab, setTab] = useState<"browse" | "chat">("browse");
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
 
   const send = () => {
     if (!input.trim()) return;
@@ -251,9 +252,9 @@ export function Directory() {
                     )}
                     <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
                       <div style={{ padding: "12px 16px", borderRadius: msg.from === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "user" ? `${COLOR}` : "rgba(255,255,255,0.05)", border: msg.from === "user" ? "none" : "1px solid rgba(255,255,255,0.06)", fontSize: 14, lineHeight: 1.6, color: "#E8EAF0" }}>{msg.text}</div>
-                      {(msg as any).action && (
+                      {msg.action && (
                         <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>
-                          {(msg as any).action} <ArrowUpRight size={13} />
+                          {msg.action} <ArrowUpRight size={13} />
                         </button>
                       )}
                     </div>

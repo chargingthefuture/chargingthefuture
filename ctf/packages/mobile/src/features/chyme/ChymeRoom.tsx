@@ -110,9 +110,16 @@ export const ChymeRoom = () => {
     try {
       const payload = await deleteChymeProfile(identity);
       setMessages([]);
-      setRoom((current) => current
-        ? { ...current, participants: current.participants.filter((participant: any) => participant.userId !== identity.userId) }
-        : current);
+      setRoom((current) =>
+        current
+          ? {
+              ...current,
+              participants: current.participants.filter(
+                (participant) => participant.userId !== identity.userId
+              ),
+            }
+          : current
+      );
       Alert.alert('Deleted', `Chyme data ${payload.status}`);
     } catch (err) {
       Alert.alert('Delete failed', String(err));

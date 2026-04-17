@@ -1,11 +1,13 @@
+interface CountRow {
+  count: string;
+}
 import { query } from '../db.js';
-import { ImplementationQueueItem } from '../types.js';
+import { ImplementationQueueRow } from '../types.js';
 
-export async function getImplementationQueue(
   status?: string,
   page: number = 1,
   pageSize: number = 20
-): Promise<{ items: any[]; totalCount: number }> {
+): Promise<{ items: ImplementationQueueRow[]; totalCount: number }> {
   let sql = `
     SELECT 
       iq.id, iq.approval_id, iq.feedback_id, iq.inventory_file_path,
@@ -18,7 +20,7 @@ export async function getImplementationQueue(
     JOIN approval_queue aq ON iq.approval_id = aq.id
     WHERE 1=1
   `;
-  const params: any[] = [];
+  const params: unknown[] = [];
   let paramIndex = 1;
 
   if (status) {
@@ -33,11 +35,11 @@ export async function getImplementationQueue(
   sql += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   params.push(pageSize, offset);
 
-  const result = await query(sql, params);
+  const result = await query<ImplementationQueueRow>(sql, params);
 
   // Get total count
   let countSql = 'SELECT COUNT(*) as count FROM implementation_queue WHERE 1=1';
-  const countParams: any[] = [];
+  const countParams: unknown[] = [];
   let countParamIndex = 1;
 
   if (status) {
@@ -46,7 +48,7 @@ export async function getImplementationQueue(
     countParamIndex++;
   }
 
-  const countResult = await query(countSql, countParams);
+  const countResult = await query<CountRow>(countSql, countParams);
   const totalCount = parseInt(countResult.rows[0].count, 10);
 
   return {
@@ -70,7 +72,7 @@ export async function setImplementationStatus(
     UPDATE implementation_queue 
     SET implementation_status = $2, updated_at = NOW()
   `;
-  const params: any[] = [implementationId, newStatus];
+  const params: unknown[] = [implementationId, newStatus];
   let paramIndex = 3;
 
   if (implementationAgentId) {

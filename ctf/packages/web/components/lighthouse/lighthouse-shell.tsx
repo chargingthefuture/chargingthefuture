@@ -27,9 +27,37 @@ type Profile = {
   desiredCountry?: string;
   updatedAtIso?: string;
 };
-type Property = any;
-type Match = any;
-type Announcement = any;
+interface Property {
+  id: string;
+  img?: string;
+  title: string;
+  city: string;
+  state: string;
+  bedrooms: number;
+  bathrooms: number;
+  monthlyRent: number;
+  credits?: boolean;
+  availableFromIso?: string;
+  description?: string;
+}
+
+interface Match {
+  id: string;
+  status: string;
+  propertyId: string;
+  seekerUserId: string;
+  hostUserId: string;
+  proposedMoveInDateIso?: string;
+  message?: string;
+}
+
+interface Announcement {
+  id: string;
+  from: string;
+  text: string;
+  title?: string;
+  action?: string;
+}
 
 const COLOR = '#EAB308';
 
@@ -41,7 +69,7 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'browse' | 'matches' | 'chat'>('browse');
-  const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     async function fetchAll() {
@@ -127,7 +155,7 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
               {announcements.length === 0 ? (
                 <div style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 40 }}>No chat messages yet.</div>
               ) : (
-                announcements.map((a: any, i: number) => (
+                announcements.map((a: Announcement, i: number) => (
                   <div key={a.id || i} style={{ marginBottom: 18, display: 'flex', flexDirection: 'column', alignItems: a.from === 'user' ? 'flex-end' : 'flex-start' }}>
                     <div style={{
                       background: a.from === 'user' ? `${COLOR}30` : 'rgba(255,255,255,0.04)',
@@ -192,14 +220,14 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
             <div style={{ padding: 24 }}>
               <div style={{ marginBottom: 20, padding: '18px 24px', borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(234,179,8,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#F9FAFB', marginBottom: 4 }}>Find Safe, Verified Housing</div>
-                <div style={{ fontSize: 14, color: '#9CA3AF' }}>{properties.length} listings · {properties.filter((p: any) => p.credits).length} accept Service Credits · Privacy by design</div>
+                <div style={{ fontSize: 14, color: '#9CA3AF' }}>{properties.length} listings · {properties.filter((p: Property) => p.credits).length} accept Service Credits · Privacy by design</div>
               </div>
               {/* Listings grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
                 {properties.length === 0 ? (
                   <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#9CA3AF', fontSize: 16, padding: 40 }}>No properties available.</div>
                 ) : (
-                  properties.map((p: any) => (
+                  properties.map((p: Property) => (
                     <div key={p.id} style={{ borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${COLOR}20`, overflow: 'hidden', cursor: 'pointer' }}>
                       <div style={{ padding: '32px 0', background: `${COLOR}08`, textAlign: 'center', fontSize: 48 }}>{p.img || '🏠'}</div>
                       <div style={{ padding: 16 }}>
@@ -236,27 +264,38 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
                 {matches.length === 0 ? (
                   <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#9CA3AF', fontSize: 16, padding: 40 }}>No matches yet.</div>
                 ) : (
-                  matches.map((m: any) => (
-                    <div key={m.id} style={{ borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${COLOR}20`, overflow: 'hidden', cursor: 'pointer' }}>
-                      <div style={{ padding: '24px 0', background: `${COLOR}08`, textAlign: 'center', fontSize: 32 }}>{m.status === 'approved' ? '✅' : m.status === 'pending' ? '⏳' : '❌'}</div>
-                      <div style={{ padding: 16 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB', marginBottom: 6 }}>Match: {m.status.charAt(0).toUpperCase() + m.status.slice(1)}</div>
-                        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Property: {m.propertyId}</div>
-                        <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Seeker: {m.seekerUserId}</div>
-                        <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Host: {m.hostUserId}</div>
-                        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Requested: {m.proposedMoveInDateIso ? new Date(m.proposedMoveInDateIso).toLocaleDateString() : '—'}</div>
-                        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Message: {m.message || '—'}</div>
-                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                          <button onClick={() => {
-                            // Find property by id for detail view, fallback to match object
-                            const prop = properties.find((p: any) => p.id === m.propertyId);
-                            setSelectedProperty(prop || m);
-                          }} style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                          <button style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Message</button>
+                  matches.map((m: Match) => {
+                    const prop = properties.find((p: Property) => p.id === m.propertyId);
+                    return (
+                      <div key={m.id} style={{ borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${COLOR}20`, overflow: 'hidden', cursor: 'pointer' }}>
+                        <div style={{ padding: '24px 0', background: `${COLOR}08`, textAlign: 'center', fontSize: 32 }}>{m.status === 'approved' ? '✅' : m.status === 'pending' ? '⏳' : '❌'}</div>
+                        <div style={{ padding: 16 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB', marginBottom: 6 }}>Match: {m.status.charAt(0).toUpperCase() + m.status.slice(1)}</div>
+                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Property: {m.propertyId}</div>
+                          <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Seeker: {m.seekerUserId}</div>
+                          <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Host: {m.hostUserId}</div>
+                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Requested: {m.proposedMoveInDateIso ? new Date(m.proposedMoveInDateIso).toLocaleDateString() : '—'}</div>
+                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Message: {m.message || '—'}</div>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button
+                              onClick={() => {
+                                if (prop) {
+                                  setSelectedProperty(prop);
+                                } else {
+                                  window.alert('Property details not found for this match.');
+                                }
+                              }}
+                              style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: prop ? 'pointer' : 'not-allowed', opacity: prop ? 1 : 0.6 }}
+                              disabled={!prop}
+                            >
+                              View
+                            </button>
+                            <button style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Message</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

@@ -1,18 +1,20 @@
+
+import type { Sector } from './types';
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 
 // API endpoints (same as web)
 const API_BASE = '/api/skills-taxonomy';
 
-function fetcher(url: string, options?: any) {
+function fetcher(url: string, options?: RequestInit) {
   return fetch(url, options).then(async (res) => {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   });
 }
 
-export const SkillsTaxonomy = ({ isAdmin = false }: { isAdmin?: boolean }) => {
-  const [hierarchy, setHierarchy] = useState<any[]>([]);
+export default function SkillsTaxonomy() {
+  const [hierarchy, setHierarchy] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

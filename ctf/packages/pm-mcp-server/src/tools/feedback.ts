@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { FeedbackItem } from '../types.js';
+import { FeedbackItem, ApprovalQueueRow } from '../types.js';
 
 export async function listFeedback(
   status?: string,
@@ -10,7 +10,7 @@ export async function listFeedback(
   pageSize: number = 20
 ): Promise<{ items: FeedbackItem[]; totalCount: number }> {
   let sql = 'SELECT * FROM feedback_items WHERE 1=1';
-  const params: any[] = [];
+  const params: unknown[] = [];
   let paramIndex = 1;
 
   if (status) {
@@ -90,7 +90,7 @@ export async function triageFeedback(
   status?: string
 ): Promise<FeedbackItem> {
   let sql = 'UPDATE feedback_items SET updated_at = NOW()';
-  const params: any[] = [];
+  const params: unknown[] = [];
   let paramIndex = 1;
 
   if (priority) {
@@ -160,7 +160,7 @@ export async function getApprovalQueue(
   status?: string,
   page: number = 1,
   pageSize: number = 20
-): Promise<{ items: any[]; totalCount: number }> {
+): Promise<{ items: ApprovalQueueRow[]; totalCount: number }> {
   let sql = `
     SELECT 
       aq.id, aq.feedback_id, aq.matcher_id, aq.status,
@@ -171,7 +171,7 @@ export async function getApprovalQueue(
     JOIN feedback_inventory_matches fim ON aq.matcher_id = fim.id
     WHERE 1=1
   `;
-  const params: any[] = [];
+  const params: unknown[] = [];
   let paramIndex = 1;
 
   if (status) {
@@ -186,11 +186,11 @@ export async function getApprovalQueue(
   sql += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   params.push(pageSize, offset);
 
-  const result = await query(sql, params);
+  const result = await query<ApprovalQueueRow>(sql, params);
 
   // Get total count
   let countSql = 'SELECT COUNT(*) as count FROM approval_queue WHERE 1=1';
-  const countParams: any[] = [];
+  const countParams: unknown[] = [];
   let countParamIndex = 1;
 
   if (status) {

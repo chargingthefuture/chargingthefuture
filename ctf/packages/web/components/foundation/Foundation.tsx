@@ -36,7 +36,7 @@ export function Foundation() {
         const data: ProviderSearchResult = await res.json();
         setProviders(data.items);
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [query, page]);
 

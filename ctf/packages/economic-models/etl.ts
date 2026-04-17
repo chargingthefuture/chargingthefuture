@@ -1,4 +1,5 @@
 import { TransactionRecord, RegionalFlowRecord, InputOutputRecord } from './schemas';
+import { RawTransactionRecord, RawRegionalFlowRecord, RawInputOutputRecord } from './types';
 
 // --- ETL Pipeline: Extract, Transform, Anonymize, Aggregate ---
 
@@ -7,7 +8,7 @@ import { TransactionRecord, RegionalFlowRecord, InputOutputRecord } from './sche
  * @param rawRecords Raw DB/plugin records (with PII)
  * @returns Array of anonymized, aggregated TransactionRecords
  */
-export function extractAnonymizedTransactions(rawRecords: any[]): TransactionRecord[] {
+export function extractAnonymizedTransactions(rawRecords: RawTransactionRecord[]): TransactionRecord[] {
   // Example: hash user IDs, bucket timestamps, aggregate by (source, target, community, time)
   // This is a stub; real implementation will depend on DB/plugin schema
   return rawRecords.map(r => ({
@@ -22,7 +23,7 @@ export function extractAnonymizedTransactions(rawRecords: any[]): TransactionRec
 /**
  * Extracts and anonymizes regional flow data.
  */
-export function extractAnonymizedRegionalFlows(rawRecords: any[]): RegionalFlowRecord[] {
+export function extractAnonymizedRegionalFlows(rawRecords: RawRegionalFlowRecord[]): RegionalFlowRecord[] {
   return rawRecords.map(r => ({
     from_region: anonymizeId(r.from_region),
     to_region: anonymizeId(r.to_region),
@@ -35,7 +36,7 @@ export function extractAnonymizedRegionalFlows(rawRecords: any[]): RegionalFlowR
 /**
  * Extracts and anonymizes input-output data.
  */
-export function extractAnonymizedInputOutput(rawRecords: any[]): InputOutputRecord[] {
+export function extractAnonymizedInputOutput(rawRecords: RawInputOutputRecord[]): InputOutputRecord[] {
   return rawRecords.map(r => ({
     from_sector: anonymizeId(r.from_sector),
     to_sector: anonymizeId(r.to_sector),

@@ -15,8 +15,8 @@ export function ClicklogCounter() {
     try {
       const data = await fetchIncidents();
       setCount(data.count);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -42,9 +42,10 @@ export function ClicklogCounter() {
       // Fire-and-forget haptic feedback (non-critical)
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       await refresh();
-    } catch (e: any) {
-      setError(e.message);
-      Alert.alert('Error', e.message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }

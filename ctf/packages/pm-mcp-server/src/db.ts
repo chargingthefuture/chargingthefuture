@@ -1,4 +1,4 @@
-import pkg from 'pg';
+import pkg, { QueryResult } from 'pg';
 const { Client } = pkg;
 
 let client: InstanceType<typeof Client> | null = null;
@@ -39,7 +39,7 @@ export async function closeDb(): Promise<void> {
   }
 }
 
-export async function query(sql: string, params?: any[]): Promise<any> {
+export async function query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
   const c = getClient();
   return c.query(sql, params);
 }
