@@ -4,7 +4,7 @@
   "packageManager": "pnpm@9.12.0",
   "scripts": {
     "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git config core.hooksPath ctf/.husky && chmod +x .husky/pre-commit .husky/pre-push || true",
-    "build": "echo Build started && pnpm -r --if-present run build",
+    "build": "echo Build started && pnpm -r --if-present run clean && pnpm -r --if-present run build",
     "lint": "pnpm -r --if-present --filter=!@ctf/web run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "verify:web": "pnpm --filter @ctf/web run lint && pnpm --filter @ctf/web run typecheck && pnpm run lint && pnpm run typecheck",
