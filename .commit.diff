@@ -1,0 +1,58 @@
+diff --git a/ctf/packages/pm-mcp-server/src/index.ts b/ctf/packages/pm-mcp-server/src/index.ts
+index f406a3cb..9537acf8 100644
+--- a/ctf/packages/pm-mcp-server/src/index.ts
++++ b/ctf/packages/pm-mcp-server/src/index.ts
+@@ -11,13 +11,17 @@ type ToolRequest = {
+   arguments: Record<string, any>;
+ };
+ 
+-const server = new Server({
+-  name: 'pm-mcp-server',
+-  version: '1.0.0',
+-  capabilities: {
+-    tools: {},
+-  } satisfies ServerCapabilities['capabilities'],
+-});
++const server = new Server(
++  {
++    name: 'pm-mcp-server',
++    version: '1.0.0',
++  },
++  {
++    capabilities: {
++      tools: {},
++    } as ServerCapabilities,
++  }
++);
+ 
+ // Define MCP Tools
+ const tools: Tool[] = [
+@@ -337,8 +341,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
+ 
+ // List tools
+ 
+-// Use the correct string key for the handler registration
+-server.setRequestHandler('tools/list', async () => {
++server.setRequestHandler(ListToolsRequestSchema, async () => {
+   return { tools };
+ });
+ 
+diff --git a/ctf/packages/pm-mcp-server/src/types.ts b/ctf/packages/pm-mcp-server/src/types.ts
+index f76e037a..1355c539 100644
+--- a/ctf/packages/pm-mcp-server/src/types.ts
++++ b/ctf/packages/pm-mcp-server/src/types.ts
+@@ -1,9 +1,13 @@
++import type { JSONSchema7 } from './json-schema';
++// Centralized CountRow type for query results
++export interface CountRow {
++  count: string;
++}
+ 
+ // Centralized CountRow type for all DB count queries
+ export interface CountRow {
+   count: string;
+ }
+-import type { JSONSchema7 } from './json-schema';
+ // ApprovalQueueRow: all approval_queue columns plus joined fields
+ export interface ApprovalQueueRow {
+   id: string;

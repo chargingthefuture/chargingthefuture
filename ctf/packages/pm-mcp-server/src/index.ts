@@ -11,13 +11,17 @@ type ToolRequest = {
   arguments: Record<string, any>;
 };
 
-const server = new Server({
-  name: 'pm-mcp-server',
-  version: '1.0.0',
-  capabilities: {
-    tools: {},
-  } satisfies ServerCapabilities['capabilities'],
-});
+const server = new Server(
+  {
+    name: 'pm-mcp-server',
+    version: '1.0.0',
+  },
+  {
+    capabilities: {
+      tools: {},
+    } as ServerCapabilities,
+  }
+);
 
 // Define MCP Tools
 const tools: Tool[] = [
@@ -337,8 +341,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // List tools
 
-// Use the correct string key for the handler registration
-server.setRequestHandler('tools/list', async () => {
+server.setRequestHandler(ListToolsRequestSchema, async () => {
   return { tools };
 });
 
