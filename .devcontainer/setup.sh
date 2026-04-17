@@ -40,6 +40,13 @@ else
 fi
 
 
+echo "Checking for eas-cli..."
+if ! command -v eas &> /dev/null; then
+  npm install -g eas-cli
+else
+  echo "eas-cli already installed."
+fi
+
 # Ensure pnpm is installed
 echo "Checking for pnpm..."
 if ! command -v pnpm &> /dev/null; then
@@ -55,14 +62,6 @@ if [ "$FAST_MODE" != "1" ]; then
   sudo apt-get update && sudo apt-get install -y libatk1.0-0 libgtk-3-0 libnotify4 libgdk-pixbuf2.0-0 libxss1 libasound2 libnss3 libx11-xcb1
 else
   echo "Fast mode enabled: skipping Expo/React Native DevTools system libraries."
-fi
-
-# Ensure expo-cli is installed globally (for direct CLI use)
-echo "Checking for expo-cli..."
-if ! command -v expo &> /dev/null; then
-  pnpm add -g expo-cli
-else
-  echo "expo-cli already installed."
 fi
 
 

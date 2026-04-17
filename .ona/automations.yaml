@@ -1,7 +1,7 @@
 tasks:
   setup:
     name: Setup environment
-    description: Install CLIs (Railway, Vercel, expo-cli, pnpm) and system libraries required for Expo/React Native DevTools.
+    description: Install CLIs (Railway, Vercel, pnpm) and system libraries required for Expo/React Native DevTools.
     command: |
       # Install Railway CLI
       if ! command -v railway &> /dev/null; then
@@ -22,11 +22,7 @@ tasks:
       sudo apt-get update && sudo apt-get install -y \
         libatk1.0-0 libgtk-3-0 libnotify4 libgdk-pixbuf2.0-0 \
         libxss1 libasound2 libnss3 libx11-xcb1
-
-      # Install expo-cli
-      if ! command -v expo &> /dev/null; then
-        pnpm add -g expo-cli
-      fi
+        
     triggeredBy:
       - postDevcontainerStart
 
