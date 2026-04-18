@@ -41,9 +41,6 @@ importers:
       stream-chat:
         specifier: ^9.41.0
         version: 9.41.0
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
       vite:
         specifier: ^8.0.3
         version: 8.0.8(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
@@ -57,6 +54,9 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.17
       '@types/node-cron':
         specifier: ^3.0.11
         version: 3.0.11
@@ -87,6 +87,9 @@ importers:
       tailwindcss:
         specifier: ^4.2.2
         version: 4.2.2
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   ctf/packages/economic-models:
     dependencies:
@@ -207,6 +210,9 @@ importers:
         specifier: ^8.60.0
         version: 8.60.0
     devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.17
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14
@@ -232,7 +238,7 @@ importers:
         specifier: ^10.6.0
         version: 10.6.0
       lucide-react:
-        specifier: ^1.6.0
+        specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
       next:
         specifier: ^15.5.14

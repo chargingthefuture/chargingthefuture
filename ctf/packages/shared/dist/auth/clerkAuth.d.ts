@@ -3,4 +3,4 @@
  * @param token Clerk JWT
  * @returns userId or null
  */
-export declare function verifyClerkToken(token: string): string | null;
+export declare function verifyClerkToken(_token: string): string | null;

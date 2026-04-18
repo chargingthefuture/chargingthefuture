@@ -10,21 +10,6 @@ type WorkforceShellProps = {
 
 // ...existing code...
 
-const CHARTS = [
-  { label: 'Employed', value: 1830000, pct: 37, color: '#22C55E' },
-  { label: 'In Training', value: 1220000, pct: 25, color: '#6366F1' },
-  { label: 'Seeking Work', value: 980000, pct: 20, color: '#F59E0B' },
-  { label: 'Exploring', value: 890000, pct: 18, color: '#6B7280' },
-];
-
-const SKILL_GAPS = [
-  { skill: 'Trauma-Informed Therapy', supply: 3200, demand: 12800, gap: 9600, trend: '+12%' },
-  { skill: 'Housing Navigation', supply: 5100, demand: 18300, gap: 13200, trend: '+8%' },
-  { skill: 'Legal Advocacy', supply: 2800, demand: 9100, gap: 6300, trend: '+15%' },
-  { skill: 'Software Development', supply: 7400, demand: 22000, gap: 14600, trend: '+31%' },
-  { skill: 'Financial Counseling', supply: 4200, demand: 11700, gap: 7500, trend: '+6%' },
-  { skill: 'Peer Mentorship', supply: 9800, demand: 21400, gap: 11600, trend: '+4%' },
-];
 
 
 
@@ -46,16 +31,58 @@ type Profile = {
 function WorkforceShellInner(props: WorkforceShellProps) {
   const auth = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [dashboard, setDashboard] = useState<any | null>(null);
+  const [summary, setSummary] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+
+  // Fetch real data from API endpoints
+  // - /api/workforce/dashboard: for charts and workforce stats
+  // - /api/workforce/profile: for user profile
+  // - /api/workforce/reports/summary: for skill gaps and summary
   useEffect(() => {
-    // TODO: Replace with real API call
-    setTimeout(() => {
-      setProfile(null);
+    async function fetchAll() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [profileRes, dashboardRes, summaryRes] = await Promise.all([
+          fetch('/api/workforce/profile'),
+          fetch('/api/workforce/dashboard'),
+          fetch('/api/workforce/reports/summary'),
+        ]);
+        if (!profileRes.ok) throw new Error('Failed to load profile');
+        if (!dashboardRes.ok) throw new Error('Failed to load dashboard');
+        if (!summaryRes.ok) throw new Error('Failed to load summary');
+        const profileData = await profileRes.json();
+        setProfile(profileData.profile || null);
+        // Parse and store dashboard and summary data
+        try {
+          const dashboardData = await dashboardRes.json();
+          setDashboard(dashboardData || null);
+        } catch {
+          setDashboard(null);
+        }
+        try {
+          const summaryData = await summaryRes.json();
+          setSummary(summaryData || null);
+        } catch {
+          setSummary(null);
+        }
+      } catch (e: any) {
+        setError(e.message || 'Failed to load workforce data.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (auth.isAuthenticated) {
+      fetchAll();
+    } else {
       setLoading(false);
-    }, 1000);
-  }, []);
+      setProfile(null);
+      setError(null);
+    }
+  }, [auth.isAuthenticated]);
 
   if (!auth.isAuthenticated) {
     return (

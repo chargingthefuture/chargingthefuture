@@ -9,7 +9,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "baseUrl": ".",
+    
     "paths": {
       "@ctf/shared": [
         "packages/shared/src/index.ts"

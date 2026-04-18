@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback } from 'react';
-import { submitMoodCheck, fetchMoodEligibility } from '@ctf/shared';
+import { submitMoodCheck, fetchMoodEligibility } from './index';
 export function useMoodEligibility(clientId) {
     const [eligibility, setEligibility] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -13,7 +13,7 @@ export function useMoodEligibility(clientId) {
             setEligibility(result);
         }
         catch (e) {
-            setError(e.message);
+            setError(e instanceof Error ? e.message : String(e));
         }
         finally {
             setLoading(false);
@@ -33,7 +33,7 @@ export function useSubmitMoodCheck(clientId) {
             setResult(res);
         }
         catch (e) {
-            setError(e.message);
+            setError(e instanceof Error ? e.message : String(e));
         }
         finally {
             setLoading(false);

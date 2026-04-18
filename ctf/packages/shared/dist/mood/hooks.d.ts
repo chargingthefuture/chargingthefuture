@@ -1,4 +1,4 @@
-import { MoodCheck, MoodEligibility } from '@ctf/shared';
+import { MoodCheck, MoodEligibility } from './index';
 export declare function useMoodEligibility(clientId: string): {
     eligibility: MoodEligibility | null;
     loading: boolean;
