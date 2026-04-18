@@ -44,18 +44,6 @@ export default function MoodShell() {
         const data = await res.json();
         setEligible(data.eligible);
         setDaysUntilEligible(data.daysUntilEligible ?? null);
-  async function handleSubmit() {
-  // LighthouseShell pattern: use client, loading/error/data state, API fetch, submission, empty/ineligible state
-  useEffect(() => {
-    async function fetchEligibility() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/mood/eligibility");
-        if (!res.ok) throw new Error("Failed to check eligibility");
-        const data = await res.json();
-        setEligible(data.eligible);
-        setDaysUntilEligible(data.daysUntilEligible ?? null);
         // Defensive: only assign if object and has at least totalUsers or activeToday
         if (data.communityStats && typeof data.communityStats === 'object') {
           setCommunityStats(data.communityStats as CommunityStats);
@@ -70,6 +58,8 @@ export default function MoodShell() {
     }
     fetchEligibility();
   }, []);
+
+  async function handleSubmit() {
     if (!selected || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -175,5 +165,4 @@ export default function MoodShell() {
       </div>
     </div>
   );
-   );
- }
+}

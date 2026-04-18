@@ -1,12 +1,37 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
+
+// Types for peer programming
+export interface Participant {
+  id: string;
+  name: string;
+}
+
+export interface Room {
+  id: string;
+  name?: string;
+  cohortId?: string;
+  participants?: Participant[];
+  topic?: string;
+  status?: string;
+}
+
+export interface Message {
+  id: string;
+  author?: string;
+  authorId?: string;
+  content: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
 
 export function PeerProgrammingShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [room, setRoom] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -19,12 +44,12 @@ export function PeerProgrammingShell() {
         if (!res.ok) throw new Error('Failed to load room');
         const data = await res.json();
         if (controller.signal.aborted) return;
-        setRoom(data);
+        setRoom(data as Room);
         if (data && data.cohortId) {
           const msgRes = await fetch('/api/peer-programming/messages', { signal: controller.signal });
           if (!msgRes.ok) throw new Error('Failed to load messages');
           if (controller.signal.aborted) return;
-          setMessages(await msgRes.json());
+          setMessages(await msgRes.json() as Message[]);
         } else {
           setMessages([]);
         }
@@ -39,7 +64,7 @@ export function PeerProgrammingShell() {
     return () => controller.abort();
   }, []);
 
-  async function handlePostMessage(message: any) {
+  async function handlePostMessage(message: Pick<Message, 'content'>) {
     setSubmitting(true);
     setError(null);
     try {
@@ -52,7 +77,7 @@ export function PeerProgrammingShell() {
       // Refetch messages after successful post
       const msgRes = await fetch('/api/peer-programming/messages');
       if (!msgRes.ok) throw new Error('Failed to fetch updated messages');
-      setMessages(await msgRes.json());
+      setMessages(await msgRes.json() as Message[]);
     } catch (e: any) {
       setError(e.message || 'Failed to post message.');
     } finally {
@@ -60,7 +85,7 @@ export function PeerProgrammingShell() {
     }
   }
 
-  async function handleSubmitFeedback(feedback: any) {
+  async function handleSubmitFeedback(feedback: { feedback: string }) {
     setSubmitting(true);
     setError(null);
     setFeedbackSuccess(false);
@@ -99,7 +124,7 @@ export function PeerProgrammingShell() {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   // MessageList component
-  function MessageList({ messages }: { messages: any[] }) {
+  function MessageList({ messages }: { messages: Message[] }) {
     if (!messages.length) {
       return <div className="p-4 text-center text-muted-foreground">No messages yet. Start the conversation!</div>;
     }
@@ -143,7 +168,7 @@ export function PeerProgrammingShell() {
         <h2 className="text-2xl font-bold mb-1">Peer Programming Room</h2>
         <div className="text-gray-400 text-sm mb-1">Room: <span className="font-mono">{room.name || room.id}</span></div>
         {room.participants && room.participants.length > 0 && (
-          <div className="text-gray-300 text-xs mb-2">Participants: {room.participants.map((p: any) => p.name || p.id).join(", ")}</div>
+          <div className="text-gray-300 text-xs mb-2">Participants: {room.participants.map((p: Participant) => p.name || p.id).join(", ")}</div>
         )}
       </section>
 

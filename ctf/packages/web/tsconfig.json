@@ -21,6 +21,7 @@
         "name": "next"
       }
     ],
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -30,6 +31,7 @@
         "lib/*"
       ]
     },
+    "ignoreDeprecations": "6.0",
     "noEmit": true,
     "isolatedModules": true,
     "types": [],

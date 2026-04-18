@@ -1,16 +1,52 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
+
+// Directory API types
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  sector: string;
+  jobTitle: string;
+  skills: string[];
+  // Add more fields as needed
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  sector: string;
+  jobTitle: string;
+  skills: string[];
+  // Add more fields as needed
+}
+
+export interface Sector {
+  id: string;
+  name: string;
+}
+
+export interface JobTitle {
+  id: string;
+  name: string;
+}
+
+export interface Skill {
+  id: string;
+  name: string;
+}
 
 export function DirectoryShell() {
   const [loading, setLoading] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [members, setMembers] = useState<any[]>([]);
-  const [sectors, setSectors] = useState<any[]>([]);
-  const [jobTitles, setJobTitles] = useState<any[]>([]);
-  const [skills, setSkills] = useState<any[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [filters, setFilters] = useState({ sector: '', skill: '', query: '' });
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -30,10 +66,10 @@ export function DirectoryShell() {
         if (!sectorsRes.ok) throw new Error('Failed to load sectors');
         if (!jobTitlesRes.ok) throw new Error('Failed to load job titles');
         if (!skillsRes.ok) throw new Error('Failed to load skills');
-        setProfile(await profileRes.json());
-        setSectors(await sectorsRes.json());
-        setJobTitles(await jobTitlesRes.json());
-        setSkills(await skillsRes.json());
+        setProfile(await profileRes.json() as Profile);
+        setSectors(await sectorsRes.json() as Sector[]);
+        setJobTitles(await jobTitlesRes.json() as JobTitle[]);
+        setSkills(await skillsRes.json() as Skill[]);
       } catch (e: any) {
         setError(e.message || 'Failed to load directory data.');
       } finally {
@@ -58,8 +94,8 @@ export function DirectoryShell() {
         if (!res.ok) throw new Error('Failed to load members');
         const data = await res.json();
         if (!controller.signal.aborted) {
-          setMembers(data.members || []);
-          setHasMore(data.hasMore || false);
+          setMembers((data.members || []) as Member[]);
+          setHasMore(Boolean(data.hasMore));
         }
       } catch (e: any) {
         if (e.name === 'AbortError') return;
