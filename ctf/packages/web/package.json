@@ -22,7 +22,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "decimal.js": "^10.6.0",
     "lucide-react": "^1.8.0",
-    "next": "^15.5.14",
+    "next": "^16.2.4",
     "node-cron": "^3.0.0",
     "pg": "^8.16.3",
     "react": "^19.0.0",
