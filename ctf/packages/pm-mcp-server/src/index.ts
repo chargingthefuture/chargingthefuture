@@ -8,7 +8,7 @@ import * as implementationTools from './tools/implementation.js';
 
 type ToolRequest = {
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 };
 
 const server = new Server(
@@ -249,75 +249,82 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case 'listFeedback':
         result = await feedbackTools.listFeedback(
-          args.status,
-          args.type,
-          args.category,
-          args.priority,
-          args.page || 1,
-          args.pageSize || 20
+          typeof args.status === 'string' ? args.status : undefined,
+          typeof args.type === 'string' ? args.type : undefined,
+          typeof args.category === 'string' ? args.category : undefined,
+          typeof args.priority === 'string' ? args.priority : undefined,
+          typeof args.page === 'number' ? args.page : 1,
+          typeof args.pageSize === 'number' ? args.pageSize : 20
         );
         break;
 
       case 'triageFeedback':
         result = await feedbackTools.triageFeedback(
-          args.feedbackId,
-          args.priority,
-          args.category,
-          args.status
+          typeof args.feedbackId === 'string' ? args.feedbackId : '',
+          typeof args.priority === 'string' ? args.priority : undefined,
+          typeof args.category === 'string' ? args.category : undefined,
+          typeof args.status === 'string' ? args.status : undefined
         );
         break;
 
       case 'createInventoryMatch':
         result = await feedbackTools.createInventoryMatch(
-          args.feedbackId,
-          args.inventoryFilePath,
-          args.matchConfidence,
-          args.suggestedUpdates,
-          args.matcherReasoning
+          typeof args.feedbackId === 'string' ? args.feedbackId : '',
+          typeof args.inventoryFilePath === 'string' ? args.inventoryFilePath : '',
+          typeof args.matchConfidence === 'number' ? args.matchConfidence : 0,
+          typeof args.suggestedUpdates === 'object' && args.suggestedUpdates !== null ? args.suggestedUpdates : {},
+          typeof args.matcherReasoning === 'string' ? args.matcherReasoning : ''
         );
         break;
 
       case 'getApprovalQueue':
         result = await feedbackTools.getApprovalQueue(
-          args.status,
-          args.page || 1,
-          args.pageSize || 20
+          typeof args.status === 'string' ? args.status : undefined,
+          typeof args.page === 'number' ? args.page : 1,
+          typeof args.pageSize === 'number' ? args.pageSize : 20
         );
         break;
 
       case 'approveMatch':
         result = await feedbackTools.approveMatch(
-          args.approvalId,
-          args.approverId,
-          args.approverFeedback,
-          args.approvedArtifactChanges
+          typeof args.approvalId === 'string' ? args.approvalId : '',
+          typeof args.approverId === 'string' ? args.approverId : '',
+          typeof args.approverFeedback === 'string' ? args.approverFeedback : undefined,
+          typeof args.approvedArtifactChanges === 'object' && args.approvedArtifactChanges !== null ? args.approvedArtifactChanges : undefined
         );
         break;
 
       case 'rejectMatch':
         result = await feedbackTools.rejectMatch(
-          args.approvalId,
-          args.approverId,
-          args.rejectionReason
+          typeof args.approvalId === 'string' ? args.approvalId : '',
+          typeof args.approverId === 'string' ? args.approverId : '',
+          typeof args.rejectionReason === 'string' ? args.rejectionReason : ''
         );
         break;
 
       case 'getImplementationQueue':
         result = await implementationTools.getImplementationQueue(
-          args.status,
-          args.page || 1,
-          args.pageSize || 20
+          typeof args.status === 'string' ? args.status : undefined,
+          typeof args.page === 'number' ? args.page : 1,
+          typeof args.pageSize === 'number' ? args.pageSize : 20
         );
         break;
 
-      case 'setImplementationStatus':
+      case 'setImplementationStatus': {
+        let status: 'in_progress' | 'completed' | 'failed' = 'in_progress';
+        if (typeof args.status === 'string') {
+          if (args.status === 'completed' || args.status === 'failed' || args.status === 'in_progress') {
+            status = args.status;
+          }
+        }
         result = await implementationTools.setImplementationStatus(
-          args.implementationId,
-          args.status,
-          args.implementationAgentId,
-          args.implementationLog
+          typeof args.implementationId === 'string' ? args.implementationId : '',
+          status,
+          typeof args.implementationAgentId === 'string' ? args.implementationAgentId : undefined,
+          typeof args.implementationLog === 'string' ? args.implementationLog : undefined
         );
         break;
+      }
 
       default:
         throw new Error(`Unknown tool: ${name}`);

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from "react";
+import type { ChatMessage } from './types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ const CHARTS = [
   { label: "Exploring", value: 890000, pct: 18, color: "#6B7280" },
 ];
 
-const CHAT = [
+const CHAT: ChatMessage[] = [
   { id: 1, from: "hub", text: "Workforce shows real-time skills distribution across 4.9M survivors. What would you like to explore?" },
   { id: 2, from: "user", text: "Where are the biggest opportunities right now?" },
   { id: 3, from: "hub", text: "Software Development has the largest gap: 14,600 unmet demand slots. Your profile shows coding interest — want me to map a pathway?", action: "Map My Pathway" },
@@ -39,7 +40,7 @@ const CHAT = [
 export function Workforce() {
   const [tab, setTab] = useState<"dashboard" | "chat">("dashboard");
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
 
   const send = () => {
     if (!input.trim()) return;
@@ -182,9 +183,9 @@ export function Workforce() {
                   )}
                   <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ padding: "12px 16px", borderRadius: msg.from === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "user" ? COLOR : "rgba(255,255,255,0.05)", border: msg.from === "user" ? "none" : "1px solid rgba(255,255,255,0.06)", fontSize: 14, lineHeight: 1.6, color: "#E8EAF0" }}>{msg.text}</div>
-                    {(msg as any).action && (
+                    {msg.action && (
                       <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>
-                        {(msg as any).action} <ArrowUpRight size={13} />
+                        {msg.action} <ArrowUpRight size={13} />
                       </button>
                     )}
                   </div>

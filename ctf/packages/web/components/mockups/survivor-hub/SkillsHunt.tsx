@@ -1,7 +1,7 @@
-/* eslint-disable */
 'use client';
 
 import { useState } from "react";
+import type { ChatMessage } from './types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,7 @@ const BADGES = [
   { name: "Leader", emoji: "👑", earned: false },
 ];
 
-const CHAT = [
+const CHAT: ChatMessage[] = [
   { id: 1, from: "hub", text: "Skills Hunt matches you with learning cohorts based on your workforce gaps. 6 active rounds right now. Ready to level up?" },
   { id: 2, from: "user", text: "What rounds match my profile?" },
   { id: 3, from: "hub", text: "Based on your Workforce profile, Web Development (87% match) and Financial Literacy (74% match) are your top picks. Both are accepting applications.", action: "Apply Now" },
@@ -48,7 +48,7 @@ const CHAT = [
 export function SkillsHunt() {
   const [tab, setTab] = useState<"rounds" | "leaderboard" | "chat">("rounds");
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
   const [joined, setJoined] = useState<number[]>([]);
 
   const send = () => {
@@ -197,9 +197,9 @@ export function SkillsHunt() {
                     )}
                     <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
                       <div style={{ padding: "12px 16px", borderRadius: msg.from === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "user" ? COLOR : "rgba(255,255,255,0.05)", border: msg.from === "user" ? "none" : "1px solid rgba(255,255,255,0.06)", fontSize: 14, lineHeight: 1.6, color: "#E8EAF0" }}>{msg.text}</div>
-                      {(msg as any).action && (
+                      {msg.action && (
                         <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>
-                          {(msg as any).action} <ArrowUpRight size={13} />
+                          {msg.action} <ArrowUpRight size={13} />
                         </button>
                       )}
                     </div>

@@ -1,5 +1,10 @@
 packages:
-  - "ctf/packages/*"
+  - "ctf/packages/economic-models"
+  - "ctf/packages/eol"
+  - "ctf/packages/mobile"
+  - "ctf/packages/plugin-education"
+  - "ctf/packages/shared"
+  - "ctf/packages/web"
   - "landing-page"
   - "platform"
   - "waitlist-landing-page"

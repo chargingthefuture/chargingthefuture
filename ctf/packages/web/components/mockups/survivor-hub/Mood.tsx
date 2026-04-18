@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from "react";
+import type { ChatMessage } from './types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,7 @@ const RESOURCES = [
   { title: "Foundation Mental Health Providers", type: "Directory", color: "#3B82F6" },
 ];
 
-const CHAT = [
+const CHAT: ChatMessage[] = [
   { id: 1, from: "hub", text: "Mood is completely anonymous. Your check-in is never linked to your identity. How are you feeling today?" },
   { id: 2, from: "user", text: "I'm feeling really overwhelmed this week" },
   { id: 3, from: "hub", text: "Thank you for sharing. You're not alone — 23% of our community felt the same this week. I've lined up 3 resources that might help right now. Would you like to see them?", action: "Show Resources" },
@@ -49,7 +50,7 @@ export function Mood() {
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
 
   const send = () => {
     if (!input.trim()) return;
@@ -199,7 +200,7 @@ export function Mood() {
                   {msg.from === "hub" && <div style={{ width: 32, height: 32, borderRadius: 10, background: `${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Smile size={14} style={{ color: COLOR }} /></div>}
                   <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ padding: "12px 16px", borderRadius: msg.from === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "user" ? COLOR : "rgba(255,255,255,0.05)", border: msg.from === "user" ? "none" : "1px solid rgba(255,255,255,0.06)", fontSize: 14, lineHeight: 1.6, color: "#E8EAF0" }}>{msg.text}</div>
-                    {(msg as any).action && <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>{(msg as any).action} <ArrowUpRight size={13} /></button>}
+                    {msg.action && <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>{msg.action} <ArrowUpRight size={13} /></button>}
                   </div>
                 </div>
               ))}

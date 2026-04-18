@@ -215,7 +215,8 @@ const tools = [
 // Register tools
 // Use the correct string key for the handler registration
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args = {} } = request.params;
+    const params = request.params;
+    const { name, arguments: args = {} } = params;
     try {
         let result;
         switch (name) {

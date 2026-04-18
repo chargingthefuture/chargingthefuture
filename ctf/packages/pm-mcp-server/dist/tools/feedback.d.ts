@@ -17,6 +17,18 @@ export declare function approveMatch(approvalId: string, approverId: string, app
     status: string;
     approvedAt: string;
 }>;
+/**
+ * Rejects an approval match in the approval queue.
+ *
+ * Updates the approval_queue status to 'rejected', records the approver and reason,
+ * and marks the associated feedback item as 'dismissed'.
+ *
+ * @param approvalId - The approval queue entry ID to reject
+ * @param approverId - The ID of the user/agent performing the rejection
+ * @param rejectionReason - The reason for rejection (stored as approver_feedback)
+ * @returns An object containing the approvalId and new status
+ * @sideeffect Updates both approval_queue and feedback_items tables
+ */
 export declare function rejectMatch(approvalId: string, approverId: string, rejectionReason: string): Promise<{
     approvalId: string;
     status: string;

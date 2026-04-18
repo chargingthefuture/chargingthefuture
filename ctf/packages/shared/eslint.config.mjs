@@ -11,8 +11,10 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
     },
+    plugins: ['@typescript-eslint'],
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 ];

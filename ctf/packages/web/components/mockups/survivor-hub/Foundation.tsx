@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from "react";
+import type { ChatMessage } from './types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -159,7 +160,7 @@ export function Foundation() {
   const [tab, setTab] = useState<"browse" | "quotes" | "chat">("browse");
   const [trade, setTrade] = useState("All Trades");
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
   const [selected, setSelected] = useState<number | null>(null);
 
   const send = () => {
@@ -1094,7 +1095,7 @@ export function Foundation() {
                     >
                       {msg.text}
                     </div>
-                    {(msg as any).action && (
+                    {msg.action && (
                       <button
                         style={{
                           display: "inline-flex",
@@ -1111,7 +1112,7 @@ export function Foundation() {
                           alignSelf: "flex-start",
                         }}
                       >
-                        {(msg as any).action} <ArrowUpRight size={13} />
+                        {msg.action} <ArrowUpRight size={13} />
                       </button>
                     )}
                   </div>

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from "react";
+import type { ChatMessage } from './types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,7 @@ const SESSIONS = [
 
 const CATEGORIES = ["All", "Breathing", "Mindfulness", "Grounding", "Sleep", "Morning", "Affirmations"];
 
-const CHAT = [
+const CHAT: ChatMessage[] = [
   { id: 1, from: "hub", text: "GentlePulse offers trauma-informed guided meditation and breathwork. Sessions are designed by certified trauma therapists. What do you need right now?" },
   { id: 2, from: "user", text: "I'm feeling really anxious, I can't sleep" },
   { id: 3, from: "hub", text: "The 4-7-8 Breathing (5 min) can calm your nervous system in under 5 minutes, then Sleep Sanctuary (20 min) can help you drift off. Want me to start the breathing now?", action: "Start Breathing Session" },
@@ -37,7 +38,7 @@ export function GentlePulse() {
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(40);
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
 
   const send = () => {
     if (!input.trim()) return;
@@ -173,7 +174,7 @@ export function GentlePulse() {
                   {msg.from === "hub" && <div style={{ width: 32, height: 32, borderRadius: 10, background: `${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Heart size={14} style={{ color: COLOR }} /></div>}
                   <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ padding: "12px 16px", borderRadius: msg.from === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "user" ? COLOR : "rgba(255,255,255,0.04)", border: msg.from === "user" ? "none" : `1px solid ${COLOR}15`, fontSize: 14, lineHeight: 1.6, color: msg.from === "user" ? "#0A0F0E" : "#E8EAF0" }}>{msg.text}</div>
-                    {(msg as any).action && <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>{(msg as any).action} <ArrowUpRight size={13} /></button>}
+                    {msg.action && <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>{msg.action} <ArrowUpRight size={13} /></button>}
                   </div>
                 </div>
               ))}

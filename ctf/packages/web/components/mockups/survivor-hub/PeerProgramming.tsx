@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from "react";
+import type { ChatMessage } from './types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ const COHORTS = [
   },
 ];
 
-const CHAT = [
+const CHAT: ChatMessage[] = [
   { id: 1, from: "hub", text: "Peer Programming puts you in a weekly global cohort with 11 other survivors. Deterministic matching — you're always placed in a cohort, no one gets left behind. What skills do you want to develop?" },
   { id: 2, from: "user", text: "I want to learn programming and get my first tech job" },
   { id: 3, from: "hub", text: "Perfect fit: Tech for Good Cohort is forming a new group next week. Lena Hoffmann facilitates — she's helped 34 survivors land tech jobs. Want me to join you to the next cohort?", action: "Join Next Cohort" },
@@ -45,7 +46,7 @@ const CHAT = [
 export function PeerProgramming() {
   const [tab, setTab] = useState<"cohorts" | "session" | "chat">("cohorts");
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState(CHAT);
+  const [msgs, setMsgs] = useState<ChatMessage[]>(CHAT);
   const [joined, setJoined] = useState<number[]>([]);
 
   const send = () => {
@@ -185,7 +186,7 @@ export function PeerProgramming() {
                   {msg.from === "hub" && <div style={{ width: 32, height: 32, borderRadius: 10, background: `${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Users size={14} style={{ color: COLOR }} /></div>}
                   <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ padding: "12px 16px", borderRadius: msg.from === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "user" ? COLOR : "rgba(255,255,255,0.05)", border: msg.from === "user" ? "none" : "1px solid rgba(255,255,255,0.06)", fontSize: 14, lineHeight: 1.6, color: "#E8EAF0" }}>{msg.text}</div>
-                    {(msg as any).action && <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>{(msg as any).action} <ArrowUpRight size={13} /></button>}
+                    {msg.action && <button style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>{msg.action} <ArrowUpRight size={13} /></button>}
                   </div>
                 </div>
               ))}
