@@ -1,3 +1,42 @@
+# Type Safety — Avoiding `any`
+
+All TypeScript code must avoid the use of `any`, `as any`, and `any[]` type annotations. Instead, follow these patterns:
+
+- **Error Handling:**
+	- Always use `catch (e: unknown)` in try/catch blocks.
+	- Use type guard utilities or `instanceof Error` to safely extract error messages:
+		- Example:
+			```ts
+			try {
+				// ...
+			} catch (e: unknown) {
+				const message = e instanceof Error ? e.message : 'Unknown error';
+			}
+			```
+
+- **API Response Typing:**
+	- Define explicit interfaces or types for all API responses and state.
+	- Place these definitions in a `types.ts` file within the relevant feature or package.
+	- Example:
+		- `types.ts`:
+			```ts
+			export interface MyApiResponse {
+				id: string;
+				value: number;
+			}
+			```
+		- Usage:
+			```ts
+			import type { MyApiResponse } from './types';
+			const [data, setData] = useState<MyApiResponse | null>(null);
+			```
+
+- **Shared Types Pattern:**
+	- When types are used across multiple files or packages, define them in a shared `types.ts` file and import as needed. This is the expected approach for all shared state, API, and domain types.
+
+- **Exceptions:**
+	- If a third-party library or legacy code requires `any`, use `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a comment explaining the reason and a TODO to revisit.
+
 # Platform Coding Rules
 
 ## Intent
@@ -19,9 +58,39 @@ Set implementation standards for readability, modularity, and safe feature deliv
 - Allow comments only when documenting non-obvious constraints (security, compliance, protocol, or external API quirks).
 - Remove temporary implementation markers before merge (`TODO`, `FIXME`, `XXX`, `TBD`, `HACK`).
 
+
 ## Prohibited
 - Unbounded dynamic command execution.
 - Direct secret access from client code.
 - Silent catch-and-ignore error handling.
 - Stub, scaffold, placeholder, or partial task implementations in production code.
 - "Not implemented" code paths for planned work in merged code.
+
+## Type Safety — Avoiding `any`
+
+- The use of `any`, `as any`, and `any[]` type annotations is strictly prohibited in all TypeScript code.
+- If a type is truly unknown, use `unknown` and always add type guards or narrowing logic before using the value.
+- All API responses and state must have explicit interfaces or types, either inferred or defined. Define these in a `types.ts` file within the feature or package, and import shared types from `@ctf/shared/types` where possible.
+- For error handling, always use `catch (e: unknown)` and apply type guard utilities, e.g.:
+
+```ts
+catch (e: unknown) {
+	const message = e instanceof Error ? e.message : 'Unknown error';
+}
+```
+
+- For API responses, define interfaces in a `types.ts` file and use them for state and props. Example:
+
+```ts
+// types.ts
+export interface MyApiResponse {
+	id: string;
+	value: number;
+}
+
+// usage
+import type { MyApiResponse } from './types';
+const [data, setData] = useState<MyApiResponse | null>(null);
+```
+
+- Reference the shared types pattern from `types.ts` files as the expected approach for all new and refactored code.

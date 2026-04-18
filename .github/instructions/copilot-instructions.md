@@ -89,24 +89,17 @@ If two rules conflict, choose the stricter rule and document the decision.
 
 ## Database Migration Best Practices (REQUIRED)
 
-- Every migration that adds or changes a table or column MUST:
   - Use `CREATE TABLE IF NOT EXISTS ...` for new tables, listing all current columns.
   - Use `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS ...` for every new/changed column, even if the column is in the CREATE TABLE above.
   - This ensures both fresh DBs and legacy DBs are always brought up to date.
-- When a table or column is renamed or removed, always use guarded DDL and provide data migration steps if needed.
-- All database schema changes must be made directly in `ctf/schema.sql`, which is the single source of truth. Do not use or reference individual migration files.
-- When creating a new table, always include both the full CREATE TABLE and ALTER TABLE for every column, even if redundant.
-- When adding a new column, always add a new migration with ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...
-- When reviewing or updating old migrations, ensure all columns are present in both CREATE TABLE and ALTER TABLE blocks.
+
 
 ## TypeScript Type Safety Policy (Critical)
-
-- All code changes (human or AI) must pass a full TypeScript typecheck (tsc --noEmit or pnpm typecheck) in every package under ctf/packages/ before commit or PR merge.
-- The /platform directory is strictly excluded from typecheck enforcement.
-- A pre-commit hook must run typecheck for all relevant packages and block the commit if any errors are found.
-- AI agents must not mark work as complete or submit PRs unless typecheck passes for all affected packages.
-- CI must also run typecheck for all packages, but local/typecheck failure must block code before CI.
 - This policy is mandatory and must be enforced by all agents and contributors.
+
+### Explicit Type Safety Rules
+- If a legitimate exception to these rules is required (e.g., third-party library limitation), use `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with an explanatory comment and a TODO to revisit.
+
 
 ## Plugin Feature Inventory Sync Policy (Critical)
 
