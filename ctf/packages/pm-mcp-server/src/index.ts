@@ -258,24 +258,43 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         );
         break;
 
-      case 'triageFeedback':
+
+      case 'triageFeedback': {
+        if (typeof args.feedbackId !== 'string' || !args.feedbackId.trim()) {
+          throw new Error("Validation error: 'feedbackId' is required and must be a non-empty string for triageFeedback.");
+        }
         result = await feedbackTools.triageFeedback(
-          typeof args.feedbackId === 'string' ? args.feedbackId : '',
+          args.feedbackId,
           typeof args.priority === 'string' ? args.priority : undefined,
           typeof args.category === 'string' ? args.category : undefined,
           typeof args.status === 'string' ? args.status : undefined
         );
         break;
+      }
 
-      case 'createInventoryMatch':
+
+      case 'createInventoryMatch': {
+        if (typeof args.feedbackId !== 'string' || !args.feedbackId.trim()) {
+          throw new Error("Validation error: 'feedbackId' is required and must be a non-empty string for createInventoryMatch.");
+        }
+        if (typeof args.inventoryFilePath !== 'string' || !args.inventoryFilePath.trim()) {
+          throw new Error("Validation error: 'inventoryFilePath' is required and must be a non-empty string for createInventoryMatch.");
+        }
+        if (typeof args.matchConfidence !== 'number') {
+          throw new Error("Validation error: 'matchConfidence' is required and must be a number for createInventoryMatch.");
+        }
+        if (typeof args.suggestedUpdates !== 'object' || args.suggestedUpdates === null || Array.isArray(args.suggestedUpdates)) {
+          throw new Error("Validation error: 'suggestedUpdates' is required and must be a non-array object for createInventoryMatch.");
+        }
         result = await feedbackTools.createInventoryMatch(
-          typeof args.feedbackId === 'string' ? args.feedbackId : '',
-          typeof args.inventoryFilePath === 'string' ? args.inventoryFilePath : '',
-          typeof args.matchConfidence === 'number' ? args.matchConfidence : 0,
-          typeof args.suggestedUpdates === 'object' && args.suggestedUpdates !== null ? args.suggestedUpdates : {},
+          args.feedbackId,
+          args.inventoryFilePath,
+          args.matchConfidence,
+          args.suggestedUpdates,
           typeof args.matcherReasoning === 'string' ? args.matcherReasoning : ''
         );
         break;
+      }
 
       case 'getApprovalQueue':
         result = await feedbackTools.getApprovalQueue(
@@ -285,22 +304,41 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         );
         break;
 
-      case 'approveMatch':
+
+      case 'approveMatch': {
+        if (typeof args.approvalId !== 'string' || !args.approvalId.trim()) {
+          throw new Error("Validation error: 'approvalId' is required and must be a non-empty string for approveMatch.");
+        }
+        if (typeof args.approverId !== 'string' || !args.approverId.trim()) {
+          throw new Error("Validation error: 'approverId' is required and must be a non-empty string for approveMatch.");
+        }
         result = await feedbackTools.approveMatch(
-          typeof args.approvalId === 'string' ? args.approvalId : '',
-          typeof args.approverId === 'string' ? args.approverId : '',
+          args.approvalId,
+          args.approverId,
           typeof args.approverFeedback === 'string' ? args.approverFeedback : undefined,
           typeof args.approvedArtifactChanges === 'object' && args.approvedArtifactChanges !== null ? args.approvedArtifactChanges : undefined
         );
         break;
+      }
 
-      case 'rejectMatch':
+
+      case 'rejectMatch': {
+        if (typeof args.approvalId !== 'string' || !args.approvalId.trim()) {
+          throw new Error("Validation error: 'approvalId' is required and must be a non-empty string for rejectMatch.");
+        }
+        if (typeof args.approverId !== 'string' || !args.approverId.trim()) {
+          throw new Error("Validation error: 'approverId' is required and must be a non-empty string for rejectMatch.");
+        }
+        if (typeof args.rejectionReason !== 'string' || !args.rejectionReason.trim()) {
+          throw new Error("Validation error: 'rejectionReason' is required and must be a non-empty string for rejectMatch.");
+        }
         result = await feedbackTools.rejectMatch(
-          typeof args.approvalId === 'string' ? args.approvalId : '',
-          typeof args.approverId === 'string' ? args.approverId : '',
-          typeof args.rejectionReason === 'string' ? args.rejectionReason : ''
+          args.approvalId,
+          args.approverId,
+          args.rejectionReason
         );
         break;
+      }
 
       case 'getImplementationQueue':
         result = await implementationTools.getImplementationQueue(
@@ -315,10 +353,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (typeof args.status === 'string') {
           if (args.status === 'completed' || args.status === 'failed' || args.status === 'in_progress') {
             status = args.status;
+          } else {
+            throw new Error("Validation error: 'status' must be one of 'in_progress', 'completed', or 'failed' for setImplementationStatus.");
           }
         }
+        if (typeof args.implementationId !== 'string' || !args.implementationId.trim()) {
+          throw new Error("Validation error: 'implementationId' is required and must be a non-empty string for setImplementationStatus.");
+        }
         result = await implementationTools.setImplementationStatus(
-          typeof args.implementationId === 'string' ? args.implementationId : '',
+          args.implementationId,
           status,
           typeof args.implementationAgentId === 'string' ? args.implementationAgentId : undefined,
           typeof args.implementationLog === 'string' ? args.implementationLog : undefined
