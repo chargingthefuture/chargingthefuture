@@ -1,4 +1,4 @@
-import { FeedbackItem } from '../types.js';
+import { FeedbackItem, ApprovalQueueRow } from '../types.js';
 export declare function listFeedback(status?: string, type?: string, category?: string, priority?: string, page?: number, pageSize?: number): Promise<{
     items: FeedbackItem[];
     totalCount: number;
@@ -9,7 +9,7 @@ export declare function createInventoryMatch(feedbackId: string, inventoryFilePa
     feedbackId: string;
 }>;
 export declare function getApprovalQueue(status?: string, page?: number, pageSize?: number): Promise<{
-    items: any[];
+    items: ApprovalQueueRow[];
     totalCount: number;
 }>;
 export declare function approveMatch(approvalId: string, approverId: string, approverFeedback?: string, approvedArtifactChanges?: Record<string, any>): Promise<{

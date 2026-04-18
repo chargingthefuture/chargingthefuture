@@ -1,0 +1,9 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+pnpm run type-check
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+  echo "Type-check failed. Commit aborted."
+  exit 1
+fi

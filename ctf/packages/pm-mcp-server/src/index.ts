@@ -228,7 +228,12 @@ const tools: Tool[] = [
 
 // Use the correct string key for the handler registration
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  interface RpcRequestParams {
+    name: string;
+    arguments?: Record<string, unknown>;
+  }
+  const params = request.params as RpcRequestParams;
+  const { name, arguments: args = {} } = params;
 
   try {
     let result:
@@ -253,7 +258,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         );
         break;
 
-      server.setRequestHandler(ListToolsRequestSchema, async () => {
+      case 'triageFeedback':
+        result = await feedbackTools.triageFeedback(
           args.feedbackId,
           args.priority,
           args.category,

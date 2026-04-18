@@ -1,11 +1,16 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { initializeDb, closeDb } from './db.js';
 import * as feedbackTools from './tools/feedback.js';
 import * as implementationTools from './tools/implementation.js';
 const server = new Server({
     name: 'pm-mcp-server',
     version: '1.0.0',
+}, {
+    capabilities: {
+        tools: {},
+    },
 });
 // Define MCP Tools
 const tools = [
@@ -209,8 +214,8 @@ const tools = [
 ];
 // Register tools
 // Use the correct string key for the handler registration
-server.setRequestHandler('tools/call', async (request) => {
-    const { name, arguments: args } = request.params;
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args = {} } = request.params;
     try {
         let result;
         switch (name) {
@@ -264,8 +269,7 @@ server.setRequestHandler('tools/call', async (request) => {
     }
 });
 // List tools
-// Use the correct string key for the handler registration
-server.setRequestHandler('tools/list', async () => {
+server.setRequestHandler(ListToolsRequestSchema, async () => {
     return { tools };
 });
 async function main() {

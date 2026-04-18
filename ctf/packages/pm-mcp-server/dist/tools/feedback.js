@@ -102,7 +102,7 @@ export async function createInventoryMatch(feedbackId, inventoryFilePath, matchC
     // Create approval queue entry
     const matchId = result.rows[0].match_id;
     await query(`INSERT INTO approval_queue (feedback_id, matcher_id, status) VALUES ($1, $2, 'pending')`, [feedbackId, matchId]);
-    return result.rows[0];
+    return { matchId: result.rows[0].match_id, feedbackId: result.rows[0].feedback_id };
 }
 export async function getApprovalQueue(status, page = 1, pageSize = 20) {
     let sql = `
@@ -176,9 +176,15 @@ export async function approveMatch(approvalId, approverId, approverFeedback, app
         approvedArtifactChanges ? JSON.stringify(approvedArtifactChanges) : '{}',
     ]);
     // Update feedback status
-    await query(`UPDATE feedback_items SET status = 'approval_pending', updated_at = NOW() WHERE id = $1`, [feedbackId]);
-    return approval;
+    // Update feedback status
+    await query(`UPDATE feedback_items SET status = 'approved', updated_at = NOW() WHERE id = $1`, [feedbackId]);
+    return {
+        approvalId: approval.approval_id,
+        status: approval.status,
+        approvedAt: approval.approved_at,
+    };
 }
+// Restore rejectMatch function declaration
 export async function rejectMatch(approvalId, approverId, rejectionReason) {
     const sql = `
     UPDATE approval_queue 
@@ -191,6 +197,9 @@ export async function rejectMatch(approvalId, approverId, rejectionReason) {
     const feedbackResult = await query('SELECT feedback_id FROM approval_queue WHERE id = $1', [approvalId]);
     const feedbackId = feedbackResult.rows[0].feedback_id;
     await query(`UPDATE feedback_items SET status = 'dismissed', updated_at = NOW() WHERE id = $1`, [feedbackId]);
-    return result.rows[0];
+    return {
+        approvalId: result.rows[0].approval_id,
+        status: result.rows[0].status,
+    };
 }
 //# sourceMappingURL=feedback.js.map

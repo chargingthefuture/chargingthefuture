@@ -270,7 +270,7 @@ export async function approveMatch(
 
   // Update feedback status
   await query(
-    `UPDATE feedback_items SET status = 'approval_pending', updated_at = NOW() WHERE id = $1`,
+    `UPDATE feedback_items SET status = 'approved', updated_at = NOW() WHERE id = $1`,
     [feedbackId]
   );
 
@@ -281,6 +281,19 @@ export async function approveMatch(
   };
 }
 
+/**
+ * Rejects an approval match in the approval queue.
+ *
+ * Updates the approval_queue status to 'rejected', records the approver and reason,
+ * and marks the associated feedback item as 'dismissed'.
+ *
+ * @param approvalId - The approval queue entry ID to reject
+ * @param approverId - The ID of the user/agent performing the rejection
+ * @param rejectionReason - The reason for rejection (stored as approver_feedback)
+ * @returns An object containing the approvalId and new status
+ * @sideeffect Updates both approval_queue and feedback_items tables
+ */
+export async function rejectMatch(
   approvalId: string,
   approverId: string,
   rejectionReason: string

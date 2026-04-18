@@ -1,5 +1,6 @@
+import { ImplementationQueueRow } from '../types.js';
 export declare function getImplementationQueue(status?: string, page?: number, pageSize?: number): Promise<{
-    items: any[];
+    items: ImplementationQueueRow[];
     totalCount: number;
 }>;
 export declare function setImplementationStatus(implementationId: string, newStatus: 'in_progress' | 'completed' | 'failed', implementationAgentId?: string, implementationLog?: string): Promise<{

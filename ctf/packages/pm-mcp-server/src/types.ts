@@ -4,10 +4,6 @@ export interface CountRow {
   count: string;
 }
 
-// Centralized CountRow type for all DB count queries
-export interface CountRow {
-  count: string;
-}
 // ApprovalQueueRow: all approval_queue columns plus joined fields
 export interface ApprovalQueueRow {
   id: string;
