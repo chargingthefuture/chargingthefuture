@@ -31,7 +31,7 @@
     "zod": "^4.3.6",
     "@stream-io/video-react-sdk": "^1.19.0",
     "getstream": "^8.7.0",
-    "stream-chat-react": "^11.18.2"
+    "stream-chat-react": "^12.13.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
