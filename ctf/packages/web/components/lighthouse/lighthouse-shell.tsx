@@ -5,6 +5,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { StreamChatPanel } from '../shared/stream-chat-panel';
 
 type LighthouseShellProps = {
   userId: string;
@@ -70,6 +71,10 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'browse' | 'matches' | 'chat'>('browse');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [chatCredentials, setChatCredentials] = useState<any>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchAll() {
@@ -136,6 +141,25 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
     );
   }
 
+  // Fetch chat credentials when chat tab is activated and a match is selected
+  useEffect(() => {
+    if (tab === 'chat' && selectedMatch) {
+      setChatLoading(true);
+      setChatError(null);
+      fetch(`/api/lighthouse/matches/${selectedMatch.id}/chat`, { method: 'POST' })
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Failed to fetch chat credentials');
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || 'No chat credentials');
+          setChatCredentials(data);
+        })
+        .catch((e) => setChatError(e instanceof Error ? e.message : String(e)))
+        .finally(() => setChatLoading(false));
+    } else {
+      setChatCredentials(null);
+    }
+  }, [tab, selectedMatch]);
+
   // Main layout: sidebar, tab nav, and content
   return (
     <div style={{ width: '100%', minHeight: '100vh', background: '#0F1117', fontFamily: 'Inter, system-ui, sans-serif', color: '#E8EAF0', display: 'flex' }}>
@@ -148,43 +172,37 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
           <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
             <div style={{ marginBottom: 20, padding: '18px 24px', borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(234,179,8,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#F9FAFB', marginBottom: 4 }}>LightHouse Chat</div>
-              <div style={{ fontSize: 14, color: '#9CA3AF' }}>Ask questions, get help, or connect with hosts and seekers.</div>
+              <div style={{ fontSize: 14, color: '#9CA3AF' }}>Connect with your match in real time.</div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(255,255,255,0.01)', borderRadius: 12, border: `1px solid ${COLOR}10`, padding: 16, marginBottom: 16, minHeight: 200 }}>
-              {/* Chat messages will be loaded here when chat is implemented */}
-              {announcements.length === 0 ? (
-                <div style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 40 }}>No chat messages yet.</div>
-              ) : (
-                announcements.map((a: Announcement, i: number) => (
-                  <div key={a.id || i} style={{ marginBottom: 18, display: 'flex', flexDirection: 'column', alignItems: a.from === 'user' ? 'flex-end' : 'flex-start' }}>
-                    <div style={{
-                      background: a.from === 'user' ? `${COLOR}30` : 'rgba(255,255,255,0.04)',
-                      color: a.from === 'user' ? COLOR : '#E8EAF0',
-                      borderRadius: 12,
-                      padding: '10px 16px',
-                      maxWidth: 340,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      alignSelf: a.from === 'user' ? 'flex-end' : 'flex-start',
-                    }}>{a.text || a.title || a.id}</div>
-                    {a.action && (
-                      <button style={{ marginTop: 6, fontSize: 12, color: COLOR, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>{a.action}</button>
-                    )}
-                  </div>
-                ))
+            <div style={{ marginBottom: 16 }}>
+              <label htmlFor="match-select" style={{ color: '#9CA3AF', fontSize: 14, marginRight: 8 }}>Select Match:</label>
+              <select
+                id="match-select"
+                value={selectedMatch?.id || ''}
+                onChange={e => {
+                  const match = matches.find(m => m.id === e.target.value) || null;
+                  setSelectedMatch(match);
+                }}
+                style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${COLOR}25`, background: '#181A20', color: '#E8EAF0', fontSize: 15 }}
+              >
+                <option value="">-- Select a match --</option>
+                {matches.map(m => (
+                  <option key={m.id} value={m.id}>Match {m.id} ({m.status})</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(255,255,255,0.01)', borderRadius: 12, border: `1px solid ${COLOR}10`, padding: 16, minHeight: 200 }}>
+              {!selectedMatch && <div style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 40 }}>Select a match to start chatting.</div>}
+              {selectedMatch && chatLoading && <div>Loading chat…</div>}
+              {selectedMatch && chatError && <div style={{ color: 'red' }}>{chatError}</div>}
+              {selectedMatch && chatCredentials && (
+                <StreamChatPanel
+                  streamApiKey={chatCredentials.streamApiKey}
+                  streamToken={chatCredentials.streamToken}
+                  streamUserId={chatCredentials.streamUserId}
+                  streamChannelId={chatCredentials.streamChannelId || selectedMatch.id}
+                />
               )}
-            </div>
-            <form style={{ display: 'flex', gap: 8 }} onSubmit={e => { e.preventDefault(); }}>
-              <input
-                type="text"
-                placeholder="Type your message..."
-                style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: `1px solid ${COLOR}25`, background: 'rgba(255,255,255,0.03)', color: '#E8EAF0', fontSize: 15, outline: 'none' }}
-                disabled
-              />
-              <button type="submit" style={{ padding: '10px 18px', borderRadius: 10, background: COLOR, border: 'none', color: '#0F1117', fontWeight: 800, fontSize: 15, cursor: 'not-allowed', opacity: 0.7 }} disabled>Send</button>
-            </form>
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
-              (Chat coming soon. For now, see announcements and updates here.)
             </div>
           </div>
         )}

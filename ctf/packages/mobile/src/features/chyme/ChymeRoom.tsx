@@ -1,4 +1,6 @@
 import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import { StreamVideoPanel } from './StreamVideoPanel';
+import { StreamChatPanel } from './StreamChatPanel';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +33,12 @@ export const ChymeRoom = () => {
   const [joined, setJoined] = useState(false);
   const [joinChannelId, setJoinChannelId] = useState<string | null>(null);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [streamCredentials, setStreamCredentials] = useState<null | {
+    streamApiKey: string;
+    streamToken: string;
+    streamUserId: string;
+    streamChannelId: string;
+  }>(null);
 
   const identity = useMemo(() => {
     try {
@@ -93,6 +101,19 @@ export const ChymeRoom = () => {
       if (res?.ok) {
         setJoined(true);
         setJoinChannelId(res.streamChannelId);
+        if (res?.ok) {
+          setJoined(true);
+          setJoinChannelId(res.streamChannelId);
+          if (res.streamApiKey && res.streamToken && res.streamUserId && res.streamChannelId) {
+            setStreamCredentials({
+              streamApiKey: res.streamApiKey,
+              streamToken: res.streamToken,
+              streamUserId: res.streamUserId,
+              streamChannelId: res.streamChannelId,
+            });
+          }
+          Alert.alert('Joined', `Stream channel ready: ${res.streamChannelId}`);
+        }
         Alert.alert('Joined', `Stream channel ready: ${res.streamChannelId}`);
         await loadRoom();
       }
@@ -169,6 +190,22 @@ export const ChymeRoom = () => {
           <Text style={styles.summaryText}>Participants: {room.participants.length}</Text>
           <Text style={styles.summaryText}>Call active: {room.callActive ? 'yes' : 'no'}</Text>
           {joinChannelId ? <Text style={styles.summaryText}>Stream channel: {joinChannelId}</Text> : null}
+          {streamCredentials && (
+            <>
+              <StreamVideoPanel
+                streamApiKey={streamCredentials.streamApiKey}
+                streamToken={streamCredentials.streamToken}
+                streamUserId={streamCredentials.streamUserId}
+                streamChannelId={streamCredentials.streamChannelId}
+              />
+              <StreamChatPanel
+                streamApiKey={streamCredentials.streamApiKey}
+                streamToken={streamCredentials.streamToken}
+                streamUserId={streamCredentials.streamUserId}
+                streamChannelId={streamCredentials.streamChannelId}
+              />
+            </>
+          )}
         </View>
       ) : null}
 

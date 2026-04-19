@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { StreamVideoPanel } from '../shared/stream-video-panel';
 import type {
   ChymeDeletionResponse,
   ChymeJoinResponse,
@@ -221,7 +222,13 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
 
               {joinInfo ? (
                 <div className="mt-4 rounded-2xl border border-[#14532d] bg-[#041a0b] p-4 text-sm text-[#A7F3D0]">
-                  Stream ready for {joinInfo.streamUserId} on channel {joinInfo.streamChannelId}.
+                  <h3 className="mb-2 font-semibold text-[#F0FDF4]">Audio Room</h3>
+                  <StreamVideoPanel
+                    streamApiKey={joinInfo.streamApiKey}
+                    streamToken={joinInfo.streamToken}
+                    streamUserId={joinInfo.streamUserId}
+                    streamChannelId={joinInfo.streamChannelId}
+                  />
                 </div>
               ) : null}
 

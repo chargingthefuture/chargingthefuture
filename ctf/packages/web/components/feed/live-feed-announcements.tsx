@@ -2,6 +2,13 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { StreamChatPanel } from '../shared/stream-chat-panel';
+type FeedStreamCredentials = {
+  streamApiKey: string;
+  streamToken: string;
+  streamUserId: string;
+  streamChannelId: string;
+};
 import type {
   FeedAnswerRatingValue,
   FeedChannel,
@@ -105,6 +112,30 @@ export function LiveFeedAnnouncements({
   initialError,
   isAdmin,
 }: LiveFeedAnnouncementsProps) {
+  const [chatCredentials, setChatCredentials] = useState<FeedStreamCredentials | null>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setChatLoading(true);
+    setChatError(null);
+    fetch('/api/feed/stream', { method: 'POST' })
+      .then(async (res) => {
+        const data = await res.json();
+        if (data.ok) {
+          setChatCredentials({
+            streamApiKey: data.streamApiKey,
+            streamToken: data.streamToken,
+            streamUserId: data.streamUserId,
+            streamChannelId: data.streamChannelId,
+          });
+        } else {
+          setChatError(data.message || 'Unable to load chat.');
+        }
+      })
+      .catch((e) => setChatError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setChatLoading(false));
+  }, []);
   const [items, setItems] = useState(initialItems);
   const [config, setConfig] = useState(initialConfig);
   const [filter, setFilter] = useState<FeedFilter>('all');
@@ -355,6 +386,19 @@ export function LiveFeedAnnouncements({
 
   return (
     <main className="min-h-screen bg-[#090b10] px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
+      <section className="mb-6">
+        <h2 className="mb-2 text-lg font-semibold text-sky-200">Live Feed Announcements & Support</h2>
+        {chatLoading && <div>Loading chat…</div>}
+        {chatError && <div style={{ color: 'red' }}>{chatError}</div>}
+        {chatCredentials && (
+          <StreamChatPanel
+            streamApiKey={chatCredentials.streamApiKey}
+            streamToken={chatCredentials.streamToken}
+            streamUserId={chatCredentials.streamUserId}
+            streamChannelId={chatCredentials.streamChannelId}
+          />
+        )}
+      </section>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <section className="rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_35%),linear-gradient(135deg,_#0f172a,_#111827_55%,_#0c1424)] p-5 shadow-lg shadow-black/20">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

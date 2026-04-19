@@ -1,1 +1,1 @@
-export { MockFeed as Feed } from './MockFeed';
+export { FeedStream as Feed } from './FeedStream';

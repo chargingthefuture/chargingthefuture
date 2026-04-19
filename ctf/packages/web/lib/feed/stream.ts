@@ -1,3 +1,35 @@
+export type FeedStreamCredentials = {
+  streamApiKey: string;
+  streamToken: string;
+  streamUserId: string;
+  streamChannelId: string;
+};
+
+export async function getFeedStreamCredentials(userId: string, displayName: string): Promise<FeedStreamCredentials | null> {
+  const streamConfig = getStreamConfig();
+  if (!streamConfig) return null;
+  const streamClient = StreamChat.getInstance(streamConfig.apiKey, streamConfig.apiSecret);
+  const streamUserId = `feed-${userId}`;
+  await streamClient.upsertUser({ id: streamUserId, name: displayName });
+  const token = streamClient.createToken(streamUserId);
+  const channelId = 'ctf-feed-announcements';
+  const channel = streamClient.channel('messaging', channelId, {
+    created_by_id: streamUserId,
+    name: 'CTF Feed Announcements',
+  });
+  try {
+    await channel.create();
+  } catch {
+    await channel.watch();
+  }
+  await channel.addMembers([streamUserId]);
+  return {
+    streamApiKey: streamConfig.apiKey,
+    streamToken: token,
+    streamUserId,
+    streamChannelId: channelId,
+  };
+}
 import { StreamChat } from 'stream-chat';
 import type { EventTypes } from 'stream-chat';
 import type { MembershipEventType } from './types';

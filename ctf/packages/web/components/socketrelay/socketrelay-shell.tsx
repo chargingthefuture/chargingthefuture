@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { StreamChatPanel } from '../shared/stream-chat-panel';
 
 export function SocketRelayShell() {
   const [loading, setLoading] = useState(true);
@@ -10,6 +11,10 @@ export function SocketRelayShell() {
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [fulfillments, setFulfillments] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedFulfillment, setSelectedFulfillment] = useState<any>(null);
+  const [chatCredentials, setChatCredentials] = useState<any>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   // Hoist fetchData for reuse, allow silent refresh to avoid UI flicker
   async function fetchData(options?: { showLoading?: boolean }) {
@@ -87,37 +92,58 @@ export function SocketRelayShell() {
   }
   // ...existing code...
 
-  // ...existing UI code, now using profile, openRequests, myRequests, fulfillments, handlers...
+  // Chat integration UI
   return (
     <div>
-      {/* Open Requests Section */}
-      <section>
-        <h2 className="text-xl font-bold mb-2">Open Requests</h2>
-        {openRequests.length ? (
-          <ul>
-            {openRequests.map((req: any) => (
-              <li key={req.id}>{req.title}</li>
-            ))}
-          </ul>
-        ) : (
-          <div className="p-4 text-center text-muted-foreground">No open requests</div>
-        )}
+      {/* Fulfillment Chat Section */}
+      <section style={{ marginBottom: 32 }}>
+        <h2 className="text-xl font-bold mb-2">Chat with Fulfillment</h2>
+        <label htmlFor="fulfillment-select" style={{ marginRight: 8 }}>Select Fulfillment:</label>
+        <select
+          id="fulfillment-select"
+          value={selectedFulfillment?.id || ''}
+          onChange={async e => {
+            const fulfillment = fulfillments.find((f: any) => f.id === e.target.value) || null;
+            setSelectedFulfillment(fulfillment);
+            setChatCredentials(null);
+            setChatError(null);
+            if (fulfillment) {
+              setChatLoading(true);
+              try {
+                const res = await fetch(`/api/socketrelay/fulfillments/${fulfillment.id}/chat`, { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to fetch chat credentials');
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'No chat credentials');
+                setChatCredentials(data);
+              } catch (e: any) {
+                setChatError(e.message || 'Failed to load chat');
+              } finally {
+                setChatLoading(false);
+              }
+            }
+          }}
+          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15 }}
+        >
+          <option value="">-- Select a fulfillment --</option>
+          {fulfillments.map((f: any) => (
+            <option key={f.id} value={f.id}>Fulfillment {f.id}</option>
+          ))}
+        </select>
+        <div style={{ marginTop: 16, minHeight: 200 }}>
+          {!selectedFulfillment && <div style={{ color: '#888' }}>Select a fulfillment to start chatting.</div>}
+          {selectedFulfillment && chatLoading && <div>Loading chat…</div>}
+          {selectedFulfillment && chatError && <div style={{ color: 'red' }}>{chatError}</div>}
+          {selectedFulfillment && chatCredentials && (
+            <StreamChatPanel
+              streamApiKey={chatCredentials.streamApiKey}
+              streamToken={chatCredentials.streamToken}
+              streamUserId={chatCredentials.streamUserId}
+              streamChannelId={chatCredentials.streamChannelId || selectedFulfillment.id}
+            />
+          )}
+        </div>
       </section>
-      {/* My Requests Section */}
-      <section>
-        <h2 className="text-xl font-bold mb-2">My Requests</h2>
-        {myRequests.length ? (
-          <ul>
-            {myRequests.map((req: any) => (
-              <li key={req.id}>{req.title}</li>
-            ))}
-          </ul>
-        ) : (
-          <div className="p-4 text-center text-muted-foreground">You haven't made any requests yet</div>
-        )}
-      </section>
-      {/* Fulfillments Section (if needed) */}
-      {/* Add more sections as needed, e.g., fulfillments */}
+      {/* ...existing UI code for openRequests, myRequests, etc. ... */}
     </div>
   );
 }

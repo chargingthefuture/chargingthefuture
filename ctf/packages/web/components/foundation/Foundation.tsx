@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { StreamChatPanel } from '../shared/stream-chat-panel';
 
 type Provider = {
   profileId: string;
@@ -26,6 +27,9 @@ export function Foundation() {
   const [selected, setSelected] = useState<Provider | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+  const [chatCredentials, setChatCredentials] = useState<any>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -43,7 +47,10 @@ export function Foundation() {
   const handleConnect = async (provider: Provider) => {
     setConnecting(true);
     setConnectionStatus(null);
+    setChatCredentials(null);
+    setChatError(null);
     try {
+      setChatLoading(true);
       const res = await fetch('/api/foundation/connections/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,13 +59,21 @@ export function Foundation() {
       const data = await res.json();
       if (data.ok) {
         setConnectionStatus('Connection thread created!');
+        setChatCredentials({
+          streamApiKey: data.streamApiKey,
+          streamToken: data.streamToken,
+          streamUserId: data.streamUserId,
+          streamChannelId: data.thread.streamChannelId,
+        });
       } else {
         setConnectionStatus(data.message || 'Failed to create connection');
       }
     } catch (e: any) {
       setConnectionStatus(e.message || 'Error connecting');
+      setChatError(e.message || 'Error connecting');
     } finally {
       setConnecting(false);
+      setChatLoading(false);
     }
   };
 
@@ -73,6 +88,19 @@ export function Foundation() {
           {connecting ? 'Connecting...' : 'Connect'}
         </button>
         {connectionStatus && <div style={{ marginTop: 12 }}>{connectionStatus}</div>}
+        {chatLoading && <div>Loading chat…</div>}
+        {chatError && <div style={{ color: 'red' }}>{chatError}</div>}
+        {chatCredentials && (
+          <div style={{ marginTop: 24 }}>
+            <h3>Live Chat</h3>
+            <StreamChatPanel
+              streamApiKey={chatCredentials.streamApiKey}
+              streamToken={chatCredentials.streamToken}
+              streamUserId={chatCredentials.streamUserId}
+              streamChannelId={chatCredentials.streamChannelId}
+            />
+          </div>
+        )}
       </div>
     );
   }

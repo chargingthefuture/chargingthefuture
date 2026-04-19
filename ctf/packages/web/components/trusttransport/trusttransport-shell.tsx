@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { StreamChatPanel } from '../shared/stream-chat-panel';
 
 export function TrustTransportShell() {
   const [loading, setLoading] = useState(true);
@@ -9,6 +10,10 @@ export function TrustTransportShell() {
   const [requests, setRequests] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [chatCredentials, setChatCredentials] = useState<any>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -85,10 +90,58 @@ export function TrustTransportShell() {
     );
   }
 
-  // ...existing UI code, now using modes, requests, payouts, handlers...
+  // Chat integration UI
   return (
     <div>
-      {/* TrustTransport UI goes here, using fetched data and handlers */}
+      {/* Request Chat Section */}
+      <section style={{ marginBottom: 32 }}>
+        <h2 className="text-xl font-bold mb-2">Chat with Trip</h2>
+        <label htmlFor="request-select" style={{ marginRight: 8 }}>Select Trip Request:</label>
+        <select
+          id="request-select"
+          value={selectedRequest?.id || ''}
+          onChange={async e => {
+            const req = requests.find((r: any) => r.id === e.target.value) || null;
+            setSelectedRequest(req);
+            setChatCredentials(null);
+            setChatError(null);
+            if (req) {
+              setChatLoading(true);
+              try {
+                const res = await fetch(`/api/trusttransport/trips/${req.id}/chat`, { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to fetch chat credentials');
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.message || 'No chat credentials');
+                setChatCredentials(data);
+              } catch (e: any) {
+                setChatError(e.message || 'Failed to load chat');
+              } finally {
+                setChatLoading(false);
+              }
+            }
+          }}
+          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15 }}
+        >
+          <option value="">-- Select a trip --</option>
+          {requests.map((r: any) => (
+            <option key={r.id} value={r.id}>Trip {r.id}</option>
+          ))}
+        </select>
+        <div style={{ marginTop: 16, minHeight: 200 }}>
+          {!selectedRequest && <div style={{ color: '#888' }}>Select a trip to start chatting.</div>}
+          {selectedRequest && chatLoading && <div>Loading chat…</div>}
+          {selectedRequest && chatError && <div style={{ color: 'red' }}>{chatError}</div>}
+          {selectedRequest && chatCredentials && (
+            <StreamChatPanel
+              streamApiKey={chatCredentials.streamApiKey}
+              streamToken={chatCredentials.streamToken}
+              streamUserId={chatCredentials.streamUserId}
+              streamChannelId={chatCredentials.streamChannelId || selectedRequest.id}
+            />
+          )}
+        </div>
+      </section>
+      {/* ...existing UI code for requests, payouts, etc. ... */}
     </div>
   );
 }

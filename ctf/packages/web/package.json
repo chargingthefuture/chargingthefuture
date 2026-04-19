@@ -29,6 +29,9 @@
     "react-dom": "^19.0.0",
     "stream-chat": "^8.60.0",
     "zod": "^4.3.6"
+    ,"@stream-io/video-react-sdk": "^1.19.0"
+    ,"getstream": "^8.7.0"
+    ,"stream-chat-react": "^11.18.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
