@@ -1,3 +1,15 @@
+ // ...existing code...
+// ...existing code...
+
+
+type StreamConfig = {
+  apiKey: string;
+  apiSecret: string;
+};
+import { StreamChat } from 'stream-chat';
+import type { EventTypes } from 'stream-chat';
+import type { MembershipEventType } from './types';
+
 export type FeedStreamCredentials = {
   streamApiKey: string;
   streamToken: string;
@@ -19,8 +31,16 @@ export async function getFeedStreamCredentials(userId: string, displayName: stri
   });
   try {
     await channel.create();
-  } catch {
-    await channel.watch();
+  } catch (createErr) {
+    // Log the error from channel.create()
+    console.error('[getFeedStreamCredentials] channel.create() failed:', createErr);
+    try {
+      await channel.watch();
+    } catch (watchErr) {
+      // Log both errors for debugging
+      console.error('[getFeedStreamCredentials] channel.watch() also failed after create() error:', watchErr, 'Original create() error:', createErr);
+      throw watchErr;
+    }
   }
   await channel.addMembers([streamUserId]);
   return {
@@ -30,14 +50,6 @@ export async function getFeedStreamCredentials(userId: string, displayName: stri
     streamChannelId: channelId,
   };
 }
-import { StreamChat } from 'stream-chat';
-import type { EventTypes } from 'stream-chat';
-import type { MembershipEventType } from './types';
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
 
 function getStreamConfig(): StreamConfig | null {
   const apiKey = process.env.STREAM_API_KEY?.trim();
@@ -71,8 +83,16 @@ export async function emitFeedMembershipEventToStream(input: {
 
   try {
     await channel.create();
-  } catch {
-    await channel.watch();
+  } catch (createErr) {
+    // Log the error from channel.create()
+    console.error('[emitFeedMembershipEventToStream] channel.create() failed:', createErr);
+    try {
+      await channel.watch();
+    } catch (watchErr) {
+      // Log both errors for debugging
+      console.error('[emitFeedMembershipEventToStream] channel.watch() also failed after create() error:', watchErr, 'Original create() error:', createErr);
+      throw watchErr;
+    }
   }
 
   await channel.sendEvent({

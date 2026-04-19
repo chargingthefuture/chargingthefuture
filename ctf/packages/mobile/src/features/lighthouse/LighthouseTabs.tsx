@@ -28,35 +28,13 @@ export const LighthouseTabs = () => {
       <View style={{ flex: 1 }}>
         {tab === 'browse' && <LighthouseScreen />}
         {tab === 'matches' && <LighthouseMatches />}
-        {tab === 'chat' && <LighthouseChatTab />}
+        {tab === 'chat' && <LighthouseStreamTab />}
       </View>
     </View>
   );
 };
 
-// Chat tab component with empty/loading/error state scaffolding
-const LighthouseChatTab = () => {
-  // Chat data fetching logic will be implemented when chat is available
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [conversations, setConversations] = React.useState<any[]>([]);
-
-  // Future: fetch chat data here
-  // useEffect(() => { ... }, []);
-
-  if (loading) return <View style={styles.center}><Text style={styles.placeholder}>Loading chats...</Text></View>;
-  if (error) return <View style={styles.center}><Text style={styles.error}>{error}</Text></View>;
-  if (conversations.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.title}>No conversations yet.</Text>
-        <Text style={styles.subtitle}>You have no active chats.</Text>
-      </View>
-    );
-  }
-  // Future: render chat list
-  return <View style={styles.center}><Text style={styles.placeholder}>No chat data available.</Text></View>;
-};
+import { LighthouseStreamTab } from './LighthouseStreamTab';
 
 const styles = StyleSheet.create({
   tabBar: { flexDirection: 'row', backgroundColor: '#181A20', borderBottomWidth: 1, borderBottomColor: '#23262F' },

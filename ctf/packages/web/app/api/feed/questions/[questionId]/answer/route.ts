@@ -4,13 +4,9 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { generateFeedQuestionAnswer } from 'lib/feed/repository';
 
-type RouteParams = {
-  params: Promise<{
-    questionId: string;
-  }>;
-};
 
-export async function POST(request: Request, { params }: RouteParams) {
+
+export async function POST(request: Request, { params }: { params: { questionId: string } }) {
   const gate = await requireFeedReadAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -21,7 +17,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return csrfDeny;
   }
 
-  const { questionId } = await params;
+  const { questionId } = params;
 
   try {
     const answer = await generateFeedQuestionAnswer(gate.auth.userId, questionId);

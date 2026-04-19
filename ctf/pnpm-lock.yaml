@@ -115,7 +115,7 @@ importers:
         specifier: ^7.2.2
         version: 7.2.2(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.1.0))(react@19.1.0)
       '@stream-io/video-react-native-sdk':
-        specifier: 1.32.3
+        specifier: ^1.32.3
         version: 1.32.3(3qzuhlniq4v7aa63rb6def2c3m)
       expo-constants:
         specifier: ^55.0.7

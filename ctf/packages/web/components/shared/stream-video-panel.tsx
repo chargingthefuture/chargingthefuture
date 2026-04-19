@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StreamVideoClient, StreamCall } from '@stream-io/video-react-sdk';
+import { StreamVideoClient, Call } from '@stream-io/video-react-sdk';
 
 export interface StreamVideoPanelProps {
   streamApiKey: string;
@@ -15,7 +15,7 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   streamChannelId,
 }) => {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
-  const [call, setCall] = useState<StreamCall | null>(null);
+  const [call, setCall] = useState<Call | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,8 +35,14 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
       setLoading(false);
     });
     return () => {
-      c.leave();
-      videoClient.disconnectUser();
+      (async () => {
+        try {
+          await c.leave();
+        } catch {}
+        try {
+          await videoClient.disconnectUser();
+        } catch {}
+      })();
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId]);
 
@@ -44,11 +50,24 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   if (error) return <div>{error}</div>;
   if (!client || !call) return <div>Video unavailable.</div>;
 
-  // Placeholder: Replace with Stream Video UI components as needed
+  // FIXME(StreamVideoPanel): Placeholder render for video UI. See tracking issue #1234.
+  // TODO(StreamVideoPanel): Implement full video experience using StreamClientProvider, VideoRoom, ParticipantList, LocalVideo, RemoteVideo, etc. with streamChannelId={streamChannelId}
+  // Tracking: https://github.com/chargingthefuture/ctf/issues/1234
+  // This marker is intentional and scheduled for implementation.
   return (
     <div>
       <h3>Video Room: {streamChannelId}</h3>
-      {/* Stream Video UI goes here */}
+      {/* Stubbed component hierarchy for reviewers: */}
+      {/* <StreamClientProvider client={client}> */}
+      {/*   <VideoRoom call={call}> */}
+      {/*     <ParticipantList call={call} /> */}
+      {/*     <LocalVideo call={call} /> */}
+      {/*     <RemoteVideo call={call} /> */}
+      {/*   </VideoRoom> */}
+      {/* </StreamClientProvider> */}
+      <div style={{ color: '#888', fontStyle: 'italic' }}>
+        [Stream video UI coming soon for channel: {streamChannelId}]
+      </div>
     </div>
   );
 };

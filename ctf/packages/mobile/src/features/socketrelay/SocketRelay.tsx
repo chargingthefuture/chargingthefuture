@@ -113,8 +113,9 @@ export function SocketRelay() {
         </View>
       )}
       {tab === 'chat' && (
-        <View style={styles.empty}><Text>Chat coming soon.</Text></View>
+        <SocketRelayStreamTab />
       )}
+    import { SocketRelayStreamTab } from './SocketRelayStreamTab';
     </View>
   );
 }

@@ -7,11 +7,9 @@ type ReplyBody = {
   body?: string;
 };
 
-type ReplyParams = {
-  params: Promise<{ messageId: string }>;
-};
 
-export async function POST(request: Request, context: ReplyParams) {
+
+export async function POST(request: Request, context: { params: { messageId: string } }) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
@@ -33,7 +31,7 @@ export async function POST(request: Request, context: ReplyParams) {
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'cohortId and body are required.' }, { status: 400 });
   }
 
-  const { messageId } = await context.params;
+  const { messageId } = context.params;
 
   try {
     const reply = await createMessage({

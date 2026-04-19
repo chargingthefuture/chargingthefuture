@@ -1,6 +1,15 @@
 "use client";
+
 import React, { useEffect, useState } from 'react';
 import { StreamChatPanel } from '../shared/stream-chat-panel';
+
+// Chat credentials type for StreamChatPanel
+export interface ChatCredentials {
+  streamApiKey: string;
+  streamToken: string;
+  streamUserId: string;
+  streamChannelId?: string;
+}
 
 type Provider = {
   profileId: string;
@@ -27,7 +36,7 @@ export function Foundation() {
   const [selected, setSelected] = useState<Provider | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-  const [chatCredentials, setChatCredentials] = useState<any>(null);
+  const [chatCredentials, setChatCredentials] = useState<ChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
@@ -63,7 +72,7 @@ export function Foundation() {
           streamApiKey: data.streamApiKey,
           streamToken: data.streamToken,
           streamUserId: data.streamUserId,
-          streamChannelId: data.thread.streamChannelId,
+          streamChannelId: data.thread?.streamChannelId,
         });
       } else {
         setConnectionStatus(data.message || 'Failed to create connection');
@@ -97,7 +106,7 @@ export function Foundation() {
               streamApiKey={chatCredentials.streamApiKey}
               streamToken={chatCredentials.streamToken}
               streamUserId={chatCredentials.streamUserId}
-              streamChannelId={chatCredentials.streamChannelId}
+              streamChannelId={chatCredentials.streamChannelId || ''}
             />
           </div>
         )}

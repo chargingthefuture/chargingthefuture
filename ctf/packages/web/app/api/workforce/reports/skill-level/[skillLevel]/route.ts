@@ -3,19 +3,15 @@ import { requireWorkforceReadAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { fetchSkillLevelReport } from 'lib/workforce/repository';
 
-type RouteParams = {
-  params: Promise<{
-    skillLevel: string;
-  }>;
-};
 
-export async function GET(_request: Request, { params }: RouteParams) {
+
+export async function GET(_request: Request, { params }: { params: { skillLevel: string } }) {
   const gate = await requireWorkforceReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
-  const { skillLevel } = await params;
+  const { skillLevel } = params;
 
   try {
     const items = await fetchSkillLevelReport();

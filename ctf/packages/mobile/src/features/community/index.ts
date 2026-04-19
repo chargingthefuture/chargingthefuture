@@ -1,1 +1,1 @@
-export { MockCommunity as Community } from './MockCommunity';
+export { Community } from './Community';

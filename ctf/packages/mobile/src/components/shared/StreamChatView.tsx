@@ -30,20 +30,29 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
 
   useEffect(() => {
     const chatClient = StreamChat.getInstance(streamApiKey);
+    let isMounted = true;
     chatClient
       .connectUser({ id: streamUserId }, streamToken)
       .then(() => {
         const ch = chatClient.channel(channelType, streamChannelId);
-        setChannel(ch);
-        setClient(chatClient);
-        setLoading(false);
+        return ch.watch().then(() => {
+          if (!isMounted) return;
+          setChannel(ch);
+          setClient(chatClient);
+          setLoading(false);
+        });
       })
       .catch((err) => {
+        if (!isMounted) return;
         setError('Failed to connect to chat.');
         setLoading(false);
       });
     return () => {
-      chatClient.disconnectUser();
+      isMounted = false;
+      // Only disconnect if this component established the connection
+      if (chatClient.user?.id === streamUserId) {
+        chatClient.disconnectUser();
+      }
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId, channelType]);
 

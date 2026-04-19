@@ -1,1 +1,1 @@
-export { MockSurvivorHubChat as SurvivorHubChat } from './MockSurvivorHubChat';
+export { SurvivorHubChat } from './SurvivorHubChat';

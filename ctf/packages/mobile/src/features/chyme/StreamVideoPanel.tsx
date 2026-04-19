@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import { StreamVideoClient, StreamCall, StreamVideoParticipantView } from '@stream-io/video-react-native-sdk';
+import { StreamVideoClient, Call } from '@stream-io/video-react-native-sdk';
+import { ParticipantView } from '@stream-io/video-react-native-sdk/dist/typescript/components/Participant/ParticipantView/ParticipantView';
 
 export interface StreamVideoPanelProps {
   streamApiKey: string;
@@ -16,7 +17,7 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   streamChannelId,
 }) => {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
-  const [call, setCall] = useState<StreamCall | null>(null);
+  const [call, setCall] = useState<Call | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,8 +37,14 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
       setLoading(false);
     });
     return () => {
-      c.leave();
-      videoClient.disconnectUser();
+      (async () => {
+        try {
+          await c.leave();
+        } catch {}
+        try {
+          await videoClient.disconnectUser();
+        } catch {}
+      })();
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId]);
 
@@ -45,11 +52,14 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   if (error) return <Text>{error}</Text>;
   if (!client || !call) return <Text>Video unavailable.</Text>;
 
-  // Placeholder: Replace with Stream Video UI components as needed
+  // Render the local participant if available, otherwise show unavailable
+  const localParticipant = call?.state?.localParticipant;
+  if (!localParticipant) return <Text>No participant available.</Text>;
+
   return (
     <View style={{ marginVertical: 16 }}>
       <Text>Video Room: {streamChannelId}</Text>
-      <StreamVideoParticipantView call={call} />
+      <ParticipantView participant={localParticipant} />
     </View>
   );
 };

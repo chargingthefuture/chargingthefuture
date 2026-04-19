@@ -30,7 +30,7 @@
     "react-native-config": "^1.6.1",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.2"
-    ,"@stream-io/video-react-native-sdk": "1.32.3"
+    ,"@stream-io/video-react-native-sdk": "^1.32.3"
     ,"stream-chat-react-native": "^6.6.0"
   },
   "devDependencies": {

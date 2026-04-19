@@ -3,19 +3,15 @@ import { requireWorkforceReadAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { fetchSectorReport } from 'lib/workforce/repository';
 
-type RouteParams = {
-  params: Promise<{
-    sector: string;
-  }>;
-};
 
-export async function GET(_request: Request, { params }: RouteParams) {
+
+export async function GET(_request: Request, { params }: { params: { sector: string } }) {
   const gate = await requireWorkforceReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
-  const { sector } = await params;
+  const { sector } = params;
 
   try {
     const items = await fetchSectorReport();

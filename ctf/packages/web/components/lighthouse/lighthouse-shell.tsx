@@ -127,21 +127,7 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
     fetchAll();
   }, [userId]);
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading LightHouse...</div>;
-  if (error) return <div className="text-red-500 p-4">{error}</div>;
 
-  // Empty state for profile
-  if (!profile) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-bold mb-2">Welcome to LightHouse</h2>
-        <p className="mb-4">No profile found. Get started by creating your LightHouse profile.</p>
-        {/* TODO: Add Create Profile button/flow */}
-      </div>
-    );
-  }
-
-  // Fetch chat credentials when chat tab is activated and a match is selected
   useEffect(() => {
     if (tab === 'chat' && selectedMatch) {
       setChatLoading(true);
@@ -159,6 +145,20 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
       setChatCredentials(null);
     }
   }, [tab, selectedMatch]);
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading LightHouse...</div>;
+  if (error) return <div className="text-red-500 p-4">{error}</div>;
+
+  // Empty state for profile
+  if (!profile) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-bold mb-2">Welcome to LightHouse</h2>
+        <p className="mb-4">No profile found. Get started by creating your LightHouse profile.</p>
+        {/* TODO: Add Create Profile button/flow */}
+      </div>
+    );
+  }
 
   // Main layout: sidebar, tab nav, and content
   return (

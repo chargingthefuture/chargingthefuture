@@ -92,6 +92,50 @@ export function SocketRelayShell() {
   }
   // ...existing code...
 
+  // Helper to fetch chat credentials for a fulfillment
+  async function fetchChatCredentials(fulfillmentId: string) {
+    const fulfillment = fulfillments.find((f: any) => f.id === fulfillmentId) || null;
+    setSelectedFulfillment(fulfillment);
+    setChatCredentials(null);
+    setChatError(null);
+    if (fulfillment) {
+      setChatLoading(true);
+      try {
+        const res = await fetch(`/api/socketrelay/fulfillments/${fulfillment.id}/chat`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to fetch chat credentials');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'No chat credentials');
+        setChatCredentials(data);
+      } catch (e: any) {
+        setChatError(e.message || 'Failed to load chat');
+      } finally {
+        setChatLoading(false);
+      }
+    }
+  }
+
+  // Helper to fetch chat credentials for a fulfillment
+  async function fetchChatCredentials(fulfillmentId: string) {
+    const fulfillment = fulfillments.find((f: any) => f.id === fulfillmentId) || null;
+    setSelectedFulfillment(fulfillment);
+    setChatCredentials(null);
+    setChatError(null);
+    if (fulfillment) {
+      setChatLoading(true);
+      try {
+        const res = await fetch(`/api/socketrelay/fulfillments/${fulfillment.id}/chat`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to fetch chat credentials');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'No chat credentials');
+        setChatCredentials(data);
+      } catch (e: any) {
+        setChatError(e.message || 'Failed to load chat');
+      } finally {
+        setChatLoading(false);
+      }
+    }
+  }
+
   // Chat integration UI
   return (
     <div>
@@ -102,26 +146,7 @@ export function SocketRelayShell() {
         <select
           id="fulfillment-select"
           value={selectedFulfillment?.id || ''}
-          onChange={async e => {
-            const fulfillment = fulfillments.find((f: any) => f.id === e.target.value) || null;
-            setSelectedFulfillment(fulfillment);
-            setChatCredentials(null);
-            setChatError(null);
-            if (fulfillment) {
-              setChatLoading(true);
-              try {
-                const res = await fetch(`/api/socketrelay/fulfillments/${fulfillment.id}/chat`, { method: 'POST' });
-                if (!res.ok) throw new Error('Failed to fetch chat credentials');
-                const data = await res.json();
-                if (!data.ok) throw new Error(data.message || 'No chat credentials');
-                setChatCredentials(data);
-              } catch (e: any) {
-                setChatError(e.message || 'Failed to load chat');
-              } finally {
-                setChatLoading(false);
-              }
-            }
-          }}
+          onChange={e => fetchChatCredentials(e.target.value)}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15 }}
         >
           <option value="">-- Select a fulfillment --</option>

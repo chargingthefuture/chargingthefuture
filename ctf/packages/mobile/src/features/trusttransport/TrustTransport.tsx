@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TrustTransportStreamTab } from './TrustTransportStreamTab';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useAuth } from './auth-context';
 
@@ -110,12 +111,23 @@ export const TrustTransport = () => {
           </View>
         )}
         {/* PACKAGE & CHAT TABS */}
-        {(tab === 'package' || tab === 'chat') && (
+        {tab === 'package' && (
           <View style={styles.centeredBox}>
-            <Text style={styles.centeredIcon}>{tab === 'package' ? '📦' : '💬'}</Text>
-            <Text style={styles.centeredTitle}>{tab === 'package' ? 'Package Delivery' : 'Transport Chat'}</Text>
+            <Text style={styles.centeredIcon}>📦</Text>
+            <Text style={styles.centeredTitle}>Package Delivery</Text>
             <Text style={styles.centeredDesc}>GetStream-powered · Safety-first</Text>
           </View>
+        )}
+        {tab === 'chat' && (
+          user && user.activeTripId ? (
+            <TrustTransportStreamTab tripId={user.activeTripId} />
+          ) : (
+            <View style={styles.centeredBox}>
+              <Text style={styles.centeredIcon}>💬</Text>
+              <Text style={styles.centeredTitle}>Transport Chat</Text>
+              <Text style={styles.centeredDesc}>GetStream-powered · Safety-first</Text>
+            </View>
+          )
         )}
       </ScrollView>
     </View>

@@ -1,1 +1,1 @@
-export { MockAnnouncements as Announcements } from './MockAnnouncements';
+export { Announcements } from './Announcements';

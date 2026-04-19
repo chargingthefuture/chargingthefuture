@@ -1,17 +1,44 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import { StreamChatPanel } from '../shared/stream-chat-panel';
+
+// Types for TrustTransport
+export interface Mode {
+  id: string;
+  name: string;
+  // Add more fields as needed
+}
+
+export interface Request {
+  id: string;
+  // Add more fields as needed
+}
+
+export interface Payout {
+  id: string;
+  // Add more fields as needed
+}
+
+export interface ChatCredentials {
+  streamApiKey: string;
+  streamToken: string;
+  streamUserId: string;
+  streamChannelId?: string;
+  ok?: boolean;
+  message?: string;
+}
 
 export function TrustTransportShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modes, setModes] = useState<any[]>([]);
-  const [requests, setRequests] = useState<any[]>([]);
-  const [payouts, setPayouts] = useState<any[]>([]);
+  const [modes, setModes] = useState<Mode[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [chatCredentials, setChatCredentials] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [chatCredentials, setChatCredentials] = useState<ChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
@@ -90,6 +117,28 @@ export function TrustTransportShell() {
     );
   }
 
+  // Helper to fetch chat credentials for a request
+  async function fetchChatForRequest(requestId: string) {
+    const req = requests.find((r) => r.id === requestId) || null;
+    setSelectedRequest(req);
+    setChatCredentials(null);
+    setChatError(null);
+    if (req) {
+      setChatLoading(true);
+      try {
+        const res = await fetch(`/api/trusttransport/trips/${req.id}/chat`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to fetch chat credentials');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'No chat credentials');
+        setChatCredentials(data);
+      } catch (e: any) {
+        setChatError(e.message || 'Failed to load chat');
+      } finally {
+        setChatLoading(false);
+      }
+    }
+  }
+
   // Chat integration UI
   return (
     <div>
@@ -100,30 +149,11 @@ export function TrustTransportShell() {
         <select
           id="request-select"
           value={selectedRequest?.id || ''}
-          onChange={async e => {
-            const req = requests.find((r: any) => r.id === e.target.value) || null;
-            setSelectedRequest(req);
-            setChatCredentials(null);
-            setChatError(null);
-            if (req) {
-              setChatLoading(true);
-              try {
-                const res = await fetch(`/api/trusttransport/trips/${req.id}/chat`, { method: 'POST' });
-                if (!res.ok) throw new Error('Failed to fetch chat credentials');
-                const data = await res.json();
-                if (!data.ok) throw new Error(data.message || 'No chat credentials');
-                setChatCredentials(data);
-              } catch (e: any) {
-                setChatError(e.message || 'Failed to load chat');
-              } finally {
-                setChatLoading(false);
-              }
-            }
-          }}
+          onChange={e => fetchChatForRequest(e.target.value)}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15 }}
         >
           <option value="">-- Select a trip --</option>
-          {requests.map((r: any) => (
+          {requests.map((r) => (
             <option key={r.id} value={r.id}>Trip {r.id}</option>
           ))}
         </select>
