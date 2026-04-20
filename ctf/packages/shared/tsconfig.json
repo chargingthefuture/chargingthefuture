@@ -6,8 +6,8 @@
     "declaration": true,
     "emitDeclarationOnly": false,
     "types": ["node"],
-    "jsx": "react-jsx"
-    ,"ignoreDeprecations": "6.0"
+    "jsx": "react-jsx",
+    "baseUrl": "./"
   },
   "include": ["src/"],
   "exclude": ["node_modules"]
