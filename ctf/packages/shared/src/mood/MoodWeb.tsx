@@ -1,5 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useMoodEligibility, useSubmitMoodCheck } from '@ctf/shared';
+// TODO: Implement useMoodEligibility and useSubmitMoodCheck hooks
+// These hooks were previously imported from '@ctf/shared' but do not exist yet.
+// Stubbed below to unblock the build.
+const useMoodEligibility = (_clientId: string) => ({
+  eligibility: null as { eligible: boolean; nextEligibleAt: string } | null,
+  loading: false,
+  error: null as string | null,
+  fetchEligibility: () => {},
+});
+const useSubmitMoodCheck = (_clientId: string) => ({
+  result: null,
+  loading: false,
+  error: null as string | null,
+  submit: (_mood: number) => {},
+});
 
 // TODO: Replace with real clientId from auth context
 const getClientId = () => 'demo-client-id';
