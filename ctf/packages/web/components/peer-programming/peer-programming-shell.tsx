@@ -1,37 +1,42 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 
-// Types for peer programming
-export interface Participant {
+type Topic = {
   id: string;
-  name: string;
-}
+  weekStartDate: string;
+  title: string;
+  guidance: string;
+  status: string;
+};
 
-export interface Room {
+type Cohort = {
   id: string;
-  name?: string;
-  cohortId?: string;
-  participants?: Participant[];
-  topic?: string;
-  status?: string;
-}
+  weekStartDate: string;
+  cohortLabel: string;
+  fallbackOpen: boolean;
+  topicId: string | null;
+};
 
-export interface Message {
+type Message = {
   id: string;
-  author?: string;
-  authorId?: string;
-  content: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
-}
+  cohortId: string;
+  authorUserId: string;
+  body: string;
+  tier: string;
+  createdAtIso: string;
+};
 
 export function PeerProgrammingShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [cohort, setCohort] = useState<Cohort | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [feedbackInput, setFeedbackInput] = useState("");
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -40,22 +45,18 @@ export function PeerProgrammingShell() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/peer-programming/room', { signal: controller.signal });
-        if (!res.ok) throw new Error('Failed to load room');
+        const res = await fetch("/api/peer-programming/room", {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error("Failed to load room");
         const data = await res.json();
         if (controller.signal.aborted) return;
-        setRoom(data as Room);
-        if (data && data.cohortId) {
-          const msgRes = await fetch('/api/peer-programming/messages', { signal: controller.signal });
-          if (!msgRes.ok) throw new Error('Failed to load messages');
-          if (controller.signal.aborted) return;
-          setMessages(await msgRes.json() as Message[]);
-        } else {
-          setMessages([]);
-        }
+        setTopic(data.topic ?? null);
+        setCohort(data.cohort ?? null);
+        setMessages(data.messages ?? []);
       } catch (e: any) {
-        if (e.name === 'AbortError' || controller.signal.aborted) return;
-        setError(e.message || 'Failed to load peer programming data.');
+        if (e.name === "AbortError" || controller.signal.aborted) return;
+        setError(e.message || "Failed to load peer programming data.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -64,87 +65,29 @@ export function PeerProgrammingShell() {
     return () => controller.abort();
   }, []);
 
-  async function handlePostMessage(message: Pick<Message, 'content'>) {
+  async function handlePostMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!messageInput.trim() || !cohort) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/peer-programming/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(message),
+      const res = await fetch("/api/peer-programming/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ cohortId: cohort.id, body: messageInput }),
       });
-      if (!res.ok) throw new Error('Failed to post message');
-      // Refetch messages after successful post
-      const msgRes = await fetch('/api/peer-programming/messages');
-      if (!msgRes.ok) throw new Error('Failed to fetch updated messages');
-      setMessages(await msgRes.json() as Message[]);
+      if (!res.ok) throw new Error("Failed to post message");
+      const data = await res.json();
+      setMessages((prev) => [...prev, data.message]);
+      setMessageInput("");
     } catch (e: any) {
-      setError(e.message || 'Failed to post message.');
+      setError(e.message || "Failed to post message.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleSubmitFeedback(feedback: { feedback: string }) {
-    setSubmitting(true);
-    setError(null);
-    setFeedbackSuccess(false);
-    try {
-      const res = await fetch('/api/peer-programming/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(feedback),
-      });
-      if (!res.ok) throw new Error('Failed to submit feedback');
-      setFeedbackSuccess(true);
-    } catch (e: any) {
-      setError(e.message || 'Failed to submit feedback.');
-      setFeedbackSuccess(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading peer programming…</div>;
-  if (error) return <div className="text-red-500 p-4">{error}</div>;
-  if (!room || !room.cohortId) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-bold mb-2">Peer Programming</h2>
-        <p className="mb-4">You're not assigned to a cohort this week. Assignments happen every Monday.</p>
-      </div>
-    );
-  }
-
-  // ...existing UI code, now using room, messages, handlers...
-  // Message input state
-  const [messageInput, setMessageInput] = useState("");
-  const [feedbackInput, setFeedbackInput] = useState("");
-  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
-  const [feedbackError, setFeedbackError] = useState<string | null>(null);
-
-  // MessageList component
-  function MessageList({ messages }: { messages: Message[] }) {
-    if (!messages.length) {
-      return <div className="p-4 text-center text-muted-foreground">No messages yet. Start the conversation!</div>;
-    }
-    return (
-      <div className="overflow-y-auto max-h-64 border rounded p-2 bg-white/5 mb-4">
-        {messages.map((msg, i) => (
-          <div key={msg.id || i} className="mb-2">
-            <div className="text-xs text-gray-400 flex gap-2 items-center">
-              <span className="font-bold text-gray-300">{msg.author || 'Anonymous'}</span>
-              <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleString() : ''}</span>
-            </div>
-            <div className="text-sm text-gray-100">{msg.content}</div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // Feedback form submit handler
-  async function onFeedbackSubmit(e: React.FormEvent) {
+  async function handleSubmitFeedback(e: React.FormEvent) {
     e.preventDefault();
     setFeedbackSuccess(false);
     setFeedbackError(null);
@@ -152,51 +95,105 @@ export function PeerProgrammingShell() {
       setFeedbackError("Feedback cannot be empty.");
       return;
     }
+    setSubmitting(true);
     try {
-      await handleSubmitFeedback({ feedback: feedbackInput });
+      const res = await fetch("/api/peer-programming/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({
+          cohortId: cohort?.id ?? null,
+          issueType: "general",
+          suggestionCategory: "experience",
+          releaseSurface: "web",
+          note: feedbackInput,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to submit feedback");
       setFeedbackSuccess(true);
       setFeedbackInput("");
     } catch (e: any) {
       setFeedbackError(e.message || "Failed to submit feedback.");
+    } finally {
+      setSubmitting(false);
     }
+  }
+
+  if (loading)
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Loading peer programming…
+      </div>
+    );
+  if (error) return <div className="text-red-500 p-4">{error}</div>;
+
+  if (!cohort) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-bold mb-2">Peer Programming</h2>
+        <p className="text-muted-foreground">
+          You&apos;re not assigned to a cohort this week. Assignments happen every Monday.
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-8">
-      {/* Room metadata */}
-      <section className="mb-4">
-        <h2 className="text-2xl font-bold mb-1">Peer Programming Room</h2>
-        <div className="text-gray-400 text-sm mb-1">Room: <span className="font-mono">{room.name || room.id}</span></div>
-        {room.participants && room.participants.length > 0 && (
-          <div className="text-gray-300 text-xs mb-2">Participants: {room.participants.map((p: Participant) => p.name || p.id).join(", ")}</div>
+      {/* Topic */}
+      {topic && (
+        <section className="rounded-lg border bg-card p-5">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+            Week of {topic.weekStartDate}
+          </p>
+          <h2 className="text-xl font-bold mb-2">{topic.title}</h2>
+          <p className="text-sm text-muted-foreground">{topic.guidance}</p>
+        </section>
+      )}
+
+      {/* Cohort info */}
+      <section className="rounded-lg border bg-card p-5">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+          Your Cohort
+        </h3>
+        <p className="font-medium">{cohort.cohortLabel}</p>
+        {cohort.fallbackOpen && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Open session — all authenticated members can join
+          </p>
         )}
       </section>
 
       {/* Messages */}
       <section>
-        <h3 className="text-lg font-semibold mb-2">Messages</h3>
-        <MessageList messages={messages} />
-        {/* Message input form */}
-        <form
-          className="flex gap-2 mt-2"
-          onSubmit={async e => {
-            e.preventDefault();
-            if (!messageInput.trim()) return;
-            await handlePostMessage({ content: messageInput });
-            setMessageInput("");
-          }}
-        >
+        <h3 className="text-lg font-semibold mb-3">Discussion</h3>
+        <div className="overflow-y-auto max-h-72 rounded-lg border bg-card p-3 mb-3 space-y-3">
+          {messages.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-4">
+              No messages yet. Start the conversation!
+            </p>
+          ) : (
+            messages.map((msg) => (
+              <div key={msg.id}>
+                <p className="text-xs text-muted-foreground mb-0.5">
+                  {new Date(msg.createdAtIso).toLocaleString()}
+                </p>
+                <p className="text-sm">{msg.body}</p>
+              </div>
+            ))
+          )}
+        </div>
+        <form className="flex gap-2" onSubmit={handlePostMessage}>
           <input
-            className="flex-1 rounded border px-3 py-2 text-sm bg-gray-900 text-white"
+            className="flex-1 rounded border px-3 py-2 text-sm bg-background"
             type="text"
             value={messageInput}
-            onChange={e => setMessageInput(e.target.value)}
+            onChange={(e) => setMessageInput(e.target.value)}
             placeholder="Type your message…"
             disabled={submitting}
             required
           />
           <button
-            className="rounded bg-blue-600 px-4 py-2 text-white font-bold disabled:opacity-60"
+            className="rounded bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold disabled:opacity-60"
             type="submit"
             disabled={submitting || !messageInput.trim()}
           >
@@ -205,29 +202,35 @@ export function PeerProgrammingShell() {
         </form>
       </section>
 
-      {/* Feedback form */}
+      {/* Feedback */}
       <section>
-        <h3 className="text-lg font-semibold mb-2">Feedback</h3>
-        <form className="flex flex-col gap-2" onSubmit={onFeedbackSubmit}>
+        <h3 className="text-lg font-semibold mb-3">Session Feedback</h3>
+        <form className="space-y-3" onSubmit={handleSubmitFeedback}>
           <textarea
-            className="rounded border px-3 py-2 text-sm bg-gray-900 text-white"
+            className="w-full rounded border px-3 py-2 text-sm bg-background"
             value={feedbackInput}
-            onChange={e => setFeedbackInput(e.target.value)}
+            onChange={(e) => setFeedbackInput(e.target.value)}
             placeholder="How was your peer programming experience?"
-            rows={2}
-            disabled={submitting}
+            rows={3}
+            disabled={submitting || feedbackSuccess}
             required
           />
-          <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-3">
             <button
-              className="rounded bg-green-600 px-4 py-2 text-white font-bold disabled:opacity-60"
+              className="rounded bg-green-600 text-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
               type="submit"
-              disabled={submitting || !feedbackInput.trim()}
+              disabled={submitting || !feedbackInput.trim() || feedbackSuccess}
             >
               {submitting ? "Submitting…" : "Submit Feedback"}
             </button>
-            {feedbackSuccess && <span className="text-green-400 text-sm">Thank you for your feedback!</span>}
-            {feedbackError && <span className="text-red-400 text-sm">{feedbackError}</span>}
+            {feedbackSuccess && (
+              <span className="text-green-500 text-sm">
+                Thank you for your feedback!
+              </span>
+            )}
+            {feedbackError && (
+              <span className="text-red-500 text-sm">{feedbackError}</span>
+            )}
           </div>
         </form>
       </section>
