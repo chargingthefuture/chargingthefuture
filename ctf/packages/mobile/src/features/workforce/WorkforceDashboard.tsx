@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+
 type Chart = { label: string; value: number; pct: number; color: string };
 type SkillGap = { skill: string; gap: number; trend: string };
 
@@ -12,13 +14,24 @@ export function WorkforceDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Replace with real API call
-    setTimeout(() => {
-      // Simulate empty state
-      setCharts([]);
-      setGaps([]);
-      setLoading(false);
-    }, 1000);
+    let cancelled = false;
+    async function fetchDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}/api/workforce/dashboard`);
+        if (!res.ok) throw new Error('Failed to load dashboard');
+        const data = await res.json();
+        if (!cancelled) {
+          setCharts(data.dashboard?.charts || []);
+          setGaps(data.dashboard?.skillGaps || []);
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e.message || 'Failed to load dashboard.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchDashboard();
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

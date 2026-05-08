@@ -1,18 +1,38 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from 'react-native';
+
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
 
 export const Unlock = () => {
   const [url, setUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
-    if (!url.match(/^https:\/\/www\.quora\.com\/profile\//)) {
+    if (!url.match(/^https:\/\/(www\.)?quora\.com\/profile\//)) {
       setError('Please enter a valid Quora profile URL.');
       return;
     }
-    setSubmitted(true);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/unlock/submission`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoraProfileUrl: url }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Submission failed. Please try again.');
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -39,7 +59,11 @@ export const Unlock = () => {
         autoCorrect={false}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Submit" onPress={handleSubmit} />
+      {loading ? (
+        <ActivityIndicator color="#0000ff" />
+      ) : (
+        <Button title="Submit" onPress={handleSubmit} disabled={loading} />
+      )}
     </View>
   );
 };

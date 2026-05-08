@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Button } from 'react-native';
 
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+
 // Placeholder generic auth context
 const AuthContext = React.createContext({ isAuthenticated: false, signIn: () => {} });
 
@@ -22,12 +24,26 @@ export function WorkforceProfile() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Replace with real API call
-    setTimeout(() => {
-      setProfile(null);
+    if (!auth.isAuthenticated) {
       setLoading(false);
-    }, 1000);
-  }, []);
+      return;
+    }
+    let cancelled = false;
+    async function fetchProfile() {
+      try {
+        const res = await fetch(`${API_BASE}/api/workforce/profile`);
+        if (!res.ok) throw new Error('Failed to load profile');
+        const data = await res.json();
+        if (!cancelled) setProfile(data.profile ?? null);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message || 'Failed to load profile.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchProfile();
+    return () => { cancelled = true; };
+  }, [auth.isAuthenticated]);
 
   if (!auth.isAuthenticated) {
     return (

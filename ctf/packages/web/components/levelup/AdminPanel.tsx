@@ -13,7 +13,7 @@ export function AdminPanel({ kpis }: AdminPanelProps) {
     <section className="rounded-lg border bg-card p-5 space-y-3">
       <h2 className="text-lg font-medium">Admin Panel</h2>
       <p className="text-sm text-muted-foreground">
-        Configure refund policies, adjust credits, and monitor cohort performance metrics. TODO: add policy editor and advanced compliance notes.
+        Configure refund policies, adjust credits, and monitor cohort performance metrics.
       </p>
 
       <div className="grid gap-3 md:grid-cols-3 text-sm">

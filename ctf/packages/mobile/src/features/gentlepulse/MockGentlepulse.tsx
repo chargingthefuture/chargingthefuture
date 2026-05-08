@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchSessions } from './api';
+import { fetchSessions, playSession, setFavorite } from './api';
 
 const COLOR = '#14B8A6';
 const WIDTH = Dimensions.get('window').width;
@@ -13,11 +13,12 @@ const NAV: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; key: str
 	{ icon: 'star-outline', label: 'Favorites', key: 'favorites' },
 ];
 
-export const MockGentlepulse = () => {
+export const GentlePulse = () => {
 	const [activeNav, setActiveNav] = useState('sessions');
-	const [playing, setPlaying] = useState(null);
+	const [playing, setPlaying] = useState<string | number | null>(null);
 	const [isPaused, setIsPaused] = useState(false);
 	const [progress] = useState(40);
+	const [favorites, setFavorites] = useState<Set<string | number>>(new Set());
 	const [sessions, setSessions] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -46,7 +47,39 @@ export const MockGentlepulse = () => {
 		setRefreshing(false);
 	}, [loadSessions]);
 
-	const currentSession = sessions.find((s) => s.id === playing);
+	const handlePlay = useCallback(async (sessionId: string | number) => {
+		setPlaying(sessionId);
+		setActiveNav('playing');
+		try {
+			await playSession(sessionId);
+		} catch {
+			// Non-critical: play tracking failure doesn't block playback
+		}
+	}, []);
+
+	const handleToggleFavorite = useCallback(async (sessionId: string | number) => {
+		const isFav = favorites.has(sessionId);
+		// Optimistic update
+		setFavorites((prev) => {
+			const next = new Set(prev);
+			if (isFav) next.delete(sessionId);
+			else next.add(sessionId);
+			return next;
+		});
+		try {
+			await setFavorite(sessionId, !isFav);
+		} catch {
+			// Revert on failure
+			setFavorites((prev) => {
+				const next = new Set(prev);
+				if (isFav) next.add(sessionId);
+				else next.delete(sessionId);
+				return next;
+			});
+		}
+	}, [favorites]);
+
+	const currentSession = sessions.find((s: any) => s.id === playing);
 
 	return (
 		<View style={styles.root}>
@@ -98,7 +131,7 @@ export const MockGentlepulse = () => {
 							) : (
 								<View style={styles.sessionGrid}>
 									{sessions.map((s) => (
-										<TouchableOpacity style={styles.sessionCard} onPress={() => { setPlaying(s.id); setActiveNav('playing'); }}>
+										<TouchableOpacity style={styles.sessionCard} onPress={() => handlePlay(s.id)}>
 											<Text style={styles.sessionEmoji}>{s.emoji || '🧘'}</Text>
 											<Text style={styles.sessionTitle}>{s.title}</Text>
 											<View style={styles.sessionMeta}>

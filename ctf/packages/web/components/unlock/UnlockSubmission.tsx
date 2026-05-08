@@ -5,16 +5,37 @@ export default function UnlockSubmission() {
   const [url, setUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    // TODO: Add real validation and API call
-    if (!url.match(/^https:\/\/www\.quora\.com\/profile\//)) {
+
+    if (!url.match(/^https:\/\/(www\.)?quora\.com\/profile\//)) {
       setError('Please enter a valid Quora profile URL.');
       return;
     }
-    setSubmitted(true);
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/unlock/submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoraProfileUrl: url }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Submission failed. Please try again.');
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -40,9 +61,16 @@ export default function UnlockSubmission() {
         value={url}
         onChange={e => setUrl(e.target.value)}
         required
+        disabled={loading}
       />
       {error && <div className="text-red-600 mb-2">{error}</div>}
-      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">Submit</button>
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-blue-600 text-white px-4 py-2 rounded w-full disabled:opacity-60"
+      >
+        {loading ? 'Submitting…' : 'Submit'}
+      </button>
     </form>
   );
 }

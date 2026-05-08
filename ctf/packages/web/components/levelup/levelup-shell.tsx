@@ -1,4 +1,5 @@
 
+import { listCohorts, getUserDashboardData } from 'lib/levelup/repository';
 import { CohortList } from './CohortList';
 import { UserDashboard } from './UserDashboard';
 
@@ -13,33 +14,23 @@ type LevelupShellProps = {
   };
 };
 
-
-// This is a simplified shell. In production, fetch real data and pass to components.
 export async function LevelupShell(props: LevelupShellProps) {
-  // Mock data for typecheck and demo
-  const cohorts = [
-    {
-      id: '1',
-      title: 'Web Development Fundamentals',
-      track: 'Tech',
-      status: 'open',
-      startDate: '2026-04-10',
-      seatsAvailable: 4,
-      requiredCredits: 40,
-    },
-  ];
-  const activeCohortId = props.query.cohortId || null;
-  const wallet = {
-    availableBalance: 148,
-    walletEscrowBalance: 16,
-    levelupEscrowedBalance: 16,
-  };
-  const activeEnrollments = [
-    { id: '1', title: 'Web Development Fundamentals', track: 'Tech', status: 'active', progress: 40 },
-  ];
-  const recentTransactions = [
-    { id: 't1', type: 'Credit', amount: 40, referenceType: 'Enrollment', createdAtIso: new Date().toISOString() },
-  ];
+  const { userId, query } = props;
+
+  const [cohorts, dashboardData] = await Promise.all([
+    listCohorts({
+      track: query.track,
+      status: query.status,
+      startDate: query.startDate,
+    }).catch(() => []),
+    getUserDashboardData(userId).catch(() => ({
+      wallet: { availableBalance: 0, walletEscrowBalance: 0, levelupEscrowedBalance: 0 },
+      activeEnrollments: [],
+      recentTransactions: [],
+    })),
+  ]);
+
+  const activeCohortId = query.cohortId || null;
 
   return (
     <div style={{ display: 'flex', gap: 32 }}>
@@ -47,7 +38,11 @@ export async function LevelupShell(props: LevelupShellProps) {
         <CohortList cohorts={cohorts} activeCohortId={activeCohortId} />
       </div>
       <div style={{ flex: 1 }}>
-        <UserDashboard wallet={wallet} activeEnrollments={activeEnrollments} recentTransactions={recentTransactions} />
+        <UserDashboard
+          wallet={dashboardData.wallet}
+          activeEnrollments={dashboardData.activeEnrollments}
+          recentTransactions={dashboardData.recentTransactions}
+        />
       </div>
     </div>
   );

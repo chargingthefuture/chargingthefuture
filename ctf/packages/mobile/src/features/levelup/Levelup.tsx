@@ -1,44 +1,18 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 
-const mockCohorts = [
-  {
-    id: '1',
-    title: 'Web Development Fundamentals',
-    track: 'Tech',
-    trainer: 'Maya R.',
-    seats: 8,
-    totalSeats: 12,
-    credits: 40,
-    milestones: 5,
-    status: 'open',
-    tags: ['HTML', 'CSS', 'React'],
-  },
-  {
-    id: '2',
-    title: 'Financial Literacy & Budgeting',
-    track: 'Finance',
-    trainer: 'Jordan T.',
-    seats: 3,
-    totalSeats: 10,
-    credits: 25,
-    milestones: 4,
-    status: 'open',
-    tags: ['Budgeting', 'Credit', 'Savings'],
-  },
-  {
-    id: '3',
-    title: 'Trauma-Informed Leadership',
-    track: 'Life Skills',
-    trainer: 'Sasha M.',
-    seats: 0,
-    totalSeats: 8,
-    credits: 30,
-    milestones: 6,
-    status: 'full',
-    tags: ['Leadership', 'Healing', 'Advocacy'],
-  },
-];
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+
+type Cohort = {
+  id: string;
+  title: string;
+  track: string;
+  status: string;
+  seatsAvailable: number;
+  requiredCredits: number;
+  startDate?: string;
+  tags?: string[];
+};
 
 const EmptyState = () => (
   <View style={styles.emptyContainer}>
@@ -47,7 +21,46 @@ const EmptyState = () => (
 );
 
 export const Levelup = () => {
-  const cohorts = mockCohorts;
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchCohorts = useCallback(async () => {
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/levelup/cohorts`);
+      if (!res.ok) throw new Error('Failed to load cohorts');
+      const data = await res.json();
+      setCohorts(data.cohorts || []);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load cohorts.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchCohorts(); }, [fetchCohorts]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchCohorts();
+  }, [fetchCohorts]);
+
+  if (loading) {
+    return <View style={styles.container}><ActivityIndicator size="large" color="#22C55E" /></View>;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>LevelUp Cohorts</Text>
+        <Text style={{ color: '#EF4444', marginTop: 16 }}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>LevelUp Cohorts</Text>
@@ -55,28 +68,34 @@ export const Levelup = () => {
         data={cohorts}
         keyExtractor={item => item.id}
         ListEmptyComponent={<EmptyState />}
-        renderItem={({ item }) => (
-          <View style={styles.cohortCard}>
-            <Text style={styles.cohortTitle}>{item.title}</Text>
-            <Text style={styles.cohortMeta}>{item.track} · Trainer: {item.trainer}</Text>
-            <Text style={styles.cohortMeta}>Seats: {item.seats}/{item.totalSeats} · Credits: {item.credits}</Text>
-            <View style={styles.tagRow}>
-              {item.tags.map(tag => (
-                <React.Fragment key={tag}>
-                  <Text style={styles.tag}>{tag}</Text>
-                </React.Fragment>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={[styles.enrollBtn, item.status === 'full' && styles.disabledBtn]}
-              disabled={item.status === 'full'}
-            >
-              <Text style={[styles.enrollText, item.status === 'full' && styles.disabledText]}>
-                {item.status === 'full' ? 'Waitlist' : 'Enroll'}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        renderItem={({ item }) => {
+          const isFull = item.seatsAvailable === 0 || item.status === 'full' || item.status === 'closed';
+          return (
+            <View style={styles.cohortCard}>
+              <Text style={styles.cohortTitle}>{item.title}</Text>
+              <Text style={styles.cohortMeta}>{item.track} · Status: {item.status}</Text>
+              <Text style={styles.cohortMeta}>
+                Seats available: {item.seatsAvailable} · Credits: {item.requiredCredits}
               </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              {item.tags && item.tags.length > 0 && (
+                <View style={styles.tagRow}>
+                  {item.tags.map(tag => (
+                    <Text key={tag} style={styles.tag}>{tag}</Text>
+                  ))}
+                </View>
+              )}
+              <TouchableOpacity
+                style={[styles.enrollBtn, isFull && styles.disabledBtn]}
+                disabled={isFull}
+              >
+                <Text style={[styles.enrollText, isFull && styles.disabledText]}>
+                  {isFull ? 'Waitlist' : 'Enroll'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }}
       />
     </View>
   );

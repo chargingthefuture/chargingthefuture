@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const COLOR = '#06B6D4';
 
-export default function GdpShell() {
+export function GdpShell(_props: { isAdmin?: boolean }) {
   // LighthouseShell pattern: use client, loading/error/data state, API fetch, empty state, real data mapping
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

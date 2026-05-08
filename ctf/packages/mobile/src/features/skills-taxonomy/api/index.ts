@@ -1,9 +1,11 @@
 // API client for Skills Taxonomy plugin (mobile)
 import { Platform } from 'react-native';
 
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+
 const BASE_URL = Platform.select({
   web: '/api/skills-taxonomy',
-  default: 'https://your-api-domain.com/api/skills-taxonomy', // TODO: Replace with actual prod URL or env
+  default: `${API_BASE}/api/skills-taxonomy`,
 });
 
 type FetchOptions = RequestInit & { headers?: Record<string, string> };

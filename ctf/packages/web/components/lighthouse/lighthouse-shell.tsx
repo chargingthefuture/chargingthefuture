@@ -1,8 +1,4 @@
-
 'use client';
-
-
-"use client";
 
 import { useEffect, useState } from 'react';
 import { StreamChatPanel } from '../shared/stream-chat-panel';
@@ -61,6 +57,67 @@ interface Announcement {
 }
 
 const COLOR = '#EAB308';
+
+function LighthouseCreateProfile({ onCreated }: { onCreated: (profile: Profile) => void }) {
+  const [profileType, setProfileType] = useState<'seeker' | 'host'>('seeker');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/lighthouse/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ profileType }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || 'Failed to create profile.');
+        return;
+      }
+      const data = await res.json();
+      onCreated(data.profile);
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="p-8 max-w-md mx-auto text-center">
+      <h2 className="text-xl font-bold mb-2">Welcome to LightHouse</h2>
+      <p className="mb-6 text-muted-foreground">
+        LightHouse connects survivors with safe housing. Choose your role to get started.
+      </p>
+      <div className="flex gap-4 justify-center mb-6">
+        {(['seeker', 'host'] as const).map((type) => (
+          <button
+            key={type}
+            onClick={() => setProfileType(type)}
+            className={`px-6 py-3 rounded-lg border-2 font-semibold capitalize transition-colors ${
+              profileType === type
+                ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400'
+                : 'border-border text-muted-foreground hover:border-yellow-500/50'
+            }`}
+          >
+            {type === 'seeker' ? '🏠 Housing Seeker' : '🔑 Housing Host'}
+          </button>
+        ))}
+      </div>
+      {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
+      <button
+        onClick={handleCreate}
+        disabled={submitting}
+        className="bg-yellow-500 text-black font-bold px-8 py-3 rounded-lg disabled:opacity-60 hover:bg-yellow-400 transition-colors"
+      >
+        {submitting ? 'Creating…' : 'Create Profile'}
+      </button>
+    </div>
+  );
+}
 
 export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps) {
   const [loading, setLoading] = useState(true);
@@ -149,15 +206,9 @@ export function LighthouseShell({ userId, isAdmin, role }: LighthouseShellProps)
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading LightHouse...</div>;
   if (error) return <div className="text-red-500 p-4">{error}</div>;
 
-  // Empty state for profile
+  // Empty state: inline profile creation
   if (!profile) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-bold mb-2">Welcome to LightHouse</h2>
-        <p className="mb-4">No profile found. Get started by creating your LightHouse profile.</p>
-        {/* TODO: Add Create Profile button/flow */}
-      </div>
-    );
+    return <LighthouseCreateProfile onCreated={setProfile} />;
   }
 
   // Main layout: sidebar, tab nav, and content

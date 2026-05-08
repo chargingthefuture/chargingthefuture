@@ -23,7 +23,7 @@ const MOODS = [
 ];
 
 // LighthouseShell pattern: use client, loading/error/data state, API fetch, submission, empty/ineligible state
-export default function MoodShell() {
+export function MoodShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eligible, setEligible] = useState<boolean | null>(null);

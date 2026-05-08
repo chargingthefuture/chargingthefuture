@@ -65,6 +65,8 @@ export function GentlePulseShell() {
     } catch (e) {
       console.error("Failed to track play event:", e);
     }
+  }
+
   async function handleFavorite(sessionId: number, isFav: boolean) {
     setSubmitting(true);
     try {
@@ -77,10 +79,7 @@ export function GentlePulseShell() {
       }
     } catch (e) {
       console.error("Failed to update favorite:", e);
-      // Consider: show toast notification to user
     }
-    setSubmitting(false);
-  }
     setSubmitting(false);
   }
 
