@@ -1,13 +1,16 @@
 tasks:
   railway-debug:
     name: Debug Railway deployment
-    description: Fetch Railway logs for the failing service and write a structured summary. Requires RAILWAY_TOKEN in Ona project secrets.
+    description: Fetch Railway logs for the failing service and write a structured summary. Requires RAILWAY_API_TOKEN (account token) in Ona project secrets.
     command: |
       set -euo pipefail
 
-      if [ -z "${RAILWAY_TOKEN:-}" ]; then
-        echo "ERROR: RAILWAY_TOKEN is not set."
-        echo "Add RAILWAY_TOKEN to Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
+      # RAILWAY_API_TOKEN = account-level token (for status, logs, CLI auth)
+      # RAILWAY_TOKEN     = project token (for railway up deploys only)
+      if [ -z "${RAILWAY_API_TOKEN:-}" ]; then
+        echo "ERROR: RAILWAY_API_TOKEN is not set."
+        echo "Create an account-level token at railway.app → Account Settings → Tokens"
+        echo "Add it as RAILWAY_API_TOKEN in Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
         exit 1
       fi
 
@@ -19,12 +22,12 @@ tasks:
       cd /workspaces/chargingthefuture/ctf
 
       echo "=== Railway Status ===" | tee /tmp/railway-debug.log
-      railway status 2>&1 | tee -a /tmp/railway-debug.log || true
+      RAILWAY_API_TOKEN="$RAILWAY_API_TOKEN" railway status 2>&1 | tee -a /tmp/railway-debug.log || true
 
       echo "" | tee -a /tmp/railway-debug.log
       echo "=== Last 200 log lines ===" | tee -a /tmp/railway-debug.log
-      railway logs --tail 200 2>&1 | tee -a /tmp/railway-debug.log || {
-        echo "WARNING: Could not fetch Railway logs. Verify RAILWAY_TOKEN has access to this project." | tee -a /tmp/railway-debug.log
+      RAILWAY_API_TOKEN="$RAILWAY_API_TOKEN" railway logs --tail 200 2>&1 | tee -a /tmp/railway-debug.log || {
+        echo "WARNING: Could not fetch Railway logs. Verify RAILWAY_API_TOKEN has access to this project." | tee -a /tmp/railway-debug.log
       }
 
       echo "" | tee -a /tmp/railway-debug.log
@@ -39,13 +42,15 @@ tasks:
 
   railway-redeploy:
     name: Redeploy to Railway
-    description: Run railway up --ci from ctf/ to trigger a Railway deployment. Requires RAILWAY_TOKEN in Ona project secrets.
+    description: Run railway up --ci from ctf/ to trigger a Railway deployment. Requires RAILWAY_TOKEN (project token) in Ona project secrets.
     command: |
       set -euo pipefail
 
+      # RAILWAY_TOKEN = project token (scoped to staging or production environment)
       if [ -z "${RAILWAY_TOKEN:-}" ]; then
         echo "ERROR: RAILWAY_TOKEN is not set."
-        echo "Add RAILWAY_TOKEN to Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
+        echo "Create a project token at railway.app → your project → Settings → Tokens"
+        echo "Add it as RAILWAY_TOKEN in Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
         exit 1
       fi
 

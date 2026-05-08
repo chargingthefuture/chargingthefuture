@@ -46,7 +46,8 @@ All secrets below are shared across every environment started from this project.
 
 | Secret name | Description |
 |---|---|
-| `RAILWAY_TOKEN` | Railway API token (see setup instructions below) |
+| `RAILWAY_TOKEN` | Project token — used by `railway up` for deploys. Scoped to staging or production environment. |
+| `RAILWAY_API_TOKEN` | Account token — used by `railway status`, `railway logs`, and all CLI auth. Account-level scope. |
 | `RAILWAY_NEXT_PUBLIC_APP_URL` | Public app URL on Railway |
 | `RAILWAY_SENTRY_DSN` | Sentry DSN for Railway environments |
 
@@ -115,19 +116,31 @@ These are personal tokens that should not be shared across team members.
 
 ---
 
-## Creating a Railway API Token
+## Creating Railway Tokens
 
-1. Go to [railway.app](https://railway.app) → Account Settings → Tokens
-2. Click **New Token**
-3. Name it `ona-agent` (or similar)
-4. Set scope to **Production** (Railway tokens are scoped to an environment — staging or production — not to a project)
-5. Copy the token value
-6. Add it as `RAILWAY_TOKEN` in Ona project secrets (above)
-7. Also add it to GitHub Actions secrets: repo Settings → Secrets and variables → Actions → `RAILWAY_TOKEN`
+Railway uses two distinct token types. You need both.
 
-> **Note:** Railway tokens are environment-scoped (staging or production), not project-scoped. Create separate tokens if you need to debug both environments. The token used in CI targets whichever Railway environment is connected to the service.
+### 1. Account token (`RAILWAY_API_TOKEN`) — for CLI auth, logs, status
 
-> The Railway token must exist in **both** Ona (for agent CLI access) and GitHub Actions (for CI deploy). These are separate secret stores.
+1. Go to [railway.app](https://railway.app) → click your **profile avatar** → **Account Settings** → **Tokens**
+2. Click **New Token**, name it `ona-agent-account`
+3. Copy the value (it will be a UUID)
+4. Add it as `RAILWAY_API_TOKEN` in Ona project secrets
+
+This token authenticates the Railway CLI for commands like `railway status` and `railway logs`.
+
+### 2. Project token (`RAILWAY_TOKEN`) — for deploys
+
+1. Go to [railway.app](https://railway.app) → open your project → **Settings** → **Tokens**
+2. Click **New Token**, select environment scope: **Production** or **Staging**
+3. Name it `ona-agent-deploy`
+4. Copy the value
+5. Add it as `RAILWAY_TOKEN` in Ona project secrets
+6. Also add it to GitHub Actions secrets: repo Settings → Secrets and variables → Actions → `RAILWAY_TOKEN`
+
+This token is used by `railway up --ci` for deployments. Create one per environment if needed.
+
+> Both tokens must exist in Ona project secrets. `RAILWAY_TOKEN` must also exist in GitHub Actions secrets for CI deploys. These are separate secret stores.
 
 ---
 
