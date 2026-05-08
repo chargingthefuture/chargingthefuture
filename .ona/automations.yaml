@@ -11,6 +11,11 @@ tasks:
         exit 1
       fi
 
+      if ! command -v railway &> /dev/null; then
+        echo "Railway CLI not found. Installing..."
+        npm install -g @railway/cli
+      fi
+
       cd /workspaces/chargingthefuture/ctf
 
       echo "=== Railway Status ===" | tee /tmp/railway-debug.log
@@ -42,6 +47,11 @@ tasks:
         echo "ERROR: RAILWAY_TOKEN is not set."
         echo "Add RAILWAY_TOKEN to Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
         exit 1
+      fi
+
+      if ! command -v railway &> /dev/null; then
+        echo "Railway CLI not found. Installing..."
+        npm install -g @railway/cli
       fi
 
       cd /workspaces/chargingthefuture/ctf

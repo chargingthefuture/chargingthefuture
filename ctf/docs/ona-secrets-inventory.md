@@ -120,10 +120,12 @@ These are personal tokens that should not be shared across team members.
 1. Go to [railway.app](https://railway.app) → Account Settings → Tokens
 2. Click **New Token**
 3. Name it `ona-agent` (or similar)
-4. Set scope to the `chargingthefuture` project
+4. Set scope to **Production** (Railway tokens are scoped to an environment — staging or production — not to a project)
 5. Copy the token value
 6. Add it as `RAILWAY_TOKEN` in Ona project secrets (above)
 7. Also add it to GitHub Actions secrets: repo Settings → Secrets and variables → Actions → `RAILWAY_TOKEN`
+
+> **Note:** Railway tokens are environment-scoped (staging or production), not project-scoped. Create separate tokens if you need to debug both environments. The token used in CI targets whichever Railway environment is connected to the service.
 
 > The Railway token must exist in **both** Ona (for agent CLI access) and GitHub Actions (for CI deploy). These are separate secret stores.
 
