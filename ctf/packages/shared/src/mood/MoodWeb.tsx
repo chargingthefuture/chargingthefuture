@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useMoodEligibility, useSubmitMoodCheck } from '@ctf/shared';
+import { useMoodEligibility, useSubmitMoodCheck } from './hooks';
 
 // TODO: Replace with real clientId from auth context
 const getClientId = () => 'demo-client-id';

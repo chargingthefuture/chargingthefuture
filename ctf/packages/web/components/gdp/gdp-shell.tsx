@@ -61,19 +61,8 @@ export default function GdpShell() {
   const countries = report.countries || [];
   const metrics = report.metrics || {};
 
-  // ...existing UI code, using sectors, countries, metrics from API...
   return (
     <div style={{ width: '100%', height: '100%', minHeight: '100vh', background: '#0F1117', fontFamily: 'Inter, system-ui, sans-serif', color: '#E8EAF0', display: 'flex' }}>
-      {/* ...existing sidebar and layout code, using API data... */}
-    </div>
-  );
-}
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}><Settings size={18} /></button>
-        <Avatar style={{ width: 36, height: 36 }}>
-          <AvatarFallback style={{ background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
-        </Avatar>
-      </aside>
-
       <aside style={{ width: 240, background: '#0D0F14', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '20px 16px 12px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#6B7280', textTransform: 'uppercase', marginBottom: 12 }}>🗺️ GDP Tracker</div>
@@ -96,6 +85,12 @@ export default function GdpShell() {
             ))}
           </div>
         </ScrollArea>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button style={{ width: 44, height: 44, borderRadius: 12, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}><Settings size={18} /></button>
+          <Avatar style={{ width: 36, height: 36 }}>
+            <AvatarFallback style={{ background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
+          </Avatar>
+        </div>
       </aside>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>

@@ -1,4 +1,5 @@
 // Clerk authentication logic for genericPluginAuth
+
 /**
  * Verifies Clerk JWT and returns user ID if valid.
  * @param token Clerk JWT
@@ -7,6 +8,6 @@
  * Note: Server-side JWT verification is handled in @ctf/web.
  * This stub satisfies the shared package contract for mobile/plugin consumers.
  */
-export function verifyClerkToken(_token) {
-    return null;
+export function verifyClerkToken(_token: string): string | null {
+  return null;
 }
