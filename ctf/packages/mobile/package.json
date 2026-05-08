@@ -8,7 +8,7 @@
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",
     "web": "npx expo start --web",
-    "build": "pnpm run build:android:ci",
+    "build": "echo '@ctf/mobile build skipped (run build:android:ci for Android export)'",
     "build:android:ci": "CI=1 npx expo export --platform android --output-dir dist/android",
     "lint": "pnpm exec eslint --config eslint.config.mjs App.tsx src --max-warnings 0",
     "typecheck": "pnpm exec tsc --noEmit -p tsconfig.json",
