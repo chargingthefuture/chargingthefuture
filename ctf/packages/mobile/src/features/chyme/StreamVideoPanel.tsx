@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { StreamVideoClient, Call } from '@stream-io/video-react-native-sdk';
-import { ParticipantView } from '@stream-io/video-react-native-sdk/dist/typescript/components/Participant/ParticipantView/ParticipantView';
+import { ParticipantView } from '@stream-io/video-react-native-sdk';
 
 export interface StreamVideoPanelProps {
   streamApiKey: string;
