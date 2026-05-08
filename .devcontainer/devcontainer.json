@@ -8,7 +8,7 @@
   "features": {
     "ghcr.io/devcontainers/features/github-cli": {}
   },
-  "postCreateCommand": "git config --global user.email '16567092+farahbrunache@users.noreply.github.com' && git config --global user.name 'Farah Brunache' && git config --global commit.gpgsign false && git config --local --unset commit.gpgsign || true && bash .devcontainer/setup.sh",
+  "postCreateCommand": "git config --global user.email '16567092+farahbrunache@users.noreply.github.com' && git config --global user.name 'Farah Brunache' && git config --global commit.gpgsign false && git config --local --unset commit.gpgsign || true && if [ -n \"$GITHUB_TOKEN\" ]; then git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/chargingthefuture/chargingthefuture.git; fi && bash .devcontainer/setup.sh",
   "forwardPorts": [3000, 8081, 19000, 19001],
   "portsAttributes": {
     "3000": {
