@@ -1,32 +1,48 @@
 import { NextResponse } from 'next/server';
-import { createSocketRelayChatChannel } from 'lib/socketrelay/stream';
-import { requireFeedAccess } from 'lib/auth/require-feed-access';
+import { ensureSocketRelayFulfillmentChannel, createSocketRelayParticipantToken } from 'lib/socketrelay/stream';
+import { requireSocketRelayReadAccess } from 'lib/socketrelay/_lib';
+import { getFulfillmentById } from 'lib/socketrelay/repository';
+import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const { id } = params;
   if (!id) {
     return NextResponse.json({ ok: false, message: 'Missing fulfillment id' }, { status: 400 });
   }
-  // Auth check: requireFeedAccess ensures the user is authorized for this fulfillment
-  const authorized = await requireFeedAccess(request, id);
-  if (!authorized) {
-    return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+
+  const gate = await requireSocketRelayReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
+
+  const userId = gate.auth.userId;
+
+  const fulfillment = await getFulfillmentById(id);
+  if (!fulfillment || (fulfillment.requesterUserId !== userId && fulfillment.fulfillerUserId !== userId)) {
+    return NextResponse.json({ ok: false, message: 'Fulfillment not found or access denied' }, { status: 404 });
+  }
+
   try {
-    const credentials = await createSocketRelayChatChannel(id);
-    if (!credentials) {
+    const channelId = await ensureSocketRelayFulfillmentChannel({
+      fulfillmentId: fulfillment.id,
+      requesterUserId: fulfillment.requesterUserId,
+      requesterDisplayName: buildIdentityDisplayName(null, fulfillment.requesterUserId),
+      fulfillerUserId: fulfillment.fulfillerUserId,
+      fulfillerDisplayName: buildIdentityDisplayName(null, fulfillment.fulfillerUserId),
+    });
+    if (!channelId) {
       return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, ...credentials });
-  } catch (error: unknown) {
-    let message = 'Error creating chat channel';
-    if (error instanceof Error) {
-      message = error.message;
-    } else if (typeof error === 'string') {
-      message = error;
-    } else if (error && typeof error === 'object') {
-      message = JSON.stringify(error);
+    const credentials = await createSocketRelayParticipantToken(
+      userId,
+      buildIdentityDisplayName(gate.auth.username, userId),
+    );
+    if (!credentials) {
+      return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
+    return NextResponse.json({ ok: true, channelId, ...credentials });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error creating chat channel';
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }

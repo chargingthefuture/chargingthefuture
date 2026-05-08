@@ -1,32 +1,49 @@
 import { NextResponse } from 'next/server';
-import { createLighthouseMatchChannel } from 'lib/lighthouse/stream';
-import { getSessionFromRequest } from 'lib/auth/session';
-import { authorizeUserForLighthouseMatch } from 'lib/lighthouse/auth';
+import { ensureLighthouseMatchChannel, createLighthouseParticipantToken } from 'lib/lighthouse/stream';
+import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
+import { listMatches } from 'lib/lighthouse/repository';
+import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 
-async function createMatchChatChannelHandler(request: Request, matchId: string) {
-  const session = await getSessionFromRequest(request);
-  if (!session || !session.user) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
-  }
-  const authorized = await authorizeUserForLighthouseMatch(matchId, session.user.id);
-  if (!authorized) {
-    return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
-  }
-  try {
-    const credentials = await createLighthouseMatchChannel(matchId);
-    if (!credentials) {
-      return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true, ...credentials });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, message: e.message || 'Error creating chat channel' }, { status: 500 });
-  }
-}
-
-export async function POST(request: Request, { params }: { params: { matchId: string } }) {
+export async function POST(_request: Request, { params }: { params: { matchId: string } }) {
   const { matchId } = params;
   if (!matchId) {
     return NextResponse.json({ ok: false, message: 'Missing matchId' }, { status: 400 });
   }
-  return createMatchChatChannelHandler(request, matchId);
+
+  const gate = await requireLighthouseReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const userId = gate.auth.userId;
+
+  // Fetch matches for this user and find the one with matchId
+  const matches = await listMatches(userId);
+  const match = matches.find((m) => m.id === matchId);
+  if (!match) {
+    return NextResponse.json({ ok: false, message: 'Match not found or access denied' }, { status: 404 });
+  }
+
+  try {
+    const channelId = await ensureLighthouseMatchChannel({
+      matchId: match.id,
+      seekerUserId: match.seekerUserId,
+      seekerDisplayName: buildIdentityDisplayName(null, match.seekerUserId),
+      hostUserId: match.hostUserId,
+      hostDisplayName: buildIdentityDisplayName(null, match.hostUserId),
+    });
+    if (!channelId) {
+      return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
+    }
+    const credentials = await createLighthouseParticipantToken(
+      userId,
+      buildIdentityDisplayName(gate.auth.username, userId),
+    );
+    if (!credentials) {
+      return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, channelId, ...credentials });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, message: e.message || 'Error creating chat channel' }, { status: 500 });
+  }
 }

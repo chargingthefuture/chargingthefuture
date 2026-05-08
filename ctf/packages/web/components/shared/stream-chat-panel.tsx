@@ -6,7 +6,7 @@ import {
   MessageList,
   MessageInput,
 } from 'stream-chat-react';
-import 'stream-chat-react/dist/css/index.css';
+import 'stream-chat-react/dist/css/v2/index.css';
 
 export interface StreamChatPanelProps {
   streamApiKey: string;
