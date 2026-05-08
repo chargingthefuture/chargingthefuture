@@ -27,7 +27,7 @@ export interface Message {
   metadata?: Record<string, unknown>;
 }
 
-export function PeerProgrammingShell() {
+export function PeerProgrammingShell(_props: { userId?: string; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);

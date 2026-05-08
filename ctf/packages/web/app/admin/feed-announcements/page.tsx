@@ -56,7 +56,7 @@ export default async function FeedAnnouncementsAdminPage() {
       <section className="rounded-lg border bg-card p-5 space-y-3">
         <h2 className="text-lg font-medium">Announcement lifecycle</h2>
         <ul className="space-y-2 text-sm">
-          {announcements.map((announcement) => (
+          {announcements.map((announcement: { id: string; title: string; body: string; status: string; priority: number; mandatory: boolean }) => (
             <li key={announcement.id} className="rounded border p-3">
               <p className="font-medium">{announcement.title}</p>
               <p className="text-muted-foreground">{announcement.body}</p>

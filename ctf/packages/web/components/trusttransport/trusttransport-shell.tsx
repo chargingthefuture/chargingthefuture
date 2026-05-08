@@ -30,7 +30,7 @@ export interface ChatCredentials {
   message?: string;
 }
 
-export function TrustTransportShell() {
+export function TrustTransportShell(_props: { userId?: string; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modes, setModes] = useState<Mode[]>([]);

@@ -38,7 +38,7 @@ export interface Skill {
   name: string;
 }
 
-export function DirectoryShell() {
+export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState<string | null>(null);

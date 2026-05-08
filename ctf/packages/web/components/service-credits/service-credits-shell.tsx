@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export function ServiceCreditsShell() {
+export function ServiceCreditsShell(_props: { userId?: string; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<any>(null);

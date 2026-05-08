@@ -512,7 +512,7 @@ export function validateFeedConfigInput(input: FeedConfigInput): boolean {
     && input.maxTimelinePageSize >= 10
     && input.maxTimelinePageSize <= FEED_MAX_PAGE_SIZE;
   const channelsAllowed = !input.enabledChannels
-    || input.enabledChannels.every((channel) => FEED_ALLOWED_CHANNELS.includes(channel));
+    || input.enabledChannels.every((channel: string) => FEED_ALLOWED_CHANNELS.includes(channel as FeedEnabledChannel));
 
   return renderModeAllowed && typeof input.killSwitchEnabled === 'boolean' && maxPageSizeAllowed && channelsAllowed;
 }
@@ -629,7 +629,7 @@ export async function listFeedTimeline(
     const requestedChannel = filters.channel ?? 'all';
     const allowedItemTypes = requestedChannel === 'all'
       ? enabledChannels
-      : enabledChannels.filter((channel) => channel === requestedChannel);
+      : enabledChannels.filter((channel: string) => channel === requestedChannel);
 
     if (allowedItemTypes.length === 0) {
       return {

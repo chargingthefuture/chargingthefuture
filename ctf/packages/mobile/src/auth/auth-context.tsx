@@ -9,6 +9,7 @@ export interface AuthUser {
   isAdmin?: boolean;
   isApproved?: boolean;
   provider?: string | null;
+  activeTripId?: string | null;
 }
 
 export interface AuthContextType {

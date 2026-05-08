@@ -2,6 +2,7 @@
 import type { Sector } from './types';
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useAuth } from '../../auth/auth-context';
 
 // API endpoints (same as web)
 const API_BASE = '/api/skills-taxonomy';
@@ -14,6 +15,8 @@ function fetcher(url: string, options?: RequestInit) {
 }
 
 export default function SkillsTaxonomy() {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
   const [hierarchy, setHierarchy] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCohorts } from '../../../../lib/peer-programming/repository';
-import { requirePeerProgrammingAuth } from '../../../../lib/peer-programming/auth';
-import type { AuthProvider } from '../../../../../../shared/auth/genericPluginAuth';
+import { getMyCohort } from 'lib/peer-programming/repository';
+import { requirePeerProgrammingAuth } from 'lib/peer-programming/auth';
+import type { AuthProvider } from '@ctf/shared';
 
 export async function GET(req: NextRequest) {
   // Example: extract provider/token from headers
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
   try {
-    const cohorts = await getCohorts();
+    const cohorts = await getMyCohort(authResult.userId ?? '');
     return NextResponse.json(cohorts, { status: 200 });
   } catch (e) {
     return NextResponse.json({ error: 'Failed to load cohorts' }, { status: 500 });

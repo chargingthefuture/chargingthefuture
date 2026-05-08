@@ -1,15 +1,10 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { Tool, TextContent, ServerCapabilities } from '@modelcontextprotocol/sdk/types.js';
+import { Tool, ServerCapabilities, CallToolRequest } from '@modelcontextprotocol/sdk/types.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { initializeDb, closeDb } from './db.js';
 import * as feedbackTools from './tools/feedback.js';
 import * as implementationTools from './tools/implementation.js';
-
-type ToolRequest = {
-  name: string;
-  arguments: Record<string, unknown>;
-};
 
 const server = new Server(
   {
@@ -227,13 +222,8 @@ const tools: Tool[] = [
 // Register tools
 
 // Use the correct string key for the handler registration
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  interface RpcRequestParams {
-    name: string;
-    arguments?: Record<string, unknown>;
-  }
-  const params = request.params as RpcRequestParams;
-  const { name, arguments: args = {} } = params;
+server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
+  const { name, arguments: args = {} } = request.params;
 
   try {
     let result:

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchTrustTransportStreamCredentials } from './fetchTrustTransportStreamCredentials';
-import { StreamChat, OverlayProvider, Chat, Channel, MessageList, MessageInput } from 'stream-chat-react-native';
+import { StreamChat } from 'stream-chat';
+import { OverlayProvider, Chat, Channel, MessageList, MessageInput } from 'stream-chat-react-native';
 import { StreamVideo, StreamVideoClient, Call, StreamCall, CallContent } from '@stream-io/video-react-native-sdk';
 
 interface TrustTransportStreamTabProps {

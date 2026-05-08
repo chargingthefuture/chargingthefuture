@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Platform } from 'react-native';
 import type { SocketRequest } from './types';
+import { SocketRelayStreamTab } from './SocketRelayStreamTab';
 
 const COLOR = '#F43F5E';
 
@@ -115,7 +116,6 @@ export function SocketRelay() {
       {tab === 'chat' && (
         <SocketRelayStreamTab />
       )}
-    import { SocketRelayStreamTab } from './SocketRelayStreamTab';
     </View>
   );
 }

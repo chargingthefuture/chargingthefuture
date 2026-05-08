@@ -23,7 +23,8 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
   streamChannelId,
   channelType = 'messaging',
 }) => {
-  const [client, setClient] = useState<StreamChat | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [client, setClient] = useState<any>(null);
   const [channel, setChannel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

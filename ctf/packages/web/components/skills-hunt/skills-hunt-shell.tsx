@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export function SkillsHuntShell() {
+export function SkillsHuntShell(_props: { userId?: string; isAdmin?: boolean; isModerator?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rounds, setRounds] = useState<any[]>([]);

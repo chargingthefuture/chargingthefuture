@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchAnnouncementsStreamCredentials } from './fetchAnnouncementsStreamCredentials';
-import { StreamChat, OverlayProvider, Chat, Channel, MessageList } from 'stream-chat-react-native';
+import { StreamChat } from 'stream-chat';
+import { OverlayProvider, Chat, Channel, MessageList } from 'stream-chat-react-native';
 
 export const Announcements = () => {
   const [loading, setLoading] = useState(true);

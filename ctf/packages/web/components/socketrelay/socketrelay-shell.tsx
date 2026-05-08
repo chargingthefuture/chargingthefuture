@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { StreamChatPanel } from '../shared/stream-chat-panel';
 
-export function SocketRelayShell() {
+export function SocketRelayShell(_props: { userId?: string; isAdmin?: boolean; role?: string | null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -91,28 +91,6 @@ export function SocketRelayShell() {
     );
   }
   // ...existing code...
-
-  // Helper to fetch chat credentials for a fulfillment
-  async function fetchChatCredentials(fulfillmentId: string) {
-    const fulfillment = fulfillments.find((f: any) => f.id === fulfillmentId) || null;
-    setSelectedFulfillment(fulfillment);
-    setChatCredentials(null);
-    setChatError(null);
-    if (fulfillment) {
-      setChatLoading(true);
-      try {
-        const res = await fetch(`/api/socketrelay/fulfillments/${fulfillment.id}/chat`, { method: 'POST' });
-        if (!res.ok) throw new Error('Failed to fetch chat credentials');
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.message || 'No chat credentials');
-        setChatCredentials(data);
-      } catch (e: any) {
-        setChatError(e.message || 'Failed to load chat');
-      } finally {
-        setChatLoading(false);
-      }
-    }
-  }
 
   // Helper to fetch chat credentials for a fulfillment
   async function fetchChatCredentials(fulfillmentId: string) {

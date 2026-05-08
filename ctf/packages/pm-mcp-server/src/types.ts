@@ -1,4 +1,4 @@
-import type { JSONSchema7 } from './json-schema';
+import type { JSONSchema7 } from './json-schema.js';
 // Centralized CountRow type for query results
 export interface CountRow {
   count: string;
