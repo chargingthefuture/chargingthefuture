@@ -264,3 +264,26 @@ jobs:
             echo "ctf directory does not exist. Cannot deploy to Railway."
             exit 1
           fi
+
+      - name: Open failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Railway deploy failed: ${{ github.ref_name }} @ ${{ github.sha }}" \
+            --label "railway-failure" \
+            --body "## Railway Deployment Failure
+
+**Branch:** \`${{ github.ref_name }}\`
+**Commit:** \`${{ github.sha }}\`
+**Job URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+**Triggered by:** ${{ github.event_name }}
+
+Run the \`railway-debug\` task in your Ona environment to fetch logs and diagnose the failure:
+
+\`\`\`
+gitpod automations task start railway-debug
+\`\`\`
+
+Then trigger the Ona Automation to diagnose and auto-fix."

@@ -1,4 +1,55 @@
 tasks:
+  railway-debug:
+    name: Debug Railway deployment
+    description: Fetch Railway logs for the failing service and write a structured summary. Requires RAILWAY_TOKEN in Ona project secrets.
+    command: |
+      set -euo pipefail
+
+      if [ -z "${RAILWAY_TOKEN:-}" ]; then
+        echo "ERROR: RAILWAY_TOKEN is not set."
+        echo "Add RAILWAY_TOKEN to Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
+        exit 1
+      fi
+
+      cd /workspaces/chargingthefuture/ctf
+
+      echo "=== Railway Status ===" | tee /tmp/railway-debug.log
+      railway status 2>&1 | tee -a /tmp/railway-debug.log || true
+
+      echo "" | tee -a /tmp/railway-debug.log
+      echo "=== Last 200 log lines ===" | tee -a /tmp/railway-debug.log
+      railway logs --tail 200 2>&1 | tee -a /tmp/railway-debug.log || {
+        echo "WARNING: Could not fetch Railway logs. Verify RAILWAY_TOKEN has access to this project." | tee -a /tmp/railway-debug.log
+      }
+
+      echo "" | tee -a /tmp/railway-debug.log
+      echo "=== Summary ===" | tee -a /tmp/railway-debug.log
+      LAST_ERROR=$(grep -iE "(error|failed|exit code|cannot|unable|not found)" /tmp/railway-debug.log | tail -5 || echo "No explicit error lines found")
+      echo "Last error lines:" | tee -a /tmp/railway-debug.log
+      echo "$LAST_ERROR" | tee -a /tmp/railway-debug.log
+
+      echo ""
+      echo "Full debug log written to /tmp/railway-debug.log"
+      echo "Run: cat /tmp/railway-debug.log"
+
+  railway-redeploy:
+    name: Redeploy to Railway
+    description: Run railway up --ci from ctf/ to trigger a Railway deployment. Requires RAILWAY_TOKEN in Ona project secrets.
+    command: |
+      set -euo pipefail
+
+      if [ -z "${RAILWAY_TOKEN:-}" ]; then
+        echo "ERROR: RAILWAY_TOKEN is not set."
+        echo "Add RAILWAY_TOKEN to Ona project secrets. See ctf/docs/ona-secrets-inventory.md."
+        exit 1
+      fi
+
+      cd /workspaces/chargingthefuture/ctf
+
+      echo "Starting Railway deployment from ctf/..."
+      railway up --ci
+      echo "Deployment submitted. Monitor progress in the Railway dashboard."
+
   setup:
     name: Setup environment
     description: Install CLIs (Railway, Vercel, pnpm) and system libraries required for Expo/React Native DevTools.
