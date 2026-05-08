@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFeedStreamCredentials } from 'lib/feed/stream';
-import { requireFeedReadAccess } from '../../_lib';
+import { requireFeedReadAccess } from '../_lib';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 
 export async function POST() {
