@@ -31,10 +31,9 @@
         "lib/*"
       ]
     },
-    "ignoreDeprecations": "5.0",
     "noEmit": true,
     "isolatedModules": true,
-    "types": [],
+    "types": ["node"],
   },
   "include": [
     "next-env.d.ts",
