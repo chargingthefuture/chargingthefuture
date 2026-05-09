@@ -5,7 +5,6 @@ packages:
   - "ctf/packages/plugin-education"
   - "ctf/packages/shared"
   - "ctf/packages/web"
-  - "landing-page"
   - "platform"
   - "waitlist-landing-page"
   - "wiki-blog"
