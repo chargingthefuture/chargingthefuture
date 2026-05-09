@@ -69,7 +69,7 @@ export const Levelup = () => {
             </View>
             <TouchableOpacity
               style={[styles.enrollBtn, item.status === 'full' && styles.disabledBtn]}
-              disabled={item.status === 'full'}
+              disabled={true}
             >
               <Text style={[styles.enrollText, item.status === 'full' && styles.disabledText]}>
                 {item.status === 'full' ? 'Waitlist' : 'Enroll'}

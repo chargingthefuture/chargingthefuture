@@ -43,8 +43,8 @@ export function WorkforceDashboard() {
       <Text style={styles.header}>Workforce Dashboard</Text>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Status Distribution</Text>
-        {charts.map((item) => (
-          <View style={styles.chartRow}>
+        {charts.map((item, i) => (
+          <View key={item.label ?? i} style={styles.chartRow}>
             <Text style={[styles.chartLabel, { color: item.color }]}>{item.label}</Text>
             <Text style={styles.chartValue}>{item.value.toLocaleString()} ({item.pct}%)</Text>
           </View>
@@ -52,8 +52,8 @@ export function WorkforceDashboard() {
       </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Critical Skill Gaps</Text>
-        {gaps.map((gap) => (
-          <View style={styles.gapRow}>
+        {gaps.map((gap, i) => (
+          <View key={gap.skill ?? i} style={styles.gapRow}>
             <Text style={styles.gapSkill}>{gap.skill}</Text>
             <Text style={styles.gapDetail}>Gap: {gap.gap} ({gap.trend})</Text>
           </View>
