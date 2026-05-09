@@ -56,6 +56,26 @@ Do not rename, remove, or restructure variables without explicit user approval.
 
 ---
 
+## Secrets — Infisical is the single source of truth
+
+All secrets are stored in the self-hosted Infisical instance on Railway.
+Only three bootstrap secrets live outside Infisical:
+
+| Where | Secrets |
+|---|---|
+| Ona project secrets | `INFISICAL_TOKEN`, `INFISICAL_PROJECT_ID`, `GITHUB_TOKEN` |
+| GitHub Actions secrets | `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_SLUG`, `INFISICAL_URL` |
+
+**To use secrets in a task or script:**
+```bash
+infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --env=production -- \
+  <your command>
+```
+
+See `ctf/docs/infisical-migration-guide.md` for full setup and `ctf/docs/ona-secrets-inventory.md` for the Ona-specific model.
+
+---
+
 ## Railway CLI
 
 Railway CLI is pre-installed in this Ona environment via the `setup` task.

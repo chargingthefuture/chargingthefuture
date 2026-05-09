@@ -212,11 +212,20 @@ jobs:
     name: Railway Deploy
     runs-on: ubuntu-latest
     needs: [actions-budget-gate, main-quality-gate, schema-drift-gate, schema-query-audit]
-    if: ${{ github.event_name != 'schedule' && needs.actions-budget-gate.outputs.enforce_block != 'true' && needs.schema-drift-gate.result == 'success' && needs.schema-query-audit.result == 'success' && (github.ref != 'refs/heads/main' || needs.main-quality-gate.result == 'success') }}
+    if: ${{ github.event_name != 'schedule' && needs.actions-budget-gate.outputs.enforce_block != 'true' && needs.schema-drift-gate.result == 'success' && needs.schema-query-audit.result == 'success' && (needs.main-quality-gate.result == 'success' || needs.main-quality-gate.result == 'skipped') }}
     environment: ${{ github.ref == 'refs/heads/main' && 'rewrite-railway-production' || 'rewrite-railway-staging' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.7
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          infisical-url: ${{ secrets.INFISICAL_URL }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -227,21 +236,14 @@ jobs:
         run: corepack enable
 
       - name: Validate Railway secret
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           set -euo pipefail
-          [ -n "$RAILWAY_TOKEN" ] || { echo "Missing RAILWAY_TOKEN"; exit 1; }
+          [ -n "$RAILWAY_TOKEN" ] || { echo "Missing RAILWAY_TOKEN — check Infisical secrets"; exit 1; }
 
       - name: Validate Clerk env contract for Railway target
         working-directory: ctf
         env:
           CLERK_ENV_TARGET: ${{ github.ref == 'refs/heads/main' && 'railway-production' || 'railway-staging' }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          CLERK_ENCRYPTION_KEY: ${{ secrets.CLERK_ENCRYPTION_KEY }}
-          CLERK_SIGN_IN_URL: ${{ secrets.CLERK_SIGN_IN_URL }}
-          RAILWAY_NEXT_PUBLIC_APP_URL: ${{ secrets.RAILWAY_NEXT_PUBLIC_APP_URL }}
         run: |
           set -euo pipefail
           echo "Skipping Clerk environment check as Clerk auth is disabled"
@@ -253,8 +255,6 @@ jobs:
           corepack pnpm --filter @ctf/web run build
 
       - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           set -euo pipefail
           if [ -d ctf ]; then

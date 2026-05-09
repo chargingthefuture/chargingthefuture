@@ -1,10 +1,64 @@
 # Ona Secrets Inventory
 
-Reference for adding all project secrets to Ona (Settings → Project → Secrets).
-Derived from `ctf/packages/web/.env.local.example` and `deploy-backend-railway.yml`.
+After the Infisical migration, only three secrets are managed in Ona project settings.
+All other secrets live in Infisical and are injected at runtime via `infisical run --`.
 
-**Rule:** Secret names must match exactly. Do not rename, consolidate, or restructure.
-See `123-environment-configuration-rules.mdc` for the full constraint set.
+See `ctf/docs/infisical-migration-guide.md` for full migration instructions and the
+complete list of secrets that must exist in Infisical.
+
+---
+
+## Ona Project Secrets (post-migration)
+
+Add at: Ona dashboard → Project → Settings → Secrets → New Secret → Environment Variable
+
+| Secret name | Description |
+|---|---|
+| `INFISICAL_TOKEN` | Machine identity token — authenticates `infisical run --` in all tasks |
+| `INFISICAL_PROJECT_ID` | Infisical project ID — used by `infisical run --` to scope secret fetch |
+| `GITHUB_TOKEN` | GitHub PAT (`repo` + `workflow` scopes) — used for git push operations |
+
+All other secrets previously listed here are now managed in Infisical.
+
+---
+
+## How secrets reach the environment
+
+Tasks use `infisical run --` to inject secrets at command execution time:
+
+```bash
+infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --env=production -- \
+  railway status
+```
+
+Infisical injects all project secrets as env vars before the command runs.
+
+---
+
+## Verification
+
+```bash
+echo $INFISICAL_TOKEN   # should be set
+infisical --version     # should print CLI version
+infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --env=production -- \
+  env | grep RAILWAY    # should show RAILWAY_TOKEN, RAILWAY_API_TOKEN
+```
+
+---
+
+## Railway token reference
+
+| Infisical secret name | Type | Used for |
+|---|---|---|
+| `RAILWAY_API_TOKEN` | Account-level | `railway status`, `railway logs` |
+| `RAILWAY_TOKEN` | Project/environment | `railway up --ci` deploys |
+
+---
+
+## Pre-migration inventory (archived)
+
+The sections below are preserved for reference during migration.
+Once all secrets are in Infisical and verified, this content can be removed.
 
 ---
 

@@ -1,139 +1,188 @@
-# Spec: Unified Secrets + Autonomous Railway Debug Loop
+# Spec: Infisical as Single Source of Truth for Secrets
 
 ## Problem Statement
 
-Development and deployment are fragmented across three systems with no shared context:
+Secrets are currently fragmented across four systems: GitHub Actions encrypted secrets, Railway service variables, Ona project secrets, and `.env.local.example` as a reference-only file. There is no single source of truth. When a secret changes, it must be updated in multiple places. Agents have no access to secrets at runtime. CI has no access to secrets outside GitHub Actions. Railway services have no access to secrets outside the Railway dashboard.
 
-- **Secrets** live in two places: GitHub Actions encrypted secrets and Railway dashboard. Ona environments have none of them, so agents operating in Ona cannot authenticate to any external service, validate environment contracts, or reproduce deployment failures locally.
-- **Railway failures** are invisible to agents. When a deploy fails, the debug loop is manual: read GitHub Actions logs in the browser, read Railway dashboard logs separately, copy error text into an agent prompt, apply a fix, push, wait for CI, repeat.
-- **No autonomous recovery path exists.** There is no mechanism for an agent to detect a Railway failure, diagnose it, fix the code, and redeploy without human copy-paste at each step.
+Additionally, two CI checks fail on every push due to pre-existing issues unrelated to any feature work: EOF formatting on ~20 files, and the `deploy-backend-railway.yml` workflow.
 
-The goal is to eliminate this context-switching loop by: (1) making all secrets available inside Ona environments, and (2) building an Ona Automation that triggers on Railway deployment failures, diagnoses the cause using the Railway CLI, fixes the code, and pushes a branch that triggers the existing GitHub Actions → Railway pipeline.
+The goal is to:
+1. Add the Infisical CLI to the dev container so agents and developers can use it
+2. Fix the pre-existing CI failures (EOF formatting, deploy workflow)
+3. Migrate all secrets to the self-hosted Infisical instance on Railway as the single source of truth — replacing GitHub Actions secrets, Railway service variables, and Ona project secrets
 
 ---
 
-## Current State
+## Architecture After Migration
 
-| Component | Current location | Agent visibility |
+```
+Infisical (self-hosted on Railway)
+    ├── Project: chargingthefuture
+    │   ├── Environment: staging
+    │   └── Environment: production
+    │
+    ├── GitHub Actions  → infisical/secrets-action injects secrets at job start
+    ├── Railway services → Infisical Railway integration syncs vars automatically
+    └── Ona environments → INFISICAL_TOKEN secret + infisical run -- <cmd> in setup
+```
+
+**Single bootstrap secret required everywhere:** `INFISICAL_TOKEN` (machine identity token from Infisical). Everything else is fetched from Infisical at runtime.
+
+---
+
+## Injection Strategy
+
+| Platform | Method | Why |
 |---|---|---|
-| `RAILWAY_TOKEN` | GitHub Actions secrets | ❌ None |
-| `DATABASE_URL` (staging + prod) | GitHub Actions secrets | ❌ None |
-| Auth keys (`AUTH_*`, `CLERK_*`) | GitHub Actions secrets | ❌ None |
-| Stream, Sentry, Formance keys | GitHub Actions secrets | ❌ None |
-| Railway service env vars | Railway dashboard | ❌ None |
-| Railway CLI | Installed in Ona via `setup` task | ✅ Available but unauthenticated |
-| Deploy pipeline | `deploy-backend-railway.yml` (GH Actions) | ✅ Triggered by push |
+| GitHub Actions | `infisical/secrets-action` — official GH Action, injects secrets as env vars before each job | Native, no shell scripting, works with existing workflow structure |
+| Railway services | Infisical Railway native integration — syncs secrets directly into Railway service variables | No token needed at runtime, Railway handles injection natively |
+| Ona environments | `INFISICAL_TOKEN` Ona project secret + `infisical run --` prefix in `setup.sh` commands that need secrets | Minimal bootstrap, secrets available as env vars in all tasks |
 
 ---
 
 ## Requirements
 
-### R1 — Secret Inventory and Documentation
+### R1 — Infisical CLI in Dev Container
 
-Produce a complete, authoritative list of every secret that must exist in Ona project secrets, derived from:
-- `ctf/packages/web/.env.local.example` (the canonical env contract)
-- `deploy-backend-railway.yml` (secrets consumed by CI)
-- `railway.toml` (build/start commands that depend on env vars)
+Add `@infisical/cli` to `setup.sh` alongside the existing CLI installs. The CLI must:
+- Be installed via `npm install -g @infisical/cli`
+- Be guarded with a presence check (same pattern as Railway, Vercel CLIs)
+- Be available in all Ona tasks and agent sessions without a restart
 
-The list must cover all three deployment environments: staging Railway, staging Vercel, production Railway.
+### R2 — Fix EOF CI Failures
 
-### R2 — Ona Project Secrets Setup Guide
+The `check-eof-format.sh` script fails on ~20 files missing a trailing newline. Fix all affected files by appending a single newline. Files identified:
 
-Produce a step-by-step guide for adding all secrets to the Ona project (Settings → Project → Secrets). The guide must:
-- Group secrets by scope (project-level vs. user-level)
-- Specify exact secret names matching `.env.local.example` — no renaming
-- Note which secrets are shared across environments vs. environment-specific
-- Include instructions for creating a Railway API token (scoped to the project)
+- `packages/web/postcss.config.js`
+- `packages/mobile/package.json`
+- `packages/mobile/src/index.ts`
+- `packages/mobile/src/features/announcements/MockAnnouncements.tsx`
+- `packages/mobile/src/features/weekly-performance/WeeklyPerformance.tsx`
+- `packages/mobile/src/features/community/index.ts`
+- `packages/mobile/src/features/community/MockCommunity.tsx`
+- `packages/mobile/src/features/workforce/Workforce.tsx`
+- `packages/mobile/src/features/questions/MockQuestions.tsx`
+- `packages/mobile/src/features/questions/index.ts`
+- `packages/mobile/src/features/feed/MockFeed.tsx`
+- `packages/mobile/src/features/feed/feedDemoData.ts`
+- `packages/pm-mcp-server/src/react-native.d.ts`
+- `packages/shared/package.json`
+- `packages/shared/src/index.ts`
+- `packages/shared/src/stream/chyme.ts`
+- `artifacts/performance/perf-budget-report.json`
+- `docs/contracts/TRUST_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
+- `docs/contracts/TRUST_PLUGIN_AUDIT_CONTRACTS.yaml`
+- `docs/contracts/TRUST_PLUGIN_COMMAND_CONTRACTS.yaml`
 
-### R3 — Railway Debug Task in `automations.yaml`
+### R3 — Fix deploy-backend-railway.yml CI Failures
 
-Add a new on-demand task `railway-debug` to `.ona/automations.yaml` that:
-- Requires `RAILWAY_TOKEN` to be set (fails fast with a clear message if not)
-- Fetches the last 200 lines of Railway logs for the failing service
-- Writes logs to a file the agent can read (`/tmp/railway-debug.log`)
-- Prints a structured summary: exit code, last error line, service name, environment
+The `deploy-backend-railway.yml` workflow fails on every push. The `railway-deploy` job's `if` condition references `needs.main-quality-gate.result == 'success'` but `main-quality-gate` only runs on `main` branch — on other branches it is skipped, which causes the condition to evaluate incorrectly. Fix the condition to treat a skipped `main-quality-gate` as passing (i.e. `== 'success' || == 'skipped'`).
 
-### R4 — Railway Deploy Task in `automations.yaml`
+### R4 — Infisical Project Structure (manual, documented)
 
-Add a new on-demand task `railway-redeploy` to `.ona/automations.yaml` that:
-- Validates `RAILWAY_TOKEN` is set
-- Runs `railway up --ci` from the `ctf/` directory
-- Captures exit code and surfaces pass/fail clearly
+Define the Infisical project structure that maps to the existing environment contract:
 
-### R5 — Ona Automation: Autonomous Railway Failure Recovery
+| Infisical environment | Maps to | Secret prefix pattern |
+|---|---|---|
+| `staging` | Staging Railway | `RAILWAY_STAGING_*` vars + universal vars |
+| `production` | Production Railway | `RAILWAY_PROD_*` vars + universal vars |
 
-Create an Ona Automation (configured via the Ona UI, documented in the spec) that:
+All secrets from `ctf/packages/web/.env.local.example` must be present in Infisical before migration. This is a manual step documented in `ctf/docs/infisical-migration-guide.md`.
 
-**Trigger:** Manual — run on demand when a Railway deployment fails. (Ona webhooks only accept SCM pull request events, not arbitrary HTTP POSTs from GitHub Actions. The trigger is therefore manual, not automated via CI.)
+### R5 — GitHub Actions Integration
 
-**Steps (in order):**
-1. **Command**: Run `railway-debug` task — fetch logs from the failing deployment
-2. **Prompt**: Agent reads the logs and identifies the root cause. Classifies failure as one of: build error, missing env var, runtime crash, schema drift, or unknown.
-3. **Command**: If classification is `missing env var` → halt and report (cannot fix without human adding the secret). Otherwise continue.
-4. **Prompt**: Agent applies a targeted code fix to the identified failure. Commits to a new branch `fix/railway-auto-<timestamp>`.
-5. **Command**: Push branch to GitHub.
-6. **Pull Request**: Open a draft PR with the fix summary and Railway log excerpt. The push triggers the existing `deploy-backend-railway.yml` pipeline automatically.
+Replace all `secrets.*` references in `deploy-backend-railway.yml` with Infisical injection:
 
-### R6 — GitHub Actions Failure Notification Step
+1. Add `infisical/secrets-action` as the first step in each job that consumes secrets
+2. The action requires only `INFISICAL_TOKEN` and `INFISICAL_PROJECT_ID` as GitHub Actions secrets (the only two secrets that remain in GitHub)
+3. All other secrets are fetched from Infisical and injected as env vars automatically
 
-Add a failure-notification step to `deploy-backend-railway.yml` in the `railway-deploy` job that:
-- Fires only when the job fails (`if: failure()`)
-- Uses `gh` CLI (already available via the `github-cli` devcontainer feature) to create a GitHub issue titled `Railway deploy failed: <branch> @ <sha>` with the job URL and failure context
-- Labels the issue `railway-failure` so it's filterable
-- This gives the agent a persistent, searchable record of failures to act on when the Automation is run manually
+### R6 — Railway Services Integration (manual, documented)
 
-### R7 — AGENTS.md at Repo Root
+Configure the Infisical Railway native integration to sync secrets into each Railway service:
 
-Create `AGENTS.md` at the repository root that gives agents the minimum context needed to operate in this repo without reading all 40+ instruction files. Must cover:
-- Monorepo layout (what lives where)
-- The three deployment environments and their secret prefixes
-- How to run Railway CLI commands (token required, `cd ctf/` first)
-- Where the canonical env contract lives (`.env.local.example`)
-- Pointer to `.github/instructions/` for detailed rules
+- CTF app service → Infisical `production` environment
+- Ledger (Formance) service → Infisical `production` environment
+- Infisical service itself → bootstrapped manually (cannot self-reference)
+- Ollama service → no secrets needed
+- Postgres service → managed by Railway, no Infisical integration needed
+
+### R7 — Ona Environment Integration
+
+Replace Ona project secrets (except `INFISICAL_TOKEN` and `GITHUB_TOKEN`) with Infisical injection:
+
+1. Keep only two Ona project secrets: `INFISICAL_TOKEN`, `GITHUB_TOKEN`
+2. Update `railway-debug` and `railway-redeploy` tasks in `automations.yaml` to use `infisical run --` prefix
+
+### R8 — Migration Guide Document
+
+Create `ctf/docs/infisical-migration-guide.md` covering:
+- Manual steps: Infisical project setup, environment creation, secret population
+- Machine identity token creation
+- Railway native integration setup per service
+- Ona secrets cleanup (what to remove, what to keep)
+- GitHub Actions secrets cleanup (what to remove, what to keep)
+- Verification checklist
+
+### R9 — Update AGENTS.md and ona-secrets-inventory.md
+
+Update both documents to reflect the new two-secret bootstrap model.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] A complete secret inventory document exists listing every secret name, its scope, and which environment it belongs to
-- [ ] `RAILWAY_TOKEN` exists as an Ona project secret (verified by running `echo $RAILWAY_TOKEN` in an Ona environment)
-- [ ] `railway status` runs successfully inside an Ona environment without manual token input
-- [ ] `railway-debug` task in `automations.yaml` runs and produces a readable log file
-- [ ] `railway-redeploy` task in `automations.yaml` runs and deploys to Railway staging
-- [ ] Ona Automation exists with manual trigger, 5-step recovery workflow
-- [ ] `deploy-backend-railway.yml` has an `if: failure()` step that opens a `railway-failure` GitHub issue on `railway-deploy` job failure
-- [ ] `AGENTS.md` exists at repo root and covers all 5 required topics
+- [ ] `infisical --version` runs successfully in an Ona environment
+- [ ] `check-eof-format.sh` passes with zero failures in `ctf/`
+- [ ] `deploy-backend-railway.yml` does not fail on non-main branch pushes due to skipped jobs
+- [ ] `infisical/secrets-action` is the first step in all jobs that consume secrets in `deploy-backend-railway.yml`
+- [ ] Only `INFISICAL_TOKEN` and `INFISICAL_PROJECT_ID` remain as GitHub Actions secrets
+- [ ] Only `INFISICAL_TOKEN` and `GITHUB_TOKEN` remain as Ona project secrets
+- [ ] `ctf/docs/infisical-migration-guide.md` exists with complete manual steps
 - [ ] No secret values are committed to the repository
+- [ ] `AGENTS.md` and `ona-secrets-inventory.md` reflect the new model
 
 ---
 
 ## Implementation Approach
 
-Steps are ordered by dependency. Steps 1–3 are manual (require human action in external dashboards). Steps 4–8 are code changes made by the agent.
+### Manual steps (human required before or after code changes)
 
-### Step 1 — Create Railway API Token (manual)
-In the Railway dashboard: Account Settings → Tokens → New Token. Scope to the `chargingthefuture` project. Copy the token value.
+**M1 — Set up Infisical project** (before merging)
+1. Log into self-hosted Infisical on Railway
+2. Create project `chargingthefuture`, environments `staging` and `production`
+3. Populate all secrets from `.env.local.example` with real values
 
-### Step 2 — Add Secrets to Ona Project (manual)
-Using the secret inventory produced in Step 4, add each secret to: Ona dashboard → Project → Settings → Secrets. Add `RAILWAY_TOKEN` first to unblock agent tasks.
+**M2 — Create machine identity token** (before merging)
+1. Infisical → Project Settings → Machine Identities → New Identity
+2. Name: `ci-agent`, role: `member`
+3. Copy token → this becomes `INFISICAL_TOKEN` everywhere
+4. Note the Project ID
 
-### Step 3 — Create `railway-failure` Issue Label in GitHub (manual)
-In the GitHub repository: Issues → Labels → New label. Name: `railway-failure`, color: red. This label is used by the failure notification step added in Step 6.
+**M3 — Add bootstrap secrets** (before merging)
+- GitHub Actions: add `INFISICAL_TOKEN` + `INFISICAL_PROJECT_ID`
+- Ona project secrets: add `INFISICAL_TOKEN`
 
-### Step 4 — Produce Secret Inventory Document
-Agent generates `docs/ona-secrets-inventory.md` inside `ctf/` listing every secret name, environment scope, and source file reference. This is the reference document for Step 2.
+**M4 — Configure Railway native integration** (after merging)
+1. Infisical → Integrations → Railway
+2. Connect CTF app and Ledger services to `production` environment
+3. Verify sync
 
-### Step 5 — Add `railway-debug` and `railway-redeploy` Tasks
-Agent edits `.ona/automations.yaml` to add both tasks with proper token validation, log capture, and clear output.
+**M5 — Clean up old secrets** (after verifying M4)
+- Remove all individual secrets from GitHub Actions (keep only `INFISICAL_TOKEN`, `INFISICAL_PROJECT_ID`)
+- Remove all individual secrets from Ona project (keep only `INFISICAL_TOKEN`, `GITHUB_TOKEN`)
+- Remove all manually-set vars from Railway service dashboards (Infisical sync replaces them)
 
-### Step 6 — Add Failure Notification Step to `deploy-backend-railway.yml`
-Agent edits the `railway-deploy` job to add an `if: failure()` step that uses `gh issue create` to open a `railway-failure`-labeled issue with branch, SHA, and job URL.
+### Code changes (agent executes)
 
-### Step 7 — Create Ona Automation (manual, documented)
-Agent produces `docs/ona-automation-setup.md` with exact UI steps to create the webhook-triggered automation in the Ona dashboard, including the 5-step workflow configuration.
-
-### Step 8 — Create `AGENTS.md`
-Agent creates `AGENTS.md` at the repository root covering the 5 required topics.
+**C1** — Add Infisical CLI install to `setup.sh`
+**C2** — Fix trailing newline on all 20 EOF-failing files
+**C3** — Fix `railway-deploy` job condition in `deploy-backend-railway.yml`
+**C4** — Add `infisical/secrets-action` to all secret-consuming jobs in `deploy-backend-railway.yml`
+**C5** — Update `automations.yaml` tasks to use `infisical run --` prefix
+**C6** — Create `ctf/docs/infisical-migration-guide.md`
+**C7** — Update `ctf/docs/ona-secrets-inventory.md`
+**C8** — Update `AGENTS.md`
 
 ---
 
@@ -141,18 +190,20 @@ Agent creates `AGENTS.md` at the repository root covering the 5 required topics.
 
 | File | Action |
 |---|---|
-| `.ona/automations.yaml` | Add `railway-debug` and `railway-redeploy` tasks |
-| `.github/workflows/deploy-backend-railway.yml` | Add failure webhook notification step |
-| `ctf/docs/ona-secrets-inventory.md` | New — complete secret inventory |
-| `ctf/docs/ona-automation-setup.md` | New — Ona Automation UI setup guide |
-| `AGENTS.md` | New — agent context for repo root |
+| `.devcontainer/setup.sh` | Add Infisical CLI install |
+| `ctf/packages/web/postcss.config.js` + 19 other files | Add trailing newline (EOF fix) |
+| `.github/workflows/deploy-backend-railway.yml` | Fix job condition + add Infisical secrets injection |
+| `.ona/automations.yaml` | Update tasks to use `infisical run --` |
+| `ctf/docs/infisical-migration-guide.md` | New — full migration guide |
+| `ctf/docs/ona-secrets-inventory.md` | Update to two-secret Ona model |
+| `AGENTS.md` | Document Infisical-first secret model |
 
 ---
 
 ## Constraints
 
-- Secret values must never be committed. Only secret names and scopes go in documentation.
-- Secret names must match `.env.local.example` exactly — no renaming (per rule `123-environment-configuration-rules.mdc`).
-- Railway CLI commands must be run from `ctf/` directory (per `railway.toml` location).
-- The autonomous fix path must halt and report (not guess) when the failure is a missing env var — those require human action.
-- The existing GitHub Actions → Railway pipeline is not replaced. The Ona Automation feeds back into it via PR push.
+- `INFISICAL_TOKEN` and `INFISICAL_PROJECT_ID` are the only secrets that remain outside Infisical. They are the bootstrap credentials needed to reach Infisical.
+- Secret values must never be committed to the repository.
+- Secret names in Infisical must match `.env.local.example` exactly — no renaming.
+- The Infisical service on Railway cannot self-reference for its own secrets — it must be bootstrapped manually.
+- The Railway Postgres service is managed by Railway and does not need Infisical integration.

@@ -31,6 +31,14 @@ fi
 echo "Installing/Updating Railway CLI globally..."
 npm install -g @railway/cli@latest --force
 
+# Install/update Infisical CLI
+echo "Checking for Infisical CLI..."
+if ! command -v infisical &> /dev/null; then
+  npm install -g @infisical/cli
+else
+  echo "Infisical CLI already installed."
+fi
+
 # Install/update Vercel CLI
 echo "Checking for Vercel CLI..."
 if ! command -v vercel &> /dev/null; then
