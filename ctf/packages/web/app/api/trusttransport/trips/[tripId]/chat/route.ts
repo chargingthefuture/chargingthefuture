@@ -3,8 +3,8 @@ import { ensureTrustTransportTripChannel, createTrustTransportParticipantToken }
 import { requireTrustTransportReadAccess } from 'lib/trusttransport/_lib';
 import { getTripById } from 'lib/trusttransport/repository';
 
-export async function POST(_request: Request, { params }: { params: { tripId: string } }) {
-  const { tripId } = params;
+export async function POST(_request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+  const { tripId } = await params;
   if (!tripId) {
     return NextResponse.json({ ok: false, message: 'Missing tripId' }, { status: 400 });
   }

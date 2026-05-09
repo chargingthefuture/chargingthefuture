@@ -5,13 +5,13 @@ import { fetchSkillLevelReport } from 'lib/workforce/repository';
 
 
 
-export async function GET(_request: Request, { params }: { params: { skillLevel: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ skillLevel: string }> }) {
   const gate = await requireWorkforceReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
-  const { skillLevel } = params;
+  const { skillLevel } = await params;
 
   try {
     const items = await fetchSkillLevelReport();

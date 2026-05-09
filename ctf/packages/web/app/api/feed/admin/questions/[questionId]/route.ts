@@ -4,7 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { relabelQuestionCategory, isValidFeedQuestionCategory } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
 
-export async function PATCH(request: Request, { params }: { params: { questionId: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   const gate = await requireFeedAdminAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: { params: { questionId
     );
   }
 
-  const { questionId } = params;
+  const { questionId } = await params;
 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(questionId)) {
     return NextResponse.json(

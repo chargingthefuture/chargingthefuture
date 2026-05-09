@@ -9,7 +9,7 @@ type ReplyBody = {
 
 
 
-export async function POST(request: Request, context: { params: { messageId: string } }) {
+export async function POST(request: Request, context: { params: Promise<{ messageId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
@@ -31,7 +31,7 @@ export async function POST(request: Request, context: { params: { messageId: str
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'cohortId and body are required.' }, { status: 400 });
   }
 
-  const { messageId } = context.params;
+  const { messageId } = await context.params;
 
   try {
     const reply = await createMessage({

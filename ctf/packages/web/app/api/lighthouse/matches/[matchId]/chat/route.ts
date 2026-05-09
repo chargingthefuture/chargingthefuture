@@ -4,8 +4,8 @@ import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { listMatches } from 'lib/lighthouse/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 
-export async function POST(_request: Request, { params }: { params: { matchId: string } }) {
-  const { matchId } = params;
+export async function POST(_request: Request, { params }: { params: Promise<{ matchId: string }> }) {
+  const { matchId } = await params;
   if (!matchId) {
     return NextResponse.json({ ok: false, message: 'Missing matchId' }, { status: 400 });
   }

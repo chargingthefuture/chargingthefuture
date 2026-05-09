@@ -4,8 +4,8 @@ import { requireSocketRelayReadAccess } from 'lib/socketrelay/_lib';
 import { getFulfillmentById } from 'lib/socketrelay/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) {
     return NextResponse.json({ ok: false, message: 'Missing fulfillment id' }, { status: 400 });
   }

@@ -1,10 +1,11 @@
 {
   "mcpServers": {
     "railway": {
-      "type": "stdio",
-      "command": "sh",
-      "args": ["-c", "infisical run -- sh -c 'RAILWAY_TOKEN=$RAILWAY_IDE_TOKEN npx -y @railway/mcp-server'"]
+      "type": "http",
+      "url": "https://mcp.railway.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${RAILWAY_API_TOKEN}"
+      }
     }
   }
 }
-

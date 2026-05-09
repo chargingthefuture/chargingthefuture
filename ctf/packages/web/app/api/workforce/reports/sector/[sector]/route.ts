@@ -5,13 +5,13 @@ import { fetchSectorReport } from 'lib/workforce/repository';
 
 
 
-export async function GET(_request: Request, { params }: { params: { sector: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ sector: string }> }) {
   const gate = await requireWorkforceReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
-  const { sector } = params;
+  const { sector } = await params;
 
   try {
     const items = await fetchSectorReport();

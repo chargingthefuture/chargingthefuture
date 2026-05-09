@@ -6,7 +6,7 @@ import { generateFeedQuestionAnswer } from 'lib/feed/repository';
 
 
 
-export async function POST(request: Request, { params }: { params: { questionId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   const gate = await requireFeedReadAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: { questionId:
     return csrfDeny;
   }
 
-  const { questionId } = params;
+  const { questionId } = await params;
 
   try {
     const answer = await generateFeedQuestionAnswer(gate.auth.userId, questionId);

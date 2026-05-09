@@ -27,10 +27,6 @@ else
   echo "ripgrep already installed."
 fi
 
-# Always install/update Railway CLI to latest globally
-echo "Installing/Updating Railway CLI globally..."
-npm install -g @railway/cli@latest --force
-
 # Install/update Infisical CLI
 echo "Checking for Infisical CLI..."
 if ! command -v infisical &> /dev/null; then
@@ -142,12 +138,13 @@ if [ -d /workspaces/chargingthefuture/.git ] && [ -d /workspaces/chargingthefutu
   echo "Configured git hooksPath to ctf/.husky"
 fi
 
-# Verify Railway CLI auth via RAILWAY_IDE_TOKEN (set in Infisical, mapped to RAILWAY_TOKEN)
-echo "Verifying Railway CLI auth..."
-if [ -n "$RAILWAY_IDE_TOKEN" ]; then
-  RAILWAY_TOKEN="$RAILWAY_IDE_TOKEN" railway whoami 2>/dev/null && echo "Railway: authenticated via RAILWAY_IDE_TOKEN." || echo "Warning: RAILWAY_IDE_TOKEN set but Railway auth failed — check the token in Infisical."
+# Verify Railway API token for MCP server access
+echo "Verifying Railway MCP access..."
+if [ -n "$RAILWAY_API_TOKEN" ]; then
+  echo "Railway MCP: RAILWAY_API_TOKEN is set."
 else
-  echo "Warning: RAILWAY_IDE_TOKEN not set. Railway CLI/MCP will not work. Add it to Infisical and re-open the Codespace."
+  echo "Warning: RAILWAY_API_TOKEN not set. Railway MCP server will not work."
+  echo "Add RAILWAY_API_TOKEN as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
 fi
 
 # Prompt for any remaining manual logins
