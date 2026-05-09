@@ -1,0 +1,64 @@
+import { NextResponse } from 'next/server';
+import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../_lib';
+import { FEED_ERROR_CODE } from 'lib/feed/constants';
+import { relabelQuestionCategory, isValidFeedQuestionCategory } from 'lib/feed/repository';
+import { logFeedAudit } from 'lib/feed/audit';
+
+export async function PATCH(request: Request, { params }: { params: { questionId: string } }) {
+  const gate = await requireFeedAdminAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
+  let body: { category?: unknown };
+  try {
+    body = (await request.json()) as { category?: unknown };
+  } catch {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body.category !== 'string' || !isValidFeedQuestionCategory(body.category)) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid category value.' },
+      { status: 400 },
+    );
+  }
+
+  const { questionId } = params;
+
+  try {
+    const question = await relabelQuestionCategory(gate.auth.userId, questionId, body.category);
+    logFeedAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'feed',
+      command: 'feed.question.category.relabel',
+      status: 'allow',
+      reason: 'admin_relabel_allowed',
+      targetType: 'feed_question',
+      targetId: questionId,
+      result: 'success',
+      errorCategory: null,
+      metadata: { newCategory: body.category },
+    });
+    return NextResponse.json({ ok: true, question }, { status: 200 });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'question_not_found') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'Question not found.' },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to relabel question.' },
+      { status: 503 },
+    );
+  }
+}

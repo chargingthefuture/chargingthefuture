@@ -12,6 +12,7 @@ import {
   FEED_MAX_PAGE_SIZE,
   FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
+  FEED_QUESTION_CATEGORIES,
 } from './constants';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
@@ -1462,4 +1463,187 @@ export function isValidFeedChannel(value: string | null): value is FeedChannel {
 
 export function isValidAnswerRating(value: string): value is FeedAnswerRatingValue {
   return FEED_ANSWER_RATINGS.includes(value as FeedAnswerRatingValue);
+}
+
+export function isValidFeedQuestionCategory(value: string): value is FeedQuestionCategory {
+  return FEED_QUESTION_CATEGORIES.includes(value as FeedQuestionCategory);
+}
+
+type AdminFeedQuestionRow = {
+  id: string;
+  asked_by_user_id: string;
+  body: string;
+  category: FeedQuestionCategory;
+  location_context: unknown;
+  llm_consent_granted: boolean;
+  created_at: Date;
+  answer_count: string;
+  helpful_count: string;
+  not_helpful_count: string;
+  flagged_count: string;
+};
+
+export type AdminFeedQuestion = {
+  id: string;
+  askedByUserId: string;
+  body: string;
+  category: FeedQuestionCategory;
+  location: FeedLocationContext | null;
+  llmConsentGranted: boolean;
+  createdAtIso: string;
+  answerCount: number;
+  ratingSummary: { helpful: number; not_helpful: number; flagged: number };
+};
+
+function mapAdminQuestion(row: AdminFeedQuestionRow): AdminFeedQuestion {
+  return {
+    id: row.id,
+    askedByUserId: row.asked_by_user_id,
+    body: row.body,
+    category: row.category,
+    location: normalizeLocationContext(row.location_context),
+    llmConsentGranted: row.llm_consent_granted,
+    createdAtIso: toIso(row.created_at),
+    answerCount: Number.parseInt(row.answer_count, 10),
+    ratingSummary: {
+      helpful: Number.parseInt(row.helpful_count, 10),
+      not_helpful: Number.parseInt(row.not_helpful_count, 10),
+      flagged: Number.parseInt(row.flagged_count, 10),
+    },
+  };
+}
+
+export async function listAdminQuestions(
+  pagination: { page: number; pageSize: number },
+  filters: { category?: FeedQuestionCategory | null },
+): Promise<{ items: AdminFeedQuestion[]; pagination: FeedPagination }> {
+  const offset = (pagination.page - 1) * pagination.pageSize;
+  const categoryFilter = filters.category ?? null;
+
+  const [countResult, rows] = await Promise.all([
+    queryDb<CountRow>(
+      `
+        SELECT COUNT(DISTINCT fq.id)::text AS total
+        FROM feed_questions fq
+        WHERE ($1::text IS NULL OR fq.category = $1)
+      `,
+      [categoryFilter],
+    ),
+    queryDb<AdminFeedQuestionRow>(
+      `
+        SELECT
+          fq.id,
+          fq.asked_by_user_id,
+          fq.body,
+          fq.category,
+          fq.location_context,
+          fq.llm_consent_granted,
+          fq.created_at,
+          COUNT(DISTINCT fa.id)::text AS answer_count,
+          COALESCE(SUM(CASE WHEN far.rating = 'helpful'     THEN 1 ELSE 0 END), 0)::text AS helpful_count,
+          COALESCE(SUM(CASE WHEN far.rating = 'not_helpful' THEN 1 ELSE 0 END), 0)::text AS not_helpful_count,
+          COALESCE(SUM(CASE WHEN far.rating = 'flagged'     THEN 1 ELSE 0 END), 0)::text AS flagged_count
+        FROM feed_questions fq
+        LEFT JOIN feed_answers fa ON fa.question_id = fq.id AND fa.answer_type = 'llm'
+        LEFT JOIN feed_answer_ratings far ON far.answer_id = fa.id
+        WHERE ($1::text IS NULL OR fq.category = $1)
+        GROUP BY fq.id
+        ORDER BY fq.created_at DESC
+        OFFSET $2 LIMIT $3
+      `,
+      [categoryFilter, offset, pagination.pageSize],
+    ),
+  ]);
+
+  return {
+    items: rows.rows.map(mapAdminQuestion),
+    pagination: {
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
+    },
+  };
+}
+
+export async function relabelQuestionCategory(
+  actorId: string,
+  questionId: string,
+  category: FeedQuestionCategory,
+): Promise<AdminFeedQuestion> {
+  return withDbTransaction(async (client) => {
+    const result = await client.query<AdminFeedQuestionRow>(
+      `
+        UPDATE feed_questions
+        SET category = $2
+        WHERE id = $1::uuid
+        RETURNING
+          id,
+          asked_by_user_id,
+          body,
+          category,
+          location_context,
+          llm_consent_granted,
+          created_at,
+          '0' AS answer_count,
+          '0' AS helpful_count,
+          '0' AS not_helpful_count,
+          '0' AS flagged_count
+      `,
+      [questionId, category],
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('question_not_found');
+    }
+
+    await client.query(
+      `
+        INSERT INTO llm_inference_log
+          (actor_user_id, question_id, answer_id, model_id, request_payload, response_payload, sources, confidence, latency_ms, prompt_token_count, completion_token_count, total_token_count, status)
+        VALUES
+          ($1, $2::uuid, NULL, 'admin-relabel', $3::jsonb, $4::jsonb, '[]'::jsonb, NULL, 0, 0, 0, 0, 'completed')
+      `,
+      [
+        actorId,
+        questionId,
+        JSON.stringify({ action: 'relabel', newCategory: category }),
+        JSON.stringify({ result: 'category_updated' }),
+      ],
+    );
+
+    return mapAdminQuestion(result.rows[0]);
+  });
+}
+
+type RasaExportRow = {
+  id: string;
+  body: string;
+  category: FeedQuestionCategory;
+};
+
+export async function exportQuestionsForRasa(): Promise<Record<FeedQuestionCategory, string[]>> {
+  const result = await queryDb<RasaExportRow>(
+    `
+      SELECT id, body, category
+      FROM feed_questions
+      ORDER BY category ASC, created_at ASC
+    `,
+  );
+
+  const grouped: Record<FeedQuestionCategory, string[]> = {
+    housing: [],
+    services: [],
+    general: [],
+    safety: [],
+    benefits: [],
+  };
+
+  for (const row of result.rows) {
+    const cat = row.category as FeedQuestionCategory;
+    if (cat in grouped) {
+      grouped[cat].push(row.body.replace(/\n/g, ' ').trim());
+    }
+  }
+
+  return grouped;
 }
