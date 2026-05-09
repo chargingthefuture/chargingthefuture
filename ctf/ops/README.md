@@ -1,7 +1,7 @@
 # Ops Directory
 
 ## Purpose
-Local development infrastructure, currently focused on the Formance ledger stack.
+Infrastructure configurations for Railway-deployed services and local development.
 
 ## Formance Stack
 - 5-service Docker Compose:
@@ -27,3 +27,7 @@ docker-compose -f ops/docker-compose.yml down
 
 ## Known Gaps
 - The `Caddyfile` referenced by the gateway is not present in the repo.
+
+## Ollama
+
+`ollama/Dockerfile` — custom image for the Railway Ollama service with the model baked in at build time. The Railway service builds from this file; changing the model means updating the `ARG OLLAMA_MODEL` line and pushing. See `docs/developer/OLLAMA_RAILWAY_MODEL_MANAGEMENT.md` for full instructions.

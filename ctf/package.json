@@ -32,6 +32,7 @@
     "formance:down:standalone": "bash ./scripts/formanceStandaloneDown.sh",
     "formance:ps:standalone": "pnpm run formance:fetch:standalone && docker compose -f ./ops/formance/upstream-standalone/docker-compose.yml ps",
     "formance:bootstrap:railway": "bash ./scripts/formanceRailwayBootstrap.sh",
+    "ollama:list:railway": "infisical run -- bash ./scripts/ollamaModelManager.sh list",
     "format:check": "bash ./scripts/check-eof-format.sh",
     "governance:check": "bash ./scripts/check-modularity-governance.sh",
     "perf:budgets": "node ./scripts/performanceBudgetAudit.mjs --mode=warn --output=./artifacts/performance/perf-budget-report.json",
