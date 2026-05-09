@@ -1243,7 +1243,7 @@ export async function generateFeedQuestionAnswer(actorId: string, questionId: st
       return mapped[0];
     }
 
-    const draft = generateFeedAssistedAnswer({
+    const draft = await generateFeedAssistedAnswer({
       questionBody: row.body,
       category: row.category,
       location: normalizeLocationContext(row.location_context),
