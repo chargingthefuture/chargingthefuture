@@ -101,6 +101,7 @@ export function PeerProgrammingShell(_props: { userId?: string; isAdmin?: boolea
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e) || 'Failed to submit feedback.');
       setFeedbackSuccess(false);
+      throw e;
     } finally {
       setSubmitting(false);
     }

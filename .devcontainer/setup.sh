@@ -123,12 +123,8 @@ else
   echo "Claude CLI already installed."
 fi
 
-echo "Checking for GitHub Copilot CLI..."
-if ! gh extension list 2>/dev/null | grep -q "copilot"; then
-  curl -fsSL https://gh.io/copilot-install | bash || echo "Warning: GitHub Copilot CLI install failed — run 'curl -fsSL https://gh.io/copilot-install | bash' manually."
-else
-  echo "GitHub Copilot CLI already installed."
-fi
+echo "Installing GitHub Copilot CLI (idempotent)..."
+curl -fsSL https://gh.io/copilot-install | bash || echo "Warning: GitHub Copilot CLI install failed — run 'curl -fsSL https://gh.io/copilot-install | bash' manually."
 
 # Ensure pre-commit hook is executable if present
 if [ -f /workspaces/chargingthefuture/.git/hooks/pre-commit ]; then

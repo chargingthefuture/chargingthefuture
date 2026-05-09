@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 
 const mockCohorts = [
   {
@@ -62,14 +62,13 @@ export const Levelup = () => {
             <Text style={styles.cohortMeta}>Seats: {item.seats}/{item.totalSeats} · Credits: {item.credits}</Text>
             <View style={styles.tagRow}>
               {item.tags.map(tag => (
-                <React.Fragment key={tag}>
-                  <Text style={styles.tag}>{tag}</Text>
-                </React.Fragment>
+                <Text key={tag} style={styles.tag}>{tag}</Text>
               ))}
             </View>
             <TouchableOpacity
               style={[styles.enrollBtn, item.status === 'full' && styles.disabledBtn]}
-              disabled={true}
+              disabled={item.status === 'full'}
+              onPress={item.status !== 'full' ? () => Alert.alert('Enroll on Web', 'Cohort enrollment is available in the web app.') : undefined}
             >
               <Text style={[styles.enrollText, item.status === 'full' && styles.disabledText]}>
                 {item.status === 'full' ? 'Waitlist' : 'Enroll'}
