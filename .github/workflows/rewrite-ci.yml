@@ -351,9 +351,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check lockfile/package.json sync
-        run: bash ctf/scripts/check-lockfile-sync.sh
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -365,6 +362,9 @@ jobs:
           node-version: "22"
           cache: "pnpm"
           cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Check lockfile/package.json sync
+        run: bash ctf/scripts/check-lockfile-sync.sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --dir ctf

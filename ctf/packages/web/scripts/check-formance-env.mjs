@@ -6,6 +6,16 @@ function inferRailwayRuntime() {
   );
 }
 
+function inferRailwayProduction() {
+  const name = (
+    process.env.RAILWAY_ENVIRONMENT_NAME
+    || process.env.RAILWAY_ENVIRONMENT
+    || process.env.RAILWAY_DEPLOYMENT_ENVIRONMENT
+    || ''
+  ).toLowerCase();
+  return name === 'production';
+}
+
 function isTruthy(value) {
   if (!value) {
     return false;
@@ -33,9 +43,9 @@ function isRailwayInternalHost(hostname) {
 }
 
 const runningOnRailway = inferRailwayRuntime();
+const railwayProduction = inferRailwayProduction();
 const requireFormance = isTruthy(process.env.SERVICE_CREDITS_REQUIRE_FORMANCE)
-  || process.env.NODE_ENV === 'production'
-  || runningOnRailway;
+  || railwayProduction;
 
 const requiredKeys = ['FORMANCE_API_URL', 'FORMANCE_LEDGER', 'FORMANCE_API_TOKEN'];
 
