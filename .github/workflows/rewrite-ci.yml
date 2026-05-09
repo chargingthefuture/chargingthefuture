@@ -154,6 +154,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install ctf dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
       - name: Enforce modularity and complexity governance
         run: |
           set -euo pipefail
