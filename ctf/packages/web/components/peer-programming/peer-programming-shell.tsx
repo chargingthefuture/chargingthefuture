@@ -53,9 +53,10 @@ export function PeerProgrammingShell(_props: { userId?: string; isAdmin?: boolea
         } else {
           setMessages([]);
         }
-      } catch (e: any) {
-        if (e.name === 'AbortError' || controller.signal.aborted) return;
-        setError(e.message || 'Failed to load peer programming data.');
+      } catch (e: unknown) {
+        if (controller.signal.aborted) return;
+        if (e instanceof Error && e.name === 'AbortError') return;
+        setError(e instanceof Error ? e.message : String(e) || 'Failed to load peer programming data.');
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -78,8 +79,8 @@ export function PeerProgrammingShell(_props: { userId?: string; isAdmin?: boolea
       const msgRes = await fetch('/api/peer-programming/messages');
       if (!msgRes.ok) throw new Error('Failed to fetch updated messages');
       setMessages(await msgRes.json() as Message[]);
-    } catch (e: any) {
-      setError(e.message || 'Failed to post message.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e) || 'Failed to post message.');
     } finally {
       setSubmitting(false);
     }
@@ -97,9 +98,10 @@ export function PeerProgrammingShell(_props: { userId?: string; isAdmin?: boolea
       });
       if (!res.ok) throw new Error('Failed to submit feedback');
       setFeedbackSuccess(true);
-    } catch (e: any) {
-      setError(e.message || 'Failed to submit feedback.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e) || 'Failed to submit feedback.');
       setFeedbackSuccess(false);
+      throw e;
     } finally {
       setSubmitting(false);
     }
@@ -156,8 +158,8 @@ export function PeerProgrammingShell(_props: { userId?: string; isAdmin?: boolea
       await handleSubmitFeedback({ feedback: feedbackInput });
       setFeedbackSuccess(true);
       setFeedbackInput("");
-    } catch (e: any) {
-      setFeedbackError(e.message || "Failed to submit feedback.");
+    } catch (e: unknown) {
+      setFeedbackError(e instanceof Error ? e.message : String(e) || "Failed to submit feedback.");
     }
   }
 

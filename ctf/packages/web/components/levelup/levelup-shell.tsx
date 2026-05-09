@@ -4,7 +4,6 @@ import { UserDashboard } from './UserDashboard';
 
 type LevelupShellProps = {
   userId: string;
-  isAdmin: boolean;
   query: {
     track?: string;
     status?: string;

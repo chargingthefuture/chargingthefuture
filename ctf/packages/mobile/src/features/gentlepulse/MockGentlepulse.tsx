@@ -5,6 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchSessions } from './api';
 
 const COLOR = '#14B8A6';
+
+interface Session {
+  id: string;
+  title: string;
+  emoji?: string;
+  duration?: string;
+  category?: string;
+}
 const WIDTH = Dimensions.get('window').width;
 const NAV: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; key: string }> = [
 	{ icon: 'home-outline', label: 'Home', key: 'home' },
@@ -18,7 +26,7 @@ export const MockGentlepulse = () => {
 	const [playing, setPlaying] = useState(null);
 	const [isPaused, setIsPaused] = useState(false);
 	const [progress] = useState(40);
-	const [sessions, setSessions] = useState([]);
+	const [sessions, setSessions] = useState<Session[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
@@ -86,7 +94,7 @@ export const MockGentlepulse = () => {
 							</View>
 							<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={{ alignItems: 'center' }}>
 								{['All', 'Breathing', 'Mindfulness', 'Grounding', 'Sleep', 'Morning'].map((c, i) => (
-									<TouchableOpacity style={[styles.categoryBtn, i === 0 && styles.categoryBtnActive]}>
+									<TouchableOpacity key={c} style={[styles.categoryBtn, i === 0 && styles.categoryBtnActive]}>
 										<Text style={[styles.categoryText, i === 0 && styles.categoryTextActive]}>{c}</Text>
 									</TouchableOpacity>
 								))}
@@ -98,7 +106,7 @@ export const MockGentlepulse = () => {
 							) : (
 								<View style={styles.sessionGrid}>
 									{sessions.map((s) => (
-										<TouchableOpacity style={styles.sessionCard} onPress={() => { setPlaying(s.id); setActiveNav('playing'); }}>
+										<TouchableOpacity key={s.id} style={styles.sessionCard} onPress={() => { setPlaying(s.id); setActiveNav('playing'); }}>
 											<Text style={styles.sessionEmoji}>{s.emoji || '🧘'}</Text>
 											<Text style={styles.sessionTitle}>{s.title}</Text>
 											<View style={styles.sessionMeta}>
@@ -160,7 +168,7 @@ export const MockGentlepulse = () => {
 			{/* Bottom nav */}
 			<View style={styles.bottomNav}>
 				{NAV.map(({ icon, label, key }) => (
-					<TouchableOpacity onPress={() => setActiveNav(key)} style={styles.bottomNavBtn}>
+					<TouchableOpacity key={key} onPress={() => setActiveNav(key)} style={styles.bottomNavBtn}>
 						<View style={[styles.bottomNavIcon, activeNav === key && styles.bottomNavIconActive]}>
 							<Ionicons name={icon} size={20} color={activeNav === key ? COLOR : '#4B5563'} />
 						</View>

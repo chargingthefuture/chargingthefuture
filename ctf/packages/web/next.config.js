@@ -13,9 +13,6 @@ const nextConfig = {
     // Suppress build-time type errors until all 71 route handlers are migrated.
     ignoreBuildErrors: true,
   },
-  eslint: {
-    dirs: ['app', 'components', 'lib'],
-  },
 };
 
 module.exports = shouldSkipSentryBuildPlugin

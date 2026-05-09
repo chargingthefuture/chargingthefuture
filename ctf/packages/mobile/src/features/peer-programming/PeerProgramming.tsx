@@ -56,7 +56,7 @@ export const PeerProgramming = () => {
       {/* Navigation */}
       <View style={styles.navBar}>
         {NAV.map(({ label, key }) => (
-          <TouchableOpacity onPress={() => setActiveNav(key)} style={[styles.navItem, activeNav === key && styles.navItemActive]}>
+          <TouchableOpacity key={key} onPress={() => setActiveNav(key)} style={[styles.navItem, activeNav === key && styles.navItemActive]}>
             <Text style={[styles.navLabel, activeNav === key && styles.navLabelActive]}>{label}</Text>
           </TouchableOpacity>
         ))}

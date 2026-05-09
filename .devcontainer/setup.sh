@@ -123,6 +123,9 @@ else
   echo "Claude CLI already installed."
 fi
 
+echo "Installing GitHub Copilot CLI (idempotent)..."
+curl -fsSL https://gh.io/copilot-install | bash || echo "Warning: GitHub Copilot CLI install failed — run 'curl -fsSL https://gh.io/copilot-install | bash' manually."
+
 # Ensure pre-commit hook is executable if present
 if [ -f /workspaces/chargingthefuture/.git/hooks/pre-commit ]; then
   chmod +x /workspaces/chargingthefuture/.git/hooks/pre-commit

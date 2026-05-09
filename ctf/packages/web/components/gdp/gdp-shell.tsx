@@ -8,11 +8,19 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const COLOR = '#06B6D4';
 
-export default function GdpShell(_props: { isAdmin?: boolean }) {
-  // LighthouseShell pattern: use client, loading/error/data state, API fetch, empty state, real data mapping
+interface GdpSector { name: string; color?: string; value: string; members: number }
+interface GdpCountry { country: string; flag: string; gdp: string; members: number }
+interface GdpMetrics {
+  currentValue?: string; delta?: string; target?: string; progress?: string;
+  countries?: string; members?: string;
+  memberStats?: { v: string; l: string; c?: string }[];
+}
+interface GdpReport { sectors: GdpSector[]; countries: GdpCountry[]; metrics: GdpMetrics }
+
+export default function GdpShell(_: { isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<any>(null);
+  const [report, setReport] = useState<GdpReport | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,13 +34,9 @@ export default function GdpShell(_props: { isAdmin?: boolean }) {
         if (!controller.signal.aborted) {
           setReport(data.report ?? null);
         }
-      } catch (e: any) {
-        if (controller.signal.aborted) {
-          // Ignore aborts
-          return;
-        }
-        // Only set error if not aborted
-        setError(e.message || "Failed to load GDP data.");
+      } catch (e: unknown) {
+        if (controller.signal.aborted) return;
+        setError(e instanceof Error ? e.message : "Failed to load GDP data.");
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
