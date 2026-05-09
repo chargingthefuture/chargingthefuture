@@ -12,7 +12,7 @@ cd "$repo_root" || exit 1
 # Run Railway build for web package
 cd "$repo_root/ctf/packages/web" || exit 1
 echo "Running railway run pnpm build in web package..."
-railway run pnpm build
+RAILWAY_TOKEN="${RAILWAY_IDE_TOKEN}" railway run pnpm build
 cd "$repo_root"
 
 echo "Pre-push verification passed. Proceeding with push."
