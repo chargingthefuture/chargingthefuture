@@ -118,7 +118,7 @@ fi
 
 echo "Checking for Claude CLI..."
 if ! command -v claude &> /dev/null; then
-  curl -fsSL https://claude.ai/install.sh | bash
+  curl -fsSL https://claude.ai/install.sh | bash || echo "Warning: Claude CLI install failed — run 'curl -fsSL https://claude.ai/install.sh | bash' manually."
 else
   echo "Claude CLI already installed."
 fi

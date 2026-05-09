@@ -3,7 +3,9 @@ import type {
   FeedLocationContext,
   FeedQuestionCategory,
 } from './types';
-import { callOllamaChat, isOllamaConfigured, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
+import { callOllamaChat, isOllamaConfigured, OLLAMA_MODEL, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
+
+const DEFAULT_OLLAMA_CONFIDENCE = 0.85;
 
 type FeedInferenceDraft = {
   body: string;
@@ -176,15 +178,16 @@ export async function generateFeedAssistedAnswer(input: {
 
       return {
         body: result.content,
-        confidence: 0.85,
-        modelId: `ollama/${process.env.OLLAMA_MODEL ?? 'llama3.2'}`,
+        confidence: DEFAULT_OLLAMA_CONFIDENCE,
+        modelId: `ollama/${OLLAMA_MODEL}`,
         sources,
+        // token counts are length-based estimates for logging only, not billing
         promptTokenCount,
         completionTokenCount,
         latencyMs: result.latencyMs,
       };
-    } catch {
-      // Ollama unavailable or timed out — fall through to template fallback
+    } catch (err) {
+      console.error('[feed/inference] Ollama failed, falling back to template', err);
     }
   }
 

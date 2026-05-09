@@ -1,5 +1,5 @@
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? '';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2';
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2';
 const OLLAMA_TIMEOUT_MS = 30_000;
 
 export type OllamaMessage = {
@@ -53,12 +53,14 @@ export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaR
     });
 
     if (!response.ok) {
+      console.error('[ollama] HTTP error', { status: response.status, model: OLLAMA_MODEL, latencyMs: Date.now() - startedAt });
       throw new Error(`ollama_http_error:${response.status}`);
     }
 
     const data = await response.json() as OllamaChatResponse;
 
     if (!data.message?.content) {
+      console.error('[ollama] Empty response', { model: OLLAMA_MODEL, latencyMs: Date.now() - startedAt });
       throw new Error('ollama_empty_response');
     }
 
@@ -66,6 +68,11 @@ export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaR
       content: data.message.content.trim(),
       latencyMs: Date.now() - startedAt,
     };
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.error('[ollama] Request timed out', { model: OLLAMA_MODEL, timeoutMs: OLLAMA_TIMEOUT_MS });
+    }
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }

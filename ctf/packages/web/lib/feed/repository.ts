@@ -1571,30 +1571,50 @@ export async function relabelQuestionCategory(
   category: FeedQuestionCategory,
 ): Promise<AdminFeedQuestion> {
   return withDbTransaction(async (client) => {
-    const result = await client.query<AdminFeedQuestionRow>(
-      `
-        UPDATE feed_questions
-        SET category = $2
-        WHERE id = $1::uuid
-        RETURNING
-          id,
-          asked_by_user_id,
-          body,
-          category,
-          location_context,
-          llm_consent_granted,
-          created_at,
-          '0' AS answer_count,
-          '0' AS helpful_count,
-          '0' AS not_helpful_count,
-          '0' AS flagged_count
-      `,
+    const exists = await client.query<{ id: string }>(
+      'SELECT id FROM feed_questions WHERE id = $1::uuid LIMIT 1',
+      [questionId],
+    );
+
+    if (exists.rows.length === 0) {
+      throw new Error('question_not_found');
+    }
+
+    await client.query(
+      'UPDATE feed_questions SET category = $2 WHERE id = $1::uuid',
       [questionId, category],
     );
 
-    if (result.rows.length === 0) {
-      throw new Error('question_not_found');
-    }
+    await client.query(
+      `UPDATE feed_items
+         SET title = $2, updated_by_user_id = $3, updated_at = NOW()
+         WHERE source_question_id = $1::uuid`,
+      [questionId, getQuestionTitle(category), actorId],
+    );
+
+    const result = await client.query<AdminFeedQuestionRow>(
+      `
+        SELECT
+          fq.id,
+          fq.asked_by_user_id,
+          fq.body,
+          fq.category,
+          fq.location_context,
+          fq.llm_consent_granted,
+          fq.created_at,
+          COUNT(DISTINCT fa.id)::text AS answer_count,
+          COALESCE(SUM(CASE WHEN far.rating = 'helpful'     THEN 1 ELSE 0 END), 0)::text AS helpful_count,
+          COALESCE(SUM(CASE WHEN far.rating = 'not_helpful' THEN 1 ELSE 0 END), 0)::text AS not_helpful_count,
+          COALESCE(SUM(CASE WHEN far.rating = 'flagged'     THEN 1 ELSE 0 END), 0)::text AS flagged_count
+        FROM feed_questions fq
+        LEFT JOIN feed_answers fa ON fa.question_id = fq.id AND fa.answer_type = 'llm'
+        LEFT JOIN feed_answer_ratings far ON far.answer_id = fa.id
+        WHERE fq.id = $1::uuid
+        GROUP BY fq.id, fq.asked_by_user_id, fq.body, fq.category,
+                 fq.location_context, fq.llm_consent_granted, fq.created_at
+      `,
+      [questionId],
+    );
 
     await client.query(
       `

@@ -34,6 +34,13 @@ export async function PATCH(request: Request, { params }: { params: { questionId
 
   const { questionId } = params;
 
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(questionId)) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid question ID.' },
+      { status: 400 },
+    );
+  }
+
   try {
     const question = await relabelQuestionCategory(gate.auth.userId, questionId, body.category);
     logFeedAudit({

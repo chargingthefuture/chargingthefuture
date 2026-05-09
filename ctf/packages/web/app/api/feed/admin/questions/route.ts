@@ -20,8 +20,13 @@ export async function GET(request: Request) {
     Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? pageSizeRaw : FEED_DEFAULT_PAGE_SIZE,
     FEED_MAX_PAGE_SIZE,
   );
-  const category: FeedQuestionCategory | null =
-    categoryRaw && isValidFeedQuestionCategory(categoryRaw) ? categoryRaw : null;
+  if (categoryRaw !== null && !isValidFeedQuestionCategory(categoryRaw)) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid category value.' },
+      { status: 400 },
+    );
+  }
+  const category = categoryRaw as FeedQuestionCategory | null;
 
   try {
     const result = await listAdminQuestions({ page, pageSize }, { category });
