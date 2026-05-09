@@ -142,8 +142,15 @@ if [ -d /workspaces/chargingthefuture/.git ] && [ -d /workspaces/chargingthefutu
   echo "Configured git hooksPath to ctf/.husky"
 fi
 
-# Prompt for login if needed
-echo "If you need to log in to GitHub, Railway, or Vercel, run:"
+# Verify Railway CLI auth via RAILWAY_IDE_TOKEN (set in Infisical, mapped to RAILWAY_TOKEN)
+echo "Verifying Railway CLI auth..."
+if [ -n "$RAILWAY_IDE_TOKEN" ]; then
+  RAILWAY_TOKEN="$RAILWAY_IDE_TOKEN" railway whoami 2>/dev/null && echo "Railway: authenticated via RAILWAY_IDE_TOKEN." || echo "Warning: RAILWAY_IDE_TOKEN set but Railway auth failed — check the token in Infisical."
+else
+  echo "Warning: RAILWAY_IDE_TOKEN not set. Railway CLI/MCP will not work. Add it to Infisical and re-open the Codespace."
+fi
+
+# Prompt for any remaining manual logins
+echo "If you need to log in to GitHub or Vercel, run:"
 echo "  gh auth login"
-echo "  railway login"
 echo "  vercel login"
