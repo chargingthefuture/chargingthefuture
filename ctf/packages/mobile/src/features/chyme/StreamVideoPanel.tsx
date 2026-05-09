@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { StreamVideoClient, Call } from '@stream-io/video-react-native-sdk';
-import { ParticipantView } from '@stream-io/video-react-native-sdk';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  StreamVideo,
+  StreamVideoClient,
+  StreamCall,
+  CallContent,
+  Call,
+} from '@stream-io/video-react-native-sdk';
 
 export interface StreamVideoPanelProps {
   streamApiKey: string;
   streamToken: string;
   streamUserId: string;
   streamChannelId: string;
+  callType?: string;
 }
 
 export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
@@ -15,6 +21,7 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   streamToken,
   streamUserId,
   streamChannelId,
+  callType = 'default',
 }) => {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
@@ -27,39 +34,40 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
       user: { id: streamUserId },
       token: streamToken,
     });
-    setClient(videoClient);
-    const c = videoClient.call('default', streamChannelId);
-    c.join().then(() => {
-      setCall(c);
-      setLoading(false);
-    }).catch((err) => {
-      setError('Failed to join video room.');
-      setLoading(false);
-    });
+    const c = videoClient.call(callType, streamChannelId);
+    c.join({ create: true })
+      .then(() => {
+        setClient(videoClient);
+        setCall(c);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to join video room.');
+        setLoading(false);
+        videoClient.disconnectUser().catch(() => {});
+      });
     return () => {
-      (async () => {
-        try {
-          await c.leave();
-        } catch {}
-        try {
-          await videoClient.disconnectUser();
-        } catch {}
-      })();
+      c.leave().catch(() => {});
+      videoClient.disconnectUser().catch(() => {});
     };
-  }, [streamApiKey, streamToken, streamUserId, streamChannelId]);
+  }, [streamApiKey, streamToken, streamUserId, streamChannelId, callType]);
 
   if (loading) return <ActivityIndicator size="large" />;
-  if (error) return <Text>{error}</Text>;
+  if (error) return <Text style={styles.error}>{error}</Text>;
   if (!client || !call) return <Text>Video unavailable.</Text>;
 
-  // Render the local participant if available, otherwise show unavailable
-  const localParticipant = call?.state?.localParticipant;
-  if (!localParticipant) return <Text>No participant available.</Text>;
-
   return (
-    <View style={{ marginVertical: 16 }}>
-      <Text>Video Room: {streamChannelId}</Text>
-      <ParticipantView participant={localParticipant} />
+    <View style={styles.container}>
+      <StreamVideo client={client}>
+        <StreamCall call={call}>
+          <CallContent />
+        </StreamCall>
+      </StreamVideo>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  error: { color: 'red', padding: 16 },
+});

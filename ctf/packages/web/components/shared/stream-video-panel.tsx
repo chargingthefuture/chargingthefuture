@@ -1,11 +1,23 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { StreamVideoClient, Call } from '@stream-io/video-react-sdk';
+import {
+  StreamVideo,
+  StreamVideoClient,
+  StreamCall,
+  SpeakerLayout,
+  CallControls,
+  StreamTheme,
+  Call,
+} from '@stream-io/video-react-sdk';
+import '@stream-io/video-react-sdk/dist/css/styles.css';
 
 export interface StreamVideoPanelProps {
   streamApiKey: string;
   streamToken: string;
   streamUserId: string;
   streamChannelId: string;
+  callType?: string;
 }
 
 export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
@@ -13,6 +25,7 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   streamToken,
   streamUserId,
   streamChannelId,
+  callType = 'default',
 }) => {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
@@ -25,49 +38,36 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
       user: { id: streamUserId },
       token: streamToken,
     });
-    setClient(videoClient);
-    const c = videoClient.call('default', streamChannelId);
-    c.join().then(() => {
-      setCall(c);
-      setLoading(false);
-    }).catch((err) => {
-      setError('Failed to join video room.');
-      setLoading(false);
-    });
+    const c = videoClient.call(callType, streamChannelId);
+    c.join({ create: true })
+      .then(() => {
+        setClient(videoClient);
+        setCall(c);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to join video room.');
+        setLoading(false);
+        videoClient.disconnectUser().catch(() => {});
+      });
     return () => {
-      (async () => {
-        try {
-          await c.leave();
-        } catch {}
-        try {
-          await videoClient.disconnectUser();
-        } catch {}
-      })();
+      c.leave().catch(() => {});
+      videoClient.disconnectUser().catch(() => {});
     };
-  }, [streamApiKey, streamToken, streamUserId, streamChannelId]);
+  }, [streamApiKey, streamToken, streamUserId, streamChannelId, callType]);
 
-  if (loading) return <div>Loading video…</div>;
-  if (error) return <div>{error}</div>;
-  if (!client || !call) return <div>Video unavailable.</div>;
+  if (loading) return <div className="p-4 text-sm">Connecting to room…</div>;
+  if (error) return <div className="p-4 text-sm text-red-500">{error}</div>;
+  if (!client || !call) return <div className="p-4 text-sm">Room unavailable.</div>;
 
-  // FIXME(StreamVideoPanel): Placeholder render for video UI. See tracking issue #1234.
-  // TODO(StreamVideoPanel): Implement full video experience using StreamClientProvider, VideoRoom, ParticipantList, LocalVideo, RemoteVideo, etc. with streamChannelId={streamChannelId}
-  // Tracking: https://github.com/chargingthefuture/ctf/issues/1234
-  // This marker is intentional and scheduled for implementation.
   return (
-    <div>
-      <h3>Video Room: {streamChannelId}</h3>
-      {/* Stubbed component hierarchy for reviewers: */}
-      {/* <StreamClientProvider client={client}> */}
-      {/*   <VideoRoom call={call}> */}
-      {/*     <ParticipantList call={call} /> */}
-      {/*     <LocalVideo call={call} /> */}
-      {/*     <RemoteVideo call={call} /> */}
-      {/*   </VideoRoom> */}
-      {/* </StreamClientProvider> */}
-      <div style={{ color: '#888', fontStyle: 'italic' }}>
-        [Stream video UI coming soon for channel: {streamChannelId}]
-      </div>
-    </div>
+    <StreamTheme>
+      <StreamVideo client={client}>
+        <StreamCall call={call}>
+          <SpeakerLayout />
+          <CallControls />
+        </StreamCall>
+      </StreamVideo>
+    </StreamTheme>
   );
 };
