@@ -83,17 +83,20 @@ export function Foundation() {
         body: JSON.stringify({ providerId: provider.profileId }),
       });
       const data = await res.json();
-      if (data.ok) {
+      const threadId = data.thread?.id;
+      const streamChannelId = data.thread?.streamChannelId;
+      if (data.ok && threadId && streamChannelId && data.streamApiKey && data.streamToken && data.streamUserId) {
         setConnectionStatus('Connection thread created!');
-        setThreadId(data.thread?.id ?? null);
+        setThreadId(threadId);
         setChatCredentials({
           streamApiKey: data.streamApiKey,
           streamToken: data.streamToken,
           streamUserId: data.streamUserId,
-          streamChannelId: data.thread?.streamChannelId,
+          streamChannelId,
         });
       } else {
         setConnectionStatus(data.message || 'Failed to create connection');
+        setChatError('Connection response missing required fields.');
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error connecting';
@@ -123,7 +126,7 @@ export function Foundation() {
         },
       );
       const data = await res.json();
-      if (data.ok) {
+      if (data.ok && data.streamApiKey && data.joinToken && data.streamUserId && data.streamCallId) {
         setCallCredentials({
           streamApiKey: data.streamApiKey,
           streamToken: data.joinToken,

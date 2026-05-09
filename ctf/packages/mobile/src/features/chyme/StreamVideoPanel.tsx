@@ -13,7 +13,7 @@ export interface StreamVideoPanelProps {
   streamToken: string;
   streamUserId: string;
   streamChannelId: string;
-  callType?: string;
+  callType?: 'default' | 'audio_room';
 }
 
 export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
@@ -29,6 +29,12 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setClient(null);
+    setCall(null);
+    setLoading(true);
+    setError(null);
+    let cancelled = false;
+
     const videoClient = new StreamVideoClient({
       apiKey: streamApiKey,
       user: { id: streamUserId },
@@ -37,16 +43,19 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
     const c = videoClient.call(callType, streamChannelId);
     c.join({ create: true })
       .then(() => {
+        if (cancelled) return;
         setClient(videoClient);
         setCall(c);
         setLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setError('Failed to join video room.');
         setLoading(false);
         videoClient.disconnectUser().catch(() => {});
       });
     return () => {
+      cancelled = true;
       c.leave().catch(() => {});
       videoClient.disconnectUser().catch(() => {});
     };
