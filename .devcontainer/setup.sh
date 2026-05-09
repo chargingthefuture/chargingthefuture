@@ -116,6 +116,13 @@ else
   echo "CodeRabbit CLI already installed."
 fi
 
+echo "Checking for Claude CLI..."
+if ! command -v claude &> /dev/null; then
+  curl -fsSL https://claude.ai/install.sh | bash || echo "Warning: Claude CLI install failed — run 'curl -fsSL https://claude.ai/install.sh | bash' manually."
+else
+  echo "Claude CLI already installed."
+fi
+
 # Ensure pre-commit hook is executable if present
 if [ -f /workspaces/chargingthefuture/.git/hooks/pre-commit ]; then
   chmod +x /workspaces/chargingthefuture/.git/hooks/pre-commit

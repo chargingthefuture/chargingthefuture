@@ -71,6 +71,46 @@
 
 If two rules conflict, choose the stricter rule and document the decision.
 
+## Pull Request Conventions (enforced by CI — applies to all agents)
+
+### PR Title — Conventional Commits (`pr-title-semantic.yml`)
+
+Every PR title must start with one of these prefixes:
+
+| Prefix | Use for |
+|---|---|
+| `feat:` | New feature or capability |
+| `fix:` | Bug fix |
+| `refactor:` | Code restructure, no behaviour change |
+| `chore:` | Tooling, config, deps, devcontainer |
+| `ci:` | GitHub Actions / CI workflow changes |
+| `docs:` | Documentation only |
+| `perf:` | Performance improvement |
+| `test:` | Tests only |
+| `build:` | Build system changes |
+| `style:` | Formatting only |
+| `revert:` | Revert a previous commit |
+
+Example: `feat: add Ollama chatbot integration to feed question answers`
+
+### PR Description — Parity Status (`pr-parity-status` in `rewrite-ci.yml`)
+
+Every PR description must include one of:
+
+```
+Parity Status: web+android complete
+```
+Use when the change is backend-only, infrastructure, or both web and Android are implemented in this PR.
+
+```
+Parity Ticket: <GitHub issue URL or #issue-number>
+```
+Use when Android parity is deferred; link to the tracking issue.
+
+### EOF Formatting (`formatting-eof` in `rewrite-ci.yml`)
+
+All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
+
 ## Agent Startup Read Order
 
 - On each new task, read this `index.mdc` first.

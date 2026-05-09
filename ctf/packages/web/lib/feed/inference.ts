@@ -3,6 +3,9 @@ import type {
   FeedLocationContext,
   FeedQuestionCategory,
 } from './types';
+import { callOllamaChat, isOllamaConfigured, OLLAMA_MODEL, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
+
+const DEFAULT_OLLAMA_CONFIDENCE = 0.85;
 
 type FeedInferenceDraft = {
   body: string;
@@ -114,15 +117,13 @@ export function inferFeedQuestionCategory(
   return 'general';
 }
 
-export function generateFeedAssistedAnswer(input: {
+function buildTemplateAnswer(input: {
   questionBody: string;
   category: FeedQuestionCategory;
   location?: FeedLocationContext | null;
-}): FeedInferenceDraft {
-  const startedAt = Date.now();
+}): string {
   const locationLabel = describeLocation(input.location);
   const sources = APPROVED_SOURCE_MAP[input.category] ?? APPROVED_SOURCE_MAP.general;
-  const modelId = 'ctf-approved-sources-summarizer-v1';
 
   const guidanceByCategory: Record<FeedQuestionCategory, string> = {
     housing: `Start with housing inventory and verified host/provider matches ${locationLabel}. Prioritize listings with clear move-in windows, support availability, and direct follow-up through LightHouse or Directory rather than off-platform contact.`,
@@ -132,19 +133,72 @@ export function generateFeedAssistedAnswer(input: {
     benefits: `Focus on approved benefits-navigation references ${locationLabel}. Gather the minimum facts needed for eligibility questions and route follow-up through verified support listings rather than unverified outside links.`,
   };
 
-  const body = [
+  return [
     `Question received: ${input.questionBody.trim()}`,
     guidanceByCategory[input.category],
     `Approved sources consulted: ${sources.map((source) => source.label).join(', ')}.`,
   ].join('\n\n');
+}
 
+function buildOllamaUserPrompt(input: {
+  questionBody: string;
+  category: FeedQuestionCategory;
+  location?: FeedLocationContext | null;
+}): string {
+  const locationLabel = describeLocation(input.location);
+  const sources = (APPROVED_SOURCE_MAP[input.category] ?? APPROVED_SOURCE_MAP.general)
+    .map((s) => s.label)
+    .join(', ');
+
+  return [
+    `A survivor submitted the following question (category: ${input.category}, location: ${locationLabel}):`,
+    `"${input.questionBody.trim()}"`,
+    ``,
+    `Provide a focused, survivor-safe response. Reference these CTF platform resources where applicable: ${sources}.`,
+  ].join('\n');
+}
+
+export async function generateFeedAssistedAnswer(input: {
+  questionBody: string;
+  category: FeedQuestionCategory;
+  location?: FeedLocationContext | null;
+}): Promise<FeedInferenceDraft> {
+  const startedAt = Date.now();
+  const sources = APPROVED_SOURCE_MAP[input.category] ?? APPROVED_SOURCE_MAP.general;
+
+  if (isOllamaConfigured()) {
+    try {
+      const result = await callOllamaChat([
+        { role: 'system', content: SURVIVOR_SYSTEM_PROMPT },
+        { role: 'user', content: buildOllamaUserPrompt(input) },
+      ]);
+
+      const promptTokenCount = Math.max(24, Math.ceil(input.questionBody.length / 4));
+      const completionTokenCount = Math.max(48, Math.ceil(result.content.length / 4));
+
+      return {
+        body: result.content,
+        confidence: DEFAULT_OLLAMA_CONFIDENCE,
+        modelId: `ollama/${OLLAMA_MODEL}`,
+        sources,
+        // token counts are length-based estimates for logging only, not billing
+        promptTokenCount,
+        completionTokenCount,
+        latencyMs: result.latencyMs,
+      };
+    } catch (err) {
+      console.error('[feed/inference] Ollama failed, falling back to template', err);
+    }
+  }
+
+  const body = buildTemplateAnswer(input);
   const promptTokenCount = Math.max(24, Math.ceil(input.questionBody.length / 4));
   const completionTokenCount = Math.max(48, Math.ceil(body.length / 4));
 
   return {
     body,
     confidence: input.category === 'general' ? 0.68 : 0.79,
-    modelId,
+    modelId: 'ctf-approved-sources-summarizer-v1',
     sources,
     promptTokenCount,
     completionTokenCount,
