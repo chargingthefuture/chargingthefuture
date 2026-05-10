@@ -9,7 +9,7 @@ export function WorkforceDashboard() {
   const [charts, setCharts] = useState<Chart[]>([]);
   const [gaps, setGaps] = useState<SkillGap[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   useEffect(() => {
     // TODO: Replace with real API call

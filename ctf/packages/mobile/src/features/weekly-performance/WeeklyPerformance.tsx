@@ -15,8 +15,11 @@ export const WeeklyPerformance: React.FC = () => {
   const [activeNav, setActiveNav] = useState('weeks');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [weeks, setWeeks] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentWeek, setCurrentWeek] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [metrics, setMetrics] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
 
@@ -106,7 +109,7 @@ export const WeeklyPerformance: React.FC = () => {
             {weeks.length === 0 ? (
               <Text style={styles.empty}>No weeks available.</Text>
             ) : (
-              weeks.map((w, i) => {
+              weeks.map((w) => {
                 const isCurrent = currentWeek && w.weekStartDate === currentWeek.weekStartDate;
                 return (
                   <TouchableOpacity
@@ -133,7 +136,7 @@ export const WeeklyPerformance: React.FC = () => {
               <Text style={styles.empty}>No metrics available for this week.</Text>
             )}
             {selectedWeek != null && metrics.length > 0 && (
-              metrics.map((m, i) => (
+              metrics.map((m) => (
                 <View style={styles.metricCard}>
                   <Text style={styles.metricKey}>{m.metricKey}</Text>
                   <Text style={styles.metricValue}>{m.metricValue} {m.metricUnit}</Text>
@@ -170,8 +173,8 @@ export const WeeklyPerformance: React.FC = () => {
                   const data = await res.json();
                   if (!data.ok) throw new Error(data.message || 'Failed to select week');
                   // Optionally refetch weeks/currentWeek
-                } catch (e: any) {
-                  setAdminError(e.message);
+                } catch (e: unknown) {
+                  setAdminError(e instanceof Error ? e.message : 'Action failed');
                 } finally {
                   setAdminLoading(false);
                 }
@@ -193,8 +196,8 @@ export const WeeklyPerformance: React.FC = () => {
                   const data = await res.json();
                   if (!data.ok) throw new Error(data.message || 'Export failed');
                   setExportResult('Export successful!');
-                } catch (e: any) {
-                  setAdminError(e.message);
+                } catch (e: unknown) {
+                  setAdminError(e instanceof Error ? e.message : 'Action failed');
                 } finally {
                   setAdminLoading(false);
                 }

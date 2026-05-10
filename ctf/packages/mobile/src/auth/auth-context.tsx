@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [provider, setProvider] = useState<SharedAuthProvider>('custom');
+  const [provider] = useState<SharedAuthProvider>('custom');
   const [token, setToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {

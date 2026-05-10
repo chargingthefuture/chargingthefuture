@@ -19,7 +19,7 @@ export function WorkforceProfile() {
   const auth = useContext(AuthContext);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   useEffect(() => {
     // TODO: Replace with real API call

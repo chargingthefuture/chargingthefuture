@@ -33,7 +33,7 @@ export const PeerProgramming = () => {
         setCohorts(data);
         setLoading(false);
       })
-      .catch((err) => {
+      .catch(() => {
         setError('Failed to load cohorts');
         setLoading(false);
       });

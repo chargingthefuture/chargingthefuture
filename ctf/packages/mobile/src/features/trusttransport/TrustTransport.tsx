@@ -15,7 +15,7 @@ export const TrustTransport = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [booked, setBooked] = useState(false);
-  const { user, isAuthenticated, signIn, signOut, isLoading } = useAuth();
+  const { user, isAuthenticated, signIn, isLoading } = useAuth();
 
   if (isLoading) {
     return <View style={styles.root}><Text style={{ color: '#fff', textAlign: 'center', marginTop: 40 }}>Loading...</Text></View>;

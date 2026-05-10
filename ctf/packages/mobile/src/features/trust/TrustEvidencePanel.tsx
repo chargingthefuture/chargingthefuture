@@ -41,7 +41,7 @@ export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, c
           <Text style={styles.emptyDesc}>Visible to: {trust.trustVisibility.charAt(0).toUpperCase() + trust.trustVisibility.slice(1)}</Text>
         </View>
       ) : (
-        trust.trustEvidence.map((item: TrustEvidenceItem, idx: number) => (
+        trust.trustEvidence.map((item: TrustEvidenceItem) => (
           <View style={styles.evidenceItem}>
             <Text style={styles.evidenceType}>{item.type}</Text>
             <Text style={styles.evidenceSummary}>{item.summary}</Text>

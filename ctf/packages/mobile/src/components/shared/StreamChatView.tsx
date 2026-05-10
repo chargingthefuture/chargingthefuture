@@ -25,6 +25,7 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
 }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [client, setClient] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [channel, setChannel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
           setLoading(false);
         });
       })
-      .catch((err) => {
+      .catch(() => {
         if (!isMounted) return;
         setError('Failed to connect to chat.');
         setLoading(false);

@@ -17,14 +17,6 @@ const LEADERBOARD = [
   { rank: 5, name: 'James Thibodeau', points: 5910, badges: 8 },
 ];
 
-const BADGES = [
-  { name: 'First Skill', emoji: '🌱', earned: true },
-  { name: 'Fast Learner', emoji: '⚡', earned: true },
-  { name: 'Mentor', emoji: '🎓', earned: true },
-  { name: '5 Rounds', emoji: '🏆', earned: false },
-  { name: 'Expert', emoji: '💎', earned: false },
-  { name: 'Leader', emoji: '👑', earned: false },
-];
 
 const CHAT = [
   { id: 1, from: 'hub', text: 'Skills Hunt matches you with learning cohorts based on your workforce gaps. 6 active rounds right now. Ready to level up?' },

@@ -24,7 +24,7 @@ export const LighthouseMatches = () => {
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setMatches(data.items ?? []);
-      } catch (e) {
+      } catch {
         setError('Failed to load matches.');
       } finally {
         setLoading(false);

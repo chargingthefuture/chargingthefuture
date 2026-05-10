@@ -1,7 +1,7 @@
 // API client for Peer Programming plugin (mobile)
 // This will be replaced with real endpoints when available.
 
-export async function fetchCohorts(authToken) {
+export async function fetchCohorts(_authToken: string) {
   // TODO: Replace with real API endpoint
   // Example: GET /api/peer-programming/cohorts
   // Pass authToken in headers if required

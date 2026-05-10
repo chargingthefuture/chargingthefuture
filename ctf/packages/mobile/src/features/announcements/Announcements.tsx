@@ -7,7 +7,9 @@ import { OverlayProvider, Chat, Channel, MessageList } from 'stream-chat-react-n
 export const Announcements = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [credentials, setCredentials] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatClient, setChatClient] = useState<any>(null);
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export const Announcements = () => {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
     return () => { isMounted = false; chatClient?.disconnectUser(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#F97316" /></View>;

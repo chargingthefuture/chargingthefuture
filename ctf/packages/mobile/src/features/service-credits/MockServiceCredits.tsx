@@ -25,7 +25,7 @@ export const ServiceCredits = () => {
 	// const { user } = useAuth(); // Uncomment when auth is ready
 	const [activeNav, setActiveNav] = useState('wallet');
 	const [sendAmount, setSendAmount] = useState('');
-	const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
+	const [transactions] = useState(MOCK_TRANSACTIONS);
 
 	// Empty state check
 	const isEmpty = transactions.length === 0;

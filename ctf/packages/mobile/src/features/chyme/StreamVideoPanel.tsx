@@ -32,7 +32,7 @@ export const StreamVideoPanel: React.FC<StreamVideoPanelProps> = ({
     c.join().then(() => {
       setCall(c);
       setLoading(false);
-    }).catch((err) => {
+    }).catch(() => {
       setError('Failed to join video room.');
       setLoading(false);
     });

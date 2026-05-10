@@ -28,7 +28,7 @@ export const LighthouseScreen = () => {
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setProperties(data.items ?? []);
-      } catch (e) {
+      } catch {
         setError('Failed to load properties.');
       } finally {
         setLoading(false);

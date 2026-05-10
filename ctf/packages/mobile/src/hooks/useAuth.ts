@@ -13,7 +13,7 @@ export interface AuthUser {
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [provider, setProvider] = useState<AuthProvider>('custom');
+  const [provider] = useState<AuthProvider>('custom');
   const [token, setToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
