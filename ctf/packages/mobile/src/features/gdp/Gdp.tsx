@@ -80,10 +80,12 @@ export const Gdp = () => {
         <Text style={styles.empty}>No metrics available.</Text>
       ) : (
         data.metrics.map((m) => (
-          <View key={m.metricKey} style={styles.metricRow}>
-            <Text style={styles.metricKey}>{m.metricKey}</Text>
-            <Text style={styles.metricValue}>{m.metricValue}</Text>
-          </View>
+          <React.Fragment key={m.metricKey}>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricKey}>{m.metricKey}</Text>
+              <Text style={styles.metricValue}>{m.metricValue}</Text>
+            </View>
+          </React.Fragment>
         ))
       )}
     </ScrollView>

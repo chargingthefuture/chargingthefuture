@@ -90,7 +90,8 @@ export const PeerProgramming = () => {
               <View style={styles.emptyState}><Text style={styles.emptyText}>No cohorts available. Check back soon!</Text></View>
             ) : (
               cohorts.map((c) => (
-                  <View key={c.id} style={styles.cohortCard}>
+                <React.Fragment key={String(c.id)}>
+                  <View style={styles.cohortCard}>
                   <View style={styles.cohortHeader}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cohortName}>{c.name}</Text>
@@ -99,7 +100,11 @@ export const PeerProgramming = () => {
                     <Text style={[styles.cohortStatus, c.status === 'active' ? styles.statusActive : styles.statusForming]}>{c.status === 'active' ? '🔴 Active' : '⏳ Forming'}</Text>
                   </View>
                   <View style={styles.skillRow}>
-                    {c.skills.map((s) => <Text key={s} style={styles.skillBadge}>{s}</Text>)}
+                    {c.skills.map((s) => (
+                      <React.Fragment key={s}>
+                        <Text style={styles.skillBadge}>{s}</Text>
+                      </React.Fragment>
+                    ))}
                   </View>
                   <View style={styles.cohortMeta}>
                     <Text>{c.countries.join(' ')}</Text>
@@ -115,6 +120,7 @@ export const PeerProgramming = () => {
                     </Text>
                   </TouchableOpacity>
                 </View>
+                </React.Fragment>
               ))
             )}
           </>

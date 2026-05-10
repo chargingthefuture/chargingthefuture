@@ -44,19 +44,23 @@ export function WorkforceDashboard() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Status Distribution</Text>
         {charts.map((item, i) => (
-          <View key={item.label ?? i} style={styles.chartRow}>
-            <Text style={[styles.chartLabel, { color: item.color }]}>{item.label}</Text>
-            <Text style={styles.chartValue}>{item.value.toLocaleString()} ({item.pct}%)</Text>
-          </View>
+          <React.Fragment key={String(item.label ?? i)}>
+            <View style={styles.chartRow}>
+              <Text style={[styles.chartLabel, { color: item.color }]}>{item.label}</Text>
+              <Text style={styles.chartValue}>{item.value.toLocaleString()} ({item.pct}%)</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Critical Skill Gaps</Text>
         {gaps.map((gap, i) => (
-          <View key={gap.skill ?? i} style={styles.gapRow}>
-            <Text style={styles.gapSkill}>{gap.skill}</Text>
-            <Text style={styles.gapDetail}>Gap: {gap.gap} ({gap.trend})</Text>
-          </View>
+          <React.Fragment key={String(gap.skill ?? i)}>
+            <View style={styles.gapRow}>
+              <Text style={styles.gapSkill}>{gap.skill}</Text>
+              <Text style={styles.gapDetail}>Gap: {gap.gap} ({gap.trend})</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
     </ScrollView>
