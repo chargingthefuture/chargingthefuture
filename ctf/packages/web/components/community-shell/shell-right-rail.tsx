@@ -13,11 +13,36 @@ type ShellRightRailProps = {
   implementedCount: number;
   currentUser: ShellCurrentUser;
   trust: TrustUserExtension;
+  isAuthenticated?: boolean;
+  signInUrl?: string;
 };
 
-export function ShellRightRail({ readyApps, implementedCount, currentUser, trust }: ShellRightRailProps) {
+export function ShellRightRail({ readyApps, implementedCount, currentUser, trust, isAuthenticated = false, signInUrl = '/sign-in' }: ShellRightRailProps) {
   const displayName = currentUser.displayName;
   const initial = currentUser.initial;
+
+  if (!isAuthenticated) {
+    return (
+      <aside className={`${styles.panel} ${styles.rightRail}`}>
+        <section className={styles.profileCard}>
+          <div className={styles.profileAvatar} aria-hidden="true">{initial}</div>
+          <p className={styles.profileName}>Welcome to Survivor Hub</p>
+          <p className={styles.profileMeta}>Sign in to access full features and connect with your community</p>
+          <Link href={signInUrl} className={styles.profileLoginBtn}>Sign In</Link>
+        </section>
+
+        <section className={styles.quoteCard}>
+          <p className={styles.quoteText}>&ldquo;You are not what happened to you. You are what you choose to become.&rdquo;</p>
+          <p className={styles.quoteAuthor}>— Carl Jung</p>
+        </section>
+
+        <section>
+          <p className={styles.sectionTitle}>About Survivor Hub</p>
+          <p className={styles.sectionDesc}>Survivor Hub connects you with {implementedCount} live plugins to access housing, work, safety, and community support in one place.</p>
+        </section>
+      </aside>
+    );
+  }
 
   return (
     <aside className={`${styles.panel} ${styles.rightRail}`}>
