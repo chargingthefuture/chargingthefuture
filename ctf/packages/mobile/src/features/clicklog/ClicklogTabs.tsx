@@ -9,11 +9,11 @@ type ClicklogTabParamList = {
   History: undefined;
 };
 
-const Tab = createBottomTabNavigator<ClicklogTabParamList, undefined>();
+const Tab = createBottomTabNavigator<ClicklogTabParamList, 'clicklog'>();
 
 export function ClicklogTabs() {
   return (
-    <Tab.Navigator id={undefined}>
+    <Tab.Navigator id="clicklog">
       <Tab.Screen
         name="Counter"
         component={ClicklogCounter}

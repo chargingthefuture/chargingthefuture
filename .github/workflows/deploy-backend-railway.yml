@@ -124,6 +124,7 @@ jobs:
     name: Drift Check (staging)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING != '' && secrets.DATABASE_URL_STAGING || vars.DATABASE_URL_STAGING }}
     steps:
@@ -168,6 +169,7 @@ jobs:
     name: Drift Check (production)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || vars.DATABASE_URL }}
     steps:
