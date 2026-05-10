@@ -1,6 +1,7 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
+import { getClerkRuntimeOptions } from './lib/auth/clerk-env';
 
-export default clerkMiddleware();
+export default clerkMiddleware(getClerkRuntimeOptions());
 
 export const config = {
   matcher: [
