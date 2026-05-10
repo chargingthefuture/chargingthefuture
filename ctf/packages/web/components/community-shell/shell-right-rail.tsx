@@ -50,7 +50,7 @@ export function ShellRightRail({ readyApps, implementedCount, currentUser, trust
         <div className={styles.profileAvatar} aria-hidden="true">{initial}</div>
         <p className={styles.profileName}>Welcome, {displayName}</p>
         <p className={styles.profileMeta}>{currentUser.username ? `@${currentUser.username}` : 'Member'} · {implementedCount} ready apps</p>
-        <span className={styles.profileBadge}>Space ✓</span>
+        <span className={styles.profileBadge}>Safe Space ✓</span>
       </section>
 
       {/* Trust evidence panel below Welcome card */}

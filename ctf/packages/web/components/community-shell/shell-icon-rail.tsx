@@ -1,15 +1,16 @@
 'use client';
 
-import { MessageSquare, Zap, Settings } from 'lucide-react';
+import { MessageSquare, Zap, Bell, Settings } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import styles from './community-shell.module.css';
 
 type IconRailProps = {
   section: ShellSection;
   onSectionChange: (s: ShellSection) => void;
+  initial?: string;
 };
 
-export function ShellIconRail({ section, onSectionChange }: IconRailProps) {
+export function ShellIconRail({ section, onSectionChange, initial = 'S' }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
       <div className={styles.iconRailLogo} aria-hidden="true">SH</div>
@@ -39,6 +40,17 @@ export function ShellIconRail({ section, onSectionChange }: IconRailProps) {
       <button
         type="button"
         className={`${styles.iconRailBtn} ${styles.iconRailBtnDisabled}`}
+        aria-label="Notifications coming soon"
+        aria-disabled="true"
+        disabled
+        title="Notifications coming soon"
+      >
+        <Bell size={18} />
+      </button>
+
+      <button
+        type="button"
+        className={`${styles.iconRailBtn} ${styles.iconRailBtnDisabled}`}
         aria-label="Settings coming soon"
         aria-disabled="true"
         disabled
@@ -46,6 +58,8 @@ export function ShellIconRail({ section, onSectionChange }: IconRailProps) {
       >
         <Settings size={18} />
       </button>
+
+      <div className={styles.iconRailAvatar} aria-hidden="true">{initial}</div>
     </aside>
   );
 }

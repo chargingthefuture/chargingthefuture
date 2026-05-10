@@ -195,7 +195,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   return (
     <div className={styles.shell}>
       <div className={styles.frame}>
-        <ShellIconRail section={section} onSectionChange={setSection} />
+        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} />
         <ShellSidebar
           section={section}
           plugins={filteredPlugins}

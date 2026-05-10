@@ -48,6 +48,7 @@
 - [123-environment-configuration-rules.mdc](123-environment-configuration-rules.mdc)
 - [124-brand-voice-and-language-rules.mdc](124-brand-voice-and-language-rules.mdc)
 - [125-railway-mcp-debugging-rules.mdc](125-railway-mcp-debugging-rules.mdc)
+- [126-design-mockup-implementation-rules.mdc](126-design-mockup-implementation-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](202-plugin-access-policy-schema-template.mdc)

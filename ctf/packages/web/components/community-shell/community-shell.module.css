@@ -93,6 +93,22 @@
   flex: 1;
 }
 
+.iconRailAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  user-select: none;
+  margin-top: 4px;
+}
+
 /* ─── Left sidebar ────────────────────────────────────────────────────────── */
 .leftNav {
   display: flex;

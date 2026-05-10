@@ -41,13 +41,14 @@ export default async function HomePage() {
     authDecisionPromise,
   ]);
 
-  const isAuthenticated = authDecision && authDecision.allowed;
-  const currentUser = isAuthenticated
-    ? buildShellUser(authDecision.userId, authDecision.username)
+  const allowDecision = authDecision?.allowed ? authDecision : null;
+  const isAuthenticated = Boolean(allowDecision);
+  const currentUser = allowDecision
+    ? buildShellUser(allowDecision.userId, allowDecision.username)
     : buildShellUser('guest', null);
 
-  const trust = isAuthenticated
-    ? await getTrustUserExtension(authDecision.userId).catch(() => buildFallbackTrust(authDecision.userId))
+  const trust = allowDecision
+    ? await getTrustUserExtension(allowDecision.userId).catch(() => buildFallbackTrust(allowDecision.userId))
     : buildFallbackTrust(currentUser.userId);
 
   const authProvider = getConfiguredAuthProvider();

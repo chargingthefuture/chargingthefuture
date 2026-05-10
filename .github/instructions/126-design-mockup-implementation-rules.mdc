@@ -1,0 +1,39 @@
+# Design & Mockup Implementation Rules
+
+## Intent
+Ensure mockup implementations are grounded in existing features, preventing technical debt and scope creep caused by AI-generated designs that may include features not yet built.
+
+## Core Rule: Existing Features Only
+- The Replit design submodule (`design/`) is produced by an AI agent. It frequently includes UI for features that **do not yet exist** in the codebase.
+- **Never implement UI, layout, or interactions for features that have no corresponding backend API, database table, or working server-side logic.**
+- **Never add stub data, mock data arrays, or hardcoded placeholder values** to production shells to satisfy a mockup. If the shell needs data, it must come from a real API endpoint.
+- If a mockup element requires a feature that doesn't exist, **stop and ask the user** whether they want to scope that feature before implementing any part of it.
+
+## Allowed: Pixel-Perfect Visual Updates
+These changes are safe to implement without asking:
+- Colors, typography, spacing, border-radius, gradients matching the mockup
+- Layout structure (grid, flex, icon rail widths, sidebar widths) for **existing** shell components
+- Icon choices, badge text, section labels — for already-implemented sections
+- Responsive breakpoints and media queries
+- CSS variable / design token updates in `globals.css`
+- Empty-state copy and visual treatment for features already wired up
+
+## Blocked Without User Approval
+Before implementing any of the following, stop and ask:
+- Any new API call not already present in the shell file being updated
+- Any UI section that references data from an API endpoint that doesn't exist in `ctf/packages/web/app/api/`
+- New interactive features (tabs, drawers, modals) backed by data that isn't already fetched
+- New pages or routes not already defined under `ctf/packages/web/app/`
+- New plugin shells not already present under `ctf/packages/web/components/`
+
+## Audit Process
+When implementing mockups:
+1. For each mockup component, list every data requirement (API calls, props, state).
+2. Cross-check each requirement against existing API routes (`ctf/packages/web/app/api/`).
+3. Mark each requirement as **Exists** or **Missing**.
+4. Implement only **Exists** sections; surface **Missing** ones to the user as a prioritized list.
+
+## No Stub Data Policy
+- Do not introduce `const STATIC_DATA = [...]` arrays or hardcoded objects into production shell components.
+- If a section cannot be rendered without real data, render a clean empty/loading state until the API exists.
+- Exception: the `design/` submodule itself may use stub data for mockup previews — this is expected and should not be copied into `ctf/`.
