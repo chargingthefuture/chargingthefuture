@@ -219,13 +219,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Inject secrets from Infisical
-        uses: Infisical/secrets-action@v1.0.7
+        uses: Infisical/secrets-action@v2.0.0
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
           env-slug: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
-          infisical-url: ${{ secrets.INFISICAL_URL }}
+          domain: ${{ secrets.INFISICAL_URL }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -270,20 +270,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BODY=$(cat << 'EOF'
+          ## Railway Deployment Failure
+
+          **Branch:** `${{ github.ref_name }}`
+          **Commit:** `${{ github.sha }}`
+          **Job URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **Triggered by:** ${{ github.event_name }}
+
+          Run the `railway-debug` task in your Ona environment to fetch logs and diagnose the failure:
+
+          ```
+          gitpod automations task start railway-debug
+          ```
+
+          Then trigger the Ona Automation to diagnose and auto-fix.
+          EOF
+          )
           gh issue create \
             --title "Railway deploy failed: ${{ github.ref_name }} @ ${{ github.sha }}" \
             --label "railway-failure" \
-            --body "## Railway Deployment Failure
-
-**Branch:** \`${{ github.ref_name }}\`
-**Commit:** \`${{ github.sha }}\`
-**Job URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-**Triggered by:** ${{ github.event_name }}
-
-Run the \`railway-debug\` task in your Ona environment to fetch logs and diagnose the failure:
-
-\`\`\`
-gitpod automations task start railway-debug
-\`\`\`
-
-Then trigger the Ona Automation to diagnose and auto-fix."
+            --body "$BODY"

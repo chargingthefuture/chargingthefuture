@@ -42,13 +42,13 @@ jobs:
           fetch-depth: 0
 
       - name: Inject secrets from Infisical
-        uses: Infisical/secrets-action@v1.0.7
+        uses: Infisical/secrets-action@v2.0.0
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
           env-slug: production
-          infisical-url: ${{ secrets.INFISICAL_URL }}
+          domain: ${{ secrets.INFISICAL_URL }}
 
       - name: Gitleaks Scan
         uses: gitleaks/gitleaks-action@v2
