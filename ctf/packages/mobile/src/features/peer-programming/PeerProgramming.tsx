@@ -7,6 +7,19 @@ import { usePluginAuth } from './usePluginAuth';
 
 const COLOR = '#8B5CF6';
 
+interface Cohort {
+  id: number;
+  name: string;
+  facilitator: string;
+  time: string;
+  status: string;
+  skills: string[];
+  countries: string[];
+  members: number;
+  maxMembers: number;
+  joinable: boolean;
+}
+
 const NAV = [
   { label: 'Home', key: 'home' },
   { label: 'Cohorts', key: 'cohorts' },
@@ -17,10 +30,10 @@ const NAV = [
 
 export const PeerProgramming = () => {
   const [activeNav, setActiveNav] = useState('cohorts');
-  const [joined, setJoined] = useState([]);
-  const [cohorts, setCohorts] = useState([]);
+  const [joined, setJoined] = useState<number[]>([]);
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Example: use 'clerk' as provider, token from context or props in real app
   const { auth, loading: authLoading } = usePluginAuth('clerk');
@@ -86,7 +99,7 @@ export const PeerProgramming = () => {
                     <Text style={[styles.cohortStatus, c.status === 'active' ? styles.statusActive : styles.statusForming]}>{c.status === 'active' ? '🔴 Active' : '⏳ Forming'}</Text>
                   </View>
                   <View style={styles.skillRow}>
-                    {c.skills.map((s) => <Text style={styles.skillBadge}>{s}</Text>)}
+                    {c.skills.map((s) => <Text key={s} style={styles.skillBadge}>{s}</Text>)}
                   </View>
                   <View style={styles.cohortMeta}>
                     <Text>{c.countries.join(' ')}</Text>

@@ -4,11 +4,16 @@ import { ClicklogCounter } from './ClicklogCounter';
 import { ClicklogHistory } from './ClicklogHistory';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-const Tab = createBottomTabNavigator();
+type ClicklogTabParamList = {
+  Counter: undefined;
+  History: undefined;
+};
+
+const Tab = createBottomTabNavigator<ClicklogTabParamList>();
 
 export function ClicklogTabs() {
   return (
-    <Tab.Navigator id="clicklog-tabs">
+    <Tab.Navigator id={undefined}>
       <Tab.Screen
         name="Counter"
         component={ClicklogCounter}

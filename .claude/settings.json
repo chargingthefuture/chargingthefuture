@@ -1,7 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(grep -n \"service-credits\" app/api/service-credits/wallet/route.ts)",
+      "Bash(ls app/api/service-credits/)",
+      "Bash(grep -n \"scripts\" package.json | head -5 && sed -n '/\"scripts\"/,/^  }/p' package.json | head -30)",
+      "Bash(rg -n \"process\\\\.env\\\\.\" lib/ --include=\"*.ts\" -l)",
+      "Bash(rg -n \"^const .* = process\\\\.env\\\\.\" lib/ --include=\"*.ts\")",
+      "Bash(gh run *)",
+      "Bash(pnpm --filter @ctf/mobile lint)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -v \"^✖\\\\|^packages\\\\|warning\\\\|pnpm\\\\|WARN\\\\|^\\\\s*$\")",
+      "Bash(gh auth *)",
+      "Bash(/.codespaces/bin/gh-gpgsign --help)",
+      "Bash(cat /.codespaces/bin/gh-gpgsign 2>/dev/null | head -50 || echo \"binary file\")",
+      "Read(//.codespaces/bin/**)",
+      "Bash(curl -s https://the-comic.com/api/health)",
+      "Bash(curl -sk https://the-comic.com)",
+      "Bash(pnpm --filter @ctf/mobile exec tsc --noEmit -p tsconfig.json)",
+      "Bash(pnpm --filter @ctf/mobile exec tsc --version)",
+      "Bash(pnpm --filter @ctf/mobile run typecheck)",
+      "Bash(pnpm --filter @ctf/mobile run lint)"
+    ],
+    "additionalDirectories": [
+      "/workspaces/chargingthefuture/ctf/packages/web"
     ]
   }
 }
