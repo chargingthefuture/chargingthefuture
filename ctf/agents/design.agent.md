@@ -23,9 +23,10 @@ Manages Replit design submodule and ensures pixel-perfect UI implementation. Eli
 ### Pixel-Perfect Requirements
 
 - Match spacing to 1px precision
-- Use design tokens for colors (no hardcoding hex values)
+- Match hex color values exactly as written in the mockup inline styles (designs do not use a token system)
 - Maintain aspect ratios for images
 - Respect line-height and letter-spacing from designs
+- Do not substitute design colors with CSS variables unless the project's `globals.css` already defines an equivalent token
 
 ### Example Tasks
 
@@ -38,12 +39,30 @@ Manages Replit design submodule and ensures pixel-perfect UI implementation. Eli
 ### Design System Context
 
 - **Submodule Path**: `design/`
-- **Design Format**:
-- **Components Location**: `/design/mockups/artifacts/mockup-sandbox/src/components/mockups/survivor-hub`
-- **Framework**: React
-- **CSS Approach**:
-- **Breakpoints**:
-- **Typography Scale**:
+- **Design Format**: React TSX components with inline styles (no Tailwind, no CSS modules)
+- **Components Location**: `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/`
+- **Framework**: React (Vite sandbox for previewing — not Next.js)
+- **CSS Approach**: Inline `style` objects with hardcoded hex values. No design token system exists. Do not enforce token usage — match hex values directly.
+- **Breakpoints**: Desktop files (no prefix) target `min-width: 1024px` with sidebar layout. `Mobile*` files target `width: 390px` with bottom-nav layout. No responsive media queries inside individual mockup files.
+- **Typography Scale**: Inter font family, system-ui fallback. Sizes range from 11px (labels) to 24px (section headers). Weight 400/600/700/800.
+- **File → Shell Mapping**: `Directory.tsx` → `ctf/packages/web/components/directory/directory-shell.tsx`. `Mobile*.tsx` files are Android/React Native references, not web shell targets.
+
+### State Completeness Requirements
+
+Before implementing any mockup, verify the design includes explicit variants for all four states. If a variant is missing, **stop and ask the user** rather than inventing the design:
+
+| State | What it represents | Annotation to look for |
+|---|---|---|
+| **Unauthenticated / Public** | Visitor with no Clerk session | `// STATE: Unauthenticated` or file suffix `Public` |
+| **Authenticated + Loading** | Data fetch in progress | `// STATE: Loading` or file suffix `Loading` |
+| **Authenticated + Empty** | Signed in, zero results from API | `// STATE: Empty` or file suffix `Empty` |
+| **Authenticated + Populated** | Full happy path | Main export, no suffix |
+
+If the design only shows authenticated + populated (current default), implement only that state's visuals and surface the missing states as a follow-up list to the user.
+
+### Mock Data vs. API Data
+
+All numbers and strings in Replit mockups are hardcoded. Look for `// API:` annotations to identify which values will come from real endpoints. Anything without this annotation should be treated as static presentational copy unless you can identify a matching API route in `ctf/packages/web/app/api/`.
 ---
 
 ## Design Agent Integration Guide

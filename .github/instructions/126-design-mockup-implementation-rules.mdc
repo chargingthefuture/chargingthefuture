@@ -26,12 +26,36 @@ Before implementing any of the following, stop and ask:
 - New pages or routes not already defined under `ctf/packages/web/app/`
 - New plugin shells not already present under `ctf/packages/web/components/`
 
+## State Completeness Check (run before implementing)
+
+Replit mockups are the single source of truth for UI, but they currently default to showing only the authenticated + populated state. Before implementing any mockup, check whether the design provides explicit variants for all four states:
+
+| State | Look for in design files |
+|---|---|
+| **Unauthenticated / Public** | Export named `*Public`, comment `// STATE: Unauthenticated`, or separate file `*Public.tsx` |
+| **Authenticated + Loading** | Export named `*Loading`, comment `// STATE: Loading`, or skeleton shapes in the layout |
+| **Authenticated + Empty** | Export named `*Empty`, comment `// STATE: Empty`, or a zero-results composition |
+| **Authenticated + Populated** | Main export — the happy path (always present) |
+
+**If a state variant is missing from the design:**
+- Do not invent the missing state's visual design.
+- Implement the states that are designed.
+- Surface the missing states to the user as a follow-up list so Replit can design them.
+
+**Exception**: Loading and error states with no design may be implemented as minimal functional placeholders (skeleton rectangles or a single error line) — they are mechanical, not brand-expressive.
+
 ## Audit Process
 When implementing mockups:
-1. For each mockup component, list every data requirement (API calls, props, state).
-2. Cross-check each requirement against existing API routes (`ctf/packages/web/app/api/`).
-3. Mark each requirement as **Exists** or **Missing**.
-4. Implement only **Exists** sections; surface **Missing** ones to the user as a prioritized list.
+1. Run the State Completeness Check above. Note which states have designs vs. are missing.
+2. For each designed state, list every data requirement (API calls, props, state).
+3. Cross-check each requirement against existing API routes (`ctf/packages/web/app/api/`).
+4. Mark each requirement as **Exists** or **Missing**.
+5. Implement only **Exists** sections; surface **Missing** ones to the user as a prioritized list.
+6. Implement only states that have a design; surface missing state designs to the user.
+
+## Design System Reference
+
+For design system facts (component path, CSS approach, breakpoints, typography, file→shell mapping) see `ctf/agents/design.agent.md`. That file is the authoritative source — do not re-derive these facts from the mockup files themselves.
 
 ## No Stub Data Policy
 - Do not introduce `const STATIC_DATA = [...]` arrays or hardcoded objects into production shell components.
