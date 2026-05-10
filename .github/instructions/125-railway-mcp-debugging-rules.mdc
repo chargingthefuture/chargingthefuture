@@ -10,21 +10,27 @@ The Railway CLI (`railway`) is NOT installed in the Codespaces environment.
 
 ### How to Access Railway
 
-Railway is accessible exclusively via the Railway MCP server configured in `.mcp.json`:
+Railway is accessible via the Railway MCP server (`@railway/mcp-server`), which is a **local stdio process** (not an HTTP endpoint). It is configured in `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "railway": {
-      "type": "http",
-      "url": "https://mcp.railway.com/mcp",
-      "headers": { "Authorization": "Bearer ${RAILWAY_API_TOKEN}" }
+    "railway-mcp-server": {
+      "command": "npx",
+      "args": ["-y", "@railway/mcp-server"],
+      "env": {
+        "RAILWAY_TOKEN": "${RAILWAY_API_TOKEN}"
+      }
     }
   }
 }
 ```
 
-The `RAILWAY_API_TOKEN` must be set as a Codespaces secret. If MCP tools are not available (i.e., ToolSearch returns no Railway tools), the token is missing — stop and tell the user to add `RAILWAY_API_TOKEN` to Codespaces secrets (Settings → Codespaces → Secrets).
+Prerequisites:
+- `RAILWAY_API_TOKEN` must be set as a Codespaces secret (it is forwarded to the MCP server as `RAILWAY_TOKEN`)
+- Railway CLI (`@railway/cli`) must be installed — it is installed via `setup.sh`
+
+If MCP tools are not available (ToolSearch returns no Railway tools), the session started before the MCP server connected. **Do not tell the user the token is missing** — first verify with `echo $RAILWAY_API_TOKEN`. If the token is set, ask the user to restart the Claude Code session so the MCP server can reconnect.
 
 ## Agent Workflow for Railway Build/Runtime Issues
 

@@ -43,6 +43,14 @@ else
   echo "Vercel CLI already installed."
 fi
 
+# Install/update Railway CLI (required by Railway MCP server)
+echo "Checking for Railway CLI..."
+if ! command -v railway &> /dev/null; then
+  npm install -g @railway/cli
+else
+  echo "Railway CLI already installed."
+fi
+
 
 echo "Checking for eas-cli..."
 if ! command -v eas &> /dev/null; then
@@ -138,10 +146,10 @@ if [ -d /workspaces/chargingthefuture/.git ] && [ -d /workspaces/chargingthefutu
   echo "Configured git hooksPath to ctf/.husky"
 fi
 
-# Verify Railway API token for MCP server access
+# Verify Railway token for MCP server access (CLI uses RAILWAY_TOKEN; .mcp.json maps RAILWAY_API_TOKEN → RAILWAY_TOKEN)
 echo "Verifying Railway MCP access..."
 if [ -n "$RAILWAY_API_TOKEN" ]; then
-  echo "Railway MCP: RAILWAY_API_TOKEN is set."
+  echo "Railway MCP: RAILWAY_API_TOKEN is set — will be forwarded as RAILWAY_TOKEN to the MCP server."
 else
   echo "Warning: RAILWAY_API_TOKEN not set. Railway MCP server will not work."
   echo "Add RAILWAY_API_TOKEN as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
