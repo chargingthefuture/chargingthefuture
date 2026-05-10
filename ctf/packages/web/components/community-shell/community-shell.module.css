@@ -481,6 +481,31 @@
   color: #E8EAF0;
 }
 
+.chatSignInLink {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+  text-align: center;
+}
+
+.chatSignInLink:hover {
+  opacity: 0.9;
+}
+
+.chatSuggestionsInfo {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #9CA3AF;
+  line-height: 1.5;
+}
+
 .chatInputWrap {
   margin: 0 20px 8px;
   display: flex;
@@ -790,6 +815,39 @@
 
 .memberItemGate {
   font-size: 10px;
+}
+
+.profileLoginBtn {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.profileLoginBtn:hover {
+  opacity: 0.9;
+}
+
+.rightRailSectionTitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #F9FAFB;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionDesc {
+  margin: 0;
+  font-size: 13px;
+  color: #9CA3AF;
+  line-height: 1.5;
 }
 
 .gdpCard {

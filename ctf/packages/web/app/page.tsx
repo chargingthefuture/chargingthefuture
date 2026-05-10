@@ -5,6 +5,7 @@ import { evaluatePluginAccess } from '../lib/auth/server-authz';
 import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry } from '../lib/plugins/repository';
 import { getTrustUserExtension } from '../lib/trust/repository';
+import { getConfiguredAuthProvider } from '../lib/auth/provider-env';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -40,13 +41,17 @@ export default async function HomePage() {
     authDecisionPromise,
   ]);
 
-  const currentUser = authDecision && authDecision.allowed
+  const isAuthenticated = authDecision && authDecision.allowed;
+  const currentUser = isAuthenticated
     ? buildShellUser(authDecision.userId, authDecision.username)
     : buildShellUser('guest', null);
 
-  const trust = authDecision && authDecision.allowed
+  const trust = isAuthenticated
     ? await getTrustUserExtension(authDecision.userId).catch(() => buildFallbackTrust(authDecision.userId))
     : buildFallbackTrust(currentUser.userId);
+
+  const authProvider = getConfiguredAuthProvider();
+  const signInUrl = authProvider?.signInUrl || '/sign-in';
 
   return (
     <CommunityShell
@@ -54,6 +59,8 @@ export default async function HomePage() {
       shellStats={shellStats}
       currentUser={currentUser}
       trust={trust}
+      isAuthenticated={isAuthenticated}
+      signInUrl={signInUrl}
     />
   );
 }

@@ -17,6 +17,8 @@ type CommunityShellProps = {
   currentUser: ShellCurrentUser;
   trust: TrustUserExtension;
   initialSection?: ShellSection;
+  isAuthenticated?: boolean;
+  signInUrl?: string;
 };
 
 type PluginsApiPayload = {
@@ -106,7 +108,7 @@ function sortPluginsForUi(
   });
 }
 
-export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat' }: CommunityShellProps) {
+export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, signInUrl = '/sign-in' }: CommunityShellProps) {
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
@@ -207,7 +209,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}
           {section === 'chat' ? (
-            <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} />
+            <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
           ) : (
             <ShellAppsPanel
               plugins={filteredPlugins}
@@ -223,6 +225,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           implementedCount={implementedCount}
           currentUser={currentUser}
           trust={trust}
+          isAuthenticated={isAuthenticated}
+          signInUrl={signInUrl}
         />
       </div>
     </div>

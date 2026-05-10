@@ -24,16 +24,82 @@ function formatScaledValue(value: number | null, prefix = ''): string {
   return `${prefix}${value.toLocaleString()}`;
 }
 
-type ShellChatPanelProps = {
+type AuthenticatedChatPanelProps = {
   stats: ShellStats;
   plugins: PluginRegistryItem[];
   currentUser: ShellCurrentUser;
 };
 
-export function ShellChatPanel({ stats, plugins, currentUser }: ShellChatPanelProps) {
-  const { messages, input, setInput, sendMessage, isSending, isLoading, isLive, error } = useHomeChat(currentUser);
+type ShellChatPanelProps = {
+  stats: ShellStats;
+  plugins: PluginRegistryItem[];
+  currentUser: ShellCurrentUser;
+  isAuthenticated?: boolean;
+  signInUrl?: string;
+};
+
+export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, signInUrl = '/sign-in' }: ShellChatPanelProps) {
+  if (isAuthenticated) {
+    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} />;
+  }
+
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
+
+  return (
+    <div className={styles.chatPanelWrap}>
+      <div className={styles.heroBanner}>
+        <div className={styles.heroBannerContent}>
+          <p className={styles.heroBannerTag}>✦ From Survivor to Thriver</p>
+          <h1 className={styles.heroBannerTitle}>Welcome to Survivor Hub</h1>
+          <p className={styles.heroBannerSub}>Connect with your community. Access {implementedCount} live plugins for housing, work, safety, and support.</p>
+        </div>
+        <div className={styles.heroStats}>
+          <div className={styles.heroStatBlock}>
+            <span className={styles.heroStatValue} style={{ color: '#A78BFA' }}>
+              {formatScaledValue(stats.memberCount)}
+            </span>
+            <span className={styles.heroStatLabel}>Members</span>
+          </div>
+          <div className={styles.heroStatBlock}>
+            <span className={styles.heroStatValue} style={{ color: '#38BDF8' }}>
+              {formatScaledValue(stats.gdpValueUsd, '$')}
+            </span>
+            <span className={styles.heroStatLabel}>GDP</span>
+          </div>
+          <div className={styles.heroStatBlock}>
+            <span className={styles.heroStatValue} style={{ color: '#34D399' }}>
+              {formatScaledValue(opportunityValue, '$')}
+            </span>
+            <span className={styles.heroStatLabel}>Opportunity</span>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.chatMessages}>
+        <div className={styles.chatBubbleGroup}>
+          <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
+            To start connecting with Survivor Hub and accessing community support, please sign in.
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.chatSuggestions}>
+        <Link href={signInUrl} className={styles.chatSignInLink}>
+          Sign In to Get Started
+        </Link>
+        <p className={styles.chatSuggestionsInfo}>
+          Survivor Hub is free and helps you access housing, work, safety resources, and connect with others in the community.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
+  const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
+  const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
+  const { messages, input, setInput, sendMessage, isSending, isLoading, isLive, error } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
 
   return (
