@@ -1,9 +1,6 @@
-import type { NextFetchEvent } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 
-export default function middleware(req: NextRequest, event: NextFetchEvent) {
-  return;
-}
+export default clerkMiddleware();
 
 export const config = {
   matcher: [

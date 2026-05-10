@@ -7,11 +7,12 @@ import {
   useState,
   useEffect,
 } from 'react';
+import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
+import { getClerkSignInUrl } from './clerk-env';
 
 /**
  * Provider-agnostic authentication context and types.
  * This abstraction allows swapping auth providers without breaking consumers.
- * without breaking dependent components.
  */
 
 export interface AuthUser {
@@ -39,28 +40,36 @@ export interface AuthProviderProps {
 }
 
 /**
- * Default no-op auth provider for local/unauthenticated development.
- * Replace with the active auth provider implementation as needed.
+ * Clerk-based auth provider implementation.
+ * Provides provider-agnostic interface for consumers.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
+  const { signOut: clerkSignOut } = useClerkAuth();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Future: hydrate the active auth provider session here.
-    setUser(null);
-    setIsLoading(false);
-  }, []);
+    if (isClerkLoaded && clerkUser) {
+      setUser({
+        id: clerkUser.id,
+        username: clerkUser.username,
+        email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+        provider: 'clerk',
+      });
+    } else if (isClerkLoaded && !clerkUser) {
+      setUser(null);
+    }
+  }, [clerkUser, isClerkLoaded]);
 
   const handleSignIn = async () => {
-    // Future: Implement actual sign-in flow based on chosen provider
-    // For now, this is a no-op
-    console.warn('Sign-in not yet implemented. Choose and configure an auth provider.');
+    const signInUrl = getClerkSignInUrl();
+    if (signInUrl) {
+      window.location.href = signInUrl;
+    }
   };
 
   const handleSignOut = async () => {
-    // Future: Implement actual sign-out flow
-    setUser(null);
+    await clerkSignOut();
   };
 
   return (
@@ -68,7 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         provider: user?.provider ?? null,
-        isLoading,
+        isLoading: !isClerkLoaded,
         isAuthenticated: !!user,
         signIn: handleSignIn,
         signOut: handleSignOut,
