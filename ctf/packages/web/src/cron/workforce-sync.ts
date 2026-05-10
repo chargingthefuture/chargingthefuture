@@ -11,9 +11,11 @@ export async function executeWorkforceSyncCron(): Promise<void> {
 
   try {
     const port = process.env.PORT || '3000';
-    const host = process.env.RAILWAY_PRIVATE_DOMAIN || `localhost:${port}`;
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const url = `${protocol}://${host}/api/workforce/internal/sync`;
+    const privateHost = process.env.RAILWAY_PRIVATE_DOMAIN;
+    // Railway private networking is plain HTTP on the service PORT — never HTTPS
+    const url = privateHost
+      ? `http://${privateHost}:${port}/api/workforce/internal/sync`
+      : `http://localhost:${port}/api/workforce/internal/sync`;
 
     const response = await fetch(url, {
       method: 'POST',
