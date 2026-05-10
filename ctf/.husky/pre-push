@@ -9,14 +9,10 @@ repo_root="$(git rev-parse --show-toplevel)"
 echo "Running rewrite pre-push verification (lint, typecheck, web build)..."
 cd "$repo_root" || exit 1
 
-# Run Railway build for web package (requires RAILWAY_TOKEN from Infisical)
-cd "$repo_root/ctf/packages/web" || exit 1
-if [ -n "$RAILWAY_TOKEN" ]; then
-  echo "Running railway run pnpm build in web package..."
-  RAILWAY_TOKEN="${RAILWAY_TOKEN}" railway run pnpm build
-else
-  echo "Warning: RAILWAY_TOKEN not set — skipping Railway build check. Add it to Infisical."
-fi
+# Run local build check for web package before pushing
+cd "$repo_root/ctf" || exit 1
+echo "Running local web package build check..."
+corepack pnpm --filter @ctf/web run build:ci
 cd "$repo_root"
 
 echo "Pre-push verification passed. Proceeding with push."
