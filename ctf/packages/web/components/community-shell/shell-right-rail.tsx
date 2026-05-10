@@ -37,7 +37,7 @@ export function ShellRightRail({ readyApps, implementedCount, currentUser, trust
         </section>
 
         <section>
-          <p className={styles.sectionTitle}>About Survivor Hub</p>
+          <p className={styles.rightRailSectionTitle}>About Survivor Hub</p>
           <p className={styles.sectionDesc}>Survivor Hub connects you with {implementedCount} live plugins to access housing, work, safety, and community support in one place.</p>
         </section>
       </aside>
@@ -62,7 +62,7 @@ export function ShellRightRail({ readyApps, implementedCount, currentUser, trust
       </section>
 
       <section>
-        <p className={styles.sectionTitle}>Ready Apps</p>
+        <p className={styles.rightRailSectionTitle}>Ready Apps</p>
         <ul className={styles.memberList}>
           {readyApps.map((plugin) => {
             const { emoji, color } = getPluginVisuals(plugin.slug);
