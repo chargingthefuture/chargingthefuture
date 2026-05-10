@@ -1,13 +1,4 @@
-import {
-  AUTH_AFTER_SIGN_OUT_URL_KEYS,
-  AUTH_PUBLISHABLE_KEY_KEYS,
-  AUTH_SECRET_KEY_KEYS,
-  AUTH_SIGN_IN_URL_KEYS,
-  LEGACY_CLERK_DETECTION_KEYS,
-  firstNonEmpty,
-  hasAnyConfiguredValue,
-  readEnvValue,
-} from './env-keys';
+import { firstNonEmpty } from './env-keys';
 
 export type AuthProviderRuntimeConfig = {
   providerName: string;
@@ -17,81 +8,39 @@ export type AuthProviderRuntimeConfig = {
   afterSignOutUrl?: string;
 };
 
-function parseUrl(value: string | undefined): URL | null {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return new URL(value);
-  } catch {
-    return null;
-  }
-}
-
 function normalizeUrl(value: string | undefined): string | undefined {
-  if (!value) {
+  if (!value) return undefined;
+  if (value.startsWith('/')) return value;
+  try {
+    return new URL(value).toString();
+  } catch {
     return undefined;
   }
-
-  if (value.startsWith('/')) {
-    return value;
-  }
-
-  const parsed = parseUrl(value);
-  return parsed ? parsed.toString() : undefined;
-}
-
-function getAuthPublishableKey(): string | undefined {
-  return readEnvValue(AUTH_PUBLISHABLE_KEY_KEYS);
-}
-
-function getAuthSecretKey(): string | undefined {
-  return readEnvValue(AUTH_SECRET_KEY_KEYS);
-}
-
-function getAuthSignInUrl(): string | undefined {
-  return normalizeUrl(readEnvValue(AUTH_SIGN_IN_URL_KEYS));
-}
-
-function getAuthAfterSignOutUrl(): string | undefined {
-  return normalizeUrl(firstNonEmpty(readEnvValue(AUTH_AFTER_SIGN_OUT_URL_KEYS), getAuthSignInUrl()));
-}
-
-function detectProviderName(hasLegacyClerkValues: boolean): string {
-  const explicitProviderName = firstNonEmpty(
-    process.env.CTF_AUTH_PROVIDER,
-    process.env.NEXT_PUBLIC_AUTH_PROVIDER,
-  );
-
-  if (explicitProviderName) {
-    return explicitProviderName;
-  }
-
-  return hasLegacyClerkValues ? 'clerk' : 'auth-provider';
 }
 
 export function getAppUrl(): string | undefined {
-  return firstNonEmpty(
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.RAILWAY_NEXT_PUBLIC_APP_URL,
-  );
+  return process.env.NEXT_PUBLIC_APP_URL || undefined;
 }
 
 export function getConfiguredAuthProvider(): AuthProviderRuntimeConfig | null {
-  const publishableKey = getAuthPublishableKey();
-  const secretKey = getAuthSecretKey();
-  const signInUrl = getAuthSignInUrl();
-  const afterSignOutUrl = getAuthAfterSignOutUrl();
+  const publishableKey = process.env.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY || undefined;
+  const secretKey = process.env.AUTH_SECRET_KEY || undefined;
+  const signInUrl = normalizeUrl(process.env.NEXT_PUBLIC_AUTH_SIGN_IN_URL || undefined);
+  const afterSignOutUrl = normalizeUrl(
+    firstNonEmpty(process.env.NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL, signInUrl),
+  );
 
   if (!publishableKey && !secretKey && !signInUrl && !afterSignOutUrl) {
     return null;
   }
 
-  const hasLegacyClerkValues = hasAnyConfiguredValue(LEGACY_CLERK_DETECTION_KEYS);
+  const providerName = firstNonEmpty(
+    process.env.CTF_AUTH_PROVIDER,
+    process.env.NEXT_PUBLIC_AUTH_PROVIDER,
+  ) ?? 'clerk';
 
   return {
-    providerName: detectProviderName(hasLegacyClerkValues),
+    providerName,
     ...(publishableKey ? { publishableKey } : {}),
     ...(secretKey ? { secretKey } : {}),
     ...(signInUrl ? { signInUrl } : {}),
@@ -103,38 +52,25 @@ export function getAuthRuntimeOptions(): {
   publishableKey?: string;
   secretKey?: string;
 } {
-  const configuredProvider = getConfiguredAuthProvider();
-  if (!configuredProvider) {
-    return {};
-  }
-
+  const provider = getConfiguredAuthProvider();
+  if (!provider) return {};
   return {
-    ...(configuredProvider.publishableKey ? { publishableKey: configuredProvider.publishableKey } : {}),
-    ...(configuredProvider.secretKey ? { secretKey: configuredProvider.secretKey } : {}),
+    ...(provider.publishableKey ? { publishableKey: provider.publishableKey } : {}),
+    ...(provider.secretKey ? { secretKey: provider.secretKey } : {}),
   };
 }
 
 export function isConfiguredAuthSignInExternal(): boolean {
   const provider = getConfiguredAuthProvider();
   const signInUrl = provider?.signInUrl;
-  if (!signInUrl) {
+  if (!signInUrl || signInUrl.startsWith('/')) return false;
+
+  try {
+    const parsedSignIn = new URL(signInUrl);
+    const appUrl = getAppUrl();
+    if (!appUrl) return true;
+    return parsedSignIn.hostname !== new URL(appUrl).hostname;
+  } catch {
     return false;
   }
-
-  if (signInUrl.startsWith('/')) {
-    return false;
-  }
-
-  const parsedSignIn = parseUrl(signInUrl);
-  if (!parsedSignIn) {
-    return false;
-  }
-
-  const appUrl = getAppUrl();
-  const parsedApp = parseUrl(appUrl);
-  if (!parsedApp) {
-    return true;
-  }
-
-  return parsedSignIn.hostname !== parsedApp.hostname;
 }

@@ -1,18 +1,8 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-function firstDefined(...values: Array<string | undefined>): string | undefined {
-  return values.find((value) => typeof value === 'string' && value.length > 0);
-}
-
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const projectId = firstDefined(
-    process.env.EXPO_MOBILE_PROJECT_ID,
-    process.env.MOBILE_PROJECT_ID,
-  );
-  const updatesUrl = firstDefined(
-    process.env.EXPO_MOBILE_UPDATES_URL,
-    process.env.MOBILE_UPDATES_URL,
-  );
+  const projectId = process.env.MOBILE_PROJECT_ID;
+  const updatesUrl = process.env.MOBILE_UPDATES_URL;
 
   return {
     ...config,
@@ -57,17 +47,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         role: process.env.MOBILE_CTF_USER_ROLE || 'member',
         isApproved: process.env.MOBILE_CTF_USER_APPROVED || 'approved',
       },
-      mobileAuthPublishableKeyStaging:
-        process.env.MOBILE_AUTH_PUBLISHABLE_KEY_STAGING
-        || process.env.MOBILE_CLERK_PUBLISHABLE_KEY_STAGING,
-      mobileAuthPublishableKeyProduction:
-        process.env.MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION
-        || process.env.MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION,
-      mobileObservabilityProvider:
-        process.env.MOBILE_OBSERVABILITY_PROVIDER
-        || process.env.OBSERVABILITY_PROVIDER
-        || 'noop',
-      mobileSentryDsn: process.env.MOBILE_SENTRY_DSN || process.env.EXPO_SENTRY_DSN,
+      mobileAuthPublishableKeyStaging: process.env.MOBILE_AUTH_PUBLISHABLE_KEY_STAGING,
+      mobileAuthPublishableKeyProduction: process.env.MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION,
+      mobileObservabilityProvider: process.env.MOBILE_OBSERVABILITY_PROVIDER || 'noop',
+      mobileSentryDsn: process.env.EXPO_SENTRY_DSN,
       eas: {
         ...(config.extra?.eas ?? {}),
         ...(projectId ? { projectId } : {}),

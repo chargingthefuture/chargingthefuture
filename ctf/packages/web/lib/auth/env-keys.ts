@@ -1,76 +1,7 @@
-type MaybeEnv = string | undefined;
-
-export const AUTH_PUBLISHABLE_KEY_KEYS = [
-  'NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY',
-  'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'VERCEL_NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY',
-  'VERCEL_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'RAILWAY_STAGING_NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY',
-  'RAILWAY_STAGING_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'RAILWAY_PROD_NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY',
-  'RAILWAY_PROD_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-] as const;
-
-export const AUTH_SECRET_KEY_KEYS = [
-  'AUTH_SECRET_KEY',
-  'CLERK_SECRET_KEY',
-  'VERCEL_AUTH_SECRET_KEY',
-  'VERCEL_CLERK_SECRET_KEY',
-  'RAILWAY_STAGING_AUTH_SECRET_KEY',
-  'RAILWAY_STAGING_CLERK_SECRET_KEY',
-  'RAILWAY_PROD_AUTH_SECRET_KEY',
-  'RAILWAY_PROD_CLERK_SECRET_KEY',
-] as const;
-
-export const AUTH_SIGN_IN_URL_KEYS = [
-  'AUTH_SIGN_IN_URL',
-  'NEXT_PUBLIC_AUTH_SIGN_IN_URL',
-  'CLERK_SIGN_IN_URL',
-  'NEXT_PUBLIC_CLERK_SIGN_IN_URL',
-  'VERCEL_AUTH_SIGN_IN_URL',
-  'VERCEL_CLERK_SIGN_IN_URL',
-  'RAILWAY_STAGING_AUTH_SIGN_IN_URL',
-  'RAILWAY_STAGING_CLERK_SIGN_IN_URL',
-  'RAILWAY_PROD_AUTH_SIGN_IN_URL',
-  'RAILWAY_PROD_CLERK_SIGN_IN_URL',
-] as const;
-
-export const AUTH_AFTER_SIGN_OUT_URL_KEYS = [
-  'AUTH_AFTER_SIGN_OUT_URL',
-  'NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL',
-  'CLERK_AFTER_SIGN_OUT_URL',
-  'NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL',
-  'VERCEL_AUTH_AFTER_SIGN_OUT_URL',
-  'VERCEL_CLERK_AFTER_SIGN_OUT_URL',
-  'RAILWAY_STAGING_AUTH_AFTER_SIGN_OUT_URL',
-  'RAILWAY_STAGING_CLERK_AFTER_SIGN_OUT_URL',
-  'RAILWAY_PROD_AUTH_AFTER_SIGN_OUT_URL',
-  'RAILWAY_PROD_CLERK_AFTER_SIGN_OUT_URL',
-] as const;
-
-export const LEGACY_CLERK_DETECTION_KEYS = [
-  'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'CLERK_SECRET_KEY',
-  'CLERK_SIGN_IN_URL',
-  'VERCEL_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'VERCEL_CLERK_SECRET_KEY',
-  'VERCEL_CLERK_SIGN_IN_URL',
-  'RAILWAY_STAGING_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'RAILWAY_STAGING_CLERK_SECRET_KEY',
-  'RAILWAY_STAGING_CLERK_SIGN_IN_URL',
-  'RAILWAY_PROD_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
-  'RAILWAY_PROD_CLERK_SECRET_KEY',
-  'RAILWAY_PROD_CLERK_SIGN_IN_URL',
-] as const;
-
-export function firstNonEmpty(...values: MaybeEnv[]): string | undefined {
+export function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   return values.find((value) => typeof value === 'string' && value.length > 0);
 }
 
-export function readEnvValue(keys: readonly string[]): string | undefined {
-  return firstNonEmpty(...keys.map((key) => process.env[key]));
-}
-
-export function hasAnyConfiguredValue(keys: readonly string[]): boolean {
-  return keys.some((key) => typeof process.env[key] === 'string' && process.env[key].length > 0);
+export function hasConfiguredValue(key: string): boolean {
+  return typeof process.env[key] === 'string' && process.env[key]!.length > 0;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
+import { getClerkRuntimeOptions } from '@/lib/auth/clerk-env';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,10 +14,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const clerkOptions = getClerkRuntimeOptions();
   return (
     <html lang="en">
       <body>
-        <ClerkProvider>
+        <ClerkProvider {...clerkOptions}>
           <AuthProvider>{children}</AuthProvider>
         </ClerkProvider>
       </body>
