@@ -48,7 +48,6 @@ No local dev. All environments are cloud-hosted.
 | Environment | Frontend | Backend | Secret prefix |
 |---|---|---|---|
 | Staging Railway | Railway | Railway | `RAILWAY_STAGING_*` |
-| Staging Vercel | Vercel | Railway | `VERCEL_*` |
 | Production Railway | Railway | Railway | `RAILWAY_PROD_*` |
 
 **Canonical env contract:** `ctf/packages/web/.env.local.example`
