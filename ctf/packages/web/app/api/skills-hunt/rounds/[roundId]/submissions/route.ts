@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { createSubmission, validateSubmissionInput } from 'lib/skills-hunt/repository';
+import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 
 type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
@@ -18,6 +18,30 @@ function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSub
       ? body.claimedProfessions.filter((item): item is string => typeof item === 'string')
       : [],
   };
+}
+
+export async function GET(_request: Request, { params }: { params: Promise<{ roundId: string }> }) {
+  const gate = await requireSkillsHuntReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const { roundId } = await params;
+
+  try {
+    const result = await listSubmissions(
+      roundId,
+      null,
+      { page: 1, pageSize: 50 },
+      { userId: gate.auth.userId, isModeratorOrAdmin: false },
+    );
+    return NextResponse.json({ items: result.items, total: result.total }, { status: 200 });
+  } catch {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load submissions.' },
+      { status: 503 },
+    );
+  }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
