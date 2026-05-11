@@ -115,14 +115,22 @@ type SkillsHuntSubmissionRow = {
   bio: string;
   quora_profile_url: string;
   skills: unknown;
+  proposed_skills?: unknown;
   claimed_professions: unknown;
   status: 'pending' | 'accepted' | 'rejected' | 'flagged';
   points_awarded: number;
+  participation_points?: number | null;
+  credit_granted?: boolean | null;
+  url_validation_result?: 'valid' | 'invalid' | 'dead' | null;
+  url_validation_checked_at?: Date | null;
   score_breakdown: Record<string, unknown>;
   review_action: SkillsHuntReviewAction | null;
   review_notes: string | null;
   reviewed_by_user_id: string | null;
   reviewed_at: Date | null;
+  edit_history?: unknown;
+  edited_at?: Date | null;
+  deleted_at?: Date | null;
   directory_profile_generated_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -132,10 +140,13 @@ type SkillsHuntLeaderboardRow = {
   rank: number;
   score: number;
   accepted_count: number;
+  first_match_count?: number | null;
+  pending_points?: number | null;
   rare_skill_bonus: number;
   user_id: string | null;
   username_snapshot: string | null;
   team_key: string | null;
+  last_submission_at?: Date | null;
   metadata: Record<string, unknown>;
 };
 
@@ -157,7 +168,9 @@ type SkillsHuntAchievementRow = {
   code: string;
   title: string;
   description: string;
+  round_id?: string | null;
   metadata: Record<string, unknown>;
+  archived_at?: Date | null;
   awarded_at: Date;
 };
 
@@ -282,6 +295,21 @@ function mapRound(row: SkillsHuntRoundRow): SkillsHuntRound {
   };
 }
 
+function mapEditHistory(value: unknown): SkillsHuntSubmission['editHistory'] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is SkillsHuntSubmission['editHistory'][number] => {
+    return Boolean(
+      entry
+        && typeof entry === 'object'
+        && !Array.isArray(entry)
+        && typeof (entry as { editedAtIso?: unknown }).editedAtIso === 'string'
+        && typeof (entry as { editedByUserId?: unknown }).editedByUserId === 'string',
+    );
+  });
+}
+
 function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
   return {
     id: row.id,
@@ -292,14 +320,22 @@ function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
     bio: row.bio,
     quoraProfileUrl: row.quora_profile_url,
     skills: asStringArray(row.skills),
+    proposedSkills: asStringArray(row.proposed_skills),
     claimedProfessions: asStringArray(row.claimed_professions),
     status: row.status,
     pointsAwarded: row.points_awarded,
+    participationPoints: row.participation_points ?? 0,
+    creditGranted: row.credit_granted ?? false,
+    urlValidationResult: row.url_validation_result ?? null,
+    urlValidationCheckedAtIso: row.url_validation_checked_at ? toIso(row.url_validation_checked_at) : null,
     scoreBreakdown: normalizeJsonObject(row.score_breakdown),
     reviewAction: row.review_action,
     reviewNotes: row.review_notes,
     reviewedByUserId: row.reviewed_by_user_id,
     reviewedAtIso: row.reviewed_at ? toIso(row.reviewed_at) : null,
+    editHistory: mapEditHistory(row.edit_history),
+    editedAtIso: row.edited_at ? toIso(row.edited_at) : null,
+    deletedAtIso: row.deleted_at ? toIso(row.deleted_at) : null,
     directoryProfileGeneratedAtIso: row.directory_profile_generated_at ? toIso(row.directory_profile_generated_at) : null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
@@ -311,10 +347,13 @@ function mapLeaderboard(row: SkillsHuntLeaderboardRow): SkillsHuntLeaderboardIte
     rank: row.rank,
     score: row.score,
     acceptedCount: row.accepted_count,
+    firstMatchCount: row.first_match_count ?? 0,
+    pendingPoints: row.pending_points ?? 0,
     rareSkillBonus: row.rare_skill_bonus,
     userId: row.user_id,
     usernameSnapshot: row.username_snapshot,
     teamKey: row.team_key,
+    lastSubmissionAtIso: row.last_submission_at ? toIso(row.last_submission_at) : null,
     metadata: normalizeJsonObject(row.metadata),
   };
 }
@@ -340,7 +379,9 @@ function mapAchievement(row: SkillsHuntAchievementRow): SkillsHuntAchievement {
     code: row.code,
     title: row.title,
     description: row.description,
+    roundId: row.round_id ?? null,
     metadata: normalizeJsonObject(row.metadata),
+    archivedAtIso: row.archived_at ? toIso(row.archived_at) : null,
     awardedAtIso: toIso(row.awarded_at),
   };
 }
@@ -1376,11 +1417,18 @@ export async function generateDirectoryProfileFromAcceptedSubmission(
       directory_profile_id: string;
       invited_by_username: string;
       created_at: Date;
+      unclaimed_handle: string | null;
     }>(
       `
-        SELECT submission_id, directory_profile_id, invited_by_username, created_at
-        FROM skills_hunt_directory_profiles
-        WHERE submission_id = $1::uuid
+        SELECT
+          shdp.submission_id,
+          shdp.directory_profile_id,
+          shdp.invited_by_username,
+          shdp.created_at,
+          dp.unclaimed_handle
+        FROM skills_hunt_directory_profiles shdp
+        LEFT JOIN directory_profiles dp ON dp.id::text = shdp.directory_profile_id
+        WHERE shdp.submission_id = $1::uuid
         LIMIT 1
       `,
       [submissionId],
@@ -1396,6 +1444,8 @@ export async function generateDirectoryProfileFromAcceptedSubmission(
       generatedProfileId: projection.directory_profile_id,
       profileStatus: 'unclaimed',
       invitedByUsername: projection.invited_by_username,
+      unclaimedHandle: projection.unclaimed_handle ?? null,
+      source: 'community-generated',
       createdAtIso: toIso(projection.created_at),
     };
   });

@@ -48,6 +48,15 @@ export type SkillsHuntRoundInput = {
   scoringConfig?: Record<string, unknown>;
 };
 
+export type SkillsHuntUrlValidationResult = 'valid' | 'invalid' | 'dead';
+
+export type SkillsHuntSubmissionEditEntry = {
+  editedAtIso: string;
+  editedByUserId: string;
+  fields: Record<string, { from: unknown; to: unknown }>;
+  notes?: string | null;
+};
+
 export type SkillsHuntSubmission = {
   id: string;
   roundId: string;
@@ -57,14 +66,22 @@ export type SkillsHuntSubmission = {
   bio: string;
   quoraProfileUrl: string;
   skills: string[];
+  proposedSkills: string[];
   claimedProfessions: string[];
   status: SkillsHuntSubmissionStatus;
   pointsAwarded: number;
+  participationPoints: number;
+  creditGranted: boolean;
+  urlValidationResult: SkillsHuntUrlValidationResult | null;
+  urlValidationCheckedAtIso: string | null;
   scoreBreakdown: Record<string, unknown>;
   reviewAction: SkillsHuntReviewAction | null;
   reviewNotes: string | null;
   reviewedByUserId: string | null;
   reviewedAtIso: string | null;
+  editHistory: SkillsHuntSubmissionEditEntry[];
+  editedAtIso: string | null;
+  deletedAtIso: string | null;
   directoryProfileGeneratedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
@@ -76,6 +93,7 @@ export type SkillsHuntSubmissionInput = {
   bio: string;
   quoraProfileUrl: string;
   skills: string[];
+  proposedSkills?: string[];
   claimedProfessions: string[];
 };
 
@@ -88,20 +106,46 @@ export type SkillsHuntLeaderboardItem = {
   rank: number;
   score: number;
   acceptedCount: number;
+  firstMatchCount: number;
+  pendingPoints: number;
   rareSkillBonus: number;
   userId: string | null;
   usernameSnapshot: string | null;
   teamKey: string | null;
+  lastSubmissionAtIso: string | null;
   metadata: Record<string, unknown>;
 };
+
+export type SkillsHuntLeaderboardResponse = {
+  mode: SkillsHuntLeaderboardMode;
+  roundId: string;
+  items: SkillsHuntLeaderboardItem[];
+  totalCount: number;
+  currentUserEntry: SkillsHuntLeaderboardItem | null;
+  rebuiltAtIso: string;
+};
+
+export type SkillsHuntAchievementCode =
+  | 'first-finder'
+  | 'diversity-champion'
+  | 'rare-talent-scout'
+  | 'quality-contributor'
+  | 'leaderboard-champion'
+  // Legacy generic achievements (pre-Wave 2). Will be migrated to the 5 named
+  // badges above when the scoring rewrite ships.
+  | 'accepted-first'
+  | 'accepted-five'
+  | 'accepted-ten';
 
 export type SkillsHuntAchievement = {
   id: string;
   userId: string;
-  code: string;
+  code: SkillsHuntAchievementCode | string;
   title: string;
   description: string;
+  roundId: string | null;
   metadata: Record<string, unknown>;
+  archivedAtIso: string | null;
   awardedAtIso: string;
 };
 
@@ -140,5 +184,59 @@ export type SkillsHuntGeneratedDirectoryProfile = {
   generatedProfileId: string;
   profileStatus: 'unclaimed';
   invitedByUsername: string;
+  unclaimedHandle: string | null;
+  source: 'community-generated';
   createdAtIso: string;
+};
+
+// Moderation report — backs `skills_hunt_submission_reports` and the
+// community-driven "this profile was added without permission" flow.
+export type SkillsHuntSubmissionReportReason =
+  | 'no_permission'
+  | 'inaccurate'
+  | 'duplicate'
+  | 'spam'
+  | 'other';
+
+export type SkillsHuntSubmissionReportStatus =
+  | 'open'
+  | 'dismissed'
+  | 'archived'
+  | 'removed';
+
+export type SkillsHuntSubmissionReport = {
+  id: string;
+  submissionId: string | null;
+  directoryProfileId: string | null;
+  reporterUserId: string;
+  reporterUsername: string | null;
+  reason: SkillsHuntSubmissionReportReason;
+  details: string | null;
+  status: SkillsHuntSubmissionReportStatus;
+  resolutionNotes: string | null;
+  resolvedByUserId: string | null;
+  resolvedAtIso: string | null;
+  createdAtIso: string;
+};
+
+export type SkillsHuntSubmissionReportInput = {
+  submissionId?: string | null;
+  directoryProfileId?: string | null;
+  reason: SkillsHuntSubmissionReportReason;
+  details?: string | null;
+};
+
+// Reputation tier computed on demand from accepted/rejected submission counts.
+export type SkillsHuntReputationTier = 'new' | 'standard' | 'trusted' | 'restricted';
+
+export type SkillsHuntReputationProfile = {
+  userId: string;
+  tier: SkillsHuntReputationTier;
+  acceptedCount: number;
+  rejectedCount: number;
+  pendingCount: number;
+  rolling7dCount: number;
+  rolling7dLimit: number;
+  acceptanceRate: number | null;
+  preApprovalRequired: boolean;
 };
