@@ -7,12 +7,16 @@ on:
       - "ctf/**"
       - ".github/instructions/**"
       - ".github/workflows/**"
+      - ".gitleaks.toml"
+      - ".gitleaksignore"
   push:
     branches: [main]
     paths:
       - "ctf/**"
       - ".github/instructions/**"
       - ".github/workflows/**"
+      - ".gitleaks.toml"
+      - ".gitleaksignore"
   schedule:
     - cron: "30 4 * * 1"
   workflow_dispatch:
@@ -79,13 +83,41 @@ jobs:
           path: compliance-artifacts
           retention-days: 30
 
+  secrets-scan-escalation:
+    name: Secrets Scan Escalation
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    if: always() && needs.secrets-scan.result == 'failure'
+    permissions:
+      issues: write
+    steps:
+      - name: Open issue for manual review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Secret scanning failed — manual review required: ${{ github.ref_name }}" \
+            --label "security" \
+            --body "## Secret Scanning Failure — Manual Review Required
+
+          Gitleaks detected a potential secret leak on branch \`${{ github.ref_name }}\` (commit \`${{ github.sha }}\`).
+
+          **This requires human review and must not be auto-fixed by a bot.**
+
+          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Steps to investigate:
+          1. Review the Gitleaks findings in the workflow run linked above
+          2. If a real secret was leaked, rotate it immediately — removing it from code is not enough
+          3. If it is a false positive, add the path to \`.gitleaksignore\` with a comment explaining why"
+
   auto-fix-on-failure:
     name: Auto-Fix (Claude Code)
     runs-on: ubuntu-latest
     needs: [dependency-review, secrets-scan, compliance-artifacts]
     if: |
       always() && (
-        needs.secrets-scan.result == 'failure' ||
         needs.compliance-artifacts.result == 'failure' ||
         needs.dependency-review.result == 'failure'
       )

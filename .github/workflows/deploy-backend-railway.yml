@@ -216,11 +216,6 @@ jobs:
     needs: [actions-budget-gate, main-quality-gate, schema-drift-gate, schema-query-audit]
     if: ${{ github.event_name != 'schedule' && needs.actions-budget-gate.outputs.enforce_block != 'true' && needs.schema-drift-gate.result == 'success' && needs.schema-query-audit.result == 'success' && (needs.main-quality-gate.result == 'success' || needs.main-quality-gate.result == 'skipped') }}
     environment: ${{ github.ref == 'refs/heads/main' && 'rewrite-railway-production' || 'rewrite-railway-staging' }}
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -282,9 +277,23 @@ jobs:
             exit 1
           fi
 
+
+  claude-issue-remediation:
+    name: Claude Issue Remediation
+    runs-on: ubuntu-latest
+    needs: railway-deploy
+    if: always() && needs.railway-deploy.result == 'failure'
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Auto-fix with Claude Code
         id: claude-fix
-        if: failure()
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -310,7 +319,7 @@ jobs:
             - All modified `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines
 
       - name: Fallback failure issue
-        if: failure() && steps.claude-fix.outcome != 'success'
+        if: steps.claude-fix.outcome != 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
