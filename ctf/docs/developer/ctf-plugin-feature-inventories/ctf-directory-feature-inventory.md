@@ -52,6 +52,21 @@ Decision locks for rewrite planning:
 5. Frontend hiding is presentation-only; server authorization remains the source of truth.
 6. Public routes remain separate projection endpoints for unauthenticated consumption.
 
+### Vanity URL routing (`@handle`) — added 2026-05-11
+
+1. Canonical URL for a **claimed** profile: `/apps/directory/@{users.username}` (Clerk-managed username).
+2. Canonical URL for an **unclaimed** profile: `/apps/directory/@{directory_profiles.unclaimed_handle}` (auto-generated `community-<hex>`).
+3. Legacy `/apps/directory/{uuid}` issues a 301 redirect to the canonical `@handle` URL when one resolves.
+4. Resolver lookup order: try `users.username` first; if not found, try `directory_profiles.unclaimed_handle`.
+5. Clerk dashboard rejects usernames starting with `community-`; defense-in-depth check at `lib/auth/username-policy.ts`.
+6. When a real user signs up and claims an unclaimed profile, `directory_profiles.claimed_by_user_id` is set and the public URL switches to use `users.username`. The `unclaimed_handle` is retained for audit history but no longer used as the public URL.
+
+### Reward-card integration (Skills Hunt-owned, surfaced here)
+
+1. Directory shell renders the Skills Hunt active reward card pinned to the top of the public Directory page during active rounds.
+2. Card includes title, description, end date, current leader, and a primary "Submit a community profile" CTA that opens the Skills Hunt submission modal.
+3. Component lives in `components/skills-hunt/` and is imported by `components/directory/directory-shell.tsx`. Directory owns the placement; Skills Hunt owns the component.
+
 ## API Surface and Route Map (planned)
 
 Planned route families:
@@ -95,6 +110,17 @@ Route ownership policy (planned):
 5. Public projection contracts preserve privacy-filtered output shape.
 6. Audit storage contracts capture sensitive admin mutation outcomes.
 7. Seed contracts remain deterministic across local/dev environments.
+
+### New columns on `directory_profiles` (Skills Hunt + Clerk username co-change, 2026-05-11)
+
+1. `source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated'))` — drives the "Community generated profile" badge in the UI.
+2. `invited_by_username TEXT NULL` — denormalized from `skills_hunt_directory_profiles.invited_by_username` so the public profile page renders attribution without a join.
+3. `unclaimed_handle TEXT UNIQUE NULL` — auto-generated vanity handle for unclaimed profiles. Format: `community-<6char-hex>` (no leading `@` in storage; `@` is presentation only). Cleared/ignored once `claimed_by_user_id` is set.
+4. `deleted_at TIMESTAMPTZ NULL` — soft-delete for GDPR and moderation removals; `is_active` remains in place but `deleted_at` takes precedence for visibility filters.
+
+### Backfill (one-shot, idempotent)
+
+For every `directory_profiles` row where `claimed_by_user_id IS NULL AND unclaimed_handle IS NULL`, assign `unclaimed_handle = 'community-' || encode(gen_random_bytes(3), 'hex')`. Retry on UNIQUE collision. Establishes consistent `@handle` URLs on day one.
 
 ## Security, Privacy, and Compliance Controls
 
@@ -160,3 +186,4 @@ Resolved for Prompt 02 implementation (2026-03-02):
 
 - 2026-02-25: Created initial unified Directory CTF rewrite inventory merging user and admin flows into one planned UI surface; locked v1 decisions for combined UI, Android admin parity, and display-only post-create public URL behavior.
 - 2026-03-02: Implemented Prompt 02 phase-0 backend and unified web surface (user/admin role-gated sections), with resolved list/pagination/claimed-delete decisions and migration-backed API contracts.
+- 2026-05-11: Added Skills Hunt + Clerk username co-change — `directory_profiles.source` enum, `invited_by_username`, `unclaimed_handle` (UNIQUE), `deleted_at`; one-shot backfill for existing unclaimed profiles; `@handle` vanity URL routing with 301 redirect from legacy `[id]` route; Skills Hunt reward-card placement on Directory shell. See `ctf-skills-hunt-session-continuity.md` for full context.

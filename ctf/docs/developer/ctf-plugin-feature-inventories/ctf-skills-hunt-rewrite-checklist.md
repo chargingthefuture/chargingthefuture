@@ -1,122 +1,156 @@
 # Skills Hunt Rewrite Checklist (CTF)
 
+> **For new agents:** read `ctf-skills-hunt-session-continuity.md` FIRST. It is the canonical spec + locked decisions + roadmap. This file is the execution checklist. Update boxes as work lands. Reference commits where possible.
+
 ## Scope and Boundary
 
-- [ ] Confirm implementation scope is `ctf/` only.
-  - Acceptance criteria:
-    - No implementation work is required in `platform/`.
-- [ ] Confirm plugin slug and command namespace lock.
-  - Acceptance criteria:
-    - Stable plugin slug is `skills-hunt` across docs/contracts/routes.
-- [ ] Confirm Directory boundary semantics.
-  - Acceptance criteria:
-    - Only governed generation of unclaimed profiles is allowed; ownership lifecycle remains Directory-authoritative.
+- [x] Confirm implementation scope is `ctf/` only.
+  - Evidence: confirmed in session-continuity §1.
+- [x] Confirm plugin slug and command namespace lock.
+  - Stable plugin slug is `skills-hunt` across docs/contracts/routes.
+- [x] Confirm Directory boundary semantics.
+  - Only governed generation of unclaimed profiles is allowed; ownership lifecycle remains Directory-authoritative. Reaffirmed 2026-05-11.
 
 ## Phase 0 — Contract Lock
 
-- [ ] Define Skills Hunt plugin command contracts for v1.
-  - Acceptance criteria:
-    - Every command conforms to `.github/instructions/201-plugin-command-schema-template.mdc`.
-- [ ] Define Skills Hunt access policy contracts for v1.
-  - Acceptance criteria:
-    - Every command has role, attribute, consent/lawful basis, region, and deny conditions under `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
-- [ ] Define Skills Hunt audit contracts for v1.
-  - Acceptance criteria:
-    - Every command has allow/deny + result audit coverage under `.github/instructions/203-plugin-audit-schema-template.mdc`.
-- [ ] Verify command parity across command, access, and audit files.
-  - Acceptance criteria:
-    - Command set matches exactly across the three contract files.
+- [x] Define Skills Hunt plugin command contracts for v1.
+  - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml`.
+- [x] Define Skills Hunt access policy contracts for v1.
+  - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`.
+- [x] Define Skills Hunt audit contracts for v1.
+  - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_AUDIT_CONTRACTS.yaml`.
+- [ ] Add command for `skills-hunt.submission.report` (community moderation report) and `skills-hunt.profile.delete` (GDPR delete) to all three contracts. — Wave 2.
 
 ## Phase 1 — Schema, Migrations, and Retention
 
-- [ ] Define Skills Hunt domain schema and migrations in `ctf/migrations/`.
-  - Acceptance criteria:
-    - Round, submission, leaderboard, achievement, notification, reward-card, audit, and directory-profile entities are represented.
-- [ ] Define retention behavior for moderation and reward entities.
-  - Acceptance criteria:
-    - Retention classes and deletion semantics are documented and policy-aligned.
-- [ ] Prepare rollback/replay notes.
-  - Acceptance criteria:
-    - Replay and rollback steps are documented for PR evidence.
+- [x] Define Skills Hunt domain schema for v1 baseline.
+- [ ] **Add new columns/tables for v2 (Wave 1):**
+  - [ ] `skills_hunt_submissions`: `url_validation_result`, `credit_granted`, `proposed_skills`, `edit_history`, `edited_at`, `deleted_at`, `participation_points`.
+  - [ ] `skills_hunt_leaderboard`: `first_match_count`, `pending_points`, `last_submission_at`.
+  - [ ] `skills_hunt_achievements`: `round_id` FK, `archived_at`.
+  - [ ] `directory_profiles`: `source`, `invited_by_username`, `unclaimed_handle` (UNIQUE), `deleted_at`. (Directory plugin co-change.)
+  - [ ] New table `skills_hunt_submission_reports`.
+  - [ ] Backfill migration: `community-<6hex>` handles for existing unclaimed Directory profiles.
+- [ ] Document retention behavior for moderation, reward, and report entities.
+- [ ] Prepare rollback/replay notes for the new migrations.
 
 ## Phase 2 — Core Contributor Flow
 
-- [ ] Implement rounds list/get surfaces.
-  - Acceptance criteria:
-    - Users can discover active and upcoming rounds with deterministic ordering.
-- [ ] Implement submission creation with validation.
-  - Acceptance criteria:
-    - `displayName`, `bio`, URL, skills, and professions enforce policy constraints.
-- [ ] Enforce duplicate and rate-limit safeguards.
-  - Acceptance criteria:
-    - Duplicate signature blocking and rolling 7-day caps are enforced server-side.
+- [x] Implement rounds list/get surfaces.
+  - `GET /api/skills-hunt/rounds`, `GET /api/skills-hunt/admin/rounds`.
+- [x] Implement submission creation with baseline validation.
+- [x] Enforce duplicate (signature) and rolling rate-limit safeguards.
+- [ ] **Wave 1 updates:**
+  - [ ] URL HEAD-check helper (`lib/skills-hunt/url-validation.ts`, 5s timeout).
+  - [ ] Persist `url_validation_result` and auto-reject on `dead`.
+  - [ ] Flip `requireUsername: true` on submit endpoint.
+  - [ ] Taxonomy-driven skills parsing (`parseSkillsSubmissionInput`): split matched vs `proposed_skills`.
+  - [ ] Align display name (2–100, alphanumeric+spaces) and bio (max 280) limits with spec.
 
 ## Phase 3 — Review and Scoring Flow
 
-- [ ] Implement moderator/admin submission review actions.
-  - Acceptance criteria:
-    - Accept/reject/edit/flag actions persist deterministic outcomes and reviewer attribution.
-- [ ] Implement scoring and points assignment logic.
-  - Acceptance criteria:
-    - Match, first-match, stack, rare-skill, and quality bonuses produce deterministic totals.
-- [ ] Implement rejection-rate guardrails.
-  - Acceptance criteria:
-    - Guard thresholds prevent policy-violating contributor patterns.
+- [x] Implement moderator/admin submission review actions (accept/reject/edit/flag).
+- [x] Implement baseline scoring engine.
+- [ ] **Wave 2 — scoring rewrite to spec:**
+  - [ ] Match `+10` flat (not `min(skills.length,5)*3`).
+  - [ ] First Match `+5` (not `+4`).
+  - [ ] Skill Stack `+3` only if 2+ professions (not linear).
+  - [ ] Quality `+2` only if accepted without admin edits (not `bio≥200chars`).
+  - [ ] Rare Skill `+7` from Workforce live snapshot (<50% recruited).
+  - [ ] Participation `+1` point on reject.
+  - [ ] All weights configurable per round in `scoring_config`.
+- [ ] **Wave 2 — reputation system:**
+  - [ ] New-user lower cap (configurable, default 3/wk).
+  - [ ] >20% rejection rate → admin pre-approval required for next submission.
+  - [ ] ≥80% acceptance rate → cap raised to 10/wk.
+- [x] Enforce rejection-rate guardrails (existing 80% block — to be replaced by reputation system in Wave 2).
 
 ## Phase 4 — Leaderboard, Rewards, and Notifications
 
-- [ ] Implement leaderboard rebuild and retrieval.
-  - Acceptance criteria:
-    - Individual and team modes are available and rank deterministically.
-- [ ] Implement achievements and notification surfaces.
-  - Acceptance criteria:
-    - Users can view achievements and mark notifications read.
-- [ ] Implement feature reward card read/update.
-  - Acceptance criteria:
-    - Admin update path is audited and user read path is stable.
+- [x] Implement baseline leaderboard rebuild and retrieval (individual + team mode columns).
+- [x] Implement achievements (3 generic count-based codes).
+- [x] Implement baseline feature reward card read/update endpoints.
+- [ ] **Wave 2 — leaderboard improvements:**
+  - [ ] Tie-break order: `score DESC, first_match_count DESC, last_submission_at ASC`.
+  - [ ] Top-100 cap plus current-user rank attached to response.
+  - [ ] Team mode aggregation by claimed profession.
+  - [ ] All-time view alongside per-round.
+  - [ ] 30-second polling on client (Wave 2 upgrade path: GetStream feeds).
+- [ ] **Wave 2 — 5 named badges (replace 3 generic):**
+  - [ ] `first-finder` — first accepted submission for a given Quora URL in a round.
+  - [ ] `diversity-champion` — accepted submissions across 3+ professions in a round.
+  - [ ] `rare-talent-scout` — 3+ accepted submissions tagged with rare skills.
+  - [ ] `quality-contributor` — 100% acceptance rate with 5+ submissions.
+  - [ ] `leaderboard-champion` — finished top-3 on a round's final standings.
+- [ ] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the submission modal.
+- [ ] **Wave 2 — GetStream fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked).
+- [ ] **Wave 2 — notification center UI** (web + mobile) with unread badge.
 
 ## Phase 5 — Directory Projection and Safety
 
-- [ ] Implement governed unclaimed Directory profile generation.
-  - Acceptance criteria:
-    - Generated profile includes source linkage and invite attribution.
-- [ ] Validate Directory ownership boundary.
-  - Acceptance criteria:
-    - Skills Hunt cannot claim ownership or bypass Directory policy controls.
+- [x] Implement governed unclaimed Directory profile generation via `maybeAutoGenerateDirectoryProfile`.
+- [ ] **Wave 1 — Directory schema additions** (co-change in Directory plugin):
+  - [ ] `directory_profiles.source` enum (admin/self/community-generated).
+  - [ ] `directory_profiles.invited_by_username` (denormalized for UI).
+  - [ ] `directory_profiles.unclaimed_handle` (UNIQUE).
+  - [ ] `directory_profiles.deleted_at` (soft-delete).
+- [ ] **Wave 1 — `@handle` URL routing:**
+  - [ ] `app/apps/directory/[handle]/page.tsx` handle resolver.
+  - [ ] 301 redirect from legacy `[id]` route.
+  - [ ] Resolver order: `users.username` → `directory_profiles.unclaimed_handle`.
+- [ ] **Wave 1 — visible "community generated profile" badge** on Directory profile page.
+- [ ] **Wave 1 — backfill migration** assigning `community-<6hex>` to existing 60 unclaimed profiles.
 
 ## Phase 6 — Security, Compliance, and Deletion
 
-- [ ] Verify authz, consent/lawful basis, and deny conditions.
-  - Acceptance criteria:
-    - All mutation commands enforce deny-by-default checks server-side.
-- [ ] Verify audit integrity.
-  - Acceptance criteria:
-    - Allow and deny outcomes are append-only and carry request/trace correlation.
-- [ ] Verify profile/deletion contract behavior.
-  - Acceptance criteria:
-    - Plugin deletion removes user-scoped plugin records while preserving required audit evidence and Directory ownership boundaries.
+- [x] Verify authz/deny conditions and audit integrity on existing endpoints.
+- [ ] **Wave 2 — soft-delete + GDPR endpoint:**
+  - [ ] Add `deleted_at` to all user-scoped Skills Hunt tables.
+  - [ ] `DELETE /api/account/skills-hunt-profile` GDPR erasure.
+  - [ ] Audit-log retention preserved (`skills_hunt_audit_log` is not soft-deleted).
+- [ ] **Wave 2 — moderation report flow:**
+  - [ ] `POST /api/skills-hunt/submissions/{id}/report` (auth required).
+  - [ ] Admin escalation queue (`GET /api/skills-hunt/admin/reports`).
+  - [ ] Resolution actions: dismiss, archive profile, hard-delete.
+- [ ] **Wave 1 — Clerk reserved-prefix policy:**
+  - [ ] `lib/auth/username-policy.ts` rejects usernames starting with `community-`.
+  - [ ] Document Clerk dashboard configuration in `123-environment-configuration-rules.mdc`.
 
-## Phase 7 — Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+## Phase 7 — Validation, Seeds, and Release Gates
 
-- [ ] Command schema design documentation.
-  - Acceptance criteria:
-    - Unknown/invalid fields and enum/bounds violations handling is documented.
-- [ ] Access policy and audit contract design documentation.
-  - Acceptance criteria:
-    - Missing role/scope, invalid region, rate-limit, and policy-deny cases are documented.
-- [ ] Scoring and leaderboard design documentation.
-  - Acceptance criteria:
-    - Review transitions and leaderboard recompute behavior is documented.
-- [ ] Seed fixtures for rounds/submissions/reviews.
-  - Acceptance criteria:
-    - Seed scenarios are reproducible via deterministic seed scripts/data for local/dev validation.
+- [ ] Update seed script `ctf/scripts/seedSkillsHuntPhase1.mjs` for new schema columns and new test cases (community-generated profile with backfilled handle).
+- [ ] Update plugin registry availability state: `'implemented_shell'` → `'alpha'` until Wave 2 ships, then `'beta'`.
+- [ ] Add type-safe end-to-end smoke: rounds list → submit → admin accept → leaderboard rebuild → notification fan-out → unclaimed Directory profile with `@handle`.
+
+## Phase 8 — UI Surfaces (consolidated)
+
+- [ ] **Wave 1 — submission modal component** (`components/skills-hunt/submission-modal.tsx`).
+  - [ ] Title: "Submit a Community Generated Profile".
+  - [ ] Fields: Display Name, Bio, Quora URL, Skills (taxonomy multi-select + free-text fallback), Claimed Professions.
+  - [ ] Client-side validation matches server limits exactly.
+  - [ ] Live char counters on Display Name and Bio.
+  - [ ] Mounted from Directory shell via reward card CTA.
+- [ ] **Wave 1 — admin panel real UI** (`app/admin/skills-hunt/page.tsx`).
+  - [ ] Pending submissions table.
+  - [ ] Status filter (pending/accepted/rejected/flagged).
+  - [ ] Inline Accept / Reject (with reason dropdown) / Edit (typo-fix dialog).
+  - [ ] Bulk action toolbar (multi-select + bulk accept/reject).
+  - [ ] Wave 2 follow-ups: CSV export, dispute escalation queue.
+- [ ] **Wave 2 — mobile rebuild** (`packages/mobile/src/features/skills-hunt/`).
+  - [ ] Replace `SkillsHunt.tsx` hardcoded mock.
+  - [ ] API-driven Rounds, Leaderboard, Submit screens.
+  - [ ] Notification center.
 
 ## Open Decisions Tracker
 
-- [ ] Final role model split between moderator and admin for review/edit powers.
-- [x] Final policy for admin-preapproved submitter pathways (disabled in v1).
-- [ ] Android parity target date and owners.
+- [ ] Final tier/prize structure (1st vs 2nd vs 3rd). Owner to confirm before Wave 2 ships.
+- [x] Final policy for admin-preapproved submitter pathways — re-enabled as part of reputation system in Wave 2.
+- [ ] Android parity target date and owners — to be set during Wave 2 mobile rebuild.
+- [ ] Leaderboard real-time: polling vs WebSocket. Default: 30s polling.
+- [ ] Moderation report UI: only on community-generated, or all Directory profiles. Default: all profiles.
+- [ ] Dispute escalation: second-admin sign-off vs flagged queue. Default: flagged queue.
 
 ## Change Log
 
 - 2026-02-24: Created initial Skills Hunt rewrite checklist with phase gates for contracts, validation, moderation scoring, leaderboard/reward workflows, directory-profile generation, security/compliance, and release readiness.
+- 2026-05-11: Re-baselined checklist after audit on `claude/audit-skills-hunt-plugin-6yv3e`. Marked baseline phases as implemented; opened Wave 1 + Wave 2 sub-items for the rewrite; consolidated UI work into new Phase 8. Cross-referenced `ctf-skills-hunt-session-continuity.md` as canonical source of truth.
