@@ -240,3 +240,65 @@ export type SkillsHuntReputationProfile = {
   acceptanceRate: number | null;
   preApprovalRequired: boolean;
 };
+
+// Missions — themed sub-goals within a round (continuity 2.9).
+// goal_metadata shape varies by goalType:
+//   count_total_accepted     -> {} (no extra config)
+//   count_skills_in_sector   -> { sectorId: string, sectorName: string }
+//   count_rare_skill_finds   -> {} (uses round's rare_skills_lookup)
+//   count_distinct_sectors   -> {} (target = number of distinct sectors required)
+export type SkillsHuntMissionGoalType =
+  | 'count_total_accepted'
+  | 'count_skills_in_sector'
+  | 'count_rare_skill_finds'
+  | 'count_distinct_sectors';
+
+export type SkillsHuntMissionStatus = 'draft' | 'active' | 'locked' | 'archived';
+
+export type SkillsHuntMission = {
+  id: string;
+  roundId: string;
+  title: string;
+  description: string | null;
+  goalType: SkillsHuntMissionGoalType;
+  goalTarget: number;
+  goalMetadata: Record<string, unknown>;
+  bonusPoints: number;
+  colorHex: string | null;
+  status: SkillsHuntMissionStatus;
+  displayOrder: number;
+  createdByUserId: string;
+  updatedByUserId: string;
+  createdAtIso: string;
+  updatedAtIso: string;
+};
+
+export type SkillsHuntMissionInput = {
+  roundId: string;
+  title: string;
+  description?: string | null;
+  goalType: SkillsHuntMissionGoalType;
+  goalTarget: number;
+  goalMetadata?: Record<string, unknown>;
+  bonusPoints: number;
+  colorHex?: string | null;
+  status?: SkillsHuntMissionStatus;
+  displayOrder?: number;
+};
+
+export type SkillsHuntMissionProgress = {
+  id: string;
+  missionId: string;
+  userId: string;
+  progressCount: number;
+  completedAtIso: string | null;
+  bonusCreditedAtIso: string | null;
+  metadata: Record<string, unknown>;
+  updatedAtIso: string;
+};
+
+// Composite shape returned by GET /api/skills-hunt/rounds/{roundId}/missions
+// for the requesting user — the player view that the Scout/Missions tab consumes.
+export type SkillsHuntMissionWithProgress = SkillsHuntMission & {
+  progress: SkillsHuntMissionProgress | null;
+};

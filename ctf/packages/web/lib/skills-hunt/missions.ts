@@ -1,0 +1,284 @@
+// Skills Hunt — Missions module.
+//
+// Backs the Missions feature locked into Wave 2 scope by the post-design
+// reconciliation (see ctf-skills-hunt-session-continuity.md sect 2.9).
+// Owns:
+//   - DB row mappers for skills_hunt_missions + skills_hunt_mission_progress
+//   - List queries (admin and player-with-progress views)
+//   - Progress recompute hook fired by review acceptance
+//
+// Does NOT own (deferred to follow-up commits):
+//   - Admin CRUD endpoints (POST/PUT/DELETE /api/skills-hunt/admin/rounds/{id}/missions)
+//   - Player-facing GET /api/skills-hunt/rounds/{id}/missions route handler
+//   - GetStream notification fan-out on mission completion
+//   - Service-credit ledger entry on completion
+//
+// Recompute strategy: when reviewSubmission accepts a submission, the
+// review hook calls recomputeMissionProgressForUser(client, roundId, userId).
+// That recomputes counts for every mission scoped to roundId from the user's
+// accepted submissions in that round. Cheaper than per-mutation deltas and
+// resilient to edits/rejects that flip an earlier accept.
+
+import type { PoolClient } from 'pg';
+import type {
+  SkillsHuntMission,
+  SkillsHuntMissionGoalType,
+  SkillsHuntMissionProgress,
+  SkillsHuntMissionStatus,
+  SkillsHuntMissionWithProgress,
+} from './types';
+
+type SkillsHuntMissionRow = {
+  id: string;
+  round_id: string;
+  title: string;
+  description: string | null;
+  goal_type: SkillsHuntMissionGoalType;
+  goal_target: number;
+  goal_metadata: Record<string, unknown>;
+  bonus_points: number;
+  color_hex: string | null;
+  status: SkillsHuntMissionStatus;
+  display_order: number;
+  created_by_user_id: string;
+  updated_by_user_id: string;
+  created_at: Date;
+  updated_at: Date;
+};
+
+type SkillsHuntMissionProgressRow = {
+  id: string;
+  mission_id: string;
+  user_id: string;
+  progress_count: number;
+  completed_at: Date | null;
+  bonus_credited_at: Date | null;
+  metadata: Record<string, unknown>;
+  updated_at: Date;
+};
+
+function toIso(value: Date): string {
+  return value.toISOString();
+}
+
+function normalizeJsonObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function mapMission(row: SkillsHuntMissionRow): SkillsHuntMission {
+  return {
+    id: row.id,
+    roundId: row.round_id,
+    title: row.title,
+    description: row.description,
+    goalType: row.goal_type,
+    goalTarget: row.goal_target,
+    goalMetadata: normalizeJsonObject(row.goal_metadata),
+    bonusPoints: row.bonus_points,
+    colorHex: row.color_hex,
+    status: row.status,
+    displayOrder: row.display_order,
+    createdByUserId: row.created_by_user_id,
+    updatedByUserId: row.updated_by_user_id,
+    createdAtIso: toIso(row.created_at),
+    updatedAtIso: toIso(row.updated_at),
+  };
+}
+
+function mapMissionProgress(row: SkillsHuntMissionProgressRow): SkillsHuntMissionProgress {
+  return {
+    id: row.id,
+    missionId: row.mission_id,
+    userId: row.user_id,
+    progressCount: row.progress_count,
+    completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
+    bonusCreditedAtIso: row.bonus_credited_at ? toIso(row.bonus_credited_at) : null,
+    metadata: normalizeJsonObject(row.metadata),
+    updatedAtIso: toIso(row.updated_at),
+  };
+}
+
+export async function listMissionsForRound(
+  client: PoolClient,
+  roundId: string,
+): Promise<SkillsHuntMission[]> {
+  const result = await client.query<SkillsHuntMissionRow>(
+    `
+      SELECT id, round_id, title, description, goal_type, goal_target,
+             goal_metadata, bonus_points, color_hex, status, display_order,
+             created_by_user_id, updated_by_user_id, created_at, updated_at
+      FROM skills_hunt_missions
+      WHERE round_id = $1::uuid
+        AND status IN ('active', 'locked')
+      ORDER BY display_order ASC, created_at ASC
+    `,
+    [roundId],
+  );
+  return result.rows.map(mapMission);
+}
+
+export async function listMissionsForRoundWithProgress(
+  client: PoolClient,
+  roundId: string,
+  userId: string,
+): Promise<SkillsHuntMissionWithProgress[]> {
+  const missions = await listMissionsForRound(client, roundId);
+  if (missions.length === 0) {
+    return [];
+  }
+  const progressResult = await client.query<SkillsHuntMissionProgressRow>(
+    `
+      SELECT id, mission_id, user_id, progress_count, completed_at,
+             bonus_credited_at, metadata, updated_at
+      FROM skills_hunt_mission_progress
+      WHERE user_id = $1
+        AND mission_id = ANY($2::uuid[])
+    `,
+    [userId, missions.map((m) => m.id)],
+  );
+  const byMission = new Map<string, SkillsHuntMissionProgress>();
+  for (const row of progressResult.rows) {
+    byMission.set(row.mission_id, mapMissionProgress(row));
+  }
+  return missions.map((mission) => ({
+    ...mission,
+    progress: byMission.get(mission.id) ?? null,
+  }));
+}
+
+// Recomputes progress_count for every mission in a round for a given user.
+// Called from reviewSubmission when an accept-or-edit transition could
+// change the user's accepted set. Pure recompute (idempotent) — safe to
+// re-run on every accept without delta tracking.
+//
+// Returns the missions that crossed from incomplete to complete in this
+// recompute, so the caller can fan out a "mission complete" notification
+// + service-credit ledger entry. Wave 2 follow-up wires those side effects.
+export async function recomputeMissionProgressForUser(
+  client: PoolClient,
+  roundId: string,
+  userId: string,
+): Promise<{ newlyCompleted: SkillsHuntMissionWithProgress[] }> {
+  const missions = await listMissionsForRound(client, roundId);
+  if (missions.length === 0) {
+    return { newlyCompleted: [] };
+  }
+
+  // Pull the user's accepted submissions in this round once; each goal
+  // type derives its count from this set.
+  const submissionsResult = await client.query<{
+    skills: unknown;
+    claimed_professions: unknown;
+    score_breakdown: Record<string, unknown>;
+  }>(
+    `
+      SELECT skills, claimed_professions, score_breakdown
+      FROM skills_hunt_submissions
+      WHERE round_id = $1::uuid
+        AND submitter_user_id = $2
+        AND status = 'accepted'
+        AND deleted_at IS NULL
+    `,
+    [roundId, userId],
+  );
+
+  const acceptedSubmissions = submissionsResult.rows.map((row) => ({
+    skills: Array.isArray(row.skills) ? (row.skills as string[]) : [],
+    claimedProfessions: Array.isArray(row.claimed_professions)
+      ? (row.claimed_professions as string[])
+      : [],
+    rareSkillBonus:
+      typeof row.score_breakdown === 'object'
+      && row.score_breakdown !== null
+      && typeof (row.score_breakdown as { rareSkillBonus?: unknown }).rareSkillBonus === 'number'
+        ? ((row.score_breakdown as { rareSkillBonus: number }).rareSkillBonus)
+        : 0,
+  }));
+
+  const newlyCompleted: SkillsHuntMissionWithProgress[] = [];
+
+  for (const mission of missions) {
+    const progressCount = computeProgressForMission(mission, acceptedSubmissions);
+    const previousResult = await client.query<SkillsHuntMissionProgressRow>(
+      `
+        SELECT id, mission_id, user_id, progress_count, completed_at,
+               bonus_credited_at, metadata, updated_at
+        FROM skills_hunt_mission_progress
+        WHERE mission_id = $1::uuid AND user_id = $2
+        LIMIT 1
+      `,
+      [mission.id, userId],
+    );
+    const previous = previousResult.rows[0] ? mapMissionProgress(previousResult.rows[0]) : null;
+    const wasCompleted = previous?.completedAtIso != null;
+    const isNowCompleted = progressCount >= mission.goalTarget;
+    const completedAtClause = isNowCompleted && !wasCompleted ? 'NOW()' : 'completed_at';
+
+    const upsertResult = await client.query<SkillsHuntMissionProgressRow>(
+      `
+        INSERT INTO skills_hunt_mission_progress
+          (mission_id, user_id, progress_count, completed_at, updated_at)
+        VALUES ($1::uuid, $2, $3, ${isNowCompleted && !wasCompleted ? 'NOW()' : 'NULL'}, NOW())
+        ON CONFLICT (mission_id, user_id) DO UPDATE
+          SET progress_count = EXCLUDED.progress_count,
+              completed_at = ${completedAtClause === 'NOW()' ? 'NOW()' : 'skills_hunt_mission_progress.completed_at'},
+              updated_at = NOW()
+        RETURNING id, mission_id, user_id, progress_count, completed_at,
+                  bonus_credited_at, metadata, updated_at
+      `,
+      [mission.id, userId, progressCount],
+    );
+    const updated = mapMissionProgress(upsertResult.rows[0]);
+    if (isNowCompleted && !wasCompleted) {
+      newlyCompleted.push({ ...mission, progress: updated });
+    }
+  }
+
+  return { newlyCompleted };
+}
+
+type AcceptedSubmissionForMission = {
+  skills: string[];
+  claimedProfessions: string[];
+  rareSkillBonus: number;
+};
+
+function computeProgressForMission(
+  mission: SkillsHuntMission,
+  acceptedSubmissions: AcceptedSubmissionForMission[],
+): number {
+  switch (mission.goalType) {
+    case 'count_total_accepted':
+      return acceptedSubmissions.length;
+    case 'count_rare_skill_finds':
+      return acceptedSubmissions.filter((s) => s.rareSkillBonus > 0).length;
+    case 'count_distinct_sectors': {
+      // goalMetadata may carry sector aliases; v1 uses claimed_professions
+      // as the proxy for sector since the taxonomy table isn't joined here.
+      // The Workforce-driven taxonomy join is a Wave 2 follow-up.
+      const distinctSectors = new Set<string>();
+      for (const s of acceptedSubmissions) {
+        for (const p of s.claimedProfessions) {
+          distinctSectors.add(p.toLowerCase());
+        }
+      }
+      return distinctSectors.size;
+    }
+    case 'count_skills_in_sector': {
+      const sectorName = typeof mission.goalMetadata.sectorName === 'string'
+        ? (mission.goalMetadata.sectorName as string).toLowerCase()
+        : null;
+      if (!sectorName) {
+        return 0;
+      }
+      return acceptedSubmissions.filter((s) =>
+        s.claimedProfessions.some((p) => p.toLowerCase() === sectorName),
+      ).length;
+    }
+    default:
+      return 0;
+  }
+}

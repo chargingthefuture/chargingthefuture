@@ -323,6 +323,39 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submission_reports (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK (submission_id IS NOT NULL OR directory_profile_id IS NOT NULL)
 );
+-- Missions: themed sub-goals within a round (post-design lock 2026-05-11,
+-- continuity 2.9). One mission belongs to one round; per-user progress is
+-- tracked in skills_hunt_mission_progress and recomputed on accept by the
+-- same review hook that rebuilds the leaderboard. goal_type drives the
+-- recompute strategy in lib/skills-hunt/missions.ts.
+CREATE TABLE IF NOT EXISTS skills_hunt_missions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NULL,
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors')),
+  goal_target INTEGER NOT NULL CHECK (goal_target > 0),
+  goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0),
+  color_hex TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'locked', 'archived')),
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_by_user_id TEXT NOT NULL,
+  updated_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mission_id UUID NOT NULL REFERENCES skills_hunt_missions(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  progress_count INTEGER NOT NULL DEFAULT 0 CHECK (progress_count >= 0),
+  completed_at TIMESTAMPTZ NULL,
+  bonus_credited_at TIMESTAMPTZ NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (mission_id, user_id)
+);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_rounds (status, starts_at DESC, ends_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
@@ -336,6 +369,9 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_audit_log_lookup ON skills_hunt_audit
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_status ON skills_hunt_submission_reports (status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_submission ON skills_hunt_submission_reports (submission_id) WHERE submission_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skills_hunt_submission_reports (directory_profile_id) WHERE directory_profile_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
 COMMIT;
 
 -- === skills-hunt-service-credits ===
@@ -2791,6 +2827,14 @@ BEGIN
   END IF;
 END
 $skills_hunt_achievements_round_fk$;
+
+-- Skills Hunt v2 Missions (post-design lock 2026-05-11). Defensive ALTERs
+-- so legacy DBs that already created the tables get any later additions.
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS color_hex TEXT;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS bonus_credited_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- trusttransport_admin_audit_trail (1 — defensive)
 ALTER TABLE IF EXISTS trusttransport_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
