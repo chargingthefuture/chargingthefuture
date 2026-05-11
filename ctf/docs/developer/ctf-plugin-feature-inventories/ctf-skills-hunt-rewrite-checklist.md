@@ -99,7 +99,10 @@
   - [ ] `app/apps/directory/[handle]/page.tsx` handle resolver.
   - [ ] 301 redirect from legacy `[id]` route.
   - [ ] Resolver order: `users.username` → `directory_profiles.unclaimed_handle`.
-- [ ] **Wave 1 — visible "community generated profile" badge** on Directory profile page.
+- [x] **Wave 1 — visible "community generated profile" badge + @handle + invited-by attribution** on Directory profile page (commit pending — see latest `feat(directory)` on this branch).
+  - DirectoryProfile type extended with `source`, `invitedByUsername`, `unclaimedHandle` (`lib/directory/types.ts`).
+  - `getPublicDirectoryById` SELECT pulls the new columns; soft-delete filter (`deleted_at IS NULL`) added.
+  - `app/apps/directory/[id]/page.tsx` renders the purple "Community generated" pill, the `@unclaimed_handle` monospace line, and "Nominated by @handle" attribution. Uses design's `#A855F7` palette per rule 126.
 - [x] **Wave 1 — backfill migration** assigning `community-<6hex>` to existing 60 unclaimed profiles (commit `f3aeb3f`, idempotent DO block).
 
 ## Phase 6 — Security, Compliance, and Deletion
@@ -156,3 +159,6 @@
 - 2026-02-24: Created initial Skills Hunt rewrite checklist with phase gates for contracts, validation, moderation scoring, leaderboard/reward workflows, directory-profile generation, security/compliance, and release readiness.
 - 2026-05-11: Re-baselined checklist after audit on `claude/audit-skills-hunt-plugin-6yv3e`. Marked baseline phases as implemented; opened Wave 1 + Wave 2 sub-items for the rewrite; consolidated UI work into new Phase 8. Cross-referenced `ctf-skills-hunt-session-continuity.md` as canonical source of truth.
 - 2026-05-11 (commit `f3aeb3f`): Landed Phase 1 schema additions for Wave 1 + Wave 2 — all submission/leaderboard/achievement columns, `skills_hunt_submission_reports` table, `directory_profiles` source/invited_by/unclaimed_handle/deleted_at, idempotent `community-<6hex>` backfill, defense-in-depth `users.username` UNIQUE. Types + constants aligned. Existing scoring + review code unchanged (Wave 2 will rewrite to consume the new SPEC weights).
+- 2026-05-11 (commit `f36c8ca`): Reconciled continuity doc with Replit design pass (`design/` at `dcaaf15`). Owner-locked four post-design decisions: keep reward card on Directory navigating to `/apps/skills-hunt?tab=scout`; implement Missions in Wave 2; skip Phase 0/1/2 badge until Replit clarifies; adopt "Nominate / Scout" lexicon everywhere (backend identifiers unchanged). Submodule pointer bumped.
+- 2026-05-11 (commit `403b19e`): Added Missions schema (`skills_hunt_missions`, `skills_hunt_mission_progress`), types, and `lib/skills-hunt/missions.ts` module with row mappers, list queries, and pure recompute hook. Admin CRUD endpoints + reviewSubmission hook wiring deferred to a follow-up commit.
+- 2026-05-11 (Directory profile rendering): Extended DirectoryProfile type with `source`, `invitedByUsername`, `unclaimedHandle`; `getPublicDirectoryById` now SELECTs the new columns + filters out `deleted_at`; the public profile page renders the purple "Community generated" pill, the monospace `@unclaimed_handle` line, and "Nominated by @handle" attribution. Uses design's exact hex per rule 126.

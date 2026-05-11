@@ -32,6 +32,12 @@ type DirectoryProfileRow = {
   job_title_id: string | null;
   job_title_name: string | null;
   is_active: boolean;
+  // Skills Hunt + Clerk username co-change. Optional on the row type so
+  // existing SELECTs that don't yet pull these columns still typecheck;
+  // mapProfileRow defaults to safe values.
+  source?: 'admin' | 'self' | 'community-generated' | null;
+  invited_by_username?: string | null;
+  unclaimed_handle?: string | null;
   created_at: Date;
   updated_at: Date;
     venmo_address: string | null;
@@ -136,6 +142,9 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     jobTitleName: row.job_title_name,
     skills: await loadProfileSkills(client, row.id),
     isActive: row.is_active,
+    source: row.source ?? 'admin',
+    invitedByUsername: row.invited_by_username ?? null,
+    unclaimedHandle: row.unclaimed_handle ?? null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
       venmoAddress: row.venmo_address,
@@ -659,12 +668,18 @@ export async function getPublicDirectoryById(profileId: string): Promise<Directo
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id = $1::uuid AND p.is_active = true AND p.is_public = true
+        WHERE p.id = $1::uuid
+          AND p.is_active = true
+          AND p.is_public = true
+          AND p.deleted_at IS NULL
       `,
       [profileId],
     );

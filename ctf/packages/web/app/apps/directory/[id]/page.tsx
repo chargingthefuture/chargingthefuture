@@ -43,8 +43,39 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
         {/* Trust evidence panel for Directory profile */}
         <TrustDirectoryProfilePanel trust={trust} />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{profile.displayName}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{profile.displayName}</h1>
+            {profile.source === 'community-generated' && (
+              <span
+                style={{
+                  fontSize: 11,
+                  background: '#A855F720',
+                  color: '#A855F7',
+                  border: '1px solid #A855F730',
+                  borderRadius: 8,
+                  padding: '2px 8px',
+                  fontWeight: 700,
+                }}
+              >
+                Community generated
+              </span>
+            )}
+          </div>
+          {/* Vanity @handle: Clerk-managed username for claimed profiles,
+              auto-generated community-<6hex> for unclaimed. Shown directly
+              under the name per design Directory.tsx:76. */}
+          {profile.unclaimedHandle && !profile.claimedByUserId && (
+            <p className="text-xs font-mono text-muted-foreground mt-1">
+              @{profile.unclaimedHandle}
+            </p>
+          )}
           {profile.headline && <p className="text-lg text-muted-foreground mt-2">{profile.headline}</p>}
+          {profile.source === 'community-generated' && profile.invitedByUsername && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Nominated by{' '}
+              <span className="font-mono">@{profile.invitedByUsername}</span>
+            </p>
+          )}
         </div>
 
         {/* Selectors */}
