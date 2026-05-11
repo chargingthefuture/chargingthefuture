@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Submodule directories are separate repositories with their own secret scanning"
+paths = [
+  "wiki",
+  "ctf-v2-deprecated",
+  "wiki-site",
+  "waitlist-landing-page",
+  "landing-page",
+  "design",
+]
