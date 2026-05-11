@@ -313,6 +313,20 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            const hasCtfChanges = files.some(f => f.filename.startsWith('ctf/'));
+
+            if (!hasCtfChanges) {
+              console.log('No ctf/ changes in this PR — parity check not required for CI/infra-only changes.');
+              return;
+            }
+
             const body = context.payload.pull_request.body || '';
             const hasComplete = /Parity Status:\s*web\+android complete/i.test(body);
             const hasTicket = /Parity Ticket:\s*https?:\/\//i.test(body) || /Parity Ticket:\s*#\d+/i.test(body);

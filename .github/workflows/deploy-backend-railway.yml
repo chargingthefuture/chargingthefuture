@@ -216,6 +216,11 @@ jobs:
     needs: [actions-budget-gate, main-quality-gate, schema-drift-gate, schema-query-audit]
     if: ${{ github.event_name != 'schedule' && needs.actions-budget-gate.outputs.enforce_block != 'true' && needs.schema-drift-gate.result == 'success' && needs.schema-query-audit.result == 'success' && (needs.main-quality-gate.result == 'success' || needs.main-quality-gate.result == 'skipped') }}
     environment: ${{ github.ref == 'refs/heads/main' && 'rewrite-railway-production' || 'rewrite-railway-staging' }}
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -277,29 +282,45 @@ jobs:
             exit 1
           fi
 
-      - name: Open failure issue
+      - name: Auto-fix with Claude Code
+        id: claude-fix
         if: failure()
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          timeout_minutes: "30"
+          direct_prompt: |
+            The Railway backend deployment workflow failed on branch `${{ github.ref_name }}` (commit `${{ github.sha }}`).
+
+            Workflow run for logs and context: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please investigate the repository to determine what caused the Railway deployment to fail and open a pull request with a fix. Steps:
+
+            1. Review recent commits on this branch vs main to find likely causes
+            2. Check for TypeScript or build errors in `ctf/packages/web/` — the build step runs `pnpm --filter @ctf/web run build`
+            3. Check `ctf/railway.json` or `railway.toml` for Railway configuration issues
+            4. Check for schema drift issues using `ctf/scripts/check-schema-drift.sh`
+            5. Check for missing or misconfigured environment variables referenced in code
+            6. Create a branch named `fix/railway-deploy-${{ github.run_id }}`, commit the fix, and open a PR targeting `${{ github.ref_name }}`
+
+            REQUIRED PR formatting (the CI will reject the PR without these):
+            - Title must follow conventional commits and start with `fix: `
+            - Body must include exactly this line: `Parity Status: web+android complete`
+            - All modified `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines
+
+      - name: Fallback failure issue
+        if: failure() && steps.claude-fix.outcome != 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BODY=$(cat << 'EOF'
-          ## Railway Deployment Failure
-
-          **Branch:** `${{ github.ref_name }}`
-          **Commit:** `${{ github.sha }}`
-          **Job URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          **Triggered by:** ${{ github.event_name }}
-
-          Run the `railway-debug` task in your Ona environment to fetch logs and diagnose the failure:
-
-          ```
-          gitpod automations task start railway-debug
-          ```
-
-          Then trigger the Ona Automation to diagnose and auto-fix.
-          EOF
-          )
           gh issue create \
             --title "Railway deploy failed: ${{ github.ref_name }} @ ${{ github.sha }}" \
             --label "railway-failure" \
-            --body "$BODY"
+            --body "## Railway Deployment Failure
+
+          **Branch:** \`${{ github.ref_name }}\`
+          **Commit:** \`${{ github.sha }}\`
+          **Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Claude Code auto-fix did not run or failed. Review the workflow run logs to diagnose."

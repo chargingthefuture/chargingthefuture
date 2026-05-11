@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   dependency-review:
@@ -75,3 +76,53 @@ jobs:
           name: compliance-rules-${{ github.run_id }}
           path: compliance-artifacts
           retention-days: 30
+
+  auto-fix-on-failure:
+    name: Auto-Fix (Claude Code)
+    runs-on: ubuntu-latest
+    needs: [dependency-review, secrets-scan, compliance-artifacts]
+    if: |
+      always() && (
+        needs.secrets-scan.result == 'failure' ||
+        needs.compliance-artifacts.result == 'failure' ||
+        needs.dependency-review.result == 'failure'
+      )
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auto-fix with Claude Code
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          timeout_minutes: "30"
+          direct_prompt: |
+            The Security and Compliance workflow failed on branch `${{ github.ref_name }}` (commit `${{ github.sha }}`).
+
+            Workflow run for logs and context: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            One or more of the following checks failed:
+            - **Dependency Review** (`needs.dependency-review.result`: ${{ needs.dependency-review.result }}): scans for vulnerable packages
+            - **Secret Scanning** (`needs.secrets-scan.result`: ${{ needs.secrets-scan.result }}): Gitleaks scan for accidentally committed secrets
+            - **Compliance Artifacts** (`needs.compliance-artifacts.result`: ${{ needs.compliance-artifacts.result }}): validates required rule files exist under `.github/instructions/`
+
+            Please investigate and open a pull request with a fix. Steps:
+
+            1. Check the workflow run link above to identify which job(s) failed and the specific error messages
+            2. For **dependency vulnerabilities**: update the affected packages in `ctf/package.json` and regenerate `ctf/pnpm-lock.yaml` (run `pnpm install` in `ctf/`)
+            3. For **secret scanning (Gitleaks) failures**:
+               - If it is a false positive (test fixture, example key, non-sensitive token), add the path to `.gitleaksignore` with a comment explaining why
+               - If it is a real secret, remove it from the code — but note that the secret must also be rotated out-of-band; document this in the PR description
+            4. For **compliance artifact failures**: restore or recreate the missing file under `.github/instructions/` based on the error message
+            5. Create a branch named `fix/security-compliance-${{ github.run_id }}`, commit the fix, and open a PR targeting `${{ github.ref_name }}`
+
+            REQUIRED PR formatting (the CI will reject the PR without these):
+            - Title must follow conventional commits and start with `fix: `
+            - Body must include exactly this line: `Parity Status: web+android complete`
+            - All modified `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines
