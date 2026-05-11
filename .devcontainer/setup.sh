@@ -88,6 +88,13 @@ pnpm --dir /workspaces/chargingthefuture/ctf install
 echo "Installing ctf/packages/web dependencies only..."
 pnpm --dir /workspaces/chargingthefuture/ctf/packages/web install
 
+# Build agent MCP server (required for agent discovery in Claude Code, Copilot, ona)
+echo "Building agent MCP server for agent discovery..."
+pnpm --filter "@ctf/agent-mcp-server" build || {
+  echo "Warning: Agent MCP server build failed — agents will not be discoverable.";
+  echo "Retry manually: pnpm --filter '@ctf/agent-mcp-server' build"
+}
+
 # Apply schema.sql and run startup builds only when fast mode is disabled.
 if [ "$FAST_MODE" != "1" ] && [ -n "$DATABASE_URL" ]; then
   echo "Applying ctf/schema.sql to Neon DB at DATABASE_URL..."
