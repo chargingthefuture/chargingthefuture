@@ -13,7 +13,7 @@ const Tab = createBottomTabNavigator<ClicklogTabParamList, 'clicklog'>();
 
 export function ClicklogTabs() {
   return (
-    <Tab.Navigator id="clicklog">
+    <Tab.Navigator>
       <Tab.Screen
         name="Counter"
         component={ClicklogCounter}
