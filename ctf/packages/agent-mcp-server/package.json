@@ -1,0 +1,15 @@
+{
+  "name": "@ctf/agent-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for agent discovery and invocation (universal: Claude Code, GitHub Copilot, ona)",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "mkdir -p dist && cp src/index.js dist/index.js && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  }
+}
