@@ -120,7 +120,7 @@ jobs:
       always() && (
         needs.compliance-artifacts.result == 'failure' ||
         needs.dependency-review.result == 'failure'
-      )
+      ) && needs.secrets-scan.result != 'failure'
     permissions:
       contents: write
       pull-requests: write
@@ -131,7 +131,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Auto-fix with Claude Code
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@476e359e6203e73dad705c8b322e333fabbd7416 # v1.0.119
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -141,19 +141,16 @@ jobs:
 
             Workflow run for logs and context: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            One or more of the following checks failed:
+            One or more of the following non-secret checks failed (secret-scanning failures are routed elsewhere for human review and are NOT included here):
             - **Dependency Review** (`needs.dependency-review.result`: ${{ needs.dependency-review.result }}): scans for vulnerable packages
-            - **Secret Scanning** (`needs.secrets-scan.result`: ${{ needs.secrets-scan.result }}): Gitleaks scan for accidentally committed secrets
             - **Compliance Artifacts** (`needs.compliance-artifacts.result`: ${{ needs.compliance-artifacts.result }}): validates required rule files exist under `.github/instructions/`
 
             Please investigate and open a pull request with a fix. Steps:
 
             1. Check the workflow run link above to identify which job(s) failed and the specific error messages
             2. For **dependency vulnerabilities**: update the affected packages in `ctf/package.json` and regenerate `ctf/pnpm-lock.yaml` (run `pnpm install` in `ctf/`)
-            3. For **secret scanning (Gitleaks) failures**:
-               - If it is a false positive (test fixture, example key, non-sensitive token), add the path to `.gitleaksignore` with a comment explaining why
-               - If it is a real secret, remove it from the code — but note that the secret must also be rotated out-of-band; document this in the PR description
-            4. For **compliance artifact failures**: restore or recreate the missing file under `.github/instructions/` based on the error message
+            3. For **compliance artifact failures**: restore or recreate the missing file under `.github/instructions/` based on the error message
+            4. Do NOT investigate, modify, or comment on any secret-scanning findings — those are handled by a separate manual-review path
             5. Create a branch named `fix/security-compliance-${{ github.run_id }}`, commit the fix, and open a PR targeting `${{ github.ref_name }}`
 
             REQUIRED PR formatting (the CI will reject the PR without these):

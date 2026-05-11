@@ -322,7 +322,7 @@ jobs:
                 per_page: 100,
               });
             } catch (err) {
-              core.error(`Failed to list PR files: ${err}`);
+              core.setFailed(`Failed to list PR files: ${err}`);
               return;
             }
 

@@ -294,7 +294,7 @@ jobs:
 
       - name: Auto-fix with Claude Code
         id: claude-fix
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@476e359e6203e73dad705c8b322e333fabbd7416 # v1.0.119
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -319,7 +319,7 @@ jobs:
             - All modified `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines
 
       - name: Fallback failure issue
-        if: steps.claude-fix.outcome != 'success'
+        if: always() && steps.claude-fix.outcome != 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
