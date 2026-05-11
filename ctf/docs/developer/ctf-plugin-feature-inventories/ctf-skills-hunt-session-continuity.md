@@ -47,8 +47,8 @@ The original spec's "1–140 chars" single text blob is **superseded**. The owne
 ### 2.3 Rare skill detection
 **Live read from Workforce plugin.** Rare = skill where <50% of Workforce profiles claiming that skill have `recruited_state = TRUE`. Computed at round-create time and **snapshotted** into `skills_hunt_rare_skills_lookup` so leaderboards do not shift mid-round if Workforce data moves. Admins can re-snapshot manually if needed.
 
-### 2.4 Submission modal location
-**Primary entry point is the Directory public page**, via a "Submit a community profile" CTA on the pinned reward card. The modal lives in `components/skills-hunt/` and is imported by `components/directory/directory-shell.tsx`. This maximizes the funnel: every visitor browsing the Directory sees the way to contribute. A secondary entry point lives on the Skills Hunt plugin page.
+### 2.4 Submission entry point + Scout tab UX (revised post-design)
+**Hybrid: Directory reward card → Skills Hunt Scout tab.** Replit's design (`design/` commit `dcaaf15`) elevated nomination from a modal to a first-class **Scout tab** inside the Skills Hunt plugin page (`SkillsHunt.tsx`). The Scout tab is now the canonical nomination surface — focused, no modal cramming, full taxonomy accordion + free-text fallback. The Directory public page **keeps the pinned reward card** (owner-confirmed post-design), but its CTA now reads "Nominate a Survivor" (per §2.8 lexicon) and **navigates** the user to the Skills Hunt Scout tab rather than opening a modal in place. Implementation: `components/directory/directory-shell.tsx` renders the reward card with a `next/link` to `/apps/skills-hunt?tab=scout`; the Skills Hunt shell reads the `tab` query param and selects the Scout tab on mount.
 
 ### 2.5 Backfill for existing 60 Directory profiles
 On the first deploy of `unclaimed_handle`, run a one-shot migration that assigns `@community-<6-char-hex>` handles to every existing Directory profile that has `claimed_by_user_id IS NULL`. This makes the @handle URL story consistent on day one.
@@ -60,6 +60,32 @@ The owner approved **Wave 1 + Wave 2 in one PR** (see §6). The PR is opened on 
 The owner has explicitly stated: *"Be diligent at documenting your plan and saving it in the repo so that if a session starts and resumes it does not go off my spec/intentions. There is a ctf/docs folder for a reason and inventory files, and PRs and Issues, document, document, document, it should not take three months for an agent to get this right."*
 
 **Every commit in this rewrite MUST update one of: this file, the feature inventory, the rewrite checklist, the contracts, or the relevant inline comments.** No silent code changes.
+
+### 2.8 Brand voice — "Nominate / Scout" lexicon (post-design lock, 2026-05-11)
+**Adopt "Nominate / Scout / Scouting" everywhere.** Replit's design commit `e8f4e2d` reframed Skills Hunt as gamified scouting. The literal title "Submit a Community Generated Profile" is **retired** in favor of "Nominate a Survivor" / "Submit Nomination." The verb is "scout" or "nominate"; the noun for a player is "scout"; a scout's submission is a "nomination" or "find" (singular) / "finds" (plural). Apply to:
+- User-facing UI copy (forms, buttons, tooltips, helper text, empty/error states).
+- In-app notifications and notification-center entries.
+- Admin panel labels (e.g. "Pending Nominations" not "Pending Submissions").
+- Audit-log human-readable strings.
+- Brand-voice lexicon at `ctf/docs/BRAND_VOICE_LEXICON.md` should add the terms.
+
+**Backend identifiers do NOT rename.** Database columns, table names (`skills_hunt_submissions`), command names (`skills-hunt.submission.create`), TypeScript types (`SkillsHuntSubmission`), and HTTP routes (`POST /api/skills-hunt/rounds/{id}/submissions`) stay as-is. The lexicon shift is presentation-only to avoid a destructive schema/contract rename. Code comments may reference "nomination" colloquially where it aids readability, but identifiers remain the canonical "submission."
+
+### 2.9 Missions — net-new feature from design (post-design lock, 2026-05-11)
+Replit introduced a **Missions** concept (`SkillsHunt.tsx:44-50`): themed sub-goals within a round, each with its own point reward, progress counter, and status (`active` / `locked`). Example: "Find 3 survivors with coding skills" — +150 pts on completion. **Owner locked: implement now as part of Wave 2.**
+
+Implementation contract:
+- New schema table `skills_hunt_missions` (round_id FK, title, description, goal type enum, goal target int, bonus_points int, color hex, status, display_order, created_at, updated_at).
+- New schema table `skills_hunt_mission_progress` for per-user counters (user_id, mission_id, progress_count, completed_at).
+- Mission goal types (v1): `count_skills_in_sector`, `count_rare_skill_finds`, `count_total_accepted`, `count_distinct_sectors`.
+- Admin endpoints: `POST/PUT/DELETE /api/skills-hunt/admin/rounds/{roundId}/missions` to manage missions per round.
+- Player endpoint: `GET /api/skills-hunt/rounds/{roundId}/missions` returns missions + the requesting user's progress on each.
+- Progress recompute fires inside `reviewSubmission` on accept (same hook as leaderboard rebuild, keeps semantics consistent).
+- Mission completion triggers a notification ("Mission complete: +150 pts") and a service-credits ledger entry of the mission's `bonus_points`.
+- Locked missions render greyed-out; v1 implements only the unconditional active+completed states. Locked-with-condition logic is deferred to a follow-up.
+
+### 2.10 Phase 0/1/2 badge — skipped pending Replit clarification (post-design lock, 2026-05-11)
+Replit's design includes "Phase 0 / Phase 1 / Phase 2" badges on Directory profiles (`Directory.tsx:81`). Owner does not yet know what this concept means. Implementation **skips this badge** until owner clarifies intent with Replit. Render-side: Directory profile detail + list **omits** the Phase badge; everything else in the design is implemented. Reconcile with Replit before adding it back; do not invent a definition.
 
 ---
 
@@ -212,8 +238,10 @@ Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the hi
 16. **Reputation system** (per-user dynamic rate limit + >20% rejection gate + ≥80% acceptance raise).
 17. **Soft-delete + GDPR delete endpoint + moderation report flow.**
 18. **GetStream fan-out for all 5 triggers** + notification-center UI on web + mobile.
-19. **Mobile rebuild** — replace `SkillsHunt.tsx` mock with API-driven Rounds, Leaderboard, Submit screens.
+19. **Mobile rebuild** — replace `SkillsHunt.tsx` mock with API-driven Scout, Leaderboard, Missions, My Finds screens (per `MobileSkillsHunt.tsx` + variants in `design/`).
 20. **Bulk admin actions + CSV export + dispute escalation.**
+21. **Missions feature** (post-design lock §2.9): `skills_hunt_missions` + `skills_hunt_mission_progress` schema, admin CRUD endpoints, player GET endpoint, progress recompute on accept, completion notifications + service-credit ledger entry.
+22. **Brand-voice lexicon update** (post-design lock §2.8): apply "Nominate / Scout / Scouting" everywhere in user-facing copy + admin labels + notifications + audit human-readable strings; backend identifiers unchanged.
 
 ### Out of scope until owner says otherwise
 - Tiered prize structure (top 1/2/3 different prizes)
@@ -249,6 +277,12 @@ If something in this file seems wrong or stale, **update this file first, get ow
 ## 9. Change log
 
 - 2026-05-11: Initial creation of this continuity doc on branch `claude/audit-skills-hunt-plugin-6yv3e`. Captures the full audit, locked decisions, roadmap, and resilience instructions in a single source of truth.
+- 2026-05-11 (post-design reconciliation): Replit pushed Skills Hunt designs to `design/` submodule (latest commit `dcaaf15`). Reconciled against the locked decisions per `127-design-pass-gating-rules.mdc` resume protocol. Owner answered four drift questions:
+  1. **Reward card kept on Directory** — §2.4 revised: hybrid model, reward card on Directory navigates to `/apps/skills-hunt?tab=scout` (no in-place modal).
+  2. **Missions implemented now** — added §2.9 with full implementation contract; added Wave 2 items #21.
+  3. **Phase 0/1/2 badge skipped** — added §2.10 to track that the design contains a Phase concept the owner has not yet defined; Directory profile renders everything except this badge until Replit clarifies.
+  4. **"Nominate / Scout" lexicon adopted** — added §2.8; backend identifiers stay as `submission/*`, presentation copy uses scout/nominate/find. Wave 2 item #22 captures the rollout.
+  Submodule pointer bumped to `dcaaf15`.
 
 ## 10. Known environment issues affecting commits on this branch
 
