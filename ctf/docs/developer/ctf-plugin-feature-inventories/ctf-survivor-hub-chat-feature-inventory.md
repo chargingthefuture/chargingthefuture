@@ -78,8 +78,9 @@ Stack decision (confirmed by product owner, 2026-03-23):
 5. Input and send button are fully rendered but wired to local state only — no GetStream channel.
 6. Footer note: "Human-assisted · GetStream powered (coming soon)."
 
-### 1.3 Channels Sidebar (Static Placeholders)
+### 1.3 Channels and DMs Sidebar (Static Placeholders)
 
+#### Channels
 1. **Phase 0 (current)**: Single channel (#general) renders in chat mode for all users (signed-in and non-signed-in).
    - #general links to `/apps/chyme` (community support).
    - No GetStream channel IDs or live unread counts — display-only stub.
@@ -87,7 +88,14 @@ Stack decision (confirmed by product owner, 2026-03-23):
    - Additional channels (#housing-help, #skills-trade, #mutual-aid) will be provisioned per user role/context.
    - Each channel links to its corresponding plugin route.
    - Unread counts and live GetStream integration coming in Phase 1+.
-3. DM list shows placeholder names — no real DM routing (Phase 1+).
+
+#### Direct Messages (Stub)
+1. **Phase 0**: DM list shows placeholder names (Maria G., James T., Amara O.) with "Soon" badge.
+   - Marked as `aria-disabled="true"` — non-interactive stub UI.
+   - Text label: "Direct messages coming in Phase 1".
+   - Design expectation: @comic bot and user DMs functional.
+   - Code reality: No bot management API, no DM routing, no @comic profile.
+   - **DESIGN-CODE MISMATCH**: Design shows interactive DMs and @comic bot; code shows disabled stub only.
 
 ---
 
@@ -139,7 +147,25 @@ Stack decision (confirmed by product owner, 2026-03-23):
 
 ---
 
-## 5) Non-Scope (Explicit Exclusions)
+## 5) Known Implementation Gaps (Phase 0 vs. Design)
+
+The current design mockup shows features not yet implemented in code:
+
+1. **@Comic Bot**: Design shows @comic bot responding in hub chat.
+   - Current code: Static "SH" (Survivor Hub) avatar only; no bot management, bot command routing, or @comic user profile.
+   - Needed for Phase 1: Bot registration API, bot user profiles, bot message routing logic, @comic profile seed data.
+
+2. **Interactive DMs**: Design shows functional DM list with user avatars.
+   - Current code: Disabled stub UI with "Coming in Phase 1" label; no DM routing or user profiles in context.
+   - Needed for Phase 1: GetStream DM channel provisioning, DM participant list fetch, DM message history.
+
+3. **Design-Code Alignment Action**: Design file must be updated to reflect Phase 0 stubs before design agent proceeds.
+   - Remove @comic bot from Phase 0 mockup OR create Phase 1 mockup showing bot integration.
+   - Remove functional DM interactions from Phase 0 mockup OR move to Phase 1 design.
+
+---
+
+## 6) Non-Scope (Explicit Exclusions)
 
 1. Generic standalone chat product — the chat surface is always framed in plugin context (Chyme chat) or
    as the Survivor Hub routing assistant, not as a general messaging platform.
