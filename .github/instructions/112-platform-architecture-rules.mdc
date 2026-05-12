@@ -11,11 +11,37 @@ Define the structural rules for the rewrite product so plugin messaging and comm
 - Enforce explicit ownership for each bounded context and plugin.
 - Use plugin-scoped feature naming (for example, `chyme-chat`) instead of ambiguous global names like `chat`.
 
+## Cross-Plugin Boundary (No Plugin-to-Plugin Runtime Dependency)
+
+A plugin must be operable, deployable, and reviewable without any other plugin. Plugins coordinate only through shared, plugin-neutral primitives.
+
+Mandatory:
+
+- **No source imports across plugin libraries.** Plugin A code must not import from another plugin's module tree (for example, `ctf/packages/web/lib/<other>/...`, `ctf/packages/web/components/<other>/...`, `ctf/packages/mobile/src/features/<other>/...`). Importing another plugin's type definitions is also prohibited.
+- **No cross-plugin API calls.** Plugin A's UI or server code must not fetch another plugin's API routes (for example, the Hub plugin must not call `/api/chyme/*`). Each plugin owns its own `/api/<plugin-slug>/*` namespace.
+- **No cross-plugin database access.** Plugin A must not read or write another plugin's tables. If two plugins genuinely need a shared concept, promote it to a plugin-neutral table owned by the platform, not by one plugin.
+- **No cross-plugin third-party scope sharing.** Tokens, channel IDs, user IDs, and other third-party (GetStream, Sentry, etc.) resources are scoped per plugin. See [107-integration-stack-rules.mdc](107-integration-stack-rules.mdc).
+- **Shared, plugin-neutral primitives only.** Plugins may consume:
+  - `packages/shared` library primitives (per [102-shared-boundary-rules.mdc](102-shared-boundary-rules.mdc)).
+  - Platform-level tables and APIs (auth, plugin registry, GDP snapshots, etc.) — these are not owned by any single plugin.
+  - Documented contract artifacts under `ctf/docs/contracts/`.
+
+Allowed:
+
+- A plugin may render a deep link to another plugin's route (for example, the Hub Apps grid linking to `/apps/lighthouse`). Navigation is not a runtime dependency.
+- A plugin may consume the platform-owned plugin registry to enumerate available plugins. The registry is plugin-neutral metadata, not another plugin's surface.
+
+Prohibited:
+
+- "Temporarily" borrowing another plugin's API routes, lib modules, or types while the receiving plugin's own surface is being built. If the surface is not built, the work is incomplete — do not bridge with a cross-plugin dependency.
+- Tests that rely on another plugin's data fixtures or seed scripts.
+
 ## Integration Rules
 - No plugin command path may bypass core messaging policy middleware.
-- No plugin may access another plugin's sensitive storage without an approved shared contract.
+- No plugin may access another plugin's sensitive storage without an approved shared contract; in practice, "approved shared contract" means the data has been promoted to a platform-owned, plugin-neutral surface.
 - Introduce adapters at boundaries when integrating legacy concepts.
 
 ## Release Blockers
 - New plugin capability path that is not represented as a plugin command contract.
 - Feature architecture that bypasses centralized auth, policy, or audit hooks.
+- Any cross-plugin import, API call, database read/write, or third-party scope sharing — this is a release blocker even if functionally correct.

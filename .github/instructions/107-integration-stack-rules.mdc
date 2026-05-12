@@ -9,10 +9,32 @@ Define safe integration contracts for Clerk auth, GetStream chat, and Sentry obs
 - Enforce server-side authorization checks independent of client claims.
 
 ## GetStream Rules
-- Use shared client wrappers for Stream token issuance and channel operations.
+
+### Provider Model
+- GetStream is a shared third-party SaaS dependency, not a CTF plugin.
+- Plugins may or may not use GetStream. Plugins that do not use GetStream must not be modified to consume it indirectly through another plugin.
+
+### Per-Plugin Scoping (Mandatory)
+- Every plugin that uses GetStream scopes its own resources:
+  - Its own GetStream channel IDs (no shared channel namespace across plugins).
+  - Its own GetStream user IDs (each plugin's adapter constructs a plugin-prefixed Stream user identifier from the canonical auth-provider user).
+  - Its own token issuance endpoint and its own server-side adapter call site.
+- Plugins must not reuse another plugin's Stream channels, user IDs, or tokens. A Stream token minted for plugin A is not valid for plugin B by design.
+- Plugins must not pass Stream credentials between each other at runtime, on the client or on the server.
+
+### Shared Wrappers
+- Use shared client wrappers in `ctf/packages/shared` for raw Stream token issuance and channel operations. Shared wrappers are plugin-neutral primitives.
+- Per-plugin scoping (user-id prefix, channel-id namespace, capacity/membership rules) lives in the plugin's own server-side adapter on top of the shared wrappers.
 - Gate plugin command operations with policy checks before Stream-side actions.
+
+### Audit and Capacity
 - Log Stream access purpose and command context in audit events.
 - Enforce Maker-tier capacity controls and fallback behavior from [110-stream-maker-tier-rules.mdc](110-stream-maker-tier-rules.mdc).
+
+### Cross-Plugin Prohibition
+- A plugin must not import another plugin's Stream wrappers, types, or adapter modules.
+- A plugin must not call another plugin's Stream-backed API routes (for example, the Hub plugin must not call `/api/chyme/join` to obtain its own Stream credentials).
+- See [112-platform-architecture-rules.mdc](112-platform-architecture-rules.mdc) for the canonical cross-plugin boundary rule.
 
 ## Sentry Rules
 - Sentry is required for error monitoring across web and mobile.
@@ -22,3 +44,4 @@ Define safe integration contracts for Clerk auth, GetStream chat, and Sentry obs
 ## Prohibited
 - Calling third-party SDKs directly from feature modules when shared wrappers exist.
 - Enabling verbose data capture modes in production without risk approval.
+- Sharing GetStream channel IDs, user IDs, or tokens across plugins.
