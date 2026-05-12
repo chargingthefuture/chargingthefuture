@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
+import { ensureMutationCsrf, requireSkillsHuntReadAccess, requireSkillsHuntSubmitAccess } from '../../../_lib';
+import { isReservedUsername } from 'lib/auth/username-policy';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
@@ -45,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
-  const gate = await requireSkillsHuntReadAccess();
+  const gate = await requireSkillsHuntSubmitAccess();
   if (!gate.allowed) {
     return gate.response;
   }
@@ -53,6 +54,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  if (isReservedUsername(gate.auth.username)) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.reservedUsername, message: 'Your username starts with a reserved Skills Hunt prefix. Pick another to continue.' },
+      { status: 403 },
+    );
   }
 
   const { roundId } = await params;

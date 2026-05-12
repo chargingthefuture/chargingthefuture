@@ -44,7 +44,8 @@
 - [ ] **Wave 1 updates:**
   - [ ] URL HEAD-check helper (`lib/skills-hunt/url-validation.ts`, 5s timeout).
   - [ ] Persist `url_validation_result` and auto-reject on `dead`.
-  - [ ] Flip `requireUsername: true` on submit endpoint.
+  - [x] Flip `requireUsername: true` on submit endpoint.
+    - New `requireSkillsHuntSubmitAccess` gate in `app/api/skills-hunt/_lib.ts`; submission POST now uses it. Read endpoints remain on the username-optional gate.
   - [ ] Taxonomy-driven skills parsing (`parseSkillsSubmissionInput`): split matched vs `proposed_skills`.
   - [ ] Align display name (2–100, alphanumeric+spaces) and bio (max 280) limits with spec.
 
@@ -118,7 +119,8 @@
   - [ ] Admin escalation queue (`GET /api/skills-hunt/admin/reports`).
   - [ ] Resolution actions: dismiss, archive profile, hard-delete.
 - [ ] **Wave 1 — Clerk reserved-prefix policy:**
-  - [ ] `lib/auth/username-policy.ts` rejects usernames starting with `community-`.
+  - [x] `lib/auth/username-policy.ts` rejects usernames starting with `community-`.
+    - Exports `evaluateUsernamePolicy` and `isReservedUsername`. Submissions POST returns `SKILLS_HUNT_RESERVED_USERNAME` (403) when caller's Clerk username matches a reserved prefix.
   - [ ] Document Clerk dashboard configuration in `123-environment-configuration-rules.mdc`.
 
 ## Phase 7 — Validation, Seeds, and Release Gates
