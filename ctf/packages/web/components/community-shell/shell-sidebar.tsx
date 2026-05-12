@@ -16,7 +16,7 @@ type ShellSidebarProps = {
 };
 
 const STATIC_CHANNELS = [
-  { name: 'community-support', href: '/apps/chyme' },
+  { name: 'general', href: '/apps/chyme' },
 ];
 
 const STATIC_DMS = [

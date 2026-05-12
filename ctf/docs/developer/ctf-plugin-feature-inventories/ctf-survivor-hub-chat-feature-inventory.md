@@ -80,10 +80,14 @@ Stack decision (confirmed by product owner, 2026-03-23):
 
 ### 1.3 Channels Sidebar (Static Placeholders)
 
-1. Channel list (#general, #housing-help, #skills-trade, #mutual-aid) renders in chat mode.
-2. Each channel links to the most relevant plugin route as a placeholder.
-3. No GetStream channel IDs or live unread counts — these are display-only stub values.
-4. DM list shows placeholder names — no real DM routing.
+1. **Phase 0 (current)**: Single channel (#general) renders in chat mode for all users (signed-in and non-signed-in).
+   - #general links to `/apps/chyme` (community support).
+   - No GetStream channel IDs or live unread counts — display-only stub.
+2. **Phase 1+ (planned)**: Multiple channels will become available for authenticated users:
+   - Additional channels (#housing-help, #skills-trade, #mutual-aid) will be provisioned per user role/context.
+   - Each channel links to its corresponding plugin route.
+   - Unread counts and live GetStream integration coming in Phase 1+.
+3. DM list shows placeholder names — no real DM routing (Phase 1+).
 
 ---
 
