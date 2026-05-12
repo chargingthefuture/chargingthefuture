@@ -67,7 +67,7 @@ export function ShellSidebar({
                 key={dm.name}
                 className={`${styles.sidebarDm} ${styles.sidebarDmDisabled}`}
                 aria-disabled="true"
-                title="Direct messages are coming in Phase 1"
+                title="Direct messages are not yet wired"
               >
                 <span className={styles.sidebarDmDot} aria-hidden="true" />
                 <span className={styles.sidebarDmName}>{dm.name}</span>
