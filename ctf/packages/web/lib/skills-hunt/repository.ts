@@ -723,27 +723,73 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
     [roundId],
   );
 
+  // Spec tie-break: score DESC, first_match_count DESC, last_submission_at ASC.
+  // first_match_count = accepted submissions where firstMatchBonus > 0.
+  // last_submission_at = MAX(created_at) across all statuses, drives "ties go
+  // to the scout who showed up earliest".
+  // pending_points = a rough preview of points-in-flight if every pending
+  // submission accepts at SPEC matchBase (+10). Cheap lower bound; UI shows
+  // it as "+N pending" next to the score.
   const individualRows = await client.query<{
     submitter_user_id: string;
     submitter_username: string | null;
     score: string;
     accepted_count: string;
     rare_skill_bonus: string;
+    first_match_count: string;
+    pending_points: string;
+    last_submission_at: Date | null;
   }>(
     `
+      WITH accepted AS (
+        SELECT
+          submitter_user_id,
+          MAX(submitter_username) AS submitter_username,
+          SUM(points_awarded)::text AS score,
+          COUNT(*)::text AS accepted_count,
+          SUM(COALESCE((score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
+          COUNT(*) FILTER (
+            WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0
+          )::text AS first_match_count
+        FROM skills_hunt_submissions
+        WHERE round_id = $1::uuid AND status = 'accepted'
+        GROUP BY submitter_user_id
+      ),
+      pending AS (
+        SELECT
+          submitter_user_id,
+          (COUNT(*) * $2)::text AS pending_points
+        FROM skills_hunt_submissions
+        WHERE round_id = $1::uuid AND status = 'pending'
+        GROUP BY submitter_user_id
+      ),
+      activity AS (
+        SELECT
+          submitter_user_id,
+          MAX(created_at) AS last_submission_at
+        FROM skills_hunt_submissions
+        WHERE round_id = $1::uuid
+        GROUP BY submitter_user_id
+      )
       SELECT
-        submitter_user_id,
-        MAX(submitter_username) AS submitter_username,
-        SUM(points_awarded)::text AS score,
-        COUNT(*)::text AS accepted_count,
-        SUM(COALESCE((score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus
-      FROM skills_hunt_submissions
-      WHERE round_id = $1::uuid
-        AND status = 'accepted'
-      GROUP BY submitter_user_id
-      ORDER BY SUM(points_awarded) DESC, COUNT(*) DESC, submitter_user_id ASC
+        a.submitter_user_id,
+        a.submitter_username,
+        a.score,
+        a.accepted_count,
+        a.rare_skill_bonus,
+        a.first_match_count,
+        COALESCE(p.pending_points, '0') AS pending_points,
+        act.last_submission_at
+      FROM accepted a
+      LEFT JOIN pending p ON p.submitter_user_id = a.submitter_user_id
+      LEFT JOIN activity act ON act.submitter_user_id = a.submitter_user_id
+      ORDER BY
+        a.score::int DESC,
+        a.first_match_count::int DESC,
+        act.last_submission_at ASC NULLS LAST,
+        a.submitter_user_id ASC
     `,
-    [roundId],
+    [roundId, SKILLS_HUNT_SCORE_WEIGHTS_SPEC.matchBase],
   );
 
   for (let index = 0; index < individualRows.rows.length; index += 1) {
@@ -751,9 +797,11 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
     await client.query(
       `
         INSERT INTO skills_hunt_leaderboard
-          (round_id, mode, rank, score, accepted_count, rare_skill_bonus, user_id, username_snapshot, team_key, metadata)
+          (round_id, mode, rank, score, accepted_count, rare_skill_bonus,
+           first_match_count, pending_points, last_submission_at,
+           user_id, username_snapshot, team_key, metadata)
         VALUES
-          ($1::uuid, 'individual', $2, $3, $4, $5, $6, $7, NULL, '{}'::jsonb)
+          ($1::uuid, 'individual', $2, $3, $4, $5, $6, $7, $8::timestamptz, $9, $10, NULL, '{}'::jsonb)
       `,
       [
         roundId,
@@ -761,6 +809,9 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
         Number.parseInt(row.score, 10),
         Number.parseInt(row.accepted_count, 10),
         Number.parseInt(row.rare_skill_bonus, 10),
+        Number.parseInt(row.first_match_count, 10),
+        Number.parseInt(row.pending_points, 10),
+        row.last_submission_at,
         row.submitter_user_id,
         row.submitter_username,
       ],
@@ -772,19 +823,28 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
     score: string;
     accepted_count: string;
     rare_skill_bonus: string;
+    first_match_count: string;
+    last_submission_at: Date | null;
   }>(
     `
       SELECT
         LOWER(TRIM(COALESCE(profession.value, 'unspecified'))) AS team_key,
         SUM(s.points_awarded)::text AS score,
         COUNT(*)::text AS accepted_count,
-        SUM(COALESCE((s.score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus
+        SUM(COALESCE((s.score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
+        COUNT(*) FILTER (
+          WHERE COALESCE((s.score_breakdown->>'firstMatchBonus')::int, 0) > 0
+        )::text AS first_match_count,
+        MAX(s.created_at) AS last_submission_at
       FROM skills_hunt_submissions s
       LEFT JOIN LATERAL jsonb_array_elements_text(s.claimed_professions) profession(value) ON TRUE
-      WHERE s.round_id = $1::uuid
-        AND s.status = 'accepted'
+      WHERE s.round_id = $1::uuid AND s.status = 'accepted'
       GROUP BY LOWER(TRIM(COALESCE(profession.value, 'unspecified')))
-      ORDER BY SUM(s.points_awarded) DESC, COUNT(*) DESC, team_key ASC
+      ORDER BY
+        SUM(s.points_awarded) DESC,
+        COUNT(*) FILTER (WHERE COALESCE((s.score_breakdown->>'firstMatchBonus')::int, 0) > 0) DESC,
+        MAX(s.created_at) ASC NULLS LAST,
+        team_key ASC
     `,
     [roundId],
   );
@@ -794,9 +854,11 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
     await client.query(
       `
         INSERT INTO skills_hunt_leaderboard
-          (round_id, mode, rank, score, accepted_count, rare_skill_bonus, user_id, username_snapshot, team_key, metadata)
+          (round_id, mode, rank, score, accepted_count, rare_skill_bonus,
+           first_match_count, pending_points, last_submission_at,
+           user_id, username_snapshot, team_key, metadata)
         VALUES
-          ($1::uuid, 'team', $2, $3, $4, $5, NULL, NULL, $6, '{}'::jsonb)
+          ($1::uuid, 'team', $2, $3, $4, $5, $6, 0, $7::timestamptz, NULL, NULL, $8, '{}'::jsonb)
       `,
       [
         roundId,
@@ -804,6 +866,8 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
         Number.parseInt(row.score, 10),
         Number.parseInt(row.accepted_count, 10),
         Number.parseInt(row.rare_skill_bonus, 10),
+        Number.parseInt(row.first_match_count, 10),
+        row.last_submission_at,
         row.team_key,
       ],
     );
@@ -1468,19 +1532,150 @@ export async function reviewSubmission(
   });
 }
 
-export async function listLeaderboard(roundId: string, mode: SkillsHuntLeaderboardMode): Promise<SkillsHuntLeaderboardItem[]> {
+const LEADERBOARD_TOP_CAP = 100;
+
+const LEADERBOARD_SELECT = `
+  rank, score, accepted_count, rare_skill_bonus,
+  first_match_count, pending_points, last_submission_at,
+  user_id, username_snapshot, team_key, metadata
+`;
+
+export async function listLeaderboard(
+  roundId: string,
+  mode: SkillsHuntLeaderboardMode,
+  viewerUserId: string | null = null,
+): Promise<{ items: SkillsHuntLeaderboardItem[]; currentUserEntry: SkillsHuntLeaderboardItem | null; totalCount: number }> {
   const rows = await queryDb<SkillsHuntLeaderboardRow>(
     `
-      SELECT rank, score, accepted_count, rare_skill_bonus, user_id, username_snapshot, team_key, metadata
+      SELECT ${LEADERBOARD_SELECT}
       FROM skills_hunt_leaderboard
-      WHERE round_id = $1::uuid
-        AND mode = $2
+      WHERE round_id = $1::uuid AND mode = $2
       ORDER BY rank ASC
+      LIMIT $3
     `,
-    [roundId, mode],
+    [roundId, mode, LEADERBOARD_TOP_CAP],
   );
 
-  return rows.rows.map(mapLeaderboard);
+  const totalResult = await queryDb<CountRow>(
+    `SELECT COUNT(*)::text AS total FROM skills_hunt_leaderboard WHERE round_id = $1::uuid AND mode = $2`,
+    [roundId, mode],
+  );
+  const totalCount = Number.parseInt(totalResult.rows[0]?.total ?? '0', 10);
+
+  let currentUserEntry: SkillsHuntLeaderboardItem | null = null;
+  if (viewerUserId && mode === 'individual') {
+    const inTopCap = rows.rows.find((r) => r.user_id === viewerUserId);
+    if (inTopCap) {
+      currentUserEntry = mapLeaderboard(inTopCap);
+    } else {
+      const userRow = await queryDb<SkillsHuntLeaderboardRow>(
+        `
+          SELECT ${LEADERBOARD_SELECT}
+          FROM skills_hunt_leaderboard
+          WHERE round_id = $1::uuid AND mode = 'individual' AND user_id = $2
+          LIMIT 1
+        `,
+        [roundId, viewerUserId],
+      );
+      if (userRow.rows.length > 0) currentUserEntry = mapLeaderboard(userRow.rows[0]);
+    }
+  }
+
+  return { items: rows.rows.map(mapLeaderboard), currentUserEntry, totalCount };
+}
+
+// All-time view: aggregates accepted submissions across every round. Read-only
+// derivation — no rows are materialized into skills_hunt_leaderboard with a
+// sentinel round_id (cheaper to recompute on read at this scale).
+export async function listAllTimeLeaderboard(
+  mode: SkillsHuntLeaderboardMode,
+  viewerUserId: string | null = null,
+): Promise<{ items: SkillsHuntLeaderboardItem[]; currentUserEntry: SkillsHuntLeaderboardItem | null; totalCount: number }> {
+  const orderTail = `
+    ORDER BY
+      score::int DESC,
+      first_match_count::int DESC,
+      last_submission_at ASC NULLS LAST,
+      identity ASC
+  `;
+
+  type AggRow = {
+    identity: string;
+    submitter_username: string | null;
+    score: string;
+    accepted_count: string;
+    rare_skill_bonus: string;
+    first_match_count: string;
+    last_submission_at: Date | null;
+  };
+
+  const sqlIndividual = `
+    WITH agg AS (
+      SELECT
+        submitter_user_id AS identity,
+        MAX(submitter_username) AS submitter_username,
+        SUM(points_awarded)::text AS score,
+        COUNT(*)::text AS accepted_count,
+        SUM(COALESCE((score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
+        COUNT(*) FILTER (
+          WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0
+        )::text AS first_match_count,
+        MAX(created_at) AS last_submission_at
+      FROM skills_hunt_submissions
+      WHERE status = 'accepted'
+      GROUP BY submitter_user_id
+    )
+    SELECT * FROM agg
+    ${orderTail}
+  `;
+
+  const sqlTeam = `
+    WITH agg AS (
+      SELECT
+        LOWER(TRIM(COALESCE(profession.value, 'unspecified'))) AS identity,
+        NULL::text AS submitter_username,
+        SUM(s.points_awarded)::text AS score,
+        COUNT(*)::text AS accepted_count,
+        SUM(COALESCE((s.score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
+        COUNT(*) FILTER (
+          WHERE COALESCE((s.score_breakdown->>'firstMatchBonus')::int, 0) > 0
+        )::text AS first_match_count,
+        MAX(s.created_at) AS last_submission_at
+      FROM skills_hunt_submissions s
+      LEFT JOIN LATERAL jsonb_array_elements_text(s.claimed_professions) profession(value) ON TRUE
+      WHERE s.status = 'accepted'
+      GROUP BY LOWER(TRIM(COALESCE(profession.value, 'unspecified')))
+    )
+    SELECT * FROM agg
+    ${orderTail}
+  `;
+
+  const result = await queryDb<AggRow>(mode === 'team' ? sqlTeam : sqlIndividual, []);
+  const totalCount = result.rows.length;
+
+  const toItem = (row: AggRow, rank: number): SkillsHuntLeaderboardItem => ({
+    rank,
+    score: Number.parseInt(row.score, 10),
+    acceptedCount: Number.parseInt(row.accepted_count, 10),
+    firstMatchCount: Number.parseInt(row.first_match_count, 10),
+    pendingPoints: 0,
+    rareSkillBonus: Number.parseInt(row.rare_skill_bonus, 10),
+    userId: mode === 'individual' ? row.identity : null,
+    usernameSnapshot: row.submitter_username,
+    teamKey: mode === 'team' ? row.identity : null,
+    lastSubmissionAtIso: row.last_submission_at ? toIso(row.last_submission_at) : null,
+    metadata: {},
+  });
+
+  const items = result.rows.slice(0, LEADERBOARD_TOP_CAP).map((row, index) => toItem(row, index + 1));
+
+  let currentUserEntry: SkillsHuntLeaderboardItem | null = null;
+  if (viewerUserId && mode === 'individual') {
+    const userIndex = result.rows.findIndex((r) => r.identity === viewerUserId);
+    if (userIndex >= 0) currentUserEntry = toItem(result.rows[userIndex], userIndex + 1);
+  }
+
+  return { items, currentUserEntry, totalCount };
 }
 
 export async function listAchievements(userId: string): Promise<SkillsHuntAchievement[]> {

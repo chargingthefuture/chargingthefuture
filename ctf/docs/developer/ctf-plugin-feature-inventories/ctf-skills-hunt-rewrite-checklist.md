@@ -74,11 +74,11 @@
 - [x] Implement baseline leaderboard rebuild and retrieval (individual + team mode columns).
 - [x] Implement achievements (3 generic count-based codes).
 - [x] Implement baseline feature reward card read/update endpoints.
-- [ ] **Wave 2 — leaderboard improvements:**
-  - [ ] Tie-break order: `score DESC, first_match_count DESC, last_submission_at ASC`.
-  - [ ] Top-100 cap plus current-user rank attached to response.
-  - [ ] Team mode aggregation by claimed profession.
-  - [ ] All-time view alongside per-round.
+- [x] **Wave 2 — leaderboard improvements:** `rebuildLeaderboard` writes `first_match_count`, `pending_points`, `last_submission_at`. `listLeaderboard` returns `{ items, currentUserEntry, totalCount }` with top-100 cap; new `listAllTimeLeaderboard` computes the cross-round view on-demand. Leaderboard route accepts `?range=all-time`. Shell falls back to `serverCurrentUserEntry` when the viewer is outside the top-100.
+  - [x] Tie-break order: `score DESC, first_match_count DESC, last_submission_at ASC`.
+  - [x] Top-100 cap plus current-user rank attached to response.
+  - [x] Team mode aggregation by claimed profession.
+  - [x] All-time view alongside per-round (`GET /api/skills-hunt/rounds/{roundId}/leaderboard?range=all-time`).
   - [ ] 30-second polling on client. **GetStream is explicitly out of scope** for Skills Hunt (continuity §2.11) — polling is the locked transport, not a stepping stone.
 - [x] **Wave 2 — 5 named badges (replace 3 generic):** legacy `accepted-first/-five/-ten` awards removed from `reviewSubmission`; new `awardNamedBadges()` helper now drives badge logic. Achievements record `round_id` for the Wave 2 per-round badge refactor; UNIQUE `(user_id, code)` constraint preserved per Phase 1 schema notes.
   - [x] `first-finder` — fires when this submission's `score_breakdown.firstMatchBonus > 0` (the scoring engine awards the bonus only to the first accepted submission for a normalized Quora URL in a round).

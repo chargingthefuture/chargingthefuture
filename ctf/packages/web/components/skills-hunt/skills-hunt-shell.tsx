@@ -84,6 +84,7 @@ export function SkillsHuntShell({
   const [rounds, setRounds] = useState<SkillsHuntRound[]>([]);
   const [activeRound, setActiveRound] = useState<SkillsHuntRound | null>(null);
   const [leaderboard, setLeaderboard] = useState<SkillsHuntLeaderboardItem[]>([]);
+  const [serverCurrentUserEntry, setServerCurrentUserEntry] = useState<SkillsHuntLeaderboardItem | null>(null);
   const [achievements, setAchievements] = useState<SkillsHuntAchievement[]>([]);
   const [myFinds, setMyFinds] = useState<SkillsHuntSubmission[]>([]);
   const [loadingRounds, setLoadingRounds] = useState(true);
@@ -154,8 +155,9 @@ export function SkillsHuntShell({
       try {
         const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/leaderboard`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
-        const data = await res.json() as { items: SkillsHuntLeaderboardItem[] };
+        const data = await res.json() as { items: SkillsHuntLeaderboardItem[]; currentUserEntry?: SkillsHuntLeaderboardItem | null };
         setLeaderboard(data.items);
+        setServerCurrentUserEntry(data.currentUserEntry ?? null);
       } finally {
         if (!controller.signal.aborted) setLoadingLeaderboard(false);
       }
@@ -231,7 +233,8 @@ export function SkillsHuntShell({
     setSubmitted(false); setSubmitError(null);
   }
 
-  const currentUserEntry = leaderboard.find(item => item.userId === userId) ?? null;
+  // Prefer in-list entry (top-100), fall back to server-provided entry for users outside the cap.
+  const currentUserEntry = leaderboard.find(item => item.userId === userId) ?? serverCurrentUserEntry;
   const noActiveRound = rounds.length === 0;
 
   if (loadingRounds) {
