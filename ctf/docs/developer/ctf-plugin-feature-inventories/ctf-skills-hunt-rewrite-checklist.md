@@ -83,7 +83,8 @@
   - [ ] `rare-talent-scout` — 3+ accepted submissions tagged with rare skills.
   - [ ] `quality-contributor` — 100% acceptance rate with 5+ submissions.
   - [ ] `leaderboard-champion` — finished top-3 on a round's final standings.
-- [ ] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the submission modal.
+- [x] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the Skills Hunt Scout tab.
+  - Implemented in `components/directory/directory-shell.tsx`. Fetches active card from `/api/skills-hunt/feature-reward-card`; falls back to a default card linking to `/apps/skills-hunt?tab=scout` when the API has no row configured. Purple `#A855F7` palette per rule 126.
 - [ ] **Wave 2 — GetStream fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked).
 - [ ] **Wave 2 — notification center UI** (web + mobile) with unread badge.
 
