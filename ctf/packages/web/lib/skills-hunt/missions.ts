@@ -10,7 +10,9 @@
 // Does NOT own (deferred to follow-up commits):
 //   - Admin CRUD endpoints (POST/PUT/DELETE /api/skills-hunt/admin/rounds/{id}/missions)
 //   - Player-facing GET /api/skills-hunt/rounds/{id}/missions route handler
-//   - GetStream notification fan-out on mission completion
+//   - In-DB notification fan-out on mission completion (writes to
+//     skills_hunt_notifications; GetStream is out of scope per
+//     continuity doc §2.11)
 //   - Service-credit ledger entry on completion
 //
 // Recompute strategy: when reviewSubmission accepts a submission, the

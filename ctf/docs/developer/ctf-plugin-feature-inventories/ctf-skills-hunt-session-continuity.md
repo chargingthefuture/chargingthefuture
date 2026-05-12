@@ -87,6 +87,19 @@ Implementation contract:
 ### 2.10 Phase 0/1/2 badge — skipped pending Replit clarification (post-design lock, 2026-05-11)
 Replit's design includes "Phase 0 / Phase 1 / Phase 2" badges on Directory profiles (`Directory.tsx:81`). Owner does not yet know what this concept means. Implementation **skips this badge** until owner clarifies intent with Replit. Render-side: Directory profile detail + list **omits** the Phase badge; everything else in the design is implemented. Reconcile with Replit before adding it back; do not invent a definition.
 
+### 2.11 GetStream is out of scope for Skills Hunt (2026-05-12)
+Replit's design includes a "GetStream ⚡" badge in the Skills Hunt header alongside other plugins (Chyme, Lighthouse, TrustTransport, etc.). That badge is **decorative consistency only** — Skills Hunt does NOT integrate GetStream, today or in Wave 2.
+
+**Rationale.** Skills Hunt has no chat, no video, no multi-party real-time collab. The notification surface is a one-way firehose ("your submission was accepted", "leaderboard moved", "achievement unlocked"). For that, the in-DB notification table (`skills_hunt_notifications`) + 30s client polling is the right primitive. Adopting GetStream would pay an integration tax for no functional gain over polling at this scale.
+
+**What this means concretely.**
+- Wave 2 notification fan-out (5 triggers — accept, reject, leaderboard-top10, round-ending-24h, achievement-unlocked) writes to `skills_hunt_notifications` only. No GetStream activity-feed emits.
+- Web/mobile notification center reads via the existing `GET /api/skills-hunt/notifications` endpoint, polled at 30s.
+- Skills Hunt shell **does not render** the "GetStream ⚡" badge — it was already removed in the Wave 1 shell rebuild.
+- GetStream remains in scope for chat/video plugins (Chyme, Lighthouse, TrustTransport, SocketRelay, Foundation, Feed). Their `lib/<plugin>/stream.ts` modules are untouched.
+
+**Reversibility.** If engagement metrics later show users want sub-30s leaderboard ticking or push notifications, add GetStream then — the existing `skills_hunt_notifications` rows make it straightforward to fan out into a feed.
+
 ---
 
 ## 3. Audit findings (2026-05-11 snapshot)
@@ -133,8 +146,8 @@ The plugin was already partially implemented when this rewrite started. The audi
 - No top-100 + your-rank cap on response.
 
 **Notifications:**
-- GetStream.io is integrated in the repo (`lib/lighthouse/stream.ts`, `lib/shared/stream-feeds.ts`) but Skills Hunt does NOT fan out through it — only in-DB notifications.
-- Only `submission-accepted` and `submission-rejected` are emitted. Missing: leaderboard-update (top 10), round-ending-soon (24h), achievement-unlocked.
+- Skills Hunt uses in-DB notifications + 30s polling only. GetStream is **explicitly out of scope** for this plugin (decision 2026-05-12, see §2.11). Skills Hunt has no chat/video/multi-party real-time needs that justify the dependency; it produces a one-way "your submission was accepted" firehose that the existing `/api/skills-hunt/notifications` polling endpoint serves adequately.
+- Only `submission-accepted` and `submission-rejected` are emitted today. Missing: leaderboard-update (top 10), round-ending-soon (24h), achievement-unlocked — these will be added as in-DB notification rows in Wave 2.
 - No notification-center UI on web or mobile.
 
 **Directory integration:**
@@ -222,7 +235,7 @@ Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the hi
    - Add `parseSkillsSubmissionInput()` that splits taxonomy-matched vs proposed skills.
 3. **URL HEAD-check helper** in `lib/skills-hunt/url-validation.ts` with 5s timeout.
 4. **Workforce live rare-skill helper** in `lib/workforce/rare-skill-snapshot.ts`.
-5. **GetStream notification fan-out helper** in `lib/skills-hunt/notifications.ts`.
+5. **In-DB notification helper** in `lib/skills-hunt/notifications.ts` — inserts rows for the 5 trigger events (accept, reject, leaderboard-top10, round-ending-24h, achievement-unlocked) into `skills_hunt_notifications`. Polled by client at 30s. (GetStream is out of scope — see §2.11.)
 6. **Auth: flip `requireUsername: true`** on submit endpoint + reserved-prefix validator in `lib/auth/username-policy.ts`.
 7. **Submission modal component** at `components/skills-hunt/submission-modal.tsx` with taxonomy multi-select + free-text fallback + client-side validation.
 8. **Reward card on Directory public page** — render the active reward card in `components/directory/directory-shell.tsx` with the "Submit a community profile" CTA that opens the modal.
@@ -237,7 +250,7 @@ Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the hi
 15. **Leaderboard tie-break + first_match_count + team aggregation + all-time + top-100 cap + lightweight polling**.
 16. **Reputation system** (per-user dynamic rate limit + >20% rejection gate + ≥80% acceptance raise).
 17. **Soft-delete + GDPR delete endpoint + moderation report flow.**
-18. **GetStream fan-out for all 5 triggers** + notification-center UI on web + mobile.
+18. **In-DB notification fan-out for all 5 triggers** + notification-center UI on web + mobile. GetStream is out of scope (§2.11).
 19. **Mobile rebuild** — replace `SkillsHunt.tsx` mock with API-driven Scout, Leaderboard, Missions, My Finds screens (per `MobileSkillsHunt.tsx` + variants in `design/`).
 20. **Bulk admin actions + CSV export + dispute escalation.**
 21. **Missions feature** (post-design lock §2.9): `skills_hunt_missions` + `skills_hunt_mission_progress` schema, admin CRUD endpoints, player GET endpoint, progress recompute on accept, completion notifications + service-credit ledger entry.
@@ -254,7 +267,7 @@ Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the hi
 
 These should be resolved before the corresponding Wave 2 work begins.
 
-1. **Leaderboard live updates**: WebSocket or polling? GetStream feeds support real-time push but adds infra cost. Lightweight 30s polling is simpler. **Recommendation:** start with polling; upgrade to WebSocket if engagement metrics justify.
+1. **Leaderboard live updates**: ~~WebSocket or polling?~~ **RESOLVED 2026-05-12 — 30s polling locked.** GetStream feeds are explicitly out of scope (§2.11). Revisit only if engagement metrics show users want sub-30s leaderboard ticking.
 2. **Moderation report flow placement**: report button on every Directory profile, or only on community-generated ones? **Recommendation:** all profiles, but escalation path differs.
 3. **Dispute escalation**: second-admin sign-off, or just a flagged queue the owner reviews personally? **Recommendation:** flagged queue for now; introduce second-admin only if volume justifies.
 4. **CSV export**: ad-hoc download endpoint, or scheduled exports to a storage bucket? **Recommendation:** ad-hoc on-demand endpoint.
@@ -283,6 +296,7 @@ If something in this file seems wrong or stale, **update this file first, get ow
   3. **Phase 0/1/2 badge skipped** — added §2.10 to track that the design contains a Phase concept the owner has not yet defined; Directory profile renders everything except this badge until Replit clarifies.
   4. **"Nominate / Scout" lexicon adopted** — added §2.8; backend identifiers stay as `submission/*`, presentation copy uses scout/nominate/find. Wave 2 item #22 captures the rollout.
   Submodule pointer bumped to `dcaaf15`.
+- 2026-05-12: **GetStream removed from Skills Hunt scope.** Added §2.11 lock. Updated audit findings (§3.6 notifications), Wave 1 roadmap item #5 (in-DB notification helper, not GetStream), Wave 2 roadmap item #18 (in-DB fan-out only), and §7 Q1 (resolved: 30s polling locked). The "GetStream ⚡" badge in the design was never rendered in the Wave 1 shell rebuild. The 5 trigger events (accept, reject, leaderboard-top10, round-ending-24h, achievement-unlocked) write to `skills_hunt_notifications` only.
 
 ## 10. Known environment issues affecting commits on this branch
 

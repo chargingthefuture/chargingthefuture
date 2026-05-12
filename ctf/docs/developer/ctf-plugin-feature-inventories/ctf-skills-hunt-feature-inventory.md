@@ -154,7 +154,7 @@ Admin/moderator routes:
 2. `skills_hunt_submissions` — contributor submissions; tracks `url_validation_result`, `credit_granted`, `proposed_skills`, `edit_history`, `edited_at`, `deleted_at`, `participation_points`.
 3. `skills_hunt_leaderboard` — per-round standings; includes `first_match_count` for tie-break and `pending_points`/`last_submission_at` for UI.
 4. `skills_hunt_achievements` — 5 named badges (First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion) plus `round_id` and `archived_at`.
-5. `skills_hunt_notifications` — in-DB notification ledger; fan-out via GetStream (`lib/skills-hunt/notifications.ts`).
+5. `skills_hunt_notifications` — in-DB notification ledger. Polled by client at 30s via `GET /api/skills-hunt/notifications`. GetStream is explicitly out of scope (see continuity doc §2.11).
 6. `skills_hunt_feature_reward_card` — singleton row for the Directory-pinned reward card.
 7. `skills_hunt_audit_log` — append-only allow/deny + mutation log.
 8. `skills_hunt_directory_profiles` — junction between accepted submission and generated unclaimed Directory profile.

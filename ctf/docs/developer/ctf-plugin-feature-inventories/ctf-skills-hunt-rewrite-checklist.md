@@ -79,7 +79,7 @@
   - [ ] Top-100 cap plus current-user rank attached to response.
   - [ ] Team mode aggregation by claimed profession.
   - [ ] All-time view alongside per-round.
-  - [ ] 30-second polling on client (Wave 2 upgrade path: GetStream feeds).
+  - [ ] 30-second polling on client. **GetStream is explicitly out of scope** for Skills Hunt (continuity §2.11) — polling is the locked transport, not a stepping stone.
 - [ ] **Wave 2 — 5 named badges (replace 3 generic):**
   - [ ] `first-finder` — first accepted submission for a given Quora URL in a round.
   - [ ] `diversity-champion` — accepted submissions across 3+ professions in a round.
@@ -88,7 +88,7 @@
   - [ ] `leaderboard-champion` — finished top-3 on a round's final standings.
 - [x] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the Skills Hunt Scout tab.
   - Implemented in `components/directory/directory-shell.tsx`. Fetches active card from `/api/skills-hunt/feature-reward-card`; falls back to a default card linking to `/apps/skills-hunt?tab=scout` when the API has no row configured. Purple `#A855F7` palette per rule 126.
-- [ ] **Wave 2 — GetStream fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked).
+- [ ] **Wave 2 — in-DB notification fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked). Writes rows to `skills_hunt_notifications`; client polls `GET /api/skills-hunt/notifications` at 30s. GetStream is out of scope (continuity §2.11).
 - [ ] **Wave 2 — notification center UI** (web + mobile) with unread badge.
 
 ## Phase 5 — Directory Projection and Safety
@@ -167,3 +167,4 @@
 - 2026-05-11 (commit `f36c8ca`): Reconciled continuity doc with Replit design pass (`design/` at `dcaaf15`). Owner-locked four post-design decisions: keep reward card on Directory navigating to `/apps/skills-hunt?tab=scout`; implement Missions in Wave 2; skip Phase 0/1/2 badge until Replit clarifies; adopt "Nominate / Scout" lexicon everywhere (backend identifiers unchanged). Submodule pointer bumped.
 - 2026-05-11 (commit `403b19e`): Added Missions schema (`skills_hunt_missions`, `skills_hunt_mission_progress`), types, and `lib/skills-hunt/missions.ts` module with row mappers, list queries, and pure recompute hook. Admin CRUD endpoints + reviewSubmission hook wiring deferred to a follow-up commit.
 - 2026-05-11 (Directory profile rendering): Extended DirectoryProfile type with `source`, `invitedByUsername`, `unclaimedHandle`; `getPublicDirectoryById` now SELECTs the new columns + filters out `deleted_at`; the public profile page renders the purple "Community generated" pill, the monospace `@unclaimed_handle` line, and "Nominated by @handle" attribution. Uses design's exact hex per rule 126.
+- 2026-05-12: **GetStream removed from Skills Hunt scope** (continuity §2.11). Wave 2 notification fan-out now writes to `skills_hunt_notifications` only, polled at 30s. Updated Phase 4 leaderboard upgrade-path note and the fan-out checkbox to reflect the lock. The design's "GetStream ⚡" badge is decorative-only and was already absent from the Wave 1 shell rebuild.
