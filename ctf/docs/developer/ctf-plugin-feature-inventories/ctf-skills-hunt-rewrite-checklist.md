@@ -42,8 +42,10 @@
 - [x] Implement submission creation with baseline validation.
 - [x] Enforce duplicate (signature) and rolling rate-limit safeguards.
 - [ ] **Wave 1 updates:**
-  - [ ] URL HEAD-check helper (`lib/skills-hunt/url-validation.ts`, 5s timeout).
-  - [ ] Persist `url_validation_result` and auto-reject on `dead`.
+  - [x] URL HEAD-check helper (`lib/skills-hunt/url-validation.ts`, 5s timeout).
+    - `checkUrlLiveness` returns `'valid' | 'invalid' | 'dead'` with an HTTP HEAD probe and AbortController-driven 5s timeout (`SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS`). Only 404/410 mark `'dead'` to avoid auto-rejection during transient network errors or Quora rate-limiting.
+  - [x] Persist `url_validation_result` and auto-reject on `dead`.
+    - `createSubmission` calls the helper before INSERT, stores `url_validation_result` + `url_validation_checked_at`, and throws `skills_hunt_url_dead` when the URL is unambiguously gone. Submissions POST returns `SKILLS_HUNT_URL_VALIDATION_FAILED` (400) with a helpful message.
   - [x] Flip `requireUsername: true` on submit endpoint.
     - New `requireSkillsHuntSubmitAccess` gate in `app/api/skills-hunt/_lib.ts`; submission POST now uses it. Read endpoints remain on the username-optional gate.
   - [ ] Taxonomy-driven skills parsing (`parseSkillsSubmissionInput`): split matched vs `proposed_skills`.

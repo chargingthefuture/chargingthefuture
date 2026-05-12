@@ -130,6 +130,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
       status = 400;
       code = SKILLS_HUNT_ERROR_CODE.invalidPayload;
       responseMessage = 'Invalid Quora profile URL.';
+    } else if (message === 'skills_hunt_url_dead') {
+      status = 400;
+      code = SKILLS_HUNT_ERROR_CODE.urlValidationFailed;
+      responseMessage = 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.';
     }
 
     logSkillsHuntAudit({

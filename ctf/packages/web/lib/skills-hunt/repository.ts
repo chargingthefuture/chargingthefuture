@@ -89,6 +89,7 @@ import type {
   SkillsHuntSubmissionInput,
   SkillsHuntSubmissionReviewInput,
 } from './types';
+import { checkUrlLiveness } from './url-validation';
 
 type CountRow = { total: string };
 
@@ -958,11 +959,17 @@ export async function createSubmission(
   submitterUsername: string | null,
   input: SkillsHuntSubmissionInput,
 ): Promise<SkillsHuntSubmission> {
+  const normalizedUrlForCheck = normalizeQuoraProfileUrl(input.quoraProfileUrl);
+  const liveness = await checkUrlLiveness(normalizedUrlForCheck);
+  if (liveness.result === 'dead') {
+    throw new Error('skills_hunt_url_dead');
+  }
+
   return withDbTransaction(async (client) => {
     await ensureSubmissionWindow(client, input.roundId);
     await ensureSubmissionRateLimits(client, submitterUserId);
 
-    const normalizedUrl = normalizeQuoraProfileUrl(input.quoraProfileUrl);
+    const normalizedUrl = normalizedUrlForCheck;
     const skills = normalizeArray(input.skills);
     const claimedProfessions = normalizeArray(input.claimedProfessions);
     const signatureHash = buildSignatureHash(normalizedUrl, skills);
@@ -983,10 +990,12 @@ export async function createSubmission(
             signature_hash,
             status,
             points_awarded,
-            score_breakdown
+            score_breakdown,
+            url_validation_result,
+            url_validation_checked_at
           )
         VALUES
-          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, 'pending', 0, '{}'::jsonb)
+          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, 'pending', 0, '{}'::jsonb, $11, $12::timestamptz)
         RETURNING
           id,
           round_id,
@@ -1006,7 +1015,9 @@ export async function createSubmission(
           reviewed_at,
           directory_profile_generated_at,
           created_at,
-          updated_at
+          updated_at,
+          url_validation_result,
+          url_validation_checked_at
       `,
       [
         input.roundId,
@@ -1019,6 +1030,8 @@ export async function createSubmission(
         JSON.stringify(skills),
         JSON.stringify(claimedProfessions),
         signatureHash,
+        liveness.result,
+        liveness.checkedAtIso,
       ],
     );
 
@@ -1048,6 +1061,9 @@ export async function createSubmission(
     }
     if (message.includes('skills_hunt_invalid_quora_url')) {
       throw new Error('skills_hunt_invalid_quora_url');
+    }
+    if (message.includes('skills_hunt_url_dead')) {
+      throw new Error('skills_hunt_url_dead');
     }
     if (message.includes('skills_hunt_submissions_round_id_signature_hash_key')) {
       throw new Error('skills_hunt_duplicate_submission');
