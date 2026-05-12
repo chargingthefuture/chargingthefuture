@@ -55,14 +55,14 @@
 
 - [x] Implement moderator/admin submission review actions (accept/reject/edit/flag).
 - [x] Implement baseline scoring engine.
-- [ ] **Wave 2 — scoring rewrite to spec:**
-  - [ ] Match `+10` flat (not `min(skills.length,5)*3`).
-  - [ ] First Match `+5` (not `+4`).
-  - [ ] Skill Stack `+3` only if 2+ professions (not linear).
-  - [ ] Quality `+2` only if accepted without admin edits (not `bio≥200chars`).
-  - [ ] Rare Skill `+7` from Workforce live snapshot (<50% recruited).
-  - [ ] Participation `+1` point on reject.
-  - [ ] All weights configurable per round in `scoring_config`.
+- [x] **Wave 2 — scoring rewrite to spec** (`scoreSubmission` in `lib/skills-hunt/repository.ts`).
+  - [x] Match `+10` flat (not `min(skills.length,5)*3`).
+  - [x] First Match `+5` (not `+4`).
+  - [x] Skill Stack `+3` only if 2+ professions (not linear).
+  - [x] Quality `+2` only if accepted without admin edits (`reviewAction === 'accept'`; not `bio≥200chars`).
+  - [x] Rare Skill `+7` default from `skills_hunt_rare_skills_lookup` (per-row `bonus_points` overrides). Workforce live-snapshot helper that repopulates the table is a separate Wave 2 item.
+  - [x] Participation `+1` point on reject — persisted to `submissions.participation_points`.
+  - [x] All weights configurable per round in `scoring_config` via `resolveScoreWeights(scoringConfig)` (SPEC defaults + per-round overrides). Applied weights echoed back into `score_breakdown.weightsApplied` for audit.
 - [ ] **Wave 2 — reputation system:**
   - [ ] New-user lower cap (configurable, default 3/wk).
   - [ ] >20% rejection rate → admin pre-approval required for next submission.

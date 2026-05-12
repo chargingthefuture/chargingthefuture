@@ -37,11 +37,11 @@ export const SKILLS_HUNT_REPUTATION = {
 // URL liveness check (HEAD only; no body fetched — Quora ToS compliance).
 export const SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS = 5_000;
 
-// Scoring weights — current implementation (Wave 1 baseline). The existing
-// computeScoreBreakdown in repository.ts consumes these. Do NOT change
-// values here without coordinating with the scoring engine code; Wave 2's
-// scoring rewrite will migrate the engine to consume SKILLS_HUNT_SCORE_WEIGHTS_SPEC
-// below and then this constant can be removed.
+// Scoring weights — legacy Wave 1 baseline. **No longer consumed by the
+// engine** as of the 2026-05-12 scoring rewrite — scoreSubmission() now
+// reads SKILLS_HUNT_SCORE_WEIGHTS_SPEC below merged with per-round
+// scoring_config overrides. Kept here only because seed scripts/tests
+// may still reference it. Safe to delete once those callers move over.
 export const SKILLS_HUNT_SCORE_WEIGHTS = {
   matchBase: 3,
   firstMatchBonus: 4,

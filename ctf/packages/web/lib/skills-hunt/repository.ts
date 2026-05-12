@@ -70,6 +70,7 @@ import {
   SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE,
   SKILLS_HUNT_REJECTION_GUARD_THRESHOLD,
   SKILLS_HUNT_SCORE_WEIGHTS,
+  SKILLS_HUNT_SCORE_WEIGHTS_SPEC,
   SKILLS_HUNT_SUBMISSION_LIMIT_7D,
 } from './constants';
 import type {
@@ -690,7 +691,38 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
   }
 }
 
-async function scoreSubmission(client: PoolClient, submissionId: string): Promise<{ pointsAwarded: number; scoreBreakdown: Record<string, unknown> }> {
+// Effective per-submission scoring weights = SPEC defaults + per-round overrides.
+// Per-round overrides live in `skills_hunt_rounds.scoring_config` so an admin
+// can promote/dampen rewards mid-program without code change.
+type ResolvedScoreWeights = typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC;
+
+function resolveScoreWeights(scoringConfig: unknown): ResolvedScoreWeights {
+  const overrides = scoringConfig && typeof scoringConfig === 'object' && !Array.isArray(scoringConfig)
+    ? (scoringConfig as Record<string, unknown>)
+    : {};
+
+  const pickInt = (key: keyof ResolvedScoreWeights): number => {
+    const raw = overrides[key];
+    if (typeof raw === 'number' && Number.isFinite(raw)) return Math.trunc(raw);
+    return SKILLS_HUNT_SCORE_WEIGHTS_SPEC[key];
+  };
+
+  return {
+    matchBase: pickInt('matchBase'),
+    firstMatchBonus: pickInt('firstMatchBonus'),
+    stackBonus: pickInt('stackBonus'),
+    stackBonusProfessionThreshold: pickInt('stackBonusProfessionThreshold'),
+    rareSkillBonus: pickInt('rareSkillBonus'),
+    qualityBonus: pickInt('qualityBonus'),
+    participationOnReject: pickInt('participationOnReject'),
+  };
+}
+
+async function scoreSubmission(
+  client: PoolClient,
+  submissionId: string,
+  reviewAction: 'accept' | 'edit',
+): Promise<{ pointsAwarded: number; scoreBreakdown: Record<string, unknown> }> {
   const submissionResult = await client.query<{
     id: string;
     round_id: string;
@@ -716,6 +748,18 @@ async function scoreSubmission(client: PoolClient, submissionId: string): Promis
   const skills = asStringArray(submission.skills);
   const claimedProfessions = asStringArray(submission.claimed_professions);
 
+  const roundResult = await client.query<{ scoring_config: unknown }>(
+    `SELECT scoring_config FROM skills_hunt_rounds WHERE id = $1::uuid LIMIT 1`,
+    [submission.round_id],
+  );
+  const weights = resolveScoreWeights(roundResult.rows[0]?.scoring_config ?? null);
+
+  // Match (+10 flat per spec): unconditional on acceptance. Replaces the
+  // pre-rewrite `min(skills.length, 5) * 3` per-skill scaling.
+  const matchBase = weights.matchBase;
+
+  // First Match (+5): only the first scout to land an accepted submission
+  // for a given normalized URL in this round gets the bonus.
   const firstMatchResult = await client.query<CountRow>(
     `
       SELECT COUNT(*)::text AS total
@@ -727,11 +771,17 @@ async function scoreSubmission(client: PoolClient, submissionId: string): Promis
     `,
     [submission.round_id, submission.quora_profile_url_normalized, submission.id],
   );
-
   const acceptedSameUrlCount = Number.parseInt(firstMatchResult.rows[0]?.total ?? '0', 10);
-  const firstMatchBonus = acceptedSameUrlCount === 0 ? SKILLS_HUNT_SCORE_WEIGHTS.firstMatchBonus : 0;
+  const firstMatchBonus = acceptedSameUrlCount === 0 ? weights.firstMatchBonus : 0;
 
-  const rareSkillRows = await client.query<{ skill_name: string; bonus_points: number }>(
+  // Skill Stack (+3): only when 2+ professions are claimed. Replaces the
+  // pre-rewrite linear `count * 2`.
+  const stackBonus = claimedProfessions.length >= weights.stackBonusProfessionThreshold ? weights.stackBonus : 0;
+
+  // Rare Skill (+7 default): driven by `skills_hunt_rare_skills_lookup`,
+  // which the Workforce snapshot helper repopulates at round-create time.
+  // Per-skill row may override the default bonus.
+  const rareSkillRows = await client.query<{ skill_name: string; bonus_points: number | null }>(
     `
       SELECT skill_name, bonus_points
       FROM skills_hunt_rare_skills_lookup
@@ -739,19 +789,19 @@ async function scoreSubmission(client: PoolClient, submissionId: string): Promis
     `,
     [submission.round_id],
   );
-
   const rareLookup = new Map(
     rareSkillRows.rows.map((row) => [normalizeText(row.skill_name).toLowerCase(), row.bonus_points]),
   );
-
   const rareSkillBonus = skills.reduce((accumulator, skillName) => {
     const normalizedSkill = normalizeText(skillName).toLowerCase();
-    return accumulator + (rareLookup.get(normalizedSkill) ?? 0);
+    if (!rareLookup.has(normalizedSkill)) return accumulator;
+    const perSkillBonus = rareLookup.get(normalizedSkill);
+    return accumulator + (typeof perSkillBonus === 'number' ? perSkillBonus : weights.rareSkillBonus);
   }, 0);
 
-  const qualityBonus = submission.bio.length >= 200 ? SKILLS_HUNT_SCORE_WEIGHTS.qualityBonus : 0;
-  const matchBase = Math.min(skills.length, 5) * SKILLS_HUNT_SCORE_WEIGHTS.matchBase;
-  const stackBonus = claimedProfessions.length * SKILLS_HUNT_SCORE_WEIGHTS.stackBonusPerProfession;
+  // Quality (+2): awarded only when the moderator accepts without editing.
+  // The 'edit' action signals admin had to fix something, so quality drops.
+  const qualityBonus = reviewAction === 'accept' ? weights.qualityBonus : 0;
 
   const pointsAwarded = matchBase + firstMatchBonus + stackBonus + rareSkillBonus + qualityBonus;
   const scoreBreakdown = {
@@ -760,6 +810,7 @@ async function scoreSubmission(client: PoolClient, submissionId: string): Promis
     stackBonus,
     rareSkillBonus,
     qualityBonus,
+    weightsApplied: weights,
   };
 
   return { pointsAwarded, scoreBreakdown };
@@ -1187,18 +1238,29 @@ export async function reviewSubmission(
     let status: SkillsHuntSubmission['status'] = existing.status;
     let pointsAwarded = existing.points_awarded;
     let scoreBreakdown = normalizeJsonObject(existing.score_breakdown);
+    let participationPoints = 0;
 
     if (input.action === 'accept' || input.action === 'edit') {
-      const scored = await scoreSubmission(client, submissionId);
+      const scored = await scoreSubmission(client, submissionId, input.action);
       pointsAwarded = scored.pointsAwarded;
       scoreBreakdown = scored.scoreBreakdown;
       status = 'accepted';
     }
 
     if (input.action === 'reject') {
+      // Reputation system (Wave 2 spec §6.2): rejected submitters still
+      // earn +1 participation point so scouting attempts aren't punished
+      // beyond the rejection-rate guardrail.
+      const rejectWeights = resolveScoreWeights(
+        (await client.query<{ scoring_config: unknown }>(
+          `SELECT scoring_config FROM skills_hunt_rounds WHERE id = $1::uuid LIMIT 1`,
+          [existing.round_id],
+        )).rows[0]?.scoring_config ?? null,
+      );
       status = 'rejected';
       pointsAwarded = 0;
-      scoreBreakdown = { rejected: true };
+      participationPoints = rejectWeights.participationOnReject;
+      scoreBreakdown = { rejected: true, participationPoints };
     }
 
     if (input.action === 'flag') {
@@ -1218,6 +1280,7 @@ export async function reviewSubmission(
           reviewed_at = NOW(),
           points_awarded = $6,
           score_breakdown = $7::jsonb,
+          participation_points = $8,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
@@ -1249,6 +1312,7 @@ export async function reviewSubmission(
         actorId,
         pointsAwarded,
         JSON.stringify(scoreBreakdown),
+        participationPoints,
       ],
     );
 
