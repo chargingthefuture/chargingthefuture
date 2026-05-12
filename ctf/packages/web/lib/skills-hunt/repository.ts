@@ -586,16 +586,135 @@ async function ensureAchievement(
   code: string,
   title: string,
   description: string,
+  roundId: string | null = null,
 ): Promise<void> {
+  // UNIQUE (user_id, code) is preserved per Phase 1 schema notes; round_id is
+  // recorded for forensics / Wave 2 per-round badge refactor.
   await client.query(
     `
-      INSERT INTO skills_hunt_achievements (user_id, code, title, description)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO skills_hunt_achievements (user_id, code, title, description, round_id)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (user_id, code)
       DO NOTHING
     `,
-    [userId, code, title, description],
+    [userId, code, title, description, roundId],
   );
+}
+
+// 5 named badges (continuity §6 Wave 2 + design SkillsHunt.tsx BADGES).
+// Codes are stable identifiers; titles/descriptions are UI copy.
+const NAMED_BADGES = {
+  firstFinder: {
+    code: 'first-finder',
+    title: 'First Finder',
+    description: 'First accepted submission for a given Quora URL in a round.',
+  },
+  diversityChampion: {
+    code: 'diversity-champion',
+    title: 'Diversity Champion',
+    description: 'Skills spanning 3+ sectors across accepted submissions.',
+  },
+  rareTalentScout: {
+    code: 'rare-talent-scout',
+    title: 'Rare Talent Scout',
+    description: 'Found 3+ accepted submissions tagged with rare skills.',
+  },
+  qualityContributor: {
+    code: 'quality-contributor',
+    title: 'Quality Contributor',
+    description: '100% acceptance rate with 5+ submissions.',
+  },
+  // leaderboard-champion fires on round close (top-3 final standings).
+  // Wired separately when the round-close handler lands; not awarded here.
+  leaderboardChampion: {
+    code: 'leaderboard-champion',
+    title: 'Leaderboard Champion',
+    description: 'Finished top-3 on a round’s final standings.',
+  },
+} as const;
+
+async function awardNamedBadges(
+  client: PoolClient,
+  userId: string,
+  roundId: string,
+  scoreBreakdown: Record<string, unknown>,
+): Promise<void> {
+  // first-finder — this submission's score includes the firstMatchBonus.
+  const firstMatchBonus = scoreBreakdown.firstMatchBonus;
+  if (typeof firstMatchBonus === 'number' && firstMatchBonus > 0) {
+    await ensureAchievement(
+      client, userId,
+      NAMED_BADGES.firstFinder.code, NAMED_BADGES.firstFinder.title, NAMED_BADGES.firstFinder.description,
+      roundId,
+    );
+  }
+
+  // rare-talent-scout — 3+ accepted submissions tagged with rare skills.
+  // "tagged with rare skills" = score_breakdown.rareSkillBonus > 0.
+  const rareCountResult = await client.query<CountRow>(
+    `
+      SELECT COUNT(*)::text AS total
+      FROM skills_hunt_submissions
+      WHERE submitter_user_id = $1
+        AND status = 'accepted'
+        AND COALESCE((score_breakdown ->> 'rareSkillBonus')::int, 0) > 0
+    `,
+    [userId],
+  );
+  const rareCount = Number.parseInt(rareCountResult.rows[0]?.total ?? '0', 10);
+  if (rareCount >= 3) {
+    await ensureAchievement(
+      client, userId,
+      NAMED_BADGES.rareTalentScout.code, NAMED_BADGES.rareTalentScout.title, NAMED_BADGES.rareTalentScout.description,
+      roundId,
+    );
+  }
+
+  // diversity-champion — accepted submissions spanning 3+ distinct claimed
+  // professions. claimed_professions is a JSONB array, so we unnest into rows.
+  const diversityResult = await client.query<{ total: string }>(
+    `
+      SELECT COUNT(DISTINCT prof)::text AS total
+      FROM (
+        SELECT jsonb_array_elements_text(claimed_professions) AS prof
+        FROM skills_hunt_submissions
+        WHERE submitter_user_id = $1
+          AND status = 'accepted'
+          AND jsonb_typeof(claimed_professions) = 'array'
+      ) p
+    `,
+    [userId],
+  );
+  const distinctProfessionCount = Number.parseInt(diversityResult.rows[0]?.total ?? '0', 10);
+  if (distinctProfessionCount >= 3) {
+    await ensureAchievement(
+      client, userId,
+      NAMED_BADGES.diversityChampion.code, NAMED_BADGES.diversityChampion.title, NAMED_BADGES.diversityChampion.description,
+      roundId,
+    );
+  }
+
+  // quality-contributor — 100% acceptance rate with 5+ accepted submissions.
+  // 100% rate = accepted >= 5 AND rejected = 0. Edits still count as accepted.
+  const qualityResult = await client.query<{ accepted: string; rejected: string }>(
+    `
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'accepted')::text AS accepted,
+        COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
+      FROM skills_hunt_submissions
+      WHERE submitter_user_id = $1
+    `,
+    [userId],
+  );
+  const acceptedCount = Number.parseInt(qualityResult.rows[0]?.accepted ?? '0', 10);
+  const rejectedCount = Number.parseInt(qualityResult.rows[0]?.rejected ?? '0', 10);
+  if (acceptedCount >= 5 && rejectedCount === 0) {
+    await ensureAchievement(
+      client, userId,
+      NAMED_BADGES.qualityContributor.code, NAMED_BADGES.qualityContributor.title, NAMED_BADGES.qualityContributor.description,
+      roundId,
+    );
+  }
 }
 
 async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<void> {
@@ -1328,26 +1447,7 @@ export async function reviewSubmission(
         { submissionId, pointsAwarded },
       );
 
-      const acceptedCountResult = await client.query<CountRow>(
-        `
-          SELECT COUNT(*)::text AS total
-          FROM skills_hunt_submissions
-          WHERE submitter_user_id = $1
-            AND status = 'accepted'
-        `,
-        [existing.submitter_user_id],
-      );
-
-      const acceptedCount = Number.parseInt(acceptedCountResult.rows[0]?.total ?? '0', 10);
-      if (acceptedCount >= 1) {
-        await ensureAchievement(client, existing.submitter_user_id, 'accepted-first', 'First Accepted Submission', 'First accepted Skills Hunt submission.');
-      }
-      if (acceptedCount >= 5) {
-        await ensureAchievement(client, existing.submitter_user_id, 'accepted-five', 'Five Accepted Submissions', 'Reached five accepted Skills Hunt submissions.');
-      }
-      if (acceptedCount >= 10) {
-        await ensureAchievement(client, existing.submitter_user_id, 'accepted-ten', 'Ten Accepted Submissions', 'Reached ten accepted Skills Hunt submissions.');
-      }
+      await awardNamedBadges(client, existing.submitter_user_id, existing.round_id, scoreBreakdown);
 
       const attributionUsername = existing.submitter_username ?? actorUsername ?? 'system';
       await maybeAutoGenerateDirectoryProfile(client, actorId, submissionId, attributionUsername);

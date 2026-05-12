@@ -80,12 +80,12 @@
   - [ ] Team mode aggregation by claimed profession.
   - [ ] All-time view alongside per-round.
   - [ ] 30-second polling on client. **GetStream is explicitly out of scope** for Skills Hunt (continuity §2.11) — polling is the locked transport, not a stepping stone.
-- [ ] **Wave 2 — 5 named badges (replace 3 generic):**
-  - [ ] `first-finder` — first accepted submission for a given Quora URL in a round.
-  - [ ] `diversity-champion` — accepted submissions across 3+ professions in a round.
-  - [ ] `rare-talent-scout` — 3+ accepted submissions tagged with rare skills.
-  - [ ] `quality-contributor` — 100% acceptance rate with 5+ submissions.
-  - [ ] `leaderboard-champion` — finished top-3 on a round's final standings.
+- [x] **Wave 2 — 5 named badges (replace 3 generic):** legacy `accepted-first/-five/-ten` awards removed from `reviewSubmission`; new `awardNamedBadges()` helper now drives badge logic. Achievements record `round_id` for the Wave 2 per-round badge refactor; UNIQUE `(user_id, code)` constraint preserved per Phase 1 schema notes.
+  - [x] `first-finder` — fires when this submission's `score_breakdown.firstMatchBonus > 0` (the scoring engine awards the bonus only to the first accepted submission for a normalized Quora URL in a round).
+  - [x] `diversity-champion` — accepted submissions spanning 3+ distinct `claimed_professions` (JSONB unnest in the eligibility query).
+  - [x] `rare-talent-scout` — 3+ accepted submissions with `score_breakdown.rareSkillBonus > 0`.
+  - [x] `quality-contributor` — 5+ accepted submissions AND 0 rejections (100% acceptance rate).
+  - [ ] `leaderboard-champion` — finished top-3 on a round's final standings. **Deferred:** requires a round-close handler (round status transition `active → closed`). Helper exists in `NAMED_BADGES.leaderboardChampion`; wire when the round-close path is built.
 - [x] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the Skills Hunt Scout tab.
   - Implemented in `components/directory/directory-shell.tsx`. Fetches active card from `/api/skills-hunt/feature-reward-card`; falls back to a default card linking to `/apps/skills-hunt?tab=scout` when the API has no row configured. Purple `#A855F7` palette per rule 126.
 - [ ] **Wave 2 — in-DB notification fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked). Writes rows to `skills_hunt_notifications`; client polls `GET /api/skills-hunt/notifications` at 30s. GetStream is out of scope (continuity §2.11).
