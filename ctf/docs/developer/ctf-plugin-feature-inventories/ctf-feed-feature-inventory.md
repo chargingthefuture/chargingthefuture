@@ -25,7 +25,7 @@ Approved architecture decisions:
 
 ---
 
-## 1) Planned User-Facing Features
+## 1) User-Facing Features
 
 ### 1.1 Feed Timeline Core (Unified)
 
@@ -68,7 +68,7 @@ Approved architecture decisions:
 
 ---
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Central Admin Surface
 

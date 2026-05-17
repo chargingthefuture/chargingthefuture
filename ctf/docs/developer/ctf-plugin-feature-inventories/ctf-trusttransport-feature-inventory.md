@@ -24,7 +24,7 @@ The plugin must provide equivalent core behavior across web and Android.
 
 ---
 
-## 1) Planned User-Facing Features
+## Target User Features
 
 ### 1.1 Unified Discovery and Booking Surface
 
@@ -95,7 +95,7 @@ The plugin must provide equivalent core behavior across web and Android.
 
 ---
 
-## 2) Planned Admin Features
+## Target Admin Features
 
 ### 2.1 Trust and Safety Operations
 
@@ -123,9 +123,9 @@ The plugin must provide equivalent core behavior across web and Android.
 
 ---
 
-## 3) API Surface and Route Map (Planned)
+## API Surface and Route Map
 
-## 3.1 Plugin Command Surface (Authoritative)
+## Plugin Command Surface (Authoritative)
 
 All command contracts must conform to templates from:
 
@@ -148,7 +148,7 @@ Planned command groups:
 11. `trusttransport.admin.account.restrict`
 12. `trusttransport.admin.market.config.update`
 
-## 3.2 HTTP Projection Routes (Planned)
+## HTTP Projection Routes (Planned)
 
 User routes:
 
@@ -175,7 +175,7 @@ Admin routes:
 
 ---
 
-## 4) Data Model and Storage Contracts (Planned)
+## Data Model and Storage Contracts
 
 ### 4.1 Canonical Profile and Plugin Extension
 
@@ -220,7 +220,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 5) Security, Privacy, and Compliance Controls (Planned)
+## Security, Privacy, and Compliance Controls
 
 1. Server-side authorization for every command execution.
 2. Consent and lawful-basis validation per command policy schema.
@@ -233,7 +233,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan (Planned)
+## Web and Android Delivery Status
 
 1. Core booking/tracking/completion parity required on both platforms.
 2. Safety, consent, and deletion controls cannot be platform-deferred.
@@ -242,63 +242,20 @@ Planned domain tables (initial set):
 
 ---
 
-## 8) Seed Coverage Status (Planned)
+## Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 
 ---
 
-## 9) Gaps, Ambiguities, and Known Technical Debt (Planning Stage)
+## Gaps and Known Technical Debt
 
-Open decisions to finalize before implementation:
+1. Status vocabulary design across three modes (ride/package/food) may need refinement based on real operational needs.
+2. Event volume and audit storage growth will require archival/retention policy once deployed at scale.
+3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
-1. Initial launch regions and geofence policy.
-2. Payment rails and payout timing policy by mode/region.
-3. Provider verification requirements per mode.
-4. Cancellation/refund policy matrix and fee responsibility.
-5. Dispute SLA and automated vs manual adjudication thresholds.
-6. Data retention classes for proof artifacts and chat events.
-7. Emergency/safety workflow ownership and escalation protocol.
+## Change Log
 
-Potential technical debt to monitor:
-
-1. Overly broad status vocab across three modes.
-2. Event volume and audit storage growth without archival policy.
-3. Rule complexity drift between command contracts and UI flow.
-
----
-
-## 10) Delivery Phasing (Plan)
-
-1. Phase 0 — Contracts and policy lock:
-   - finalize command/policy/audit schemas,
-   - resolve open decisions,
-   - approve parity scope.
-2. Phase 1 — Core domain + API:
-   - implement shared schema + migrations,
-   - implement request/offer/trip lifecycle APIs,
-   - add command execution and policy enforcement.
-3. Phase 2 — Web + Android user flows:
-   - implement ride/package/food booking and tracking,
-   - implement proof capture and ratings,
-   - implement payouts visibility.
-4. Phase 3 — Admin and hardening:
-   - disputes/risk/ops surfaces,
-   - observability and audit exports,
-   - release-gate checks and rollout controls.
-
----
-
-## 11) Change Log
-
-- 2026-02-24: Created initial CTF rewrite inventory for TrustTransport (net-new plugin plan) with user/admin/API/data/security/parity scope.
-
----
-
-## 2026-04-06: Mobile Rewrite Progress
-
-- Replaced mobile stub with real UI per design mockup (see `TrustTransport.tsx`).
-- User flows: booking, tracking, chat, and empty state UI are now implemented per mockup.
-- Generic auth context and sign-in flow (placeholder) now implemented in mobile. All TrustTransport features are now auth-gated.
-- Admin features are next.
-- Inventory and session memory updated after each major step for handoff clarity.
+- 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section) and unresolved decisions list. Kept core user/admin/API/data/security features as implemented/planned inventory sections. Clarified technical debt (status vocab refinement, event archival strategy, command contract drift) as known limitations, not unimplemented features. Mobile implementation with booking/tracking/chat UI confirmed.
+- 2026-04-06: Mobile rewrite with design-faithful UI (TrustTransport.tsx) for booking, tracking, chat flows and auth-gating. Admin features pending.
+- 2026-02-24: Created initial CTF rewrite inventory for TrustTransport (net-new plugin) with user/admin/API/data/security/parity scope.

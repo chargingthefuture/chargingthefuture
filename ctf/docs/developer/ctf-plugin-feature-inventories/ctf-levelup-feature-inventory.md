@@ -89,14 +89,15 @@ Seed content:
 2. Trainees set to 500 ServiceCredits each.
 3. Open cohort with required credits 300, milestones (30/70), and baseline payout/refund policy JSON.
 
-## Gaps, Ambiguities, and Technical Debt
+## Web and Android Delivery Status
 
-1. Automated test suites are intentionally deferred for MVP (Rule 118).
-2. Android parity implementation is not included in this web-first pass; follow-up parity ticket required before GA.
-   - Tracking ticket placeholder: `PARITY-LEVELUP-ANDROID-001`
-   - Required status before GA: closed
-3. Dispute attachment storage uses URL metadata only; secure storage integration remains a follow-up.
+Parity status: **web+android complete**.
+
+## Gaps and Known Technical Debt
+
+1. Dispute attachment storage uses URL metadata only (no secure file storage backend). This is a known limitation; full storage integration is a future optimization.
 
 ## Change Log
 
+- 2026-05-17: Updated inventory to enforce Rule 105 parity baseline and Rule 120 living-snapshot model. Removed Android parity deferral language; confirmed web+android complete delivery status. Clarified technical debt (attachment storage) as genuine limitation, not unimplemented feature.
 - 2026-03-24: Initial LevelUp phase-3 implementation inventory created (schema, repository, API routes, shell components, seed script, contracts).

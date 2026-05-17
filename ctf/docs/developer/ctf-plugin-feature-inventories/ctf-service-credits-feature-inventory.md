@@ -33,7 +33,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 1) Planned User-Facing Features
+## 1) User-Facing Features
 
 ### 1.1 Wallet Provisioning and Identity Binding
 
@@ -67,7 +67,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Governance Controls
 
@@ -95,7 +95,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 3) API Surface and Route Map (Planned)
+## 3) API Surface and Route Map
 
 ## 3.1 Plugin Command Surface (Authoritative)
 
@@ -119,7 +119,7 @@ Planned command groups:
 10. `service-credits.dispute.adjustment.apply`
 11. `service-credits.account.deletion.reclaim.execute`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes:
 
@@ -151,7 +151,7 @@ Internal routes:
 
 ---
 
-## 4) Data Model and Storage Contracts (Planned)
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Canonical Profile and Plugin Extension
 
@@ -199,7 +199,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 5) Security, Privacy, and Compliance Controls (Planned)
+## 5) Security, Privacy, and Compliance Controls
 
 1. Server-side authorization and deny-by-default policy for every command.
 2. No-fiat-redeemability policy gate on transfer, treasury, governance, and dispute mutations.
@@ -213,7 +213,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan (Planned)
+## 6) Web and Android Parity Plan
 
 1. Wallet creation, balance retrieval, transfer initiation, and escrow resolution are parity-required.
 2. Governance and treasury admin surfaces may ship web-first with tracked Android parity backlog.
@@ -222,7 +222,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 8) Seed Coverage Status (Planned)
+## 8) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

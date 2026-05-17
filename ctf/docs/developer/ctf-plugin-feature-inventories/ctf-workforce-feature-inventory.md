@@ -28,7 +28,7 @@ Planning constraints applied:
 
 ---
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
@@ -60,7 +60,7 @@ Planning constraints applied:
 2. Deterministic active/inactive rendering behavior.
 3. Consistent parity behavior across web and mobile clients.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Workforce Admin Operations
 
@@ -92,9 +92,9 @@ Planning constraints applied:
 2. Operational tools for backfill/recompute with auditability.
 3. Explicit exclusion checks for accidental legacy event artifact reintroduction.
 
-## 3) Planned API Surface and Route Map
+## 3) API Surface and Route Map
 
-### 3.1 Plugin Command Surface (Planned)
+### 3.1 Plugin Command Surface
 
 All command contracts must conform to:
 
@@ -131,7 +131,7 @@ Planned command groups:
 25. `workforce.admin.auditEvents.fetch`
 26. `workforce.metric.recruited.derive`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes:
 
@@ -164,7 +164,7 @@ Admin routes:
 - `POST /api/workforce/admin/recompute`
 - `GET /api/workforce/admin/audit-events`
 
-## 4) Planned Data Model and Storage Contracts
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Canonical Identity and Extension Strategy
 
@@ -191,7 +191,7 @@ Admin routes:
 7. Weekly buckets use `America/New_York`, week start = Saturday, T+14 rolling correction then freeze.
 8. No carry-over of legacy accidental event scaffolding or unrelated event models.
 
-## 5) Canonical Metrics (Planned) — Recruited Semantics
+## 5) Canonical Metrics — Recruited Semantics
 
 Metric planning must be locked in `ctf/config/canonical_metrics.yaml` before implementation starts.
 
@@ -206,7 +206,7 @@ Planned canonical definition notes for `recruited`:
    - Historical dashboard uses weekly trend buckets computed from event history.
 6. **Operational policy:** update cadence hourly; retention 60 months.
 
-## 6) Planned Security, Privacy, and Compliance Controls
+## 6) Security, Privacy, and Compliance Controls
 
 1. Server-side authz on all user/admin commands and routes.
 2. CSRF protection on every state-changing web endpoint.
@@ -218,7 +218,7 @@ Planned canonical definition notes for `recruited`:
 8. Data minimization and sensitive-field redaction in logs/diagnostics.
 9. Plugin deletion/profile handling aligns to `ctf/docs/templates/PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
 
-## 7) Seed Coverage Status (Planned)
+## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

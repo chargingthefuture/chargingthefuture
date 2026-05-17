@@ -28,7 +28,7 @@ Web is the first release surface, with Android follow-up parity tracked and clos
 
 ---
 
-## 1) Planned User-Facing Features
+## 1) User-Facing Features
 
 ### 1.1 Weekly Cohort Assignment
 
@@ -61,7 +61,7 @@ Web is the first release surface, with Android follow-up parity tracked and clos
 2. Feedback captures release surface, issue type, and suggestion category.
 3. Feedback trends inform weekly iteration planning and topic guidance revisions.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Weekly Topic Guidance Governance
 
@@ -81,7 +81,7 @@ Web is the first release surface, with Android follow-up parity tracked and clos
 2. Admins can track web-first delivery and Android follow-up parity commitments.
 3. Admins can approve iteration candidates for next weekly cycle.
 
-## 3) Planned API Surface and Route Map
+## 3) API Surface and Route Map
 
 ### 3.1 Plugin Command Surface (Authoritative)
 
@@ -105,7 +105,7 @@ Planned command groups:
 10. `peer-programming.admin.topic-guidance.set`
 11. `peer-programming.admin.topic-guidance.get`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes:
 
@@ -123,7 +123,7 @@ System/admin routes:
 - `PUT /api/peer-programming/admin/topic-guidance/:weekKey`
 - `GET /api/peer-programming/admin/topic-guidance/:weekKey`
 
-## 4) Planned Data Model and Storage Contracts
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Canonical Identity and Extension Strategy
 
@@ -150,7 +150,7 @@ System/admin routes:
 3. Fallback-open transitions capture reason and activation timestamp.
 4. Feedback records are retained for iteration analytics and audit.
 
-## 5) Planned Security, Privacy, and Compliance Controls
+## 5) Security, Privacy, and Compliance Controls
 
 1. Deny-by-default authorization on all commands.
 2. Tier enforcement for cohort member vs authenticated audience vs unauthenticated audience.
@@ -165,7 +165,7 @@ System/admin routes:
 3. Assignment notification semantics and tier visibility must remain behaviorally consistent across platforms.
 4. Any deferred Android capability requires documented risk and closure criteria.
 
-## 8) Seed Coverage Status (Planned)
+## 8) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 
