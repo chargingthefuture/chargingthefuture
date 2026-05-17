@@ -91,6 +91,7 @@ import type {
   SkillsHuntSubmissionReviewInput,
 } from './types';
 import { checkUrlLiveness } from './url-validation';
+import { snapshotRareSkillsForRound } from './rare-skill-snapshot';
 
 type CountRow = { total: string };
 
@@ -1134,6 +1135,10 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
         actorId,
       ],
     );
+
+    // Snapshot Workforce rare-skill state at round-create. Keeps the
+    // Rare Skill bonus stable for the round's lifetime per spec.
+    await snapshotRareSkillsForRound(client, row.rows[0].id);
 
     return mapRound(row.rows[0]);
   });

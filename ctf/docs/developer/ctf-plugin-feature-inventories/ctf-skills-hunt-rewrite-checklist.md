@@ -60,7 +60,7 @@
   - [x] First Match `+5` (not `+4`).
   - [x] Skill Stack `+3` only if 2+ professions (not linear).
   - [x] Quality `+2` only if accepted without admin edits (`reviewAction === 'accept'`; not `bio≥200chars`).
-  - [x] Rare Skill `+7` default from `skills_hunt_rare_skills_lookup` (per-row `bonus_points` overrides). Workforce live-snapshot helper that repopulates the table is a separate Wave 2 item.
+  - [x] Rare Skill `+7` default from `skills_hunt_rare_skills_lookup` (per-row `bonus_points` overrides). Workforce live-snapshot helper landed: `lib/skills-hunt/rare-skill-snapshot.ts::snapshotRareSkillsForRound()` runs at round-create, grouping `workforce_profiles` by occupation and emitting skill rows where the recruited share is `< 50%`. Bonus value uses `SKILLS_HUNT_SCORE_WEIGHTS_SPEC.rareSkillBonus`. Snapshot is intentionally NOT recomputed per submission — keeps the bonus deterministic for a round's lifetime.
   - [x] Participation `+1` point on reject — persisted to `submissions.participation_points`.
   - [x] All weights configurable per round in `scoring_config` via `resolveScoreWeights(scoringConfig)` (SPEC defaults + per-round overrides). Applied weights echoed back into `score_breakdown.weightsApplied` for audit.
 - [ ] **Wave 2 — reputation system:**
