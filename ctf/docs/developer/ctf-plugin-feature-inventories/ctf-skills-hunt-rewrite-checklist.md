@@ -63,10 +63,11 @@
   - [x] Rare Skill `+7` default from `skills_hunt_rare_skills_lookup` (per-row `bonus_points` overrides). Workforce live-snapshot helper landed: `lib/skills-hunt/rare-skill-snapshot.ts::snapshotRareSkillsForRound()` runs at round-create, grouping `workforce_profiles` by occupation and emitting skill rows where the recruited share is `< 50%`. Bonus value uses `SKILLS_HUNT_SCORE_WEIGHTS_SPEC.rareSkillBonus`. Snapshot is intentionally NOT recomputed per submission — keeps the bonus deterministic for a round's lifetime.
   - [x] Participation `+1` point on reject — persisted to `submissions.participation_points`.
   - [x] All weights configurable per round in `scoring_config` via `resolveScoreWeights(scoringConfig)` (SPEC defaults + per-round overrides). Applied weights echoed back into `score_breakdown.weightsApplied` for audit.
-- [ ] **Wave 2 — reputation system:**
-  - [ ] New-user lower cap (configurable, default 3/wk).
-  - [ ] >20% rejection rate → admin pre-approval required for next submission.
-  - [ ] ≥80% acceptance rate → cap raised to 10/wk.
+- [x] **Wave 2 — reputation system:** `computeReputationProfile()` resolves a four-tier label (`new` / `standard` / `trusted` / `restricted`) from lifetime accept/reject stats; `ensureSubmissionRateLimits` enforces the resolved weekly cap and throws `skills_hunt_pre_approval_required` for `restricted`. The legacy sample-based rejection-rate guard is kept as a belt-and-braces check for rapid degradation.
+  - [x] New-user lower cap (configurable, default 3/wk) via `SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d`.
+  - [x] >20% rejection rate → admin pre-approval required (`tier='restricted'` → throws `skills_hunt_pre_approval_required`, route returns `SKILLS_HUNT_PRE_APPROVAL_REQUIRED` 403). Min sample size 5 to avoid restricting users on a one-off reject.
+  - [x] ≥80% acceptance rate → cap raised to 10/wk via `trustedUserSubmissionLimit7d`. Min sample size 5.
+  - [x] Read-only `getReputationProfile(userId)` exported for future admin dashboard / submit-time UI hint.
 - [x] Enforce rejection-rate guardrails (existing 80% block — to be replaced by reputation system in Wave 2).
 
 ## Phase 4 — Leaderboard, Rewards, and Notifications

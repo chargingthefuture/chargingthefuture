@@ -118,6 +118,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
       status = 429;
       code = SKILLS_HUNT_ERROR_CODE.submissionLimitExceeded;
       responseMessage = 'Submission rate limit exceeded.';
+    } else if (message === 'skills_hunt_pre_approval_required') {
+      status = 403;
+      code = SKILLS_HUNT_ERROR_CODE.preApprovalRequired;
+      responseMessage = 'Your recent submissions need admin pre-approval before you can submit again.';
     } else if (message === 'skills_hunt_rejection_guard_violation') {
       status = 429;
       code = SKILLS_HUNT_ERROR_CODE.rejectionGuardViolation;

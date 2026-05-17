@@ -78,4 +78,5 @@ export const SKILLS_HUNT_ERROR_CODE = {
   urlValidationFailed: 'SKILLS_HUNT_URL_VALIDATION_FAILED',
   usernameRequired: 'SKILLS_HUNT_USERNAME_REQUIRED',
   reservedUsername: 'SKILLS_HUNT_RESERVED_USERNAME',
+  preApprovalRequired: 'SKILLS_HUNT_PRE_APPROVAL_REQUIRED',
 } as const;

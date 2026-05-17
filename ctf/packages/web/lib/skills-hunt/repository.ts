@@ -69,6 +69,7 @@ import {
   SKILLS_HUNT_MAX_URL_LENGTH,
   SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE,
   SKILLS_HUNT_REJECTION_GUARD_THRESHOLD,
+  SKILLS_HUNT_REPUTATION,
   SKILLS_HUNT_SCORE_WEIGHTS,
   SKILLS_HUNT_SCORE_WEIGHTS_SPEC,
   SKILLS_HUNT_SUBMISSION_LIMIT_7D,
@@ -82,6 +83,7 @@ import type {
   SkillsHuntLeaderboardMode,
   SkillsHuntNotification,
   SkillsHuntPagination,
+  SkillsHuntReputationProfile,
   SkillsHuntReviewAction,
   SkillsHuntRound,
   SkillsHuntRoundInput,
@@ -520,48 +522,119 @@ async function ensureSubmissionWindow(client: PoolClient, roundId: string): Prom
   }
 }
 
-async function ensureSubmissionRateLimits(client: PoolClient, userId: string): Promise<void> {
-  const recent = await client.query<CountRow>(
-    `
-      SELECT COUNT(*)::text AS total
-      FROM skills_hunt_submissions
-      WHERE submitter_user_id = $1
-        AND created_at >= NOW() - INTERVAL '7 days'
-    `,
+// Reputation-aware submission gate (Wave 2 spec §6.2). Resolves the user's
+// tier from lifetime accept/reject stats and weekly usage.
+//   - tier 'restricted' (sample ≥ 5 AND rejection rate > 20%)
+//   - tier 'trusted'    (sample ≥ 5 AND acceptance rate ≥ 80%) → 10/wk
+//   - tier 'standard'   (sample ≥ 5 but not yet trusted)       → 3/wk
+//   - tier 'new'        (sample < 5)                            → 3/wk
+async function computeReputationProfile(
+  client: PoolClient,
+  userId: string,
+): Promise<SkillsHuntReputationProfile> {
+  const usageResult = await client.query<CountRow>(
+    `SELECT COUNT(*)::text AS total FROM skills_hunt_submissions
+     WHERE submitter_user_id = $1 AND created_at >= NOW() - INTERVAL '7 days'`,
+    [userId],
+  );
+  const rolling7dCount = Number.parseInt(usageResult.rows[0]?.total ?? '0', 10);
+
+  const reviewedResult = await client.query<{
+    total: string; accepted: string; rejected: string; pending: string;
+  }>(
+    `SELECT
+       COUNT(*) FILTER (WHERE reviewed_at IS NOT NULL)::text AS total,
+       COUNT(*) FILTER (WHERE status = 'accepted')::text AS accepted,
+       COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected,
+       COUNT(*) FILTER (WHERE status = 'pending')::text AS pending
+     FROM skills_hunt_submissions
+     WHERE submitter_user_id = $1`,
     [userId],
   );
 
-  const count = Number.parseInt(recent.rows[0]?.total ?? '0', 10);
-  if (count >= SKILLS_HUNT_SUBMISSION_LIMIT_7D) {
+  const reviewedCount = Number.parseInt(reviewedResult.rows[0]?.total ?? '0', 10);
+  const acceptedCount = Number.parseInt(reviewedResult.rows[0]?.accepted ?? '0', 10);
+  const rejectedCount = Number.parseInt(reviewedResult.rows[0]?.rejected ?? '0', 10);
+  const pendingCount = Number.parseInt(reviewedResult.rows[0]?.pending ?? '0', 10);
+  const acceptanceRate = reviewedCount > 0 ? acceptedCount / reviewedCount : null;
+  const rejectionRate = reviewedCount > 0 ? rejectedCount / reviewedCount : null;
+
+  let tier: SkillsHuntReputationProfile['tier'] = 'new';
+  let rolling7dLimit = SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d;
+
+  if (
+    reviewedCount >= SKILLS_HUNT_REPUTATION.preApprovalMinSampleSize &&
+    rejectionRate !== null &&
+    rejectionRate > SKILLS_HUNT_REPUTATION.preApprovalRejectionRateThreshold
+  ) {
+    tier = 'restricted';
+  } else if (
+    reviewedCount >= SKILLS_HUNT_REPUTATION.trustedMinSampleSize &&
+    acceptanceRate !== null &&
+    acceptanceRate >= SKILLS_HUNT_REPUTATION.trustedAcceptanceRateThreshold
+  ) {
+    tier = 'trusted';
+    rolling7dLimit = SKILLS_HUNT_REPUTATION.trustedUserSubmissionLimit7d;
+  } else if (reviewedCount >= SKILLS_HUNT_REPUTATION.trustedMinSampleSize) {
+    tier = 'standard';
+  }
+
+  return {
+    userId,
+    tier,
+    acceptedCount,
+    rejectedCount,
+    pendingCount,
+    rolling7dCount,
+    rolling7dLimit,
+    acceptanceRate,
+    preApprovalRequired: tier === 'restricted',
+  };
+}
+
+async function ensureSubmissionRateLimits(client: PoolClient, userId: string): Promise<SkillsHuntReputationProfile> {
+  const profile = await computeReputationProfile(client, userId);
+
+  if (profile.preApprovalRequired) {
+    throw new Error('skills_hunt_pre_approval_required');
+  }
+
+  if (profile.rolling7dCount >= profile.rolling7dLimit) {
     throw new Error('skills_hunt_submission_limit_exceeded');
   }
 
-  const recentReviewed = await client.query<{ total: string; rejected: string }>(
-    `
-      SELECT
-        COUNT(*)::text AS total,
-        COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
-      FROM (
-        SELECT status
-        FROM skills_hunt_submissions
-        WHERE submitter_user_id = $1
-          AND reviewed_at IS NOT NULL
-        ORDER BY reviewed_at DESC
-        LIMIT $2
-      ) sampled
-    `,
-    [userId, SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE],
-  );
-
-  const sampledTotal = Number.parseInt(recentReviewed.rows[0]?.total ?? '0', 10);
-  const sampledRejected = Number.parseInt(recentReviewed.rows[0]?.rejected ?? '0', 10);
-
-  if (sampledTotal >= SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
-    const rejectionRate = sampledRejected / sampledTotal;
-    if (rejectionRate >= SKILLS_HUNT_REJECTION_GUARD_THRESHOLD) {
-      throw new Error('skills_hunt_rejection_guard_violation');
+  // Belt-and-braces: keep the legacy rejection-rate guard on the most recent
+  // sample. Wave 2 reputation supersedes the lifetime >20% gate, but the
+  // sample-based check still catches rapid degradation that lifetime stats
+  // haven't caught up to yet.
+  const reviewedCount = profile.acceptedCount + profile.rejectedCount;
+  if (reviewedCount >= SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
+    const recent = await client.query<{ total: string; rejected: string }>(
+      `SELECT
+         COUNT(*)::text AS total,
+         COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
+       FROM (
+         SELECT status FROM skills_hunt_submissions
+         WHERE submitter_user_id = $1 AND reviewed_at IS NOT NULL
+         ORDER BY reviewed_at DESC LIMIT $2
+       ) sampled`,
+      [userId, SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE],
+    );
+    const sampledTotal = Number.parseInt(recent.rows[0]?.total ?? '0', 10);
+    const sampledRejected = Number.parseInt(recent.rows[0]?.rejected ?? '0', 10);
+    if (sampledTotal >= SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
+      const rate = sampledRejected / sampledTotal;
+      if (rate >= SKILLS_HUNT_REJECTION_GUARD_THRESHOLD) {
+        throw new Error('skills_hunt_rejection_guard_violation');
+      }
     }
   }
+
+  return profile;
+}
+
+export async function getReputationProfile(userId: string): Promise<SkillsHuntReputationProfile> {
+  return withDbTransaction((client) => computeReputationProfile(client, userId));
 }
 
 async function insertNotification(
@@ -1294,6 +1367,9 @@ export async function createSubmission(
     }
     if (message.includes('skills_hunt_submission_limit_exceeded')) {
       throw new Error('skills_hunt_submission_limit_exceeded');
+    }
+    if (message.includes('skills_hunt_pre_approval_required')) {
+      throw new Error('skills_hunt_pre_approval_required');
     }
     if (message.includes('skills_hunt_rejection_guard_violation')) {
       throw new Error('skills_hunt_rejection_guard_violation');
