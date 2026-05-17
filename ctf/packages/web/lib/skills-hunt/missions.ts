@@ -284,3 +284,155 @@ function computeProgressForMission(
       return 0;
   }
 }
+
+// --- Admin CRUD helpers ----------------------------------------------------
+
+export type MissionCreateInput = {
+  roundId: string;
+  title: string;
+  description?: string | null;
+  goalType: SkillsHuntMissionGoalType;
+  goalTarget: number;
+  goalMetadata?: Record<string, unknown>;
+  bonusPoints?: number;
+  colorHex?: string | null;
+  status?: SkillsHuntMissionStatus;
+  displayOrder?: number;
+};
+
+export type MissionUpdateInput = Partial<Omit<MissionCreateInput, 'roundId'>>;
+
+const MISSION_RETURN_COLS = `
+  id, round_id, title, description, goal_type, goal_target,
+  goal_metadata, bonus_points, color_hex, status, display_order,
+  created_by_user_id, updated_by_user_id, created_at, updated_at
+`;
+
+export async function listMissionsForAdmin(
+  client: PoolClient,
+  roundId: string,
+): Promise<SkillsHuntMission[]> {
+  const result = await client.query<SkillsHuntMissionRow>(
+    `SELECT ${MISSION_RETURN_COLS}
+     FROM skills_hunt_missions
+     WHERE round_id = $1::uuid
+     ORDER BY display_order ASC, created_at ASC`,
+    [roundId],
+  );
+  return result.rows.map(mapMission);
+}
+
+export async function getMissionById(
+  client: PoolClient,
+  missionId: string,
+): Promise<SkillsHuntMission | null> {
+  const result = await client.query<SkillsHuntMissionRow>(
+    `SELECT ${MISSION_RETURN_COLS} FROM skills_hunt_missions WHERE id = $1::uuid LIMIT 1`,
+    [missionId],
+  );
+  return result.rows[0] ? mapMission(result.rows[0]) : null;
+}
+
+export async function createMission(
+  client: PoolClient,
+  actorId: string,
+  input: MissionCreateInput,
+): Promise<SkillsHuntMission> {
+  const result = await client.query<SkillsHuntMissionRow>(
+    `
+      INSERT INTO skills_hunt_missions
+        (round_id, title, description, goal_type, goal_target, goal_metadata,
+         bonus_points, color_hex, status, display_order,
+         created_by_user_id, updated_by_user_id)
+      VALUES
+        ($1::uuid, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $11)
+      RETURNING ${MISSION_RETURN_COLS}
+    `,
+    [
+      input.roundId,
+      input.title.trim(),
+      input.description?.trim() ?? null,
+      input.goalType,
+      input.goalTarget,
+      JSON.stringify(input.goalMetadata ?? {}),
+      input.bonusPoints ?? 0,
+      input.colorHex ?? null,
+      input.status ?? 'active',
+      input.displayOrder ?? 0,
+      actorId,
+    ],
+  );
+  return mapMission(result.rows[0]);
+}
+
+export async function updateMission(
+  client: PoolClient,
+  actorId: string,
+  missionId: string,
+  input: MissionUpdateInput,
+): Promise<SkillsHuntMission | null> {
+  // COALESCE pattern so callers can send partial updates without juggling SQL.
+  const result = await client.query<SkillsHuntMissionRow>(
+    `
+      UPDATE skills_hunt_missions
+      SET
+        title          = COALESCE($2, title),
+        description    = COALESCE($3, description),
+        goal_type      = COALESCE($4, goal_type),
+        goal_target    = COALESCE($5, goal_target),
+        goal_metadata  = COALESCE($6::jsonb, goal_metadata),
+        bonus_points   = COALESCE($7, bonus_points),
+        color_hex      = COALESCE($8, color_hex),
+        status         = COALESCE($9, status),
+        display_order  = COALESCE($10, display_order),
+        updated_by_user_id = $11,
+        updated_at = NOW()
+      WHERE id = $1::uuid
+      RETURNING ${MISSION_RETURN_COLS}
+    `,
+    [
+      missionId,
+      input.title?.trim() ?? null,
+      input.description !== undefined ? input.description?.trim() ?? null : null,
+      input.goalType ?? null,
+      input.goalTarget ?? null,
+      input.goalMetadata !== undefined ? JSON.stringify(input.goalMetadata) : null,
+      input.bonusPoints ?? null,
+      input.colorHex !== undefined ? input.colorHex : null,
+      input.status ?? null,
+      input.displayOrder ?? null,
+      actorId,
+    ],
+  );
+  return result.rows[0] ? mapMission(result.rows[0]) : null;
+}
+
+// Soft-archive (status='archived'). Hard delete is intentionally not exposed —
+// progress rows have ON DELETE CASCADE and we don't want admins to nuke
+// scoring history with one wrong click.
+export async function archiveMission(
+  client: PoolClient,
+  actorId: string,
+  missionId: string,
+): Promise<SkillsHuntMission | null> {
+  return updateMission(client, actorId, missionId, { status: 'archived' });
+}
+
+export function validateMissionCreateInput(input: MissionCreateInput): string | null {
+  if (!input.roundId || typeof input.roundId !== 'string') return 'roundId required';
+  if (!input.title || input.title.trim().length < 2 || input.title.length > 200) return 'title 2-200 chars required';
+  if (input.description && input.description.length > 1000) return 'description max 1000 chars';
+  const validGoalTypes: SkillsHuntMissionGoalType[] = [
+    'count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors',
+  ];
+  if (!validGoalTypes.includes(input.goalType)) return 'invalid goalType';
+  if (!Number.isInteger(input.goalTarget) || input.goalTarget <= 0) return 'goalTarget must be positive integer';
+  if (input.goalType === 'count_skills_in_sector') {
+    const sector = input.goalMetadata?.sectorName;
+    if (typeof sector !== 'string' || sector.trim().length === 0) return 'goalMetadata.sectorName required for count_skills_in_sector';
+  }
+  if (input.bonusPoints != null && (!Number.isInteger(input.bonusPoints) || input.bonusPoints < 0)) {
+    return 'bonusPoints must be non-negative integer';
+  }
+  return null;
+}

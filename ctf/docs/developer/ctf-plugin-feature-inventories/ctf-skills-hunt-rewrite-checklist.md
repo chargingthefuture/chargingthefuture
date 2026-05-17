@@ -89,6 +89,14 @@
   - [ ] `leaderboard-champion` — finished top-3 on a round's final standings. **Deferred:** requires a round-close handler (round status transition `active → closed`). Helper exists in `NAMED_BADGES.leaderboardChampion`; wire when the round-close path is built.
 - [x] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the Skills Hunt Scout tab.
   - Implemented in `components/directory/directory-shell.tsx`. Fetches active card from `/api/skills-hunt/feature-reward-card`; falls back to a default card linking to `/apps/skills-hunt?tab=scout` when the API has no row configured. Purple `#A855F7` palette per rule 126.
+- [x] **Wave 2 — Missions admin CRUD + player GET + recompute hook** (continuity §2.9).
+  - [x] Admin `GET/POST /api/skills-hunt/admin/rounds/{roundId}/missions` (list, create).
+  - [x] Admin `GET/PUT/DELETE /api/skills-hunt/admin/rounds/{roundId}/missions/{missionId}` (DELETE soft-archives via `status='archived'`; hard delete intentionally not exposed).
+  - [x] Player `GET /api/skills-hunt/rounds/{roundId}/missions` returns active+locked missions with per-user progress.
+  - [x] `reviewSubmission` accept branch calls `recomputeMissionProgressForUser()` so accepted submissions update mission progress in the same transaction.
+  - [x] Mission validation helper (`validateMissionCreateInput`) enforces required fields + `sectorName` metadata for `count_skills_in_sector` goals.
+  - [x] Skills Hunt shell renders missions tab from real API (replaces "Missions launching in Wave 2" stub) with progress bars + color hex from admin config.
+  - [ ] Notification fan-out on mission completion — folded into the broader in-DB notifications work below.
 - [ ] **Wave 2 — in-DB notification fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked). Writes rows to `skills_hunt_notifications`; client polls `GET /api/skills-hunt/notifications` at 30s. GetStream is out of scope (continuity §2.11).
 - [ ] **Wave 2 — notification center UI** (web + mobile) with unread badge.
 
