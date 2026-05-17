@@ -126,14 +126,14 @@
 ## Phase 6 — Security, Compliance, and Deletion
 
 - [x] Verify authz/deny conditions and audit integrity on existing endpoints.
-- [ ] **Wave 2 — soft-delete + GDPR endpoint:**
-  - [ ] Add `deleted_at` to all user-scoped Skills Hunt tables.
-  - [ ] `DELETE /api/account/skills-hunt-profile` GDPR erasure.
-  - [ ] Audit-log retention preserved (`skills_hunt_audit_log` is not soft-deleted).
-- [ ] **Wave 2 — moderation report flow:**
-  - [ ] `POST /api/skills-hunt/submissions/{id}/report` (auth required).
-  - [ ] Admin escalation queue (`GET /api/skills-hunt/admin/reports`).
-  - [ ] Resolution actions: dismiss, archive profile, hard-delete.
+- [x] **Wave 2 — soft-delete + GDPR endpoint:**
+  - [x] `deleted_at` columns already landed in Phase 1 (`f3aeb3f`); user-visible reads (`listSubmissions` and `rebuildLeaderboard` individual + team aggregates, all-time) now filter `AND deleted_at IS NULL`.
+  - [x] `DELETE /api/account/skills-hunt-profile` GDPR erasure — soft-deletes every submission authored by the caller; emits audit log entry; rebuilt leaderboards automatically skip the deleted rows on the next review.
+  - [x] Audit-log retention preserved (`skills_hunt_audit_log` is not soft-deleted; the delete endpoint *writes* an audit row with `skills-hunt.profile.delete`).
+- [x] **Wave 2 — moderation report flow:** `lib/skills-hunt/moderation.ts` (createReport, listOpenReports, resolveReport).
+  - [x] `POST /api/skills-hunt/submissions/{id}/report` (auth required, CSRF, reason CHECK enforced).
+  - [x] Admin escalation queue `GET /api/skills-hunt/admin/reports?status=...` (open by default).
+  - [x] Resolution actions via `PATCH /api/skills-hunt/admin/reports/{reportId}`: status ∈ `dismissed | archived | removed` with optional `resolutionNotes`. Idempotent (`WHERE status = 'open'`).
 - [ ] **Wave 1 — Clerk reserved-prefix policy:**
   - [x] `lib/auth/username-policy.ts` rejects usernames starting with `community-`.
     - Exports `evaluateUsernamePolicy` and `isReservedUsername`. Submissions POST returns `SKILLS_HUNT_RESERVED_USERNAME` (403) when caller's Clerk username matches a reserved prefix.

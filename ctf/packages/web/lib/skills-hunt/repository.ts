@@ -844,7 +844,7 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
             WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0
           )::text AS first_match_count
         FROM skills_hunt_submissions
-        WHERE round_id = $1::uuid AND status = 'accepted'
+        WHERE round_id = $1::uuid AND status = 'accepted' AND deleted_at IS NULL
         GROUP BY submitter_user_id
       ),
       pending AS (
@@ -930,7 +930,7 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
         MAX(s.created_at) AS last_submission_at
       FROM skills_hunt_submissions s
       LEFT JOIN LATERAL jsonb_array_elements_text(s.claimed_professions) profession(value) ON TRUE
-      WHERE s.round_id = $1::uuid AND s.status = 'accepted'
+      WHERE s.round_id = $1::uuid AND s.status = 'accepted' AND s.deleted_at IS NULL
       GROUP BY LOWER(TRIM(COALESCE(profession.value, 'unspecified')))
       ORDER BY
         SUM(s.points_awarded) DESC,
@@ -1450,6 +1450,7 @@ export async function listSubmissions(
       updated_at
     FROM skills_hunt_submissions
     WHERE round_id = $1::uuid
+      AND deleted_at IS NULL
       ${filterSql}
     ORDER BY created_at DESC
     LIMIT $${params.length - 1}
@@ -1461,6 +1462,7 @@ export async function listSubmissions(
     SELECT COUNT(*)::text AS total
     FROM skills_hunt_submissions
     WHERE round_id = $1::uuid
+      AND deleted_at IS NULL
       ${filterSql}
   `;
 
