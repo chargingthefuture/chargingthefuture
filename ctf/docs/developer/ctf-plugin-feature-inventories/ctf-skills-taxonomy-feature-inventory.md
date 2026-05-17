@@ -23,7 +23,7 @@ This plugin must:
 
 ---
 
-## 1) Planned User and Admin Feature Scope
+## 1) User and Admin Feature Scope
 
 ### 1.1 Planned User-Facing Scope
 
@@ -39,7 +39,7 @@ This plugin must:
 5. Skill CRUD under parent job title constraints.
 6. Dependency-impact preview prior to destructive actions.
 
-## 2) API and Command Surface (Planned)
+## 2) API and Command Surface
 
 ### 2.1 Plugin Command Surface (Authoritative)
 
@@ -60,7 +60,7 @@ Planned command groups:
 11. `skills-taxonomy.skill.delete`
 12. `skills-taxonomy.dependency-impact.preview`
 
-### 2.2 HTTP Projection Routes (Planned)
+### 2.2 HTTP Projection Routes
 
 Admin routes:
 
@@ -88,7 +88,7 @@ Consumer routes:
 - `GET /api/skills-taxonomy/hierarchy`
 - `GET /api/skills-taxonomy/flattened`
 
-## 3) Data Dependencies and Downstream Safeguards (Planned)
+## 3) Data Dependencies and Downstream Safeguards
 
 1. Core taxonomy entities: sectors, job titles, skills.
 2. Read model projections: hierarchy model and flattened model.
@@ -97,7 +97,7 @@ Consumer routes:
 5. Contract versioning required when read models change shape.
 6. Compatibility contract requires both hierarchy and flattened feeds to remain maintained for downstream consumers.
 
-## 4) Destructive-Action and Dependency-Impact Requirements (Planned)
+## 4) Destructive-Action and Dependency-Impact Requirements
 
 1. Hard-delete is denied when active downstream references exist beyond approved thresholds.
 2. Pre-delete dependency preview is mandatory for sector/job-title/skill delete actions.
@@ -105,7 +105,7 @@ Consumer routes:
 4. Policy-safe alternatives (deactivate/rename/reparent) should be available where feasible.
 5. Every destructive decision (allow/deny) must emit auditable evidence.
 
-## 5) Security and Compliance Controls (Planned)
+## 5) Security and Compliance Controls
 
 1. Authenticated admin access is required for all admin routes and mutation commands.
 2. Admin-only mutation commands with server-side RBAC/ABAC checks.
@@ -115,13 +115,13 @@ Consumer routes:
 6. Audit coverage for create/update/delete and dependency-impact checks.
 7. Request validation and integrity constraints to prevent hierarchy corruption.
 
-## 6) Operator Safety and Destructive Risk (Planned)
+## 6) Operator Safety and Destructive Risk
 
 1. Taxonomy mutations are treated as downstream blast-radius operations due to cross-app selector dependencies.
 2. Delete flows require explicit safeguards (dependency-impact preview, policy gates, and role checks) before commit.
 3. Safe alternatives (deactivate/rename/reparent) should be preferred when delete risk exceeds approved thresholds.
 
-## 7) Web and Android Parity Notes (Planned)
+## 7) Web and Android Parity Notes
 
 1. Web admin taxonomy management is v1 baseline.
 2. Android parity focuses on read-model consumption for dependent apps in v1.
@@ -134,7 +134,7 @@ Current status:
 - Web admin UI surface is deferred to owner `taxonomy-web-admin-phase1` (target milestone `2026-03-22`).
 - Android read-model parity remains deferred to owner `taxonomy-android-read-parity` (target milestone `2026-04-15`).
 
-## 8) Seed Coverage Status (Planned)
+## 8) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

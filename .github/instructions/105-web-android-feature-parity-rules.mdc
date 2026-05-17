@@ -7,21 +7,31 @@ Ensure every user-facing feature implemented in web is also implemented in Andro
 - Applies to `packages/web` and `packages/mobile`.
 - iOS is explicitly out of scope for delivery and parity requirements.
 
-## Mandatory
-- Any new web user-facing feature must include an Android implementation plan before merge.
-- Any new Android user-facing feature must include a web implementation plan before merge.
-- Core functional parity is required for plugin messaging features (for example, Chyme chat), command interfaces, account settings, consent/privacy controls, and safety-critical flows.
+## Mandatory — 100% Parity Baseline
+
+100% web↔Android parity is the baseline state for every user-facing plugin and platform feature. Parity is not a goal, a roadmap item, or a future state — it is a precondition for landing user-facing work.
+
+- Any new web user-facing feature must ship its Android implementation in the same PR (or in a strictly coordinated PR pair merged together).
+- Any new Android user-facing feature must ship its web implementation in the same PR (or in a strictly coordinated PR pair merged together).
+- Refactors, behavioral changes, and bug fixes on user-facing surfaces must update both platforms in the same change.
+- Parity is required for all user-facing features: plugin messaging, plugin commands, account settings, consent/privacy controls, safety-critical flows, navigation, and shell chrome.
 - Differences in UI layout are allowed when platform conventions require it, but behavior and outcomes must match.
 
 ## Delivery Rules
-- PR descriptions must state parity status: `web+android complete` or `follow-up parity ticket linked`.
-- If parity is deferred, create a tracked parity ticket with owner, deadline, and risk note.
-- No production release may leave safety/privacy/compliance features platform-incomplete.
+- PR descriptions must declare `Parity Status: web+android complete`. The CI parity gate enforces this.
+- The `Parity Ticket: <issue-or-URL>` escape hatch is reserved for explicit, time-boxed exceptions only. It is not a default option and is not appropriate for new feature work.
+- An exception must include: owner, justification, expiry date, and risk acceptance from the platform owner.
+- An exception is invalid for safety, privacy, compliance, or trauma-informed features — those must be delivered at parity, period.
+
+## No Phased Rollouts
+- Features are either delivered or not delivered. "Phase 0", "Phase 1", and "we will add Android later" framings are prohibited in PRs, inventories, checklists, design artifacts, and code comments.
+- If a feature cannot be delivered on both platforms in the same change, the feature is not ready to land.
 
 ## Testing Rules
 - Add parity acceptance criteria for critical paths in test plans.
 - Validate both web and Android for accessibility and trauma-informed constraints when introducing new user workflows.
 
 ## Prohibited
-- Shipping web-only or Android-only experiences for critical user journeys without explicit approved exception.
+- Shipping web-only or Android-only experiences for any user-facing flow without an approved exception (see Delivery Rules).
 - Marking parity complete when only UI shell exists and core behavior is missing.
+- Using phase language to justify a parity gap.

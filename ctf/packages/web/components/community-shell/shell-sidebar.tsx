@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import type { ShellSection } from './shell-types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
+import type { HubChannelInfo, HubDMInfo } from '../../lib/hub/types';
 import { getPluginVisuals } from './shell-plugin-config';
 import styles from './community-shell.module.css';
 
 type ShellSidebarProps = {
   section: ShellSection;
+  channels: HubChannelInfo[];
+  dms: HubDMInfo[];
   plugins: PluginRegistryItem[];
   activeApp: string | null;
   onAppSelect: (slug: string | null) => void;
@@ -15,18 +18,10 @@ type ShellSidebarProps = {
   onQueryChange: (q: string) => void;
 };
 
-const STATIC_CHANNELS = [
-  { name: 'community-support', href: '/apps/chyme' },
-];
-
-const STATIC_DMS = [
-  { name: 'Maria G.', status: 'Soon' },
-  { name: 'James T.', status: 'Soon' },
-  { name: 'Amara O.', status: 'Soon' },
-];
-
 export function ShellSidebar({
   section,
+  channels,
+  dms,
   plugins,
   activeApp,
   onAppSelect,
@@ -55,24 +50,28 @@ export function ShellSidebar({
       <div className={styles.sidebarBody}>
         {section === 'chat' ? (
           <>
-            {STATIC_CHANNELS.map((ch) => (
-              <Link key={ch.name} href={ch.href} className={styles.sidebarChannel}>
+            {channels.map((ch) => (
+              <Link key={ch.slug} href={`/apps/hub?channel=${encodeURIComponent(ch.slug)}`} className={styles.sidebarChannel}>
                 <span className={styles.sidebarChannelHash}>#</span>
-                <span className={styles.sidebarChannelName}>{ch.name}</span>
+                <span className={styles.sidebarChannelName}>{ch.slug}</span>
               </Link>
             ))}
             <p className={styles.sidebarGroupLabel}>Direct Messages</p>
-            {STATIC_DMS.map((dm) => (
-              <div
-                key={dm.name}
-                className={`${styles.sidebarDm} ${styles.sidebarDmDisabled}`}
-                aria-disabled="true"
-                title="Direct messages are coming in Phase 1"
+            {dms.map((dm) => (
+              <button
+                key={dm.id}
+                type="button"
+                className={styles.sidebarDm}
+                onClick={() => {
+                  // TODO: Open DM thread; wire to shell-chat-panel to show DM thread view
+                }}
               >
                 <span className={styles.sidebarDmDot} aria-hidden="true" />
-                <span className={styles.sidebarDmName}>{dm.name}</span>
-                <span className={`${styles.sidebarBadge} ${styles.sidebarBadgeMuted}`}>{dm.status}</span>
-              </div>
+                <span className={styles.sidebarDmName}>{dm.counterpartDisplayName}</span>
+                {dm.unreadCount > 0 && (
+                  <span className={`${styles.sidebarBadge}`}>{dm.unreadCount}</span>
+                )}
+              </button>
             ))}
           </>
         ) : (

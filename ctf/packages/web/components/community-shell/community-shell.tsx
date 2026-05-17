@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
+import type { HubChannelInfo, HubDMInfo } from '../../lib/hub/types';
 import type { PluginSortMode, ShellCurrentUser, ShellSection, ShellStats } from './shell-types';
 import { ShellIconRail } from './shell-icon-rail';
 import { ShellSidebar } from './shell-sidebar';
@@ -112,6 +113,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
+  const [channels, setChannels] = useState<HubChannelInfo[]>([]);
+  const [dms, setDms] = useState<HubDMInfo[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeApp, setActiveApp] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<PluginSortMode>('recent');
@@ -150,6 +153,42 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let cancelled = false;
+
+    async function loadHubData() {
+      try {
+        const [channelsRes, dmsRes] = await Promise.all([
+          fetch('/api/hub/channels', { method: 'GET', cache: 'no-store' }),
+          fetch('/api/hub/dms', { method: 'GET', cache: 'no-store' }),
+        ]);
+
+        if (channelsRes.ok) {
+          const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
+          if (!cancelled) {
+            setChannels(channelsPayload.channels ?? []);
+          }
+        }
+
+        if (dmsRes.ok) {
+          const dmsPayload = (await dmsRes.json()) as { threads: HubDMInfo[] };
+          if (!cancelled) {
+            setDms(dmsPayload.threads ?? []);
+          }
+        }
+      } catch {
+        // Silently fail; channels and DMs will remain empty.
+      }
+    }
+
+    void loadHubData();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const orderedPlugins = useMemo(
     () => sortPluginsForUi(plugins, sortMode, recentPluginSlugs, pluginUsageCounts),
@@ -198,6 +237,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} />
         <ShellSidebar
           section={section}
+          channels={channels}
+          dms={dms}
           plugins={filteredPlugins}
           activeApp={activeApp}
           onAppSelect={handleAppSelect}

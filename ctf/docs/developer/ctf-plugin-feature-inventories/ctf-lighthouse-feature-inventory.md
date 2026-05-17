@@ -20,7 +20,7 @@ Scope decisions locked for this rewrite inventory phase:
 
 ---
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Dashboard and Role-Based Entry
 
@@ -95,7 +95,7 @@ Scope decisions locked for this rewrite inventory phase:
 2. User-level block create/check/list/delete behaviors must be implemented through policy-controlled plugin contracts.
 3. Block behavior must be reflected in match and related interaction surfaces where applicable.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Admin Dashboard and Data Views
 
@@ -127,7 +127,7 @@ Scope decisions locked for this rewrite inventory phase:
 2. Admin announcements CRUD/deactivation parity is required.
 3. Cache refresh/revalidation after admin announcement mutations is required.
 
-## 3) Planned API Surface and Route Map
+## 3) API Surface and Route Map
 
 ### 3.1 Profile APIs
 
@@ -179,7 +179,7 @@ Scope decisions locked for this rewrite inventory phase:
   - list blocked users,
   - remove block.
 
-## 4) Planned Data Model and Storage Contracts
+## 4) Data Model and Storage Contracts
 
 Required entities for parity scope:
 
@@ -196,7 +196,7 @@ Contract expectations:
 3. Deletion behavior for host-linked records requires explicit contract lock before release.
 4. Block storage contract must define deterministic conflict behavior with matching lifecycle.
 
-## 5) Planned Security, Privacy, and Compliance Controls
+## 5) Security, Privacy, and Compliance Controls
 
 1. Auth required across LightHouse route families.
 2. Admin-only gate for admin endpoints.
@@ -213,7 +213,7 @@ Contract expectations:
 3. UI layout may differ by platform conventions, but functional outcomes must match.
 4. Safety/privacy/compliance-critical controls cannot be platform-incomplete at release.
 
-## 7) Seed Coverage Status (Planned)
+## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

@@ -22,7 +22,7 @@ Authoritative app-level ownership reference:
 
 ---
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Library Dashboard
 
@@ -45,7 +45,7 @@ Authoritative app-level ownership reference:
 2. Trauma-informed plugin description.
 3. Privacy statement aligned to current CTF policy language.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 In-App Admin Surface
 
@@ -53,9 +53,9 @@ Authoritative app-level ownership reference:
 2. No plugin-admin web/mobile route parity is required for GentlePulse in this rewrite.
 3. Operational CRUD management is externalized and out of CTF code implementation scope.
 
-## 3) Planned API Surface and Route Map
+## 3) API Surface and Route Map
 
-### 3.1 Plugin Command Surface (Planned)
+### 3.1 Plugin Command Surface
 
 1. `gentlepulse.library.list`
 2. `gentlepulse.meditation.detail.fetch`
@@ -67,7 +67,7 @@ Authoritative app-level ownership reference:
 8. `gentlepulse.favorite.list`
 9. `gentlepulse.favorite.status.fetch`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes (authenticated):
 
@@ -87,7 +87,7 @@ Excluded route groups:
 2. No plugin-scoped announcements routes in CTF rewrite scope.
 3. No `/api/gentlepulse/progress*` routes in CTF rewrite scope.
 
-## 4) Planned Data Model and Storage Contracts
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Meditations
 
@@ -105,7 +105,7 @@ Excluded route groups:
 1. Favorites keyed per user + meditation.
 2. Favorite add/remove/list/status endpoints support deterministic interface-state hydration.
 
-## 5) Planned Security, Privacy, and Compliance Controls
+## 5) Security, Privacy, and Compliance Controls
 
 1. Auth required for all GentlePulse API routes.
 2. Server-side authz and validation on every mutation.
@@ -118,7 +118,7 @@ Excluded route groups:
 2. No GentlePulse admin parity obligations in web/mobile for this rewrite scope.
 3. App-level settings parity is tracked in non-plugin inventory.
 
-## 7) Seed Coverage Status (Planned)
+## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

@@ -25,7 +25,7 @@ Decision locks for planning:
 3. Android parity is not a strict MVP release gate.
 4. Legacy behavior informs planning, but rewrite contracts are defined in `ctf/` only.
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Dashboard and Request Lifecycle
 
@@ -62,7 +62,7 @@ Decision locks for planning:
 1. Authenticated announcement consumption surface.
 2. Active/non-expired announcement filtering by policy contract.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Requests and Fulfillments Oversight
 
@@ -76,7 +76,7 @@ Decision locks for planning:
 2. Server-enforced admin authorization on write paths.
 3. Policy-consistent mutation outcomes and audit events.
 
-## 3) API Surface and Route Map (Planned)
+## 3) API Surface and Route Map
 
 User/authenticated routes:
 
@@ -113,7 +113,7 @@ Admin routes:
 - `PUT /api/socketrelay/admin/announcements/:id`
 - `DELETE /api/socketrelay/admin/announcements/:id`
 
-## 4) Data Model and Storage Contracts (Planned)
+## 4) Data Model and Storage Contracts
 
 1. Canonical domain entities: profiles, requests, fulfillments, messages, announcements.
 2. Request and fulfillment status transitions are explicit and replay-safe.
@@ -121,7 +121,7 @@ Admin routes:
 4. Mutation operations enforce deterministic storage outcomes and audit-friendly metadata.
 5. Seed fixtures are deterministic for request lifecycle, fulfillment outcomes, and announcement states.
 
-## 5) Security, Privacy, and Compliance Controls (Planned)
+## 5) Security, Privacy, and Compliance Controls
 
 1. Auth guards on all private user routes.
 2. Admin authorization on all admin routes.
@@ -137,7 +137,7 @@ Admin routes:
 3. Android gaps are tracked as explicit deferrals with owner, due date, and risk note.
 4. Deferred Android items do not block MVP release unless explicitly escalated.
 
-## 7) Seed Coverage Status (Planned)
+## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

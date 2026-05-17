@@ -31,7 +31,7 @@ Planning constraints applied:
 
 ---
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Round Discovery and Participation
 
@@ -67,7 +67,7 @@ Planning constraints applied:
 3. Display a configurable feature reward card in plugin surfaces.
 4. Let users mark notifications as read.
 
-## 2) Planned Admin and Moderator Features
+## 2) Admin and Moderator Features
 
 ### 2.1 Round Management
 
@@ -88,7 +88,7 @@ Planning constraints applied:
 2. Tag generated records as community-generated with invite attribution.
 3. Preserve clear ownership boundary: generated profile is unclaimed until verified owner claims.
 
-## 3) API Surface and Route Map (Planned)
+## 3) API Surface and Route Map
 
 ### 3.1 Plugin Command Surface (Authoritative)
 
@@ -114,7 +114,7 @@ Planned command groups:
 12. `skills-hunt.feature-reward-card.update`
 13. `skills-hunt.directory-profile.generate`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes:
 
@@ -135,7 +135,7 @@ Admin/moderator routes:
 - `PUT /api/skills-hunt/admin/feature-reward-card`
 - `POST /api/skills-hunt/admin/submissions/:submissionId/generate-directory-profile`
 
-## 4) Data Model and Storage Contracts (Planned)
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Canonical Identity and Extension Strategy
 
@@ -161,7 +161,7 @@ Admin/moderator routes:
 2. Skills Hunt MUST NOT bypass Directory policy controls.
 3. Ownership claim lifecycle remains Directory-authoritative.
 
-## 5) Security, Privacy, and Compliance Controls (Planned)
+## 5) Security, Privacy, and Compliance Controls
 
 1. Deny-by-default policy checks on all mutation commands.
 2. Role separation for contributor, moderator, and admin operations.
@@ -170,13 +170,13 @@ Admin/moderator routes:
 5. Sensitive-content minimization in logs and notifications.
 6. Distinct plugin deletion and full-account deletion behavior.
 
-## 6) Web and Android Delivery Strategy (Planned)
+## 6) Web and Android Delivery Strategy
 
 1. Web-first initial delivery for round, submission, and leaderboard flows.
 2. Android parity follows via checklist-tracked milestones.
 3. Review semantics and scoring outcomes must remain cross-platform consistent.
 
-## 7) Seed Coverage Status (Planned)
+## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

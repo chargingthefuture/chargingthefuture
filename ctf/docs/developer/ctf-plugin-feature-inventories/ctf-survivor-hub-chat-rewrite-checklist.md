@@ -1,114 +1,117 @@
-# Survivor Hub Chat Rewrite Checklist
+# Survivor Hub Rewrite Checklist
 
 ## Scope
 
-- Rewrite target: `ctf/packages/web`
-- Surface: `community-shell` app shell home page
-- Reference: `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-survivor-hub-chat-feature-inventory.md`
+- Rewrite target: `ctf/packages/web`, `ctf/packages/mobile`, `ctf/schema.sql`, `ctf/docs/contracts`.
+- Surface: Survivor Hub home experience (`community-shell` + supporting APIs and schema).
+- Canonical spec: `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-survivor-hub-chat-feature-inventory.md`.
+- Hub has no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
+- 100% web↔Android parity is the baseline. See [105-web-android-feature-parity-rules.mdc](../../../../.github/instructions/105-web-android-feature-parity-rules.mdc). No phased rollouts.
+
+This checklist tracks the work needed to bring code into alignment with the inventory. The inventory is the spec; this file is the punch list.
 
 ---
 
-## Phase 0 — Static/Demo UI
+## Punch List
 
-### Implementation Requirements
+### Remove Cross-Plugin Dependency on Chyme (top priority)
 
-- [x] Discord-style 4-column layout: icon rail (72px), left sidebar (240px), main content (flex), right rail (280px).
-- [x] Section toggle (Chat / Apps) controlled by icon rail buttons.
-- [x] Chat tab: pre-seeded static messages with hub avatar and user avatar.
-- [x] Chat tab: input field + send button wired to local state only (no backend).
-- [x] Chat tab: suggestion chips that pre-fill the input.
-- [x] Chat tab: action buttons in hub messages link to correct plugin routes.
-- [x] Chat tab: hero banner with live stats (member count, GDP) from GDP plugin data.
-- [x] Apps tab: 3-column plugin grid driven by live plugin registry, with per-plugin color theming.
-- [x] Sidebar: static channel list (chat mode) linking to plugin routes as placeholders.
-- [x] Sidebar: static DM list (placeholder names, no routing).
-- [x] Sidebar: app list (apps mode) with per-plugin color accent and active state.
-- [x] Right rail: active auth-provider user first name / username displayed (no hardcoded names).
-- [x] Right rail: GDP progress bar with live values from GDP repository (zero if no data).
-- [x] Right rail: active plugin list (top implemented plugins).
-- [x] Modularity: components split per rule 116 (max 200 lines per primary function/file).
-- [x] No hardcoded stat values — all stats sourced from live data or show zero/absent.
-- [x] Footer note: "Human-assisted · GetStream powered (coming soon)."
+- [ ] Replace `lib/chyme/types` imports in `ctf/packages/web/components/community-shell/use-home-chat.ts` with Hub-owned types under `ctf/packages/web/lib/hub/types.ts`.
+- [ ] Replace `GET /api/chyme/messages` / `POST /api/chyme/messages` / `POST /api/chyme/join` calls with `/api/hub/messages` and `/api/hub/join`.
+- [ ] Replace the `#general` channel's `href` (currently `/apps/chyme`) with the canonical Hub channel route once channel data is loaded from `/api/hub/channels`.
+- [ ] Audit the rest of `community-shell/` and `app/apps/` for any remaining Chyme imports, types, fetches, or styling assumptions.
 
-### Pre-Release Gates
+### Hub-Owned Schema
 
-- [ ] Visual QA against Desktop mockup (`mockups/mockups-master/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/Desktop.tsx`).
+- [ ] Add `hub_channels` to `ctf/schema.sql`.
+- [ ] Add `hub_bots` to `ctf/schema.sql`.
+- [ ] Add `hub_bot_routes` to `ctf/schema.sql`.
+- [ ] Add `hub_dm_threads` to `ctf/schema.sql`.
+- [ ] Add `hub_messages` to `ctf/schema.sql`.
+- [ ] Each new table follows `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`.
+
+### Hub-Owned GetStream Scope
+
+- [ ] Add Hub-owned GetStream adapter under `ctf/packages/shared` (separate user-id prefix and channel-id namespace from any other plugin).
+- [ ] Wire `POST /api/hub/join` and `POST /api/survivor-hub-chat/stream` to issue tokens against Hub's GetStream scope only.
+
+### Hub-Owned API Routes
+
+- [ ] `GET /api/hub/channels`.
+- [ ] `GET /api/hub/dms`.
+- [ ] `GET /api/hub/bots`.
+- [ ] `GET /api/hub/messages`.
+- [ ] `POST /api/hub/messages`.
+- [ ] `POST /api/hub/join`.
+- [ ] `POST /api/survivor-hub-chat/stream` (alias delegating to `POST /api/hub/join`).
+
+### `@comic` Bot
+
+- [ ] Author canonical `@comic` bot profile and add to `hub_bots` seed.
+- [ ] Author routing rules in `hub_bot_routes`.
+- [ ] Wire `@comic` into the DM list via `/api/hub/dms`.
+- [ ] Render `@comic` avatar in the chat panel for bot-routed messages.
+
+### Sidebar — Channels
+
+- [ ] Replace `STATIC_CHANNELS` in `shell-sidebar.tsx` with data fetched from `GET /api/hub/channels`.
+- [ ] Respect `visibility_scope` so unauthenticated callers receive only `#general`.
+
+### Sidebar — DMs
+
+- [ ] Replace `STATIC_DMS` in `shell-sidebar.tsx` with data fetched from `GET /api/hub/dms`.
+- [ ] Build the DM thread view inside the main content panel.
+- [ ] Remove the disabled-state markup and tooltip strings once DMs are live.
+
+### Routing Matrix (data-driven)
+
+- [ ] Replace the hardcoded `getActionForText` matrix in `use-home-chat.ts` with a server-side lookup against `hub_bot_routes`.
+
+### Mobile Hub (parity)
+
+- [ ] Wire `SurvivorHubChat` into the mobile navigation surface.
+- [ ] Align `fetchSurvivorHubChatStreamCredentials` with `POST /api/survivor-hub-chat/stream`.
+- [ ] Delete `MockSurvivorHubChat.tsx` or repurpose it as a Storybook fixture.
+- [ ] Reach feature parity with the web Hub: chat panel with routing assistant, channels list, DMs/bots, plugin grid.
+- [ ] Add a `hub` entry to `ctf/config/plugin-parity-contracts.json`.
+
+### Plugin Catalog / Registry
+
+- [ ] Add `hub` to `ctf/packages/web/lib/plugins/plugin-catalog.ts`.
+- [ ] Add `hub` to the plugin registry seed and `lib/plugins/repository.ts` fallback list.
+
+### Contracts
+
+- [ ] Author `ctf/docs/contracts/HUB_PLUGIN_COMMAND_CONTRACTS.yaml`.
+- [ ] Author `ctf/docs/contracts/HUB_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`.
+- [ ] Author `ctf/docs/contracts/HUB_PLUGIN_AUDIT_CONTRACTS.yaml`.
+- [ ] Author `ctf/docs/contracts/HUB_PROFILE_AND_DELETION_CONTRACT.md`.
+
+### Seed Coverage
+
+- [ ] Add `ctf/scripts/seedHubPhase0.mjs` that deterministically seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`.
+
+---
+
+## Pre-Merge Gates
+
+- [ ] No imports from `lib/chyme/*` or any other plugin's `lib/*` in `ctf/packages/web/components/community-shell/`, `ctf/packages/web/app/apps/`, or `ctf/packages/mobile/src/features/survivor-hub-chat/`.
+- [ ] No `fetch('/api/chyme/...')` (or any other plugin's API) from Hub surfaces.
+- [ ] Visual QA against the canonical Survivor Hub desktop mockup in `design/`.
 - [ ] Mobile responsive layout checked at 900px and 1200px breakpoints.
-- [ ] GDP stats display "0" or absent (not hardcoded) when no published GDP data exists.
-- [ ] Right rail shows provider-backed first name or username, not placeholder "Survivor" hardcoded text when user is signed in.
+- [ ] GDP stats display zero/absent (not hardcoded) when no published GDP data exists.
+- [ ] Right rail shows provider-backed first name or username, never hardcoded text, for signed-in users.
 - [ ] Auth-provider account control renders in icon rail for signed-in users.
 - [ ] No TypeScript errors in `community-shell` component tree.
 - [ ] ESLint passes with zero warnings (`pnpm lint`).
-- [ ] Plugin card "Open plugin →" links navigate to correct `/apps/[slug]` route.
-- [ ] Channel links navigate to correct plugin routes.
-
-### Known Deferrals
-
-- [ ] DEFERRED (Phase 1): GetStream channel wiring for real-time chat.
-- [ ] DEFERRED (Phase 1): Operator dashboard for human-in-the-loop responses.
-- [ ] DEFERRED (Phase 1): Postgres transcript logging.
-- [ ] DEFERRED (Phase 1): Unread message counts on channel list.
-- [ ] DEFERRED (Phase 1): Live DM routing.
-- [ ] DEFERRED (Phase 2): Intent classifier and slot-filler automation.
-- [ ] DEFERRED (Phase 3): LLM-augmented RAG routing.
-
----
-
-## Phase 1 — Human-in-the-Loop (Planned)
-
-> Not yet designed. Specs required before any implementation begins.
-
-### Pre-Implementation Requirements
-
-- [ ] GetStream channel provisioning spec written and approved.
-- [ ] Postgres `chat_transcripts` schema designed and migration written.
-- [ ] Postgres `intent_labels` schema designed and migration written.
-- [ ] Operator dashboard spec and wireframe approved.
-- [ ] Auth/policy contracts written: provider-neutral authz requirements for operator role.
-- [ ] Privacy review: confirm retention policy for transcript data.
-- [ ] Rollout plan: how to migrate static Phase 0 UI to live channel without disrupting existing users.
-
-### Implementation Requirements (pending spec)
-
-- [ ] GetStream channel provisioned per authenticated user.
-- [ ] Operator GetStream dashboard for viewing/responding to queued chats.
-- [ ] Chat input wired to GetStream channel (replace local state).
-- [ ] Transcript storage in Postgres with required fields.
-- [ ] Background ETL job for intent label extraction.
-- [ ] Operator typing indicator displayed in chat panel.
-- [ ] Human fallback queue monitoring with alerts.
-
----
-
-## Phase 2 — Hybrid Automation (Planned)
-
-> Not yet designed. Requires Phase 1 completion and labeled dataset.
-
-### Pre-Implementation Requirements
-
-- [ ] Minimum labeled example volume reached (≥ threshold TBD by ML owner).
-- [ ] Intent classifier trained and evaluated offline.
-- [ ] Canonical intent→plugin→action matrix documented and approved.
-- [ ] Routing service API spec written.
-- [ ] Confidence threshold policy approved for auto-respond vs. human fallback.
-- [ ] SLA policy for human fallback queue.
-
----
-
-## Phase 3 — LLM-Augmented Routing (Planned)
-
-> Not yet designed. Requires Phase 2 completion and cost/privacy evaluation.
-
-### Pre-Implementation Requirements
-
-- [ ] LLM provider selected and evaluated (latency, cost/turn, safety features, data agreements).
-- [ ] Privacy audit: confirm no PII/PHI leaves in-house boundary.
-- [ ] Prompt template library designed and approved.
-- [ ] Retrieval layer (vector store) designed: content indexed, update cadence defined.
-- [ ] RAG pipeline spec written and approved.
+- [ ] Plugin card "Open plugin →" links navigate to correct `/apps/[slug]` routes.
+- [ ] Channel links navigate to Hub's own channel routes (no cross-plugin links).
+- [ ] Unauthenticated users see exactly one channel (`#general`) and no DMs / bots / authenticated-only CTAs.
+- [ ] Inventory updated to reflect the merged code state (Change Log entry added).
 
 ---
 
 ## Change Log
 
-- 2026-03-23: Initial checklist created. Phase 0 implementation completed. Phases 1–3 deferred pending spec.
+- 2026-05-12: Checklist re-scoped as a punch list against the canonical inventory; rules 105, 107, 112, 120 referenced; pre-merge gates assert no cross-plugin imports/fetches; phased-rollout sections removed.
+- 2026-03-23: Initial checklist created under prior phase-based template.

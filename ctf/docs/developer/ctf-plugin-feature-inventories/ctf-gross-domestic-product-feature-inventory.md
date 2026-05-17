@@ -26,7 +26,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 1) Planned User-Facing Features
+## 1) User-Facing Features
 
 ### 1.1 GDP Transparency Overview
 
@@ -73,7 +73,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Metric Governance Operations
 
@@ -95,7 +95,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 3) API Surface and Route Map (Planned)
+## 3) API Surface and Route Map
 
 ## 3.1 Plugin Command Surface (Authoritative)
 
@@ -117,7 +117,7 @@ Planned command groups:
 8. `gross-domestic-product.admin.snapshot.publish`
 9. `gross-domestic-product.admin.backfill.run`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes:
 
@@ -138,7 +138,7 @@ Admin routes:
 
 ---
 
-## 4) Data Model and Storage Contracts (Planned)
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Canonical Profile and Plugin Extension
 
@@ -192,7 +192,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 5) Security, Privacy, and Compliance Controls (Planned)
+## 5) Security, Privacy, and Compliance Controls
 
 1. Server-side authorization for every command execution.
 2. Deny-by-default administrative command access.
@@ -246,7 +246,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan (Planned)
+## 6) Web and Android Parity Plan
 
 1. Core read-only GDP transparency flows are parity-required.
 2. Administrative mutation capabilities may ship web-first with tracked Android parity backlog.
@@ -255,7 +255,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 8) Seed Coverage Status (Planned)
+## 8) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

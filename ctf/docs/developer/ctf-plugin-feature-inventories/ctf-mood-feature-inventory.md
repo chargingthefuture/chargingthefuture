@@ -18,7 +18,7 @@ Scope decisions locked for this rewrite:
 
 ---
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Mood Check Submission
 
@@ -33,21 +33,21 @@ Scope decisions locked for this rewrite:
 2. Cooldown model: one check every 7 days.
 3. If no prior record (or parse failure), client is treated as eligible.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 In-App Admin Surface
 
 1. No in-app Mood admin UI in CTF scope.
 2. No plugin-admin web/mobile route parity is required for Mood in this rewrite.
 
-## 3) Planned API Surface and Route Map
+## 3) API Surface and Route Map
 
-### 3.1 Plugin Command Surface (Planned)
+### 3.1 Plugin Command Surface
 
 1. `mood.check.submit`
 2. `mood.check.eligibility.fetch`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes (authenticated):
 
@@ -59,7 +59,7 @@ Excluded route groups:
 1. No `/api/mood/announcements*` routes in CTF rewrite scope.
 2. No `/api/mood/admin*` routes in CTF rewrite scope.
 
-## 4) Planned Data Model and Storage Contracts
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Mood Checks
 
@@ -67,7 +67,7 @@ Excluded route groups:
 2. Mood values are validated as integer range `1..5`.
 3. Eligibility evaluation is derived from last check timestamp per `clientId`.
 
-## 5) Planned Security, Privacy, and Compliance Controls
+## 5) Security, Privacy, and Compliance Controls
 
 1. Auth required for all Mood API routes.
 2. Server-side validation on every submission and eligibility request.
@@ -80,7 +80,7 @@ Excluded route groups:
 2. Cooldown and validation semantics must match between web and Android.
 3. No Mood admin parity obligations in web/mobile for this rewrite scope.
 
-## 7) Seed Coverage Status (Planned)
+## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

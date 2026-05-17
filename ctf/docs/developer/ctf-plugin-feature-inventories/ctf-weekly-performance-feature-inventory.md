@@ -21,7 +21,7 @@ This plugin must:
 
 ---
 
-## 1) Planned User and Admin Feature Scope
+## 1) User and Admin Feature Scope
 
 ### 1.1 Planned User-Facing Scope
 
@@ -38,7 +38,7 @@ This plugin must:
 6. Distinct loading, empty, missing-metrics, and error states for review safety.
 7. Controlled export/report action surface if approved in contract lock.
 
-## 2) API and Command Surface (Planned)
+## 2) API and Command Surface
 
 ### 2.1 Plugin Command Surface (Authoritative)
 
@@ -52,7 +52,7 @@ Planned command groups:
 4. `weekly-performance.comparison.get`
 5. `weekly-performance.report.export`
 
-### 2.2 HTTP Projection Routes (Planned)
+### 2.2 HTTP Projection Routes
 
 Admin routes:
 
@@ -62,7 +62,7 @@ Admin routes:
 - `GET /api/weekly-performance/admin/weeks/:weekStart/comparison`
 - `POST /api/weekly-performance/admin/weeks/:weekStart/export`
 
-## 3) Data Dependencies and Contracts (Planned)
+## 3) Data Dependencies and Contracts
 
 1. Aggregated users-domain metrics (new users, verification/approval totals).
 2. Aggregated engagement-domain metrics (DAU/MAU and week comparison signals).
@@ -71,7 +71,7 @@ Admin routes:
 5. Canonical metric definitions/versioning for all comparison fields.
 6. Week payload contract includes explicit current-week and previous-week boundary metadata.
 
-## 4) Security and Compliance Controls (Planned)
+## 4) Security and Compliance Controls
 
 1. Admin-only authorization for plugin admin read/report commands.
 2. Server-side RBAC/ABAC checks and deny-by-default policy enforcement.
@@ -79,14 +79,14 @@ Admin routes:
 4. Audit coverage for allow/deny decisions and report exports.
 5. Privacy-safe field handling for sensitive operator metrics and exports.
 
-## 5) Web and Android Parity Notes (Planned)
+## 5) Web and Android Parity Notes
 
 1. Web admin delivery is initial release baseline for week selection and metric comparison.
 2. Android parity targets read-equivalent weekly summaries for authorized operators.
 3. Week-selector behavior, current-week polling policy, and empty/error semantics must remain cross-platform consistent.
 4. Metric definitions, formatting semantics, and deny reasons must remain cross-platform consistent.
 
-## 6) Seed Coverage Status (Planned)
+## 6) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 

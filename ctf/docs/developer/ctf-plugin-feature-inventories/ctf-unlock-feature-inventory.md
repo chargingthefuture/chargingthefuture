@@ -23,7 +23,7 @@ This plugin must:
 5. award one-time service-credit incentive on approval,
 6. preserve full audit trail for allow/deny/moderation/reward operations.
 
-## 1) Planned User Features
+## 1) User Features
 
 ### 1.1 Verification Submission
 
@@ -43,7 +43,7 @@ This plugin must:
 2. Show acceptable URL format examples.
 3. Show review state and next-step status text.
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Moderation Queue
 
