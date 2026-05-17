@@ -97,7 +97,12 @@
   - [x] Mission validation helper (`validateMissionCreateInput`) enforces required fields + `sectorName` metadata for `count_skills_in_sector` goals.
   - [x] Skills Hunt shell renders missions tab from real API (replaces "Missions launching in Wave 2" stub) with progress bars + color hex from admin config.
   - [ ] Notification fan-out on mission completion — folded into the broader in-DB notifications work below.
-- [ ] **Wave 2 — in-DB notification fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked). Writes rows to `skills_hunt_notifications`; client polls `GET /api/skills-hunt/notifications` at 30s. GetStream is out of scope (continuity §2.11).
+- [x] **Wave 2 — in-DB notification fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked) — plus mission-complete from the Missions feature. New `lib/skills-hunt/notifications.ts` provides semantic emit helpers and the `SKILLS_HUNT_NOTIFICATION_KIND` lexicon. Writes rows to `skills_hunt_notifications`; client polls `GET /api/skills-hunt/notifications` at 30s. GetStream out of scope (continuity §2.11).
+  - [x] `submission-accepted` / `submission-rejected` — emitted from `reviewSubmission` (replaces the inline `insertNotification` calls).
+  - [x] `achievement-unlocked` — `ensureAchievement` now returns whether it actually inserted (vs upsert no-op) and fans out the notification only on the real award.
+  - [x] `leaderboard-top-ten` — `reviewSubmission` captures the pre-rebuild top-10 user_ids, diffs after `rebuildLeaderboard`, and emits to anyone newly inside the cap.
+  - [x] `mission-complete` — `recomputeMissionProgressForUser` returns the `newlyCompleted` set; the accept branch fans out one notification per newly-completed mission.
+  - [x] `round-ending-soon` — `notifyRoundsEndingSoon()` cron entry point at `POST /api/skills-hunt/admin/notifications/round-ending-soon` (admin-gated, CSRF). Idempotent per `(user, round)`; wire a daily scheduler to invoke.
 - [ ] **Wave 2 — notification center UI** (web + mobile) with unread badge.
 
 ## Phase 5 — Directory Projection and Safety
