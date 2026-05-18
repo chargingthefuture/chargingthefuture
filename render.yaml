@@ -38,9 +38,15 @@ services:
         sync: false
       - key: INFISICAL_CLIENT_SECRET
         sync: false
+      - key: FORMANCE_API_URL
+        sync: false
+      - key: FORMANCE_LEDGER
+        sync: false
+      - key: FORMANCE_API_TOKEN
+        sync: false
 
   # ── Agent MCP Server ─────────────────────────────────────────────
-  # Runs as a background worker (stdio MCP transport — no inbound HTTP port)
+  # Background worker — stdio MCP transport, no inbound HTTP port.
   - type: worker
     name: ctf-agent-mcp-server
     runtime: docker
@@ -50,7 +56,7 @@ services:
     plan: starter
 
   # ── PM MCP Server ────────────────────────────────────────────────
-  # Runs as a background worker (stdio MCP transport — no inbound HTTP port)
+  # Background worker — stdio MCP transport, no inbound HTTP port.
   - type: worker
     name: ctf-pm-mcp-server
     runtime: docker
@@ -65,8 +71,8 @@ services:
         value: production
 
   # ── Ollama ────────────────────────────────────────────────────────
-  # Private service — only reachable by other Render services via internal URL
-  # NOTE: Render has no persistent volumes; models are baked into the image layer.
+  # Private service — reachable by other Render services via internal URL.
+  # Render has no persistent volumes; models are baked into the image at build time.
   - type: pserv
     name: ctf-ollama
     runtime: docker
@@ -79,8 +85,8 @@ services:
         value: llama3.2
 
   # ── Infisical (secrets management) ───────────────────────────────
-  # Deployed from official Infisical image.
-  # Provides secret injection for all other services.
+  # Private service — centralises secret management for all v3 services.
+  # Agents can audit and inject secrets programmatically via the Infisical API.
   - type: pserv
     name: ctf-infisical
     runtime: docker
@@ -98,9 +104,11 @@ services:
       - key: MONGO_URL
         sync: false
 
-  # ── Formance (financial ledger) ───────────────────────────────────
-  # Upstream-standalone Docker Compose converted to individual Render services.
-  # See ctf/ops/formance/ for full stack configuration.
+  # ── Formance Ledger (financial ledger) ───────────────────────────
+  # Private service — pinned to ghcr.io/formancehq/ledger:v2.3.15-dev.1
+  # No persistent volumes on Render; all state lives in Neon Postgres.
+  # AUTO_UPGRADE=true handles schema migrations on container start.
+  # Backups: daily pg_dump → Supabase Storage via .github/workflows/backup-formance-supabase.yml
   - type: pserv
     name: ctf-formance-ledger
     runtime: docker
@@ -109,7 +117,8 @@ services:
     region: ohio
     plan: standard
     envVars:
+      # Neon staging Postgres connection string — set in Render dashboard
       - key: POSTGRES_URI
         sync: false
-      - key: STORAGE_DRIVER
-        value: postgres
+      - key: DEBUG
+        value: "false"
