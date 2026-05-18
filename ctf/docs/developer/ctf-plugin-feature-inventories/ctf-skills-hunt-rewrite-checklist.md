@@ -141,8 +141,8 @@
 
 ## Phase 7 — Validation, Seeds, and Release Gates
 
-- [ ] Update seed script `ctf/scripts/seedSkillsHuntPhase1.mjs` for new schema columns and new test cases (community-generated profile with backfilled handle).
-- [ ] Update plugin registry availability state: `'implemented_shell'` → `'alpha'` until Wave 2 ships, then `'beta'`.
+- [x] Update seed script `ctf/scripts/seedSkillsHuntPhase1.mjs` for new schema columns (`proposed_skills`, `participation_points`, `credit_granted`, `url_validation_result`, leaderboard `first_match_count` / `pending_points` / `last_submission_at`) and new test case: a `community-generated` Directory profile with `@community-seed01` handle linked to the seed submission via `skills_hunt_directory_profiles`.
+- [x] Update plugin registry availability state: `'implemented_shell'` → `'alpha'`. `PluginAvailabilityState` widened to include `'alpha' | 'beta'`. Flip to `'beta'` after the e2e smoke test and a real staging cohort run.
 - [ ] Add type-safe end-to-end smoke: rounds list → submit → admin accept → leaderboard rebuild → notification fan-out → unclaimed Directory profile with `@handle`.
 
 ## Phase 8 — UI Surfaces (consolidated)

@@ -1436,7 +1436,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('directory',          'Directory',            'Unified user/admin profile surface with claimed/unclaimed policy controls.',                      'implemented_shell', 30,  TRUE),
   ('feed-announcements', 'Feed + Announcements', 'Timeline and announcement lifecycle in a coupled admin surface.',                                 'implemented_shell', 40,  TRUE),
   ('workforce',          'Workforce',            'Dashboard reporting and recruited-state derivation from upstream data.',                           'implemented_shell', 50,  TRUE),
-  ('skills-hunt',        'Skills Hunt',          'Rounds, moderation, scoring, leaderboards, and governed profile generation.',                     'implemented_shell', 60,  TRUE),
+  ('skills-hunt',        'Skills Hunt',          'Rounds, moderation, scoring, leaderboards, and governed profile generation.',                     'alpha',             60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Provider search and quote lifecycle using read-only Directory projections.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Profile/property/match parity scope with blocks lifecycle controls.',                             'implemented_shell', 80,  TRUE),
