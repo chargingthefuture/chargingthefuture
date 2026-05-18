@@ -2,18 +2,13 @@ name: Deploy Infisical to Render
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - claude/deploy-infisical-render-YrkZl
-    paths:
-      - ctf/render.yaml
-      - ctf/scripts/deploy-infisical-render.sh
-      - .github/workflows/deploy-infisical-render.yml
 
 jobs:
   deploy:
     name: Deploy Infisical
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
