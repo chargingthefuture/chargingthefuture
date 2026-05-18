@@ -1,0 +1,115 @@
+# render.yaml — Render Blueprint for chargingthefuture v3
+# All v3 services migrated from Railway to Render.
+# v2 (legacy) remains on Railway until v3 is production-ready.
+
+services:
+  # ── Next.js web app ─────────────────────────────────────────────
+  - type: web
+    name: ctf-web
+    runtime: docker
+    dockerfilePath: ctf/packages/web/Dockerfile
+    dockerContext: ctf
+    region: ohio
+    plan: standard
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      # Secrets — set these in the Render dashboard
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: NEXT_PUBLIC_STREAM_API_KEY
+        sync: false
+      - key: STREAM_API_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_AUTH_TOKEN
+        sync: false
+      - key: INFISICAL_CLIENT_ID
+        sync: false
+      - key: INFISICAL_CLIENT_SECRET
+        sync: false
+
+  # ── Agent MCP Server ─────────────────────────────────────────────
+  # Runs as a background worker (stdio MCP transport — no inbound HTTP port)
+  - type: worker
+    name: ctf-agent-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
+    dockerContext: ctf/packages/agent-mcp-server
+    region: ohio
+    plan: starter
+
+  # ── PM MCP Server ────────────────────────────────────────────────
+  # Runs as a background worker (stdio MCP transport — no inbound HTTP port)
+  - type: worker
+    name: ctf-pm-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
+    dockerContext: ctf/packages/pm-mcp-server
+    region: ohio
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+
+  # ── Ollama ────────────────────────────────────────────────────────
+  # Private service — only reachable by other Render services via internal URL
+  # NOTE: Render has no persistent volumes; models are baked into the image layer.
+  - type: pserv
+    name: ctf-ollama
+    runtime: docker
+    dockerfilePath: ctf/ops/ollama/Dockerfile
+    dockerContext: ctf/ops/ollama
+    region: ohio
+    plan: standard
+    envVars:
+      - key: OLLAMA_MODEL
+        value: llama3.2
+
+  # ── Infisical (secrets management) ───────────────────────────────
+  # Deployed from official Infisical image.
+  # Provides secret injection for all other services.
+  - type: pserv
+    name: ctf-infisical
+    runtime: docker
+    dockerfilePath: ctf/ops/infisical/Dockerfile
+    dockerContext: ctf/ops/infisical
+    region: ohio
+    plan: standard
+    envVars:
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: SITE_URL
+        sync: false
+      - key: MONGO_URL
+        sync: false
+
+  # ── Formance (financial ledger) ───────────────────────────────────
+  # Upstream-standalone Docker Compose converted to individual Render services.
+  # See ctf/ops/formance/ for full stack configuration.
+  - type: pserv
+    name: ctf-formance-ledger
+    runtime: docker
+    dockerfilePath: ctf/ops/formance/Dockerfile.ledger
+    dockerContext: ctf/ops/formance
+    region: ohio
+    plan: standard
+    envVars:
+      - key: POSTGRES_URI
+        sync: false
+      - key: STORAGE_DRIVER
+        value: postgres
