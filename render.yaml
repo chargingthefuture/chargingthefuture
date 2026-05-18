@@ -1,9 +1,30 @@
 # render.yaml — Render Blueprint for chargingthefuture v3
 # All v3 services migrated from Railway to Render.
 # v2 (legacy) remains on Railway until v3 is production-ready.
+#
+# SECRET MANAGEMENT ARCHITECTURE
+# ───────────────────────────────
+# Infisical is the single source of truth for all secrets.
+# After deploying this blueprint:
+#
+# 1. Set Infisical bootstrap secrets manually in the Render dashboard
+#    for ctf-infisical only (4 values — see that service below).
+#
+# 2. Inside Infisical, configure a Render Connection (requires a Render
+#    API key) and create a Render Sync for each service below.
+#    Infisical will then push all secrets automatically.
+#
+# 3. For GitHub Actions (backup workflow), add only two GitHub secrets:
+#    INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET.
+#    The workflow fetches everything else from Infisical at runtime.
+#
+# sync: false entries are present only where Infisical cannot bootstrap
+# itself (ctf-infisical) or where a static value cannot come from Infisical.
 
 services:
   # ── Next.js web app ─────────────────────────────────────────────
+  # All secrets injected by Infisical → Render Sync. No manual setup required
+  # beyond configuring the Render Sync inside Infisical.
   - type: web
     name: ctf-web
     runtime: docker
@@ -19,42 +40,16 @@ services:
         value: production
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
-      # Observability — enables Sentry cron check-ins (workforce-incremental-sync monitor)
+      # Observability — enables Sentry cron check-ins for workforce-incremental-sync
       - key: OBSERVABILITY_PROVIDER
         value: sentry
-      # Workforce cron auth — required for node-cron to call /api/workforce/internal/sync
-      - key: CRON_SECRET
-        sync: false
-      # Secrets — set these in the Render dashboard
-      - key: DATABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        sync: false
-      - key: CLERK_SECRET_KEY
-        sync: false
-      - key: NEXT_PUBLIC_STREAM_API_KEY
-        sync: false
-      - key: STREAM_API_SECRET
-        sync: false
-      # SENTRY_DSN replaces RAILWAY_SENTRY_DSN on Render.
-      # sentry-config.ts falls back to RAILWAY_SENTRY_DSN during migration window.
-      - key: SENTRY_DSN
-        sync: false
-      - key: SENTRY_AUTH_TOKEN
-        sync: false
-      - key: INFISICAL_CLIENT_ID
-        sync: false
-      - key: INFISICAL_CLIENT_SECRET
-        sync: false
-      - key: FORMANCE_API_URL
-        sync: false
-      - key: FORMANCE_LEDGER
-        sync: false
-      - key: FORMANCE_API_TOKEN
-        sync: false
+      # All remaining secrets (DATABASE_URL, CLERK_*, STREAM_*, SENTRY_DSN,
+      # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_*) are synced
+      # automatically by Infisical via the Render Sync integration.
 
   # ── Agent MCP Server ─────────────────────────────────────────────
   # Background worker — stdio MCP transport, no inbound HTTP port.
+  # Secrets injected by Infisical → Render Sync.
   - type: worker
     name: ctf-agent-mcp-server
     runtime: docker
@@ -65,6 +60,7 @@ services:
 
   # ── PM MCP Server ────────────────────────────────────────────────
   # Background worker — stdio MCP transport, no inbound HTTP port.
+  # Secrets injected by Infisical → Render Sync.
   - type: worker
     name: ctf-pm-mcp-server
     runtime: docker
@@ -73,8 +69,6 @@ services:
     region: ohio
     plan: starter
     envVars:
-      - key: DATABASE_URL
-        sync: false
       - key: NODE_ENV
         value: production
 
@@ -93,7 +87,17 @@ services:
         value: llama3.2
 
   # ── Infisical (secrets management) ───────────────────────────────
-  # Private service — centralises secret management for all v3 services.
+  # Private service — single source of truth for all secrets.
+  #
+  # BOOTSTRAP (one-time manual setup in Render dashboard):
+  #   ENCRYPTION_KEY  — random 32-char hex string
+  #   AUTH_SECRET     — random 32-char hex string
+  #   SITE_URL        — internal Render URL for this service
+  #   MONGO_URL       — MongoDB Atlas connection string
+  #
+  # These four are the ONLY secrets that must be set manually anywhere.
+  # Once Infisical is running, configure a Render Connection inside it
+  # to take over secret management for all other services.
   - type: pserv
     name: ctf-infisical
     runtime: docker
@@ -113,9 +117,10 @@ services:
 
   # ── Formance Ledger (financial ledger) ───────────────────────────
   # Private service — pinned to ghcr.io/formancehq/ledger:v2.3.15-dev.1
-  # No persistent volumes on Render; all state lives in Neon Postgres.
+  # All state lives in Neon Postgres (no persistent disk on Render).
   # AUTO_UPGRADE=true handles schema migrations on container start.
-  # Backups: daily pg_dump → Supabase Storage via .github/workflows/backup-formance-supabase.yml
+  # Backups: daily pg_dump → Supabase Storage via backup-formance-supabase.yml.
+  # POSTGRES_URI injected by Infisical → Render Sync.
   - type: pserv
     name: ctf-formance-ledger
     runtime: docker
@@ -123,9 +128,3 @@ services:
     dockerContext: ctf/ops/formance
     region: ohio
     plan: standard
-    envVars:
-      # Neon staging Postgres connection string — set in Render dashboard
-      - key: POSTGRES_URI
-        sync: false
-      - key: DEBUG
-        value: "false"
