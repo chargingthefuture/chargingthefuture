@@ -153,12 +153,12 @@
   - [ ] Client-side validation matches server limits exactly.
   - [ ] Live char counters on Display Name and Bio.
   - [ ] Mounted from Directory shell via reward card CTA.
-- [ ] **Wave 1 — admin panel real UI** (`app/admin/skills-hunt/page.tsx`).
-  - [ ] Pending submissions table.
-  - [ ] Status filter (pending/accepted/rejected/flagged).
-  - [ ] Inline Accept / Reject (with reason dropdown) / Edit (typo-fix dialog).
-  - [ ] Bulk action toolbar (multi-select + bulk accept/reject).
-  - [ ] Wave 2 follow-ups: CSV export, dispute escalation queue.
+- [x] **Wave 1 — admin panel real UI** (`app/admin/skills-hunt/page.tsx` + `components/skills-hunt/skills-hunt-admin-shell.tsx`).
+  - [x] Submissions table populated from `/api/skills-hunt/admin/rounds/{id}/submissions` (pageSize=100). Columns: submitter, displayName, skill + proposed-skill chips, Quora link, URL validation result, points, actions.
+  - [x] Status filter pills (pending / accepted / rejected / flagged).
+  - [x] Inline Accept / Reject (with prompted reason — 6 canned options + free-text) / Flag. Edit dialog is Wave 2 (continuity §6 sub-task).
+  - [x] Bulk action toolbar with multi-select checkboxes + bulk accept / bulk reject (single reason applied to the batch; sequential POSTs so leaderboards rebuild deterministically row-by-row).
+  - [ ] Wave 2 follow-ups: edit-dialog, CSV export, dispute escalation queue.
 - [ ] **Wave 2 — mobile rebuild** (`packages/mobile/src/features/skills-hunt/`).
   - [ ] Replace `SkillsHunt.tsx` hardcoded mock.
   - [ ] API-driven Rounds, Leaderboard, Submit screens.
