@@ -159,10 +159,11 @@
   - [x] Inline Accept / Reject (with prompted reason — 6 canned options + free-text) / Flag. Edit dialog is Wave 2 (continuity §6 sub-task).
   - [x] Bulk action toolbar with multi-select checkboxes + bulk accept / bulk reject (single reason applied to the batch; sequential POSTs so leaderboards rebuild deterministically row-by-row).
   - [ ] Wave 2 follow-ups: edit-dialog, CSV export, dispute escalation queue.
-- [ ] **Wave 2 — mobile rebuild** (`packages/mobile/src/features/skills-hunt/`).
-  - [ ] Replace `SkillsHunt.tsx` hardcoded mock.
-  - [ ] API-driven Rounds, Leaderboard, Submit screens.
-  - [ ] Notification center.
+- [x] **Wave 2 — mobile rebuild** (`packages/mobile/src/features/skills-hunt/`).
+  - [x] Replace `SkillsHunt.tsx` hardcoded mock with a 4-tab (Scout / Leaderboard / Missions / My Finds) API-driven view.
+  - [x] New `SkillsHuntApi.ts` client wrapping `/api/skills-hunt/*` (rounds, leaderboard, achievements, my finds, missions, submit). Same envelope as the web shell so the route layer is reusable.
+  - [x] API-driven Rounds, Leaderboard, Submit screens — single round auto-selected from the active list.
+  - [ ] Notification center mirroring the web `/api/skills-hunt/notifications` polling — deferred (web notification center UI is still pending per Wave 2 Phase 4 follow-up).
 
 ## Open Decisions Tracker
 

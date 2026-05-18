@@ -1,143 +1,423 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput,
+  ScrollView, ActivityIndicator,
+} from 'react-native';
+import {
+  SkillsHuntApi,
+  type Achievement,
+  type LeaderboardItem,
+  type MissionWithProgress,
+  type Round,
+  type Submission,
+} from './SkillsHuntApi';
 
-const ROUNDS = [
-  { id: 1, title: 'Web Development Bootcamp', status: 'live', enrolled: 234, capacity: 300, weeks: 8, level: 'Beginner', facilitator: 'Lena H.', color: '#A855F7' },
-  { id: 2, title: 'Trauma-Informed Care Training', status: 'live', enrolled: 189, capacity: 200, weeks: 6, level: 'Intermediate', facilitator: 'Maria G.', color: '#22C55E' },
-  { id: 3, title: 'Financial Literacy Cohort', status: 'upcoming', enrolled: 0, capacity: 150, weeks: 4, level: 'Beginner', facilitator: 'DeShawn W.', color: '#F59E0B' },
-  { id: 4, title: 'Legal Rights Navigator', status: 'upcoming', enrolled: 0, capacity: 100, weeks: 3, level: 'All Levels', facilitator: 'Priya S.', color: '#3B82F6' },
-  { id: 5, title: 'Peer Leadership Program', status: 'completed', enrolled: 120, capacity: 120, weeks: 12, level: 'Advanced', facilitator: 'James T.', color: '#EC4899' },
+const COLOR = '#A855F7';
+type Tab = 'scout' | 'leaderboard' | 'missions' | 'my-finds';
+const TABS: Array<{ key: Tab; label: string }> = [
+  { key: 'scout',       label: 'Scout' },
+  { key: 'leaderboard', label: 'Leaderboard' },
+  { key: 'missions',    label: 'Missions' },
+  { key: 'my-finds',    label: 'My Finds' },
 ];
 
-const LEADERBOARD = [
-  { rank: 1, name: 'Amara Okonkwo', points: 9840, badges: 14 },
-  { rank: 2, name: 'Maria Gonzalez', points: 8723, badges: 12 },
-  { rank: 3, name: 'Priya Sharma', points: 7891, badges: 11 },
-  { rank: 4, name: 'You', points: 6412, badges: 9, isMe: true },
-  { rank: 5, name: 'James Thibodeau', points: 5910, badges: 8 },
-];
+const BIO_MAX = 280;
 
+export function SkillsHunt({ userId }: { userId?: string } = {}) {
+  const [tab, setTab] = useState<Tab>('scout');
+  const [round, setRound] = useState<Round | null>(null);
+  const [loadingRound, setLoadingRound] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const CHAT = [
-  { id: 1, from: 'hub', text: 'Skills Hunt matches you with learning cohorts based on your workforce gaps. 6 active rounds right now. Ready to level up?' },
-  { id: 2, from: 'user', text: 'What rounds match my profile?' },
-  { id: 3, from: 'hub', text: 'Based on your Workforce profile, Web Development (87% match) and Financial Literacy (74% match) are your top picks. Both are accepting applications.', action: 'Apply Now' },
-];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingRound(true);
+      try {
+        const data = await SkillsHuntApi.listActiveRounds();
+        if (!cancelled) setRound(data.rounds[0] ?? null);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load rounds.');
+      } finally {
+        if (!cancelled) setLoadingRound(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-export const SkillsHunt = () => {
-  const [tab, setTab] = useState('rounds');
-  const [input, setInput] = useState('');
-  const [msgs, setMsgs] = useState(CHAT);
-  const [joined, setJoined] = useState([]);
-
-  const send = () => {
-    if (!input.trim()) return;
-    setMsgs([...msgs, { id: Date.now(), from: 'user', text: input }]);
-    setInput('');
-  };
-
-  const renderRounds = () => (
-    <FlatList
-      data={ROUNDS}
-      keyExtractor={item => item.id.toString()}
-      ListEmptyComponent={<Text style={styles.empty}>No rounds available.</Text>}
-      renderItem={({ item }) => (
-        <View style={[styles.round, { borderLeftColor: item.color }] }>
-          <Text style={styles.roundTitle}>{item.title}</Text>
-          <Text>Status: {item.status}</Text>
-          <Text>Enrolled: {item.enrolled}/{item.capacity}</Text>
-          <Text>Weeks: {item.weeks}</Text>
-          <Text>Level: {item.level}</Text>
-          <Text>Facilitator: {item.facilitator}</Text>
-          {item.status === 'live' && !joined.includes(item.id) && (
-            <TouchableOpacity style={styles.joinBtn} onPress={() => setJoined([...joined, item.id])}>
-              <Text style={styles.joinBtnText}>Join</Text>
-            </TouchableOpacity>
-          )}
-          {joined.includes(item.id) && <Text style={styles.joined}>Joined</Text>}
-        </View>
-      )}
-    />
-  );
-
-  const renderLeaderboard = () => (
-    <FlatList
-      data={LEADERBOARD}
-      keyExtractor={item => item.rank.toString()}
-      ListEmptyComponent={<Text style={styles.empty}>No leaderboard data.</Text>}
-      renderItem={({ item }) => (
-        <View style={styles.leaderRow}>
-          <Text style={styles.leaderRank}>#{item.rank}</Text>
-          <Text style={item.isMe ? styles.me : styles.leaderName}>{item.name}</Text>
-          <Text>{item.points} pts</Text>
-          <Text>🏅{item.badges}</Text>
-        </View>
-      )}
-    />
-  );
-
-  const renderChat = () => (
-    <View style={{flex:1}}>
-      <ScrollView style={styles.chatArea}>
-        {msgs.map(m => (
-          <View style={m.from === 'user' ? styles.userMsg : styles.hubMsg}>
-            <Text>{m.text}</Text>
-            {m.action && <TouchableOpacity style={styles.actionBtn}><Text style={styles.actionBtnText}>{m.action}</Text></TouchableOpacity>}
-          </View>
-        ))}
-      </ScrollView>
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Type a message..."
-        />
-        <TouchableOpacity style={styles.sendBtn} onPress={send}>
-          <Text style={styles.sendBtnText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  if (loadingRound) {
+    return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  }
+  if (error) {
+    return <View style={styles.center}><Text style={styles.errorText}>{error}</Text></View>;
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tabs}>
-        <TouchableOpacity onPress={() => setTab('rounds')} style={[styles.tab, tab==='rounds'&&styles.activeTab]}><Text>Rounds</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => setTab('leaderboard')} style={[styles.tab, tab==='leaderboard'&&styles.activeTab]}><Text>Leaderboard</Text></TouchableOpacity>
-        <TouchableOpacity onPress={() => setTab('chat')} style={[styles.tab, tab==='chat'&&styles.activeTab]}><Text>Chat</Text></TouchableOpacity>
+    <View style={styles.root}>
+      <View style={styles.tabbar}>
+        {TABS.map(t => (
+          <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabActive]}>
+            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-      <View style={{flex:1}}>
-        {tab==='rounds' && renderRounds()}
-        {tab==='leaderboard' && renderLeaderboard()}
-        {tab==='chat' && renderChat()}
+      <View style={styles.body}>
+        {tab === 'scout' && <ScoutTab round={round} />}
+        {tab === 'leaderboard' && <LeaderboardTab round={round} userId={userId} />}
+        {tab === 'missions' && <MissionsTab round={round} />}
+        {tab === 'my-finds' && <MyFindsTab round={round} />}
       </View>
     </View>
   );
-};
+}
+
+// --- Scout --------------------------------------------------------------
+
+function ScoutTab({ round }: { round: Round | null }) {
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [quora, setQuora] = useState('');
+  const [skillsText, setSkillsText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  if (!round) {
+    return <View style={styles.center}><Text style={styles.muted}>No active round right now.</Text></View>;
+  }
+
+  if (done) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.successTitle}>Nomination submitted</Text>
+        <Text style={styles.muted}>Your submission is queued for moderation review.</Text>
+        <TouchableOpacity
+          onPress={() => { setDone(false); setDisplayName(''); setBio(''); setQuora(''); setSkillsText(''); }}
+          style={styles.primaryBtn}
+        >
+          <Text style={styles.primaryBtnText}>Nominate Another</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const skills = skillsText.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  const canSubmit = displayName.trim().length >= 2 && skills.length > 0 && !submitting;
+
+  async function onSubmit() {
+    if (!canSubmit || !round) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await SkillsHuntApi.submitNomination(round.id, {
+        displayName: displayName.trim(),
+        bio: bio.trim(),
+        quoraProfileUrl: quora.trim(),
+        skills: skills.slice(0, 10),
+        proposedSkills: [],
+        claimedProfessions: [],
+      });
+      setDone(true);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Failed to submit nomination.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.h1}>Nominate a Survivor</Text>
+      <Text style={styles.muted}>
+        Think of someone you believe may be a survivor — their Quora profile is the social proof,
+        their skills join our economy.
+      </Text>
+
+      {submitError && <Text style={styles.errorText}>{submitError}</Text>}
+
+      <Text style={styles.label}>Display Name <Text style={styles.required}>*</Text></Text>
+      <TextInput
+        value={displayName}
+        onChangeText={(t) => setDisplayName(t.replace(/[^a-zA-Z\s]/g, '').slice(0, 100))}
+        placeholder="e.g. Amara Williams"
+        placeholderTextColor="#6B7280"
+        style={styles.input}
+      />
+
+      <Text style={styles.label}>Bio <Text style={styles.muted}>(optional, max 280)</Text></Text>
+      <TextInput
+        value={bio}
+        onChangeText={(t) => setBio(t.slice(0, BIO_MAX))}
+        placeholder="One sentence about who they are…"
+        placeholderTextColor="#6B7280"
+        style={[styles.input, { minHeight: 64 }]}
+        multiline
+      />
+      <Text style={[styles.muted, { textAlign: 'right' }]}>{bio.length}/{BIO_MAX}</Text>
+
+      <Text style={styles.label}>Quora Profile URL</Text>
+      <TextInput
+        value={quora}
+        onChangeText={setQuora}
+        autoCapitalize="none"
+        keyboardType="url"
+        placeholder="https://quora.com/profile/..."
+        placeholderTextColor="#6B7280"
+        style={styles.input}
+      />
+
+      <Text style={styles.label}>Skills <Text style={styles.required}>*</Text> <Text style={styles.muted}>(comma-separated, max 10)</Text></Text>
+      <TextInput
+        value={skillsText}
+        onChangeText={setSkillsText}
+        placeholder="e.g. Carpentry, Web Development"
+        placeholderTextColor="#6B7280"
+        style={styles.input}
+      />
+
+      <TouchableOpacity onPress={onSubmit} disabled={!canSubmit} style={[styles.primaryBtn, !canSubmit && styles.primaryBtnDisabled]}>
+        <Text style={[styles.primaryBtnText, !canSubmit && { color: '#4B5563' }]}>
+          {submitting ? 'Submitting…' : 'Submit Nomination'}
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+// --- Leaderboard --------------------------------------------------------
+
+function LeaderboardTab({ round, userId }: { round: Round | null; userId?: string }) {
+  const [items, setItems] = useState<LeaderboardItem[]>([]);
+  const [serverCurrent, setServerCurrent] = useState<LeaderboardItem | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!round) return;
+    setLoading(true);
+    try {
+      const data = await SkillsHuntApi.listLeaderboard(round.id);
+      setItems(data.items);
+      setServerCurrent(data.currentUserEntry);
+    } finally {
+      setLoading(false);
+    }
+  }, [round]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const myEntry = useMemo(
+    () => items.find(i => i.userId === userId) ?? serverCurrent,
+    [items, serverCurrent, userId],
+  );
+
+  if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(item) => `${item.rank}-${item.userId ?? item.teamKey ?? ''}`}
+      ListHeaderComponent={
+        myEntry ? (
+          <View style={[styles.row, styles.rowMe]}>
+            <Text style={styles.rowRank}>#{myEntry.rank}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowName, { color: COLOR }]}>{myEntry.usernameSnapshot ?? 'You'} (You)</Text>
+              <Text style={styles.muted}>{myEntry.acceptedCount} accepted · {myEntry.firstMatchCount} first-match</Text>
+            </View>
+            <Text style={styles.rowPts}>{myEntry.score}</Text>
+          </View>
+        ) : null
+      }
+      ListEmptyComponent={<Text style={styles.empty}>No entries yet — be the first scout!</Text>}
+      renderItem={({ item }) => {
+        const isMe = item.userId === userId;
+        return (
+          <View style={[styles.row, isMe && styles.rowMe]}>
+            <Text style={styles.rowRank}>#{item.rank}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowName, isMe && { color: COLOR }]}>
+                {item.usernameSnapshot ?? 'Anonymous'}{isMe ? ' (You)' : ''}
+              </Text>
+              <Text style={styles.muted}>{item.acceptedCount} accepted · {item.firstMatchCount} first-match</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.rowPts}>{item.score}</Text>
+              {item.pendingPoints > 0 && <Text style={styles.pendingPts}>+{item.pendingPoints} pending</Text>}
+            </View>
+          </View>
+        );
+      }}
+    />
+  );
+}
+
+// --- Missions ----------------------------------------------------------
+
+function MissionsTab({ round }: { round: Round | null }) {
+  const [items, setItems] = useState<MissionWithProgress[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!round) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await SkillsHuntApi.listMissions(round.id);
+        if (!cancelled) setItems(data.items);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [round]);
+
+  if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (items.length === 0) return <View style={styles.center}><Text style={styles.muted}>No missions for this round yet.</Text></View>;
+
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(m) => m.id}
+      renderItem={({ item }) => {
+        const progress = item.progress?.progressCount ?? 0;
+        const pct = Math.min(100, (progress / Math.max(1, item.goalTarget)) * 100);
+        const isComplete = item.progress?.completedAtIso != null;
+        const color = item.colorHex ?? COLOR;
+        return (
+          <View style={[styles.missionCard, { borderColor: color + '60' }]}>
+            <Text style={styles.missionTitle}>{item.title}</Text>
+            {item.description ? <Text style={styles.muted}>{item.description}</Text> : null}
+            <View style={styles.missionMeta}>
+              <Text style={styles.muted}>{progress}/{item.goalTarget}</Text>
+              <Text style={{ color, fontWeight: '700' }}>+{item.bonusPoints} pts</Text>
+            </View>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: color }]} />
+            </View>
+            {isComplete && <Text style={[styles.successTitle, { fontSize: 12, marginTop: 6 }]}>✓ Complete</Text>}
+          </View>
+        );
+      }}
+    />
+  );
+}
+
+// --- My Finds ----------------------------------------------------------
+
+function MyFindsTab({ round }: { round: Round | null }) {
+  const [items, setItems] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!round) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await SkillsHuntApi.listMyFinds(round.id);
+        if (!cancelled) setItems(data.items);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [round]);
+
+  if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (items.length === 0) return <View style={styles.center}><Text style={styles.muted}>No nominations yet.</Text></View>;
+
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(s) => s.id}
+      renderItem={({ item }) => (
+        <View style={styles.findCard}>
+          <View style={styles.findHeader}>
+            <Text style={styles.findName}>{item.displayName}</Text>
+            <Text style={[styles.statusPill, statusStyle(item.status)]}>{item.status}</Text>
+          </View>
+          {item.skills.length > 0 && (
+            <Text style={styles.muted}>{item.skills.join(' · ')}</Text>
+          )}
+          {item.pointsAwarded > 0 && (
+            <Text style={{ color: COLOR, fontWeight: '600', marginTop: 4 }}>+{item.pointsAwarded} pts</Text>
+          )}
+        </View>
+      )}
+    />
+  );
+}
+
+function statusStyle(status: Submission['status']) {
+  if (status === 'accepted') return { backgroundColor: '#22C55E20', color: '#22C55E', borderColor: '#22C55E40' };
+  if (status === 'rejected') return { backgroundColor: '#EF444420', color: '#EF4444', borderColor: '#EF444440' };
+  if (status === 'flagged')  return { backgroundColor: `${COLOR}20`, color: COLOR, borderColor: `${COLOR}40` };
+  return { backgroundColor: '#F59E0B20', color: '#F59E0B', borderColor: '#F59E0B40' };
+}
+
+// --- Styles ------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12, backgroundColor: '#fff' },
-  tabs: { flexDirection: 'row', marginBottom: 12 },
-  tab: { flex: 1, alignItems: 'center', padding: 8, borderBottomWidth: 2, borderBottomColor: '#eee' },
-  activeTab: { borderBottomColor: '#A855F7' },
-  round: { borderLeftWidth: 4, padding: 12, marginBottom: 10, backgroundColor: '#f9f9f9', borderRadius: 8 },
-  roundTitle: { fontWeight: '700', fontSize: 16, marginBottom: 4 },
-  joinBtn: { marginTop: 8, backgroundColor: '#A855F7', padding: 8, borderRadius: 6 },
-  joinBtnText: { color: '#fff', fontWeight: '700' },
-  joined: { marginTop: 8, color: '#22C55E', fontWeight: '700' },
-  leaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 },
-  leaderRank: { fontWeight: '700', width: 32 },
-  leaderName: { flex: 1 },
-  me: { flex: 1, color: '#A855F7', fontWeight: '700' },
-  chatArea: { flex: 1, marginBottom: 8 },
-  userMsg: { alignSelf: 'flex-end', backgroundColor: '#A855F7', color: '#fff', padding: 8, borderRadius: 8, marginBottom: 4 },
-  hubMsg: { alignSelf: 'flex-start', backgroundColor: '#eee', padding: 8, borderRadius: 8, marginBottom: 4 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#eee', borderRadius: 6, padding: 8, marginRight: 8 },
-  sendBtn: { backgroundColor: '#A855F7', padding: 10, borderRadius: 6 },
-  sendBtnText: { color: '#fff', fontWeight: '700' },
-  actionBtn: { marginTop: 4, backgroundColor: '#22C55E', padding: 6, borderRadius: 6 },
-  actionBtnText: { color: '#fff', fontWeight: '700' },
-  empty: { textAlign: 'center', color: '#aaa', marginTop: 24 },
+  root: { flex: 1, backgroundColor: '#0F1117' },
+  body: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16 },
+
+  tabbar: { flexDirection: 'row', backgroundColor: '#0D0F14', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: COLOR },
+  tabText: { color: '#9CA3AF', fontSize: 13, fontWeight: '600' },
+  tabTextActive: { color: COLOR },
+
+  h1: { color: '#F9FAFB', fontSize: 20, fontWeight: '800', marginBottom: 4 },
+  label: { color: '#9CA3AF', fontSize: 12, fontWeight: '600', marginTop: 14, marginBottom: 6 },
+  required: { color: COLOR },
+  muted: { color: '#6B7280', fontSize: 12 },
+  empty: { color: '#6B7280', textAlign: 'center', padding: 24 },
+  errorText: { color: '#EF4444', fontSize: 13, marginBottom: 8 },
+  successTitle: { color: '#22C55E', fontSize: 18, fontWeight: '800', marginBottom: 6 },
+
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    color: '#E8EAF0',
+    fontSize: 14,
+  },
+
+  primaryBtn: { marginTop: 18, paddingVertical: 14, borderRadius: 12, backgroundColor: COLOR, alignItems: 'center' },
+  primaryBtnDisabled: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  rowMe: { backgroundColor: `${COLOR}12` },
+  rowRank: { color: '#9CA3AF', fontWeight: '800', width: 40 },
+  rowName: { color: '#F9FAFB', fontWeight: '600' },
+  rowPts: { color: COLOR, fontWeight: '800', fontSize: 16 },
+  pendingPts: { color: '#F59E0B', fontSize: 11 },
+
+  missionCard: { margin: 12, padding: 14, borderRadius: 14, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.02)' },
+  missionTitle: { color: '#F9FAFB', fontWeight: '700', fontSize: 15, marginBottom: 4 },
+  missionMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, marginBottom: 4 },
+  barTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 3 },
+
+  findCard: { margin: 12, padding: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  findHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  findName: { color: '#F9FAFB', fontWeight: '700' },
+  statusPill: {
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1,
+    fontSize: 11, fontWeight: '700', overflow: 'hidden',
+  },
 });
