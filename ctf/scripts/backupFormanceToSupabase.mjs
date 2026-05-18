@@ -3,7 +3,7 @@
 import { execSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 import { basename } from 'node:path';
-import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
 
 function requireEnv(name) {
   const value = process.env[name];
