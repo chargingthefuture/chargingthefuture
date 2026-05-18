@@ -19,6 +19,12 @@ services:
         value: production
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
+      # Observability — enables Sentry cron check-ins (workforce-incremental-sync monitor)
+      - key: OBSERVABILITY_PROVIDER
+        value: sentry
+      # Workforce cron auth — required for node-cron to call /api/workforce/internal/sync
+      - key: CRON_SECRET
+        sync: false
       # Secrets — set these in the Render dashboard
       - key: DATABASE_URL
         sync: false
@@ -30,6 +36,8 @@ services:
         sync: false
       - key: STREAM_API_SECRET
         sync: false
+      # SENTRY_DSN replaces RAILWAY_SENTRY_DSN on Render.
+      # sentry-config.ts falls back to RAILWAY_SENTRY_DSN during migration window.
       - key: SENTRY_DSN
         sync: false
       - key: SENTRY_AUTH_TOKEN
@@ -86,7 +94,6 @@ services:
 
   # ── Infisical (secrets management) ───────────────────────────────
   # Private service — centralises secret management for all v3 services.
-  # Agents can audit and inject secrets programmatically via the Infisical API.
   - type: pserv
     name: ctf-infisical
     runtime: docker
