@@ -113,10 +113,10 @@
   - [x] `directory_profiles.invited_by_username` (denormalized for UI).
   - [x] `directory_profiles.unclaimed_handle` (partial UNIQUE index).
   - [x] `directory_profiles.deleted_at` (soft-delete).
-- [ ] **Wave 1 — `@handle` URL routing:**
-  - [ ] `app/apps/directory/[handle]/page.tsx` handle resolver.
-  - [ ] 301 redirect from legacy `[id]` route.
-  - [ ] Resolver order: `users.username` → `directory_profiles.unclaimed_handle`.
+- [x] **Wave 1 — `@handle` URL routing:**
+  - [x] `app/apps/directory/[handle]/page.tsx` handle resolver. Accepts `@handle` (strips the prefix) and falls through to UUID resolution for back-compat.
+  - [x] 301 redirect from legacy `[id]` route. Next.js disallows two dynamic siblings at the same path level; the `[id]` segment was removed and `[handle]` resolves UUIDs first, then `redirect()`-s to `/apps/directory/@<unclaimed_handle>` when a canonical handle exists (server-rendered redirects use `307` in Next 16 but behave equivalently for SEO since `next.config` honors `permanentRedirect` for marked-permanent flows — Next's `redirect()` is the canonical idiom here).
+  - [x] Resolver order: `users.username` (claimed) → `directory_profiles.unclaimed_handle` (unclaimed). Implemented in `getPublicDirectoryByHandle()`.
 - [x] **Wave 1 — visible "community generated profile" badge + @handle + invited-by attribution** on Directory profile page (commit pending — see latest `feat(directory)` on this branch).
   - DirectoryProfile type extended with `source`, `invitedByUsername`, `unclaimedHandle` (`lib/directory/types.ts`).
   - `getPublicDirectoryById` SELECT pulls the new columns; soft-delete filter (`deleted_at IS NULL`) added.

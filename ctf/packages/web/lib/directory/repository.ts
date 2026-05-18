@@ -651,6 +651,69 @@ export async function listPublicDirectory(
   });
 }
 
+// Handle-based public lookup. Resolves in two passes per continuity §4.2:
+// 1) `users.username` (claimed profile owner) → claimed_by_user_id match
+// 2) `directory_profiles.unclaimed_handle` (community-<6hex>)
+// Returns the same shape as getPublicDirectoryById so the page renderer is
+// agnostic to the entry path.
+export async function getPublicDirectoryByHandle(handle: string): Promise<DirectoryProfile | null> {
+  return withDbTransaction(async (client) => {
+    const normalized = handle.trim().toLowerCase();
+    if (!normalized) return null;
+
+    // Pass 1: claimed profile via Clerk username.
+    const claimed = await client.query<DirectoryProfileRow>(
+      `
+        SELECT
+          p.id, p.claimed_by_user_id, p.display_name, p.headline, p.bio, p.profile_url,
+          p.is_public, p.sector_id, s.name AS sector_name,
+          p.job_title_id, jt.name AS job_title_name,
+          p.is_active, p.source, p.invited_by_username, p.unclaimed_handle,
+          p.created_at, p.updated_at
+        FROM directory_profiles p
+        JOIN public.users u ON u.id = p.claimed_by_user_id
+        LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
+        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
+        WHERE LOWER(u.username) = $1
+          AND p.is_active = true
+          AND p.is_public = true
+          AND p.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [normalized],
+    );
+    if (claimed.rows.length > 0) {
+      return mapProfileRow(client, claimed.rows[0]);
+    }
+
+    // Pass 2: unclaimed handle (community-<6hex>).
+    const unclaimed = await client.query<DirectoryProfileRow>(
+      `
+        SELECT
+          p.id, p.claimed_by_user_id, p.display_name, p.headline, p.bio, p.profile_url,
+          p.is_public, p.sector_id, s.name AS sector_name,
+          p.job_title_id, jt.name AS job_title_name,
+          p.is_active, p.source, p.invited_by_username, p.unclaimed_handle,
+          p.created_at, p.updated_at
+        FROM directory_profiles p
+        LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
+        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
+        WHERE LOWER(p.unclaimed_handle) = $1
+          AND p.is_active = true
+          AND p.is_public = true
+          AND p.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [normalized],
+    );
+    if (unclaimed.rows.length > 0) {
+      return mapProfileRow(client, unclaimed.rows[0]);
+    }
+
+    return null;
+  });
+}
+
 export async function getPublicDirectoryById(profileId: string): Promise<DirectoryProfile | null> {
   return withDbTransaction(async (client) => {
     const rows = await client.query<DirectoryProfileRow>(
