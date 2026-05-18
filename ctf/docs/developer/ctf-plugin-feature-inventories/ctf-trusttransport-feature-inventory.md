@@ -1,14 +1,12 @@
 # TrustTransport Plugin Feature Inventory (CTF Rewrite)
 
-## Scope
+## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy reference excluded from implementation: `platform/`
 - Plugin name: `TrustTransport`
-- Primary mission scope:
-  - peer-to-peer rides,
-  - peer-to-peer package delivery,
-  - peer-to-peer food delivery.
+- Plugin slug: `trusttransport`
+- Owned surfaces: `/apps/trusttransport` (web), `packages/mobile/src/features/trusttransport` (Android), `/api/trusttransport/*` routes, `trusttransport_*` tables.
+- Not owned: identity (Clerk), service credits ledger (service-credits plugin), notifications/email transport (notifications integration).
+- Primary mission scope: peer-to-peer rides, package delivery, and food delivery.
 
 ## Intent and Outcome
 
@@ -127,13 +125,9 @@ The plugin must provide equivalent core behavior across web and Android.
 
 ## Plugin Command Surface (Authoritative)
 
-All command contracts must conform to templates from:
+All command contracts conform to templates in `201-plugin-command-schema-template.mdc`, `202-plugin-access-policy-schema-template.mdc`, and `203-plugin-audit-schema-template.mdc`.
 
-- `201-plugin-command-schema-template.mdc`
-- `202-plugin-access-policy-schema-template.mdc`
-- `203-plugin-audit-schema-template.mdc`
-
-Planned command groups:
+Command groups in scope:
 
 1. `trusttransport.request.create`
 2. `trusttransport.offer.list`
@@ -148,30 +142,33 @@ Planned command groups:
 11. `trusttransport.admin.account.restrict`
 12. `trusttransport.admin.market.config.update`
 
-## HTTP Projection Routes (Planned)
+## HTTP Projection Routes
 
 User routes:
 
-- `GET /api/trusttransport/modes`
-- `POST /api/trusttransport/requests`
-- `GET /api/trusttransport/requests/:requestId`
-- `GET /api/trusttransport/requests/:requestId/offers`
-- `POST /api/trusttransport/offers/:offerId/accept`
-- `POST /api/trusttransport/trips/:tripId/status`
-- `POST /api/trusttransport/trips/:tripId/proof`
-- `POST /api/trusttransport/orders/:orderId/cancel`
-- `POST /api/trusttransport/orders/:orderId/rating`
-- `POST /api/trusttransport/payouts/requests`
-- `GET /api/trusttransport/payouts`
+- `GET /api/trusttransport/modes` — Available transport modes.
+- `POST /api/trusttransport/requests` — Create a request.
+- `GET /api/trusttransport/requests/:requestId` — Request detail.
+- `GET /api/trusttransport/requests/:requestId/offers` — Offers on a request.
+- `POST /api/trusttransport/offers/:offerId/accept` — Accept an offer, opening a trip.
+- `POST /api/trusttransport/trips/:tripId/status` — Update trip status.
+- `POST /api/trusttransport/trips/:tripId/proof` — Capture pickup/delivery proof.
+- `POST /api/trusttransport/trips/:tripId/chat` — Send chat in trip thread.
+- `POST /api/trusttransport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
+- `POST /api/trusttransport/orders/:orderId/cancel` — Cancel an order.
+- `POST /api/trusttransport/orders/:orderId/rating` — Submit a rating.
+- `GET /api/trusttransport/payouts` — Payout history.
+- `POST /api/trusttransport/payouts/requests` — Request a payout.
+- `POST /api/trusttransport/service-credits` — Service-credit interactions for trip economics.
 
 Admin routes:
 
-- `GET /api/trusttransport/admin/incidents`
-- `POST /api/trusttransport/admin/incidents/:incidentId/resolve`
-- `POST /api/trusttransport/admin/accounts/:userId/restrict`
-- `POST /api/trusttransport/admin/accounts/:userId/restore`
-- `PUT /api/trusttransport/admin/market-config`
-- `GET /api/trusttransport/admin/audit-events`
+- `GET /api/trusttransport/admin/incidents` — Incident queue.
+- `POST /api/trusttransport/admin/incidents/:incidentId/resolve` — Resolve an incident.
+- `POST /api/trusttransport/admin/accounts/:userId/restrict` — Restrict an account.
+- `POST /api/trusttransport/admin/accounts/:userId/restore` — Restore a restricted account.
+- `PUT /api/trusttransport/admin/market-config` — Update market configuration.
+- `GET /api/trusttransport/admin/audit-events` — Read admin audit trail.
 
 ---
 
@@ -179,37 +176,32 @@ Admin routes:
 
 ### 4.1 Canonical Profile and Plugin Extension
 
-Must follow single-profile rule:
+Single-profile rule is enforced:
 
-1. Reuse canonical user profile for identity/preferences/safety controls.
-2. Add plugin extension data linked by `user_id` only.
+1. Canonical user profile is reused for identity/preferences/safety controls.
+2. Plugin-specific extension data is linked by `user_id` only.
 3. No separate full profile table for TrustTransport.
 
-Planned extension entity:
+Extension entity:
 
-- `trusttransport_user_extension`
-  - `user_id`
-  - mode preferences,
-  - trust/safety settings,
-  - payout preference metadata,
-  - provider eligibility flags.
+- `trusttransport_user_extension` — mode preferences, trust/safety settings, payout preference metadata, provider eligibility flags, linked by `user_id`.
 
 ### 4.2 Domain Entities
 
-Planned domain tables (initial set):
+Tables owned by this plugin:
 
-1. `trusttransport_requests`
-2. `trusttransport_offers`
-3. `trusttransport_trips`
-4. `trusttransport_deliveries`
-5. `trusttransport_food_orders`
-6. `trusttransport_status_events`
-7. `trusttransport_proof_artifacts`
-8. `trusttransport_disputes`
-9. `trusttransport_ratings`
-10. `trusttransport_earnings_ledger`
-11. `trusttransport_payout_requests`
-12. `trusttransport_risk_signals`
+1. `trusttransport_requests` — Request rows across ride/package/food modes.
+2. `trusttransport_offers` — Offers placed by providers on a request.
+3. `trusttransport_trips` — Accepted-offer trips with lifecycle state.
+4. `trusttransport_status_events` — Append-only event log for status transitions.
+5. `trusttransport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
+6. `trusttransport_disputes` — Dispute records and adjudication state.
+7. `trusttransport_ratings` — Dual-sided ratings/reviews.
+8. `trusttransport_earnings_ledger` — Earnings entries per completed task.
+9. `trusttransport_payout_requests` — Provider payout requests and status.
+10. `trusttransport_risk_signals` — Fraud/risk signals captured for monitoring.
+11. `trusttransport_market_config` — Region/service-zone/fee/commission/capacity configuration.
+12. `trusttransport_admin_audit_trail` — Admin mutation audit log.
 
 ### 4.3 Lifecycle and Storage Constraints
 
@@ -235,16 +227,13 @@ Planned domain tables (initial set):
 
 ## Web and Android Delivery Status
 
-1. Core booking/tracking/completion parity required on both platforms.
-2. Safety, consent, and deletion controls cannot be platform-deferred.
-3. UI layout may differ by platform, but command outcomes and status semantics must match.
-4. Any deferred parity requires owner + due date + risk note.
+`web+android complete`. Web surface lives under `/apps/trusttransport`; Android surface lives under `packages/mobile/src/features/trusttransport`. Booking, tracking, completion, safety controls, and deletion behave consistently across platforms.
 
 ---
 
 ## Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedTrustTransportPhase2.mjs` seeds deterministic request/offer/trip/proof/dispute/rating data for dev validation.
 
 ---
 
@@ -256,6 +245,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## Change Log
 
-- 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section) and unresolved decisions list. Kept core user/admin/API/data/security features as implemented/planned inventory sections. Clarified technical debt (status vocab refinement, event archival strategy, command contract drift) as known limitations, not unimplemented features. Mobile implementation with booking/tracking/chat UI confirmed.
+- 2026-05-18: Inventory updated to enforce Rule 120 living-snapshot model. Removed "(Planned)" annotation from the HTTP Projection Routes heading and removed "Planned" prefixes on command groups, extension entities, and domain entities. Synced route list (added trips chat, emergency-stop, service-credits) and table list (added `market_config`, `admin_audit_trail`; removed unshipped `deliveries`, `food_orders`) with `ctf/schema.sql` and `ctf/packages/web/app/api/trusttransport/`. Confirmed `web+android complete`.
+- 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section) and unresolved decisions list.
 - 2026-04-06: Mobile rewrite with design-faithful UI (TrustTransport.tsx) for booking, tracking, chat flows and auth-gating. Admin features pending.
 - 2026-02-24: Created initial CTF rewrite inventory for TrustTransport (net-new plugin) with user/admin/API/data/security/parity scope.

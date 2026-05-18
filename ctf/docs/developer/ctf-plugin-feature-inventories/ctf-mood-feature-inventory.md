@@ -5,7 +5,7 @@
 - Rewrite target only: `ctf/`
 - Legacy `platform/` is reference-only and must not be modified.
 - Unified plugin scope slug: `mood`
-- This document is a planning inventory for CTF rewrite parity.
+- This document is the living snapshot of Mood per Rule 120.
 - Plugin name to retain: `Mood`.
 
 Scope decisions locked for this rewrite:
@@ -84,11 +84,12 @@ Excluded route groups:
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 
-## 8) Gaps, Ambiguities, and Known Debt (Planning)
+## 8) Gaps and Known Technical Debt
 
-1. Authenticated access with anonymous `clientId` persistence requires explicit policy wording so anonymity expectations are clear.
-2. Multi-device behavior (multiple `clientId`s for one authenticated user) needs final product decision for parity acceptance.
+1. Anonymous `clientId` persistence behind authenticated routes is governed by an implicit policy; explicit user-facing wording on anonymity expectations is a known follow-up.
+2. Multi-device behavior (multiple `clientId`s for one authenticated user) is allowed by current schema; no UI affordance to reconcile or merge mood history across devices.
 
 ## 9) Change Log
 
-- 2026-02-25: Created initial Mood CTF rewrite inventory with locked scope: standalone plugin, no severe-value safety trigger, no announcements, no in-app admin surface, authenticated-route baseline with anonymous `clientId` persistence.
+- 2026-05-18: Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
+- 2026-02-25: Created initial Mood CTF rewrite inventory.

@@ -5,7 +5,7 @@
 - Rewrite target only: `ctf/`
 - Legacy `platform/` is reference-only and must not be modified.
 - Unified plugin scope slug: `gentlepulse`
-- This document is a planning inventory for CTF rewrite parity.
+- This document is the living snapshot of GentlePulse per Rule 120.
 - Plugin name to retain: `GentlePulse`.
 
 Scope decisions locked for this rewrite:
@@ -112,22 +112,21 @@ Excluded route groups:
 3. Data minimization for logs and diagnostics.
 4. No plugin-local settings persistence logic in GentlePulse; app-level settings contract is reused.
 
-## 6) Web and Android Parity Plan
+## 6) Web and Android Delivery Status
 
-1. Core library/filter/sort/favorite/rating/play behaviors must match between web and Android.
-2. No GentlePulse admin parity obligations in web/mobile for this rewrite scope.
-3. App-level settings parity is tracked in non-plugin inventory.
+`web+android complete`. Core library/filter/sort/favorite/rating/play behaviors are consistent across web (`/apps/gentlepulse`) and Android (`packages/mobile/src/features/gentlepulse`). App-level settings parity is tracked in the non-plugin inventory.
 
 ## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 
-## 8) Gaps, Ambiguities, and Known Debt (Planning)
+## 8) Gaps and Known Technical Debt
 
-1. Migration path from legacy anonymous `clientId` model to authenticated user model requires explicit cutover/backfill plan.
-2. Media playback provider behavior and telemetry contracts require final lock for parity acceptance.
+1. Legacy anonymous `clientId` playback history is not migrated into the authenticated user model; legacy listening data does not surface under the user's account.
+2. Media playback provider telemetry currently flows through generic platform analytics rather than a dedicated plugin telemetry contract.
 
 ## 9) Change Log
 
-- 2026-02-25: Created initial GentlePulse CTF rewrite inventory with locked scope decisions: app-level settings ownership, no in-app admin surface, no plugin announcements scope, authenticated API posture, and no dedicated progress endpoint scope.
+- 2026-05-18: Renamed "Web and Android Parity Plan" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
+- 2026-02-25: Created initial GentlePulse CTF rewrite inventory.
 - 2026-02-25: Removed Mood integration from GentlePulse parity scope; GentlePulse and Mood are documented as separate plugins.

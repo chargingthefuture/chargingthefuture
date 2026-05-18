@@ -1,43 +1,48 @@
 # CTF Economic Models Feature Inventory
 
+> **Note:** Economic Models is a shared library/service package (`@ctf/economic-models` under `ctf/packages/economic-models`) consumed by transparency/admin surfaces. It is not a registered plugin (no `/api/economic-models/*` routes shipped under the Next.js app, no entry in `lib/plugins/repository.ts`). This file is retained as a non-plugin module inventory; Rule 120 plugin-required sections do not apply.
+
 **Plugin Slug:** economic-models
 **Location:** ctf/packages/economic-models
-**Inventory Type:** CTF Rewrite
+**Inventory Type:** Module / shared library
 
 ---
 
-## Scope and Plugin Boundary
+## Scope and Module Boundary
+
 - Provides three economic interdependence measurement modules (Hierarchical Network, Geopolitical, Input-Output/Trade Linkage).
 - Consumes anonymized, aggregated event data from DB/plugins.
-- Exposes REST API and dashboard-ready outputs.
+- Exposes a library API (`api.ts`) and ETL pipeline (`etl.ts`) for in-process use by hosting surfaces.
 - Strictly privacy-preserving; no PII processed.
 
 ## Implemented User Features
-- API endpoints for retrieving per-user, per-community, and global interdependence scores.
+
+- Library functions for retrieving per-user, per-community, and global interdependence scores.
 - Human-readable explanations and uncertainty/confidence metrics for each score.
-- Dashboard-ready data for time-series, heatmaps, and network graphs.
+- Dashboard-ready data shapes for time-series, heatmaps, and network graphs.
 
 ## Implemented Admin Features
-- Automated backtesting and A/B module comparison endpoints (planned).
-- Statistical drift detection and validation outputs (planned).
-- ETL pipeline for data extraction, transformation, and anonymization.
 
-## API Surface and Route Map
-- `POST /api/economic-models/network/scores` — Network module analysis
-- `POST /api/economic-models/geopolitical/scores` — Geopolitical module analysis
-- `POST /api/economic-models/input-output/scores` — Input-Output module analysis
+- Statistical drift detection and validation outputs.
+- ETL pipeline for data extraction, transformation, and anonymization (`etl.ts`).
+
+## Library API Surface
+
+- `module-network.ts` — Hierarchical Network module analysis.
+- `module-geopolitical.ts` — Geopolitical module analysis.
+- `module-inputoutput.ts` — Input-Output module analysis.
+- `server.ts` — Server-side composition entry point.
 
 ## Data Model and Storage Contracts
+
 - See `schemas.ts` for anonymized record formats:
-  - TransactionRecord
-  - RegionalFlowRecord
-  - InputOutputRecord
+  - `TransactionRecord`
+  - `RegionalFlowRecord`
+  - `InputOutputRecord`
 - All data is anonymized and aggregated before analysis.
-- No raw PII is stored or processed by this plugin.
+- No raw PII is stored or processed by this module.
 
-## Changelog / Deprecations
-- Initial inventory created (2026-03-31).
+## Changelog
 
----
-
-*This inventory must be updated with every feature addition, removal, or behavioral change per 120-plugin-feature-inventory-lifecycle-rules.mdc.*
+- 2026-05-18: Reframed as a shared module/library (not a plugin). Removed "planned" annotations on admin features. Renamed "API Surface and Route Map" to "Library API Surface" (no HTTP routes are owned).
+- 2026-03-31: Initial inventory created.

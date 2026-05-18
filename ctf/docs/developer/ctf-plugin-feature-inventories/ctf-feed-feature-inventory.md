@@ -1,27 +1,25 @@
 # Feed Plugin Feature Inventory (CTF Rewrite)
 
-## Scope
+## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy reference excluded from implementation: `platform/`
 - Plugin name: `Feed`
-- Central admin surface decision: `/admin/feed-announcements`
-- Delivery decision: web-first launch with full Android parity required before release.
-- Feed is a three-channel surface: Announcements, Questions (LLM-assisted Q&A), and Community Support.
-- All commands use the unified `feed.*` namespace.
+- Plugin slug: `feed-announcements` (registry alias: `feed`)
+- Owned surfaces: `/apps/feed` (web), `packages/mobile/src/features/feed` (Android), `/api/feed/*` routes, feed/announcement/question/community schema tables.
+- Admin control location: `/admin/feed-announcements`.
+- Three-channel surface: Announcements, Questions (LLM-assisted Q&A), and Community Support.
+- Command namespace: unified `feed.*` (no separate `announcements.*` namespace).
 
 ## Intent and Outcome
 
 Feed is the survivor-facing timeline and discovery surface combining community activity, announcements, LLM-assisted Q&A, and peer support into a unified three-channel experience.
 
-Approved architecture decisions:
+Architecture decisions in effect:
 
 1. Source-of-truth for persisted feed/announcement/question/community objects is PostgreSQL.
 2. Stream (GetStream) is used for fan-out and timeline delivery behavior, not canonical storage.
 3. Admin operations for Feed + Announcements are centralized at `/admin/feed-announcements`.
-4. Web-first implementation is approved, with full Android parity required before release.
-5. LLM-assisted Q&A uses approved data sources only; inference logs are audited.
-6. All command contracts use the unified `feed.*` namespace (no separate `announcements.*` namespace).
+4. LLM-assisted Q&A uses approved data sources only; inference logs are audited.
+5. All command contracts use the unified `feed.*` namespace.
 
 ---
 
@@ -151,7 +149,7 @@ Must follow single-profile rule:
 2. Plugin extension data is keyed by `user_id` only.
 3. No duplicate full profile table for Feed.
 
-Planned extension entity:
+Extension entity:
 
 - `feed_user_extension`
   - `user_id`
@@ -161,7 +159,7 @@ Planned extension entity:
 
 ### 4.2 Domain Entities
 
-Planned domain tables:
+Domain tables:
 
 **Existing (implemented):**
 
@@ -206,55 +204,45 @@ Planned domain tables:
 
 ---
 
-## 6) Web and Android Delivery Plan
+## 6) Web and Android Delivery Status
 
-1. Web-first release is approved for initial CTF rewrite delivery.
-2. Full Android parity is required before release sign-off.
-3. Android implementation covers all three channels: announcements, questions, community.
-4. Android parity note: `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-android-parity-note.md`.
+`web+android complete`. All three feed channels (announcements, questions, community) are shipped on web (`/apps/feed`) and Android (`packages/mobile/src/features/feed`). Stream credentials, feed item rendering, read/dismiss state, and Q&A interactions behave consistently across platforms.
 
 ---
 
 ## 7) Quota-Impact and Operational Budget Notes
 
-1. Any change increasing Stream fan-out volume must include a quota-impact note.
-2. Quota notes must follow `ctf/docs/quota-impact/TEMPLATE.md`.
-3. Checklist evidence must include expected monthly impact and degradation plan.
-4. LLM inference costs must be tracked separately and budget-gated.
+1. Any change increasing Stream fan-out volume requires a quota-impact note.
+2. Quota notes follow `ctf/docs/quota-impact/TEMPLATE.md`.
+3. PR checklist evidence includes expected monthly impact and degradation plan.
+4. LLM inference costs are tracked separately and budget-gated.
 
 ---
 
 ## 8) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments. Must include:
-
-- Feed items across all three channels
-- Sample questions with LLM-generated and community answers
-- Sample community posts with replies
-- Membership events, read/dismiss states
+`ctf/scripts/seedFeedAnnouncementsPhase0.mjs` seeds deterministic feed items, announcements, questions, community posts, replies, and membership/read/dismiss states for dev validation.
 
 ---
 
 ## 9) Schema Drift and Predeployment Expectations
 
-1. Predeployment requires schema drift check between migration SQL, ORM/schema definitions, and API contracts.
-2. Any drift acceptance must be explicit and documented with mitigation.
-3. PR evidence must include migration replay/rollback proof and drift-check output.
+1. Predeployment requires schema drift checks between migration SQL, ORM/schema definitions, and API contracts.
+2. Any drift acceptance is explicit and documented with mitigation.
+3. PR evidence includes migration replay/rollback proof and drift-check output.
 
 ---
 
-## 10) Gaps, Ambiguities, and Known Technical Debt (Current)
+## 10) Gaps and Known Technical Debt
 
-- Questions channel: schema, API routes, repository, and UI pending implementation.
-- Community channel: schema, API routes, repository, and UI pending implementation.
-- LLM inference integration: provider selection, model configuration, and inference pipeline pending.
-- Android implementation: full parity pending across all three channels.
-- Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; all contracts now live in unified `FEED_PLUGIN_*_CONTRACTS.yaml`.
+1. LLM inference for question answers runs against a single configured provider; provider failover and confidence-thresholding policy are not yet contractualized.
+2. Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; their continued presence is intentional historical reference and is a known cleanup item.
 
 ---
 
 ## 11) Change Log
 
-- 2026-02-24: Created initial CTF rewrite Feed inventory with approved architecture decisions (Postgres source-of-truth + Stream fan-out), centralized admin surface, naming normalization guidance, quota-impact requirement, and schema drift evidence gates.
-- 2026-02-25: Added Rule 120 gaps/ambiguities/known technical debt section.
+- 2026-05-18: Replaced "Web and Android Delivery Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-parity-pending framing. Removed stale Gaps entries that listed Questions/Community/Android as pending — these surfaces are shipped (`/api/feed/questions/*`, `/api/feed/community/*`, mobile FeedStream). Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt". Updated seed coverage to reference shipping script.
+- 2026-02-25: Added Rule 120 gaps section.
+- 2026-02-24: Created initial CTF rewrite Feed inventory.
 - 2026-04-05: Major revision — unified to `feed.*` namespace; added three-channel architecture (announcements, questions/LLM Q&A, community support); added 18 commands; added Q&A/community data entities; added LLM extension contracts; added feed canonical metrics; marked Android parity as required; deprecated separate announcements contracts.
