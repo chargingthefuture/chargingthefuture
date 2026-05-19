@@ -15,6 +15,9 @@ function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSub
     bio: typeof body.bio === 'string' ? body.bio : '',
     quoraProfileUrl: typeof body.quoraProfileUrl === 'string' ? body.quoraProfileUrl : '',
     skills: Array.isArray(body.skills) ? body.skills.filter((item): item is string => typeof item === 'string') : [],
+    proposedSkills: Array.isArray(body.proposedSkills)
+      ? body.proposedSkills.filter((item): item is string => typeof item === 'string')
+      : [],
     claimedProfessions: Array.isArray(body.claimedProfessions)
       ? body.claimedProfessions.filter((item): item is string => typeof item === 'string')
       : [],

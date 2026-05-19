@@ -19,7 +19,7 @@
   - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`.
 - [x] Define Skills Hunt audit contracts for v1.
   - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_AUDIT_CONTRACTS.yaml`.
-- [ ] Add command for `skills-hunt.submission.report` (community moderation report) and `skills-hunt.profile.delete` (GDPR delete) to all three contracts. — Wave 2.
+- [x] Add command for `skills-hunt.submission.report` (community moderation report) and `skills-hunt.profile.delete` (GDPR delete) to all three contracts. Landed in `SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml`, `..._ACCESS_POLICY_CONTRACTS.yaml`, `..._AUDIT_CONTRACTS.yaml` (2026-05-12 changelog entries).
 
 ## Phase 1 — Schema, Migrations, and Retention
 
@@ -32,8 +32,19 @@
   - [x] New table `skills_hunt_submission_reports` with XOR check between `submission_id` and `directory_profile_id`.
   - [x] Backfill migration: idempotent DO block assigns `community-<6hex>` to every existing unclaimed Directory profile, retries on UNIQUE collision.
   - [x] `public.users`: defense-in-depth CREATE UNIQUE INDEX on `LOWER(username)` where NOT NULL.
-- [ ] Document retention behavior for moderation, reward, and report entities.
-- [ ] Prepare rollback/replay notes for the new migrations.
+- [x] Document retention behavior for moderation, reward, and report entities.
+  - **Submissions** (`skills_hunt_submissions`): GDPR soft-delete via `deleted_at`; user-facing reads filter `deleted_at IS NULL`. Audit log retained.
+  - **Reports** (`skills_hunt_submission_reports`): retained indefinitely (status transitions only — `open` → `dismissed | archived | removed`). No deletion path.
+  - **Notifications** (`skills_hunt_notifications`): retained indefinitely. UI may show only recent N; cleanup is a future ops task.
+  - **Audit log** (`skills_hunt_audit_log`): NOT soft-deleted; regulatory retention preserved even after a GDPR profile delete.
+  - **Achievements** (`skills_hunt_achievements`): retained; `archived_at` exists for future per-round badge refactor.
+  - **Missions + progress** (`skills_hunt_missions`, `skills_hunt_mission_progress`): retained; missions use `status='archived'` for soft-archive.
+  - **Rare-skill lookup** (`skills_hunt_rare_skills_lookup`): regenerated per round at create; old entries deleted in-place during `snapshotRareSkillsForRound`.
+- [x] Prepare rollback/replay notes for the new migrations.
+  - All Phase 1 schema additions in `f3aeb3f` use `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`. **Replay-safe** (idempotent): re-running `runAllMigrations.mjs` is a no-op on already-current DBs.
+  - **Backfill DO block** (`community-<6hex>` for existing unclaimed profiles) retries on UNIQUE collision until every profile has a handle. Safe to re-run.
+  - **Rollback path** (only if the rewrite must be reverted): each new column has a defined default; rollback can `DROP COLUMN IF EXISTS` per column safely. No data loss for pre-rewrite rows since the legacy code didn't read the new columns. Do NOT drop `directory_profiles.deleted_at` or `directory_profiles.unclaimed_handle` without first clearing UI/route handlers that consume them (see `app/apps/directory/[handle]/page.tsx`).
+  - **No `DROP TABLE` rollback is supported** — `skills_hunt_submission_reports` and `skills_hunt_missions` may carry production data; backup before drop.
 
 ## Phase 2 — Core Contributor Flow
 
@@ -48,8 +59,8 @@
     - `createSubmission` calls the helper before INSERT, stores `url_validation_result` + `url_validation_checked_at`, and throws `skills_hunt_url_dead` when the URL is unambiguously gone. Submissions POST returns `SKILLS_HUNT_URL_VALIDATION_FAILED` (400) with a helpful message.
   - [x] Flip `requireUsername: true` on submit endpoint.
     - New `requireSkillsHuntSubmitAccess` gate in `app/api/skills-hunt/_lib.ts`; submission POST now uses it. Read endpoints remain on the username-optional gate.
-  - [ ] Taxonomy-driven skills parsing (`parseSkillsSubmissionInput`): split matched vs `proposed_skills`.
-  - [ ] Align display name (2–100, alphanumeric+spaces) and bio (max 280) limits with spec.
+  - [x] Taxonomy-driven skills parsing — submission POST forwards `proposedSkills` and `validateSubmissionInput` enforces `skills + proposedSkills ≤ 10`, each label ≤ 40 chars, `proposedSkills ≤ 10`. `createSubmission` persists `proposed_skills` to the JSONB column on insert.
+  - [x] Align display name (2–100 chars, letters/digits/spaces only) and bio (≤ 280, optional) limits with spec. Server validator uses `SKILLS_HUNT_MIN_DISPLAY_NAME_LENGTH`, `SKILLS_HUNT_MAX_DISPLAY_NAME_LENGTH`, `SKILLS_HUNT_DISPLAY_NAME_PATTERN`, and `SKILLS_HUNT_MAX_BIO_LENGTH` constants. UI already enforces matching limits in the shell.
 
 ## Phase 3 — Review and Scoring Flow
 

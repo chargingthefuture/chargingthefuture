@@ -146,6 +146,27 @@ When frontend is on Vercel and backend is on Railway:
 4. For Vercel deployments, verify CORS is configured on Railway backend
 5. Check browser console for Clerk-specific error messages
 
+## Reserved Username Prefixes (Skills Hunt + Directory co-change)
+
+Skills Hunt auto-generates `community-<6hex>` handles for unclaimed Directory profiles (`directory_profiles.unclaimed_handle`). Allowing a Clerk-managed user to claim a username starting with `community-` would let them impersonate a community-generated profile.
+
+**Server-side defense:** `lib/auth/username-policy.ts` rejects submissions from any user whose Clerk `username` starts with a reserved prefix (returns `SKILLS_HUNT_RESERVED_USERNAME` 403).
+
+**Clerk dashboard configuration (REQUIRED on every Clerk instance — staging Railway, staging Vercel, production):**
+
+1. Open the Clerk dashboard for the instance.
+2. Go to **User & authentication → Username**.
+3. Add `community-` to the **disallowed usernames** / blocklist as a prefix pattern.
+4. If your Clerk plan only exposes regex-based blocking, use `^community-`.
+5. Save and re-test with a sign-up attempt using `community-test` — Clerk should reject before reaching the server.
+
+The server-side check is the source of truth; the Clerk dashboard layer is defense-in-depth so users get a clear error at signup time instead of after their first submission.
+
+**When this list changes:**
+- Update `SKILLS_HUNT_RESERVED_USERNAME_PREFIXES` in `lib/auth/username-policy.ts`.
+- Update the Clerk dashboard on all three Clerk instances.
+- Document the new prefix in this rule.
+
 ## Precedence
 This rule takes precedence over all other environment and deployment rules.
 Breaking this rule will directly cause Clerk authentication to fail and prevent users from signing in.

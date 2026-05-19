@@ -370,6 +370,54 @@ contracts:
     retentionClass: transactional_long_lived
     idempotency: true
 
+  - pluginId: skills-hunt
+    command: skills-hunt.submission.report
+    version: 1.0.0
+    description: File a community moderation report against a submission or a community-generated Directory profile.
+    inputSchema:
+      submissionId:
+        type: string
+        required: false
+      directoryProfileId:
+        type: string
+        required: false
+      reason:
+        type: string
+        required: true
+        description: One of no_permission | inaccurate | duplicate | spam | other.
+      details:
+        type: string
+        required: false
+        description: Optional free-text context (max 1000 chars).
+    outputSchema:
+      report:
+        type: object
+        description: The created report row including status ('open').
+    dataAccess:
+      - skills_hunt_submission_reports
+      - skills_hunt_audit_log
+    purpose: community_moderation
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: skills-hunt
+    command: skills-hunt.profile.delete
+    version: 1.0.0
+    description: GDPR-style soft-delete of every submission authored by the caller. Audit log retained.
+    inputSchema: {}
+    outputSchema:
+      deleted:
+        type: number
+        description: Count of submissions soft-deleted.
+    dataAccess:
+      - skills_hunt_submissions
+      - skills_hunt_audit_log
+    purpose: gdpr_self_delete
+    retentionClass: gdpr_soft_delete
+    idempotency: true
+
 changelog:
   - date: 2026-02-24
     change: Initial Skills Hunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
+  - date: 2026-05-12
+    change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) commands.

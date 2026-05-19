@@ -334,6 +334,56 @@ policies:
       - projection_already_exists
       - directory_boundary_violation
 
+  - pluginId: skills-hunt
+    command: skills-hunt.submission.report
+    rolePolicies:
+      authenticated: allow
+      anonymous: deny
+    attributePolicies:
+      reasonInEnum: true
+      xorTarget: true
+      detailsMaxLength: 1000
+    consentRequirements:
+      scopes:
+        - skills_hunt_moderation_report
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - missing_target
+      - invalid_reason
+      - csrf_denied
+
+  - pluginId: skills-hunt
+    command: skills-hunt.profile.delete
+    rolePolicies:
+      authenticated: allow
+      anonymous: deny
+    attributePolicies:
+      selfOnly: true
+      auditLogRetained: true
+    consentRequirements:
+      scopes:
+        - skills_hunt_gdpr_self_delete
+      fallbackLawfulBasis: gdpr_right_to_erasure
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_caller
+      - csrf_denied
+
 changelog:
   - date: 2026-02-24
     change: Initial Skills Hunt access policy contracts added with role, validation, anti-abuse, and Directory-boundary controls for all v1 commands.
+  - date: 2026-05-12
+    change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) access-policy contracts.

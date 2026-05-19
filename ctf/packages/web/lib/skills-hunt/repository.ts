@@ -60,8 +60,13 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   SKILLS_HUNT_DEFAULT_PAGE,
   SKILLS_HUNT_DEFAULT_PAGE_SIZE,
+  SKILLS_HUNT_DISPLAY_NAME_PATTERN,
   SKILLS_HUNT_MAX_BIO_LENGTH,
   SKILLS_HUNT_MAX_DISPLAY_NAME_LENGTH,
+  SKILLS_HUNT_MAX_PROPOSED_SKILLS_PER_SUBMISSION,
+  SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION,
+  SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH,
+  SKILLS_HUNT_MIN_DISPLAY_NAME_LENGTH,
   SKILLS_HUNT_MAX_PAGE_SIZE,
   SKILLS_HUNT_MAX_REVIEW_NOTES_LENGTH,
   SKILLS_HUNT_MAX_ROUND_DESCRIPTION_LENGTH,
@@ -453,16 +458,37 @@ export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boole
   const displayName = normalizeText(input.displayName ?? '');
   const bio = normalizeText(input.bio ?? '');
   const skills = normalizeArray(input.skills);
+  const proposedSkills = normalizeArray(input.proposedSkills ?? []);
   const claimedProfessions = normalizeArray(input.claimedProfessions);
 
   const hasValidRoundId = typeof input.roundId === 'string' && input.roundId.length > 0;
-  const hasValidDisplayName = isLengthInRange(displayName, 1, SKILLS_HUNT_MAX_DISPLAY_NAME_LENGTH);
-  const hasValidBio = isLengthInRange(bio, 1, SKILLS_HUNT_MAX_BIO_LENGTH);
+
+  // Spec §2.1: display name 2–100 chars, letters/digits/spaces only.
+  const hasValidDisplayName =
+    isLengthInRange(displayName, SKILLS_HUNT_MIN_DISPLAY_NAME_LENGTH, SKILLS_HUNT_MAX_DISPLAY_NAME_LENGTH)
+    && SKILLS_HUNT_DISPLAY_NAME_PATTERN.test(displayName);
+
+  // Spec §2.1: bio is optional (max 280). Length 0 accepted; >280 rejected.
+  const hasValidBio = bio.length === 0 || bio.length <= SKILLS_HUNT_MAX_BIO_LENGTH;
+
   const quoraProfileUrl = typeof input.quoraProfileUrl === 'string' ? input.quoraProfileUrl.trim() : '';
   const hasValidUrl = isLengthInRange(quoraProfileUrl, 1, SKILLS_HUNT_MAX_URL_LENGTH);
-  const hasValidSkills = skills.length > 0 && skills.length <= 25;
+
+  // Spec §2.1: ≥1 taxonomy-or-proposed skill, sum capped at 10, each ≤ 40 chars.
+  const totalSkills = skills.length + proposedSkills.length;
+  const allSkillsWithinLabelLimit = [...skills, ...proposedSkills].every(
+    (label) => label.length <= SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH,
+  );
+  const hasValidSkills =
+    totalSkills > 0
+    && totalSkills <= SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION
+    && proposedSkills.length <= SKILLS_HUNT_MAX_PROPOSED_SKILLS_PER_SUBMISSION
+    && allSkillsWithinLabelLimit;
+
   const hasValidClaimedProfessions = claimedProfessions.length <= 20;
-  const hasUnsafeText = hasUnsafeCollectionText([displayName, bio, ...skills, ...claimedProfessions]);
+  const hasUnsafeText = hasUnsafeCollectionText([
+    displayName, bio, ...skills, ...proposedSkills, ...claimedProfessions,
+  ]);
 
   return hasValidRoundId
     && hasValidDisplayName
@@ -1331,6 +1357,7 @@ export async function createSubmission(
 
     const normalizedUrl = normalizedUrlForCheck;
     const skills = normalizeArray(input.skills);
+    const proposedSkills = normalizeArray(input.proposedSkills ?? []);
     const claimedProfessions = normalizeArray(input.claimedProfessions);
     const signatureHash = buildSignatureHash(normalizedUrl, skills);
 
@@ -1346,6 +1373,7 @@ export async function createSubmission(
             quora_profile_url,
             quora_profile_url_normalized,
             skills,
+            proposed_skills,
             claimed_professions,
             signature_hash,
             status,
@@ -1355,7 +1383,7 @@ export async function createSubmission(
             url_validation_checked_at
           )
         VALUES
-          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10, 'pending', 0, '{}'::jsonb, $11, $12::timestamptz)
+          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $13::jsonb, $9::jsonb, $10, 'pending', 0, '{}'::jsonb, $11, $12::timestamptz)
         RETURNING
           id,
           round_id,
@@ -1392,6 +1420,7 @@ export async function createSubmission(
         signatureHash,
         liveness.result,
         liveness.checkedAtIso,
+        JSON.stringify(proposedSkills),
       ],
     );
 
