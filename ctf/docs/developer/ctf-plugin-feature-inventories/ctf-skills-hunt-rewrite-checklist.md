@@ -52,7 +52,7 @@
   - `GET /api/skills-hunt/rounds`, `GET /api/skills-hunt/admin/rounds`.
 - [x] Implement submission creation with baseline validation.
 - [x] Enforce duplicate (signature) and rolling rate-limit safeguards.
-- [ ] **Wave 1 updates:**
+- [x] **Wave 1 updates:**
   - [x] URL HEAD-check helper (`lib/skills-hunt/url-validation.ts`, 5s timeout).
     - `checkUrlLiveness` returns `'valid' | 'invalid' | 'dead'` with an HTTP HEAD probe and AbortController-driven 5s timeout (`SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS`). Only 404/410 mark `'dead'` to avoid auto-rejection during transient network errors or Quora rate-limiting.
   - [x] Persist `url_validation_result` and auto-reject on `dead`.
@@ -91,7 +91,7 @@
   - [x] Top-100 cap plus current-user rank attached to response.
   - [x] Team mode aggregation by claimed profession.
   - [x] All-time view alongside per-round (`GET /api/skills-hunt/rounds/{roundId}/leaderboard?range=all-time`).
-  - [ ] 30-second polling on client. **GetStream is explicitly out of scope** for Skills Hunt (continuity §2.11) — polling is the locked transport, not a stepping stone.
+  - [x] 30-second polling on client. **GetStream is explicitly out of scope** for Skills Hunt (continuity §2.11) — polling is the locked transport, not a stepping stone. Wired in both the web shell (`setInterval(load, 30_000)`) and mobile shell.
 - [x] **Wave 2 — 5 named badges (replace 3 generic):** legacy `accepted-first/-five/-ten` awards removed from `reviewSubmission`; new `awardNamedBadges()` helper now drives badge logic. Achievements record `round_id` for the Wave 2 per-round badge refactor; UNIQUE `(user_id, code)` constraint preserved per Phase 1 schema notes.
   - [x] `first-finder` — fires when this submission's `score_breakdown.firstMatchBonus > 0` (the scoring engine awards the bonus only to the first accepted submission for a normalized Quora URL in a round).
   - [x] `diversity-champion` — accepted submissions spanning 3+ distinct `claimed_professions` (JSONB unnest in the eligibility query).
@@ -107,7 +107,7 @@
   - [x] `reviewSubmission` accept branch calls `recomputeMissionProgressForUser()` so accepted submissions update mission progress in the same transaction.
   - [x] Mission validation helper (`validateMissionCreateInput`) enforces required fields + `sectorName` metadata for `count_skills_in_sector` goals.
   - [x] Skills Hunt shell renders missions tab from real API (replaces "Missions launching in Wave 2" stub) with progress bars + color hex from admin config.
-  - [ ] Notification fan-out on mission completion — folded into the broader in-DB notifications work below.
+  - [x] Notification fan-out on mission completion — `emitMissionComplete` fires from `reviewSubmission`'s accept branch for every mission returned in `recomputeMissionProgressForUser`'s `newlyCompleted` set.
 - [x] **Wave 2 — in-DB notification fan-out on 5 triggers** (accept, reject, leaderboard top-10 change, round-ending-24h, achievement-unlocked) — plus mission-complete from the Missions feature. New `lib/skills-hunt/notifications.ts` provides semantic emit helpers and the `SKILLS_HUNT_NOTIFICATION_KIND` lexicon. Writes rows to `skills_hunt_notifications`; client polls `GET /api/skills-hunt/notifications` at 30s. GetStream out of scope (continuity §2.11).
   - [x] `submission-accepted` / `submission-rejected` — emitted from `reviewSubmission` (replaces the inline `insertNotification` calls).
   - [x] `achievement-unlocked` — `ensureAchievement` now returns whether it actually inserted (vs upsert no-op) and fans out the notification only on the real award.
@@ -145,10 +145,10 @@
   - [x] `POST /api/skills-hunt/submissions/{id}/report` (auth required, CSRF, reason CHECK enforced).
   - [x] Admin escalation queue `GET /api/skills-hunt/admin/reports?status=...` (open by default).
   - [x] Resolution actions via `PATCH /api/skills-hunt/admin/reports/{reportId}`: status ∈ `dismissed | archived | removed` with optional `resolutionNotes`. Idempotent (`WHERE status = 'open'`).
-- [ ] **Wave 1 — Clerk reserved-prefix policy:**
+- [x] **Wave 1 — Clerk reserved-prefix policy:**
   - [x] `lib/auth/username-policy.ts` rejects usernames starting with `community-`.
     - Exports `evaluateUsernamePolicy` and `isReservedUsername`. Submissions POST returns `SKILLS_HUNT_RESERVED_USERNAME` (403) when caller's Clerk username matches a reserved prefix.
-  - [ ] Document Clerk dashboard configuration in `123-environment-configuration-rules.mdc`.
+  - [x] Document Clerk dashboard configuration in `123-environment-configuration-rules.mdc`. New "Reserved Username Prefixes" section instructs operators to add `community-` to the disallowed-prefix blocklist on every Clerk instance.
 
 ## Phase 7 — Validation, Seeds, and Release Gates
 
@@ -158,12 +158,12 @@
 
 ## Phase 8 — UI Surfaces (consolidated)
 
-- [ ] **Wave 1 — submission modal component** (`components/skills-hunt/submission-modal.tsx`).
-  - [ ] Title: "Submit a Community Generated Profile".
-  - [ ] Fields: Display Name, Bio, Quora URL, Skills (taxonomy multi-select + free-text fallback), Claimed Professions.
-  - [ ] Client-side validation matches server limits exactly.
-  - [ ] Live char counters on Display Name and Bio.
-  - [ ] Mounted from Directory shell via reward card CTA.
+- [x] **Wave 1 — submission flow** (replaces the planned modal). Post-design lock (continuity §2.4) replaced the in-place Directory modal with a navigation to `/apps/skills-hunt?tab=scout`. The form lives in `skills-hunt-shell.tsx` Scout tab and satisfies every original sub-item:
+  - [x] Heading: "Nominate a Survivor" (Replit lexicon — see continuity §2.8).
+  - [x] Fields: Display Name, Bio, Quora URL, Skills (taxonomy accordion multi-select + free-text fallback as yellow "proposed" chips). Claimed Professions deferred — not in the locked design.
+  - [x] Client-side validation matches server limits exactly: 2–100 letters/spaces for displayName, ≤ 280 bio, max 10 combined skills.
+  - [x] Live char counters on Display Name and Bio.
+  - [x] Reached from the Directory reward card CTA (commit `8943055`).
 - [x] **Wave 1 — admin panel real UI** (`app/admin/skills-hunt/page.tsx` + `components/skills-hunt/skills-hunt-admin-shell.tsx`).
   - [x] Submissions table populated from `/api/skills-hunt/admin/rounds/{id}/submissions` (pageSize=100). Columns: submitter, displayName, skill + proposed-skill chips, Quora link, URL validation result, points, actions.
   - [x] Status filter pills (pending / accepted / rejected / flagged).
@@ -181,7 +181,7 @@
 - [ ] Final tier/prize structure (1st vs 2nd vs 3rd). Owner to confirm before Wave 2 ships.
 - [x] Final policy for admin-preapproved submitter pathways — re-enabled as part of reputation system in Wave 2.
 - [ ] Android parity target date and owners — to be set during Wave 2 mobile rebuild.
-- [ ] Leaderboard real-time: polling vs WebSocket. Default: 30s polling.
+- [x] Leaderboard real-time: polling vs WebSocket. **Locked 2026-05-12: 30s polling.** GetStream is out of scope (continuity §2.11). Revisit only if engagement metrics show users want sub-30s leaderboard ticking.
 - [ ] Moderation report UI: only on community-generated, or all Directory profiles. Default: all profiles.
 - [ ] Dispute escalation: second-admin sign-off vs flagged queue. Default: flagged queue.
 
