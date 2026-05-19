@@ -1,7 +1,7 @@
 # Design Audit: Replit Mockup vs Shell Code
 
     _Generated: 2026-05-19 by design agent per `.github/instructions/126-design-mockup-implementation-rules.mdc`_
-    _Last updated: 2026-05-19 — GentlePulse + Community shells created; Mood shell patched_
+    _Last updated: 2026-05-19 — LevelUp shell implemented_
 
     ---
 
@@ -9,12 +9,10 @@
 
     | Severity | Components |
     |---|---|
-    | 🔴 STUB — API missing | Trust |
-    | 🔴 STUB — API exists, awaiting approval | LevelUp |
-    | 🟡 PARTIAL (< 65% implemented) | ~~Mood~~ ✅, ~~Community/Desktop~~ ✅ |
-    | 🟢 MINOR DRIFT (colors / labels) | GDP, LightHouse, Workforce |
+    | 🔴 STUB — awaiting user decision | Trust |
+    | 🟢 MINOR DRIFT — remaining | GDP, LightHouse, Workforce |
     | 🟢 MINOR DRIFT — review needed | Foundation |
-    | ✅ IMPLEMENTED / NO MAJOR DRIFT | Directory ✅, ServiceCredits ✅, SkillsHunt ✅, Feed ✅, Chyme ✅, PeerProgramming, SocketRelay, TrustTransport, GentlePulse ✅, Community ✅, Mood ✅ |
+    | ✅ IMPLEMENTED / NO MAJOR DRIFT | Directory ✅, ServiceCredits ✅, SkillsHunt ✅, Feed ✅, Chyme ✅, PeerProgramming, SocketRelay, TrustTransport, GentlePulse ✅, Community ✅, Mood ✅, LevelUp ✅ |
 
     ---
 
@@ -43,96 +41,94 @@
 
     - **File**: `ctf/packages/web/components/gentle-pulse/gentle-pulse-shell.tsx` (new)
     - **Design ref**: `GentlePulse.tsx` — COLOR=#14B8A6, BG=#0A0F0E
-    - **Structure**: 72px icon rail + 240px category sidebar + main area + 280px right rail. Three tabs: Sessions (grid of library items), Playing (player view), Chat/Support (backed by API).
-    - **API backing**: `/api/gentlepulse/library` (GET — session grid), `/api/gentlepulse/support` (POST — chat messages)
+    - **Structure**: 72px icon rail + 240px category sidebar + main area + 280px right rail. Three tabs: Sessions (grid of library items), Playing (player view), Support chat.
+    - **API backing**: `/api/gentlepulse/library` (GET), `/api/gentlepulse/support` (POST)
     - **Status**: ✅ committed
 
     ### 5. Community shell — created from scratch
 
     - **File**: `ctf/packages/web/components/community/community-shell.tsx` (new)
     - **Design ref**: `Desktop.tsx` — purple/cyan gradient, Discord-style hub
-    - **Structure**: 72px icon rail + 240px sidebar (channels/mini-apps) + main content (chat/apps grid) + 280px right rail (profile, trust widget, GDP progress). Two sections: Chat (live channel messages) and Mini-Apps (grid of 8 mini-apps).
-    - **API backing**: `/api/hub/channels` (GET — channel list), `/api/hub/messages` (GET/POST — channel messages)
-    - **Right rail**: Trust widget (unverified empty state matching Desktop.tsx), GDP progress bar, motivational quote.
+    - **Structure**: 72px icon rail + 240px sidebar (channels/mini-apps) + main content (chat/apps grid) + 280px right rail (profile, trust widget, GDP progress). Two sections: Chat and Mini-Apps.
+    - **API backing**: `/api/hub/channels` (GET), `/api/hub/messages` (GET/POST)
     - **Status**: ✅ committed
 
     ### 6. Mood shell — tab switching + trends + crisis widget
 
     - **File**: `ctf/packages/web/components/mood/mood-shell.tsx`
-    - **Changes**:
-      - Wired tab buttons to actual tab state (was static buttons with no `onClick`)
-      - Added 200px second sidebar with nav items + community stats
-      - Added **Trends tab**: 7-day mood bar chart (uses `communityStats.weeklyTrend` from eligibility API or sensible defaults), mood distribution bars (Great/Good/Okay/Low/Struggling)
-      - Added **280px right rail** with crisis resources (National Hotline, Crisis Text Line, RAINN) and privacy reminder
-      - Chat tab renders "Coming soon" state (no `/api/mood/chat` route exists — honest unavailability)
-      - Eligible=false → improved empty state with "View Trends" CTA
-    - **API backing**: `/api/mood/eligibility` (eligibility + communityStats), `/api/mood/submissions` (POST)
+    - **Changes**: Wired tab buttons, added second sidebar with stats, Trends tab with 7-day bar chart + mood distribution, 280px right rail with crisis hotlines and privacy note, Chat tab shows "coming soon" (no API backing).
+    - **API backing**: `/api/mood/eligibility` (GET), `/api/mood/submissions` (POST)
+    - **Status**: ✅ committed
+
+    ### 7. LevelUp shell — full implementation replacing stub
+
+    - **File**: `ctf/packages/web/components/levelup/levelup-shell.tsx`
+    - **Design ref**: `LevelUp.tsx` — green=#22C55E, dark surface theme
+    - **Structure**: 220px sidebar (logo, nav, trainer tools section, wallet badge) + main area + 300px right panel.
+    - **Nav views**: Browse Cohorts (stats bar + track filters + search + 3-col cohort grid), My Progress (enrollment tracking with milestone progress bars), stub views for Trainers/Achievements/Wallet.
+    - **Cohort grid**: track color badge, status badge (open/active/full/completed), seat count, SC cost, Enroll button with optimistic enrolled state.
+    - **Enrollment flow**: POST `/api/levelup/enroll` with `{ cohortId, idempotencyKey, depositCredits }`. Enrolled state tracked client-side; enrolled cohorts appear in right panel and Progress view.
+    - **Wallet**: fetched from `/api/service-credits/wallet` — available balance + escrow shown in sidebar badge and stats bar.
+    - **Trainer panel**: `isAdmin=true` reveals Create Cohort button, Trainer Tools nav section, pending validations panel with Approve action (`POST /api/levelup/milestones/[id]/validate`).
+    - **Track filters**: All Tracks, Tech, Finance, Wellness, Life Skills — passed to `GET /api/levelup/cohorts?track=`.
     - **Status**: ✅ committed
 
     ---
 
-    ## Investigation Findings (not implemented — awaiting approval or missing API)
+    ## Investigation Findings (not implemented)
 
     ### Feed shell — already correctly implemented
-
-    - Shell delegates to `LiveFeedAnnouncements` which fetches from `lib/feed/repository`. Original "4% stub" assessment was incorrect.
     - **Status**: ✅ No action needed.
 
     ### Chyme shell — already correctly implemented
-
-    - Shell delegates to `ChymeLiveShell`. Original "10% stub" assessment was incorrect.
     - **Status**: ✅ No action needed.
 
     ---
 
-    ## 🔴 STUBS — Require User Decision Before Any Work
-
-    ### LevelUp (shell = 8% of design)
-
-    - **Shell file**: `ctf/packages/web/components/levelup/levelup-shell.tsx`
-    - Shell is a stub. Design shows cohort cards, skill tracks, enrollment CTAs, and progress bars.
-    - **API dependency**: Confirmed routes: `/api/levelup/cohorts`, `/api/levelup/enroll`, `/api/levelup/milestones`, `/api/levelup/disputes`, `/api/levelup/transfers`.
-    - **Verdict**: API exists. Awaiting approval to implement full shell UI.
+    ## 🔴 STUB — Awaiting User Decision
 
     ### Trust (shell file does not exist)
 
     - **Shell file**: `ctf/packages/web/components/trust/trust-shell.tsx` — **file does not exist yet**.
     - **Design file**: `Trust.tsx` — trust score dashboard with community endorsements and history timeline.
     - **Related components** (5 files present): TrustDirectoryProfilePanel, TrustEvidencePanel, TrustRightRailCard, TrustStatusBadge, TrustVisibilityBadge.
-    - **API dependency**: Not yet verified.
-    - **Verdict**: ⚠️ Shell file missing entirely. Awaiting user approval + API route verification.
+    - **API dependency**: Not yet verified — user skipped this component for now to fix API routes first.
+    - **Verdict**: Awaiting user approval + API route verification.
 
     ---
 
-    ## 🟢 MINOR DRIFT — Remaining (visual-only, safe to implement)
+    ## 🟢 MINOR DRIFT — Remaining (visual-only, blocked by missing API routes)
 
-    ### Foundation — review needed
+    ### GDP
 
-    - **Shell file**: `ctf/packages/web/components/foundation/foundation-shell.tsx`
-    - All 3 tabs (browse/quotes/chat) present and API-backed. COLOR=#EF4444 matches design. No structural gaps found.
+    - Dashboard: sectors + countries grid ✅, map tab present (placeholder) ✅. COLOR=#06B6D4 ✅.
+    - Missing: weekly trend chart — no `/api/gdp/weekly` route found; user skipped for now.
+
+    ### LightHouse
+
+    - 3 tabs + inline chat + detail view all present ✅. COLOR=#EAB308 ✅.
+    - No remaining structural gaps.
+
+    ### Workforce
+
+    - Overview + sector + skill-level views ✅. COLOR=#6366F1 ✅.
+    - Missing: employment status donut (no dedicated route), chat tab (no `/api/workforce/chat` route). User skipped for now.
+
+    ### Foundation
+
+    - All 3 tabs (browse/quotes/chat) present and API-backed ✅. COLOR=#EF4444 ✅.
     - Minor typography / spacing polish may exist — safe to address as a visual-only pass.
-    - **Status**: Monitored. No blocking drift found.
 
-    ### Directory — remaining color drift
+    ### Directory — color drift
 
-    - Missing sections not yet in shell: online indicator (`#22c55e`), star ratings (`#fbbf24`), community-generated badge (`#a855f7`), category color bars.
-    - **Blocker**: Fields (`online`, `rating`, `source`) not confirmed in `/api/directory/list` response.
-    - **Status**: Awaiting API field confirmation.
-
-    ### GDP, LightHouse, Workforce
-
-    - COLOR constants match design. Minor color / typography drift in detail surfaces. No structural gaps.
-    - GDP: map tab present (placeholder). Dashboard: sectors + countries grid ✅. Missing: weekly trend chart (no `/api/gdp/weekly` route found).
-    - LightHouse: 3 tabs + inline chat + detail view all present ✅.
-    - Workforce: overview + sector + skill-level views present ✅. Missing: employment status donut (design shows it; no dedicated route). Chat tab not added (no `/api/workforce/chat` route).
-    - **Status**: Remaining gaps blocked by missing API routes. No action without user approval.
+    - Missing: online indicator, star ratings, community-generated badge, category color bars.
+    - **Blocker**: Fields not confirmed in `/api/directory/list` response.
 
     ---
 
     ## Rules Applied (from 126-design-mockup-implementation-rules.mdc)
 
-    - **Stubs and partials** → flagged above; user must approve before implementation (require new API calls or new UI sections with data dependencies)
-    - **Visual-only changes** (colors, spacing, typography) → safe to implement without approval
-    - **Missing labels** from design are hardcoded mock data — shells use real API data, so label gaps are expected and not flagged as drift
+    - **Stubs and partials** → flagged above; user must approve before implementation
+    - **Visual-only changes** → safe to implement without approval
     - **No stub data** in production shells — all implemented UI is backed by confirmed API routes
   
