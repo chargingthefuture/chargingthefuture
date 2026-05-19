@@ -1,7 +1,7 @@
 # Plugin Feature Inventory Lifecycle Rules
 
 ## Intent
-Require a living feature inventory artifact for every plugin implemented in `ctf/`, and keep rewrite inventories clearly separated from legacy reference inventories.
+Require a living feature inventory artifact for every plugin implemented in `ctf/`, and keep rewrite inventories clearly separated from legacy reference inventories. The inventory is the single source of truth for what a plugin's feature surface is at any given moment.
 
 ## Scope
 - Applies to all plugin rewrites and net-new plugins under `ctf/`.
@@ -27,27 +27,53 @@ Require a living feature inventory artifact for every plugin implemented in `ctf
 - **CTF rewrite checklist filename format**:
   - `ctf-{plugin-slug}-rewrite-checklist.md`
 
+## Inventory Is a Living Snapshot of the Plugin
+
+The inventory describes what the plugin **is** at the time of reading. It is both the canonical spec ("what should exist") and the snapshot of current code state ("what is"). These must match. Any divergence between inventory and code is drift to be fixed in the next PR.
+
+- When an agent adds a feature, the agent updates the inventory in the same PR.
+- When an agent removes a feature, the agent removes it from the inventory in the same PR (and notes the removal in the Change Log).
+- When an agent refactors a feature, the agent updates the inventory in the same PR so the description matches the new shape.
+- After a fix lands, the issue it fixed must no longer be visible in the inventory — the inventory describes the new correct state, not the historical broken state.
+
+## Forbidden Inventory Patterns
+
+The following structures are forbidden because they turn the inventory into a TODO list or a roadmap, defeating drift detection:
+
+- "Phase 0 / Phase 1 / Phase 2 / Phase 3" or any phased rollout framing. Features are either part of the plugin or not.
+- "Planned" sections that describe features the plugin does not have. Future work belongs in the rewrite checklist, PR descriptions, or issue trackers — not in the inventory.
+- "Risks and Known Technical Debt" lists used as a holding pen for unimplemented features. The "Gaps and Known Technical Debt" section (see Required Content) is for genuine ambiguity — unanswered design questions, intentional deferrals with stakeholder sign-off, or invariants worth flagging — not for "we haven't built X yet."
+- "Production Readiness Snapshot" or similar audit-style sections that contradict the rest of the document. The whole inventory is the production-readiness picture by definition.
+- "Deferred to Android later" or any framing that treats web↔Android parity as a future state. Per [105-web-android-feature-parity-rules.mdc](105-web-android-feature-parity-rules.mdc), 100% parity is the baseline.
+
+## Required Inventory Content (CTF Rewrite)
+
+Each inventory must contain, in this order:
+
+1. **Scope and Boundary** — plugin slug, the surfaces it owns, and what it explicitly does not own.
+2. **Intent and Outcome** — one-paragraph plain-English statement of what the plugin is for.
+3. **Target User Features** — the user-facing features the plugin provides. This is the canonical product surface.
+4. **Target Admin Features** — admin-facing surfaces or contract obligations (Retool, internal APIs).
+5. **API Surface and Route Map** — every `/api/{plugin-slug}/*` route the plugin owns, with method and one-line purpose.
+6. **Data Model and Storage Contracts** — every table the plugin owns, with columns and constraints. Cross-plugin reads are not permitted ([112-platform-architecture-rules.mdc](112-platform-architecture-rules.mdc)).
+7. **Security, Privacy, and Compliance Controls** — authz/authn gates, consent points, retention rules, audit obligations.
+8. **Web and Android Delivery Status** — must say `web+android complete` per [105-web-android-feature-parity-rules.mdc](105-web-android-feature-parity-rules.mdc). Phased or web-only states are a rule violation.
+9. **Seed Coverage Status** — deterministic plugin seed script reference and what it covers.
+10. **Gaps and Known Technical Debt** — used only for genuine ambiguities (unanswered design questions, intentional deferrals with sign-off, invariants worth flagging). Do not use this section to list unimplemented features.
+11. **Change Log** — date-stamped entries summarizing inventory edits and the PRs that drove them.
+
 ## Lifecycle Requirements
 - On plugin rewrite completion (MVP or release-candidate milestone), create the ctf rewrite inventory before marking work complete.
 - On every accepted feature change (add/remove/behavioral change), update the corresponding ctf rewrite inventory in the same PR.
-- If a feature is removed, move it from active sections to a changelog/deprecations note in the same inventory file.
-
-## Required Inventory Content (CTF Rewrite)
-- Scope and plugin boundary.
-- Implemented user features.
-- Implemented admin features.
-- API surface and route map.
-- Data model and storage contracts.
-- Security/compliance controls.
-- Seed coverage status with deterministic plugin seed script requirement for manual plugin validation in dev environments. (Test evidence summary DEFERRED FOR MVP — see Rule 118.)
-- Gaps/ambiguities and known technical debt.
-- Change log section with date-stamped entries.
+- If a feature is removed from code, remove it from the inventory and add a Change Log entry. Do not leave deprecated features as orphan text in active sections.
 
 ## PR/Review Gate
 - A plugin rewrite PR is incomplete if:
   - No ctf rewrite inventory exists in the required folder.
   - Inventory is not updated for changed feature scope.
   - Inventory naming does not distinguish ctf rewrite from legacy reference docs.
+  - Inventory uses any of the Forbidden Inventory Patterns (phases, planned sections, technical-debt-as-TODO, deferred parity).
+  - Inventory disagrees with the code shipped in the PR.
 
 ## Conflict Resolution
 - If this rule conflicts with a narrower feature rule, choose the stricter inventory-update requirement and document the rationale in the PR.

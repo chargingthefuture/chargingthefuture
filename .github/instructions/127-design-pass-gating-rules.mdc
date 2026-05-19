@@ -1,0 +1,119 @@
+# Design Pass Gating Rules
+
+## Intent
+
+Stop AI implementation agents from building UI against an unlocked design. Replit's design agent produces designs that are the **only** authoritative visual source for this codebase. Code agents that build UI before the design lands cause rework, drift, and product debt. This rule defines exactly when an agent must halt for a design pass, how to verify a pass exists, and how to resume.
+
+Companion rule: `126-design-mockup-implementation-rules.mdc` covers what to do *after* a design exists. This rule (`127-`) covers what to do *before* one does.
+
+## The Design Submodule Is The Only Source Of Truth
+
+- Authoritative design location: the `design/` submodule at the root of this repo (`/design`). Submodule URL: `https://github.com/chargingthefuture/design`.
+- The Replit design agent commits designs **directly into that submodule** and pushes to its remote. There is no Figma file, no screenshot folder, no Slack thread, no Notion page that supersedes it. If it isn't in the `design/` submodule, it is not the design.
+- The submodule pointer in this repo (`/design`) may lag the latest design-repo HEAD. Agents must `git -C design fetch && git -C design log --oneline -5` to see what's actually on the remote before claiming a design exists.
+- The design system reference (component path, CSS approach, breakpoints, typography, file→shell mapping) is in `ctf/agents/design.agent.md`. That file is the authoritative *index* into the design submodule — do not re-derive its facts from anywhere else.
+
+## When Stop-For-Design Is REQUIRED
+
+An agent must halt before writing any UI code if the change introduces or materially restructures:
+
+1. A new user-facing page, route, modal, drawer, or component family.
+2. A new plugin or major plugin rewrite (per the New Plugin Lifecycle Checklist in `CLAUDE.md`).
+3. A pinned, featured, or above-the-fold surface on a high-traffic page (Directory, Feed, Lighthouse, etc.).
+4. A change to existing user-facing UI that materially changes layout, information architecture, or interaction model (not just copy or color).
+5. Anything visible to the 5M-survivor audience that is not a copy-only or color-only tweak.
+6. Cross-plugin UI co-changes (e.g., Skills Hunt placing a reward card on Directory's public page).
+
+In any of these cases, the agent must follow the **Required Checkpoint Behavior** below.
+
+## When Stop-For-Design Is SKIPPABLE
+
+An agent may proceed end-to-end without waiting for a design pass if the change is limited to:
+
+1. Schema / database migration only.
+2. Library, utility, helper, or repository code with no UI surface.
+3. API routes whose only consumer is another agent, admin tooling the owner uses directly, or a server-side process.
+4. Internal admin tooling **only the owner uses**, with no risk of accidental exposure to the survivor audience.
+5. Infra, configuration, CI/CD, or devcontainer changes.
+6. Bug fixes that change behavior but not layout, copy, or interaction model.
+7. Pure refactors with no observable user-visible effect.
+8. Type, lint, or test-only changes.
+
+When in doubt, treat the change as REQUIRED. Cost of a false stop is one round-trip. Cost of a false start is rework.
+
+## Bypass Mechanism (User-Initiated)
+
+The owner may explicitly bypass the gate by including one of the following in their prompt:
+
+- `bypass design` — agent proceeds end-to-end without a design pass; document the bypass in the change-log entry and in the relevant `*-session-continuity.md` doc.
+- `design done` followed by a reference to the design submodule path or commit (e.g. `design done: design/skills-hunt/`) — agent treats the design as locked, reads the referenced design artifacts, and resumes.
+- `hotfix` — agent treats the change as a bug fix and applies the SKIPPABLE rules even if the surface is normally REQUIRED.
+
+If the prompt is ambiguous, the agent must ask before proceeding.
+
+## Required Checkpoint Behavior
+
+When stop-for-design is required, the agent must, in order:
+
+1. **Lock the spec.** Write or update a `*-session-continuity.md` doc next to the relevant plugin's inventory at `ctf/docs/developer/ctf-plugin-feature-inventories/`. The doc must include:
+   - The owner-locked decisions made in this session (verbatim where possible).
+   - The audit findings if this is a rewrite.
+   - The roadmap split into "foundation now" vs "UI after design pass."
+   - Open questions that still need owner input.
+   - A "How a future session should start" section.
+2. **Update the rewrite/feature checklist.** Mark off the foundation items being committed and leave the UI items unchecked, with a note that they are gated on the design pass.
+3. **Commit + push the foundation.** Schema, types, library helpers, API routes that don't render UI, contract YAMLs, inventory updates. **Do not build UI components against unlocked design.** Foundation commits go on the working feature branch.
+4. **Announce the stop.** End the session-or-turn with a short summary that ends with this exact pattern, with no extra prose after it:
+
+   ```
+   DESIGN PASS REQUIRED
+   branch: <feature-branch>
+   design path: design/<plugin-or-feature>/
+   resume command: continue against design/<plugin-or-feature>/ at commit <sha>
+   ```
+
+5. **Stop.** Do not proceed to UI components. Do not "scaffold" a component file with a placeholder. Do not "pre-stub" the JSX. The next code change against UI must come after the design pass.
+
+## Verifying A Design Pass Exists (Resume Protocol)
+
+When the owner asks the agent to resume, the agent must:
+
+1. Update the submodule: `git -C design fetch` (do not assume the in-tree submodule pointer is current; the Replit agent pushes to the remote independently).
+2. Check the relevant subfolder of the design submodule for files specific to this feature (e.g. `design/skills-hunt/`, `design/directory/`).
+3. Confirm the design covers the four states required by `126-design-mockup-implementation-rules.mdc`: Unauthenticated, Authenticated+Loading, Authenticated+Empty, Authenticated+Populated. Surface missing states to the owner; do not invent them.
+4. Reconcile the design against the locked decisions in the `*-session-continuity.md` doc. If the design contradicts a locked decision (wrong field, wrong copy, wrong placement), surface the conflict to the owner before writing any code. Do not silently re-shape the implementation to match a drifted design.
+5. Only after reconciliation, implement the UI per `126-design-mockup-implementation-rules.mdc` (no stub data, no UI for non-existent backend, etc.).
+
+## Anti-Patterns (do not do these)
+
+1. **Building a component "skeleton" or "shell" while waiting for design.** Even if the file is "just a placeholder," it becomes the design once it ships, and Replit will be forced to design around it. The right placeholder is `null`.
+2. **Treating screenshots, Figma exports, Slack messages, or chat descriptions as the design.** They are not. The submodule is.
+3. **Copying mockup stub data into production shells.** Forbidden by `126-`. Even more forbidden when there is no design pass at all.
+4. **Splitting a single user-facing feature across "foundation now, UI later" without a session-continuity doc.** The doc is what makes the split safe. Without it, the next session has to re-litigate the spec and the owner pays the documentation cost again.
+5. **Asking the owner "should I keep going?" instead of stopping.** The gate is the stop. If the surface is REQUIRED, stop without asking. Resume on explicit owner instruction.
+
+## Cross-References
+
+- `099-agent-scope-guardrails.mdc` — write-scope rules; this rule extends them with a design-scope concept.
+- `120-plugin-feature-inventory-lifecycle-rules.mdc` — inventory and continuity doc naming.
+- `122-schema-drift-predeployment-rules.mdc` — schema-side gate; this rule is the UI-side equivalent.
+- `126-design-mockup-implementation-rules.mdc` — what to do once a design exists.
+- `CLAUDE.md` "Plugin Feature Inventory Sync Policy" — every code change must update the inventory; the session-continuity doc is the lightweight form of that for in-flight design-gated work.
+
+## Examples
+
+### Example 1 — REQUIRED (Skills Hunt rewrite, 2026-05-11)
+
+Owner asks for a Skills Hunt audit + fix. Scope includes a new submission modal, admin panel UI, reward card placement on Directory, mobile rebuild. **Required stop.** Agent locked the spec in `ctf-skills-hunt-session-continuity.md`, committed schema + types + inventory updates as the foundation, and stopped with the `DESIGN PASS REQUIRED` block before writing any of the new UI components. Replit picks up next.
+
+### Example 2 — SKIPPABLE (Adding a database index)
+
+Owner asks for a Postgres index on `directory_profiles.unclaimed_handle`. No UI surface touched. Agent proceeds end-to-end without a design pass; documents the change in the relevant inventory.
+
+### Example 3 — BYPASS (Hotfix on existing screen)
+
+Production is showing an incorrect leaderboard rank for ties. Owner prompts: `hotfix — leaderboard tie-break broken in /apps/skills-hunt`. Agent applies the bug fix to the existing leaderboard component without waiting for a design pass; logs the bypass in the relevant change-log.
+
+### Example 4 — DRIFT (Design contradicts locked decision)
+
+Resume: design lands at `design/skills-hunt/submission-modal.tsx` showing skills as a free-text textarea rather than the taxonomy multi-select that was owner-locked in the continuity doc. Agent surfaces the conflict to the owner ("design shows free-text; continuity §2.1 locks taxonomy multi-select — which wins?") before writing any code. Does **not** silently match the implementation to the drifted design.

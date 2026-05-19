@@ -1,0 +1,149 @@
+name: Generate Product Update
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Job 1: decide whether this push warrants a product update ───────────────
+  check-changes:
+    name: Check for meaningful commits
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+      commits: ${{ steps.check.outputs.commits }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find feat/fix/perf commits since last update tag
+        id: check
+        run: |
+          LAST_TAG=$(git tag -l "update/*" --sort=-version:refname | head -1)
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+          fi
+
+          COMMITS=$(git log "$RANGE" --pretty=format:"%h %s" | head -30)
+          COUNT=$(echo "$COMMITS" | grep -cE " (feat|fix|perf):" || true)
+
+          echo "commits<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Found $COUNT meaningful commit(s) — will generate update."
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No feat/fix/perf commits found — skipping update."
+          fi
+
+  # ── Job 2: generate content and publish to all three destinations ───────────
+  generate-and-publish:
+    name: Generate and publish product update
+    needs: check-changes
+    if: needs.check-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push update/* tag
+      issues: write     # create Quora draft issue
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Secrets (Infisical → env) ─────────────────────────────────────────────
+      # Injects: ANTHROPIC_API_KEY, APP_URL, INTERNAL_SERVICE_SECRET
+      # GitHub-direct secrets (not in Infisical): GH_PAT, GITHUB_TOKEN
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: production
+          domain: ${{ secrets.INFISICAL_URL }}
+
+      # ── Generate ─────────────────────────────────────────────────────────────
+      - name: Generate update content via Claude
+        id: content
+        env:
+          # ANTHROPIC_API_KEY is in env after Infisical step
+          COMMITS: ${{ needs.check-changes.outputs.commits }}
+        run: |
+          OUTPUT=$(node ctf/scripts/generate-update.mjs)
+          echo "json<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      # ── Feed + wiki-site ─────────────────────────────────────────────────────
+      - name: Post to in-app feed and update wiki-site index
+        env:
+          UPDATE_JSON: ${{ steps.content.outputs.json }}
+          # APP_URL and INTERNAL_SERVICE_SECRET are in env after Infisical step
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: node ctf/scripts/publish-product-update.mjs
+
+      # ── GitHub wiki page ──────────────────────────────────────────────────────
+      - name: Create GitHub wiki page
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          UPDATE_JSON: ${{ steps.content.outputs.json }}
+        run: |
+          WIKI_PAGE_NAME=$(echo "$UPDATE_JSON" | jq -r '.wikiPageName')
+          echo "$UPDATE_JSON" | jq -r '.wikiContent' > /tmp/wiki-page.md
+
+          git clone \
+            "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/chargingthefuture.wiki.git" \
+            /tmp/ctf-wiki
+
+          cd /tmp/ctf-wiki
+          git config user.email "ci@chargingthefuture.org"
+          git config user.name "CTF CI Bot"
+          cp /tmp/wiki-page.md "${WIKI_PAGE_NAME}.md"
+          git add "${WIKI_PAGE_NAME}.md"
+          git commit -m "Add product update: ${WIKI_PAGE_NAME}"
+          git push
+
+      # ── Quora draft issue ─────────────────────────────────────────────────────
+      - name: Create Quora draft issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATE_JSON: ${{ steps.content.outputs.json }}
+        run: |
+          TODAY=$(date +%Y-%m-%d)
+          FEED_TITLE=$(echo "$UPDATE_JSON" | jq -r '.feedTitle')
+          echo "$UPDATE_JSON" | jq -r '.quoraDraft' > /tmp/quora-draft.md
+
+          gh label create "quora-draft" \
+            --color "0075ca" \
+            --description "Auto-generated Quora post draft" \
+            --force 2>/dev/null || true
+
+          gh label create "posted" \
+            --color "0e8a16" \
+            --description "Posted to Quora" \
+            --force 2>/dev/null || true
+
+          gh issue create \
+            --title "Quora Draft: ${TODAY} — ${FEED_TITLE}" \
+            --body-file /tmp/quora-draft.md \
+            --label "quora-draft"
+
+      # ── Tag for next run's range ──────────────────────────────────────────────
+      - name: Tag this update
+        run: |
+          git config user.email "ci@chargingthefuture.org"
+          git config user.name "CTF CI Bot"
+          TAG="update/$(date +%Y-%m-%d-%H%M)"
+          git tag "$TAG"
+          git push origin "$TAG"

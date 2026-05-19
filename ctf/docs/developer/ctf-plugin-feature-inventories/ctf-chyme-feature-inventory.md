@@ -98,26 +98,14 @@ Current status:
 - Deterministic Chyme seed script is present under `ctf/scripts/seedChymePhase0.mjs`.
 - Validation and release evidence live in `ctf/docs/testing/CHYME_FIRST_TEST_PASS.md` and `ctf/docs/quota-impact/2026-04-05-chyme-phase0-remediation.md`.
 
-## Risks, Ambiguities, and Known Technical Debt
+## Gaps and Known Technical Debt
 
 1. Full-account delete lifecycle remains request-first; terminal orchestrator completion still depends on the broader account-deletion workflow.
-2. Chyme-specific admin tooling and moderation controls are out of MVP unless explicitly approved.
-3. Chyme uses Stream chat channels for room coordination and token issuance; a dedicated in-room native call client remains a future enhancement if the product moves beyond the current token/join pattern.
-
-## Delivery Phasing
-
-1. Phase 0 — Core implementation completed: room/chat/join/deletion routes and persistence with policy and audit enforcement.
-2. Phase 0b — Deterministic dev/test readiness completed: seed script and release evidence wired to canonical docs.
-3. Phase 1 — Android parity completed: mobile parity uses the same policy outcomes and protected API surface.
-4. Phase 2+ — Lifecycle closure remains open only for global full-account orchestrator completion beyond `requested` state.
+2. Chyme-specific admin tooling and moderation controls are out of MVP scope.
+3. In-room native call client (beyond Stream chat channels for coordination) remains a future enhancement.
 
 ## Change Log
 
-- 2026-02-25: Created initial Chyme CTF rewrite inventory and documented governance/parity requirements.
-- 2026-02-25: Added Chyme command/access/audit YAML triplet references and removed contract-triplet gap from known technical debt.
-- 2026-03-01: Reframed inventory for fresh-start implementation sequencing and removed implemented-baseline assumptions.
-- 2026-03-01: Added canonical auth-provider handle decision for Chyme/plugin identity parity.
-- 2026-04-05: Re-audited auth boundaries so Chyme depends on provider-neutral auth context and generic server identity policy rather than Clerk-specific assumptions.
-- 2026-03-01: Recorded Phase 0 delivery status (API + policy + audit + migration + deterministic seed) and Android deferment details.
-- 2026-03-02: Closed Chyme second-pass scaffold gap by persisting room call-active state on join and publishing dedicated closure handoff evidence.
+- 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section); confirmed implementation is complete across web and Android. Renamed section to "Gaps and Known Technical Debt" (Rule 120 format).
 - 2026-04-05: Completed Android parity on the real Chyme API surface, queued Service Credits reclaim dependency on full-account delete, and aligned Chyme docs to `ctf/schema.sql` plus shared Stream wrappers.
+- 2026-02-25: Created initial Chyme CTF rewrite inventory and documented governance/parity requirements.

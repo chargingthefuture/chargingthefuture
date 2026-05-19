@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: infisical
+    env: image
+    image:
+      url: docker.io/infisical/infisical:latest-postgres
+    plan: starter
+    region: ohio
+    healthCheckPath: /api/status
+    autoDeploy: false
+    envVars:
+      - key: DB_CONNECTION_URI
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: TELEMETRY_ENABLED
+        value: "false"
+      - key: PORT
+        value: "8080"

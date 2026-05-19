@@ -1,168 +1,137 @@
-# Survivor Hub Chat Feature Inventory (CTF Rewrite)
+# Survivor Hub Feature Inventory (CTF Rewrite)
 
 ## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy `platform/` is reference-only and must not be modified.
-- Feature type: **non-plugin, app-shell level capability**
-- Surface: App shell (`community-shell`) home page entry point
-- Plugin context: Chat capability is framed as **Chyme chat** when it refers to the GetStream-backed social
-  audio/text surface — not as a generic standalone chat product.
-
----
+- Rewrite target only: `ctf/`. Legacy `platform/` is reference-only.
+- Plugin slug: `hub`.
+- Hub owns the unified Survivor Hub home/landing experience: app shell, channels, DMs, bots, routing assistant, hero stats, and plugin grid.
+- Hub is a standalone plugin with no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
+- Hub owns its own GetStream scope (channels, user IDs, tokens) per [107-integration-stack-rules.mdc](../../../../.github/instructions/107-integration-stack-rules.mdc).
 
 ## Intent and Outcome
 
-Survivor Hub Chat is the primary navigation and query interface on the CTF home screen. It allows survivors
-to ask natural-language questions ("I need a place to stay for 3 months") and receive routing guidance to the
-correct mini-app/plugin ("Use LightHouse → Rentals").
+The Survivor Hub is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, the channels and DMs sidebar, the system bots (including `@comic`), the routing assistant chat, the live hero stats, and the plugin grid. Hub is the canonical "home" route; opening a plugin moves the user out of the Hub chat surface and into that plugin's own scope.
 
-The feature is delivered in phased stages:
+## Target User Features
 
-1. **Phase 0 (current)**: Static/demo UI — pre-seeded conversations showing representative routing examples. No
-   backend integration. No GetStream wiring. Human-operators answer queries manually out-of-band.
-2. **Phase 1 (planned)**: Human-in-the-loop backend — GetStream channel wires operator responses to users in
-   real time. Transcripts are logged to Postgres for intent labeling and training data collection.
-3. **Phase 2 (planned)**: Hybrid automation — intent classifier trained on collected examples auto-responds for
-   high-confidence intents; ambiguous or high-risk messages fall back to human operators.
-4. **Phase 3 (planned)**: LLM-augmented routing — retrieval-augmented generation (RAG) over plugin documentation
-   and service metadata, with third-party LLM inference for natural-language response generation.
+### Hub Shell
 
----
+1. Four-column layout on `/apps`: icon rail (72px), left sidebar (240px), main content (flex), right rail (280px).
+2. Section toggle between **Chat** and **Apps** controlled by icon rail buttons; section state is shell-local.
+3. Right rail renders auth-provider username/display name for signed-in users and a sign-in CTA for unsigned visitors.
+4. Right rail "About Survivor Hub" section with live implemented-plugin count.
+5. Right rail "Active Apps" list with the top implemented plugins (sorted by recent use).
+6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
+7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
 
-## Research Background
+### Hub Chat (Chat Section)
 
-Architecture decision: **hybrid approach** (confirmed by product owner, 2026-03-23):
+1. Hero banner with live stats from the platform-owned GDP snapshot table: member count, GDP value (USD), opportunity value (target GDP minus current GDP).
+2. Hero banner copy adapts: "Welcome to Survivor Hub" for unsigned visitors; "Good morning, {displayName} — your network is active." for signed-in users.
+3. Live message feed for signed-in users on Hub-owned GetStream channels; history loaded via `GET /api/hub/messages`, polled while shell is mounted.
+4. Optimistic send via `POST /api/hub/messages`; dedup on display by `(from, sender, text, time)` tuple.
+5. Routing assistant maps user utterances to plugin action buttons via the data-driven `hub_bot_routes` table.
+6. Suggestion chips pre-fill the input with canonical example utterances.
+7. Hub avatar ("SH") rendered for hub-team responses; bot responses use the bot's avatar.
+8. Connection state visible as footer status (connecting, live, fallback); live state requires a successful `POST /api/hub/join`.
+9. Unsigned visitors see a sign-in gate in place of the input.
 
-- Third-party runtime (target: GetStream for messaging; LLM inference provider TBD) for scalable infra,
-  safety primitives, monitoring, and SLOs.
-- In-house router and business logic layer for canonical intent → plugin/action mappings, authorization
-  checks, and proprietary data control.
-- In-house retrieval layer (vector store + plugin metadata/help content) once intent→action dataset is mature
-  enough to justify the investment.
-- Human-first pilot to generate labeled training data before any automation is deployed.
+### Sidebar — Channels
 
-Stack decision (confirmed by product owner, 2026-03-23):
+1. Channel list renders in chat mode for all users.
+2. Unauthenticated users see exactly one channel: `#general`.
+3. Authenticated users see additional channels (e.g., `#housing-help`, `#skills-trade`, `#mutual-aid`) provisioned per role/context via `hub_channels.visibility_scope`.
+4. Each channel routes to its associated Hub-owned GetStream channel.
+5. Channels reflect presence/unread state from Hub's GetStream scope.
 
-- **GetStream**: messaging channel (UI real-time), typing indicators, read receipts.
-- **Postgres**: transcripts, normalized intent/entity labels, user profiles, action logs, audit trail.
-- **Routing service** (in-house): receives messages from GetStream, routes to operator or bot, enforces authz,
-  records metadata.
-- **Agent interface**: minimal operator dashboard built on GetStream for agents to respond, tag intents, mark
-  outcomes.
-- **Logging/analytics**: centralized logs + dashboards for top utterances, response times, deflection rate.
-- **Transcription/ETL pipeline**: background job to normalize transcripts and extract structured fields.
-- **Optional (Phase 2+)**: NLU tooling for training (Rasa, Snips, or managed classifier).
-- **Optional (Phase 3+)**: Secure vector store (Postgres full-text or Pinecone/Weaviate).
+### Sidebar — Direct Messages
 
----
+1. DM list renders below the channel list in chat mode for signed-in users.
+2. DMs include peer-to-peer survivor conversations and system bot conversations.
+3. Each DM row shows the counterpart's display name, online indicator, and unread badge.
+4. Selecting a DM opens the DM thread in the main content panel; message persistence runs on Hub's GetStream scope.
 
-## 1) Phase 0 — Static/Demo UI (Implemented)
+### Sidebar — Bots
 
-### 1.1 Shell Design
+1. The hub manages system bots that appear in the DM list and respond on Hub channels and Hub DMs.
+2. `@comic` bot: hub-owned bot. Persona: lightweight assistive bot that introduces survivor stories and onboarding nudges, and routes users to plugins. Appears in DMs and is addressable from channels.
+3. Bots are first-class Hub entities with a canonical profile (slug, display name, avatar, persona copy), routing rules in `hub_bot_routes`, and deterministic seed coverage.
+4. Bot messages render with the bot's avatar and are visually distinguishable from human Hub-team responses.
 
-1. Four-column Discord-style layout: icon rail, left sidebar nav, main content panel, right rail.
-2. Section toggle: **Chat** tab and **Apps** tab.
-3. Chat tab shows pre-seeded representative conversations between the user and the Survivor Hub assistant.
-4. Apps tab shows the full plugin grid (driven by live plugin registry data).
-5. Right rail shows active auth-provider user info (first name / username or equivalent), live GDP stats, and active plugin list.
-6. GDP stats (member count, GDP value) are pulled from `gdp_metric_snapshots` via the GDP repository.
-   They display as zero/absent if no data has been published rather than using hardcoded values.
+### Hub Apps (Apps Section)
 
-### 1.2 Chat Tab (Static Placeholder)
+1. Three-column plugin grid driven by the platform-owned plugin registry (`GET /api/plugins`).
+2. Per-plugin color theme and emoji from `shell-plugin-config.ts`.
+3. Sort modes: **recent**, **alphabetical**, **most-used**. Selection persists in `localStorage` (`ctf.communityShell.pluginSortMode`).
+4. Recent-use tracking persists in `localStorage` (`ctf.communityShell.recentPluginSlugs`); capped at 12 entries.
+5. Most-used tracking persists in `localStorage` (`ctf.communityShell.pluginUsageCounts`).
+6. Sidebar in apps mode shows a flat searchable plugin list; selection sets the active app and updates recent/used counters.
+7. Search filters by name and summary.
+8. Cards link to `/apps/[slug]` for each plugin.
 
-1. Pre-seeded chat messages serve as onboarding examples of the intended routing behavior.
-2. User can type into the input field; messages append to local state only (no backend).
-3. Suggestion chips pre-fill the input with common query examples.
-4. Action buttons in hub responses link to the appropriate plugin route.
-5. Input and send button are fully rendered but wired to local state only — no GetStream channel.
-6. Footer note: "Human-assisted · GetStream powered (coming soon)."
+## Target Admin Features
 
-### 1.3 Channels Sidebar (Static Placeholders)
+1. Bot management (registering bots, updating persona, toggling visibility) is a Hub-owned admin contract surface operated via Retool against `hub_bots` and `hub_bot_routes`.
+2. Channel visibility per role/context is a Hub-owned admin policy surface configured via seed/config against `hub_channels.visibility_scope`.
 
-1. Channel list (#general, #housing-help, #skills-trade, #mutual-aid) renders in chat mode.
-2. Each channel links to the most relevant plugin route as a placeholder.
-3. No GetStream channel IDs or live unread counts — these are display-only stub values.
-4. DM list shows placeholder names — no real DM routing.
+## API Surface and Route Map
 
----
+All Hub APIs are namespaced under `/api/hub/*`. The `/api/survivor-hub-chat/stream` route is an alias for the mobile credentials handoff and delegates to `POST /api/hub/join`.
 
-## 2) Phase 1 — Human-in-the-Loop (Planned, not designed)
+- `GET /api/hub/channels` — channel set visible to the caller, filtered by `visibility_scope`.
+- `GET /api/hub/dms` — DM list for the caller, including bot DMs.
+- `GET /api/hub/bots` — active bot registry (slug, display name, avatar, persona blurb).
+- `GET /api/hub/messages` — message history for the active Hub channel or DM thread.
+- `POST /api/hub/messages` — send into a Hub channel or DM thread.
+- `POST /api/hub/join` — GetStream membership/token issuance for Hub's scope. Returns `streamApiKey`, `streamUserId`, `streamToken`, `streamChannelId`.
+- `POST /api/survivor-hub-chat/stream` — mobile credentials alias; delegates to `POST /api/hub/join`.
 
-> Specs not yet finalized. Design and contract work required before implementation.
+Web entry route:
 
-### 2.1 Backend Requirements (Planned)
+- `GET /apps` — Hub home page (Next.js `app/apps/page.tsx`).
 
-1. GetStream channel provisioned for each authenticated user upon first chat interaction.
-2. Operator dashboard (built on GetStream) for agents to view queued chats, respond, and tag intents.
-3. Postgres `chat_transcripts` table: stores message ID, user ID (hashed), operator ID, timestamp, user
-   utterance, operator response, tagged intent, tagged entity values, routed plugin, outcome.
-4. Postgres `intent_labels` table: canonical intent→plugin→action mappings maintained by operators.
-5. Background ETL job: extract structured fields from transcripts, populate `intent_labels`.
-6. Auth: authenticated access through the provider-neutral auth boundary; unauthenticated users cannot initiate chat.
-7. Policy: operator identity is logged; no PII outside approved retention fields.
+## Data Model and Storage Contracts
 
-### 2.2 User-Facing Changes (Planned)
+Hub-owned tables (canonical schema in `ctf/schema.sql`):
 
-1. Chat input wired to GetStream channel — messages appear in real time.
-2. Operator typing indicator shows.
-3. Operator responses appear as "Survivor Hub" avatar messages (identical visual to static demo).
+1. `hub_channels` — `(slug PK, display_name, visibility_scope, stream_channel_id, ordering)`. `visibility_scope`: `public | authenticated | role:<role>`.
+2. `hub_bots` — `(slug PK, display_name, avatar_url, persona_blurb, is_active)`. Seed includes `@comic` deterministically.
+3. `hub_bot_routes` — `(id PK, bot_slug FK, intent_pattern, response_template, plugin_handoff_slug nullable)`.
+4. `hub_dm_threads` — `(id PK, user_id, counterpart_id_or_bot_slug, stream_channel_id, last_message_at, unread_count)`.
+5. `hub_messages` — `(id PK, stream_channel_id, sender_user_id, body, sent_at)`.
 
----
+Platform-neutral tables consumed read-only by Hub:
 
-## 3) Phase 2 — Hybrid Automation (Planned, not designed)
+- `gdp_metric_snapshots` (platform-owned) — hero stats source.
+- Plugin registry table behind `GET /api/plugins` (platform-owned) — Apps grid source.
 
-> Timeline: Month 2–3 after Phase 1 launch, contingent on labeled example volume.
+Hub-owned tables follow `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`.
 
-1. Intent classifier trained on Phase 1 collected examples.
-2. Auto-responds for high-confidence intents (≥ threshold TBD); falls back to human for ambiguous/risk cases.
-3. Slot-filler extracts entities (location, dates, service type) to enrich routing decisions.
-4. Routing service returns structured action (plugin slug + optional params) for display.
-5. Human fallback queue monitored with SLA; alerting on queue depth.
+## Security, Privacy, and Compliance Controls
 
----
+1. Unauthenticated visitors see only the public Hub shell: `#general` channel, sign-in-gated chat input, no DMs or bots exposed.
+2. Authenticated routes (`/api/hub/*`, `/api/survivor-hub-chat/stream`) require a valid auth-provider session; reject with `401` otherwise.
+3. Approved-user / admin gate enforced on Hub chat send and bot DM interactions.
+4. Bot routing rules are server-side only; the client never sees a raw bot policy table.
+5. Identity handles for `@mention` semantics use the canonical auth-provider username/handle per `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`.
+6. Routing assistant is a pure server-side lookup against `hub_bot_routes`; user utterances are not forwarded to third-party LLMs.
+7. GetStream interactions are scoped to Hub's channels/users/tokens via shared wrappers in `ctf/packages/shared`. Hub tokens are not reused for any other plugin's channels.
+8. Right rail renders `displayName` derived from auth provider, never hardcoded names; falls back to `Survivor` when no display name is available.
+9. Hero stats come from `gdp_metric_snapshots`; render zero/absent when data is missing.
 
-## 4) Phase 3 — LLM-Augmented Routing (Planned, not designed)
+## Web and Android Delivery Status
 
-> Timeline: Month 3+ after Phase 2, contingent on cost/privacy evaluation.
+Parity status: **web+android complete**.
 
-1. Retrieval-augmented generation (RAG) over plugin documentation, canonical help content, and service flows.
-2. Third-party LLM inference (provider TBD) generates natural-language responses from retrieved context
-   and strict prompt templates.
-3. All LLM requests go through in-house prompt layer; no raw user input is forwarded to third-party APIs
-   without sanitization and data classification review.
-4. Privacy audit required before Phase 3 deployment: confirm no PII/PHI leaves the in-house boundary.
+## Seed Coverage Status
 
----
+Deterministic Hub seed script: `ctf/scripts/seedHubPhase0.mjs`. Seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`, and any required `hub_dm_threads` fixtures.
 
-## 5) Non-Scope (Explicit Exclusions)
+## Gaps and Known Technical Debt
 
-1. Generic standalone chat product — the chat surface is always framed in plugin context (Chyme chat) or
-   as the Survivor Hub routing assistant, not as a general messaging platform.
-2. Admin moderation tools for chat are out of scope unless approved by separate artifact.
-3. Push notifications for chat messages are out of scope for Phase 0–1.
-4. AI-generated responses that bypass the in-house routing layer are prohibited.
-5. No LLM inference in Phase 0 or Phase 1.
+(None recorded.)
 
----
+## Change Log
 
-## 6) Rule Alignment
-
-1. `.github/instructions/index.mdc` — CTF rewrite scope, plugin-first flows.
-2. `.github/instructions/107-integration-stack-rules.mdc` — GetStream as the backed streaming channel.
-3. `.github/instructions/116-file-size-and-modularity-rules.mdc` — Shell chat panel split into modular
-   sub-components; each file ≤ 200 lines per primary function.
-4. `.github/instructions/113-platform-coding-rules.mdc` — provider-neutral session auth; no PII in client bundles.
-5. `.github/instructions/103-web-nextjs-structure-rules.mdc` — Server components fetch GDP stats; client
-   components handle local chat state only.
-6. CTF Contract — chat functionality referred to as "Survivor Hub assistant" or "Chyme chat context," not as
-   a standalone generic product.
-
----
-
-## 7) Change Log
-
-- 2026-03-23: Initial inventory created. Phase 0 (static UI) confirmed for immediate implementation.
-  Phases 1–3 planned, specs deferred. Decisions: hybrid architecture confirmed; GetStream + Postgres stack
-  confirmed; human-first pilot confirmed; no AI/LLM in Phase 0 or 1. GDP stats pulled live (no hardcoding).
-   Provider-neutral auth user data used for right rail display. No roles beyond admin/user.
+- 2026-05-12: Inventory rewritten as a clean snapshot per the updated rule 120. Removed phased-rollout language, the "Risks and Known Technical Debt" TODO list, the "Production Readiness Snapshot" audit framing, and cross-plugin language about Chyme. Hub now described as a standalone plugin with its own `/api/hub/*` surface, its own `hub_*` schema, and its own GetStream scope.
+- 2026-03-23: Initial inventory created under prior phase-based template.

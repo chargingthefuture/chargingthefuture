@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { ChymeJoinResponse, ChymeMessage, ChymeMessagesResponse } from '../../lib/chyme/types';
+import type { HubJoinResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
 import type { ChatMessage, ShellCurrentUser } from './shell-types';
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
@@ -63,7 +63,7 @@ function buildChatMessage(
   };
 }
 
-function mapStoredMessage(message: ChymeMessage, currentUserId: string): ChatMessage {
+function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessage {
   const from = message.userId === currentUserId ? 'user' : 'hub';
   return buildChatMessage(
     message.id,
@@ -120,7 +120,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const [isSending, setIsSending] = useState(false);
 
   const refreshHistory = useCallback(async () => {
-    const payload = await requestJson<ChymeMessagesResponse>('/api/chyme/messages?limit=50');
+    const payload = await requestJson<HubMessagesResponse>('/api/hub/messages?limit=50');
     const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
     setMessages((previous) => mergeMessages(previous, nextMessages));
   }, [currentUser.userId]);
@@ -143,7 +143,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       }
 
       try {
-        const join = await requestJson<ChymeJoinResponse>('/api/chyme/join', { method: 'POST' });
+        const join = await requestJson<HubJoinResponse>('/api/hub/join', { method: 'POST' });
         if (!active) return;
         void join;
         setConnectionState('live');
@@ -188,7 +188,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setInput('');
 
     try {
-      const payload = await requestJson<{ ok: true; message: ChymeMessage }>('/api/chyme/messages', {
+      const payload = await requestJson<{ ok: true; message: HubMessage }>('/api/hub/messages', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',

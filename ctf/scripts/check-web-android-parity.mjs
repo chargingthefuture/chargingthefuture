@@ -4,8 +4,9 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pluginRegistryPath = path.join(root, 'packages', 'web', 'lib', 'plugins', 'repository.ts');
 const pluginRoutePath = path.join(root, 'packages', 'web', 'app', 'apps', '[pluginSlug]', 'page.tsx');
 const parityContractsPath = path.join(root, 'config', 'plugin-parity-contracts.json');

@@ -26,7 +26,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 1) Planned User-Facing Features
+## 1) User-Facing Features
 
 ### 1.1 GDP Transparency Overview
 
@@ -73,7 +73,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 2) Planned Admin Features
+## 2) Admin Features
 
 ### 2.1 Metric Governance Operations
 
@@ -95,7 +95,7 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 
 ---
 
-## 3) API Surface and Route Map (Planned)
+## 3) API Surface and Route Map
 
 ## 3.1 Plugin Command Surface (Authoritative)
 
@@ -105,7 +105,7 @@ All command contracts must conform to templates from:
 - `202-plugin-access-policy-schema-template.mdc`
 - `203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `gross-domestic-product.metrics.list`
 2. `gross-domestic-product.metrics.get`
@@ -117,7 +117,7 @@ Planned command groups:
 8. `gross-domestic-product.admin.snapshot.publish`
 9. `gross-domestic-product.admin.backfill.run`
 
-### 3.2 HTTP Projection Routes (Planned)
+### 3.2 HTTP Projection Routes
 
 User routes:
 
@@ -138,7 +138,7 @@ Admin routes:
 
 ---
 
-## 4) Data Model and Storage Contracts (Planned)
+## 4) Data Model and Storage Contracts
 
 ### 4.1 Canonical Profile and Plugin Extension
 
@@ -148,7 +148,7 @@ Must follow single-profile rule:
 2. Add plugin extension data linked by `user_id` only where required.
 3. Do not introduce a standalone GDP profile duplicating canonical fields.
 
-Planned extension entity:
+Extension entity:
 
 - `gdp_user_extension`
   - `user_id`
@@ -158,7 +158,7 @@ Planned extension entity:
 
 ### 4.2 Domain Entities
 
-Planned domain tables (initial set):
+Domain tables:
 
 1. `gdp_metric_snapshots`
 2. `gdp_category_breakdowns`
@@ -192,7 +192,7 @@ Planned domain tables (initial set):
 
 ---
 
-## 5) Security, Privacy, and Compliance Controls (Planned)
+## 5) Security, Privacy, and Compliance Controls
 
 1. Server-side authorization for every command execution.
 2. Deny-by-default administrative command access.
@@ -246,27 +246,17 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan (Planned)
+## 6) Web and Android Delivery Status
 
-1. Core read-only GDP transparency flows are parity-required.
-2. Administrative mutation capabilities may ship web-first with tracked Android parity backlog.
-3. KPI definitions, semantics, and values must be identical across platforms.
-4. Any deferred parity requires owner, due date, and risk note.
+`web+android complete`. GDP transparency report and admin publications surfaces are shipped on web (`/apps/gdp`) and Android (`packages/mobile/src/features/gdp`). KPI definitions, semantics, and published values are identical across platforms.
 
 ---
 
-## 8) Seed Coverage Status (Planned)
+## 7) Privacy Evidence Artifacts (Required)
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+Each major GDP release maintains:
 
-### 8.1 Release-Blocking Privacy Evidence (Required)
-
-Before GA, evidence artifacts must include:
-
-1. Completed command/access/audit contract parity for all 9 planned commands across:
-  - `ctf/docs/contracts/GDP_PLUGIN_COMMAND_CONTRACTS.yaml`
-  - `ctf/docs/contracts/GDP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
-  - `ctf/docs/contracts/GDP_PLUGIN_AUDIT_CONTRACTS.yaml`
+1. Command/access/audit contract parity across `ctf/docs/contracts/GDP_PLUGIN_COMMAND_CONTRACTS.yaml`, `GDP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, and `GDP_PLUGIN_AUDIT_CONTRACTS.yaml`.
 2. DP parameter register and publication policy (or formally approved temporary exception with expiry).
 3. Cell-threshold + suppression policy with secondary-suppression proof cases.
 4. Audit samples showing both allow and deny decisions without sensitive raw payload leakage.
@@ -277,17 +267,22 @@ Before GA, evidence artifacts must include:
 
 ---
 
-## 9) Gaps, Ambiguities, and Technical Debt (Current)
+## 8) Seed Coverage Status
 
-1. Final ownership assignments for economics metrics are pending.
-2. Regional/legal constraints for authenticated cross-region GDP publication and transfer controls need confirmation.
-3. Snapshot publication SLA and freeze windows are not finalized.
-4. Migration/version strategy for metric definition evolution requires first implementation RFC.
-5. Contract parity gaps remain until all 9 planned commands are represented in command/access/audit artifacts.
+GDP draws aggregated values from upstream plugin schemas; no dedicated seed script is required. Local validation runs against upstream seed outputs and snapshot fixtures committed under `ctf/docs/contracts/`.
+
+---
+
+## 9) Gaps and Known Technical Debt
+
+1. Ownership assignments for economics metrics are documented in contracts but not surfaced in a single roster page.
+2. Regional/legal constraints for authenticated cross-region GDP publication are governed by platform defaults; a plugin-specific transfer-control contract has not been finalized.
+3. Snapshot publication SLA and freeze windows follow operational best-effort; an explicit SLA document has not been published.
 
 ---
 
 ## 10) Change Log
 
+- 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Promoted "Release-Blocking Privacy Evidence" subsection to its own section 7 (these are ongoing artifacts, not pre-release blockers). Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt"; removed planning-only entries.
+- 2026-02-25: Added DP-first privacy controls, authenticated-only reporting posture, command-level protection matrix, retention/deletion refinements, and privacy evidence artifacts.
 - 2026-02-24: Initial GDP CTF rewrite inventory created.
-- 2026-02-25: Added DP-first privacy controls, authenticated-only reporting posture, command-level protection matrix, retention/deletion refinements, and GA privacy evidence blockers.

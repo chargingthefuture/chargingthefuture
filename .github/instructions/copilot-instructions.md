@@ -49,6 +49,7 @@
 - [124-brand-voice-and-language-rules.mdc](124-brand-voice-and-language-rules.mdc)
 - [125-railway-mcp-debugging-rules.mdc](125-railway-mcp-debugging-rules.mdc)
 - [126-design-mockup-implementation-rules.mdc](126-design-mockup-implementation-rules.mdc)
+- [127-design-pass-gating-rules.mdc](127-design-pass-gating-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](202-plugin-access-policy-schema-template.mdc)
@@ -122,6 +123,29 @@ All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with e
 - When unclear, prefer broader safety/compliance and boundary rules over feature-level rules.
 
 ## CTF Contract
+
+## Security and Secrets Policy (Critical)
+
+**This is an open source repository.** Everything committed to this codebase is publicly visible. Never expose secrets, credentials, API keys, encryption keys, tokens, or any sensitive information through:
+
+- **Code commits** — no secrets hardcoded or in examples
+- **GitHub Actions logs/stdout** — no auto-generated secrets printed to console
+- **Job summaries or outputs** — no sensitive values in workflow summaries
+- **Documentation or comments** — no example credentials or keys
+- **Error messages or debugging output** — scrub sensitive info from error handling
+
+**Correct pattern for secrets:**
+1. User generates secrets locally (e.g., `openssl rand -hex 16` in a terminal)
+2. User stores them securely as GitHub repository secrets
+3. Workflows pass them to scripts as masked environment variables
+4. Scripts consume them but never print or output them
+5. Error messages that fail validation refer users to the generation command, not the secret itself
+
+**If a secret is ever exposed** (even locally in logs or momentarily in a PR):
+- Rotate it immediately via the GitHub Actions secrets UI or service dashboard
+- Do not commit the exposed value to the repo
+
+This applies to all development: deploy scripts, CI/CD workflows, seed scripts, test fixtures, and any infrastructure code.
 
 ## Local Build and Error Checking Requirement
 
