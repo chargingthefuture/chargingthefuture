@@ -17,6 +17,7 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
+          RENDER_PROJECT_ID: ${{ secrets.RENDER_PROJECT_ID }}
           INFISICAL_DB_URI: ${{ secrets.INFISICAL_DB_URI }}
           INFISICAL_ENCRYPTION_KEY: ${{ secrets.INFISICAL_ENCRYPTION_KEY }}
           INFISICAL_AUTH_SECRET: ${{ secrets.INFISICAL_AUTH_SECRET }}
@@ -30,3 +31,9 @@ jobs:
           echo "### Infisical Deployed" >> $GITHUB_STEP_SUMMARY
           echo "- Service ID: ${{ steps.deploy.outputs.SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
           echo "- URL: ${{ steps.deploy.outputs.SERVICE_URL }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.deploy.outputs.INFISICAL_ENCRYPTION_KEY }}" ]; then
+            echo "- **Save this ENCRYPTION_KEY**: ${{ steps.deploy.outputs.INFISICAL_ENCRYPTION_KEY }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "${{ steps.deploy.outputs.INFISICAL_AUTH_SECRET }}" ]; then
+            echo "- **Save this AUTH_SECRET**: ${{ steps.deploy.outputs.INFISICAL_AUTH_SECRET }}" >> $GITHUB_STEP_SUMMARY
+          fi

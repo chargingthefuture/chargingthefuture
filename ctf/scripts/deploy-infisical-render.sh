@@ -4,19 +4,32 @@
 #   RENDER_API_KEY       - Render API key
 #   RENDER_OWNER_ID      - Render owner/user ID (e.g. usr-xxx)
 #   INFISICAL_DB_URI     - Postgres connection string (Neon)
-#   INFISICAL_ENCRYPTION_KEY - 32-char hex encryption key
-#   INFISICAL_AUTH_SECRET    - JWT auth secret
+# Optional env vars:
+#   RENDER_PROJECT_ID        - Render project ID (e.g. prj-xxx); places service in a project
+#   INFISICAL_ENCRYPTION_KEY - 32-char hex encryption key (auto-generated if not set)
+#   INFISICAL_AUTH_SECRET    - JWT auth secret (auto-generated if not set)
 
 set -euo pipefail
 
 : "${RENDER_API_KEY:?RENDER_API_KEY is required}"
 : "${RENDER_OWNER_ID:?RENDER_OWNER_ID is required}"
 : "${INFISICAL_DB_URI:?INFISICAL_DB_URI is required}"
-: "${INFISICAL_ENCRYPTION_KEY:?INFISICAL_ENCRYPTION_KEY is required}"
-: "${INFISICAL_AUTH_SECRET:?INFISICAL_AUTH_SECRET is required}"
 
 RENDER_API="https://api.render.com/v1"
 SERVICE_NAME="infisical"
+
+# Auto-generate secrets if not provided
+if [ -z "${INFISICAL_ENCRYPTION_KEY:-}" ]; then
+  INFISICAL_ENCRYPTION_KEY=$(openssl rand -hex 16)
+  echo "==> Generated INFISICAL_ENCRYPTION_KEY (save this): $INFISICAL_ENCRYPTION_KEY"
+  echo "INFISICAL_ENCRYPTION_KEY=$INFISICAL_ENCRYPTION_KEY" >> "${GITHUB_OUTPUT:-/dev/null}" 2>/dev/null || true
+fi
+
+if [ -z "${INFISICAL_AUTH_SECRET:-}" ]; then
+  INFISICAL_AUTH_SECRET=$(openssl rand -base64 32)
+  echo "==> Generated INFISICAL_AUTH_SECRET (save this): $INFISICAL_AUTH_SECRET"
+  echo "INFISICAL_AUTH_SECRET=$INFISICAL_AUTH_SECRET" >> "${GITHUB_OUTPUT:-/dev/null}" 2>/dev/null || true
+fi
 
 echo "==> Checking if Infisical service already exists on Render..."
 EXISTING=$(curl -sf "$RENDER_API/services?name=$SERVICE_NAME&ownerId=$RENDER_OWNER_ID&limit=1" \
@@ -44,40 +57,45 @@ if [ -n "$EXISTING" ]; then
   echo "==> Env vars updated."
 else
   echo "==> Creating Infisical service on Render..."
+
+  # Build the service payload, optionally including projectId
+  SERVICE_PAYLOAD=$(jq -n \
+    --arg name "$SERVICE_NAME" \
+    --arg owner "$RENDER_OWNER_ID" \
+    --arg project "${RENDER_PROJECT_ID:-}" \
+    --arg db "$INFISICAL_DB_URI" \
+    --arg enc "$INFISICAL_ENCRYPTION_KEY" \
+    --arg auth "$INFISICAL_AUTH_SECRET" \
+    '{
+      type: "web_service",
+      name: $name,
+      ownerId: $owner,
+      image: {
+        ownerId: $owner,
+        imagePath: "docker.io/infisical/infisical:latest-postgres"
+      },
+      serviceDetails: {
+        env: "image",
+        plan: "starter",
+        region: "ohio",
+        healthCheckPath: "/api/status",
+        numInstances: 1,
+        pullRequestPreviewsEnabled: "no"
+      },
+      envVars: [
+        {key: "DB_CONNECTION_URI", value: $db},
+        {key: "ENCRYPTION_KEY", value: $enc},
+        {key: "AUTH_SECRET", value: $auth},
+        {key: "NODE_ENV", value: "production"},
+        {key: "TELEMETRY_ENABLED", value: "false"},
+        {key: "PORT", value: "8080"}
+      ]
+    } | if $project != "" then . + {projectId: $project} else . end')
+
   RESPONSE=$(curl -sf -X POST "$RENDER_API/services" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "$(jq -n \
-      --arg name "$SERVICE_NAME" \
-      --arg owner "$RENDER_OWNER_ID" \
-      --arg db "$INFISICAL_DB_URI" \
-      --arg enc "$INFISICAL_ENCRYPTION_KEY" \
-      --arg auth "$INFISICAL_AUTH_SECRET" \
-      '{
-        type: "web_service",
-        name: $name,
-        ownerId: $owner,
-        image: {
-          ownerId: $owner,
-          imagePath: "docker.io/infisical/infisical:latest-postgres"
-        },
-        serviceDetails: {
-          env: "image",
-          plan: "starter",
-          region: "ohio",
-          healthCheckPath: "/api/status",
-          numInstances: 1,
-          pullRequestPreviewsEnabled: "no"
-        },
-        envVars: [
-          {key: "DB_CONNECTION_URI", value: $db},
-          {key: "ENCRYPTION_KEY", value: $enc},
-          {key: "AUTH_SECRET", value: $auth},
-          {key: "NODE_ENV", value: "production"},
-          {key: "TELEMETRY_ENABLED", value: "false"},
-          {key: "PORT", value: "8080"}
-        ]
-      }')")
+    -d "$SERVICE_PAYLOAD")
 
   SERVICE_ID=$(echo "$RESPONSE" | jq -r '.service.id')
   echo "==> Service created: $SERVICE_ID"
