@@ -115,7 +115,7 @@ DEPLOY=$(curl -s -w "\n%{http_code}" -X POST "$RENDER_API/services/$SERVICE_ID/d
 DEPLOY_CODE=$(echo "$DEPLOY" | tail -1)
 DEPLOY_BODY=$(echo "$DEPLOY" | head -n -1)
 
-if [ "$DEPLOY_CODE" != "201" ]; then
+if [ "$DEPLOY_CODE" != "201" ] && [ "$DEPLOY_CODE" != "202" ]; then
   echo "ERROR: Failed to trigger deployment (HTTP $DEPLOY_CODE)" >&2
   echo "Response: $DEPLOY_BODY" >&2
   exit 1
