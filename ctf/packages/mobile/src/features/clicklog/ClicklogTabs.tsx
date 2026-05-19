@@ -9,11 +9,16 @@ type ClicklogTabParamList = {
   History: undefined;
 };
 
-const Tab = createBottomTabNavigator<ClicklogTabParamList, 'clicklog'>();
+const Tab = createBottomTabNavigator<ClicklogTabParamList>();
+// @types/react 19.2 + React Navigation v7 overload resolution incompatibility:
+// JSX children no longer satisfy the navigator's overloaded prop signature.
+// TODO: remove cast when @react-navigation/bottom-tabs ships React 19.2-compatible types.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TabNavigator = Tab.Navigator as React.ComponentType<any>;
 
 export function ClicklogTabs() {
   return (
-    <Tab.Navigator id="clicklog">
+    <TabNavigator>
       <Tab.Screen
         name="Counter"
         component={ClicklogCounter}
@@ -28,7 +33,7 @@ export function ClicklogTabs() {
           tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
         }}
       />
-    </Tab.Navigator>
+    </TabNavigator>
   );
 }
 
