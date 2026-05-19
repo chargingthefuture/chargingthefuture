@@ -140,6 +140,12 @@ export const pluginCatalog: PluginCatalogItem[] = [
     kind: 'plugin',
     summary: 'Incident counter and logging with optional location/notes, for user event tracking and history.',
   },
+  {
+    id: 'trust',
+    name: 'Trust',
+    kind: 'plugin',
+    summary: 'Privacy-first verification status and evidence panels embedded into Directory profile surfaces.',
+  },
 ];
 
 export const baselinePluginCount = pluginCatalog.filter((plugin) => plugin.kind === 'baseline').length;
