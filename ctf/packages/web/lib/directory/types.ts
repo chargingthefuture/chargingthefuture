@@ -1,3 +1,5 @@
+export type DirectoryProfileSource = 'admin' | 'self' | 'community-generated';
+
 export type DirectoryProfile = {
   id: string;
   claimedByUserId: string | null;
@@ -5,13 +7,20 @@ export type DirectoryProfile = {
   headline: string | null;
   bio: string | null;
   profileUrl: string | null;
-  isPublic: boolean;
   sectorId: string | null;
   sectorName: string | null;
   jobTitleId: string | null;
   jobTitleName: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
   isActive: boolean;
+  // Skills Hunt + Clerk username co-change (continuity §2.4 / §4 in
+  // ctf-skills-hunt-session-continuity.md). source drives the visible
+  // "Community generated" badge in the design; unclaimedHandle drives the
+  // @handle vanity URL for unclaimed profiles; invitedByUsername surfaces
+  // attribution without joining skills_hunt_directory_profiles.
+  source: DirectoryProfileSource;
+  invitedByUsername: string | null;
+  unclaimedHandle: string | null;
   createdAtIso: string;
   updatedAtIso: string;
   venmoAddress?: string | null;
@@ -44,7 +53,6 @@ export type DirectoryProfileInput = {
   headline?: string | null;
   bio?: string | null;
   profileUrl?: string | null;
-  isPublic: boolean;
   sectorId?: string | null;
   jobTitleId?: string | null;
   skillIds?: string[];

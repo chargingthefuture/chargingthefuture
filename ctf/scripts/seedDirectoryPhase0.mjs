@@ -23,7 +23,6 @@ const seedUsers = [
     displayName: 'Amina Johnson',
     headline: 'Community support navigator',
     bio: 'Deterministic seed profile for directory phase-0 validation.',
-    isPublic: true,
   },
   {
     profileId: 'seed-directory-profile-002',
@@ -31,7 +30,6 @@ const seedUsers = [
     displayName: 'Luis Rivera',
     headline: 'Legal advocacy coordinator',
     bio: 'Second deterministic profile for pagination and claimed-state checks.',
-    isPublic: false,
   },
 ];
 
@@ -94,10 +92,9 @@ async function main() {
               bio = $4,
               description = $4,
               profile_url = NULL,
-              is_public = $5,
               is_claimed = false,
-              sector_id = $6::uuid,
-              job_title_id = $7::uuid,
+              sector_id = $5::uuid,
+              job_title_id = $6::uuid,
               is_active = true,
               updated_at = NOW()
             WHERE id = $1
@@ -108,7 +105,6 @@ async function main() {
             user.displayName,
             user.headline,
             user.bio,
-            user.isPublic,
             selectors.sectorId,
             selectors.jobTitleId,
           ],
@@ -117,9 +113,9 @@ async function main() {
         profileResult = await client.query(
           `
             INSERT INTO directory_profiles
-              (id, claimed_by_user_id, user_id, display_name, headline, bio, description, profile_url, is_public, is_claimed, sector_id, job_title_id, is_active)
+              (id, claimed_by_user_id, user_id, display_name, headline, bio, description, profile_url, is_claimed, sector_id, job_title_id, is_active)
             VALUES
-              ($1::text, NULL, NULL, $2::text, $3::text, $4::text, $4::text, NULL, $5::boolean, false, $6::uuid, $7::uuid, true)
+              ($1::text, NULL, NULL, $2::text, $3::text, $4::text, $4::text, NULL, false, $5::uuid, $6::uuid, true)
             RETURNING id
           `,
           [
@@ -127,7 +123,6 @@ async function main() {
             user.displayName,
             user.headline,
             user.bio,
-            user.isPublic,
             selectors.sectorId,
             selectors.jobTitleId,
           ],
@@ -153,14 +148,14 @@ async function main() {
       await client.query(
         `
           INSERT INTO directory_user_extension (user_id, profile_visibility, service_deleted_at, updated_at)
-          VALUES ($1, CASE WHEN $2 THEN 'public' ELSE 'workspace' END, NULL, NOW())
+          VALUES ($1, 'workspace', NULL, NOW())
           ON CONFLICT (user_id)
           DO UPDATE SET
             profile_visibility = EXCLUDED.profile_visibility,
             service_deleted_at = NULL,
             updated_at = NOW()
         `,
-        [user.profileId, user.isPublic],
+        [user.profileId],
       );
     }
 

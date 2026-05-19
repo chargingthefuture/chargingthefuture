@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, FlatList, Button, StyleSheet, Alert } from 'react-native';
 
 const mockProfiles = [
-  { id: 'p1', name: 'Alice', title: 'Engineer', isPublic: true },
-  { id: 'p2', name: 'Bob', title: 'Designer', isPublic: false },
-  { id: 'p3', name: 'Carol', title: 'PM', isPublic: true },
+  { id: 'p1', name: 'Alice', title: 'Engineer' },
+  { id: 'p2', name: 'Bob', title: 'Designer' },
+  { id: 'p3', name: 'Carol', title: 'PM' },
 ];
 
 export const DirectoryList = () => {
@@ -20,7 +20,7 @@ export const DirectoryList = () => {
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.titleText}>{item.title}</Text>
             </View>
-            <Button title="View" onPress={() => Alert.alert('Profile', `${item.name} (${item.title})\nPublic: ${item.isPublic}`)} />
+            <Button title="View" onPress={() => Alert.alert('Profile', `${item.name} (${item.title})`)} />
           </View>
         )}
       />

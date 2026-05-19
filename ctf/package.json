@@ -16,6 +16,7 @@
     "seed:feed-announcements": "node ./scripts/seedFeedAnnouncementsPhase0.mjs",
     "seed:workforce": "node ./scripts/seedWorkforcePhase1.mjs",
     "seed:skills-hunt": "node ./scripts/seedSkillsHuntPhase1.mjs",
+    "smoke:skills-hunt": "node ./scripts/smokeSkillsHuntE2e.mjs",
     "seed:foundation": "node ./scripts/seedFoundationPhase1.mjs",
     "seed:lighthouse": "node ./scripts/seedLighthousePhase2.mjs",
     "seed:socketrelay": "node ./scripts/seedSocketRelayPhase2.mjs",

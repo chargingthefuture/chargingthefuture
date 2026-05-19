@@ -10,6 +10,23 @@ import {
 } from "lucide-react";
 
 const COLOR = "#3B82F6";
+const SKILLS_HUNT_COLOR = "#A855F7";
+
+type SkillsHuntRewardCard = {
+  title: string;
+  description: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  isActive: boolean;
+};
+
+const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
+  title: "Help grow the Directory",
+  description: "Nominate someone you believe may be a survivor. Their Quora profile is the social proof, their skills join our economy, and you earn points on acceptance.",
+  ctaLabel: "Submit a community profile",
+  ctaUrl: "/apps/skills-hunt?tab=scout",
+  isActive: true,
+};
 
 interface Member {
   id: string;
@@ -47,6 +64,7 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
   const [selected, setSelected] = useState<Member | null>(null);
   const [tab, setTab] = useState<Tab>("browse");
   const [chatInput, setChatInput] = useState("");
+  const [rewardCard, setRewardCard] = useState<SkillsHuntRewardCard | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -63,6 +81,28 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
       }
     }
     void fetchMeta();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function fetchRewardCard() {
+      try {
+        const res = await fetch("/api/skills-hunt/feature-reward-card", { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        if (res.ok) {
+          const data = await res.json() as { card?: SkillsHuntRewardCard };
+          if (data.card && data.card.isActive) {
+            setRewardCard(data.card);
+            return;
+          }
+        }
+        setRewardCard(DEFAULT_REWARD_CARD);
+      } catch {
+        if (!controller.signal.aborted) setRewardCard(DEFAULT_REWARD_CARD);
+      }
+    }
+    void fetchRewardCard();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -257,6 +297,22 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
         {tab === "browse" && (
           <ScrollArea style={{ flex: 1 }}>
             <div style={{ padding: "24px" }}>
+              {rewardCard && rewardCard.isActive && (
+                <a href={rewardCard.ctaUrl} style={{ display: "block", marginBottom: 16, padding: "18px 22px", borderRadius: 14, background: `${SKILLS_HUNT_COLOR}10`, border: `1px solid ${SKILLS_HUNT_COLOR}30`, textDecoration: "none", color: "inherit" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${SKILLS_HUNT_COLOR}25`, border: `1px solid ${SKILLS_HUNT_COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Search size={20} style={{ color: SKILLS_HUNT_COLOR }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: SKILLS_HUNT_COLOR, marginBottom: 2 }}>{rewardCard.title}</div>
+                      <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>{rewardCard.description}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: SKILLS_HUNT_COLOR, color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                      {rewardCard.ctaLabel} <ArrowUpRight size={14} />
+                    </div>
+                  </div>
+                </a>
+              )}
               <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}20 0%,rgba(14,165,233,0.1) 100%)`, border: `1px solid ${COLOR}25` }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Find Your Support Network</div>
                 <div style={{ fontSize: 14, color: "#9CA3AF" }}>Verified trauma-informed providers · Trusted · Privacy-first</div>

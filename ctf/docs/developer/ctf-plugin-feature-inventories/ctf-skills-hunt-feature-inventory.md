@@ -1,5 +1,7 @@
 # Skills Hunt Plugin Feature Inventory (CTF Rewrite)
 
+> **For new agents:** read `ctf-skills-hunt-session-continuity.md` BEFORE this file. That document is the canonical source of truth for spec, locked owner decisions, audit findings, and the implementation roadmap. This inventory tracks what is currently planned/implemented in the codebase.
+
 ## Scope and Boundary
 
 - Rewrite target only: `ctf/`
@@ -41,10 +43,12 @@ Planning constraints applied:
 
 ### 1.2 Entry Submission Experience
 
-1. Submit `first_name`, `bio`, Quora profile URL, skills, and claimed professions.
+1. Submit display name (2–100 chars, alphanumeric + spaces), bio (max 280 chars), Quora profile URL, taxonomy-selected skills, optional proposed (free-text) skills, and claimed professions *(deferred — not in the locked Wave 1 design)*.
 2. Enforce URL normalization and Quora profile pattern validation.
-3. Prevent duplicate submissions in a round by normalized URL + skills signature.
-4. Enforce rolling submission cap per user.
+3. Liveness HEAD-check on URL with 5s timeout; persist `url_validation_result` ∈ {valid, invalid, dead}.
+4. Prevent duplicate submissions in a round by normalized URL + skills signature.
+5. Enforce rolling submission cap per user with reputation-driven dynamic limits (see §5).
+6. Submitter must have a confirmed `@handle` (Clerk-managed); `requireUsername: true` on submit endpoint.
 
 ### 1.3 Quality and Safety Validation
 
@@ -145,30 +149,36 @@ Admin/moderator routes:
 
 ### 4.2 Domain Entities
 
-1. `skills_hunt_rounds`
-2. `skills_hunt_submissions`
-3. `skills_hunt_leaderboard`
-4. `skills_hunt_achievements`
-5. `skills_hunt_notifications`
-6. `skills_hunt_feature_reward_card`
-7. `skills_hunt_audit_log`
-8. `skills_hunt_directory_profiles`
-9. `skills_hunt_rare_skills_lookup`
+1. `skills_hunt_rounds` — round lifecycle, configurable scoring weights.
+2. `skills_hunt_submissions` — contributor submissions; tracks `url_validation_result`, `credit_granted`, `proposed_skills`, `edit_history`, `edited_at`, `deleted_at`, `participation_points`.
+3. `skills_hunt_leaderboard` — per-round standings; includes `first_match_count` for tie-break and `pending_points`/`last_submission_at` for UI.
+4. `skills_hunt_achievements` — 5 named badges (First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion) plus `round_id` and `archived_at`.
+5. `skills_hunt_notifications` — in-DB notification ledger. Polled by client at 30s via `GET /api/skills-hunt/notifications`. GetStream is explicitly out of scope (see continuity doc §2.11).
+6. `skills_hunt_feature_reward_card` — singleton row for the Directory-pinned reward card.
+7. `skills_hunt_audit_log` — append-only allow/deny + mutation log.
+8. `skills_hunt_directory_profiles` — junction between accepted submission and generated unclaimed Directory profile.
+9. `skills_hunt_rare_skills_lookup` — per-round rarity snapshot computed from Workforce plugin (<50% recruited).
+10. `skills_hunt_submission_reports` — community moderation reports against community-generated Directory profiles.
+11. `skills_hunt_service_credits_transactions` — service-credit reward ledger.
 
 ### 4.3 Directory Integration Boundary
 
-1. Skills Hunt may generate unclaimed Directory profile records through governed adapter commands only.
+1. Skills Hunt may generate unclaimed Directory profile records through governed adapter commands only (`generateDirectoryProfileFromAcceptedSubmission`).
 2. Skills Hunt MUST NOT bypass Directory policy controls.
 3. Ownership claim lifecycle remains Directory-authoritative.
+4. Generated profiles are stamped `directory_profiles.source = 'community-generated'`, `invited_by_username` is set from the submitter's `@handle`, and a `unclaimed_handle` is auto-generated in the reserved `community-<hex>` namespace.
+5. Backfill (one-shot): every existing unclaimed Directory profile receives a `community-<6char-hex>` handle so the `@handle` URL story is consistent on day one.
 
 ## 5) Security, Privacy, and Compliance Controls
 
 1. Deny-by-default policy checks on all mutation commands.
 2. Role separation for contributor, moderator, and admin operations.
-3. Anti-spam/rate-limit controls for submission creation.
-4. Audit trails for allow/deny and review decisions.
+3. Anti-spam controls: rolling 7-day submission cap, reputation-driven dynamic limits (new users start lower; >20% rejection rate requires admin pre-approval; ≥80% acceptance rate raises cap).
+4. Audit trails for allow/deny and review decisions in `skills_hunt_audit_log`.
 5. Sensitive-content minimization in logs and notifications.
-6. Distinct plugin deletion and full-account deletion behavior.
+6. Distinct plugin deletion and full-account deletion behavior; soft-delete columns (`deleted_at`) on all user-scoped tables; `DELETE /api/account/skills-hunt-profile` is GDPR-compliant erasure path.
+7. Community moderation: report flow against community-generated Directory profiles (`skills_hunt_submission_reports`) with admin escalation queue.
+8. Clerk reserved-prefix enforcement: usernames starting with `community-` are rejected at signup; defense-in-depth check at API layer in `lib/auth/username-policy.ts`.
 
 ## 6) Web and Android Delivery Status
 

@@ -29,6 +29,21 @@ export async function requireSkillsHuntReadAccess(): Promise<SkillsHuntApiGate> 
   };
 }
 
+export async function requireSkillsHuntSubmitAccess(): Promise<SkillsHuntApiGate> {
+  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: true });
+  if (!decision.allowed) {
+    return {
+      allowed: false,
+      response: NextResponse.json(decision, { status: decision.status }),
+    };
+  }
+
+  return {
+    allowed: true,
+    auth: decision,
+  };
+}
+
 export async function requireSkillsHuntModeratorAccess(): Promise<SkillsHuntApiGate> {
   const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
   if (!decision.allowed) {
