@@ -3,32 +3,38 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ClicklogCounter } from './ClicklogCounter';
 import { ClicklogHistory } from './ClicklogHistory';
 
-const TABS = [
-  { key: 'counter', label: 'Counter' },
-  { key: 'history', label: 'History' },
-];
+type ClicklogTabParamList = {
+  Counter: undefined;
+  History: undefined;
+};
+
+const Tab = createBottomTabNavigator<ClicklogTabParamList>();
+// @types/react 19.2 + React Navigation v7 overload resolution incompatibility:
+// JSX children no longer satisfy the navigator's overloaded prop signature.
+// TODO: remove cast when @react-navigation/bottom-tabs ships React 19.2-compatible types.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TabNavigator = Tab.Navigator as React.ComponentType<any>;
 
 export function ClicklogTabs() {
   const [tab, setTab] = useState('counter');
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={styles.tabBar}>
-        {TABS.map(t => (
-          <TouchableOpacity
-            key={t.key}
-            style={[styles.tab, tab === t.key && styles.tabActive]}
-            onPress={() => setTab(t.key)}
-          >
-            <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={{ flex: 1 }}>
-        {tab === 'counter' && <ClicklogCounter />}
-        {tab === 'history' && <ClicklogHistory />}
-      </View>
-    </View>
+    <TabNavigator>
+      <Tab.Screen
+        name="Counter"
+        component={ClicklogCounter}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle-outline" size={size} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="History"
+        component={ClicklogHistory}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
+        }}
+      />
+    </TabNavigator>
   );
 }
 
