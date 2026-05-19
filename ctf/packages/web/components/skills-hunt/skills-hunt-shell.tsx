@@ -9,6 +9,7 @@ import type {
   SkillsHuntRound,
   SkillsHuntLeaderboardItem,
   SkillsHuntAchievement,
+  SkillsHuntNotification,
   SkillsHuntSubmission,
   SkillsHuntMissionWithProgress,
 } from "lib/skills-hunt/types";
@@ -88,6 +89,8 @@ export function SkillsHuntShell({
   const [serverCurrentUserEntry, setServerCurrentUserEntry] = useState<SkillsHuntLeaderboardItem | null>(null);
   const [missions, setMissions] = useState<SkillsHuntMissionWithProgress[]>([]);
   const [loadingMissions, setLoadingMissions] = useState(false);
+  const [notifications, setNotifications] = useState<SkillsHuntNotification[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [achievements, setAchievements] = useState<SkillsHuntAchievement[]>([]);
   const [myFinds, setMyFinds] = useState<SkillsHuntSubmission[]>([]);
   const [loadingRounds, setLoadingRounds] = useState(true);
@@ -205,6 +208,35 @@ export function SkillsHuntShell({
     return () => controller.abort();
   }, [tab, activeRound]);
 
+  // Notifications: poll every 30s for unread; GetStream is out of scope
+  // (continuity §2.11). Manual refresh on dropdown open + after mark-read.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/skills-hunt/notifications");
+        if (cancelled || !res.ok) return;
+        const data = await res.json() as { notifications: SkillsHuntNotification[] };
+        setNotifications(data.notifications);
+      } catch { /* ignore polling errors */ }
+    }
+    load();
+    const timer = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  async function markRead(notificationId: string) {
+    try {
+      await fetch(`/api/skills-hunt/notifications/${notificationId}/read`, {
+        method: "POST",
+        headers: { "x-ctf-csrf": "1" },
+      });
+      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+    } catch { /* swallow — UX falls through to next poll */ }
+  }
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   const toggleSkill = (s: string) => {
     setSkills(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
@@ -275,7 +307,7 @@ export function SkillsHuntShell({
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
 
       {/* Icon rail */}
       <aside style={{ width: 72, background: "#090B0F", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
@@ -288,9 +320,50 @@ export function SkillsHuntShell({
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><Bell size={18} /></button>
+        <button onClick={() => setNotifOpen(o => !o)} style={{ position: "relative", width: 44, height: 44, borderRadius: 12, background: notifOpen ? `${COLOR}20` : "transparent", border: notifOpen ? `1px solid ${COLOR}40` : "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: notifOpen ? COLOR : "#6B7280" }}>
+          <Bell size={18} />
+          {unreadCount > 0 && (
+            <span style={{ position: "absolute", top: 6, right: 6, minWidth: 18, height: 18, borderRadius: 9, background: "#EF4444", color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
         <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><Settings size={18} /></button>
       </aside>
+
+      {/* Notification popover — anchored to the bell, overlays the secondary sidebar */}
+      {notifOpen && (
+        <div style={{ position: "absolute", left: 80, top: 60, width: 360, maxHeight: 480, overflowY: "auto", background: "#0D0F14", border: `1px solid ${COLOR}40`, borderRadius: 14, zIndex: 50, boxShadow: "0 12px 32px rgba(0,0,0,0.4)" }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#F9FAFB" }}>Notifications</span>
+            <button onClick={() => setNotifOpen(false)} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+          </div>
+          {notifications.length === 0 ? (
+            <div style={{ padding: 24, fontSize: 13, color: "#6B7280", textAlign: "center" }}>No notifications yet.</div>
+          ) : (
+            <div>
+              {notifications.map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => !n.isRead && markRead(n.id)}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "10px 16px",
+                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    background: n.isRead ? "transparent" : `${COLOR}08`,
+                    border: "none", borderLeft: n.isRead ? "2px solid transparent" : `2px solid ${COLOR}`,
+                    cursor: n.isRead ? "default" : "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: n.isRead ? 500 : 700, color: "#F9FAFB", marginBottom: 2 }}>{n.title}</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.4 }}>{n.body}</div>
+                  <div style={{ fontSize: 11, color: "#4B5563", marginTop: 4 }}>{new Date(n.createdAtIso).toLocaleString()}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Secondary sidebar */}
       <aside style={{ width: 240, background: "#0D0F14", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 }}>

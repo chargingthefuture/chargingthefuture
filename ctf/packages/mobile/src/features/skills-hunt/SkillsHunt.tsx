@@ -8,6 +8,7 @@ import {
   type Achievement,
   type LeaderboardItem,
   type MissionWithProgress,
+  type Notification,
   type Round,
   type Submission,
 } from './SkillsHuntApi';
@@ -28,6 +29,8 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
   const [round, setRound] = useState<Round | null>(null);
   const [loadingRound, setLoadingRound] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [inboxOpen, setInboxOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +48,30 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
     return () => { cancelled = true; };
   }, []);
 
+  // Notification polling — 30s, matches the web shell. GetStream is out
+  // of scope (continuity §2.11).
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await SkillsHuntApi.listNotifications();
+        if (!cancelled) setNotifications(data.notifications);
+      } catch { /* ignore */ }
+    }
+    void load();
+    const timer = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  async function markRead(id: string) {
+    try {
+      await SkillsHuntApi.markNotificationRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch { /* swallow */ }
+  }
+
   if (loadingRound) {
     return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
   }
@@ -54,6 +81,36 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
 
   return (
     <View style={styles.root}>
+      <View style={styles.inboxBar}>
+        <Text style={styles.inboxTitle}>Skills Hunt</Text>
+        <TouchableOpacity onPress={() => setInboxOpen(o => !o)} style={styles.bellBtn}>
+          <Text style={styles.bellGlyph}>🔔</Text>
+          {unreadCount > 0 && <View style={styles.bellDot}><Text style={styles.bellDotText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>}
+        </TouchableOpacity>
+      </View>
+
+      {inboxOpen && (
+        <View style={styles.inbox}>
+          {notifications.length === 0 ? (
+            <Text style={styles.muted}>No notifications yet.</Text>
+          ) : (
+            <FlatList
+              data={notifications}
+              keyExtractor={(n) => n.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => !item.isRead && markRead(item.id)}
+                  style={[styles.notifRow, !item.isRead && styles.notifRowUnread]}
+                >
+                  <Text style={[styles.notifTitle, !item.isRead && { fontWeight: '700' }]}>{item.title}</Text>
+                  <Text style={styles.muted}>{item.body}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      )}
+
       <View style={styles.tabbar}>
         {TABS.map(t => (
           <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabActive]}>
@@ -412,6 +469,17 @@ const styles = StyleSheet.create({
   missionMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, marginBottom: 4 },
   barTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 3 },
+
+  inboxBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#0D0F14', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  inboxTitle: { color: '#F9FAFB', fontSize: 16, fontWeight: '800' },
+  bellBtn: { padding: 6, position: 'relative' },
+  bellGlyph: { fontSize: 18 },
+  bellDot: { position: 'absolute', top: 0, right: 0, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  bellDotText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  inbox: { maxHeight: 240, backgroundColor: '#0D0F14', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  notifRow: { padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+  notifRowUnread: { backgroundColor: `${COLOR}08`, borderLeftWidth: 2, borderLeftColor: COLOR },
+  notifTitle: { color: '#F9FAFB', fontSize: 13 },
 
   findCard: { margin: 12, padding: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   findHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },

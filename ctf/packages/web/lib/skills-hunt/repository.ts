@@ -1280,6 +1280,36 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
       ],
     );
 
+    // Round-close hook: when the admin flips a round from active → closed,
+    // award `leaderboard-champion` to the top-3 individual finishers. This is
+    // the only place that badge can fire (the recompute helper inside
+    // reviewSubmission can't know whether the round has ended).
+    if (existing.status === 'active' && input.status === 'closed') {
+      const finalTopThree = await client.query<{ user_id: string | null; rank: number }>(
+        `
+          SELECT user_id, rank
+          FROM skills_hunt_leaderboard
+          WHERE round_id = $1::uuid
+            AND mode = 'individual'
+            AND user_id IS NOT NULL
+          ORDER BY rank ASC
+          LIMIT 3
+        `,
+        [roundId],
+      );
+      for (const row of finalTopThree.rows) {
+        if (!row.user_id) continue;
+        await ensureAchievement(
+          client,
+          row.user_id,
+          NAMED_BADGES.leaderboardChampion.code,
+          NAMED_BADGES.leaderboardChampion.title,
+          NAMED_BADGES.leaderboardChampion.description,
+          roundId,
+        );
+      }
+    }
+
     return mapRound(updated.rows[0]);
   });
 }

@@ -86,7 +86,7 @@
   - [x] `diversity-champion` — accepted submissions spanning 3+ distinct `claimed_professions` (JSONB unnest in the eligibility query).
   - [x] `rare-talent-scout` — 3+ accepted submissions with `score_breakdown.rareSkillBonus > 0`.
   - [x] `quality-contributor` — 5+ accepted submissions AND 0 rejections (100% acceptance rate).
-  - [ ] `leaderboard-champion` — finished top-3 on a round's final standings. **Deferred:** requires a round-close handler (round status transition `active → closed`). Helper exists in `NAMED_BADGES.leaderboardChampion`; wire when the round-close path is built.
+  - [x] `leaderboard-champion` — finished top-3 on a round's final standings. `updateRound()` now detects the `active → closed` transition and awards the badge (with notification fan-out via `ensureAchievement → emitAchievementUnlocked`) to the top-3 individual finishers.
 - [x] **Wave 1 — reward card pinned on Directory public page** with "Submit a community profile" CTA opening the Skills Hunt Scout tab.
   - Implemented in `components/directory/directory-shell.tsx`. Fetches active card from `/api/skills-hunt/feature-reward-card`; falls back to a default card linking to `/apps/skills-hunt?tab=scout` when the API has no row configured. Purple `#A855F7` palette per rule 126.
 - [x] **Wave 2 — Missions admin CRUD + player GET + recompute hook** (continuity §2.9).
@@ -103,7 +103,7 @@
   - [x] `leaderboard-top-ten` — `reviewSubmission` captures the pre-rebuild top-10 user_ids, diffs after `rebuildLeaderboard`, and emits to anyone newly inside the cap.
   - [x] `mission-complete` — `recomputeMissionProgressForUser` returns the `newlyCompleted` set; the accept branch fans out one notification per newly-completed mission.
   - [x] `round-ending-soon` — `notifyRoundsEndingSoon()` cron entry point at `POST /api/skills-hunt/admin/notifications/round-ending-soon` (admin-gated, CSRF). Idempotent per `(user, round)`; wire a daily scheduler to invoke.
-- [ ] **Wave 2 — notification center UI** (web + mobile) with unread badge.
+- [x] **Wave 2 — notification center UI** (web + mobile) with unread badge. Web: bell icon in the icon rail toggles a popover anchored above the secondary sidebar, with a red `unreadCount` badge and per-row mark-read on click. Mobile: top-bar bell with the same badge opens an inline inbox above the tabbar. Both poll `/api/skills-hunt/notifications` every 30s.
 
 ## Phase 5 — Directory Projection and Safety
 
@@ -163,7 +163,7 @@
   - [x] Replace `SkillsHunt.tsx` hardcoded mock with a 4-tab (Scout / Leaderboard / Missions / My Finds) API-driven view.
   - [x] New `SkillsHuntApi.ts` client wrapping `/api/skills-hunt/*` (rounds, leaderboard, achievements, my finds, missions, submit). Same envelope as the web shell so the route layer is reusable.
   - [x] API-driven Rounds, Leaderboard, Submit screens — single round auto-selected from the active list.
-  - [ ] Notification center mirroring the web `/api/skills-hunt/notifications` polling — deferred (web notification center UI is still pending per Wave 2 Phase 4 follow-up).
+  - [x] Notification center mirroring the web `/api/skills-hunt/notifications` polling. `SkillsHuntApi.listNotifications` + `markNotificationRead`; inbox bar above the tabbar with the red unread badge.
 
 ## Open Decisions Tracker
 

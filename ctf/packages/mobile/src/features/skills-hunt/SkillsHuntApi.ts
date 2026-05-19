@@ -50,6 +50,15 @@ export type Achievement = {
   description: string;
 };
 
+export type Notification = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAtIso: string;
+};
+
 export type MissionWithProgress = {
   id: string;
   roundId: string;
@@ -93,6 +102,9 @@ export const SkillsHuntApi = {
     getJson<{ items: Submission[] }>(`/rounds/${roundId}/submissions`),
   listMissions: (roundId: string) =>
     getJson<{ items: MissionWithProgress[] }>(`/rounds/${roundId}/missions`),
+  listNotifications: () => getJson<{ notifications: Notification[] }>(`/notifications`),
+  markNotificationRead: (notificationId: string) =>
+    postJson<{ ok: true }>(`/notifications/${notificationId}/read`, {}),
   submitNomination: (
     roundId: string,
     body: {
