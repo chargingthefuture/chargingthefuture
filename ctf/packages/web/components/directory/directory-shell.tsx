@@ -103,7 +103,7 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
 
   if (loadingMeta) {
     return (
-      <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#6B7280" }}>
+      <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0C1A3D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#6B7280" }}>
         Loading directory…
       </div>
     );
@@ -111,7 +111,7 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
 
   if (metaError) {
     return (
-      <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#EF4444" }}>
+      <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0C1A3D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#EF4444" }}>
         {metaError}
       </div>
     );
@@ -120,7 +120,7 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
   if (selected) {
     const p = selected;
     return (
-      <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex", flexDirection: "column" }}>
+      <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0C1A3D", fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex", flexDirection: "column" }}>
         <div style={{ height: 56, borderBottom: `1px solid ${COLOR}25`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
           <button onClick={() => setSelected(null)} style={{ color: COLOR, background: "none", border: "none", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
             ← Back
@@ -181,7 +181,7 @@ export function DirectoryShell(_props: { userId?: string; isAdmin?: boolean }) {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0C1A3D", fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
       {/* Icon rail */}
       <aside style={{ width: 72, background: "#090B0F", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}30`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
