@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "entries": [],
+  "last_report": {
+    "generated_at": "2026-05-18T00:59:30.683427734+00:00",
+    "completed_at": "2026-05-18T00:59:30.686521973+00:00",
+    "reported_scopes": [
+      {
+        "scope_kind": "project",
+        "scope_id": "18231f866d1933e6",
+        "label": "project workspace"
+      }
+    ],
+    "reported_sources": [
+      {
+        "competitor": "claude_code",
+        "scope_kind": "project",
+        "scope_id": "18231f866d1933e6",
+        "source_label": ".claude"
+      },
+      {
+        "competitor": "open_code",
+        "scope_kind": "project",
+        "scope_id": "18231f866d1933e6",
+        "source_label": ".opencode"
+      },
+      {
+        "competitor": "kilo_code",
+        "scope_kind": "project",
+        "scope_id": "18231f866d1933e6",
+        "source_label": ".kilo"
+      },
+      {
+        "competitor": "kilo_code",
+        "scope_kind": "project",
+        "scope_id": "18231f866d1933e6",
+        "source_label": ".kilocode"
+      },
+      {
+        "competitor": "continue_dev",
+        "scope_kind": "project",
+        "scope_id": "18231f866d1933e6",
+        "source_label": ".continue"
+      }
+    ],
+    "discovered_candidates": 0,
+    "status_counts": {
+      "unsupported": 4
+    },
+    "competitor_counts": {
+      "kilo_code": {
+        "discovered": 0,
+        "created": 0,
+        "updated": 0,
+        "unchanged": 0,
+        "stale": 0,
+        "conflicts": 0,
+        "user_modified": 0,
+        "unsupported": 2,
+        "errors": 0
+      },
+      "continue_dev": {
+        "discovered": 0,
+        "created": 0,
+        "updated": 0,
+        "unchanged": 0,
+        "stale": 0,
+        "conflicts": 0,
+        "user_modified": 0,
+        "unsupported": 2,
+        "errors": 0
+      }
+    },
+    "kind_counts": {
+      "unsupported_rules": {
+        "discovered": 0,
+        "created": 0,
+        "updated": 0,
+        "unchanged": 0,
+        "stale": 0,
+        "conflicts": 0,
+        "user_modified": 0,
+        "unsupported": 4,
+        "errors": 0
+      }
+    },
+    "top_issues": [
+      {
+        "competitor": "kilo_code",
+        "kind": "unsupported_rules",
+        "scope": {
+          "type": "project",
+          "root": "<redacted>"
+        },
+        "path": "<redacted>/.../AGENTS.md",
+        "status": "unsupported",
+        "message": "Kilo Code rules and instruction files are report-only in v1"
+      },
+      {
+        "competitor": "kilo_code",
+        "kind": "unsupported_rules",
+        "scope": {
+          "type": "project",
+          "root": "<redacted>"
+        },
+        "path": "<redacted>/.../CLAUDE.md",
+        "status": "unsupported",
+        "message": "Kilo Code rules and instruction files are report-only in v1"
+      },
+      {
+        "competitor": "continue_dev",
+        "kind": "unsupported_rules",
+        "scope": {
+          "type": "project",
+          "root": "<redacted>"
+        },
+        "path": "<redacted>/.../AGENTS.md",
+        "status": "unsupported",
+        "message": "Continue rules and instruction files are report-only in v1"
+      },
+      {
+        "competitor": "continue_dev",
+        "kind": "unsupported_rules",
+        "scope": {
+          "type": "project",
+          "root": "<redacted>"
+        },
+        "path": "<redacted>/.../CLAUDE.md",
+        "status": "unsupported",
+        "message": "Continue rules and instruction files are report-only in v1"
+      }
+    ]
+  }
+}
