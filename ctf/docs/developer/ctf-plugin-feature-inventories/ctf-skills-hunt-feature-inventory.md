@@ -6,11 +6,11 @@
 - Legacy `platform/` is reference-only and must not be modified.
 - Plugin name: `Skills Hunt`
 - Plugin slug / service key: `skills-hunt`
-- This document is the planning inventory required before implementation.
+- This document is the living snapshot of Skills Hunt per Rule 120.
 
 ## Intent and Outcome
 
-Skills Hunt is planned as a community-sourced skill-discovery and profile-seeding plugin that rewards high-quality submissions and safely generates unclaimed Directory profiles.
+Skills Hunt is a community-sourced skill-discovery and profile-seeding plugin that rewards high-quality submissions and safely generates unclaimed Directory profiles.
 
 This plugin must:
 
@@ -98,7 +98,7 @@ All command contracts conform to:
 - `.github/instructions/202-plugin-access-policy-schema-template.mdc`
 - `.github/instructions/203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `skills-hunt.round.create`
 2. `skills-hunt.round.update`
@@ -143,7 +143,7 @@ Admin/moderator routes:
 2. Use plugin extension/domain tables for Skills Hunt-specific state.
 3. Do not duplicate canonical profile tables.
 
-### 4.2 Planned Domain Entities
+### 4.2 Domain Entities
 
 1. `skills_hunt_rounds`
 2. `skills_hunt_submissions`
@@ -170,23 +170,21 @@ Admin/moderator routes:
 5. Sensitive-content minimization in logs and notifications.
 6. Distinct plugin deletion and full-account deletion behavior.
 
-## 6) Web and Android Delivery Strategy
+## 6) Web and Android Delivery Status
 
-1. Web-first initial delivery for round, submission, and leaderboard flows.
-2. Android parity follows via checklist-tracked milestones.
-3. Review semantics and scoring outcomes must remain cross-platform consistent.
+`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`).
 
 ## 7) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedSkillsHuntPhase1.mjs` seeds deterministic rounds, submissions, and moderation fixtures for dev validation.
 
-## 8) Gaps, Ambiguities, and Known Debt (Planning)
+## 8) Gaps and Known Technical Debt
 
-1. Admin preapproval submitter pathway is disabled for v1.
-2. URL liveness verification fallback behavior needs final SLO decision.
-3. Team leaderboard aggregation by profession taxonomy needs taxonomy owner sign-off.
-4. Android parity schedule and owner assignments must be locked before GA.
+1. Admin pre-approval submitter pathway is intentionally disabled in the current scope (decision recorded, no UI affordance).
+2. URL liveness verification fallback behavior follows a best-effort policy; a stronger SLO contract has not been finalized.
+3. Team leaderboard aggregation by profession taxonomy depends on Skills Taxonomy sign-off on grouping semantics.
 
 ## 9) Change Log
 
-- 2026-02-24: Created initial Skills Hunt CTF rewrite inventory with round lifecycle, validated submissions, moderation scoring, leaderboards, achievements, notifications, feature reward card, and Directory unclaimed-profile generation scope.
+- 2026-05-18: Renamed "Web and Android Delivery Strategy" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt". Removed Android-parity-deferral entry per Rule 105.
+- 2026-02-24: Created initial Skills Hunt CTF rewrite inventory.

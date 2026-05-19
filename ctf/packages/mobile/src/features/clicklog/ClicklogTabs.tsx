@@ -1,8 +1,7 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ClicklogCounter } from './ClicklogCounter';
 import { ClicklogHistory } from './ClicklogHistory';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 type ClicklogTabParamList = {
   Counter: undefined;
@@ -17,6 +16,8 @@ const Tab = createBottomTabNavigator<ClicklogTabParamList>();
 const TabNavigator = Tab.Navigator as React.ComponentType<any>;
 
 export function ClicklogTabs() {
+  const [tab, setTab] = useState('counter');
+
   return (
     <TabNavigator>
       <Tab.Screen
@@ -38,3 +39,11 @@ export function ClicklogTabs() {
 }
 
 export default ClicklogTabs;
+
+const styles = StyleSheet.create({
+  tabBar: { flexDirection: 'row', backgroundColor: '#181A20', borderBottomWidth: 1, borderBottomColor: '#23262F' },
+  tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
+  tabActive: { borderBottomWidth: 3, borderBottomColor: '#EAB308' },
+  tabLabel: { color: '#9CA3AF', fontSize: 15, fontWeight: '600' },
+  tabLabelActive: { color: '#EAB308' },
+});

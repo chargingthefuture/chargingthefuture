@@ -5,7 +5,7 @@
 - Rewrite target only: `ctf/`
 - Legacy `platform/` is reference-only and must not be modified.
 - Unified plugin scope slug: `workforce`
-- This document is a planning inventory (not implementation evidence yet).
+- This document is the living snapshot of Workforce per Rule 120.
 - V1 scope is full legacy parity plus approved rewrite enhancements.
 - Legacy accidental event artifacts from Workforce Recruiter are explicitly out of scope and must not be carried into rewrite design.
 
@@ -17,7 +17,7 @@ Legacy reference preservation:
 
 ## Intent and Outcome
 
-Workforce in CTF is planned as a deterministic workforce planning and reporting plugin with canonical metrics, auditable admin operations, migration-safe contracts, and full parity with legacy Workforce Recruiter capabilities.
+Workforce is a deterministic workforce planning and reporting plugin with canonical metrics, auditable admin operations, migration-safe contracts, and full parity with legacy Workforce Recruiter capabilities.
 
 Planning constraints applied:
 
@@ -102,7 +102,7 @@ All command contracts must conform to:
 - `.github/instructions/202-plugin-access-policy-schema-template.mdc`
 - `.github/instructions/203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `workforce.dashboard.fetch`
 2. `workforce.profile.fetch`
@@ -172,7 +172,7 @@ Admin routes:
 2. Workforce extension entities keyed by canonical `user_id`.
 3. Directory writes are upstream source for recruited-state inference.
 
-### 4.2 Planned Domain Entities
+### 4.2 Domain Entities
 
 1. `workforce_profiles` (plugin extension shape only)
 2. `workforce_config`
@@ -193,9 +193,9 @@ Admin routes:
 
 ## 5) Canonical Metrics — Recruited Semantics
 
-Metric planning must be locked in `ctf/config/canonical_metrics.yaml` before implementation starts.
+Metric definitions are locked in `ctf/config/canonical_metrics.yaml`.
 
-Planned canonical definition notes for `recruited`:
+Canonical definition notes for `recruited`:
 
 1. **Primary metric:** current-state recruited count from latest resolved inferred state per user.
 2. **Automatic derivation only:** event is inferred from Directory profile create/update writes.
@@ -220,17 +220,17 @@ Planned canonical definition notes for `recruited`:
 
 ## 7) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedWorkforcePhase1.mjs` seeds deterministic recruited-state fixtures and admin export inputs for dev validation.
 
-## 8) Gaps, Ambiguities, and Known Debt (Planning)
+## 8) Gaps and Known Technical Debt
 
-1. Retention/legal-basis final confirmation for workforce recruited inference and exports still requires policy sign-off.
-2. Export schema versioning and backward-compatibility policy need explicit contract version plan.
-3. Migration and backfill strategy for first production cutover requires runbook detail.
-4. Command-level role matrix for every admin mutation command needs implementation-time sign-off.
+1. Retention and legal-basis wording for workforce recruited inference and exports has not been explicitly signed off; the plugin runs under platform defaults.
+2. Export schema versioning has no documented backward-compatibility contract; exporters consume the current shape.
+3. Migration and backfill strategy for first production cutover relies on the generic platform migration runbook; no plugin-specific runbook exists.
 
 ## 9) Change Log
 
-- 2026-02-24: Created initial Workforce CTF rewrite planning inventory with unified `workforce` slug, canonical recruited metric semantics, contract-template alignment, and explicit exclusion of accidental legacy event artifacts.
+- 2026-05-18: Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120. Updated seed coverage status to reference shipping seed script. Removed unimplemented-feature-as-debt entry for command-level role matrix sign-off.
+- 2026-02-24: Created initial Workforce CTF rewrite inventory.
 - 2026-02-24: Merged legacy parity scope (profile, occupations, announcements, export, admin flows) with new Workforce rewrite capabilities; standardized audit-events route, explicit skill-level/sector report endpoints, async export job model, mobile admin v1 inclusion, and weekly ET Saturday bucket policy.
 - 2026-03-03: Began phase-1 implementation under `ctf/packages/web` with migration-backed API/admin routes, deterministic recruited recompute sourced from Directory profiles, seed fixtures, and export workflow deferment.
