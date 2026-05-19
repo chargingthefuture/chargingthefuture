@@ -143,7 +143,7 @@
 
 - [x] Update seed script `ctf/scripts/seedSkillsHuntPhase1.mjs` for new schema columns (`proposed_skills`, `participation_points`, `credit_granted`, `url_validation_result`, leaderboard `first_match_count` / `pending_points` / `last_submission_at`) and new test case: a `community-generated` Directory profile with `@community-seed01` handle linked to the seed submission via `skills_hunt_directory_profiles`.
 - [x] Update plugin registry availability state: `'implemented_shell'` → `'alpha'`. `PluginAvailabilityState` widened to include `'alpha' | 'beta'`. Flip to `'beta'` after the e2e smoke test and a real staging cohort run.
-- [ ] Add type-safe end-to-end smoke: rounds list → submit → admin accept → leaderboard rebuild → notification fan-out → unclaimed Directory profile with `@handle`.
+- [x] Add type-safe end-to-end smoke: rounds list → submit → admin accept → leaderboard rebuild → notification fan-out → unclaimed Directory profile with `@handle`. `ctf/scripts/smokeSkillsHuntE2e.mjs` asserts on the deterministic post-state left by `seed:skills-hunt`. Invoke with `pnpm smoke:skills-hunt`. Both scripts are idempotent, so the seed + smoke can be chained safely in CI / on-demand.
 
 ## Phase 8 — UI Surfaces (consolidated)
 
