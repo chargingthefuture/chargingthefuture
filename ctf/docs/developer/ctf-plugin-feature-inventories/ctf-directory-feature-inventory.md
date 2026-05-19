@@ -64,8 +64,8 @@ Decision locks for rewrite planning:
 ### Reward-card integration (Skills Hunt-owned, surfaced here)
 
 1. Directory shell renders the Skills Hunt active reward card pinned to the top of the public Directory page during active rounds.
-2. Card includes title, description, end date, current leader, and a primary "Submit a community profile" CTA that opens the Skills Hunt submission modal.
-3. Component lives in `components/skills-hunt/` and is imported by `components/directory/directory-shell.tsx`. Directory owns the placement; Skills Hunt owns the component.
+2. Card includes title, description, end date, current leader, and a primary "Submit a community profile" CTA that **navigates** to the Skills Hunt app at `/apps/skills-hunt?tab=scout` (Scout tab is the canonical surface for nomination). Per the post-design lock (Skills Hunt continuity §2.4), there is no in-place modal.
+3. The reward-card component lives in `components/skills-hunt/` and is imported by `components/directory/directory-shell.tsx`. Directory owns the placement; Skills Hunt owns the component.
 
 ## API Surface and Route Map (planned)
 

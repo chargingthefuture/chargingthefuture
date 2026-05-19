@@ -294,9 +294,16 @@ function normalizeQuoraProfileUrl(value: string): string {
   return parsedUrl.toString();
 }
 
-function buildSignatureHash(url: string, skills: string[]): string {
+function buildSignatureHash(url: string, skills: string[], proposedSkills: string[] = []): string {
   const normalizedSkills = [...skills].sort((left, right) => left.localeCompare(right));
-  return createHash('sha256').update(`${url.toLowerCase()}::${normalizedSkills.join('|').toLowerCase()}`).digest('hex');
+  // Include proposedSkills in the signature so submissions differing only in
+  // free-text proposed skills are NOT collapsed as duplicates. Separated by a
+  // distinct delimiter ("##") so a proposed label can never collide with a
+  // taxonomy label of the same name.
+  const normalizedProposed = [...proposedSkills].sort((left, right) => left.localeCompare(right));
+  return createHash('sha256')
+    .update(`${url.toLowerCase()}::${normalizedSkills.join('|').toLowerCase()}##${normalizedProposed.join('|').toLowerCase()}`)
+    .digest('hex');
 }
 
 function mapRound(row: SkillsHuntRoundRow): SkillsHuntRound {
@@ -570,7 +577,9 @@ async function computeReputationProfile(
 ): Promise<SkillsHuntReputationProfile> {
   const usageResult = await client.query<CountRow>(
     `SELECT COUNT(*)::text AS total FROM skills_hunt_submissions
-     WHERE submitter_user_id = $1 AND created_at >= NOW() - INTERVAL '7 days'`,
+     WHERE submitter_user_id = $1
+       AND created_at >= NOW() - INTERVAL '7 days'
+       AND deleted_at IS NULL`,
     [userId],
   );
   const rolling7dCount = Number.parseInt(usageResult.rows[0]?.total ?? '0', 10);
@@ -584,7 +593,8 @@ async function computeReputationProfile(
        COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected,
        COUNT(*) FILTER (WHERE status = 'pending')::text AS pending
      FROM skills_hunt_submissions
-     WHERE submitter_user_id = $1`,
+     WHERE submitter_user_id = $1
+       AND deleted_at IS NULL`,
     [userId],
   );
 
@@ -651,7 +661,9 @@ async function ensureSubmissionRateLimits(client: PoolClient, userId: string): P
          COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
        FROM (
          SELECT status FROM skills_hunt_submissions
-         WHERE submitter_user_id = $1 AND reviewed_at IS NOT NULL
+         WHERE submitter_user_id = $1
+           AND reviewed_at IS NOT NULL
+           AND deleted_at IS NULL
          ORDER BY reviewed_at DESC LIMIT $2
        ) sampled`,
       [userId, SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE],
@@ -835,7 +847,7 @@ async function awardNamedBadges(
   }
 }
 
-async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<void> {
+export async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<void> {
   await client.query(
     'DELETE FROM skills_hunt_leaderboard WHERE round_id = $1::uuid',
     [roundId],
@@ -882,9 +894,13 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
         GROUP BY submitter_user_id
       ),
       activity AS (
+        -- Spec tie-break: "ties go to the earliest scout to submit". We use
+        -- MIN(created_at) here and ORDER BY ASC at the consumer so the row
+        -- with the oldest first-touch wins. The column name is kept for
+        -- backwards compatibility with existing consumers.
         SELECT
           submitter_user_id,
-          MAX(created_at) AS last_submission_at
+          MIN(created_at) AS last_submission_at
         FROM skills_hunt_submissions
         WHERE round_id = $1::uuid
         GROUP BY submitter_user_id
@@ -953,7 +969,8 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
         COUNT(*) FILTER (
           WHERE COALESCE((s.score_breakdown->>'firstMatchBonus')::int, 0) > 0
         )::text AS first_match_count,
-        MAX(s.created_at) AS last_submission_at
+        -- Earliest-scout-wins tie-break (see comment in individual CTE).
+        MIN(s.created_at) AS last_submission_at
       FROM skills_hunt_submissions s
       LEFT JOIN LATERAL jsonb_array_elements_text(s.claimed_professions) profession(value) ON TRUE
       WHERE s.round_id = $1::uuid AND s.status = 'accepted' AND s.deleted_at IS NULL
@@ -961,7 +978,7 @@ async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<
       ORDER BY
         SUM(s.points_awarded) DESC,
         COUNT(*) FILTER (WHERE COALESCE((s.score_breakdown->>'firstMatchBonus')::int, 0) > 0) DESC,
-        MAX(s.created_at) ASC NULLS LAST,
+        MIN(s.created_at) ASC NULLS LAST,
         team_key ASC
     `,
     [roundId],
@@ -1346,6 +1363,18 @@ export async function createSubmission(
   input: SkillsHuntSubmissionInput,
 ): Promise<SkillsHuntSubmission> {
   const normalizedUrlForCheck = normalizeQuoraProfileUrl(input.quoraProfileUrl);
+  // Defense-in-depth: only allow true Quora hostnames before we make any
+  // outbound HEAD request. Rejects look-alikes like evilquora.com or
+  // notquora.com.example.
+  try {
+    const parsedHost = new URL(normalizedUrlForCheck).hostname.toLowerCase();
+    if (parsedHost !== 'quora.com' && !parsedHost.endsWith('.quora.com')) {
+      throw new Error('skills_hunt_invalid_quora_url');
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message === 'skills_hunt_invalid_quora_url') throw e;
+    throw new Error('skills_hunt_invalid_quora_url');
+  }
   const liveness = await checkUrlLiveness(normalizedUrlForCheck);
   if (liveness.result === 'dead') {
     throw new Error('skills_hunt_url_dead');
@@ -1359,7 +1388,7 @@ export async function createSubmission(
     const skills = normalizeArray(input.skills);
     const proposedSkills = normalizeArray(input.proposedSkills ?? []);
     const claimedProfessions = normalizeArray(input.claimedProfessions);
-    const signatureHash = buildSignatureHash(normalizedUrl, skills);
+    const signatureHash = buildSignatureHash(normalizedUrl, skills, proposedSkills);
 
     const inserted = await client.query<SkillsHuntSubmissionRow>(
       `
@@ -1393,9 +1422,12 @@ export async function createSubmission(
           bio,
           quora_profile_url,
           skills,
+          proposed_skills,
           claimed_professions,
           status,
           points_awarded,
+          participation_points,
+          credit_granted,
           score_breakdown,
           review_action,
           review_notes,
@@ -1496,9 +1528,14 @@ export async function listSubmissions(
       bio,
       quora_profile_url,
       skills,
+      proposed_skills,
       claimed_professions,
       status,
       points_awarded,
+      participation_points,
+      credit_granted,
+      url_validation_result,
+      url_validation_checked_at,
       score_breakdown,
       review_action,
       review_notes,
@@ -1635,9 +1672,14 @@ export async function reviewSubmission(
           bio,
           quora_profile_url,
           skills,
+          proposed_skills,
           claimed_professions,
           status,
           points_awarded,
+          participation_points,
+          credit_granted,
+          url_validation_result,
+          url_validation_checked_at,
           score_breakdown,
           review_action,
           review_notes,
@@ -1701,6 +1743,27 @@ export async function reviewSubmission(
 
     if (status === 'rejected') {
       await emitSubmissionRejected(client, existing.submitter_user_id, submissionId);
+    }
+
+    // If an already-accepted submission was flipped to reject/flag, mission
+    // progress for this user may need to roll back. recomputeMissionProgressForUser
+    // is idempotent and reads only currently-accepted rows, so the simple
+    // path is to call it on any accepted → non-accepted transition.
+    if (existing.status === 'accepted' && status !== 'accepted') {
+      const { newlyCompleted } = await recomputeMissionProgressForUser(
+        client,
+        existing.round_id,
+        existing.submitter_user_id,
+      );
+      for (const mission of newlyCompleted) {
+        await emitMissionComplete(
+          client,
+          existing.submitter_user_id,
+          mission.id,
+          mission.title,
+          mission.bonusPoints,
+        );
+      }
     }
 
     return mapSubmission(updated.rows[0]);
@@ -1795,9 +1858,9 @@ export async function listAllTimeLeaderboard(
         COUNT(*) FILTER (
           WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0
         )::text AS first_match_count,
-        MAX(created_at) AS last_submission_at
+        MIN(created_at) AS last_submission_at
       FROM skills_hunt_submissions
-      WHERE status = 'accepted'
+      WHERE status = 'accepted' AND deleted_at IS NULL
       GROUP BY submitter_user_id
     )
     SELECT * FROM agg
@@ -1815,10 +1878,10 @@ export async function listAllTimeLeaderboard(
         COUNT(*) FILTER (
           WHERE COALESCE((s.score_breakdown->>'firstMatchBonus')::int, 0) > 0
         )::text AS first_match_count,
-        MAX(s.created_at) AS last_submission_at
+        MIN(s.created_at) AS last_submission_at
       FROM skills_hunt_submissions s
       LEFT JOIN LATERAL jsonb_array_elements_text(s.claimed_professions) profession(value) ON TRUE
-      WHERE s.status = 'accepted'
+      WHERE s.status = 'accepted' AND s.deleted_at IS NULL
       GROUP BY LOWER(TRIM(COALESCE(profession.value, 'unspecified')))
     )
     SELECT * FROM agg

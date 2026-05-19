@@ -142,14 +142,18 @@ async function main() {
       { total: 1 },
     );
 
-    // 7. Audit log row was written for the accept (regulatory retention).
+    // 7. Audit log row was written for the seed flow (regulatory retention).
+    // Tighten the predicate so the assertion is meaningful: require ≥ 1 row
+    // for the seed actor on a Skills Hunt command.
     await assertRow(
-      'audit log retained an entry for the seed flow',
+      'audit log retained at least one entry for the seed actor',
       client.query(
-        `SELECT COUNT(*)::int AS total FROM skills_hunt_audit_log WHERE actor_id IS NOT NULL`,
+        `SELECT COUNT(*)::int AS total FROM skills_hunt_audit_log
+         WHERE actor_id = $1 AND command LIKE 'skills-hunt.%'`,
+        [SEED_USERNAME],
       ),
       [],
-      { total: (v) => v >= 0 },
+      { total: (v) => v > 0 },
     );
 
     console.log('\nAll Skills Hunt smoke assertions passed.');

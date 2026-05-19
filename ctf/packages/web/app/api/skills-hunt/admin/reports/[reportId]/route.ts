@@ -34,11 +34,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
     );
   }
 
+  // resolutionNotes must be string, null, or absent. Anything else is malformed.
+  if (
+    body.resolutionNotes !== undefined
+    && body.resolutionNotes !== null
+    && typeof body.resolutionNotes !== 'string'
+  ) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'resolutionNotes must be a string or null' },
+      { status: 400 },
+    );
+  }
+  const resolutionNotes: string | null = body.resolutionNotes ?? null;
+
   try {
     const report = await withDbTransaction((client) =>
       resolveReport(client, gate.auth.userId, reportId, {
         status: body.status as ResolveReportInput['status'],
-        resolutionNotes: body.resolutionNotes ?? null,
+        resolutionNotes,
       }),
     );
     if (!report) {

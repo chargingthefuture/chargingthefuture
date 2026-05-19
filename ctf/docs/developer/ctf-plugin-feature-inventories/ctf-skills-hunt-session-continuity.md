@@ -100,6 +100,12 @@ Replit's design includes a "GetStream ⚡" badge in the Skills Hunt header along
 
 **Reversibility.** If engagement metrics later show users want sub-30s leaderboard ticking or push notifications, add GetStream then — the existing `skills_hunt_notifications` rows make it straightforward to fan out into a feed.
 
+### 2.12 CSV export is out of scope for Skills Hunt (2026-05-18)
+
+CSV export of submissions / leaderboard / reports is **explicitly not a product capability**. Any ad-hoc data extraction goes through existing admin DB tooling (Neon console, internal data ops), not a Skills Hunt-owned endpoint or UI button. Removed from the Wave 2 admin-panel follow-ups for that reason.
+
+Reversibility: trivial to add later if a product need emerges — the admin queries already exist; only an `export` route + a UI button would be net-new.
+
 ---
 
 ## 3. Audit findings (2026-05-11 snapshot)
@@ -159,7 +165,7 @@ The plugin was already partially implemented when this rewrite started. The audi
 - No soft-delete columns; uses CASCADE hard deletes.
 - No GDPR delete endpoint (`DELETE /api/account/skills-hunt-profile`).
 - No moderation/report flow ("report this profile, permission not given").
-- No bulk admin actions, no CSV export, no dispute escalation.
+- No bulk admin actions, no dispute escalation.
 
 **UI surfaces:**
 - **Submission modal does not exist** as a React component.
@@ -237,9 +243,9 @@ Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the hi
 4. **Workforce live rare-skill helper** in `lib/workforce/rare-skill-snapshot.ts`.
 5. **In-DB notification helper** in `lib/skills-hunt/notifications.ts` — inserts rows for the 5 trigger events (accept, reject, leaderboard-top10, round-ending-24h, achievement-unlocked) into `skills_hunt_notifications`. Polled by client at 30s. (GetStream is out of scope — see §2.11.)
 6. **Auth: flip `requireUsername: true`** on submit endpoint + reserved-prefix validator in `lib/auth/username-policy.ts`.
-7. **Submission modal component** at `components/skills-hunt/submission-modal.tsx` with taxonomy multi-select + free-text fallback + client-side validation.
-8. **Reward card on Directory public page** — render the active reward card in `components/directory/directory-shell.tsx` with the "Submit a community profile" CTA that opens the modal.
-9. **@handle routing** in Directory: add `app/apps/directory/[handle]/page.tsx` with handle resolver, 301 redirect from old `[id]` route.
+7. **Submission flow on the Skills Hunt Scout tab** — `components/skills-hunt/skills-hunt-shell.tsx` Scout tab (taxonomy multi-select accordion + free-text proposed-skills fallback + client-side validation matching the server limits). Per the post-design lock (§2.4), there is no separate `submission-modal.tsx`; the form lives in the Scout tab.
+8. **Reward card on Directory public page** — render the active reward card in `components/directory/directory-shell.tsx` with the "Submit a community profile" CTA that **navigates** to `/apps/skills-hunt?tab=scout` (Nominate/Scout lexicon — §2.8).
+9. **@handle routing** in Directory: `app/apps/directory/[handle]/page.tsx` resolves via `users.username` then `directory_profiles.unclaimed_handle`, and `permanentRedirect()`s (HTTP 308) UUIDs to the canonical `@handle` URL. Consistent with the Nominate/Scout lexicon.
 10. **Admin panel real UI** at `app/admin/skills-hunt/page.tsx` — pending-submissions table with status filter, inline Accept/Reject/Edit, bulk action toolbar.
 11. **"Community generated profile" badge** rendered on Directory profile page (`app/apps/directory/[handle]/page.tsx`).
 12. **Inventory + contracts + registry update.**
@@ -252,7 +258,7 @@ Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the hi
 17. **Soft-delete + GDPR delete endpoint + moderation report flow.**
 18. **In-DB notification fan-out for all 5 triggers** + notification-center UI on web + mobile. GetStream is out of scope (§2.11).
 19. **Mobile rebuild** — replace `SkillsHunt.tsx` mock with API-driven Scout, Leaderboard, Missions, My Finds screens (per `MobileSkillsHunt.tsx` + variants in `design/`).
-20. **Bulk admin actions + CSV export + dispute escalation.**
+20. **Bulk admin actions + dispute escalation.** Bulk accept/reject already wired in the admin shell; dispute escalation is the Wave 2 follow-up. (CSV export is explicitly out of scope — see §2.12.)
 21. **Missions feature** (post-design lock §2.9): `skills_hunt_missions` + `skills_hunt_mission_progress` schema, admin CRUD endpoints, player GET endpoint, progress recompute on accept, completion notifications + service-credit ledger entry.
 22. **Brand-voice lexicon update** (post-design lock §2.8): apply "Nominate / Scout / Scouting" everywhere in user-facing copy + admin labels + notifications + audit human-readable strings; backend identifiers unchanged.
 
@@ -270,7 +276,7 @@ These should be resolved before the corresponding Wave 2 work begins.
 1. **Leaderboard live updates**: ~~WebSocket or polling?~~ **RESOLVED 2026-05-12 — 30s polling locked.** GetStream feeds are explicitly out of scope (§2.11). Revisit only if engagement metrics show users want sub-30s leaderboard ticking.
 2. **Moderation report flow placement**: report button on every Directory profile, or only on community-generated ones? **Recommendation:** all profiles, but escalation path differs.
 3. **Dispute escalation**: second-admin sign-off, or just a flagged queue the owner reviews personally? **Recommendation:** flagged queue for now; introduce second-admin only if volume justifies.
-4. **CSV export**: ad-hoc download endpoint, or scheduled exports to a storage bucket? **Recommendation:** ad-hoc on-demand endpoint.
+4. ~~**CSV export**~~ — **REMOVED from scope 2026-05-18 (§2.12).** Not a product capability for Skills Hunt; any future ad-hoc data pulls go through the existing admin DB tooling, not a product endpoint.
 
 ---
 

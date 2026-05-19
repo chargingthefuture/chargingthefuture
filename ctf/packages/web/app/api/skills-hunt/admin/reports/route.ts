@@ -16,7 +16,16 @@ export async function GET(request: Request) {
     return gate.response;
   }
 
-  const status = parseStatus(new URL(request.url).searchParams.get('status'));
+  const rawStatus = new URL(request.url).searchParams.get('status');
+  const status = parseStatus(rawStatus);
+  // If a status filter was provided but doesn't parse, surface a 400 rather
+  // than silently dropping the filter and returning the full open queue.
+  if (rawStatus !== null && status === null) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'status must be open | dismissed | archived | removed' },
+      { status: 400 },
+    );
+  }
 
   try {
     const items = await withDbTransaction((client) => listOpenReports(client, status));

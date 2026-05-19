@@ -195,7 +195,10 @@ function ScoutTab({ round }: { round: Round | null }) {
       <Text style={styles.label}>Display Name <Text style={styles.required}>*</Text></Text>
       <TextInput
         value={displayName}
-        onChangeText={(t) => setDisplayName(t.replace(/[^a-zA-Z\s]/g, '').slice(0, 100))}
+        // Strip only control characters (newlines, tabs) — keep diacritics,
+        // non-ASCII letters, apostrophes, hyphens so names like "José",
+        // "O'Connor", "Đ" remain typeable. Length capped at 100.
+        onChangeText={(t) => setDisplayName(t.replace(/[\r\n\t]/g, '').slice(0, 100))}
         placeholder="e.g. Amara Williams"
         placeholderTextColor="#6B7280"
         style={styles.input}
@@ -247,14 +250,18 @@ function LeaderboardTab({ round, userId }: { round: Round | null; userId?: strin
   const [items, setItems] = useState<LeaderboardItem[]>([]);
   const [serverCurrent, setServerCurrent] = useState<LeaderboardItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!round) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await SkillsHuntApi.listLeaderboard(round.id);
       setItems(data.items);
       setServerCurrent(data.currentUserEntry);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Failed to load leaderboard.');
     } finally {
       setLoading(false);
     }
@@ -262,13 +269,15 @@ function LeaderboardTab({ round, userId }: { round: Round | null; userId?: strin
 
   useEffect(() => { void load(); }, [load]);
 
-  const myEntry = useMemo(
-    () => items.find(i => i.userId === userId) ?? serverCurrent,
-    [items, serverCurrent, userId],
-  );
+  // Header should only render the "You" row when myEntry comes from the
+  // server-provided fallback (i.e., user is outside the top-100 in items).
+  // Otherwise the user would appear twice.
+  const inItems = items.some(i => i.userId === userId);
+  const myEntry = inItems ? null : serverCurrent;
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (loadError) return <View style={styles.center}><Text style={styles.errorText}>{loadError}</Text></View>;
 
   return (
     <FlatList
@@ -314,15 +323,19 @@ function LeaderboardTab({ round, userId }: { round: Round | null; userId?: strin
 function MissionsTab({ round }: { round: Round | null }) {
   const [items, setItems] = useState<MissionWithProgress[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!round) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const data = await SkillsHuntApi.listMissions(round.id);
         if (!cancelled) setItems(data.items);
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load missions.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -332,6 +345,7 @@ function MissionsTab({ round }: { round: Round | null }) {
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (loadError) return <View style={styles.center}><Text style={styles.errorText}>{loadError}</Text></View>;
   if (items.length === 0) return <View style={styles.center}><Text style={styles.muted}>No missions for this round yet.</Text></View>;
 
   return (
@@ -367,15 +381,19 @@ function MissionsTab({ round }: { round: Round | null }) {
 function MyFindsTab({ round }: { round: Round | null }) {
   const [items, setItems] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!round) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const data = await SkillsHuntApi.listMyFinds(round.id);
         if (!cancelled) setItems(data.items);
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load finds.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -385,6 +403,7 @@ function MyFindsTab({ round }: { round: Round | null }) {
 
   if (!round) return <View style={styles.center}><Text style={styles.muted}>No active round.</Text></View>;
   if (loading) return <View style={styles.center}><ActivityIndicator color={COLOR} /></View>;
+  if (loadError) return <View style={styles.center}><Text style={styles.errorText}>{loadError}</Text></View>;
   if (items.length === 0) return <View style={styles.center}><Text style={styles.muted}>No nominations yet.</Text></View>;
 
   return (

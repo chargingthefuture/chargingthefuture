@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { withDbTransaction } from 'lib/db/postgres';
+import { ensureMutationCsrf } from '../../skills-hunt/_lib';
 import { softDeleteUserSubmissions } from 'lib/skills-hunt/moderation';
+import { rebuildLeaderboard } from 'lib/skills-hunt/repository';
+import { recomputeMissionProgressForUser } from 'lib/skills-hunt/missions';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 
@@ -12,7 +15,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 // auto-generated from accepted submissions are NOT touched here — the
 // Directory plugin owns its own deletion path, and the skills_hunt_directory
 // _profiles link table has ON DELETE SET NULL where appropriate.
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const decision = await evaluatePluginAccess({
     requireUsername: false,
     requireApprovedUserOrAdmin: false,
@@ -22,8 +25,18 @@ export async function DELETE() {
     return NextResponse.json(decision, { status: decision.status });
   }
 
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   try {
-    const result = await withDbTransaction((client) => softDeleteUserSubmissions(client, decision.userId));
+    const result = await withDbTransaction((client) =>
+      softDeleteUserSubmissions(client, decision.userId, {
+        rebuildLeaderboard,
+        recomputeMissions: recomputeMissionProgressForUser,
+      }),
+    );
 
     logSkillsHuntAudit({
       actorId: decision.userId,

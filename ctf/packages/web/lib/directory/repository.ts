@@ -656,6 +656,29 @@ export async function listPublicDirectory(
 // 2) `directory_profiles.unclaimed_handle` (community-<6hex>)
 // Returns the same shape as getPublicDirectoryById so the page renderer is
 // agnostic to the entry path.
+// Resolve the canonical Clerk username for a *claimed* directory profile, so
+// the [handle] page can permanent-redirect UUID URLs to /apps/directory/@<username>.
+// Returns null if the profile is unclaimed or the linked user has no username.
+export async function resolveClaimedUsernameForProfile(profileId: string): Promise<string | null> {
+  return withDbTransaction(async (client) => {
+    const rows = await client.query<{ username: string | null }>(
+      `
+        SELECT u.username
+        FROM directory_profiles p
+        JOIN public.users u ON u.id = p.claimed_by_user_id
+        WHERE p.id = $1::uuid
+          AND p.is_active = true
+          AND p.is_public = true
+          AND p.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [profileId],
+    );
+    const username = rows.rows[0]?.username;
+    return username && username.length > 0 ? username : null;
+  });
+}
+
 export async function getPublicDirectoryByHandle(handle: string): Promise<DirectoryProfile | null> {
   return withDbTransaction(async (client) => {
     const normalized = handle.trim().toLowerCase();

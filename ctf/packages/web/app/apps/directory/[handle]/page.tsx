@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
-import { getPublicDirectoryByHandle, getPublicDirectoryById } from 'lib/directory/repository';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { getPublicDirectoryByHandle, getPublicDirectoryById, resolveClaimedUsernameForProfile } from 'lib/directory/repository';
 import { TrustDirectoryProfilePanel } from '@/components/trust/TrustDirectoryProfilePanel';
 import type { TrustUserExtension } from 'lib/trust/types';
 
@@ -24,18 +24,22 @@ export default async function DirectoryHandlePage({ params }: DirectoryHandlePag
   const cleaned = raw.startsWith('@') ? raw.slice(1) : raw;
 
   if (UUID_RE.test(cleaned)) {
-    // Resolve by UUID, then 301 the user to the canonical @handle URL when one
-    // exists. Keeps deep-links from old systems working but pushes everyone
-    // toward the vanity URL in the address bar.
+    // Resolve by UUID, then permanent-redirect (HTTP 308) to the canonical
+    // @handle URL whenever one exists — for both unclaimed profiles and
+    // claimed profiles whose owner has a Clerk username. Search engines
+    // canonicalize the new URL; legacy deep-links still work.
     const byId = await getPublicDirectoryById(cleaned);
     if (!byId) notFound();
-    const canonicalHandle = byId.unclaimedHandle ?? null;
-    if (canonicalHandle) {
-      redirect(`/apps/directory/@${canonicalHandle}`);
+    if (byId.unclaimedHandle) {
+      permanentRedirect(`/apps/directory/@${byId.unclaimedHandle}`);
     }
-    // Claimed profile with no unclaimed_handle — try the claimed username
-    // route via the handle resolver. Falls back to rendering the by-id
-    // content if no canonical handle exists yet.
+    if (byId.claimedByUserId) {
+      const claimedUsername = await resolveClaimedUsernameForProfile(byId.id);
+      if (claimedUsername) {
+        permanentRedirect(`/apps/directory/@${claimedUsername}`);
+      }
+    }
+    // No canonical handle for this profile yet — render in place.
     return renderProfile(byId);
   }
 

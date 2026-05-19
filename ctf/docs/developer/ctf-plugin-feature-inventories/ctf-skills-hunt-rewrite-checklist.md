@@ -126,12 +126,12 @@
   - [x] `directory_profiles.deleted_at` (soft-delete).
 - [x] **Wave 1 — `@handle` URL routing:**
   - [x] `app/apps/directory/[handle]/page.tsx` handle resolver. Accepts `@handle` (strips the prefix) and falls through to UUID resolution for back-compat.
-  - [x] 301 redirect from legacy `[id]` route. Next.js disallows two dynamic siblings at the same path level; the `[id]` segment was removed and `[handle]` resolves UUIDs first, then `redirect()`-s to `/apps/directory/@<unclaimed_handle>` when a canonical handle exists (server-rendered redirects use `307` in Next 16 but behave equivalently for SEO since `next.config` honors `permanentRedirect` for marked-permanent flows — Next's `redirect()` is the canonical idiom here).
+  - [x] 308 permanent redirect from legacy `[id]` route. Next.js disallows two dynamic siblings at the same path level; the `[id]` segment was removed and `[handle]` resolves UUIDs first, then calls `permanentRedirect()` (HTTP 308) to `/apps/directory/@<unclaimed_handle>` when a canonical handle exists, so search engines canonicalize the new URL.
   - [x] Resolver order: `users.username` (claimed) → `directory_profiles.unclaimed_handle` (unclaimed). Implemented in `getPublicDirectoryByHandle()`.
 - [x] **Wave 1 — visible "community generated profile" badge + @handle + invited-by attribution** on Directory profile page (commit pending — see latest `feat(directory)` on this branch).
   - DirectoryProfile type extended with `source`, `invitedByUsername`, `unclaimedHandle` (`lib/directory/types.ts`).
   - `getPublicDirectoryById` SELECT pulls the new columns; soft-delete filter (`deleted_at IS NULL`) added.
-  - `app/apps/directory/[id]/page.tsx` renders the purple "Community generated" pill, the `@unclaimed_handle` monospace line, and "Nominated by @handle" attribution. Uses design's `#A855F7` palette per rule 126.
+  - `app/apps/directory/[handle]/page.tsx` renders the purple "Community generated" pill, the `@unclaimed_handle` monospace line, and "Nominated by @handle" attribution. Uses design's `#A855F7` palette per rule 126.
 - [x] **Wave 1 — backfill migration** assigning `community-<6hex>` to existing 60 unclaimed profiles (commit `f3aeb3f`, idempotent DO block).
 
 ## Phase 6 — Security, Compliance, and Deletion
@@ -169,7 +169,7 @@
   - [x] Status filter pills (pending / accepted / rejected / flagged).
   - [x] Inline Accept / Reject (with prompted reason — 6 canned options + free-text) / Flag. Edit dialog is Wave 2 (continuity §6 sub-task).
   - [x] Bulk action toolbar with multi-select checkboxes + bulk accept / bulk reject (single reason applied to the batch; sequential POSTs so leaderboards rebuild deterministically row-by-row).
-  - [ ] Wave 2 follow-ups: edit-dialog, CSV export, dispute escalation queue.
+  - [ ] Wave 2 follow-ups: edit-dialog, dispute escalation queue. *(CSV export removed from scope — continuity §2.12.)*
 - [x] **Wave 2 — mobile rebuild** (`packages/mobile/src/features/skills-hunt/`).
   - [x] Replace `SkillsHunt.tsx` hardcoded mock with a 4-tab (Scout / Leaderboard / Missions / My Finds) API-driven view.
   - [x] New `SkillsHuntApi.ts` client wrapping `/api/skills-hunt/*` (rounds, leaderboard, achievements, my finds, missions, submit). Same envelope as the web shell so the route layer is reusable.

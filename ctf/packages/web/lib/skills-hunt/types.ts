@@ -219,12 +219,22 @@ export type SkillsHuntSubmissionReport = {
   createdAtIso: string;
 };
 
-export type SkillsHuntSubmissionReportInput = {
-  submissionId?: string | null;
-  directoryProfileId?: string | null;
-  reason: SkillsHuntSubmissionReportReason;
-  details?: string | null;
-};
+// At-least-one-target requirement is enforced at the type level via a
+// discriminated union: callers must provide submissionId OR directoryProfileId.
+// Passing { reason } alone is now a compile-time error.
+export type SkillsHuntSubmissionReportInput =
+  | {
+      submissionId: string;
+      directoryProfileId?: string | null;
+      reason: SkillsHuntSubmissionReportReason;
+      details?: string | null;
+    }
+  | {
+      submissionId?: string | null;
+      directoryProfileId: string;
+      reason: SkillsHuntSubmissionReportReason;
+      details?: string | null;
+    };
 
 // Reputation tier computed on demand from accepted/rejected submission counts.
 export type SkillsHuntReputationTier = 'new' | 'standard' | 'trusted' | 'restricted';

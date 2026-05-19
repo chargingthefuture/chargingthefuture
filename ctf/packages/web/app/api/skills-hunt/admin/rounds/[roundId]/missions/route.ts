@@ -41,9 +41,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
 
   const { roundId } = await params;
 
-  let body: Partial<MissionCreateInput>;
+  let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Partial<MissionCreateInput>;
+    body = (await request.json()) as Record<string, unknown>;
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      throw new Error('not an object');
+    }
   } catch {
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
@@ -51,17 +54,52 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
     );
   }
 
+  // Runtime narrowing: every field touched by createMission gets checked
+  // before construction. Malformed types fail-fast with 400.
+  const errors: string[] = [];
+  if (typeof body.title !== 'string') errors.push('title must be a string');
+  if (typeof body.goalTarget !== 'number') errors.push('goalTarget must be a number');
+  const validGoalTypes = ['count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors'] as const;
+  if (typeof body.goalType !== 'string' || !validGoalTypes.includes(body.goalType as typeof validGoalTypes[number])) {
+    errors.push('goalType must be one of ' + validGoalTypes.join(' | '));
+  }
+  if (body.description !== undefined && body.description !== null && typeof body.description !== 'string') {
+    errors.push('description must be a string or null');
+  }
+  if (body.goalMetadata !== undefined && (typeof body.goalMetadata !== 'object' || body.goalMetadata === null || Array.isArray(body.goalMetadata))) {
+    errors.push('goalMetadata must be an object');
+  }
+  if (body.bonusPoints !== undefined && typeof body.bonusPoints !== 'number') {
+    errors.push('bonusPoints must be a number');
+  }
+  if (body.colorHex !== undefined && body.colorHex !== null && typeof body.colorHex !== 'string') {
+    errors.push('colorHex must be a string or null');
+  }
+  const validStatuses = ['draft', 'active', 'locked', 'archived'] as const;
+  if (body.status !== undefined && (typeof body.status !== 'string' || !validStatuses.includes(body.status as typeof validStatuses[number]))) {
+    errors.push('status must be one of ' + validStatuses.join(' | '));
+  }
+  if (body.displayOrder !== undefined && typeof body.displayOrder !== 'number') {
+    errors.push('displayOrder must be a number');
+  }
+  if (errors.length) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: errors.join('; ') },
+      { status: 400 },
+    );
+  }
+
   const input: MissionCreateInput = {
     roundId,
-    title: typeof body.title === 'string' ? body.title : '',
-    description: body.description ?? null,
-    goalType: body.goalType ?? 'count_total_accepted',
-    goalTarget: typeof body.goalTarget === 'number' ? body.goalTarget : 0,
-    goalMetadata: body.goalMetadata ?? {},
-    bonusPoints: typeof body.bonusPoints === 'number' ? body.bonusPoints : 0,
-    colorHex: body.colorHex ?? null,
-    status: body.status ?? 'active',
-    displayOrder: typeof body.displayOrder === 'number' ? body.displayOrder : 0,
+    title: body.title as string,
+    description: (body.description as string | null | undefined) ?? null,
+    goalType: body.goalType as MissionCreateInput['goalType'],
+    goalTarget: body.goalTarget as number,
+    goalMetadata: (body.goalMetadata as Record<string, unknown> | undefined) ?? {},
+    bonusPoints: (body.bonusPoints as number | undefined) ?? 0,
+    colorHex: (body.colorHex as string | null | undefined) ?? null,
+    status: (body.status as MissionCreateInput['status'] | undefined) ?? 'active',
+    displayOrder: (body.displayOrder as number | undefined) ?? 0,
   };
 
   const validation = validateMissionCreateInput(input);

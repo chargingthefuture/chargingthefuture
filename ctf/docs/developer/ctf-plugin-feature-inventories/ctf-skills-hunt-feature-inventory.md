@@ -44,7 +44,7 @@ Planning constraints applied:
 
 ### 1.2 Entry Submission Experience
 
-1. Submit display name (2–100 chars, alphanumeric + spaces), bio (max 280 chars), Quora profile URL, taxonomy-selected skills, optional proposed (free-text) skills, and claimed professions.
+1. Submit display name (2–100 chars, alphanumeric + spaces), bio (max 280 chars), Quora profile URL, taxonomy-selected skills, optional proposed (free-text) skills, and claimed professions *(deferred — not in the locked Wave 1 design)*.
 2. Enforce URL normalization and Quora profile pattern validation.
 3. Liveness HEAD-check on URL with 5s timeout; persist `url_validation_result` ∈ {valid, invalid, dead}.
 4. Prevent duplicate submissions in a round by normalized URL + skills signature.
@@ -198,7 +198,7 @@ Tracked in detail in `ctf-skills-hunt-session-continuity.md` §3.2 and §7. Summ
 1. Admin preapproval submitter pathway: re-enable as part of reputation system (Wave 2).
 2. URL liveness HEAD-check: implemented in Wave 1; persist `url_validation_result`.
 3. Team leaderboard aggregation: keyed by claimed profession taxonomy; one team per profession; aggregated `score` and `accepted_count`.
-4. Android parity: mobile feature currently a hardcoded mock — rebuild planned in Wave 2.
+4. Android parity: mobile feature implemented; API-driven Scout / Leaderboard / Missions / My Finds surfaces + inbox in production — parity/UX refinements planned in Wave 2.
 5. Leaderboard live updates: starting with 30-second polling; WebSocket upgrade deferred pending engagement metrics.
 
 ## 9) Change Log

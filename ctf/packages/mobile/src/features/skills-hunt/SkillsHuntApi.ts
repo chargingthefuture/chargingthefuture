@@ -5,7 +5,18 @@
 
 import { Platform } from 'react-native';
 
-const API_BASE = Platform.OS === 'web' ? '/api/skills-hunt' : 'https://your-api-domain/api/skills-hunt';
+// Native builds resolve the API origin from a runtime config key
+// (process.env.EXPO_PUBLIC_API_ORIGIN — exposed via Expo's public-env
+// convention; falls back to localhost for dev). Document the key in the
+// mobile build configs alongside other EXPO_PUBLIC_* values.
+function getApiOrigin(): string {
+  const fromEnv = typeof process !== 'undefined' && process.env
+    ? (process.env.EXPO_PUBLIC_API_ORIGIN ?? process.env.API_ORIGIN)
+    : undefined;
+  return fromEnv && fromEnv.length > 0 ? fromEnv.replace(/\/$/, '') : 'http://localhost:3000';
+}
+
+const API_BASE = Platform.OS === 'web' ? '/api/skills-hunt' : `${getApiOrigin()}/api/skills-hunt`;
 
 export type Round = {
   id: string;

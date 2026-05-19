@@ -73,7 +73,10 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
     if (selected.size === 0) return;
     const notes = action === "reject" ? promptRejectReason() : null;
     if (action === "reject" && notes === null) return;
-    const ids = Array.from(selected);
+    // Defensive filter: only act on currently-pending submissions even if a
+    // status change between select-and-act sneaks non-pending IDs in.
+    const pendingIds = new Set(submissions.filter(s => s.status === "pending").map(s => s.id));
+    const ids = Array.from(selected).filter(id => pendingIds.has(id));
     for (const id of ids) {
       // Sequential so the leaderboard rebuilds settle row-by-row.
       await reviewOne(id, action, notes);
@@ -100,8 +103,10 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   }
 
   function toggleAllVisible() {
-    if (selected.size === submissions.length) setSelected(new Set());
-    else setSelected(new Set(submissions.map(s => s.id)));
+    // Only pending rows are actionable; never select accepted/rejected/flagged.
+    const pendingIds = submissions.filter(s => s.status === "pending").map(s => s.id);
+    if (selected.size === pendingIds.length) setSelected(new Set());
+    else setSelected(new Set(pendingIds));
   }
 
   return (

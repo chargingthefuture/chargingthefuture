@@ -336,9 +336,9 @@ policies:
 
   - pluginId: skills-hunt
     command: skills-hunt.submission.report
-    rolePolicies:
-      authenticated: allow
-      anonymous: deny
+    version: 1.0.0
+    requiredRoles:
+      - authenticated
     attributePolicies:
       reasonInEnum: true
       xorTarget: true
@@ -361,9 +361,9 @@ policies:
 
   - pluginId: skills-hunt
     command: skills-hunt.profile.delete
-    rolePolicies:
-      authenticated: allow
-      anonymous: deny
+    version: 1.0.0
+    requiredRoles:
+      - authenticated
     attributePolicies:
       selfOnly: true
       auditLogRetained: true

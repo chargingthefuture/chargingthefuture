@@ -1642,15 +1642,27 @@ $directory_profiles_source_check$;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+-- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
+-- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
+-- sensitive index if it exists, then recreates on lower(unclaimed_handle).
 DO $directory_profiles_unclaimed_handle_unique$
 BEGIN
+  -- If the legacy case-sensitive index exists, drop it so we can replace
+  -- with the case-insensitive variant below.
+  IF EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+      AND indexdef NOT ILIKE '%lower(unclaimed_handle)%'
+  ) THEN
+    EXECUTE 'DROP INDEX IF EXISTS directory_profiles_unclaimed_handle_key';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE indexname = 'directory_profiles_unclaimed_handle_key'
   ) THEN
     BEGIN
       CREATE UNIQUE INDEX directory_profiles_unclaimed_handle_key
-        ON directory_profiles (unclaimed_handle)
+        ON directory_profiles (lower(unclaimed_handle))
         WHERE unclaimed_handle IS NOT NULL;
     EXCEPTION WHEN duplicate_table THEN
       NULL;
