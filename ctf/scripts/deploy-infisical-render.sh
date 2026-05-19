@@ -17,6 +17,9 @@ set -euo pipefail
 : "${INFISICAL_ENCRYPTION_KEY:?INFISICAL_ENCRYPTION_KEY is required — generate with: openssl rand -hex 16}"
 : "${INFISICAL_AUTH_SECRET:?INFISICAL_AUTH_SECRET is required — generate with: openssl rand -base64 32}"
 
+RENDER_API="https://api.render.com/v1"
+SERVICE_NAME="infisical"
+
 echo "==> Checking if Infisical service already exists on Render..."
 EXISTING=$(curl -sf "$RENDER_API/services?name=$SERVICE_NAME&ownerId=$RENDER_OWNER_ID&limit=1" \
   -H "Authorization: Bearer $RENDER_API_KEY" | jq -r '.[0].service.id // empty')
