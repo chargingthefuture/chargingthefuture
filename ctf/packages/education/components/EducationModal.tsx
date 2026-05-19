@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { EducationContent } from '../schema';
+import { EducationContent } from '../types';
 import ReactMarkdown from 'react-markdown';
 
 interface EducationModalProps {

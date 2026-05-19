@@ -38,7 +38,7 @@ This package provides a modular, updatable, and optional educational component f
 - No code changes or redeploys needed for content updates.
 
 ## Type Safety
-- All types are defined in `schema.ts`.
+- All types are defined in `types.ts`.
 
 ## Compliance
 - Follows CTF monorepo modularity and typecheck rules.

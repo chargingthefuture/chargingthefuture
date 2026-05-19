@@ -17,11 +17,11 @@
 
 ## Compliance
 
-- Type safe (TypeScript schema)
+- Type safe (TypeScript types in `types.ts`)
 - Follows CTF monorepo modularity and typecheck rules
 - Documentation and usage in README
 
 ## Change Log
 
 - 2026-05-18: Removed "Planned Features" section to comply with Rule 120 forbidden patterns. Added module-vs-plugin scope note; this file documents a shared library, not a registered plugin.
-- 2026-05-19: Renamed package `@ctf/plugin-education` → `@ctf/education`; renamed directory `ctf/packages/plugin-education` → `ctf/packages/education`; renamed inventory file from `plugin-education-feature-inventory.md` → `education-feature-inventory.md` to remove confusing `plugin-` prefix from a non-plugin shared module.
+- 2026-05-19: Renamed package `@ctf/plugin-education` → `@ctf/education`; renamed directory `ctf/packages/plugin-education` → `ctf/packages/education`; renamed inventory file from `plugin-education-feature-inventory.md` → `education-feature-inventory.md` to remove confusing `plugin-` prefix from a non-plugin shared module. Also renamed internal `schema.ts` → `types.ts` since the file holds TypeScript interfaces for educational content (not a DB schema); the prior name false-tripped the `Schema Drift Gate` keyword scanner.
