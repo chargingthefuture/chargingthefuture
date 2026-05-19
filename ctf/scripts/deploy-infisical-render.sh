@@ -21,28 +21,35 @@ RENDER_API="https://api.render.com/v1"
 SERVICE_NAME="infisical"
 
 echo "==> Checking if Infisical service already exists on Render..."
-EXISTING=$(curl -sf "$RENDER_API/services?name=$SERVICE_NAME&ownerId=$RENDER_OWNER_ID&limit=1" \
+EXISTING=$(curl -s "$RENDER_API/services?name=$SERVICE_NAME&ownerId=$RENDER_OWNER_ID&limit=1" \
   -H "Authorization: Bearer $RENDER_API_KEY" | jq -r '.[0].service.id // empty')
 
 if [ -n "$EXISTING" ]; then
   echo "==> Service already exists: $EXISTING — updating env vars..."
   SERVICE_ID="$EXISTING"
 
-  curl -sf -X PUT "$RENDER_API/services/$SERVICE_ID/env-vars" \
+  VARS_PAYLOAD=$(jq -n \
+    --arg db "$INFISICAL_DB_URI" \
+    --arg enc "$INFISICAL_ENCRYPTION_KEY" \
+    --arg auth "$INFISICAL_AUTH_SECRET" \
+    '[
+      {"key":"DB_CONNECTION_URI","value":$db},
+      {"key":"ENCRYPTION_KEY","value":$enc},
+      {"key":"AUTH_SECRET","value":$auth},
+      {"key":"NODE_ENV","value":"production"},
+      {"key":"TELEMETRY_ENABLED","value":"false"},
+      {"key":"PORT","value":"8080"}
+    ]')
+
+  UPDATE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT "$RENDER_API/services/$SERVICE_ID/env-vars" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "$(jq -n \
-      --arg db "$INFISICAL_DB_URI" \
-      --arg enc "$INFISICAL_ENCRYPTION_KEY" \
-      --arg auth "$INFISICAL_AUTH_SECRET" \
-      '[
-        {"key":"DB_CONNECTION_URI","value":$db},
-        {"key":"ENCRYPTION_KEY","value":$enc},
-        {"key":"AUTH_SECRET","value":$auth},
-        {"key":"NODE_ENV","value":"production"},
-        {"key":"TELEMETRY_ENABLED","value":"false"},
-        {"key":"PORT","value":"8080"}
-      ]')" > /dev/null
+    -d "$VARS_PAYLOAD")
+
+  UPDATE_CODE=$(echo "$UPDATE_RESPONSE" | tail -1)
+  if [ "$UPDATE_CODE" != "200" ]; then
+    echo "WARNING: Failed to update env vars (HTTP $UPDATE_CODE)" >&2
+  fi
   echo "==> Env vars updated."
 else
   echo "==> Creating Infisical service on Render..."
@@ -81,27 +88,46 @@ else
       ]
     } | if $project != "" then . + {projectId: $project} else . end')
 
-  RESPONSE=$(curl -sf -X POST "$RENDER_API/services" \
+  RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$RENDER_API/services" \
     -H "Authorization: Bearer $RENDER_API_KEY" \
     -H "Content-Type: application/json" \
     -d "$SERVICE_PAYLOAD")
 
-  SERVICE_ID=$(echo "$RESPONSE" | jq -r '.service.id')
+  HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+  RESPONSE_BODY=$(echo "$RESPONSE" | head -n -1)
+
+  if [ "$HTTP_CODE" != "201" ]; then
+    echo "ERROR: Render API returned HTTP $HTTP_CODE" >&2
+    echo "Response: $RESPONSE_BODY" >&2
+    exit 1
+  fi
+
+  SERVICE_ID=$(echo "$RESPONSE_BODY" | jq -r '.service.id')
   echo "==> Service created: $SERVICE_ID"
 fi
 
 echo "==> Triggering deployment..."
-DEPLOY=$(curl -sf -X POST "$RENDER_API/services/$SERVICE_ID/deploys" \
+DEPLOY=$(curl -s -w "\n%{http_code}" -X POST "$RENDER_API/services/$SERVICE_ID/deploys" \
   -H "Authorization: Bearer $RENDER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"clearCache":"do_not_clear"}')
-DEPLOY_ID=$(echo "$DEPLOY" | jq -r '.id')
+
+DEPLOY_CODE=$(echo "$DEPLOY" | tail -1)
+DEPLOY_BODY=$(echo "$DEPLOY" | head -n -1)
+
+if [ "$DEPLOY_CODE" != "201" ]; then
+  echo "ERROR: Failed to trigger deployment (HTTP $DEPLOY_CODE)" >&2
+  echo "Response: $DEPLOY_BODY" >&2
+  exit 1
+fi
+
+DEPLOY_ID=$(echo "$DEPLOY_BODY" | jq -r '.id')
 echo "==> Deploy started: $DEPLOY_ID"
 
 echo "==> Waiting for deploy to complete (up to 10 min)..."
 for i in $(seq 1 60); do
-  STATUS=$(curl -sf "$RENDER_API/services/$SERVICE_ID/deploys/$DEPLOY_ID" \
-    -H "Authorization: Bearer $RENDER_API_KEY" | jq -r '.status')
+  STATUS=$(curl -s "$RENDER_API/services/$SERVICE_ID/deploys/$DEPLOY_ID" \
+    -H "Authorization: Bearer $RENDER_API_KEY" | jq -r '.status // "unknown"')
   echo "    [$i/60] status: $STATUS"
   if [ "$STATUS" = "live" ]; then
     echo "==> Deploy succeeded."
@@ -113,7 +139,7 @@ for i in $(seq 1 60); do
   sleep 10
 done
 
-SERVICE_URL=$(curl -sf "$RENDER_API/services/$SERVICE_ID" \
+SERVICE_URL=$(curl -s "$RENDER_API/services/$SERVICE_ID" \
   -H "Authorization: Bearer $RENDER_API_KEY" | jq -r '.serviceDetails.url // .service.serviceDetails.url // empty')
 echo ""
 echo "==> Infisical is live at: $SERVICE_URL"
