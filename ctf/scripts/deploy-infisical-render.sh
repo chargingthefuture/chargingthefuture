@@ -77,7 +77,7 @@
         },
         serviceDetails: {
           env: "image",
-          plan: "starter",
+          plan: "standard",
           region: "ohio",
           healthCheckPath: "/api/status",
           numInstances: 1,
