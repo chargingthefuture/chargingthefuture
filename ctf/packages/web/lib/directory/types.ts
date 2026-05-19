@@ -7,7 +7,6 @@ export type DirectoryProfile = {
   headline: string | null;
   bio: string | null;
   profileUrl: string | null;
-  isPublic: boolean;
   sectorId: string | null;
   sectorName: string | null;
   jobTitleId: string | null;
@@ -54,7 +53,6 @@ export type DirectoryProfileInput = {
   headline?: string | null;
   bio?: string | null;
   profileUrl?: string | null;
-  isPublic: boolean;
   sectorId?: string | null;
   jobTitleId?: string | null;
   skillIds?: string[];

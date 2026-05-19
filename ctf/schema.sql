@@ -1589,7 +1589,6 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   headline TEXT,
   bio TEXT,
   profile_url TEXT,
-  is_public BOOLEAN NOT NULL DEFAULT FALSE,
   sector_id UUID,
   job_title_id UUID,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -1610,7 +1609,9 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS display_name T
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TEXT;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
+-- is_public was removed 2026-05-18 — Directory is no longer public-facing;
+-- all authenticated members see all active profiles. Drop is idempotent.
+ALTER TABLE IF EXISTS directory_profiles DROP COLUMN IF EXISTS is_public;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS job_title_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;

@@ -13,7 +13,6 @@ function toProfileInput(body: ProfileBody): DirectoryProfileInput {
     headline: typeof body.headline === 'string' ? body.headline : null,
     bio: typeof body.bio === 'string' ? body.bio : null,
     profileUrl: typeof body.profileUrl === 'string' ? body.profileUrl : null,
-    isPublic: body.isPublic === true,
     sectorId: typeof body.sectorId === 'string' ? body.sectorId : null,
     jobTitleId: typeof body.jobTitleId === 'string' ? body.jobTitleId : null,
     skillIds: Array.isArray(body.skillIds)

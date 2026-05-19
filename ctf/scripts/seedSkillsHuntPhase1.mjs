@@ -181,13 +181,13 @@ async function main() {
       `
         INSERT INTO directory_profiles
           (id, claimed_by_user_id, display_name, headline, bio,
-           is_public, is_active, source, invited_by_username, unclaimed_handle,
+           is_active, source, invited_by_username, unclaimed_handle,
            created_at, updated_at)
         VALUES
           ($1::uuid, NULL, 'Seed Nominee',
            'Community-generated profile seeded for @handle validation.',
            'Seeded by the Skills Hunt Phase-1 fixture.',
-           TRUE, TRUE, 'community-generated', 'seed-user-01', 'community-seed01',
+           TRUE, 'community-generated', 'seed-user-01', 'community-seed01',
            NOW(), NOW())
         ON CONFLICT (id) DO UPDATE SET
           display_name = EXCLUDED.display_name,
