@@ -55,6 +55,17 @@
       echo "WARNING: Failed to update env vars (HTTP $UPDATE_CODE)" >&2
     fi
     echo "==> Env vars updated."
+      echo "==> Ensuring service plan is standard (2 GB RAM)..."
+      PLAN_RESP=$(curl -s -w "\n%{http_code}" -X PATCH "$RENDER_API/services/$SERVICE_ID" \
+        -H "Authorization: Bearer $RENDER_API_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{"serviceDetails":{"plan":"standard"}}')
+      PLAN_CODE=$(echo "$PLAN_RESP" | tail -1)
+      if [ "$PLAN_CODE" != "200" ]; then
+        echo "WARNING: Could not upgrade plan (HTTP $PLAN_CODE)" >&2
+      else
+        echo "==> Plan set to standard."
+      fi
   else
     echo "==> Creating Infisical service on Render..."
 
