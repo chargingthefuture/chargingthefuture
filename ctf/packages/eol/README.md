@@ -3,8 +3,8 @@
 This plugin provides end-of-life planning tools for users, with a trauma-informed, privacy-first approach.
 
 ## Educational Component
-- Integrates the shared `EducationModal` from `@ctf/plugin-education`.
-- Loads content from `plugin-education/content/eol.md`.
+- Integrates the shared `EducationModal` from `@ctf/education`.
+- Loads content from `education/content/eol.md`.
 - Educational content is always optional/skippable.
 
 ## Example Usage

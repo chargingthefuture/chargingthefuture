@@ -2,7 +2,7 @@ packages:
   - "packages/economic-models"
   - "packages/eol"
   - "packages/mobile"
-  - "packages/plugin-education"
+  - "packages/education"
   - "packages/pm-mcp-server"
   - "packages/shared"
   - "packages/web"

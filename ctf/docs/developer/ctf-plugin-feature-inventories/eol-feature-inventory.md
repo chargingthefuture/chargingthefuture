@@ -23,7 +23,7 @@
 
 ## Educational Module Integration
 
-- Uses shared `@ctf/plugin-education` system
+- Uses shared `@ctf/education` system
 - Content in Markdown, updatable without code changes
 - Always skippable, never blocks access to main features
 

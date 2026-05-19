@@ -1,6 +1,6 @@
-# Plugin Education Module
+# Education Module
 
-This package provides a modular, updatable, and optional educational component for all plugins in the CTF monorepo.
+This package provides a modular, updatable, and optional educational component for all plugins in the CTF monorepo. Despite living alongside plugins in `packages/`, it is a shared library (consumed via `@ctf/education`), not a registered plugin.
 
 ## Features
 - Loads educational content from Markdown with frontmatter (see `content/`)
@@ -23,8 +23,8 @@ This package provides a modular, updatable, and optional educational component f
 
 2. **Import and use in your plugin**
    ```tsx
-   import { EducationModal } from '@ctf/plugin-education';
-   import { loadEducationContent } from '@ctf/plugin-education/content/loader';
+   import { EducationModal } from '@ctf/education';
+   import { loadEducationContent } from '@ctf/education/content/loader';
 
    const content = loadEducationContent('eol');
    <EducationModal content={content} onSkip={...} onComplete={...} pluginName="eol" />
