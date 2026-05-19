@@ -17,6 +17,7 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
+          RENDER_PROJECT_ID: ${{ secrets.RENDER_PROJECT_ID }}
           INFISICAL_DB_URI: ${{ secrets.INFISICAL_DB_URI }}
           INFISICAL_ENCRYPTION_KEY: ${{ secrets.INFISICAL_ENCRYPTION_KEY }}
           INFISICAL_AUTH_SECRET: ${{ secrets.INFISICAL_AUTH_SECRET }}
