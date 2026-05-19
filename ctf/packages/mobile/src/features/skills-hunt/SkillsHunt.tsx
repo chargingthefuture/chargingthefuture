@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput,
   ScrollView, ActivityIndicator,
 } from 'react-native';
 import {
   SkillsHuntApi,
-  type Achievement,
   type LeaderboardItem,
   type MissionWithProgress,
   type Notification,

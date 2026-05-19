@@ -606,7 +606,7 @@ async function computeReputationProfile(
   const rejectionRate = reviewedCount > 0 ? rejectedCount / reviewedCount : null;
 
   let tier: SkillsHuntReputationProfile['tier'] = 'new';
-  let rolling7dLimit = SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d;
+  let rolling7dLimit: number = SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d;
 
   if (
     reviewedCount >= SKILLS_HUNT_REPUTATION.preApprovalMinSampleSize &&
@@ -1012,7 +1012,12 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
 // Effective per-submission scoring weights = SPEC defaults + per-round overrides.
 // Per-round overrides live in `skills_hunt_rounds.scoring_config` so an admin
 // can promote/dampen rewards mid-program without code change.
-type ResolvedScoreWeights = typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC;
+// Explicit number-typed shape (not `typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC`)
+// because the spec object is `as const` and its literal types would reject
+// per-round overrides from scoring_config.
+type ResolvedScoreWeights = {
+  -readonly [K in keyof typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC]: number;
+};
 
 function resolveScoreWeights(scoringConfig: unknown): ResolvedScoreWeights {
   const overrides = scoringConfig && typeof scoringConfig === 'object' && !Array.isArray(scoringConfig)

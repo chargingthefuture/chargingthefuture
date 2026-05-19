@@ -15,7 +15,7 @@ const pluginRouteText = fs.readFileSync(pluginRoutePath, 'utf8');
 const parityContractsText = fs.readFileSync(parityContractsPath, 'utf8');
 
 const pluginRegistryEntries = [];
-const pluginRegistryEntryRegex = /slug:\s*'([^']+)'[\s\S]*?availabilityState:\s*'(implemented_shell|planned)'[\s\S]*?isVisible:\s*(true|false)/g;
+const pluginRegistryEntryRegex = /slug:\s*'([^']+)'[\s\S]*?availabilityState:\s*'(implemented_shell|planned|alpha|beta)'[\s\S]*?isVisible:\s*(true|false)/g;
 let match;
 
 while ((match = pluginRegistryEntryRegex.exec(pluginRegistryText)) !== null) {

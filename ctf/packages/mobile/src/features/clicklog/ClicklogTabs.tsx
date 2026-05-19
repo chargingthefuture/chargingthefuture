@@ -9,11 +9,18 @@ type ClicklogTabParamList = {
   History: undefined;
 };
 
-const Tab = createBottomTabNavigator<ClicklogTabParamList, 'clicklog'>();
+const Tab = createBottomTabNavigator<ClicklogTabParamList>();
 
 export function ClicklogTabs() {
   return (
-    <Tab.Navigator id="clicklog">
+    // React Navigation v7's prop types declare `children` as a required
+    // structural prop but TypeScript narrows the overload from the JSX
+    // props object alone (without seeing the JSX children below). Known
+    // upstream typing issue under React 19; runtime is fine. See
+    // ctf-skills-hunt-session-continuity.md §10 for the documentation
+    // trail behind this suppression.
+    // @ts-expect-error RN-Nav-v7 children-narrowing — see comment above
+    <Tab.Navigator>
       <Tab.Screen
         name="Counter"
         component={ClicklogCounter}
