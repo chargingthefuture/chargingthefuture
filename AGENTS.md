@@ -15,7 +15,7 @@ chargingthefuture/          ← repo root
 │   │   ├── mobile/         ← React Native / Expo app (@ctf/mobile)
 │   │   ├── shared/         ← shared types, contracts, utilities
 │   │   ├── pm-mcp-server/  ← project management MCP server
-│   │   ├── plugin-education/
+│   │   ├── education/
 │   │   ├── economic-models/
 │   │   └── eol/
 │   ├── scripts/            ← operational helpers (migrations, audits, seeds)

@@ -16,22 +16,22 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
+// directory_profiles.id is UUID, so the deterministic seed ids must be valid
+// UUIDs. userId stays a free-form text key for directory_user_extension.
 const seedUsers = [
   {
-    profileId: 'seed-directory-profile-001',
+    profileId: 'd1100000-0000-4000-8000-000000000001',
     userId: 'seed-directory-user-001',
     displayName: 'Amina Johnson',
     headline: 'Community support navigator',
     bio: 'Deterministic seed profile for directory phase-0 validation.',
-    isPublic: true,
   },
   {
-    profileId: 'seed-directory-profile-002',
+    profileId: 'd1100000-0000-4000-8000-000000000002',
     userId: 'seed-directory-user-002',
     displayName: 'Luis Rivera',
     headline: 'Legal advocacy coordinator',
     bio: 'Second deterministic profile for pagination and claimed-state checks.',
-    isPublic: false,
   },
 ];
 
@@ -75,7 +75,7 @@ async function main() {
         `
           SELECT id
           FROM directory_profiles
-          WHERE id = $1
+          WHERE id = $1::uuid
           LIMIT 1
         `,
         [user.profileId],
@@ -87,20 +87,18 @@ async function main() {
           `
             UPDATE directory_profiles
             SET
-              user_id = NULL,
               claimed_by_user_id = NULL,
               display_name = $2,
               headline = $3,
               bio = $4,
-              description = $4,
               profile_url = NULL,
-              is_public = $5,
-              is_claimed = false,
-              sector_id = $6::uuid,
-              job_title_id = $7::uuid,
+              source = 'admin',
+              sector_id = $5::uuid,
+              job_title_id = $6::uuid,
               is_active = true,
+              deleted_at = NULL,
               updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1::uuid
             RETURNING id
           `,
           [
@@ -108,7 +106,6 @@ async function main() {
             user.displayName,
             user.headline,
             user.bio,
-            user.isPublic,
             selectors.sectorId,
             selectors.jobTitleId,
           ],
@@ -117,9 +114,9 @@ async function main() {
         profileResult = await client.query(
           `
             INSERT INTO directory_profiles
-              (id, claimed_by_user_id, user_id, display_name, headline, bio, description, profile_url, is_public, is_claimed, sector_id, job_title_id, is_active)
+              (id, claimed_by_user_id, display_name, headline, bio, profile_url, source, sector_id, job_title_id, is_active)
             VALUES
-              ($1::text, NULL, NULL, $2::text, $3::text, $4::text, $4::text, NULL, $5::boolean, false, $6::uuid, $7::uuid, true)
+              ($1::uuid, NULL, $2::text, $3::text, $4::text, NULL, 'admin', $5::uuid, $6::uuid, true)
             RETURNING id
           `,
           [
@@ -127,7 +124,6 @@ async function main() {
             user.displayName,
             user.headline,
             user.bio,
-            user.isPublic,
             selectors.sectorId,
             selectors.jobTitleId,
           ],
@@ -153,14 +149,14 @@ async function main() {
       await client.query(
         `
           INSERT INTO directory_user_extension (user_id, profile_visibility, service_deleted_at, updated_at)
-          VALUES ($1, CASE WHEN $2 THEN 'public' ELSE 'workspace' END, NULL, NOW())
+          VALUES ($1, 'workspace', NULL, NOW())
           ON CONFLICT (user_id)
           DO UPDATE SET
             profile_visibility = EXCLUDED.profile_visibility,
             service_deleted_at = NULL,
             updated_at = NOW()
         `,
-        [user.profileId, user.isPublic],
+        [user.userId],
       );
     }
 

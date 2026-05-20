@@ -57,6 +57,7 @@ async function main() {
             quora_profile_url,
             quora_profile_url_normalized,
             skills,
+            proposed_skills,
             claimed_professions,
             signature_hash,
             status,
@@ -65,6 +66,10 @@ async function main() {
             review_notes,
             score_breakdown,
             points_awarded,
+            participation_points,
+            credit_granted,
+            url_validation_result,
+            url_validation_checked_at,
             reviewed_at
           )
         VALUES
@@ -78,14 +83,19 @@ async function main() {
             'https://www.quora.com/profile/Seed-Contributor',
             'https://www.quora.com/profile/Seed-Contributor',
             '["TypeScript","Policy Design"]'::jsonb,
-            '["mentor"]'::jsonb,
+            '["Kintsugi"]'::jsonb,
+            '["mentor","instructor"]'::jsonb,
             'seed-signature-001',
             'accepted',
             'accept',
             'seed-moderator',
             'seed accepted',
-            '{"matchBase":6,"firstMatchBonus":4,"stackBonus":2,"rareSkillBonus":0,"qualityBonus":0}'::jsonb,
-            12,
+            '{"matchBase":10,"firstMatchBonus":5,"stackBonus":3,"rareSkillBonus":0,"qualityBonus":2}'::jsonb,
+            20,
+            0,
+            TRUE,
+            'valid',
+            NOW(),
             NOW()
           )
         ON CONFLICT (id)
@@ -96,6 +106,12 @@ async function main() {
           review_notes = EXCLUDED.review_notes,
           score_breakdown = EXCLUDED.score_breakdown,
           points_awarded = EXCLUDED.points_awarded,
+          participation_points = EXCLUDED.participation_points,
+          credit_granted = EXCLUDED.credit_granted,
+          url_validation_result = EXCLUDED.url_validation_result,
+          url_validation_checked_at = EXCLUDED.url_validation_checked_at,
+          proposed_skills = EXCLUDED.proposed_skills,
+          claimed_professions = EXCLUDED.claimed_professions,
           reviewed_at = EXCLUDED.reviewed_at,
           updated_at = NOW()
       `,
@@ -105,14 +121,19 @@ async function main() {
     await client.query(
       `
         INSERT INTO skills_hunt_leaderboard
-          (round_id, mode, rank, score, accepted_count, rare_skill_bonus, user_id, username_snapshot, team_key, metadata)
+          (round_id, mode, rank, score, accepted_count, rare_skill_bonus,
+           first_match_count, pending_points, last_submission_at,
+           user_id, username_snapshot, team_key, metadata)
         VALUES
-          ($1::uuid, 'individual', 1, 12, 1, 0, 'seed-user-01', 'seed-user-01', NULL, '{}'::jsonb)
+          ($1::uuid, 'individual', 1, 20, 1, 0, 1, 0, NOW(), 'seed-user-01', 'seed-user-01', NULL, '{}'::jsonb)
         ON CONFLICT (round_id, mode, rank)
         DO UPDATE SET
           score = EXCLUDED.score,
           accepted_count = EXCLUDED.accepted_count,
           rare_skill_bonus = EXCLUDED.rare_skill_bonus,
+          first_match_count = EXCLUDED.first_match_count,
+          pending_points = EXCLUDED.pending_points,
+          last_submission_at = EXCLUDED.last_submission_at,
           user_id = EXCLUDED.user_id,
           username_snapshot = EXCLUDED.username_snapshot,
           updated_at = NOW()
@@ -148,6 +169,49 @@ async function main() {
         ON CONFLICT DO NOTHING
       `,
       [submissionId],
+    );
+
+    // Seed a community-generated Directory profile so the @handle route and
+    // "Community generated" badge / "Nominated by" attribution can be
+    // exercised end-to-end against this branch. Linked back to the seed
+    // submission via skills_hunt_directory_profiles so the audit trail is
+    // intact.
+    const directoryProfileId = '00000000-0000-0000-0000-00005ee15ed1';
+    await client.query(
+      `
+        INSERT INTO directory_profiles
+          (id, claimed_by_user_id, display_name, headline, bio,
+           is_active, source, invited_by_username, unclaimed_handle,
+           created_at, updated_at)
+        VALUES
+          ($1::uuid, NULL, 'Seed Nominee',
+           'Community-generated profile seeded for @handle validation.',
+           'Seeded by the Skills Hunt Phase-1 fixture.',
+           TRUE, 'community-generated', 'seed-user-01', 'community-seed01',
+           NOW(), NOW())
+        ON CONFLICT (id) DO UPDATE SET
+          display_name = EXCLUDED.display_name,
+          headline = EXCLUDED.headline,
+          bio = EXCLUDED.bio,
+          is_active = TRUE,
+          source = EXCLUDED.source,
+          invited_by_username = EXCLUDED.invited_by_username,
+          unclaimed_handle = EXCLUDED.unclaimed_handle,
+          deleted_at = NULL,
+          updated_at = NOW()
+      `,
+      [directoryProfileId],
+    );
+
+    await client.query(
+      `
+        INSERT INTO skills_hunt_directory_profiles
+          (submission_id, directory_profile_id, invited_by_username, created_by_user_id, metadata)
+        VALUES
+          ($1::uuid, $2, 'seed-user-01', 'seed-moderator', '{"seed":true}'::jsonb)
+        ON CONFLICT (submission_id) DO NOTHING
+      `,
+      [submissionId, directoryProfileId],
     );
 
     await client.query('COMMIT');

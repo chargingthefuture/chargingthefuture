@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 
-export type PluginAvailabilityState = 'implemented_shell' | 'planned';
+export type PluginAvailabilityState = 'implemented_shell' | 'planned' | 'alpha' | 'beta';
 
 export type PluginRegistryItem = {
   slug: string;
@@ -71,7 +71,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     slug: 'skills-hunt',
     name: 'Skills Hunt',
     summary: 'Rounds, moderation, scoring, leaderboards, and governed profile generation.',
-    availabilityState: 'implemented_shell',
+    availabilityState: 'alpha',
     navRank: 60,
     isVisible: true,
   },
