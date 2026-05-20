@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
-import { basename } from 'node:path';
 import { readFileSync, unlinkSync, existsSync } from 'node:fs';
 
 function requireEnv(name) {
@@ -14,7 +13,7 @@ function requireEnv(name) {
 }
 
 async function main() {
-  const FORMDATABASE_URL = requireEnv('FORMANCE_DATABASE_URL');
+  const FORMANCE_DATABASE_URL = requireEnv('FORMANCE_DATABASE_URL');
   const SUPABASE_URL = requireEnv('SUPABASE_URL');
   const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -24,8 +23,15 @@ async function main() {
   const filename = `formance-backup-${iso}.dump`;
 
   try {
-    // Run pg_dump
-    execSync(`pg_dump --dbname="${FORMDATABASE_URL}" --format=custom --no-owner --no-privileges -f "${filename}"`, {
+    // Run pg_dump. Pass args as an array (no shell) so the connection string
+    // cannot be interpreted by a shell, eliminating any injection surface.
+    execFileSync('pg_dump', [
+      '--dbname', FORMANCE_DATABASE_URL,
+      '--format=custom',
+      '--no-owner',
+      '--no-privileges',
+      '-f', filename,
+    ], {
       stdio: 'inherit',
       env: process.env,
     });

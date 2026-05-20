@@ -90,8 +90,8 @@ services:
   # Private service — single source of truth for all secrets.
   #
   # BOOTSTRAP (one-time manual setup in Render dashboard):
-  #   ENCRYPTION_KEY  — random 32-char hex string
-  #   AUTH_SECRET     — random 32-char hex string
+  #   ENCRYPTION_KEY  — random 32-char hex string (openssl rand -hex 16)
+  #   AUTH_SECRET     — random 32-byte base64 string (openssl rand -base64 32)
   #   SITE_URL        — internal Render URL for this service
   #   MONGO_URL       — MongoDB Atlas connection string
   #

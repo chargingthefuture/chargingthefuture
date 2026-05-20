@@ -7,7 +7,7 @@ FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
 # Install deps
 COPY package.json ./
-RUN npm install --frozen-lockfile
+RUN npm install
 # Copy source and compile
 COPY tsconfig.json ./
 COPY src ./src
@@ -19,7 +19,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 # Install only production deps
 COPY package.json ./
-RUN npm install --omit=dev --frozen-lockfile
+RUN npm install --omit=dev
 # Copy compiled output
 COPY --from=builder /app/dist ./dist
 CMD ["node", "dist/index.js"]
