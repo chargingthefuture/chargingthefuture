@@ -1,5 +1,5 @@
 {
-  "name": "@ctf/plugin-education",
+  "name": "@ctf/education",
   "version": "0.1.0",
   "main": "index.ts",
   "types": "index.ts",

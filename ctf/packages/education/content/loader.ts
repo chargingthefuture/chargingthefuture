@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { EducationContent } from '../schema';
+import { EducationContent } from '../types';
 
 export function loadEducationContent(plugin: string): EducationContent {
   const filePath = path.join(__dirname, 'content', `${plugin}.md`);

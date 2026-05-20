@@ -3,7 +3,7 @@ packages:
   - "ctf/packages/economic-models"
   - "ctf/packages/eol"
   - "ctf/packages/mobile"
-  - "ctf/packages/plugin-education"
+  - "ctf/packages/education"
   - "ctf/packages/pm-mcp-server"
   - "ctf/packages/shared"
   - "ctf/packages/web"

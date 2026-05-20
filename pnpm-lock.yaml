@@ -126,11 +126,32 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
+  ctf/packages/education:
+    dependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      react:
+        specifier: 19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: 19.2.5
+        version: 19.2.5(react@19.2.5)
+      react-markdown:
+        specifier: ^9.1.0
+        version: 9.1.0(@types/react@19.2.14)(react@19.2.5)
+
   ctf/packages/eol:
     dependencies:
-      '@ctf/plugin-education':
+      '@ctf/education':
         specifier: workspace:*
-        version: link:../plugin-education
+        version: link:../education
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14
@@ -204,27 +225,9 @@ importers:
       expo:
         specifier: ^55.0.4
         version: 55.0.15(@babel/core@7.29.0)(@expo/dom-webview@55.0.5)(react-dom@19.2.0(react@19.1.0))(react-native-worklets@0.8.1(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
-
-  ctf/packages/plugin-education:
-    dependencies:
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      gray-matter:
-        specifier: ^4.0.3
-        version: 4.0.3
-      react:
-        specifier: 19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: 19.2.5
-        version: 19.2.5(react@19.2.5)
-      react-markdown:
-        specifier: ^9.1.0
-        version: 9.1.0(@types/react@19.2.14)(react@19.2.5)
+      hermes-compiler:
+        specifier: ^250829098.0.2
+        version: 250829098.0.2
 
   ctf/packages/pm-mcp-server:
     dependencies:
@@ -5031,6 +5034,9 @@ packages:
   hast-util-whitespace@3.0.0:
     resolution: {integrity: sha512-88JUN06ipLwsnv+dVn+OIYOvAuvBMy/Qoi6O7mQHxdPXpjy+Cd6xRkWwux7DKO+4sYILtLBRIKgsdpS2gQc7qw==}
 
+  hermes-compiler@250829098.0.2:
+    resolution: {integrity: sha512-9+la7TeGGZg5Cj0UV5MbqhqyT/Hd/PUlQZ3Uhggy0jiaiG2qxFJbi/uGWALTqa7GwETyQa4A7ngus1A1aXA8QQ==}
+
   hermes-estree@0.25.1:
     resolution: {integrity: sha512-0wUoCcLp+5Ev5pDW2OriHC2MJCbwLwuRx+gAqMTOkGKJJiBCLjtrvy4PWUGn6MIVefecRpzoOZ/UV6iGdOr+Cw==}
 
@@ -5070,8 +5076,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.12.19:
-    resolution: {integrity: sha512-xa3eYXYXx68XTT4hZ7dRzsXBhaq85ToSrlUJNoR0gwz/1Ap/CNwX47wfvV7pc/xWhjKVVkLT7zBJy8chhNguqQ==}
+  hono@4.12.21:
+    resolution: {integrity: sha512-uV63apnb0kyPtAUwoWgaGh9HyIFcv8lgmzPZSiTBQAFOFGIzka5EZ1dZocmGnn0XdX0+XTqJ6Tqv7selMuGLRQ==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@7.0.2:
@@ -9619,9 +9625,9 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.2(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.1.0)
 
-  '@hono/node-server@1.19.14(hono@4.12.19)':
+  '@hono/node-server@1.19.14(hono@4.12.21)':
     dependencies:
-      hono: 4.12.19
+      hono: 4.12.21
 
   '@humanfs/core@0.19.1': {}
 
@@ -9849,7 +9855,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(zod@4.3.6)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.12.19)
+      '@hono/node-server': 1.19.14(hono@4.12.21)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
@@ -9859,7 +9865,7 @@ snapshots:
       eventsource-parser: 3.0.8
       express: 5.2.1
       express-rate-limit: 8.5.2(express@5.2.1)
-      hono: 4.12.19
+      hono: 4.12.21
       jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -13728,6 +13734,8 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.4
 
+  hermes-compiler@250829098.0.2: {}
+
   hermes-estree@0.25.1: {}
 
   hermes-estree@0.29.1: {}
@@ -13768,7 +13776,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.12.19: {}
+  hono@4.12.21: {}
 
   hosted-git-info@7.0.2:
     dependencies:

@@ -67,12 +67,12 @@ Implemented routes:
 
 1. `source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated'))` — drives the "Community generated profile" badge in the UI.
 2. `invited_by_username TEXT NULL` — denormalized from `skills_hunt_directory_profiles.invited_by_username` so the (auth-gated) profile page renders attribution without a join.
-3. `unclaimed_handle TEXT UNIQUE NULL` — auto-generated vanity handle for unclaimed profiles. Format: `community-<6char-hex>` (no leading `@` in storage; `@` is presentation only). Cleared/ignored once `claimed_by_user_id` is set.
+3. `unclaimed_handle TEXT NULL` — auto-generated vanity handle for unclaimed profiles. Format: `community-<6char-hex>` (no leading `@` in storage; `@` is presentation only). Cleared/ignored once `claimed_by_user_id` is set. Uniqueness is enforced by a case-insensitive partial unique index (`directory_profiles_unclaimed_handle_key` on `lower(unclaimed_handle)` WHERE `unclaimed_handle IS NOT NULL`), not an inline column constraint — so `Community-7F3A2B` and `community-7f3a2b` cannot coexist, and the migration block can drop/recreate the index without tripping over a constraint-backed index on the fresh-schema path.
 4. `deleted_at TIMESTAMPTZ NULL` — soft-delete for GDPR and moderation removals; `is_active` remains in place but `deleted_at` takes precedence for visibility filters.
 
 ### Backfill (one-shot, idempotent)
 
-For every `directory_profiles` row where `claimed_by_user_id IS NULL AND unclaimed_handle IS NULL`, assign `unclaimed_handle = 'community-' || encode(gen_random_bytes(3), 'hex')`. Retry on UNIQUE collision. Establishes consistent `@handle` URLs on day one.
+For every `directory_profiles` row where `claimed_by_user_id IS NULL AND unclaimed_handle IS NULL`, assign `unclaimed_handle = 'community-' || encode(gen_random_bytes(3), 'hex')`. Retry on case-insensitive unique-index collision. Establishes consistent `@handle` URLs on day one.
 
 ## Security, Privacy, and Compliance Controls
 

@@ -79,11 +79,32 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
+  packages/education:
+    dependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      react:
+        specifier: 19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: 19.2.5
+        version: 19.2.5(react@19.2.5)
+      react-markdown:
+        specifier: ^9.1.0
+        version: 9.1.0(@types/react@19.2.14)(react@19.2.5)
+
   packages/eol:
     dependencies:
-      '@ctf/plugin-education':
+      '@ctf/education':
         specifier: workspace:*
-        version: link:../plugin-education
+        version: link:../education
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14
@@ -160,27 +181,6 @@ importers:
       hermes-compiler:
         specifier: ^250829098.0.2
         version: 250829098.0.2
-
-  packages/plugin-education:
-    dependencies:
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      gray-matter:
-        specifier: ^4.0.3
-        version: 4.0.3
-      react:
-        specifier: 19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: 19.2.5
-        version: 19.2.5(react@19.2.5)
-      react-markdown:
-        specifier: ^9.1.0
-        version: 9.1.0(@types/react@19.2.14)(react@19.2.5)
 
   packages/pm-mcp-server:
     dependencies:
