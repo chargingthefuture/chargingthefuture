@@ -1,4 +1,4 @@
-// Educational content schema for plugin modules
+// Educational content types for plugin modules
 export interface EducationSection {
   title: string;
   body: string; // markdown
