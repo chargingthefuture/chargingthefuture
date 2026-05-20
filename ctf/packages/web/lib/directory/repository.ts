@@ -37,12 +37,14 @@ type DirectoryProfileRow = {
   source?: 'admin' | 'self' | 'community-generated' | null;
   invited_by_username?: string | null;
   unclaimed_handle?: string | null;
+  // Optional on the row type so SELECTs that don't pull the payment columns
+  // still typecheck; mapProfileRow defaults each to null.
+  venmo_address?: string | null;
+  monero_address?: string | null;
+  bitcoin_address?: string | null;
+  service_credits_address?: string | null;
   created_at: Date;
   updated_at: Date;
-    venmo_address: string | null;
-    monero_address: string | null;
-    bitcoin_address: string | null;
-    service_credits_address: string | null;
 };
 
 type DirectorySkillRow = {
@@ -145,10 +147,10 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     unclaimedHandle: row.unclaimed_handle ?? null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
-      venmoAddress: row.venmo_address,
-      moneroAddress: row.monero_address,
-      bitcoinAddress: row.bitcoin_address,
-      serviceCreditsAddress: row.service_credits_address,
+    venmoAddress: row.venmo_address ?? null,
+    moneroAddress: row.monero_address ?? null,
+    bitcoinAddress: row.bitcoin_address ?? null,
+    serviceCreditsAddress: row.service_credits_address ?? null,
   };
 }
 
@@ -277,6 +279,9 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
         p.job_title_id,
         jt.name AS job_title_name,
         p.is_active,
+        p.source,
+        p.invited_by_username,
+        p.unclaimed_handle,
         p.created_at,
         p.updated_at
       FROM directory_profiles p
@@ -339,9 +344,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
       const inserted = await client.query<{ id: string }>(
         `
           INSERT INTO directory_profiles
-            (claimed_by_user_id, display_name, headline, bio, profile_url, sector_id, job_title_id, is_active)
+            (claimed_by_user_id, display_name, headline, bio, profile_url, sector_id, job_title_id, is_active, source)
           VALUES
-            ($1, $2, $3, $4, $5, $6::uuid, $7::uuid, true)
+            ($1, $2, $3, $4, $5, $6::uuid, $7::uuid, true, 'self')
           RETURNING id
         `,
         [userId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
@@ -394,6 +399,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.created_at,
           p.updated_at
         FROM directory_profiles p

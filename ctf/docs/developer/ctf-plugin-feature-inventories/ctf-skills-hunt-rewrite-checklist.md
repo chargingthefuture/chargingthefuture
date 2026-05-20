@@ -139,7 +139,7 @@
 - [x] Verify authz/deny conditions and audit integrity on existing endpoints.
 - [x] **Wave 2 — soft-delete + GDPR endpoint:**
   - [x] `deleted_at` columns already landed in Phase 1 (`f3aeb3f`); user-visible reads (`listSubmissions` and `rebuildLeaderboard` individual + team aggregates, all-time) now filter `AND deleted_at IS NULL`.
-  - [x] `DELETE /api/account/skills-hunt-profile` GDPR erasure — soft-deletes every submission authored by the caller; emits audit log entry; rebuilt leaderboards automatically skip the deleted rows on the next review.
+  - [x] `DELETE /api/account/skills-hunt-profile` GDPR erasure — soft-deletes every submission authored by the caller; emits audit log entry; the delete runs in one transaction that immediately rebuilds affected leaderboards and recomputes mission progress, so the deleted rows drop out of standings and mission counts right away (not on the next review).
   - [x] Audit-log retention preserved (`skills_hunt_audit_log` is not soft-deleted; the delete endpoint *writes* an audit row with `skills-hunt.profile.delete`).
 - [x] **Wave 2 — moderation report flow:** `lib/skills-hunt/moderation.ts` (createReport, listOpenReports, resolveReport).
   - [x] `POST /api/skills-hunt/submissions/{id}/report` (auth required, CSRF, reason CHECK enforced).

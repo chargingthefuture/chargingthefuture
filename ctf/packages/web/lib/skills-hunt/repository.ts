@@ -75,9 +75,7 @@ import {
   SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE,
   SKILLS_HUNT_REJECTION_GUARD_THRESHOLD,
   SKILLS_HUNT_REPUTATION,
-  SKILLS_HUNT_SCORE_WEIGHTS,
   SKILLS_HUNT_SCORE_WEIGHTS_SPEC,
-  SKILLS_HUNT_SUBMISSION_LIMIT_7D,
 } from './constants';
 import type {
   SkillsHuntAchievement,
@@ -787,6 +785,7 @@ async function awardNamedBadges(
       FROM skills_hunt_submissions
       WHERE submitter_user_id = $1
         AND status = 'accepted'
+        AND deleted_at IS NULL
         AND COALESCE((score_breakdown ->> 'rareSkillBonus')::int, 0) > 0
     `,
     [userId],
@@ -810,6 +809,7 @@ async function awardNamedBadges(
         FROM skills_hunt_submissions
         WHERE submitter_user_id = $1
           AND status = 'accepted'
+          AND deleted_at IS NULL
           AND jsonb_typeof(claimed_professions) = 'array'
       ) p
     `,
@@ -833,6 +833,7 @@ async function awardNamedBadges(
         COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
       FROM skills_hunt_submissions
       WHERE submitter_user_id = $1
+        AND deleted_at IS NULL
     `,
     [userId],
   );
@@ -890,7 +891,7 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
           submitter_user_id,
           (COUNT(*) * $2)::text AS pending_points
         FROM skills_hunt_submissions
-        WHERE round_id = $1::uuid AND status = 'pending'
+        WHERE round_id = $1::uuid AND status = 'pending' AND deleted_at IS NULL
         GROUP BY submitter_user_id
       ),
       activity AS (
@@ -902,7 +903,7 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
           submitter_user_id,
           MIN(created_at) AS last_submission_at
         FROM skills_hunt_submissions
-        WHERE round_id = $1::uuid
+        WHERE round_id = $1::uuid AND deleted_at IS NULL
         GROUP BY submitter_user_id
       )
       SELECT
@@ -1014,7 +1015,7 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
 // can promote/dampen rewards mid-program without code change.
 // Explicit number-typed shape (not `typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC`)
 // because the spec object is `as const` and its literal types would reject
-// per-round overrides from scoring_config.
+// per-round overrides stored on the round.
 type ResolvedScoreWeights = {
   -readonly [K in keyof typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC]: number;
 };
@@ -1546,6 +1547,9 @@ export async function listSubmissions(
       review_notes,
       reviewed_by_user_id,
       reviewed_at,
+      edit_history,
+      edited_at,
+      deleted_at,
       directory_profile_generated_at,
       created_at,
       updated_at
@@ -1690,6 +1694,9 @@ export async function reviewSubmission(
           review_notes,
           reviewed_by_user_id,
           reviewed_at,
+          edit_history,
+          edited_at,
+          deleted_at,
           directory_profile_generated_at,
           created_at,
           updated_at
@@ -1720,7 +1727,12 @@ export async function reviewSubmission(
     }
 
     if (status === 'accepted') {
-      await emitSubmissionAccepted(client, existing.submitter_user_id, submissionId, pointsAwarded);
+      // Only fan out the acceptance notification on an actual transition into
+      // `accepted` — re-reviewing an already-accepted submission (accept/edit)
+      // must not spam duplicate inbox entries for the same submission.
+      if (existing.status !== 'accepted') {
+        await emitSubmissionAccepted(client, existing.submitter_user_id, submissionId, pointsAwarded);
+      }
 
       await awardNamedBadges(client, existing.submitter_user_id, existing.round_id, scoreBreakdown);
 
@@ -1924,7 +1936,7 @@ export async function listAllTimeLeaderboard(
 export async function listAchievements(userId: string): Promise<SkillsHuntAchievement[]> {
   const result = await queryDb<SkillsHuntAchievementRow>(
     `
-      SELECT id, user_id, code, title, description, metadata, awarded_at
+      SELECT id, user_id, code, title, description, round_id, metadata, archived_at, awarded_at
       FROM skills_hunt_achievements
       WHERE user_id = $1
       ORDER BY awarded_at DESC
