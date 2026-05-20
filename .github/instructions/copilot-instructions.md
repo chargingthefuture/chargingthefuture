@@ -10,6 +10,25 @@
 - Use this portable shell pattern when needed:
   - `if command -v rg >/dev/null 2>&1; then rg -n "pattern" path; else grep -RIn "pattern" path; fi`
 
+## Task Planning — No Phases (Critical)
+
+Do **not** organize work into "phases." No "Phase 0 / Phase 1 / Phase 2", no "Phase F", no
+phased-rollout buckets — anywhere: plans, inventories, checklists, design artifacts, mockups, code
+comments, PR descriptions, or commit messages. Phases confuse humans and agents and have been
+hard-coded into design mockups by mistake.
+
+Instead, when given an objective, break it into discrete tasks and **list them one after another in
+the order they must happen**. Where order matters, state it as an explicit blocking dependency, not a
+phase:
+
+- ✅ "Task B is blocked by Task A — do A first."
+- ✅ A flat, ordered, numbered task list (1, 2, 3 …) where each item may name what it depends on.
+- ❌ "Phase 1: …", "Phase 2: …", "do this in a later phase."
+
+A task with no dependency can be done at any time or in parallel; say so plainly ("no dependencies;
+can run anytime"). Reserve the word "phase" only for fixed product-maturity terms already in the
+rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
+
 # Product Rules Index
 
 ## Scope
@@ -186,7 +205,7 @@ When making code changes, consult this table to identify which inventory section
 | **Modify column constraints/type** | `ctf/schema.sql` | Data Model and Storage Contracts | Update column definition; document breaking changes and migration impact |
 | **Add/modify seed script** | `ctf/scripts/seed{PluginName}Phase0.mjs` | Seed Coverage Status | Update what data is seeded; note any new columns/tables; document deterministic UUIDs |
 | **Add mobile feature** | `ctf/packages/mobile/src/features/{plugin}/**` | Web and Android Delivery Status; Mobile Parity Contracts | Update delivery status; create/update `ctf/config/plugin-parity-contracts.json` entry; update milestone dates |
-| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; Target User Features | Move feature to changelog section; update phase/milestone dates; document deprecation reason |
+| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; Target User Features | Move feature to changelog section; update milestone dates; document deprecation reason |
 | **Create entirely new plugin** | Full stack (see below) | All sections | See new plugin checklist below |
 
 ### New Plugin Lifecycle Checklist
@@ -195,7 +214,7 @@ When creating a new plugin from scratch, ALL of the following must be completed 
 
 1. **Inventory Files**
    - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all 10 required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Risks & Known Technical Debt)
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-rewrite-checklist.md` with implementation phases
+   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-rewrite-checklist.md` as an ordered, dependency-based task list (no phases)
 
 2. **Schema & Migrations**
    - Add all plugin tables to `ctf/schema.sql` using `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` pattern

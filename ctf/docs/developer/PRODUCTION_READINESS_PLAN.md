@@ -50,19 +50,33 @@ Every plugin passes the same gates, run by one agent on an isolated worktree, th
 6. **Inventory sync** — update "Web and Android Delivery Status" + parity contract per CLAUDE.md drift policy.
 7. **Deploy increment** — merge to branch; Render auto-deploys the wave.
 
-## Execution waves (dependency order)
+## Execution order (ordered task list, dependency-annotated)
 
-Per `ctf-plugin-implementation-order.md`. Agents run one plugin each on isolated worktrees;
-shared files (`schema.sql`, `plugin-parity-contracts.json`, `repository.ts`) are reconciled by the
-orchestrator at merge to avoid clobbering.
+No phases. This is a flat, ordered list; each item names what blocks it. Items with "no dependency"
+can run anytime / in parallel. Agents run one plugin each on isolated worktrees; shared files
+(`schema.sql`, `plugin-parity-contracts.json`, `repository.ts`) are reconciled by the orchestrator
+at merge to avoid clobbering. Every plugin's **UI (web + android) is blocked by its design landing
+in the `design/` submodule** — build backend now, circle back for UI.
 
-- **Phase F — Foundation (this session):** green build baseline + Render infra merged + reference plugin.
-- **Phase 0 — Core primitives:** chyme, skills-taxonomy, directory, feed+announcements.
-- **Phase 1 — Direct dependents:** workforce, skills-hunt, foundation.
-- **Phase 2 — Independent surfaces:** lighthouse, socketrelay, trusttransport, peer-programming, mood, gentlepulse, weekly-performance.
-- **Phase 3 — Finance/reporting:** gdp, service-credits.
-- **Phase 4 — remaining + design-pending:** levelup, trust, then backend-now/UI-later for
-  clicklog, unlock, community, skills-taxonomy, weekly-performance (UI circles back per design pass).
+1. **Foundation** — green build baseline + Render infra merged. No dependency. *(done)*
+2. **skills-taxonomy** backend — no dependency. Authoritative for sectors/job-titles/skills; **blocks** directory & workforce.
+3. **directory** backend — blocked by #2 (consumes taxonomy). Upstream authority; **blocks** workforce, skills-hunt, foundation.
+4. **chyme** backend — no dependency.
+5. **feed + announcements** backend — no dependency (coupled to each other; build together).
+6. **workforce** backend — blocked by #2 and #3.
+7. **skills-hunt** backend — blocked by #3 (generates unclaimed Directory profiles).
+8. **foundation** backend — blocked by #3 (reads Directory projections, read-only boundary).
+9. **lighthouse** backend — no dependency.
+10. **socketrelay** backend — no dependency.
+11. **trusttransport** backend — no dependency.
+12. **peer-programming** backend — no dependency.
+13. **mood** backend — no dependency.
+14. **gentlepulse** backend — no dependency.
+15. **weekly-performance** backend — no dependency.
+16. **gdp** backend — best done after upstream metric/event semantics settle (#6–#14).
+17. **service-credits** backend — blocked by #16 (GDP accounting/reclaim coupling).
+18. **levelup**, **trust**, **clicklog**, **unlock**, **community** backend — no dependency.
+19. **UI circle-back** (per plugin) — blocked by that plugin's design landing in `design/`. Implement web pixel-perfect + android parity once the design agent finishes it.
 
 ## Progress checklist
 
@@ -111,7 +125,7 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
 ## How a future session / agent picks up work
 
 1. `git -C design fetch && git submodule update --init design` (designs are the only UI source of truth).
-2. Pick the next ⬜ plugin in the lowest open phase.
+2. Pick the next ⬜ plugin in the ordered list above whose dependencies are met.
 3. Run the 7-gate pipeline above on an isolated worktree.
 4. Update this checklist + the plugin inventory's Delivery Status in the same commit.
 5. Merge to `claude/production-readiness-plan-op4lA`; let Render deploy the increment.
