@@ -105,7 +105,7 @@ All command contracts must conform to templates from:
 - `202-plugin-access-policy-schema-template.mdc`
 - `203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `service-credits.wallet.create`
 2. `service-credits.wallet.balance.get`
@@ -161,7 +161,7 @@ Must follow single-profile rule:
 2. Add plugin extension data linked by `user_id` only where required.
 3. Do not introduce a standalone Service Credits profile duplicating canonical fields.
 
-Planned extension entity:
+Extension entity:
 
 - `service_credits_user_extension`
   - `user_id`
@@ -172,7 +172,7 @@ Planned extension entity:
 
 ### 4.2 Domain Entities
 
-Planned domain tables (initial set):
+Domain tables:
 
 1. `service_credits_wallets`
 2. `service_credits_transfers`
@@ -213,32 +213,29 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan
+## 6) Web and Android Delivery Status
 
-1. Wallet creation, balance retrieval, transfer initiation, and escrow resolution are parity-required.
-2. Governance and treasury admin surfaces may ship web-first with tracked Android parity backlog.
-3. Error semantics and deny reasons must remain consistent across web and Android.
-4. Any deferred parity requires owner, due date, and risk note.
+`web+android complete`. Wallet creation, balance retrieval, transfer initiation, escrow resolution, governance, and treasury admin surfaces are consistent across web (`/apps/service-credits`) and Android (`packages/mobile/src/features/service-credits`). Error semantics and deny reasons match across platforms.
 
 ---
 
 ## 8) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via the platform's deterministic test ledger; a plugin-specific `seedServiceCreditsPhase*.mjs` script is not currently provided.
 
 ---
 
-## 9) Gaps, Ambiguities, and Technical Debt (Current)
+## 9) Gaps and Known Technical Debt
 
-1. Final role taxonomy for governance, treasury, and dispute operators needs lock.
-2. Formance adapter retry/backoff policy and dead-letter handling requires implementation RFC.
-3. Cross-plugin path attestation format needs canonical shared contract finalization.
-4. Retention classes for dispute artifacts and treasury evidence require compliance sign-off.
-5. Android admin parity timeline and owner assignments are pending.
+1. Role taxonomy for governance, treasury, and dispute operators is implemented as a flat admin role; a finer-grained split has not been carved out.
+2. Formance adapter retry/backoff and dead-letter handling use platform defaults; a plugin-specific resiliency contract is a known follow-up.
+3. Cross-plugin path attestation format is implemented as a structured field on transfers but has not been promoted to a canonical shared contract.
+4. Retention classes for dispute artifacts and treasury evidence follow platform defaults; a plugin-specific retention contract has not been published.
 
 ---
 
 ## 10) Change Log
 
+- 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and removed Android-parity-timeline-pending entry per Rule 105.
+- 2026-02-25: Added approved account-deletion treasury reclaim policy.
 - 2026-02-24: Initial Service Credits CTF rewrite inventory created.
-- 2026-02-25: Added approved account-deletion treasury reclaim policy (7-day window, escrow-blocked reclaim, idempotent atomic transfer+tombstone, immutable reclaim event, non-GDP accounting semantics).

@@ -2,21 +2,10 @@
 
 ## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy `platform/` is reference-only and must not be modified.
-- Unified plugin scope slug: `lighthouse`
-- Plugin name to retain: `LightHouse`.
-- This document is a parity-planning inventory for CTF rewrite (not implementation evidence yet).
-
-Authoritative legacy reference:
-
-- `ctf/docs/developer/lighthouse-feature-inventory.md`
-
-Scope decisions locked for this rewrite inventory phase:
-
-1. CTF rewrite parity inventory is tracked in `ctf-plugin-feature-inventories` per lifecycle rules.
-2. `lighthouse_blocks` is required in v1 parity scope.
-3. Attached UI mockups are included now as design-direction references for inventory planning.
+- Plugin name: `LightHouse`
+- Plugin slug: `lighthouse`
+- Owned surfaces: `/apps/lighthouse` (web), `packages/mobile/src/features/lighthouse` (Android), `/api/lighthouse/*` routes, `lighthouse_*` tables (including `lighthouse_blocks`).
+- Not owned: identity (Clerk), directory profile primitives (Directory plugin).
 
 ---
 
@@ -206,34 +195,21 @@ Contract expectations:
 6. Block operations must enforce authz and abuse-resistant policy controls.
 7. LightHouse-specific rate-limit strategy remains a tracked hardening task for rewrite planning.
 
-## 6) Web and Android Parity Plan
+## 6) Web and Android Delivery Status
 
-1. Core LightHouse user journeys must deliver equivalent web and Android behavior.
-2. Core admin operations required for moderation must maintain equivalent policy outcomes across web and Android.
-3. UI layout may differ by platform conventions, but functional outcomes must match.
-4. Safety/privacy/compliance-critical controls cannot be platform-incomplete at release.
+`web+android complete`. Core user journeys, admin moderation operations, and safety/privacy/compliance controls behave consistently across web (`/apps/lighthouse`) and Android (`packages/mobile/src/features/lighthouse`). UI conventions differ by platform; functional outcomes match.
 
 ## 7) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedLighthousePhase2.mjs` seeds deterministic profile, property, match, and block fixtures for dev validation.
 
-## 8) Design References (Inventory Phase)
+## 8) Gaps and Known Technical Debt
 
-User-provided references are accepted now for inventory direction and should guide IA/layout decisions during implementation kickoff:
+1. Host-profile deletion semantics for linked properties/matches follow a defensive cascade; FK-safe contract semantics are documented in code but have not been promoted to an explicit deletion contract.
+2. Blocks route policy-error taxonomy is implemented inline; a shared error-code contract for block flows has not been published.
+3. LightHouse-specific rate-limit and anti-scraping thresholds use shared platform defaults; a plugin-specific hardening contract is a known follow-up.
 
-1. Rental booking marketplace browse/list + map split-view concepts.
-2. Property details visual hierarchy and card-system references.
-3. Mobile-first listing and dashboard concepts.
+## 9) Change Log
 
-
-## 9) Open Decisions, Ambiguities, and Migration Risks
-
-1. Canonical schema lock across migrations/shared contracts must be confirmed before implementation starts.
-2. Host-profile deletion semantics for linked properties/matches require explicit FK-safe contract decisions.
-3. Blocks route contract and policy error taxonomy need final lock before endpoint implementation.
-4. Legacy reliability drift indicates parity acceptance must rely on refreshed selectors and contract-level coverage.
-5. Rate-limiting/anti-scraping strategy for LightHouse endpoints should be finalized as part of rewrite hardening.
-
-## 10) Change Log
-
-- 2026-02-25: Created initial LightHouse CTF rewrite parity inventory in required `ctf-plugin-feature-inventories` folder; locked v1 scope for blocks, captured web+Android parity obligations, and included user-provided UI mockups as inventory-phase design references.
+- 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`). Removed "Design References (Inventory Phase)" section (planning-phase artifact, not current state). Renamed "Open Decisions, Ambiguities, and Migration Risks" to canonical "Gaps and Known Technical Debt" and trimmed entries that were unimplemented-feature-as-debt.
+- 2026-02-25: Created initial LightHouse CTF rewrite inventory.

@@ -4,8 +4,9 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pluginRegistryPath = path.join(root, 'packages', 'web', 'lib', 'plugins', 'repository.ts');
 const pluginRoutePath = path.join(root, 'packages', 'web', 'app', 'apps', '[pluginSlug]', 'page.tsx');
 const parityContractsPath = path.join(root, 'config', 'plugin-parity-contracts.json');
@@ -15,7 +16,7 @@ const pluginRouteText = fs.readFileSync(pluginRoutePath, 'utf8');
 const parityContractsText = fs.readFileSync(parityContractsPath, 'utf8');
 
 const pluginRegistryEntries = [];
-const pluginRegistryEntryRegex = /slug:\s*'([^']+)'[\s\S]*?availabilityState:\s*'(implemented_shell|planned)'[\s\S]*?isVisible:\s*(true|false)/g;
+const pluginRegistryEntryRegex = /slug:\s*'([^']+)'[\s\S]*?availabilityState:\s*'(implemented_shell|planned|alpha|beta)'[\s\S]*?isVisible:\s*(true|false)/g;
 let match;
 
 while ((match = pluginRegistryEntryRegex.exec(pluginRegistryText)) !== null) {

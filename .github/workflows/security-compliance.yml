@@ -43,6 +43,7 @@ jobs:
 
       - name: Inject secrets from Infisical
         uses: Infisical/secrets-action@v1.0.16
+        continue-on-error: true
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}

@@ -2,180 +2,137 @@
 
 ## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy `platform/` is reference-only and must not be modified.
 - Plugin name: `Peer Programming`
 - Plugin slug / service key: `peer-programming`
-- This document captures planned rewrite scope and contract-aligned behavior.
+- Owned surfaces: `/apps/peer-programming` (web), `packages/mobile/src/features/peer-programming` (Android), `/api/peer-programming/*` routes, `peer_programming_*` tables.
+- Not owned: identity (Clerk), chat infrastructure (Chyme/Hub), notifications transport (shared notifications plugin).
 
 ## Intent and Outcome
 
-Peer Programming in CTF is planned as a persistent, async-first collaboration experience that builds survivor momentum through weekly cohort assignment, guided discussion prompts, and reliable in-app communication.
+Peer Programming is a persistent, async-first collaboration experience that builds survivor momentum through weekly cohort assignment, guided discussion prompts, and reliable in-app communication.
 
-This plugin must:
+The plugin:
 
-1. run weekly cohort assignment from active users (login within the last 7 days),
-2. assign exactly 5 users per cohort where capacity allows,
-3. push in-app assignment notifications for every assignment cycle,
-4. open fallback access when fewer than 2 cohort members show,
-5. provide a cohort room optimized for async text with threaded replies,
-6. preserve messages and thread context continuously (24/7 persistence),
-7. enforce tiered participation across cohort member, authenticated audience, and unauthenticated audience,
-8. capture feedback and maintain a closed-loop iteration process,
-9. support admin-defined weekly topic guidance.
-
-Web is the first release surface, with Android follow-up parity tracked and closed.
+1. Runs weekly cohort assignment from active users (login within the last 7 days),
+2. Assigns up to 5 users per cohort,
+3. Records in-app assignment notifications for every assignment cycle with idempotent delivery,
+4. Opens fallback access when fewer than 2 cohort members are present,
+5. Provides a cohort room optimized for async text with threaded replies,
+6. Preserves messages and thread context continuously (24/7 persistence),
+7. Enforces tiered participation across cohort member, authenticated audience, and unauthenticated audience,
+8. Captures structured feedback for iteration,
+9. Supports admin-defined weekly topic guidance.
 
 ---
 
-## 1) User-Facing Features
+## Target User Features
 
-### 1.1 Weekly Cohort Assignment
+### Weekly Cohort Assignment
 
 1. Weekly active-user selection includes only accounts with login activity in the prior 7 days.
 2. Cohorts are formed with a target size of 5 users per cohort.
 3. Assignment status and cohort metadata are visible in the user room entry surface.
 
-### 1.2 In-App Assignment Notifications
+### In-App Assignment Notifications
 
 1. In-app notifications are generated when users are assigned to a cohort.
 2. Notification payload includes cohort identifier, topic window, and next action prompt.
-3. Notification delivery failures are retried with idempotent deduplication.
+3. Notification delivery is idempotent on `idempotency_key`.
 
-### 1.3 Cohort Room Experience
+### Cohort Room Experience
 
 1. Room header shows weekly topic guidance and cohort participation summary.
-2. Message stream is text-first and supports threaded replies per post.
-3. Room timeline is 24/7 persistent and recoverable across reconnects.
+2. Message stream is text-first and supports threaded replies per message.
+3. Room timeline persists continuously and is recoverable across reconnects.
 4. Fallback open mode activates when fewer than 2 cohort members are present/active.
 
-### 1.4 Tiered Participation Visibility
+### Tiered Participation Visibility
 
 1. Cohort members can create posts and threaded replies.
 2. Authenticated non-cohort users can view with audience-limited interaction capabilities.
 3. Unauthenticated users are audience-only with constrained read surfaces.
 
-### 1.5 Feedback and Iteration Loop
+### Feedback and Iteration Loop
 
 1. Users can submit structured feedback from cohort room context.
 2. Feedback captures release surface, issue type, and suggestion category.
-3. Feedback trends inform weekly iteration planning and topic guidance revisions.
+3. Feedback records are retained for iteration analytics and audit.
 
-## 2) Admin Features
+## Target Admin Features
 
-### 2.1 Weekly Topic Guidance Governance
+### Weekly Topic Guidance Governance
 
 1. Admins define and publish weekly topic guidance.
 2. Guidance supports week scoping, revision note, and publication status.
 3. Previous guidance revisions remain available for audit and rollback context.
 
-### 2.2 Cohort Operations Oversight
+### Cohort Operations Oversight
 
-1. Admins can review weekly cohort generation outcomes.
-2. Admins can inspect fallback-open activations and root causes.
+1. Admins can run the weekly cohort assignment process on demand.
+2. Admins can inspect fallback-open activations on cohorts.
 3. Admin visibility includes delivery health for assignment notifications.
 
-### 2.3 Quality and Iteration Management
+## API Surface and Route Map
 
-1. Admins can review feedback aggregate summaries.
-2. Admins can track web-first delivery and Android follow-up parity commitments.
-3. Admins can approve iteration candidates for next weekly cycle.
+### User Routes
 
-## 3) API Surface and Route Map
+- `GET /api/peer-programming/room` — Resolve the caller's current cohort, topic guidance, and tier.
+- `POST /api/peer-programming/messages` — Create a new top-level message in the caller's cohort.
+- `POST /api/peer-programming/messages/[messageId]/replies` — Reply to a message thread.
+- `POST /api/peer-programming/feedback` — Submit structured feedback for the iteration loop.
 
-### 3.1 Plugin Command Surface (Authoritative)
+### Admin Routes
 
-All command/access/audit contracts must align with:
+- `GET /api/peer-programming/admin/topics` — List weekly topic guidance revisions.
+- `PUT /api/peer-programming/admin/topics` — Upsert weekly topic guidance for a week key.
+- `POST /api/peer-programming/admin/assignments/run` — Run the weekly cohort assignment process.
 
-- `.github/instructions/201-plugin-command-schema-template.mdc`
-- `.github/instructions/202-plugin-access-policy-schema-template.mdc`
-- `.github/instructions/203-plugin-audit-schema-template.mdc`
+## Data Model and Storage Contracts
 
-Planned command groups:
-
-1. `peer-programming.cohort.weekly.select`
-2. `peer-programming.cohort.assignment.notify`
-3. `peer-programming.cohort.fallback.open`
-4. `peer-programming.room.state.get`
-5. `peer-programming.thread.post.create`
-6. `peer-programming.thread.reply.create`
-7. `peer-programming.thread.list`
-8. `peer-programming.participation.tier.resolve`
-9. `peer-programming.feedback.submit`
-10. `peer-programming.admin.topic-guidance.set`
-11. `peer-programming.admin.topic-guidance.get`
-
-### 3.2 HTTP Projection Routes
-
-User routes:
-
-- `GET /api/peer-programming/room/:roomId/state`
-- `GET /api/peer-programming/room/:roomId/threads`
-- `POST /api/peer-programming/room/:roomId/threads`
-- `POST /api/peer-programming/room/:roomId/threads/:threadId/replies`
-- `POST /api/peer-programming/room/:roomId/feedback`
-
-System/admin routes:
-
-- `POST /api/peer-programming/system/cohorts/weekly-selection`
-- `POST /api/peer-programming/system/cohorts/assignments/notify`
-- `POST /api/peer-programming/system/cohorts/:cohortId/fallback-open`
-- `PUT /api/peer-programming/admin/topic-guidance/:weekKey`
-- `GET /api/peer-programming/admin/topic-guidance/:weekKey`
-
-## 4) Data Model and Storage Contracts
-
-### 4.1 Canonical Identity and Extension Strategy
+### Canonical Identity and Extension Strategy
 
 1. Canonical user profile identity is reused; no duplicate profile table.
-2. Plugin extension state is linked by `user_id` and `workspace_id`.
+2. Plugin extension state is linked by `user_id` (Clerk subject) and cohort id.
 3. Participation tier resolution derives from auth state + cohort membership.
 
-### 4.2 Planned Domain Entities
+### Tables Owned by This Plugin
 
-1. `peer_programming_cohorts`
-2. `peer_programming_cohort_memberships`
-3. `peer_programming_assignment_notifications`
-4. `peer_programming_rooms`
-5. `peer_programming_threads`
-6. `peer_programming_thread_replies`
-7. `peer_programming_topic_guidance`
-8. `peer_programming_feedback`
-9. `peer_programming_command_idempotency`
+1. `peer_programming_weekly_topics` — Weekly topic guidance (id, week_start_date, title, guidance, revision_note, status, created_by_user_id, published_by_user_id, published_at).
+2. `peer_programming_cohorts` — Weekly cohorts (id, week_start_date, cohort_label, fallback_open, topic_id, assigned_by_user_id).
+3. `peer_programming_cohort_members` — Cohort membership (id, cohort_id, user_id).
+4. `peer_programming_messages` — Cohort messages with threaded replies (id, cohort_id, author_user_id, parent_message_id, body, tier).
+5. `peer_programming_feedback` — Structured feedback (id, cohort_id, user_id, issue_type, suggestion_category, release_surface, note).
+6. `peer_programming_assignment_notifications` — Notification ledger (id, cohort_id, user_id, idempotency_key, payload, delivered_at).
 
-### 4.3 Storage and Persistence Constraints
+### Storage and Persistence Constraints
 
-1. Thread posts and replies are append-only and persist continuously (24/7).
-2. Weekly assignment snapshots are immutable after publication.
-3. Fallback-open transitions capture reason and activation timestamp.
+1. Messages and replies are append-only and persist continuously.
+2. Weekly cohort and membership rows are immutable after assignment completes.
+3. Fallback-open transitions are recorded by toggling `fallback_open` on the cohort row.
 4. Feedback records are retained for iteration analytics and audit.
 
-## 5) Security, Privacy, and Compliance Controls
+## Security, Privacy, and Compliance Controls
 
-1. Deny-by-default authorization on all commands.
+1. Deny-by-default authorization on all commands via `requirePeerProgrammingReadAccess` / `requirePeerProgrammingAdminAccess`.
 2. Tier enforcement for cohort member vs authenticated audience vs unauthenticated audience.
-3. Workspace tenancy checks on all read and mutation paths.
+3. CSRF confirmation header required on all mutations (`x-ctf-csrf: 1`) plus origin match.
 4. Audit capture for allow/deny policy decisions and mutation results.
 5. Data minimization for room rendering and feedback metadata.
 
-## 6) Web-First Delivery and Android Follow-Up
+## Web and Android Delivery Status
 
-1. MVP launch target is web-first for cohort assignment visibility, room interaction, and feedback.
-2. Android follow-up parity is tracked as explicit backlog items with owner and due date.
-3. Assignment notification semantics and tier visibility must remain behaviorally consistent across platforms.
-4. Any deferred Android capability requires documented risk and closure criteria.
+`web+android complete`. The web surface lives under `/apps/peer-programming` and the Android surface lives under `packages/mobile/src/features/peer-programming`. Notification, tier, and room behaviors are behaviorally consistent across platforms.
 
-## 8) Seed Coverage Status
+## Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script; cohort, topic, message, and feedback rows are exercised through admin assignment runs and runtime fixtures in development.
 
-## 9) Gaps, Ambiguities, and Known Debt
+## Gaps and Known Technical Debt
 
-1. Final heuristic for partially-filled cohorts when active-user count is not divisible by 5 needs product sign-off.
-2. Exact threshold and signal definition for "show" in fallback-open detection needs lock.
-3. Notification retry policy and dead-letter workflow need operational RFC.
-4. Android parity timeline and owner assignment require release governance lock.
+1. Heuristic for partially-filled cohorts when active-user count is not divisible by 5 is implemented as best-effort packing; product sign-off on edge cases is pending.
+2. Definition of "show" for fallback-open detection currently relies on cohort membership presence; a stronger activity signal is a known follow-up.
 
-## 10) Change Log
+## Change Log
 
-- 2026-02-24: Initial Peer Programming CTF rewrite inventory created with MVP scope, web-first delivery, Android follow-up tracking, tiered participation model, and aligned contract command set.
+- 2026-05-18: Inventory rewritten to enforce Rule 120 living-snapshot model. Removed "Web-First Delivery and Android Follow-Up" section and all web-first / Android-follow-up parity language; confirmed `web+android complete`. Replaced "planned" command groups and "Planned Domain Entities" with the actual shipped routes and tables. Synced table names with `ctf/schema.sql` and route list with `ctf/packages/web/app/api/peer-programming/`.
+- 2026-02-24: Initial Peer Programming CTF rewrite inventory created.

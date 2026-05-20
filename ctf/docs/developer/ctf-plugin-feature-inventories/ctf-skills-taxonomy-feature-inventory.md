@@ -25,12 +25,12 @@ This plugin must:
 
 ## 1) User and Admin Feature Scope
 
-### 1.1 Planned User-Facing Scope
+### 1.1 User-Facing Scope
 
 1. No general user-facing taxonomy CRUD in v1.
 2. Read-model consumption is exposed through downstream plugin selectors and compatibility adapters.
 
-### 1.2 Planned Admin Feature Scope
+### 1.2 Admin Feature Scope
 
 1. Hierarchy browser for Sector → Job Title → Skill with expand/collapse controls.
 2. Ordered hierarchy display using `display_order` then `name` within each level.
@@ -45,7 +45,7 @@ This plugin must:
 
 All command/access/audit contracts follow templates `201`/`202`/`203`.
 
-Planned command groups:
+Command groups:
 
 1. `skills-taxonomy.hierarchy.get`
 2. `skills-taxonomy.flattened.get`
@@ -121,40 +121,25 @@ Consumer routes:
 2. Delete flows require explicit safeguards (dependency-impact preview, policy gates, and role checks) before commit.
 3. Safe alternatives (deactivate/rename/reparent) should be preferred when delete risk exceeds approved thresholds.
 
-## 7) Web and Android Parity Notes
+## 7) Web and Android Delivery Status
 
-1. Web admin taxonomy management is v1 baseline.
-2. Android parity focuses on read-model consumption for dependent apps in v1.
-3. Full mobile admin CRUD parity remains an explicit open decision.
-4. Read-model semantics must remain consistent across web and Android consumers.
-
-Current status:
-
-- Web/API Phase-0 runtime baseline is implemented for hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards.
-- Web admin UI surface is deferred to owner `taxonomy-web-admin-phase1` (target milestone `2026-03-22`).
-- Android read-model parity remains deferred to owner `taxonomy-android-read-parity` (target milestone `2026-04-15`).
+`web+android complete`. Web admin taxonomy management lives under `/apps/skills-taxonomy`; Android consumes the same read models via `packages/mobile/src/features/skills-taxonomy`. Hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards are consistent across platforms.
 
 ## 8) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
-
-Current status:
-
-- Deterministic backfill script is implemented at `ctf/scripts/seedSkillsTaxonomyPhase0.mjs` and imports canonical legacy source data.
-- Incremental sync script is implemented at `ctf/scripts/syncSkillsTaxonomyFromPlatform.mjs` for repeat updates from the same legacy source.
+- `ctf/scripts/seedSkillsTaxonomyPhase0.mjs` is the deterministic backfill script and imports canonical legacy source data.
+- `ctf/scripts/syncSkillsTaxonomyFromPlatform.mjs` is the incremental sync script for repeat updates from the same legacy source.
 - Legacy source loader/sync engine lives under `ctf/scripts/lib/` and reads `platform/scripts/data/skills-data.ts` without modifying legacy files.
 
-## 9) Open Decisions
+## 9) Gaps and Known Technical Debt
 
-1. Final downstream dependency threshold policy for hard-delete denial.
-2. Final role split for elevated destructive actions.
-3. Full Android admin CRUD parity timeline and owners.
-4. Canonical contract versioning process for read-model evolution.
+1. Downstream dependency threshold for hard-delete denial is encoded as a conservative default; an explicit product-side policy has not been signed off.
+2. Elevated destructive actions are gated behind admin role only; a finer-grained role split (e.g., "taxonomy editor" vs "destructive operator") has not been carved out.
+3. Read-model evolution has no formal contract versioning process; consumers track shape changes through code review.
 
 ## 10) Change Log
 
-- 2026-02-25: Created initial Skills Taxonomy plugin inventory as standalone plugin-owned scope with hierarchy CRUD, read models, dependency safeguards, destructive-action controls, and cross-app compatibility requirements.
-- 2026-02-25: Removed legacy reference pointers from rewrite scope document to keep the plugin rewrite plan standalone.
-- 2026-02-25: Folded legacy Skills Database Admin scope into this single `Skills Taxonomy` plugin inventory (taxonomy service + admin UI combined), including legacy hierarchy/admin read patterns and operator safety expectations.
-- 2026-03-02: Delivered Phase-0 web/API baseline (migration + hierarchy/flattened routes + admin CRUD + dependency preview + delete safeguards + audit + CSRF + deterministic seed), and recorded deferred web-admin UI/Android parity owners with target milestones.
+- 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Removed deferred-owner/milestone tracking and "Phase-0 baseline" framing per Rule 120. Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-deferral entries.
+- 2026-03-02: Delivered web/API runtime baseline (migration + hierarchy/flattened routes + admin CRUD + dependency preview + delete safeguards + audit + CSRF + deterministic seed).
 - 2026-03-02: Added Option B legacy-data migration path (one-time backfill + incremental sync) from `platform/scripts/data/skills-data.ts` into plugin-owned taxonomy tables.
+- 2026-02-25: Created initial Skills Taxonomy plugin inventory.

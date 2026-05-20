@@ -15,8 +15,7 @@ Directory in CTF provides authenticated users with a deterministic profile-and-d
 
 1. Authenticated dashboard/profile experience for create, update, and delete profile operations.
 2. Directory list and profile discovery experience for authenticated users.
-3. Public profile controls (`isPublic`) and deterministic profile visibility outcomes.
-4. Public directory projection routes for unauthenticated list/detail consumption.
+3. **Directory is no longer public-facing** (2026-05-18). The `isPublic` toggle was removed; every authenticated member sees every active, non-deleted profile. There is no anonymous projection route. Legacy public URLs are not redirected — backwards compatibility is intentionally not preserved.
 5. Announcement consumption in user-visible contexts.
 6. Deterministic validation limits for description, selectors, and URL fields.
 
@@ -63,6 +62,17 @@ Implemented routes:
 3. Skills hierarchy (shared taxonomy) — Selector-backed taxonomy data.
 4. Profile policy contracts — Claimed/unclaimed state and assignment constraints.
 5. Public projection contracts — Privacy-filtered output shape for unauthenticated callers.
+
+### New columns on `directory_profiles` (Skills Hunt + Clerk username co-change, 2026-05-11)
+
+1. `source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated'))` — drives the "Community generated profile" badge in the UI.
+2. `invited_by_username TEXT NULL` — denormalized from `skills_hunt_directory_profiles.invited_by_username` so the (auth-gated) profile page renders attribution without a join.
+3. `unclaimed_handle TEXT UNIQUE NULL` — auto-generated vanity handle for unclaimed profiles. Format: `community-<6char-hex>` (no leading `@` in storage; `@` is presentation only). Cleared/ignored once `claimed_by_user_id` is set.
+4. `deleted_at TIMESTAMPTZ NULL` — soft-delete for GDPR and moderation removals; `is_active` remains in place but `deleted_at` takes precedence for visibility filters.
+
+### Backfill (one-shot, idempotent)
+
+For every `directory_profiles` row where `claimed_by_user_id IS NULL AND unclaimed_handle IS NULL`, assign `unclaimed_handle = 'community-' || encode(gen_random_bytes(3), 'hex')`. Retry on UNIQUE collision. Establishes consistent `@handle` URLs on day one.
 
 ## Security, Privacy, and Compliance Controls
 

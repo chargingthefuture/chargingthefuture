@@ -1,38 +1,38 @@
 {
-  "generatedAt": "2026-04-02T14:40:49.480Z",
+  "generatedAt": "2026-05-19T05:35:46.027Z",
   "mode": "warn",
-  "status": "ok",
+  "status": "warning",
   "notes": [],
   "budgetFile": "config/performance-budgets.json",
   "results": [
     {
       "metric": "web.jsBytes",
-      "value": 2904711,
+      "value": 3450174,
       "warningMax": 3670016,
       "blockMax": 4718592,
       "status": "ok"
     },
     {
       "metric": "web.cssBytes",
-      "value": 14169,
+      "value": 340555,
       "warningMax": 524288,
       "blockMax": 786432,
       "status": "ok"
     },
     {
       "metric": "android.totalBytes",
-      "value": 1730470,
+      "value": 13171824,
       "warningMax": 15728640,
       "blockMax": 23068672,
       "status": "ok"
     },
     {
       "metric": "android.jsBundleBytes",
-      "value": 1730320,
+      "value": 9093638,
       "warningMax": 6291456,
       "blockMax": 9437184,
-      "status": "ok"
+      "status": "warning"
     }
   ],
-  "markdown": "## Performance Budget Audit\n\n- Mode: **warn**\n- Budget file: **config/performance-budgets.json**\n\n| Metric | Value | Warning max | Block max | Status |\n|---|---:|---:|---:|---|\n| web.jsBytes | 2.77 MB | 3.50 MB | 4.50 MB | ok |\n| web.cssBytes | 0.01 MB | 0.50 MB | 0.75 MB | ok |\n| android.totalBytes | 1.65 MB | 15.00 MB | 22.00 MB | ok |\n| android.jsBundleBytes | 1.65 MB | 6.00 MB | 9.00 MB | ok |\n"
+  "markdown": "## Performance Budget Audit\n\n- Mode: **warn**\n- Budget file: **config/performance-budgets.json**\n\n| Metric | Value | Warning max | Block max | Status |\n|---|---:|---:|---:|---|\n| web.jsBytes | 3.29 MB | 3.50 MB | 4.50 MB | ok |\n| web.cssBytes | 0.32 MB | 0.50 MB | 0.75 MB | ok |\n| android.totalBytes | 12.56 MB | 15.00 MB | 22.00 MB | ok |\n| android.jsBundleBytes | 8.67 MB | 6.00 MB | 9.00 MB | warning |\n"
 }

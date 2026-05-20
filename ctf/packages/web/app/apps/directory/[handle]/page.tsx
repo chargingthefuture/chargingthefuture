@@ -1,26 +1,56 @@
 
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { getPublicDirectoryById } from 'lib/directory/repository';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { getPublicDirectoryByHandle, getPublicDirectoryById, resolveClaimedUsernameForProfile } from 'lib/directory/repository';
 import { TrustDirectoryProfilePanel } from '@/components/trust/TrustDirectoryProfilePanel';
 import type { TrustUserExtension } from 'lib/trust/types';
 
-type DirectoryProfilePageProps = {
-  params: Promise<{
-    id: string;
-  }>;
+type DirectoryHandlePageProps = {
+  params: Promise<{ handle: string }>;
 };
 
-export default async function DirectoryProfilePage({ params }: DirectoryProfilePageProps) {
-  const { id } = await params;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  const profile = await getPublicDirectoryById(id);
+export default async function DirectoryHandlePage({ params }: DirectoryHandlePageProps) {
+  const { handle: raw } = await params;
 
-  if (!profile) {
-    notFound();
+  // Two entry paths into this route:
+  //   /apps/directory/[handle]  with handle = "@maria-g" or "@community-7f3a2b"
+  //   /apps/directory/[handle]  with handle = profile UUID (legacy / dev tools)
+  //
+  // For UUIDs we keep the lookup-by-id behavior so the route is fully
+  // back-compatible while [id] is being phased out. For handles we strip the
+  // optional leading "@" so links can use either form.
+  const cleaned = raw.startsWith('@') ? raw.slice(1) : raw;
+
+  if (UUID_RE.test(cleaned)) {
+    // Resolve by UUID, then permanent-redirect (HTTP 308) to the canonical
+    // @handle URL whenever one exists — for both unclaimed profiles and
+    // claimed profiles whose owner has a Clerk username. Search engines
+    // canonicalize the new URL; legacy deep-links still work.
+    const byId = await getPublicDirectoryById(cleaned);
+    if (!byId) notFound();
+    if (byId.unclaimedHandle) {
+      permanentRedirect(`/apps/directory/@${byId.unclaimedHandle}`);
+    }
+    if (byId.claimedByUserId) {
+      const claimedUsername = await resolveClaimedUsernameForProfile(byId.id);
+      if (claimedUsername) {
+        permanentRedirect(`/apps/directory/@${claimedUsername}`);
+      }
+    }
+    // No canonical handle for this profile yet — render in place.
+    return renderProfile(byId);
   }
 
-  // TODO: Replace with real trust fetch logic (API call, etc.)
+  const profile = await getPublicDirectoryByHandle(cleaned);
+  if (!profile) notFound();
+  return renderProfile(profile);
+}
+
+function renderProfile(profile: Awaited<ReturnType<typeof getPublicDirectoryById>>) {
+  if (!profile) notFound();
+
   const trust: TrustUserExtension = {
     userId: profile.id,
     trustStatus: 'unverified',
@@ -31,23 +61,47 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
-      {/* Back link */}
       <div className="mb-6">
         <Link href="/apps/directory" className="text-sm text-blue-600 hover:underline">
           ← Back to Directory
         </Link>
       </div>
 
-      {/* Profile header */}
       <div className="rounded-lg border bg-card p-6 space-y-4">
-        {/* Trust evidence panel for Directory profile */}
         <TrustDirectoryProfilePanel trust={trust} />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{profile.displayName}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{profile.displayName}</h1>
+            {profile.source === 'community-generated' && (
+              <span
+                style={{
+                  fontSize: 11,
+                  background: '#A855F720',
+                  color: '#A855F7',
+                  border: '1px solid #A855F730',
+                  borderRadius: 8,
+                  padding: '2px 8px',
+                  fontWeight: 700,
+                }}
+              >
+                Community generated
+              </span>
+            )}
+          </div>
+          {profile.unclaimedHandle && !profile.claimedByUserId && (
+            <p className="text-xs font-mono text-muted-foreground mt-1">
+              @{profile.unclaimedHandle}
+            </p>
+          )}
           {profile.headline && <p className="text-lg text-muted-foreground mt-2">{profile.headline}</p>}
+          {profile.source === 'community-generated' && profile.invitedByUsername && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Nominated by{' '}
+              <span className="font-mono">@{profile.invitedByUsername}</span>
+            </p>
+          )}
         </div>
 
-        {/* Selectors */}
         <div className="flex flex-wrap gap-2">
           {profile.sectorName && (
             <span className="inline-block px-3 py-1 rounded-full bg-slate-100 text-sm font-medium">
@@ -61,10 +115,8 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
           )}
         </div>
 
-        {/* Bio */}
         {profile.bio && <p className="text-base leading-relaxed whitespace-pre-wrap">{profile.bio}</p>}
 
-        {/* Skills */}
         {profile.skills && profile.skills.length > 0 && (
           <div>
             <h3 className="font-medium text-sm mb-2">Skills</h3>
@@ -78,7 +130,6 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
           </div>
         )}
 
-        {/* Payment addresses */}
         <div className="border-t pt-4 space-y-2">
           <h3 className="font-medium text-sm">Payment Methods</h3>
           <div className="text-sm space-y-1">
@@ -92,7 +143,6 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
           </div>
         </div>
 
-        {/* External link */}
         {profile.profileUrl && (
           <div className="border-t pt-4">
             <a
@@ -106,9 +156,7 @@ export default async function DirectoryProfilePage({ params }: DirectoryProfileP
           </div>
         )}
 
-        {/* Metadata */}
         <div className="border-t pt-4 text-xs text-muted-foreground">
-          <p>Profile ID: {id}</p>
           <p>Updated: {new Date(profile.updatedAtIso).toLocaleDateString()}</p>
         </div>
       </div>
