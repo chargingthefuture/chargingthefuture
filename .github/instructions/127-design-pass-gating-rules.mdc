@@ -15,7 +15,7 @@ Companion rule: `126-design-mockup-implementation-rules.mdc` covers what to do *
 
 ## When Stop-For-Design Is REQUIRED
 
-An agent must halt before writing any UI code if the change introduces or materially restructures:
+**No UI surface is design-skippable.** Every rendered surface — user-facing *and* admin/internal — requires a design pass before its UI is built. An agent must halt before writing any UI code if the change introduces or materially restructures:
 
 1. A new user-facing page, route, modal, drawer, or component family.
 2. A new plugin or major plugin rewrite (per the New Plugin Lifecycle Checklist in `CLAUDE.md`).
@@ -23,23 +23,38 @@ An agent must halt before writing any UI code if the change introduces or materi
 4. A change to existing user-facing UI that materially changes layout, information architecture, or interaction model (not just copy or color).
 5. Anything visible to the 5M-survivor audience that is not a copy-only or color-only tweak.
 6. Cross-plugin UI co-changes (e.g., Skills Hunt placing a reward card on Directory's public page).
+7. **Admin-only or internal tooling that renders a UI** — even surfaces only the owner uses. There is no "internal tooling" exemption from the design gate.
 
 In any of these cases, the agent must follow the **Required Checkpoint Behavior** below.
 
-## When Stop-For-Design Is SKIPPABLE
+## Parallel Design Workflow (owner-directed, 2026-05-20)
 
-An agent may proceed end-to-end without waiting for a design pass if the change is limited to:
+Designs are produced by the Replit design agent in a separate thread, concurrently with backend
+work. The standing workflow is therefore:
+
+- Agents build **non-UI foundation now** (see below) without waiting.
+- The design agent commits mockups into the `design/` submodule in parallel.
+- When a design lands, the owner directs the agent to **circle back and implement the UI** against it.
+
+This does **not** relax the gate: UI is still never written ahead of its design. It only clarifies
+that foundation work need not block on design, and that the UI pass is a deliberate later step.
+
+## What The Gate Does Not Apply To (no UI surface)
+
+These change types contain no rendered surface, so there is no design to wait on. They are not
+"UI skips" — they simply have no UI. An agent may proceed end-to-end:
 
 1. Schema / database migration only.
 2. Library, utility, helper, or repository code with no UI surface.
-3. API routes whose only consumer is another agent, admin tooling the owner uses directly, or a server-side process.
-4. Internal admin tooling **only the owner uses**, with no risk of accidental exposure to the survivor audience.
-5. Infra, configuration, CI/CD, or devcontainer changes.
-6. Bug fixes that change behavior but not layout, copy, or interaction model.
-7. Pure refactors with no observable user-visible effect.
-8. Type, lint, or test-only changes.
+3. API routes whose only consumer is another agent or a server-side process (no rendered surface).
+4. Infra, configuration, CI/CD, or devcontainer changes.
+5. Bug fixes that change behavior but not layout, copy, or interaction model.
+6. Pure refactors with no observable user-visible effect.
+7. Type, lint, or test-only changes.
 
-When in doubt, treat the change as REQUIRED. Cost of a false stop is one round-trip. Cost of a false start is rework.
+If a change touches *any* rendered surface — including admin/internal pages — it is REQUIRED, not
+exempt. When in doubt, treat the change as REQUIRED. Cost of a false stop is one round-trip. Cost of
+a false start is rework.
 
 ## Bypass Mechanism (User-Initiated)
 
