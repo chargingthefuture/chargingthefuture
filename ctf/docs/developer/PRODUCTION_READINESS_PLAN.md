@@ -84,10 +84,10 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
-| chyme | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| skills-taxonomy | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| directory | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| feed-announcements | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| chyme | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -138,3 +138,11 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   Design agent producing remaining mockups in parallel; agents build foundation now, circle back for UI.
 - 2026-05-20: Merged PR #86 Render infra (all CI green); owner chose to keep all 6 Render services;
   removed dead `ctf/render.yaml`. Render foundation in place — deploy requires owner Render setup.
+- 2026-05-20: Banned "phases" project-wide (instructions + design agent + plan docs); converted to
+  ordered, dependency-annotated task lists.
+- 2026-05-20: Backend audit (skills-taxonomy + directory backend spec-complete; chyme seed bug fixed
+  — removed insert into non-existent `chyme_service_credits_transactions`). feed-announcements: the
+  inventory's data model names 4 tables (`feed_user_extension`, `feed_admin_audit_trail`,
+  `announcement_targets`, `announcements_user_extension`) that the code never uses — it uses
+  equivalent existing tables (`feed_item_targets`, `announcement_user_state`,
+  `announcement_membership_events`). Inventory↔code drift; awaiting owner decision on reconciliation.
