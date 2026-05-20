@@ -75,17 +75,6 @@ async function main() {
         [demoUser.userId],
       );
 
-      // Seed a service credits transaction for Chyme demo users
-      await client.query(
-        `
-          INSERT INTO chyme_service_credits_transactions
-            (from_user_id, to_user_id, amount, reason, created_at)
-          VALUES
-            ('seed-chyme-user-001', 'seed-chyme-user-002', 5, 'Seed Chyme service credits', NOW())
-          ON CONFLICT DO NOTHING
-        `
-      );
-
       await client.query(
         `
           INSERT INTO chyme_room_members (
