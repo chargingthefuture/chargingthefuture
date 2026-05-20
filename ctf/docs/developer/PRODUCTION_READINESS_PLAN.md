@@ -98,10 +98,14 @@ Cross-cutting (non-plugin): Hub/Home shell (🎨 design exists), account, auth (
 
 ## Infra / deploy status (Render, via PR #86)
 
-- [ ] Merge PR #86 Render Blueprint + Dockerfiles into this branch
-- [ ] `render.yaml` validated (web, agent-mcp, pm-mcp, infisical services)
-- [ ] Infisical → Render secret sync verified
-- [ ] First successful Render deploy of `ctf-web`
+Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
+(ctf-web, ctf-agent-mcp-server, ctf-pm-mcp-server, ctf-ollama, ctf-infisical, ctf-formance-ledger).
+
+- [x] Merge PR #86 Render Blueprint + Dockerfiles into this branch (commit `b5d8fc4`; all CI green)
+- [x] Remove dead `ctf/render.yaml` (infisical-only stub; root `render.yaml` is canonical)
+- [ ] **Owner**: connect Render to repo + apply `render.yaml` Blueprint
+- [ ] **Owner**: set 4 Infisical bootstrap secrets in Render dashboard (ctf-infisical), configure Render Sync
+- [ ] First successful Render deploy of `ctf-web` (`/api/health` green)
 - [ ] Sentry cron monitor (`workforce-incremental-sync`) green on Render
 
 ## How a future session / agent picks up work
@@ -118,3 +122,5 @@ Cross-cutting (non-plugin): Hub/Home shell (🎨 design exists), account, auth (
   (17 user-facing plugins have pixel-perfect desktop + mobile + 4-state mockups).
 - 2026-05-20: Rule 127 updated — nothing is design-skippable; no admin/internal UI exemption.
   Design agent producing remaining mockups in parallel; agents build foundation now, circle back for UI.
+- 2026-05-20: Merged PR #86 Render infra (all CI green); owner chose to keep all 6 Render services;
+  removed dead `ctf/render.yaml`. Render foundation in place — deploy requires owner Render setup.
