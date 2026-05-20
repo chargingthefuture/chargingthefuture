@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   metadata JSONB NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
+-- Chyme does not maintain its own service_credits_transactions table.
+-- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
 
 -- === peer-programming placeholder ===
