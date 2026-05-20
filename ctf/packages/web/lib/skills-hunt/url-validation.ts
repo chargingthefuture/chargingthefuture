@@ -11,22 +11,42 @@ export type UrlLivenessOutcome = {
 // when Quora rate-limits the worker or the network is briefly flaky.
 const DEAD_STATUSES = new Set<number>([404, 410]);
 
-function isPlausibleHttpUrl(value: string): boolean {
+// SSRF guard: this worker only ever pings Quora profile URLs. Restricting the
+// outbound host to the Quora apex (and its subdomains) before any fetch keeps
+// a user-supplied URL from steering the request at an internal address, even
+// if an upstream caller's allow-list is ever bypassed. Defaults are passed in
+// so the function stays the single sanitizer right before the network call.
+const DEFAULT_ALLOWED_HOST_SUFFIXES = ['quora.com'] as const;
+
+function isAllowedHost(hostname: string, allowedHostSuffixes: readonly string[]): boolean {
+  const host = hostname.toLowerCase();
+  return allowedHostSuffixes.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
+function parseAllowedHttpUrl(value: string, allowedHostSuffixes: readonly string[]): URL | null {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    if (!isAllowedHost(parsed.hostname, allowedHostSuffixes)) {
+      return null;
+    }
+    return parsed;
   } catch {
-    return false;
+    return null;
   }
 }
 
 export async function checkUrlLiveness(
   rawUrl: string,
   timeoutMs: number = SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS,
+  allowedHostSuffixes: readonly string[] = DEFAULT_ALLOWED_HOST_SUFFIXES,
 ): Promise<UrlLivenessOutcome> {
   const checkedAtIso = new Date().toISOString();
 
-  if (!isPlausibleHttpUrl(rawUrl)) {
+  const allowedUrl = parseAllowedHttpUrl(rawUrl, allowedHostSuffixes);
+  if (!allowedUrl) {
     return { result: 'invalid', status: null, checkedAtIso };
   }
 
@@ -34,9 +54,12 @@ export async function checkUrlLiveness(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(rawUrl, {
+    // redirect: 'manual' — never auto-follow a 3xx to an attacker-controlled
+    // host. A redirect still counts as live (status is in the 2xx-3xx range
+    // below), but we never issue a second request at a non-allow-listed host.
+    const response = await fetch(allowedUrl.toString(), {
       method: 'HEAD',
-      redirect: 'follow',
+      redirect: 'manual',
       signal: controller.signal,
     });
 

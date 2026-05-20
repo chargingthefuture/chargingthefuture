@@ -185,7 +185,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
               <thead>
                 <tr style={{ textAlign: "left", color: "#6B7280", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   <th style={{ padding: "8px 6px", width: 32 }}>
-                    <input type="checkbox" checked={selected.size > 0 && selected.size === submissions.length} onChange={toggleAllVisible} />
+                    <input type="checkbox" checked={selected.size > 0 && selected.size === submissions.filter(s => s.status === "pending").length} onChange={toggleAllVisible} />
                   </th>
                   <th style={{ padding: "8px 6px" }}>Submitter</th>
                   <th style={{ padding: "8px 6px" }}>Display Name</th>

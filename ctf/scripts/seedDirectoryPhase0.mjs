@@ -155,7 +155,7 @@ async function main() {
             service_deleted_at = NULL,
             updated_at = NOW()
         `,
-        [user.profileId],
+        [user.userId],
       );
     }
 

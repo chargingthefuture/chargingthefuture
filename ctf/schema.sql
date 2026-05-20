@@ -1594,7 +1594,11 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated')),
   invited_by_username TEXT,
-  unclaimed_handle TEXT UNIQUE,
+  -- No inline UNIQUE: the case-insensitive unique index below owns uniqueness.
+  -- A constraint-backed index here cannot be dropped by the DROP INDEX in the
+  -- migration block (Postgres rejects it), which would break the fresh-schema
+  -- path. See the directory_profiles_unclaimed_handle_unique DO block.
+  unclaimed_handle TEXT,
   venmo_address TEXT,
   monero_address TEXT,
   bitcoin_address TEXT,
@@ -1655,6 +1659,12 @@ BEGIN
     WHERE indexname = 'directory_profiles_unclaimed_handle_key'
       AND indexdef NOT ILIKE '%lower(unclaimed_handle)%'
   ) THEN
+    -- A legacy DB may have created this name as a UNIQUE *constraint*
+    -- (constraint-backed index), which Postgres refuses to DROP INDEX. Drop
+    -- the constraint first (cascades to its index); the DROP INDEX then mops
+    -- up any standalone index left by an earlier migration run.
+    ALTER TABLE directory_profiles
+      DROP CONSTRAINT IF EXISTS directory_profiles_unclaimed_handle_key;
     EXECUTE 'DROP INDEX IF EXISTS directory_profiles_unclaimed_handle_key';
   END IF;
   IF NOT EXISTS (
