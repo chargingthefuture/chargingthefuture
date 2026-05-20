@@ -114,6 +114,12 @@
       "mobileFeatureDirs": ["clicklog"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
+    },
+    {
+      "slug": "trust",
+      "mobileFeatureDirs": ["trust"],
+      "requiresMobileSurface": true,
+      "requiresExplicitWebShell": false
     }
   ]
 }

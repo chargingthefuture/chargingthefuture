@@ -179,6 +179,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 180,
     isVisible: true,
   },
+  {
+    slug: 'trust',
+    name: 'Trust',
+    summary: 'Privacy-first verification status and evidence panels embedded into Directory profile surfaces.',
+    availabilityState: 'implemented_shell',
+    navRank: 190,
+    isVisible: false,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {
