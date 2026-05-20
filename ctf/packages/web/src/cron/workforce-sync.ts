@@ -10,12 +10,11 @@ export async function executeWorkforceSyncCron(): Promise<void> {
   });
 
   try {
+    // The cron runs inside the web service and calls that same service's
+    // internal endpoint, so a loopback call on the service PORT is correct on
+    // Render (and locally). Plain HTTP — the request never leaves the host.
     const port = process.env.PORT || '3000';
-    const privateHost = process.env.RAILWAY_PRIVATE_DOMAIN;
-    // Railway private networking is plain HTTP on the service PORT — never HTTPS
-    const url = privateHost
-      ? `http://${privateHost}:${port}/api/workforce/internal/sync`
-      : `http://localhost:${port}/api/workforce/internal/sync`;
+    const url = `http://localhost:${port}/api/workforce/internal/sync`;
 
     const response = await fetch(url, {
       method: 'POST',
