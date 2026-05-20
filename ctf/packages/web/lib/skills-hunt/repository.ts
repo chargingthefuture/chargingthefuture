@@ -1015,7 +1015,7 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
 // can promote/dampen rewards mid-program without code change.
 // Explicit number-typed shape (not `typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC`)
 // because the spec object is `as const` and its literal types would reject
-// per-round overrides from scoring_config.
+// per-round overrides stored on the round.
 type ResolvedScoreWeights = {
   -readonly [K in keyof typeof SKILLS_HUNT_SCORE_WEIGHTS_SPEC]: number;
 };
