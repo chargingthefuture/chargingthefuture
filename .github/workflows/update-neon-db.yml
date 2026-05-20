@@ -12,6 +12,7 @@ on:
           - production
           - staging
   push:
+    branches: [main]
     paths:
       - "ctf/schema.sql"
       - ".github/workflows/update-neon-db.yml"
