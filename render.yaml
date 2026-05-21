@@ -31,6 +31,7 @@ services:
     dockerfilePath: ctf/packages/web/Dockerfile
     dockerContext: ctf
     region: ohio
+    # Standard (2GB/1CPU) — headroom for a production Next.js app (~159 routes).
     plan: standard
     healthCheckPath: /api/health
     envVars:
@@ -47,30 +48,12 @@ services:
       # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_*) are synced
       # automatically by Infisical via the Render Sync integration.
 
-  # ── Agent MCP Server ─────────────────────────────────────────────
-  # Background worker — stdio MCP transport, no inbound HTTP port.
-  # Secrets injected by Infisical → Render Sync.
-  - type: worker
-    name: ctf-agent-mcp-server
-    runtime: docker
-    dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
-    dockerContext: ctf/packages/agent-mcp-server
-    region: ohio
-    plan: starter
-
-  # ── PM MCP Server ────────────────────────────────────────────────
-  # Background worker — stdio MCP transport, no inbound HTTP port.
-  # Secrets injected by Infisical → Render Sync.
-  - type: worker
-    name: ctf-pm-mcp-server
-    runtime: docker
-    dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
-    dockerContext: ctf/packages/pm-mcp-server
-    region: ohio
-    plan: starter
-    envVars:
-      - key: NODE_ENV
-        value: production
+  # NOTE: agent-mcp-server and pm-mcp-server are intentionally NOT deployed
+  # here. They are stdio-transport MCP servers (no inbound HTTP port) that
+  # are spawned on demand by local AI coding agents (Claude Code, Copilot)
+  # via `node dist/index.js` — see ctf/agents/AGENT-MCP-SETUP.md. Running
+  # them as always-on Render workers serves no purpose (no client is
+  # attached to stdin). Their Dockerfiles remain for local/CI builds only.
 
   # ── Ollama ────────────────────────────────────────────────────────
   # Private service — reachable by other Render services via internal URL.
@@ -104,7 +87,7 @@ services:
     dockerfilePath: ctf/ops/infisical/Dockerfile
     dockerContext: ctf/ops/infisical
     region: ohio
-    plan: standard
+    plan: starter
     envVars:
       - key: ENCRYPTION_KEY
         sync: false
@@ -127,4 +110,4 @@ services:
     dockerfilePath: ctf/ops/formance/Dockerfile.ledger
     dockerContext: ctf/ops/formance
     region: ohio
-    plan: standard
+    plan: starter
