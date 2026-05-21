@@ -1,0 +1,130 @@
+# render.yaml — Render Blueprint for chargingthefuture v3
+# All v3 services migrated from Railway to Render.
+# v2 (legacy) remains on Railway until v3 is production-ready.
+#
+# SECRET MANAGEMENT ARCHITECTURE
+# ───────────────────────────────
+# Infisical is the single source of truth for all secrets.
+# After deploying this blueprint:
+#
+# 1. Set Infisical bootstrap secrets manually in the Render dashboard
+#    for ctf-infisical only (4 values — see that service below).
+#
+# 2. Inside Infisical, configure a Render Connection (requires a Render
+#    API key) and create a Render Sync for each service below.
+#    Infisical will then push all secrets automatically.
+#
+# 3. For GitHub Actions (backup workflow), add only two GitHub secrets:
+#    INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET.
+#    The workflow fetches everything else from Infisical at runtime.
+#
+# sync: false entries are present only where Infisical cannot bootstrap
+# itself (ctf-infisical) or where a static value cannot come from Infisical.
+
+services:
+  # ── Next.js web app ─────────────────────────────────────────────
+  # All secrets injected by Infisical → Render Sync. No manual setup required
+  # beyond configuring the Render Sync inside Infisical.
+  - type: web
+    name: ctf-web
+    runtime: docker
+    dockerfilePath: ctf/packages/web/Dockerfile
+    dockerContext: ctf
+    region: ohio
+    plan: standard
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      # Observability — enables Sentry cron check-ins for workforce-incremental-sync
+      - key: OBSERVABILITY_PROVIDER
+        value: sentry
+      # All remaining secrets (DATABASE_URL, CLERK_*, STREAM_*, SENTRY_DSN,
+      # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_*) are synced
+      # automatically by Infisical via the Render Sync integration.
+
+  # ── Agent MCP Server ─────────────────────────────────────────────
+  # Background worker — stdio MCP transport, no inbound HTTP port.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-agent-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
+    dockerContext: ctf/packages/agent-mcp-server
+    region: ohio
+    plan: starter
+
+  # ── PM MCP Server ────────────────────────────────────────────────
+  # Background worker — stdio MCP transport, no inbound HTTP port.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-pm-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
+    dockerContext: ctf/packages/pm-mcp-server
+    region: ohio
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # ── Ollama ────────────────────────────────────────────────────────
+  # Private service — reachable by other Render services via internal URL.
+  # Render has no persistent volumes; models are baked into the image at build time.
+  - type: pserv
+    name: ctf-ollama
+    runtime: docker
+    dockerfilePath: ctf/ops/ollama/Dockerfile
+    dockerContext: ctf/ops/ollama
+    region: ohio
+    plan: standard
+    envVars:
+      - key: OLLAMA_MODEL
+        value: llama3.2
+
+  # ── Infisical (secrets management) ───────────────────────────────
+  # Private service — single source of truth for all secrets.
+  #
+  # BOOTSTRAP (one-time manual setup in Render dashboard):
+  #   ENCRYPTION_KEY  — random 32-char hex string (openssl rand -hex 16)
+  #   AUTH_SECRET     — random 32-byte base64 string (openssl rand -base64 32)
+  #   SITE_URL        — internal Render URL for this service
+  #   MONGO_URL       — MongoDB Atlas connection string
+  #
+  # These four are the ONLY secrets that must be set manually anywhere.
+  # Once Infisical is running, configure a Render Connection inside it
+  # to take over secret management for all other services.
+  - type: pserv
+    name: ctf-infisical
+    runtime: docker
+    dockerfilePath: ctf/ops/infisical/Dockerfile
+    dockerContext: ctf/ops/infisical
+    region: ohio
+    plan: standard
+    envVars:
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: SITE_URL
+        sync: false
+      - key: MONGO_URL
+        sync: false
+
+  # ── Formance Ledger (financial ledger) ───────────────────────────
+  # Private service — pinned to ghcr.io/formancehq/ledger:v2.3.15-dev.1
+  # All state lives in Neon Postgres (no persistent disk on Render).
+  # AUTO_UPGRADE=true handles schema migrations on container start.
+  # Backups: daily pg_dump → Supabase Storage via backup-formance-supabase.yml.
+  # POSTGRES_URI injected by Infisical → Render Sync.
+  - type: pserv
+    name: ctf-formance-ledger
+    runtime: docker
+    dockerfilePath: ctf/ops/formance/Dockerfile.ledger
+    dockerContext: ctf/ops/formance
+    region: ohio
+    plan: standard

@@ -21,6 +21,7 @@ jobs:
           INFISICAL_DB_URI: ${{ secrets.INFISICAL_DB_URI }}
           INFISICAL_ENCRYPTION_KEY: ${{ secrets.INFISICAL_ENCRYPTION_KEY }}
           INFISICAL_AUTH_SECRET: ${{ secrets.INFISICAL_AUTH_SECRET }}
+          INFISICAL_REDIS_URL: ${{ secrets.INFISICAL_REDIS_URL }}
         run: |
           chmod +x ctf/scripts/deploy-infisical-render.sh
           ctf/scripts/deploy-infisical-render.sh

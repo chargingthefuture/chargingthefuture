@@ -1,0 +1,20 @@
+# Formance Ledger — Render private service
+# Wraps the official GHCR image with Render-compatible configuration.
+# Pinned image per ctf/docs/developer/FORMANCE_LEDGER_SELF_HOST_RUNBOOK.md
+FROM ghcr.io/formancehq/ledger:v2.3.15-dev.1.g1077fe2@sha256:5c280c2b1b397c6d910e88d7f1719666fadf3b2be18ab6dad31a905dee876db7
+
+# Render has no persistent volumes — Formance state lives in the external
+# Neon Postgres database. AUTO_UPGRADE runs schema migrations on start.
+# POSTGRES_URI must be set in the Render dashboard (Neon staging connection string).
+ENV POSTGRES_MAX_OPEN_CONNS=40 \
+    POSTGRES_MAX_IDLE_CONNS=40 \
+    POSTGRES_CONN_MAX_IDLE_TIME=5m \
+    EXPERIMENTAL_FEATURES=true \
+    AUTO_UPGRADE=true \
+    BULK_PARALLEL=10 \
+    EXPERIMENTAL_NUMSCRIPT_INTERPRETER=true \
+    EXPERIMENTAL_NUMSCRIPT_INTERPRETER_FLAGS="experimental-overdraft-function experimental-get-asset-function experimental-get-amount-function experimental-oneof experimental-account-interpolation experimental-mid-script-function-call experimental-asset-colors"
+
+EXPOSE 3068
+# PORT is injected by Render; --worker=true runs ledger + worker in one process.
+CMD ["sh", "-c", "serve --bind=0.0.0.0:${PORT:-3068} --worker=true --worker-grpc-address=127.0.0.1:8081"]
