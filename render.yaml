@@ -31,9 +31,8 @@ services:
     dockerfilePath: ctf/packages/web/Dockerfile
     dockerContext: ctf
     region: ohio
-    # Starter (512MB/0.5CPU). Watch memory under real traffic — this is the
-    # most likely service to need a bump back to `standard`.
-    plan: starter
+    # Standard (2GB/1CPU) — headroom for a production Next.js app (~159 routes).
+    plan: standard
     healthCheckPath: /api/health
     envVars:
       - key: PORT
