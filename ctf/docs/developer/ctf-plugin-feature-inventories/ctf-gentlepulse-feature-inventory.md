@@ -158,7 +158,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - No `/api/gentlepulse/progress*` contract or implementation tasks are in scope.
 
-### Phase 0 â€” Contracts and Scope Lock
+### €” Contracts and Scope Lock
 
 - [ ] Lock authenticated API posture for GentlePulse routes.
   - Acceptance criteria:
@@ -170,7 +170,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Exclusions include plugin settings/accessibility, plugin announcements, in-app admin surfaces, and progress endpoints.
 
-### Phase 1 â€” Data and Migration Readiness
+### €” Data and Migration Readiness
 
 - [ ] Define migration approach from anonymous `clientId` to authenticated user model.
   - Acceptance criteria:
@@ -183,7 +183,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Required fields and sorting/filtering indexes are documented.
 
-### Phase 2 â€” API and Behavior Implementation Readiness
+### €” API and Behavior Implementation Readiness
 
 - [ ] Finalize API route map for in-scope features.
   - Acceptance criteria:
@@ -192,7 +192,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Validation gate or lint/contract checks fail if excluded route groups are introduced.
 
-### Phase 3 â€” Security and Compliance Gates
+### €” Security and Compliance Gates
 
 - [ ] Verify authz coverage for all GentlePulse writes.
   - Acceptance criteria:
@@ -204,7 +204,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Exposed GentlePulse contracts align with approved shared deny/error taxonomy.
 
-### Phase 4 â€” Web and Android Parity Gates
+### €” Web and Android Parity Gates
 
 - [ ] Web/mobile parity design scope for core user journeys.
   - Acceptance criteria:
@@ -213,7 +213,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - GentlePulse clients consume app-level settings contracts.
 
-### Phase 5 â€” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API/integration design documentation for retained feature scope.
   - Acceptance criteria:

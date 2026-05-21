@@ -115,7 +115,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Mood user flows are standalone and not embedded in GentlePulse features.
 
-### Phase 0 â€” Contracts and Scope Lock
+### €” Contracts and Scope Lock
 
 - [ ] Lock authenticated API posture for Mood routes.
   - Acceptance criteria:
@@ -128,7 +128,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
     - Submission access is authenticated-user-only.
     - Mood values are persisted by anonymous `clientId` (not `user_id`).
 
-### Phase 1 â€” Data and Migration Readiness
+### €” Data and Migration Readiness
 
 - [ ] Define mood-check schema and uniqueness constraints.
   - Acceptance criteria:
@@ -138,7 +138,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Product decision for multiple `clientId`s per authenticated user is documented.
 
-### Phase 2 â€” API and Behavior Implementation Readiness
+### €” API and Behavior Implementation Readiness
 
 - [ ] Finalize API route map for in-scope features.
   - Acceptance criteria:
@@ -150,7 +150,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Validation gate or lint/contract checks fail if announcements/admin/safety-trigger surface is introduced.
 
-### Phase 3 â€” Security and Compliance Gates
+### €” Security and Compliance Gates
 
 - [ ] Verify authz coverage for all Mood writes/reads.
   - Acceptance criteria:
@@ -162,7 +162,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Product/policy wording is consistent with authenticated access plus anonymous `clientId` storage.
 
-### Phase 4 â€” Web and Android Parity Gates
+### €” Web and Android Parity Gates
 
 - [ ] Validate web/mobile parity for core Mood journey.
   - Acceptance criteria:
@@ -174,7 +174,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - No Mood admin or announcements parity tasks are required because these are out of scope.
 
-### Phase 5 â€” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API/integration design documentation for retained feature scope.
   - Acceptance criteria:

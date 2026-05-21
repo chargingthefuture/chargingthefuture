@@ -112,7 +112,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Stable plugin slug is `weekly-performance` across inventory, contracts, and routes.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [ ] Define v1 plugin command contracts.
   - Acceptance criteria:
@@ -127,7 +127,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Week start policy and non-financial metric formulas are documented and approved.
 
-### Phase 1 â€” Schema and Migrations
+### €” Schema and Migrations
 
 - [ ] Define weekly performance plugin tables/materializations in `ctf/migrations/`.
   - Acceptance criteria:
@@ -136,7 +136,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Retention class, recompute policy, and rollback/replay notes are documented.
 
-### Phase 2 â€” API and Policy Implementation
+### €” API and Policy Implementation
 
 - [ ] Implement admin week list/get and metrics/comparison endpoints.
   - Acceptance criteria:
@@ -152,7 +152,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Unauthorized role/scope access is denied with stable reason categories.
 
-### Phase 3 â€” Web and Mobile Parity
+### €” Web and Mobile Parity
 
 - [ ] Deliver web admin weekly review surface.
   - Acceptance criteria:
@@ -166,7 +166,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Error/deny semantics and metric formatting are equivalent across platforms.
 
-### Phase 4 â€” Security and Compliance
+### €” Security and Compliance
 
 - [ ] Verify authz/authn controls for all plugin routes.
   - Acceptance criteria:
@@ -178,7 +178,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Allow/deny outcomes and report exports are captured with actor/action/outcome/timestamp correlation fields.
 
-### Phase 5 â€” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Command/access/audit parity design documentation.
   - Acceptance criteria:

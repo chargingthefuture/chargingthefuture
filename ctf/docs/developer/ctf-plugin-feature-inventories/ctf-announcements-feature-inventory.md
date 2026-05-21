@@ -217,7 +217,7 @@ Domain tables:
   - Acceptance criteria:
     - Android follow-up ticket exists with owner and due date.
 
-### Phase 0 â€” Contracts and Naming Lock
+### €” Contracts and Naming Lock
 
 - [x] Define Announcements command contracts.
   - Acceptance criteria:
@@ -232,7 +232,7 @@ Domain tables:
   - Acceptance criteria:
     - New docs/contracts use **Announcements** spelling; legacy typo alias note is documented for compatibility.
 
-### Phase 1 â€” Schema and Migration Readiness
+### €” Schema and Migration Readiness
 
 - [x] Implement Announcements domain schema.
   - Acceptance criteria:
@@ -247,7 +247,7 @@ Domain tables:
   - Acceptance criteria:
     - Drift status across migration SQL, app schema, and API contracts is attached to PR.
 
-### Phase 2 â€” API and Projection Pipeline
+### €” API and Projection Pipeline
 
 - [x] Implement draft/create/update/publish/archive API and command flows.
   - Acceptance criteria:
@@ -262,7 +262,7 @@ Domain tables:
   - Acceptance criteria:
     - User-state transitions are policy-compliant and auditable.
 
-### Phase 3 â€” Web Delivery
+### €” Web Delivery
 
 - [x] Implement authoring and publish UX on `/admin/feed-announcements`.
   - Acceptance criteria:
@@ -274,13 +274,13 @@ Domain tables:
   - Acceptance criteria:
     - Toast mode is optional and managed via Feed configuration.
 
-### Phase 4 â€” Android Follow-Up (Required â€” see Feed Checklist Phase 6)
+### €” Android Follow-Up (Required â€” see Feed Checklist Phase 6)
 
 - [ ] All Android parity items are now tracked in `ctf-feed-feature-inventory.md` Phase 6.
   - Acceptance criteria:
     - See unified feed checklist for acceptance criteria.
 
-### Phase 5 â€” Security, Compliance, and Hardening
+### €” Security, Compliance, and Hardening
 
 - [x] Document policy and CSRF handling.
   - Acceptance criteria:

@@ -135,7 +135,7 @@ Seeded content:
     - Android admin parity is required in v1.
     - Post-create public URL behavior remains display-only parity for v1.
 
-### Phase 0 â€” Decision Lock and Ambiguity Resolution
+### €” Decision Lock and Ambiguity Resolution
 
 - [x] Resolve all user-facing open decisions from inventory section A.
   - Acceptance criteria:
@@ -151,7 +151,7 @@ Seeded content:
     - Directory announcement and admin routes have explicit module ownership.
     - No unresolved route ownership ambiguity remains.
 
-### Phase 1 â€” Unified UI and Policy Boundary
+### €” Unified UI and Policy Boundary
 
 - [x] Implement one unified Directory UI surface for user + admin workflows.
   - Acceptance criteria:
@@ -164,7 +164,7 @@ Seeded content:
   - Acceptance criteria:
     - No mandatory copy/open action control is introduced in v1 parity scope.
 
-### Phase 2 â€” API and Backend Policy Gates
+### €” API and Backend Policy Gates
 
 - [x] Enforce server-side authz on every admin endpoint.
   - Acceptance criteria:
@@ -183,7 +183,7 @@ Seeded content:
   - Acceptance criteria:
     - Route-to-module ownership map is documented and validated in validation/lint gates.
 
-### Phase 3 â€” Privacy and Anti-Scraping Controls
+### €” Privacy and Anti-Scraping Controls
 
 - [x] Validate public projection privacy contract.
   - Acceptance criteria:
@@ -194,7 +194,7 @@ Seeded content:
     - Rate limit thresholds are documented.
     - Public ordering/privacy controls remain deterministic and policy-compliant.
 
-### Phase 4 â€” Data, Schema, and Seed Consistency
+### €” Data, Schema, and Seed Consistency
 
 - [ ] Confirm schema consistency for profile, announcement, and audit contracts.
   - Acceptance criteria:
@@ -207,7 +207,7 @@ Seeded content:
   - Acceptance criteria:
     - Automated checks fail on schema drift or incompatible seed assumptions.
 
-### Phase 5 â€” Web and Android Delivery Parity (Required)
+### €” Web and Android Delivery Parity (Required)
 
 - [ ] Ship web user + admin parity for in-scope Directory flows.
   - Acceptance criteria:
@@ -220,7 +220,7 @@ Seeded content:
   - Acceptance criteria:
     - Cross-client parity validation scope is documented for post-MVP testing.
 
-### Phase 6 â€” Release Gates and Lifecycle Maintenance [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Release Gates and Lifecycle Maintenance [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Admin API authz design alignment.
   - Acceptance criteria:

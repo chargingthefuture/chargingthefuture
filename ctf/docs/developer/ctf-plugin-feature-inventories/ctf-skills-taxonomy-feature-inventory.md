@@ -157,7 +157,7 @@ Consumer routes:
   - Acceptance criteria:
     - Stable plugin slug is `skills-taxonomy` across inventory, contracts, and routes.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [x] Define v1 plugin command contracts.
   - Acceptance criteria:
@@ -172,7 +172,7 @@ Consumer routes:
   - Acceptance criteria:
     - Clear allow/deny rules exist for sector/job-title/skill deletes with dependency thresholds.
 
-### Phase 1 â€” Schema and Migrations
+### €” Schema and Migrations
 
 - [x] Define taxonomy entities and constraints in `ctf/migrations/`.
   - Acceptance criteria:
@@ -184,7 +184,7 @@ Consumer routes:
   - Acceptance criteria:
     - Migration rollback and replay evidence plan is approved.
 
-### Phase 2 â€” API and Policy Implementation
+### €” API and Policy Implementation
 
 - [x] Implement hierarchy and flattened read endpoints.
   - Acceptance criteria:
@@ -199,7 +199,7 @@ Consumer routes:
   - Acceptance criteria:
     - Unauthorized or non-compliant writes are denied with stable reason categories.
 
-### Phase 3 â€” Web and Mobile Parity
+### €” Web and Mobile Parity
 
 - [ ] Deliver web admin hierarchy management surface. (Deferred: owner `taxonomy-web-admin-phase1`, target milestone `2026-03-22`)
   - Acceptance criteria:
@@ -211,7 +211,7 @@ Consumer routes:
   - Acceptance criteria:
     - Contract snapshots and parity checks detect web/mobile read-model divergence.
 
-### Phase 4 â€” Security and Compliance
+### €” Security and Compliance
 
 - [x] Verify authz/authn controls for all plugin routes.
   - Acceptance criteria:
@@ -223,7 +223,7 @@ Consumer routes:
   - Acceptance criteria:
     - Delete allow/deny outcomes include actor, purpose, target class, and timestamp metadata.
 
-### Phase 5 â€” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [x] Command/access/audit parity design documentation.
   - Acceptance criteria:

@@ -153,7 +153,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Weekly active-user selection (login within 7 days), 5-user cohorts, assignment notifications, fallback-open behavior, room UI, threaded async text, tiered participation, feedback loop, and admin topic guidance are all explicitly accepted.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [ ] Define plugin command contracts for v1.
   - Acceptance criteria:
@@ -168,7 +168,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Command set matches exactly across command, policy, and audit YAML.
 
-### Phase 1 â€” Cohort Selection and Assignment
+### €” Cohort Selection and Assignment
 
 - [ ] Implement weekly active-user selection based on login recency.
   - Acceptance criteria:
@@ -182,7 +182,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
     - In-app notification event is generated for each assigned member.
     - Notification retries are idempotent.
 
-### Phase 2 â€” Room Experience and Persistence
+### €” Room Experience and Persistence
 
 - [ ] Implement cohort room state retrieval.
   - Acceptance criteria:
@@ -197,7 +197,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Posts/replies remain available across reconnects and session restarts.
 
-### Phase 3 â€” Fallback and Tiered Participation
+### €” Fallback and Tiered Participation
 
 - [ ] Implement fallback-open activation path.
   - Acceptance criteria:
@@ -209,7 +209,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Non-cohort and unauthenticated users are blocked from unauthorized write actions.
 
-### Phase 4 â€” Topic Guidance and Feedback Loop
+### €” Topic Guidance and Feedback Loop
 
 - [ ] Implement admin weekly topic guidance set/get.
   - Acceptance criteria:
@@ -221,7 +221,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Feedback summaries are reviewed weekly and linked to follow-up planning decisions.
 
-### Phase 5 â€” Web-First Delivery and Android Follow-Up
+### €” Web-First Delivery and Android Follow-Up
 
 - [ ] Deliver MVP web-first release for all core commands.
   - Acceptance criteria:
@@ -233,7 +233,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Completed Android items match web command outcomes and deny reason behavior.
 
-### Phase 6 â€” Security, Audit, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Security, Audit, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Policy deny-by-default posture design.
   - Acceptance criteria:

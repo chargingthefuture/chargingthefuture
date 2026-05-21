@@ -2922,6 +2922,9 @@ ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS metada
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS resolved_recruited BOOLEAN;
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS source_event TEXT;
+-- Required by `ON CONFLICT (inference_dedupe_key)` in repository.ts and the workforce seed;
+-- recruited-event upserts fail without this unique index.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_recruited_events_dedupe_key ON workforce_recruited_events(inference_dedupe_key);
 
 -- workforce_recruited_sync_cursor (1 missing)
 ALTER TABLE IF EXISTS workforce_recruited_sync_cursor ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

@@ -127,7 +127,7 @@ Seeded content:
     - Foundation reads Directory data through read-only projections only.
     - No Foundation command can mutate Directory behavior/data.
 
-### Phase 0 â€” Contract and Policy Lock
+### €” Contract and Policy Lock
 
 - [ ] Lock Foundation command contracts for full-v1.
   - Acceptance criteria:
@@ -142,7 +142,7 @@ Seeded content:
   - Acceptance criteria:
     - Contracts and inventory align with `.github/instructions/110-stream-maker-tier-rules.mdc` threshold model and fallback rules.
 
-### Phase 1 â€” Schema, Migrations, and Retention
+### €” Schema, Migrations, and Retention
 
 - [ ] Define Foundation extension/domain schema and migrations under `ctf/migrations/`.
   - Acceptance criteria:
@@ -157,7 +157,7 @@ Seeded content:
   - Acceptance criteria:
     - Migration replay and rollback steps are captured for PR evidence.
 
-### Phase 2 â€” Core Service and Command Execution
+### €” Core Service and Command Execution
 
 - [ ] Implement provider search service using Directory read-only projections.
   - Acceptance criteria:
@@ -175,7 +175,7 @@ Seeded content:
   - Acceptance criteria:
     - Actor ownership checks prevent cross-user history access.
 
-### Phase 3 â€” Rate Limiting, Quotas, and Scalability
+### €” Rate Limiting, Quotas, and Scalability
 
 - [ ] Implement command-level rate limiting for high-frequency actions.
   - Acceptance criteria:
@@ -190,7 +190,7 @@ Seeded content:
   - Acceptance criteria:
     - PR includes required note under `ctf/docs/quota-impact/` with fallback and observability sections.
 
-### Phase 4 â€” Web Full-v1 Delivery
+### €” Web Full-v1 Delivery
 
 - [ ] Deliver web provider search and profile preview flows.
   - Acceptance criteria:
@@ -205,7 +205,7 @@ Seeded content:
   - Acceptance criteria:
     - Users can review interaction history and control notification channels/quiet hours.
 
-### Phase 5 â€” Android Parity Follow-up Tracking
+### €” Android Parity Follow-up Tracking
 
 - [ ] Create parity tracking table for all web-delivered Foundation capabilities.
   - Acceptance criteria:
@@ -223,7 +223,7 @@ Seeded content:
   - Acceptance criteria:
     - Any deferred item includes approved risk note and final completion date.
 
-### Phase 6 â€” Trauma-Informed and Accessibility Validation
+### €” Trauma-Informed and Accessibility Validation
 
 - [ ] Validate trauma-informed UX constraints.
   - Acceptance criteria:
@@ -235,7 +235,7 @@ Seeded content:
   - Acceptance criteria:
     - Critical safety pathways are discoverable, clear, and policy-compliant.
 
-### Phase 7 â€” Security, Compliance, and Deletion
+### €” Security, Compliance, and Deletion
 
 - [ ] Verify authz, consent, region, and deny-condition enforcement.
   - Acceptance criteria:

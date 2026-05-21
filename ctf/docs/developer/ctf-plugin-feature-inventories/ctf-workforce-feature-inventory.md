@@ -174,17 +174,27 @@ Admin routes:
 
 ### 4.2 Domain Entities
 
+Tables owned by the plugin and present in `ctf/schema.sql`:
+
 1. `workforce_profiles` (plugin extension shape only)
-2. `workforce_config`
-3. `workforce_report_snapshots`
-4. `workforce_recruited_events` (append-only inferred events)
-5. `workforce_admin_audit_trail`
+2. `workforce_occupations`
+3. `workforce_announcements`
+4. `workforce_user_extension`
+5. `workforce_recruited_events` (append-only inferred events; unique on `inference_dedupe_key`)
+6. `workforce_config`
+7. `workforce_recruited_sync_cursor`
+8. `workforce_export_jobs`
+9. `workforce_admin_audit_trail`
+
+Not yet implemented: `workforce_report_snapshots` is named in the `workforce.dashboard.fetch`
+command contract's `dataAccess` but does not exist in `ctf/schema.sql` and is not read by code
+(`getDashboard()` derives state live). See Gaps and Known Technical Debt.
 
 ### 4.3 Storage and Derivation Rules
 
 1. Recruited inference is derived from Directory profile create/update writes.
 2. Inference history is append-only for traceability of mapping changes.
-3. Inference writes use deterministic dedupe key (`inference_dedupe_key`) and unique constraint semantics.
+3. Inference writes use deterministic dedupe key (`inference_dedupe_key`), enforced by the unique index `uq_workforce_recruited_events_dedupe_key`; repository upserts and the seed rely on `ON CONFLICT (inference_dedupe_key)`.
 4. Replay/backfill duplicates are idempotent no-op outcomes.
 5. Current-state dashboards read latest resolved state.
 6. Historical dashboards read weekly trend buckets from inferred event history.
@@ -227,9 +237,12 @@ Canonical definition notes for `recruited`:
 1. Retention and legal-basis wording for workforce recruited inference and exports has not been explicitly signed off; the plugin runs under platform defaults.
 2. Export schema versioning has no documented backward-compatibility contract; exporters consume the current shape.
 3. Migration and backfill strategy for first production cutover relies on the generic platform migration runbook; no plugin-specific runbook exists.
+4. `workforce_report_snapshots` drift: the `workforce.dashboard.fetch` command contract lists it under `dataAccess`, but no such table exists in `ctf/schema.sql` and no code reads it (the dashboard derives state live). Decision needed: either build/wire the snapshot table or remove it from the command contract's `dataAccess`. Tracked, not yet reconciled.
+5. Sync routes `POST /api/workforce/admin/sync` and `POST /api/workforce/internal/sync` exist in code but are not enumerated in the API Surface section above; they back the incremental recruited-state sync cron.
 
 ## 9) Change Log
 
+- 2026-05-21: Added the missing unique index `uq_workforce_recruited_events_dedupe_key` on `workforce_recruited_events(inference_dedupe_key)` — without it the `ON CONFLICT (inference_dedupe_key)` upserts in `repository.ts` and the seed fail at runtime. Reconciled Domain Entities (4.2) to the 9 tables actually in `ctf/schema.sql`; flagged the `workforce_report_snapshots` contract drift and undocumented sync routes in Gaps.
 - 2026-05-18: Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120. Updated seed coverage status to reference shipping seed script. Removed unimplemented-feature-as-debt entry for command-level role matrix sign-off.
 - 2026-02-24: Created initial Workforce CTF rewrite inventory.
 - 2026-02-24: Merged legacy parity scope (profile, occupations, announcements, export, admin flows) with new Workforce rewrite capabilities; standardized audit-events route, explicit skill-level/sector report endpoints, async export job model, mobile admin v1 inclusion, and weekly ET Saturday bucket policy.
@@ -262,7 +275,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Admin capabilities included in web and mobile parity contract/validation scope.
 
-### Phase 0 — Legacy Review and Contract Lock
+### �� Legacy Review and Contract Lock
 
 - [ ] Review and correct sections 8 and 9 from legacy Workforce inventory before implementation starts.
   - Acceptance criteria:
@@ -288,7 +301,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Command/policy/audit contracts can be implemented in parallel with route handlers.
 
-### Phase 1 — Canonical Metric Definition Lock
+### �� Canonical Metric Definition Lock
 
 - [ ] Define and lock `recruited` canonical metric in `ctf/config/canonical_metrics.yaml`.
   - Acceptance criteria:
@@ -308,7 +321,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - PR includes metric registry check output and explicit canonical metric identifier mapping.
 
-### Phase 2 — Schema and Drift Readiness
+### �� Schema and Drift Readiness
 
 - [ ] Define Workforce schema and migration plan in `ctf/migrations/`.
   - Acceptance criteria:
@@ -328,7 +341,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - PR declares `Schema Drift: none`, `compatible`, or `versioned-breaking` with required details.
 
-### Phase 3 — API and Behavior Implementation Readiness
+### �� API and Behavior Implementation Readiness
 
 - [ ] Finalize Workforce API route map and command mapping.
   - Acceptance criteria:
@@ -344,7 +357,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Validation gate fails if user/admin-triggered recruited event creation is introduced.
 
-### Phase 4 — Security and Compliance Gates
+### �� Security and Compliance Gates
 
 - [ ] Verify authz + CSRF coverage for all state-changing operations.
   - Acceptance criteria:
@@ -360,7 +373,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Audit contract evidence includes both success and denied operation cases.
 
-### Phase 5 — Validation, Seeds, and Non-Regression Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+### �� Validation, Seeds, and Non-Regression Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
 
 - [ ] Command/policy/audit schema design documentation. [MANUAL TESTING DEFERRED FOR MVP — see Rule 118.]
   - Acceptance criteria:
@@ -378,7 +391,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Lint gate fails if legacy accidental event artifact patterns are reintroduced.
 
-### Phase 6 — PR Evidence and Release Readiness
+### �� PR Evidence and Release Readiness
 
 - [ ] Include schema drift and migration evidence in PR.
   - Acceptance criteria:

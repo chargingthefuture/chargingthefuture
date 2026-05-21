@@ -112,13 +112,13 @@ Parity status: **web+android complete**.
 - [x] Confirm plugin slug and route namespace (`levelup`).
 - [x] Confirm no Prisma usage; SQL migration + repository pattern only.
 
-### Phase 1 - Schema and Registry
+### Schema and Registry
 
 - [x] Add core migration for LevelUp domain tables.
 - [x] Add plugin registry availability entry for `levelup`.
 - [x] Add baseline policy config (`starter_credits`, split defaults).
 
-### Phase 2 - Repository and Business Rules
+### Repository and Business Rules
 
 - [x] Implement cohort creation/list/detail repository methods.
 - [x] Implement enrollment and escrow allocation logic with idempotency.
@@ -126,20 +126,20 @@ Parity status: **web+android complete**.
 - [x] Implement dispute open/resolve and admin adjust credit flows.
 - [x] Implement persisted DB rate-limit counters for enroll/validate.
 
-### Phase 3 - API Surface
+### API Surface
 
 - [x] Implement route helpers for authz, CSRF, and error mapping.
 - [x] Add zod validation to LevelUp mutation/query handlers.
 - [x] Add routes for cohorts, enrollments, milestones, transfers, disputes, admin adjustment.
 
-### Phase 4 - Web UI Shell
+### Web UI Shell
 
 - [x] Add `LevelupShell` under plugin app route.
 - [x] Add `CohortList`, `CohortDetail`, `EnrollModal` components.
 - [x] Add `UserDashboard`, `TrainerDashboard`, `AdminPanel` components.
 - [x] Add `/admin/levelup` page.
 
-### Phase 5 - Contracts and Inventory
+### Contracts and Inventory
 
 - [x] Add command contracts file.
 - [x] Add access policy contracts file.
@@ -147,7 +147,7 @@ Parity status: **web+android complete**.
 - [x] Add plugin feature inventory file.
 - [x] Add rewrite checklist file.
 
-### Phase 6 - Seed and Release Readiness
+### Seed and Release Readiness
 
 - [x] Add deterministic seed script for sample users/cohort/milestones.
 - [ ] Android parity implementation (follow-up required before GA).

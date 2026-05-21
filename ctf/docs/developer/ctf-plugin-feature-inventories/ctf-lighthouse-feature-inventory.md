@@ -236,7 +236,7 @@ Contract expectations:
     - Included: profile CRUD, property browse/detail, host property CRUD, match lifecycle, announcements, admin operations, blocks.
     - No net-new non-parity discovery features are introduced without explicit approval.
 
-### Phase 0 â€” Decision Lock and Contract Baseline
+### €” Decision Lock and Contract Baseline
 
 - [ ] Lock canonical schema authority for LightHouse rewrite.
   - Acceptance criteria:
@@ -254,7 +254,7 @@ Contract expectations:
   - Acceptance criteria:
     - Critical user/admin/safety flows are marked parity-required across web and Android.
 
-### Phase 1 â€” Data, Migration, and Contract Readiness
+### €” Data, Migration, and Contract Readiness
 
 - [ ] Implement canonical schema contracts for LightHouse entities.
   - Acceptance criteria:
@@ -267,7 +267,7 @@ Contract expectations:
   - Acceptance criteria:
     - Profile/property/match/announcement/admin/blocks route contracts are versioned and documented.
 
-### Phase 2 â€” API and Policy Gate Implementation
+### €” API and Policy Gate Implementation
 
 - [ ] Enforce auth requirements across LightHouse user routes.
   - Acceptance criteria:
@@ -284,7 +284,7 @@ Contract expectations:
     - Block relationships are respected in affected interaction paths.
     - Policy-deny behavior is deterministic and documented.
 
-### Phase 3 â€” Web Delivery
+### €” Web Delivery
 
 - [ ] Implement dashboard parity with role-based entry behavior.
   - Acceptance criteria:
@@ -305,7 +305,7 @@ Contract expectations:
   - Acceptance criteria:
     - User block create/check/list/delete interactions are accessible and policy-aligned.
 
-### Phase 4 â€” Android Delivery Parity
+### €” Android Delivery Parity
 
 - [ ] Implement Android parity for core user flows.
   - Acceptance criteria:
@@ -317,7 +317,7 @@ Contract expectations:
   - Acceptance criteria:
     - Blocks lifecycle and enforcement behavior mirror shared contract outcomes.
 
-### Phase 5 â€” Security, Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Security, Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API contracts design documentation for all route families.
   - Acceptance criteria:

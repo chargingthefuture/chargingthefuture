@@ -303,7 +303,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Core survivor-facing transparency flows marked parity-required.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [ ] Define GDP plugin command contracts for v1.
   - Acceptance criteria:
@@ -318,7 +318,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Metric ownership, publish cadence, correction policy, and public disclosure controls approved.
 
-### Phase 1 â€” Metrics Registry and Model Definition
+### €” Metrics Registry and Model Definition
 
 - [ ] Add canonical GDP metric definitions to `ctf/config/canonical_metrics.yaml`.
   - Acceptance criteria:
@@ -333,7 +333,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Aliases and deprecations are documented; ambiguous names avoided.
 
-### Phase 2 â€” Schema and Migration Planning
+### €” Schema and Migration Planning
 
 - [ ] Design GDP extension model on canonical profile.
   - Acceptance criteria:
@@ -348,7 +348,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Retention metadata is explicit for snapshots, events, and governance records.
 
-### Phase 3 â€” API and Command Execution Planning
+### €” API and Command Execution Planning
 
 - [ ] Define public read command projections.
   - Acceptance criteria:
@@ -360,7 +360,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Fallback payloads match declared contracts and avoid schema drift.
 
-### Phase 4 â€” Web Delivery Planning
+### €” Web Delivery Planning
 
 - [ ] Plan public GDP dashboard surfaces.
   - Acceptance criteria:
@@ -372,7 +372,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Freshness, ownership, and formula context visible to users.
 
-### Phase 5 â€” Android Delivery Planning
+### €” Android Delivery Planning
 
 - [ ] Plan critical path parity for survivor-facing GDP transparency.
   - Acceptance criteria:
@@ -381,7 +381,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Deferrals tracked with owner, due date, and risk notes.
 
-### Phase 6 â€” Compliance, Hardening, and Operations
+### €” Compliance, Hardening, and Operations
 
 - [ ] Define observability and error-budget requirements.
   - Acceptance criteria:

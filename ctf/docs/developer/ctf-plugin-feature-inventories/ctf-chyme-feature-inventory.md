@@ -136,7 +136,7 @@ Current status:
     - Vercel staging integration completed.
     - Expo baseline completed.
 
-### Phase 0 â€” Core Implementation and Contract Alignment
+### €” Core Implementation and Contract Alignment
 
 - [x] Implement Chyme room bootstrap route behavior.
   - Acceptance criteria:
@@ -158,7 +158,7 @@ Current status:
     - Chyme access/deny policy contract follows Rule 202 template conventions.
     - Chyme audit contract follows Rule 203 template conventions.
 
-### Phase 1 â€” Deletion and Compliance
+### €” Deletion and Compliance
 
 - [x] Implement service-scoped deletion flow.
   - Acceptance criteria:
@@ -170,7 +170,7 @@ Current status:
   - Acceptance criteria:
     - Status model (`requested`/`processing`/`completed`/`failed`) is represented consistently in account deletion workflow.
 
-### Phase 2 â€” Seed and Deterministic Dev Validation
+### €” Seed and Deterministic Dev Validation
 
 - [x] Add deterministic Chyme seed script.
   - Acceptance criteria:
@@ -179,7 +179,7 @@ Current status:
   - Acceptance criteria:
     - Seed data can be regenerated for local/dev manual validation.
 
-### Phase 3 â€” Web/Android Parity
+### €” Web/Android Parity
 
 - [x] Confirm web Chyme baseline is implemented.
   - Acceptance criteria:
@@ -191,7 +191,7 @@ Current status:
   - Acceptance criteria:
     - Parity no longer depends on a deferred follow-up owner/date.
 
-### Phase 4 â€” Release Gates and Lifecycle Maintenance
+### €” Release Gates and Lifecycle Maintenance
 
 - [x] Keep Chyme inventory/checklist synchronized with accepted changes. [EVIDENCE CAPTURE DEFERRED FOR MVP â€” see Rule 118.]
   - Acceptance criteria:

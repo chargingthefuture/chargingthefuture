@@ -162,7 +162,7 @@ Storage and projection rules:
     - `ctf/docs/developer/socketrelay-feature-inventory.md` is unchanged.
     - `ctf/docs/developer/socketrelay-rewrite-checklist.md` is unchanged.
 
-### Phase 0 â€” Decision Lock
+### €” Decision Lock
 
 - [ ] Lock web-first delivery policy.
   - Acceptance criteria:
@@ -175,7 +175,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Schema authority, DTO authority, and module ownership are explicitly assigned.
 
-### Phase 1 â€” Contract and Schema Lock
+### €” Contract and Schema Lock
 
 - [ ] Finalize profile/request/fulfillment/message/announcement contracts.
   - Acceptance criteria:
@@ -190,7 +190,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Shared schema, migrations, and seeds align on fields and constraints.
 
-### Phase 2 â€” API and Policy Controls
+### €” API and Policy Controls
 
 - [ ] Implement user/authenticated API routes for core lifecycle flows.
   - Acceptance criteria:
@@ -205,7 +205,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - All admin write endpoints enforce identical CSRF contract behavior.
 
-### Phase 3 â€” Web MVP Delivery (Release Gate)
+### €” Web MVP Delivery (Release Gate)
 
 - [ ] Deliver dashboard and request lifecycle UX.
   - Acceptance criteria:
@@ -220,7 +220,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Public privacy contract and announcement filtering behavior are correct.
 
-### Phase 4 â€” Android Deferrals Tracking (Not Strict Parity Gate)
+### €” Android Deferrals Tracking (Not Strict Parity Gate)
 
 - [ ] Define Android in-scope and deferred SocketRelay surfaces.
   - Acceptance criteria:
@@ -232,7 +232,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Tracker is updated in each PR that changes Android scope.
 
-### Phase 5 â€” Risk Mitigation and Hardening
+### €” Risk Mitigation and Hardening
 
 - [ ] Mitigate **schema drift** risk.
   - Acceptance criteria:
@@ -250,7 +250,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - One uniform CSRF policy contract is enforced and verified for admin writes.
 
-### Phase 6 â€” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API groups design documentation against contracts.
   - Acceptance criteria:

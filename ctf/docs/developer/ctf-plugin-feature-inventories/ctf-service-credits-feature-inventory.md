@@ -256,7 +256,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - External ledger calls are routed through adapter interfaces only.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [ ] Define Service Credits plugin command contracts for v1.
   - Acceptance criteria:
@@ -271,7 +271,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - No-fiat-redeemability and mandatory cross-plugin-path constraints are documented and approved.
 
-### Phase 1 â€” Schema and Integration
+### €” Schema and Integration
 
 - [ ] Design Service Credits extension model on canonical profile.
   - Acceptance criteria:
@@ -286,7 +286,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Replay and rollback strategy documented before implementation.
 
-### Phase 2 â€” Command Execution
+### €” Command Execution
 
 - [ ] Implement `wallet.create` and `wallet.balance.get` command execution paths.
   - Acceptance criteria:
@@ -301,7 +301,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Adjustment reason coding and balance mutation ordering are deterministic.
 
-### Phase 3 â€” Cross-Plugin Enforcement
+### €” Cross-Plugin Enforcement
 
 - [ ] Enforce cross-plugin-path metadata for value-moving commands.
   - Acceptance criteria:
@@ -313,7 +313,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Commands implying fiat redemption, withdrawal, or cash-out are denied and audited.
 
-### Phase 4 â€” Web and Android Parity
+### €” Web and Android Parity
 
 - [ ] Deliver wallet, balance, transfer, and escrow critical path parity.
   - Acceptance criteria:
@@ -325,7 +325,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Each deferral has owner, due date, and risk note with closure evidence.
 
-### Phase 5 â€” Admin and Compliance
+### €” Admin and Compliance
 
 - [ ] Deliver governance, treasury, and dispute admin operations.
   - Acceptance criteria:
@@ -358,7 +358,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Account-deletion treasury returns are recorded as reserve reallocations and excluded from GDP recognition metrics.
 
-### Phase 6 â€” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Command schema design documentation.
   - Acceptance criteria:
@@ -376,7 +376,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Wallet/transfer/escrow/treasury/dispute seed scenarios are reproducible via deterministic seed scripts/data.
 
-### Phase 7 â€” Docs Lifecycle
+### €” Docs Lifecycle
 
 - [ ] Keep `ctf-service-credits-feature-inventory.md` updated per accepted scope change.
   - Acceptance criteria:

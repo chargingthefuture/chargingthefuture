@@ -266,7 +266,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Ride/package/food booking and safety controls marked parity-required.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [ ] Define plugin command contracts for v1.
   - Acceptance criteria:
@@ -281,7 +281,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Launch regions, payout policy, verification, cancellation/refunds, and dispute SLA are approved.
 
-### Phase 1 â€” Schema and Migrations
+### €” Schema and Migrations
 
 - [ ] Implement TrustTransport extension model on canonical profile.
   - Acceptance criteria:
@@ -296,7 +296,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Retention class documented for proof, events, disputes, and financial records.
 
-### Phase 2 â€” API and Command Execution
+### €” API and Command Execution
 
 - [ ] Implement request/create and offer/list/accept flows.
   - Acceptance criteria:
@@ -311,7 +311,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Admin mutation endpoints enforce role + CSRF + audit logging.
 
-### Phase 3 â€” Web Delivery
+### €” Web Delivery
 
 - [ ] Build unified mode-selection and booking UX (ride/package/food).
   - Acceptance criteria:
@@ -326,7 +326,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Earnings, payout requests, ratings, and reliability indicators visible.
 
-### Phase 4 â€” Android Delivery
+### €” Android Delivery
 
 - [ ] Implement critical path parity for booking and tracking.
   - Acceptance criteria:
@@ -338,7 +338,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Critical journeys pass accessibility checks and avoid overload patterns.
 
-### Phase 5 â€” Admin, Compliance, and Hardening
+### €” Admin, Compliance, and Hardening
 
 - [ ] Build admin trust-and-safety operations UI.
   - Acceptance criteria:

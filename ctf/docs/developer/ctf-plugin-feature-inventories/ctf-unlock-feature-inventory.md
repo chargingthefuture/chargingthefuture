@@ -149,7 +149,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Hidden in end-user plugin listing and available in admin contexts.
 
-### Phase 0 â€” Contract Lock
+### €” Contract Lock
 
 - [ ] Define Unlock plugin command contracts for v1.
   - Acceptance criteria:
@@ -164,7 +164,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Command set matches across all three contract files.
 
-### Phase 1 â€” Schema and Persistence
+### €” Schema and Persistence
 
 - [ ] Implement Unlock schema and migration(s) in `ctf/migrations/`.
   - Acceptance criteria:
@@ -176,7 +176,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Incentive grant is tracked and cannot be double-marked.
 
-### Phase 2 â€” User Submission Flow
+### €” User Submission Flow
 
 - [ ] Implement Quora URL submission endpoint.
   - Acceptance criteria:
@@ -185,7 +185,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Invalid URL and accepted submission outcomes are auditable.
 
-### Phase 3 â€” Admin Moderation Flow
+### €” Admin Moderation Flow
 
 - [ ] Implement admin queue listing endpoint.
   - Acceptance criteria:
@@ -197,7 +197,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Queue snapshot and pending submissions render for admins only.
 
-### Phase 4 â€” Incentive Integration
+### €” Incentive Integration
 
 - [x] Implement one-time service-credits grant on approval (runtime-configurable).
   - Acceptance criteria:
@@ -206,7 +206,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Unlock submission stores grant timestamp and service-credits event is auditable.
 
-### Phase 5 â€” Access-Tier Enforcement
+### €” Access-Tier Enforcement
 
 - [x] Implement platform-wide, centralized access-tier policy integration.
   - Acceptance criteria:
@@ -215,7 +215,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Pending submissions past window can transition to support-only without manual edits.
 
-### Phase 6 â€” Validation and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### €” Validation and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Command schema design documentation.
   - Acceptance criteria:
