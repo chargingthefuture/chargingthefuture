@@ -94,15 +94,15 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | lighthouse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | socketrelay | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| peer-programming | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| mood | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| peer-programming | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
+| mood | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| weekly-performance | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| gdp | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| service-credits | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| weekly-performance | ⏳ | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
+| gdp | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
+| service-credits | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| clicklog | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| clicklog | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | unlock | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
@@ -173,5 +173,8 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   7 additional backends complete (schema, contracts, routes, seed script all present and coherent):
   lighthouse (5 tables, 23 routes), socketrelay (7 tables, 20 routes), trusttransport (13 tables, 20 routes),
   gentlepulse (4 tables, 6 routes), levelup (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
-  4 routes). Marked all 7 backends ✅. Remaining: peer-programming/mood/clicklog/gdp/service-credits/weekly-performance
-  require focused audit (mixed/missing schema/contracts/routes); foundation is UI-gated; feed+workforce remain 🟡 due to documented drift.
+  4 routes). Marked all 7 backends ✅. Detailed audit of remaining 6 plugins: peer-programming (7 tables, 6 routes,
+  NO seed script), mood (1 table, 2 routes, NO seed), gdp (3 tables, 2 routes, NO seed), service-credits (15 tables,
+  11 routes, NO seed), weekly-performance (3 tables, 5 routes, NO seed), clicklog (1 table, 2 routes, ✅ seed).
+  Marked clicklog ✅, others 🟡 (schema+contracts+routes complete but missing deterministic seed scripts per 7-gate
+  requirement). Foundation is UI-gated; feed+workforce remain 🟡 due to documented drift.
