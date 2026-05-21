@@ -88,7 +88,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| workforce | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -156,3 +156,10 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
 - 2026-05-21: Adopted v3 app-versioning policy (no new repos; `v3.x.y`) and began dropping the
   "rewrite" label from governance prose now that the legacy app is gone. Removed the spurious
   "community" plugin row — community is a Feed channel, not a standalone plugin.
+- 2026-05-21: Fixed a Phase-header regression introduced by the consolidation (stripped 128
+  "Phase N" headings the merge pulled in from old checklists). Workforce backend audit: routes,
+  tables, contracts, and seed exist; fixed the missing unique index on
+  `workforce_recruited_events(inference_dedupe_key)` (ON CONFLICT upserts/seed were broken without
+  it). Open drift: `workforce_report_snapshots` is in the dashboard command contract's dataAccess
+  but absent from schema/code — awaiting owner decision (build vs. remove), so workforce backend is
+  marked 🟡 not ✅.
