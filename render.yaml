@@ -96,7 +96,7 @@ services:
   #   ENCRYPTION_KEY  — random 32-char hex string (openssl rand -hex 16)
   #   AUTH_SECRET     — random 32-byte base64 string (openssl rand -base64 32)
   #   SITE_URL        — internal Render URL for this service
-  #   MONGO_URL       — MongoDB Atlas connection string
+  #   DATABASE_URL    — Neon PostgreSQL connection string
   #   REDIS_URL       — Redis connection string (e.g., redis://host:port or a Render Redis service URL)
   #
   # These five are the ONLY secrets that must be set manually anywhere.
@@ -116,7 +116,7 @@ services:
         sync: false
       - key: SITE_URL
         sync: false
-      - key: MONGO_URL
+      - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
         sync: false
