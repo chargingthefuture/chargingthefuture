@@ -156,7 +156,6 @@ contracts:
     dataAccess:
       - announcements
       - announcement_delivery_events
-      - feed_admin_audit_trail
     purpose: broadcast_delivery
     retentionClass: transactional_long_lived
     idempotency: true
@@ -179,7 +178,6 @@ contracts:
     dataAccess:
       - announcements
       - announcement_delivery_events
-      - feed_admin_audit_trail
     purpose: broadcast_delivery
     retentionClass: transactional_long_lived
     idempotency: true
@@ -423,7 +421,6 @@ contracts:
         type: string
     dataAccess:
       - feed_render_config
-      - feed_admin_audit_trail
     purpose: feed_governance
     retentionClass: audit_long_lived
     idempotency: true

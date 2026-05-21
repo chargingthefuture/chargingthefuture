@@ -169,12 +169,11 @@ Domain tables:
 4. `feed_user_dismissals`
 5. `feed_render_config`
 6. `feed_membership_events`
-7. `feed_admin_audit_trail`
-8. `announcements`
-9. `announcement_revisions`
-10. `announcement_delivery_events`
-11. `announcement_user_state`
-12. `announcement_membership_events`
+7. `announcements`
+8. `announcement_revisions`
+9. `announcement_delivery_events`
+10. `announcement_user_state`
+11. `announcement_membership_events`
 
 13. `feed_questions`
 14. `feed_answers`
@@ -263,7 +262,7 @@ Domain tables:
   - Acceptance criteria:
     - Web-first implementation accepted; Android follow-up tracked by ticket link in PR.
 
-### €” Contract and Naming Lock
+### ï¿½ï¿½ Contract and Naming Lock
 
 - [x] Lock Feed command contracts.
   - Acceptance criteria:
@@ -278,7 +277,7 @@ Domain tables:
   - Acceptance criteria:
     - New implementation removes legacy typo
 
-### €” Schema and Migration Readiness
+### ï¿½ï¿½ Schema and Migration Readiness
 
 - [x] Implement Feed extension and domain schema.
   - Acceptance criteria:
@@ -293,7 +292,7 @@ Domain tables:
   - Acceptance criteria:
     - Drift check between SQL migrations, app schema, and API contracts is attached as PR evidence.
 
-### €” API and Fan-Out Behavior
+### ï¿½ï¿½ API and Fan-Out Behavior
 
 - [x] Implement timeline/read/dismiss API flows.
   - Acceptance criteria:
@@ -308,7 +307,7 @@ Domain tables:
   - Acceptance criteria:
     - Publish/archive/render-mode updates are role-gated and audited.
 
-### €” Web Delivery
+### ï¿½ï¿½ Web Delivery
 
 - [x] Implement web timeline UI and item states.
   - Acceptance criteria:
@@ -323,7 +322,7 @@ Domain tables:
   - Acceptance criteria:
     - Admin can configure rendering, publish/archive items, and review change history.
 
-### €” Questions Channel and LLM Integration
+### ï¿½ï¿½ Questions Channel and LLM Integration
 
 - [x] Implement `feed_questions`, `feed_answers`, `feed_answer_ratings`, and `llm_inference_log` schema.
   - Acceptance criteria:
@@ -342,7 +341,7 @@ Domain tables:
   - Acceptance criteria:
     - Timeline can filter to questions-only view; LLM answers render inline.
 
-### €” Community Support Channel
+### ï¿½ï¿½ Community Support Channel
 
 - [x] Implement `feed_community_posts` and `feed_community_replies` schema.
   - Acceptance criteria:
@@ -355,7 +354,7 @@ Domain tables:
   - Acceptance criteria:
     - Timeline can filter to community-only view.
 
-### €” Android Parity (Required)
+### ï¿½ï¿½ Android Parity (Required)
 
 - [ ] Implement Android feed timeline with three-channel support.
   - Acceptance criteria:
@@ -370,7 +369,7 @@ Domain tables:
   - Acceptance criteria:
     - All three channels pass parity validation; no web-only gaps remain.
 
-### €” Security, Compliance, and Hardening
+### ï¿½ï¿½ Security, Compliance, and Hardening
 
 - [x] Validate policy enforcement and CSRF coverage.
   - Acceptance criteria:
