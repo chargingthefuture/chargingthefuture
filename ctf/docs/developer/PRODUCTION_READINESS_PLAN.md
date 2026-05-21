@@ -91,19 +91,19 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| lighthouse | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| socketrelay | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| trusttransport | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| lighthouse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| socketrelay | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | peer-programming | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| gentlepulse | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | weekly-performance | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | gdp | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | service-credits | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| levelup | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| trust | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | clicklog | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| unlock | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| unlock | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
 
@@ -169,3 +169,9 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   backend audit: all schema tables, routes, contracts, and seed script verified complete (13 tables, 22
   routes, comprehensive Wave 1+2 features implemented). Marked skills-hunt backend ✅. Fixed schema-drift
   gate contract field pattern matching (now handles both 'version'/'command' and legacy 'contractVersion'/'commandId').
+- 2026-05-21: Batch backend audit — discovered most plugins already have backend implementations. Verified
+  7 additional backends complete (schema, contracts, routes, seed script all present and coherent):
+  lighthouse (5 tables, 23 routes), socketrelay (7 tables, 20 routes), trusttransport (13 tables, 20 routes),
+  gentlepulse (4 tables, 6 routes), levelup (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
+  4 routes). Marked all 7 backends ✅. Remaining: peer-programming/mood/clicklog/gdp/service-credits/weekly-performance
+  require focused audit (mixed/missing schema/contracts/routes); foundation is UI-gated; feed+workforce remain 🟡 due to documented drift.
