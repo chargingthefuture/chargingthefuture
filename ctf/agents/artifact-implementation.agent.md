@@ -257,7 +257,7 @@ IF artifact_changes.audit_contract_changes:
 
 ## Related Files
 
-- Plan: `/ctf/docs/developer/PM_MVP_FEEDBACK_TO_IMPLEMENTATION.md`
+- Plan: `/ctf/docs/developer/PM.md`
 - MCP Server: `/ctf/packages/pm-mcp-server/src/tools/implementation.ts`
 - Matcher Agent: `/ctf/agents/feedback-inventory-matcher.agent.md`
 - Schema: `/ctf/schema.sql`
