@@ -1,11 +1,17 @@
-# CTF Plugin Rewrite Inventories
+# CTF Plugin Feature Inventories
 
-This folder is reserved for **ctf rewrite** plugin inventories.
+This folder holds one living feature inventory per plugin in the v3 app under `ctf/`.
+
+## Single-document model
+
+Each plugin has **one** combined document. The build checklist lives inside the
+inventory as a `## Build Checklist` section (no separate checklist file). Machine-validated
+contract files (`{PLUGIN}_PLUGIN_COMMAND_CONTRACTS.yaml`, `..._ACCESS_POLICY_CONTRACTS.yaml`,
+`..._AUDIT_CONTRACTS.yaml`) stay separate under `ctf/docs/contracts/`.
 
 ## Naming convention
 
-- Inventory: `ctf-{plugin-slug}-feature-inventory.md`
-- Checklist: `ctf-{plugin-slug}-rewrite-checklist.md`
+- Inventory (with embedded build checklist): `ctf-{plugin-slug}-feature-inventory.md`
 
 Examples:
 
@@ -13,46 +19,26 @@ Examples:
 - `ctf-socketrelay-feature-inventory.md`
 - `ctf-workforce-feature-inventory.md`
 
-## Current CTF rewrite inventories
+## Current inventories
 
 - [CTF plugin coding readiness matrix](./ctf-plugin-coding-readiness-matrix.md)
-
-- [Chyme feature inventory](./ctf-chyme-feature-inventory.md)
-- [Chyme rewrite checklist](./ctf-chyme-rewrite-checklist.md)
-
-- [TrustTransport feature inventory](./ctf-trusttransport-feature-inventory.md)
-- [TrustTransport rewrite checklist](./ctf-trusttransport-rewrite-checklist.md)
-- [Feed feature inventory](./ctf-feed-feature-inventory.md)
-- [Feed rewrite checklist](./ctf-feed-rewrite-checklist.md)
-- [Announcements feature inventory](./ctf-announcements-feature-inventory.md)
-- [Announcements rewrite checklist](./ctf-announcements-rewrite-checklist.md)
-- [Directory feature inventory](./ctf-directory-feature-inventory.md)
-- [Directory rewrite checklist](./ctf-directory-rewrite-checklist.md)
-- [Foundation feature inventory](./ctf-foundation-feature-inventory.md)
-- [Foundation rewrite checklist](./ctf-foundation-rewrite-checklist.md)
-- [Peer Programming feature inventory](./ctf-peer-programming-feature-inventory.md)
-- [Peer Programming rewrite checklist](./ctf-peer-programming-rewrite-checklist.md)
-- [Gross Domestic Product feature inventory](./ctf-gross-domestic-product-feature-inventory.md)
-- [Gross Domestic Product rewrite checklist](./ctf-gross-domestic-product-rewrite-checklist.md)
-- [Service Credits feature inventory](./ctf-service-credits-feature-inventory.md)
-- [Service Credits rewrite checklist](./ctf-service-credits-rewrite-checklist.md)
-- [LevelUp feature inventory](./ctf-levelup-feature-inventory.md)
-- [LevelUp rewrite checklist](./ctf-levelup-rewrite-checklist.md)
-- [Skills Hunt feature inventory](./ctf-skills-hunt-feature-inventory.md)
-- [Skills Hunt rewrite checklist](./ctf-skills-hunt-rewrite-checklist.md)
-- [Workforce feature inventory](./ctf-workforce-feature-inventory.md)
-- [Workforce rewrite checklist](./ctf-workforce-rewrite-checklist.md)
-- [GentlePulse feature inventory](./ctf-gentlepulse-feature-inventory.md)
-- [GentlePulse rewrite checklist](./ctf-gentlepulse-rewrite-checklist.md)
-- [Mood feature inventory](./ctf-mood-feature-inventory.md)
-- [Mood rewrite checklist](./ctf-mood-rewrite-checklist.md)
-- [SocketRelay feature inventory](./ctf-socketrelay-feature-inventory.md)
-- [SocketRelay rewrite checklist](./ctf-socketrelay-rewrite-checklist.md)
-- [Weekly Performance feature inventory](./ctf-weekly-performance-feature-inventory.md)
-- [Weekly Performance rewrite checklist](./ctf-weekly-performance-rewrite-checklist.md)
-- [Skills Taxonomy feature inventory](./ctf-skills-taxonomy-feature-inventory.md)
-- [Skills Taxonomy rewrite checklist](./ctf-skills-taxonomy-rewrite-checklist.md)
-- [Unlock feature inventory](./ctf-unlock-feature-inventory.md)
-- [Unlock rewrite checklist](./ctf-unlock-rewrite-checklist.md)
+- [Chyme](./ctf-chyme-feature-inventory.md)
+- [TrustTransport](./ctf-trusttransport-feature-inventory.md)
+- [Feed](./ctf-feed-feature-inventory.md)
+- [Announcements](./ctf-announcements-feature-inventory.md)
+- [Directory](./ctf-directory-feature-inventory.md)
+- [Foundation](./ctf-foundation-feature-inventory.md)
+- [Peer Programming](./ctf-peer-programming-feature-inventory.md)
+- [Gross Domestic Product](./ctf-gross-domestic-product-feature-inventory.md)
+- [Service Credits](./ctf-service-credits-feature-inventory.md)
+- [LevelUp](./ctf-levelup-feature-inventory.md)
+- [Skills Hunt](./ctf-skills-hunt-feature-inventory.md)
+- [Workforce](./ctf-workforce-feature-inventory.md)
+- [GentlePulse](./ctf-gentlepulse-feature-inventory.md)
+- [Mood](./ctf-mood-feature-inventory.md)
+- [SocketRelay](./ctf-socketrelay-feature-inventory.md)
+- [Weekly Performance](./ctf-weekly-performance-feature-inventory.md)
+- [Skills Taxonomy](./ctf-skills-taxonomy-feature-inventory.md)
+- [Unlock](./ctf-unlock-feature-inventory.md)
 
 Legacy reference inventories remain in `ctf/docs/developer/legacy-inventories` and should include `(Legacy Reference)` in the title.

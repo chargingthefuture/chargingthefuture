@@ -74,3 +74,24 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 - 2026-05-20: Corrected the trust model — Trust derives a **qualitative, non-numeric** trust signal/badge (deliberately not a numeric score, on humane grounds) indicating the likelihood a member is a genuine, safe participant, based on engagement/contribution aggregated across the platform's seeded plugins (e.g. login frequency, SocketRelay trades, overall engagement), not just Directory. This is why Trust needs no seed script of its own (it reads from already-seeded plugins). Documented the Directory integration (badge surfaced on the profile). Fixed the API surface (`POST /api/trust/visibility`, not `PUT`) and marked the snapshot/visibility/admin-verification routes as stubs; corrected delivery status from "web+android complete" to "shells delivered, backend logic pending"; noted the unguarded cross-user read and mobile mock data.
 - 2026-05-18: Inventory rewritten to enforce Rule 120 living-snapshot model. Removed "future phase" framing and "No mobile implementation yet" entry (Android features exist under `packages/mobile/src/features/trust`). Replaced placeholder command list with actual routes. Removed `trust_signal_snapshots` table (not present in `ctf/schema.sql`).
 - 2026-03-25: Initial inventory created for Trust plugin rewrite MVP.
+
+
+## Build Checklist
+
+
+### MVP Completion Checklist
+
+- [x] Profile/deletion contract drafted and registered
+- [x] Command, policy, and audit contracts drafted
+- [x] Migration SQL for trust tables delivered
+- [x] Feature inventory created in required folder
+- [ ] Shared Trust React components implemented
+- [ ] Right-rail and Directory profile UI surfaces wired up
+- [ ] API routes and backend logic for trust commands
+- [ ] Policy enforcement and audit logging
+- [ ] Seed script for plugin validation (deferred for MVP)
+- [ ] Mobile parity (deferred)
+
+### Notes
+- All compliance and modularity rules followed per product instructions.
+- Update this checklist as features are completed or deferred.

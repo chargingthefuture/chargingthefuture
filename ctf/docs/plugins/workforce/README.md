@@ -10,7 +10,6 @@ This index links to canonical artifacts for Workforce.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-workforce-rewrite-checklist.md)
 - [Android Parity Note(../../developer/ctf-plugin-feature-inventories/ctf-workforce-android-parity-note.md)
 
 ## Notes

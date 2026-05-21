@@ -18,7 +18,7 @@ This index groups the Skills Hunt plugin planning contracts for review, approval
 1. Feature inventory:
    - `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md`
 2. Rewrite checklist:
-   - `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-rewrite-checklist.md`
+   - `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md`
 
 ## Template and Rule References
 

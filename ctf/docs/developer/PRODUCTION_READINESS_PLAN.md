@@ -38,7 +38,7 @@
 
 Every plugin passes the same gates, run by one agent on an isolated worktree, then merged back:
 
-1. **Spec read** — inventory + rewrite-checklist + contract YAMLs are the contract.
+1. **Spec read** — inventory (with its embedded Build Checklist) + contract YAMLs are the contract.
 2. **Backend to spec** — schema (`CREATE/ALTER ... IF NOT EXISTS`), API routes under
    `app/api/<plugin>/`, command/access/audit/deletion contracts, deterministic seed script. No stub data.
 3. **Web pixel-perfect** — shell matches `design/.../<Plugin>.tsx` + Empty/Loading/Public exactly
@@ -75,7 +75,7 @@ in the `design/` submodule** — build backend now, circle back for UI.
 15. **weekly-performance** backend — no dependency.
 16. **gdp** backend — best done after upstream metric/event semantics settle (#6–#14).
 17. **service-credits** backend — blocked by #16 (GDP accounting/reclaim coupling).
-18. **levelup**, **trust**, **clicklog**, **unlock**, **community** backend — no dependency.
+18. **levelup**, **trust**, **clicklog**, **unlock** backend — no dependency.
 19. **UI circle-back** (per plugin) — blocked by that plugin's design landing in `design/`. Implement web pixel-perfect + android parity once the design agent finishes it.
 
 ## Progress checklist
@@ -104,9 +104,13 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | trust | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | clicklog | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | unlock | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| community | ⏳ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
+
+Note: "community" is **not** a standalone plugin — it is a channel within the Feed plugin
+(`feed_render_config.enabled_channels` includes `community`; routes under `/api/feed/community/*`).
+It is tracked under `feed-announcements`, not as its own row. The Hub/Home shell is separate (its own
+`/api/hub/*` routes) and is listed under Cross-cutting below.
 
 Cross-cutting (non-plugin): Hub/Home shell (🎨 design exists), account, auth (Clerk), Sentry observability.
 
@@ -146,3 +150,9 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   `announcement_targets`, `announcements_user_extension`) that the code never uses — it uses
   equivalent existing tables (`feed_item_targets`, `announcement_user_state`,
   `announcement_membership_events`). Inventory↔code drift; awaiting owner decision on reconciliation.
+- 2026-05-21: Doc consolidation — merged each plugin's `*-rewrite-checklist.md` into its
+  `*-feature-inventory.md` as a `## Build Checklist` section (one doc per plugin; contracts stay
+  separate). Updated rule 120, CLAUDE.md, and the inventories README to mandate the single-file model.
+- 2026-05-21: Adopted v3 app-versioning policy (no new repos; `v3.x.y`) and began dropping the
+  "rewrite" label from governance prose now that the legacy app is gone. Removed the spurious
+  "community" plugin row — community is a Feed channel, not a standalone plugin.

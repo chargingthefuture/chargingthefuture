@@ -10,7 +10,6 @@ This index links to canonical artifacts for Chyme.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-chyme-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

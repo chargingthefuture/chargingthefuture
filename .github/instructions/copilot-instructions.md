@@ -33,9 +33,21 @@ rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
 
 ## Scope
 
-- Applies to the rewrite web/Android product under `ctf/`.
+- Applies to the v3 web/Android product under `ctf/`.
 - The `/platform` folder is strictly for reference-only during migration and must never be referenced, deployed, or used for routing or domain configuration unless explicitly requested.
 - Governs architecture, coding standards, delivery quality, and compliance.
+
+## App Versioning and Repository Policy
+
+- This is **v3** of the app. The legacy app has been removed; the codebase under `ctf/` is the
+  single, mature product. Do not describe it as "the rewrite" — that label has lost its meaning now
+  that there is only one app. Prefer "the v3 app" or just "the app".
+- **No new repositories.** Going forward, ship changes as app versions only — `v3.0.1`, `v3.1.0`,
+  `v3.1.1`, etc. (semver under the `v3` major). Do not propose or create a new repo for a "v4" or a
+  fresh rewrite; increment the version instead.
+- Note: some identifiers retain the historical "rewrite" name for stability (e.g. the
+  `rewrite-ci.yml` workflow and the package name). These are intentionally left as-is to avoid CI and
+  build churn; do not rename them without an explicit instruction.
 
 
 ## Product Rule Modules
@@ -212,9 +224,9 @@ When making code changes, consult this table to identify which inventory section
 
 When creating a new plugin from scratch, ALL of the following must be completed before PR approval:
 
-1. **Inventory Files**
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all 10 required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Risks & Known Technical Debt)
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-rewrite-checklist.md` as an ordered, dependency-based task list (no phases)
+1. **Inventory File** (single combined document — see [120-plugin-feature-inventory-lifecycle-rules.mdc](120-plugin-feature-inventory-lifecycle-rules.mdc))
+   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Gaps & Known Technical Debt, Change Log)
+   - Include a `## Build Checklist` section in that same file: an ordered, dependency-based task list (no phases). There is no separate checklist file.
 
 2. **Schema & Migrations**
    - Add all plugin tables to `ctf/schema.sql` using `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` pattern
