@@ -42,18 +42,21 @@ RUN pnpm --filter @ctf/web run build:ci
 # ── 3. Production runner ──────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS runner
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+# Run as a non-root user with a real home for least-privilege at runtime
+RUN addgroup -S app && adduser -S -G app -h /home/app app
 WORKDIR /repo
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
-# Copy only what `next start` needs at runtime
-COPY --from=builder /repo/packages/web/.next          packages/web/.next
-COPY --from=builder /repo/packages/web/public         packages/web/public
-COPY --from=builder /repo/packages/web/package.json   packages/web/package.json
-COPY --from=deps    /repo/packages/web/node_modules   packages/web/node_modules
+# Copy only what `next start` needs at runtime, owned by the non-root user
+COPY --from=builder --chown=app:app /repo/packages/web/.next          packages/web/.next
+COPY --from=builder --chown=app:app /repo/packages/web/public         packages/web/public
+COPY --from=builder --chown=app:app /repo/packages/web/package.json   packages/web/package.json
+COPY --from=deps    --chown=app:app /repo/packages/web/node_modules   packages/web/node_modules
 # @ctf/shared is bundled into .next but symlink resolution may need the dist
-COPY --from=builder /repo/packages/shared/dist        packages/shared/dist
-COPY --from=builder /repo/packages/shared/package.json packages/shared/package.json
-COPY pnpm-workspace.yaml ./
+COPY --from=builder --chown=app:app /repo/packages/shared/dist        packages/shared/dist
+COPY --from=builder --chown=app:app /repo/packages/shared/package.json packages/shared/package.json
+COPY --chown=app:app pnpm-workspace.yaml ./
 EXPOSE 3000
+USER app
 WORKDIR /repo/packages/web
 # PORT is injected by Render at runtime
 CMD ["sh", "-c", "node_modules/.bin/next start -p ${PORT:-3000}"]
