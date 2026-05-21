@@ -97,8 +97,9 @@ services:
   #   AUTH_SECRET     — random 32-byte base64 string (openssl rand -base64 32)
   #   SITE_URL        — internal Render URL for this service
   #   MONGO_URL       — MongoDB Atlas connection string
+  #   REDIS_URL       — Redis connection string (e.g., redis://host:port or a Render Redis service URL)
   #
-  # These four are the ONLY secrets that must be set manually anywhere.
+  # These five are the ONLY secrets that must be set manually anywhere.
   # Once Infisical is running, configure a Render Connection inside it
   # to take over secret management for all other services.
   - type: pserv
@@ -116,6 +117,8 @@ services:
       - key: SITE_URL
         sync: false
       - key: MONGO_URL
+        sync: false
+      - key: REDIS_URL
         sync: false
 
   # ── Formance Ledger (financial ledger) ───────────────────────────
