@@ -48,12 +48,32 @@ services:
       # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_*) are synced
       # automatically by Infisical via the Render Sync integration.
 
-  # NOTE: agent-mcp-server and pm-mcp-server are intentionally NOT deployed
-  # here. They are stdio-transport MCP servers (no inbound HTTP port) that
-  # are spawned on demand by local AI coding agents (Claude Code, Copilot)
-  # via `node dist/index.js` — see ctf/agents/AGENT-MCP-SETUP.md. Running
-  # them as always-on Render workers serves no purpose (no client is
-  # attached to stdin). Their Dockerfiles remain for local/CI builds only.
+  # ── Agent MCP Server ─────────────────────────────────────────────
+  # Background worker — stdio MCP transport for agentic build/deploy/debug.
+  # Part of 100% agentic infrastructure orchestration.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-agent-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
+    dockerContext: ctf/packages/agent-mcp-server
+    region: ohio
+    plan: starter
+
+  # ── PM MCP Server ────────────────────────────────────────────────
+  # Background worker — stdio MCP transport for PM feedback workflows.
+  # Part of 100% agentic infrastructure orchestration.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-pm-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
+    dockerContext: ctf/packages/pm-mcp-server
+    region: ohio
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
 
   # ── Ollama ────────────────────────────────────────────────────────
   # Private service — reachable by other Render services via internal URL.
