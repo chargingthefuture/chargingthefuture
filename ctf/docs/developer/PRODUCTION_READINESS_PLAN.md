@@ -89,7 +89,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| skills-hunt | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | socketrelay | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -163,3 +163,9 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   it). Open drift: `workforce_report_snapshots` is in the dashboard command contract's dataAccess
   but absent from schema/code — awaiting owner decision (build vs. remove), so workforce backend is
   marked 🟡 not ✅.
+- 2026-05-21: Resolved two drift items per owner decision: (1) Removed phantom `workforce_report_snapshots`
+  from workforce command contracts (spec'd but never built). (2) Removed phantom `feed_admin_audit_trail`
+  from feed inventory + contracts (table doesn't exist in schema; code doesn't reference it). Skills-hunt
+  backend audit: all schema tables, routes, contracts, and seed script verified complete (13 tables, 22
+  routes, comprehensive Wave 1+2 features implemented). Marked skills-hunt backend ✅. Fixed schema-drift
+  gate contract field pattern matching (now handles both 'version'/'command' and legacy 'contractVersion'/'commandId').
