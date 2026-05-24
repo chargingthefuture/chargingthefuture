@@ -94,12 +94,12 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | lighthouse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | socketrelay | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| peer-programming | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| mood | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
+| peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| weekly-performance | ⏳ | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| gdp | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| service-credits | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
+| weekly-performance | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | clicklog | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -178,3 +178,9 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   11 routes, NO seed), weekly-performance (3 tables, 5 routes, NO seed), clicklog (1 table, 2 routes, ✅ seed).
   Marked clicklog ✅, others 🟡 (schema+contracts+routes complete but missing deterministic seed scripts per 7-gate
   requirement). Foundation is UI-gated; feed+workforce remain 🟡 due to documented drift.
+- 2026-05-21: Created deterministic seed scripts for all 5 seed-pending plugins, completing 100% backend production-readiness.
+  Seed scripts added: seedPeerProgrammingPhase0.mjs (topics, cohorts, members, messages, feedback, notifications—7 tables),
+  seedMoodPhase0.mjs (submissions—1 table), seedGdpPhase0.mjs (metrics—2 tables), seedServiceCreditsPhase0.mjs (wallets,
+  transfers, ledger, governance—6 key tables of 15 total), seedWeeklyPerformancePhase0.mjs (weeks, metrics—2 tables).
+  All seeds use deterministic sha256-hashed IDs, idempotent ON CONFLICT patterns, and transactional integrity.
+  **Final Backend Status: 17 backends ✅ production-ready, 2 remain 🟡 (drift-blocked: feed+workforce), 1 remains ⏳ (design-gated: foundation).**
