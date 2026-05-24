@@ -48,12 +48,32 @@ services:
       # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_*) are synced
       # automatically by Infisical via the Render Sync integration.
 
-  # NOTE: agent-mcp-server and pm-mcp-server are intentionally NOT deployed
-  # here. They are stdio-transport MCP servers (no inbound HTTP port) that
-  # are spawned on demand by local AI coding agents (Claude Code, Copilot)
-  # via `node dist/index.js` — see ctf/agents/AGENT-MCP-SETUP.md. Running
-  # them as always-on Render workers serves no purpose (no client is
-  # attached to stdin). Their Dockerfiles remain for local/CI builds only.
+  # ── Agent MCP Server ─────────────────────────────────────────────
+  # Background worker — stdio MCP transport for agentic build/deploy/debug.
+  # Part of 100% agentic infrastructure orchestration.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-agent-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
+    dockerContext: ctf/packages/agent-mcp-server
+    region: ohio
+    plan: starter
+
+  # ── PM MCP Server ────────────────────────────────────────────────
+  # Background worker — stdio MCP transport for PM feedback workflows.
+  # Part of 100% agentic infrastructure orchestration.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-pm-mcp-server
+    runtime: docker
+    dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
+    dockerContext: ctf/packages/pm-mcp-server
+    region: ohio
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
 
   # ── Ollama ────────────────────────────────────────────────────────
   # Private service — reachable by other Render services via internal URL.
@@ -76,9 +96,10 @@ services:
   #   ENCRYPTION_KEY  — random 32-char hex string (openssl rand -hex 16)
   #   AUTH_SECRET     — random 32-byte base64 string (openssl rand -base64 32)
   #   SITE_URL        — internal Render URL for this service
-  #   MONGO_URL       — MongoDB Atlas connection string
+  #   DATABASE_URL    — Neon PostgreSQL connection string
+  #   REDIS_URL       — Redis connection string (e.g., redis://host:port or a Render Redis service URL)
   #
-  # These four are the ONLY secrets that must be set manually anywhere.
+  # These five are the ONLY secrets that must be set manually anywhere.
   # Once Infisical is running, configure a Render Connection inside it
   # to take over secret management for all other services.
   - type: pserv
@@ -95,7 +116,9 @@ services:
         sync: false
       - key: SITE_URL
         sync: false
-      - key: MONGO_URL
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
         sync: false
 
   # ── Formance Ledger (financial ledger) ───────────────────────────

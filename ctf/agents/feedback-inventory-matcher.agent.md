@@ -182,7 +182,7 @@ Creates approval_queue entry for human review
 
 ## Related Files
 
-- Plan: `/ctf/docs/developer/PM_MVP_FEEDBACK_TO_IMPLEMENTATION.md`
+- Plan: `/ctf/docs/developer/PM.md`
 - MCP Server: `/ctf/packages/pm-mcp-server/src/tools/feedback.ts`
 - Approval Agent: `/ctf/agents/artifact-implementation.agent.md`
 - Contracts: `/ctf/docs/contracts/feedback/`

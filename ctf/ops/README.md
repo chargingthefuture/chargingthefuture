@@ -30,4 +30,4 @@ docker-compose -f ops/docker-compose.yml down
 
 ## Ollama
 
-`ollama/Dockerfile` — custom image for the Railway Ollama service with the model baked in at build time. The Railway service builds from this file; changing the model means updating the `ARG OLLAMA_MODEL` line and pushing. See `docs/developer/OLLAMA_RAILWAY_MODEL_MANAGEMENT.md` for full instructions.
+`ollama/Dockerfile` — custom image for the `ctf-ollama` Render service with the model baked in at build time. Render builds from this file; changing the model means updating the `ARG OLLAMA_MODEL` line and pushing. See `docs/developer/OLLAMA.md` for full instructions.
