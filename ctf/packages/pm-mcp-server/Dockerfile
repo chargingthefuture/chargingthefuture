@@ -5,9 +5,10 @@
 ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
-# Install all deps (including devDeps for tsc)
+# Install all deps (including devDeps for tsc). No package-lock.json is committed
+# (pnpm monorepo gitignores npm lockfiles), so use npm install.
 COPY package.json ./
-RUN npm ci
+RUN npm install
 # Compile TypeScript
 COPY tsconfig.json ./
 COPY src ./src
@@ -19,7 +20,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 # Install only production deps
 COPY package.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 # Copy compiled output
 COPY --from=builder /app/dist ./dist
 CMD ["node", "dist/index.js"]
