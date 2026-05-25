@@ -76,7 +76,7 @@ services:
     name: ctf-agent-mcp-server
     runtime: docker
     dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
-    dockerContext: ctf/packages/agent-mcp-server
+    dockerContext: ctf
     region: ohio
     plan: starter
     envVars:
@@ -91,7 +91,7 @@ services:
     name: ctf-pm-mcp-server
     runtime: docker
     dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
-    dockerContext: ctf/packages/pm-mcp-server
+    dockerContext: ctf
     region: ohio
     plan: starter
     envVars:
