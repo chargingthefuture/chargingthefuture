@@ -37,12 +37,24 @@ COPY packages/shared packages/shared
 COPY packages/web    packages/web
 # Build shared first — web depends on it
 RUN pnpm --filter @ctf/shared run build
+# Build-time public env vars — passed as --build-arg from GitHub Actions.
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time by Next.js.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_AUTH_SIGN_IN_URL
+ARG NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL
+ARG NEXT_PUBLIC_AUTH_PROVIDER
 # Build web (CI mode: skips Sentry build plugin, increases heap)
 ENV NEXT_TELEMETRY_DISABLED=1 \
     CTF_SKIP_SENTRY_NEXTJS=1 \
     NODE_OPTIONS="--max-old-space-size=8192" \
     NEXT_PRIVATE_MAX_WORKER_THREADS=1 \
-    SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1
+    SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1 \
+    NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL} \
+    NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=${NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY} \
+    NEXT_PUBLIC_AUTH_SIGN_IN_URL=${NEXT_PUBLIC_AUTH_SIGN_IN_URL} \
+    NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL=${NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL} \
+    NEXT_PUBLIC_AUTH_PROVIDER=${NEXT_PUBLIC_AUTH_PROVIDER}
 RUN pnpm --filter @ctf/web run build:ci
 
 # ── 3. Production runner ──────────────────────────────────────────

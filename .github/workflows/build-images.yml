@@ -1,0 +1,263 @@
+name: Build and push Docker images
+
+# Builds each service image on push to main (with path filtering so Ollama
+# only rebuilds when its Dockerfile changes) and pushes to GHCR. Render is
+# then configured to pull pre-built images, consuming zero Render build minutes.
+#
+# FIRST-TIME SETUP (do once per service image):
+#   After the workflow runs for the first time, go to:
+#   github.com/orgs/chargingthefuture/packages → each ctf-* image →
+#   Package settings → Change visibility → Public.
+#   This lets Render pull images without registry credentials.
+#
+# REQUIRED GITHUB SECRETS:
+#   NEXT_PUBLIC_APP_URL               — production URL, e.g. https://chargingthefuture.com
+#   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  — Clerk publishable key (pk_live_…)
+#   NEXT_PUBLIC_AUTH_SIGN_IN_URL      — e.g. /sign-in
+#   NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL — e.g. /
+#   NEXT_PUBLIC_AUTH_PROVIDER         — clerk
+#
+# OPTIONAL GITHUB SECRETS (enables auto-deploy to Render after image push):
+#   RENDER_API_KEY                    — Render API key
+#   RENDER_SERVICE_ID_WEB             — Render service ID for ctf-web
+#   RENDER_SERVICE_ID_PM_MCP          — Render service ID for ctf-pm-mcp-server
+#   RENDER_SERVICE_ID_OLLAMA          — Render service ID for ctf-ollama
+#   RENDER_SERVICE_ID_FORMANCE        — Render service ID for ctf-formance-ledger
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ctf/**'
+      - 'render.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Detect which services have changed ──────────────────────────
+  changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      pm-mcp-server: ${{ steps.filter.outputs.pm-mcp-server }}
+      ollama: ${{ steps.filter.outputs.ollama }}
+      formance: ${{ steps.filter.outputs.formance }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'ctf/packages/web/**'
+              - 'ctf/packages/shared/**'
+              - 'ctf/pnpm-lock.yaml'
+              - 'ctf/package.json'
+              - 'ctf/tsconfig.base.json'
+              - 'ctf/pnpm-workspace.yaml'
+            pm-mcp-server:
+              - 'ctf/packages/pm-mcp-server/**'
+            ollama:
+              - 'ctf/ops/ollama/**'
+            formance:
+              - 'ctf/ops/formance/Dockerfile.ledger'
+
+  # ── ctf-web ─────────────────────────────────────────────────────
+  build-web:
+    name: Build ctf-web
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ctf-web
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ctf
+          file: ctf/packages/web/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ctf-web
+          cache-to: type=gha,scope=ctf-web,mode=max
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_AUTH_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_AUTH_SIGN_IN_URL }}
+            NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL=${{ secrets.NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL }}
+            NEXT_PUBLIC_AUTH_PROVIDER=${{ secrets.NEXT_PUBLIC_AUTH_PROVIDER }}
+
+      - name: Trigger Render deploy
+        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_WEB != '' }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_WEB/deploys"
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_WEB: ${{ secrets.RENDER_SERVICE_ID_WEB }}
+
+  # ── ctf-pm-mcp-server ───────────────────────────────────────────
+  build-pm-mcp-server:
+    name: Build ctf-pm-mcp-server
+    needs: changes
+    if: needs.changes.outputs.pm-mcp-server == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ctf-pm-mcp-server
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ctf/packages/pm-mcp-server
+          file: ctf/packages/pm-mcp-server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ctf-pm-mcp-server
+          cache-to: type=gha,scope=ctf-pm-mcp-server,mode=max
+
+      - name: Trigger Render deploy
+        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_PM_MCP != '' }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_PM_MCP/deploys"
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_PM_MCP: ${{ secrets.RENDER_SERVICE_ID_PM_MCP }}
+
+  # ── ctf-ollama ──────────────────────────────────────────────────
+  # Only rebuilds when the Dockerfile changes — model bake takes ~1 hour.
+  build-ollama:
+    name: Build ctf-ollama
+    needs: changes
+    if: needs.changes.outputs.ollama == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ctf-ollama
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ctf/ops/ollama
+          file: ctf/ops/ollama/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ctf-ollama
+          cache-to: type=gha,scope=ctf-ollama,mode=max
+
+      - name: Trigger Render deploy
+        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_OLLAMA != '' }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_OLLAMA/deploys"
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
+
+  # ── ctf-formance-ledger ─────────────────────────────────────────
+  build-formance-ledger:
+    name: Build ctf-formance-ledger
+    needs: changes
+    if: needs.changes.outputs.formance == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ctf-formance-ledger
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ctf/ops/formance
+          file: ctf/ops/formance/Dockerfile.ledger
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ctf-formance-ledger
+          cache-to: type=gha,scope=ctf-formance-ledger,mode=max
+
+      - name: Trigger Render deploy
+        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_FORMANCE != '' }}
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_FORMANCE/deploys"
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
