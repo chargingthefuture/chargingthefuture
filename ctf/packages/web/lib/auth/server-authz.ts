@@ -59,8 +59,11 @@ export async function evaluatePluginAccess(
     allowUnlockSupportOnly = false,
   } = options;
 
-  // DEV AUTH BYPASS: If DEV_AUTH_BYPASS is set, always allow as admin for local QA
-  if (process.env.DEV_AUTH_BYPASS === 'true') {
+  // DEV AUTH BYPASS: local QA only. Never honored in a deployed environment —
+  // Render runs NODE_ENV=production for prod AND previews, so a stray
+  // DEV_AUTH_BYPASS=true reaching a service via a synced env group can never
+  // grant admin in prod or previews.
+  if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === 'true') {
     return {
       allowed: true,
       userId: 'dev-admin',
