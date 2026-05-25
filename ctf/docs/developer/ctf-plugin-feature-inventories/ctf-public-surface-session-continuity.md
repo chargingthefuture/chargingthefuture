@@ -55,12 +55,21 @@ Current state (as of 2026-05-25):
 
 ## Roadmap: Foundation Now, UI After Design
 
-### Foundation (This Session)
+### Foundation (Landed 2026-05-25)
+- [x] **Server flag helpers** — `ctf/packages/web/lib/feature-flags/system.ts`:
+  - `isPublicSurfaceEnabled()` — evaluates `SYSTEM_FLAGS.PUBLIC_SURFACE`, default `true` (preserves current prod behavior + local/CI when Unleash unconfigured).
+  - `isDemoMode()` — evaluates `SYSTEM_FLAGS.DEMO_MODE`, default `false` (real data unless an operator explicitly enables demo mode).
+  - `publicSurfaceGate()` — returns a 403 `NextResponse` when the flag is OFF, else null. Server-only; no rendered surface, so not design-pass gated.
+- [x] **Gated public API routes** behind `publicSurfaceGate()` (server-only, no rendered surface):
+  - `GET /api/directory/public`
+  - `GET /api/directory/public/[id]`
+  - `GET /api/socketrelay/public`
+  - `GET /api/socketrelay/public/[id]`
+- [x] **Flag keys confirmed** in `ctf/packages/shared/src/feature-flags/keys.ts`: `SYSTEM_FLAGS.PUBLIC_SURFACE`, `SYSTEM_FLAGS.DEMO_MODE`.
+
+### Foundation (Remaining — Blocked on Owner Decisions)
 - [ ] **Lock owner decisions** (Decision 1, 2, 3 above).
-- [ ] **Define flag keys** in `ctf/packages/shared/src/feature-flags/keys.ts`:
-  - `SYSTEM_FLAGS.PUBLIC_SURFACE` (already exists; re-confirm usage)
-  - `SYSTEM_FLAGS.DEMO_MODE` (already exists; re-confirm usage)
-  - Optionally, per-route flags if Decision 2 chooses per-route gating.
+- [ ] **Decide on per-route flags** if Decision 2 chooses per-route gating (currently a single binary `public-surface` flag gates all public APIs).
 - [ ] **Plan database/data routing**: If Neon branch chosen (Decision 1), document:
   - Neon project ID, branch-creation script, demo-data seed steps.
   - How `DEMO_MODE` flag triggers branch-switch in server initialization.
@@ -116,7 +125,7 @@ Current state (as of 2026-05-25):
 
 - [ ] **UI Implementation Phase** (gated on design pass)
   - [ ] Design: `design/public-surface/` submodule (landing, auth flows, directory profile, unlock form)
-  - [ ] Middleware flag check: add `public-surface` gate
+  - [ ] Public **page** gating (vs API gating, which is done): when `public-surface` is OFF, decide whether `/`, `/apps/directory/[handle]`, `/plugin/unlock` redirect to sign-in or render a "currently unavailable" surface. The "unavailable" surface is a rendered UI → needs design. Redirect-only behavior could ship as foundation if the owner prefers.
   - [ ] Landing page: responsive, demo-mode styling
   - [ ] Sign-in/sign-up flows: flag-gated, demo-mode labels
   - [ ] Directory public profile: flag-gated, demo-safe data

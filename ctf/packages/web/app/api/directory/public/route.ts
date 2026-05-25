@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { listPublicDirectory, parsePaginationParams } from 'lib/directory/repository';
+import { publicSurfaceGate } from 'lib/feature-flags';
 
 function getFilters(url: string) {
   const params = new URL(url).searchParams;
@@ -14,6 +15,9 @@ function getFilters(url: string) {
 }
 
 export async function GET(request: Request) {
+  const gate = await publicSurfaceGate();
+  if (gate) return gate;
+
   const pagination = parsePaginationParams(request.url);
 
   try {

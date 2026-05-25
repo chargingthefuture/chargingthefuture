@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { getPublicDirectoryById } from 'lib/directory/repository';
+import { publicSurfaceGate } from 'lib/feature-flags';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(_: Request, { params }: RouteParams) {
+  const gate = await publicSurfaceGate();
+  if (gate) return gate;
+
   const { id } = await params;
 
   try {
