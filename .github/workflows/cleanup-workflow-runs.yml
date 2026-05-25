@@ -1,0 +1,27 @@
+name: Cleanup deprecated workflow runs
+
+# One-shot cleanup: deletes all GitHub Actions runs for workflows whose .yml
+# files have been removed, removing them from the Actions sidebar.
+# Safe to re-run. Active workflows are preserved (see script ACTIVE_PATHS).
+#
+# Usage: Actions → "Cleanup deprecated workflow runs" → Run workflow
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    name: Delete deprecated workflow runs
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete deprecated workflow runs
+        run: |
+          chmod +x ctf/scripts/cleanup-old-workflow-runs.sh
+          ctf/scripts/cleanup-old-workflow-runs.sh
