@@ -60,7 +60,7 @@ services:
     dockerContext: ctf
     region: ohio
     plan: starter
-    envVars: {}
+    envVars: []
 
   # ── PM MCP Server ────────────────────────────────────────────────
   # Background worker — stdio MCP transport for PM feedback workflows.
@@ -132,4 +132,4 @@ services:
     dockerContext: ctf/ops/formance
     region: ohio
     plan: starter
-    envVars: {}
+    envVars: []
