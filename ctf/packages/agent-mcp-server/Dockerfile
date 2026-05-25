@@ -24,4 +24,6 @@ COPY package.json ./
 RUN npm install --omit=dev
 # Copy compiled output
 COPY --from=builder /app/dist ./dist
+# Copy agent definitions (loaded at runtime by discoverAgents)
+COPY ../../agents ./agents
 CMD ["node", "dist/index.js"]
