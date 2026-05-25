@@ -4,38 +4,29 @@
 #
 # ENVIRONMENT MODEL
 # ───────────────────────────────
-# Production is the only persistent environment — it deploys from `main`.
-# Every pull request gets a full ephemeral preview environment (all services
-# below), which Render destroys automatically when the PR merges or closes.
-# There is no permanent staging environment; test branches via previews.
+# Production is the only environment — it deploys from `main`. Render preview
+# environments are NOT used: they require a paid (non-Hobby) workspace, and a
+# `previews:` block here blocks Blueprint sync on a Hobby workspace. Test
+# changes locally / in Codespaces before merging to `main`. To get ephemeral
+# per-PR previews later, upgrade the workspace and re-add a `previews:` block.
 #
 # SECRET MANAGEMENT ARCHITECTURE
 # ───────────────────────────────
 # Infisical (self-hosted on Railway) is the single source of truth for secrets.
 # Its Render Sync integration pushes secrets into each production service below.
 #
-# Preview environments get suffixed service names that Infisical's per-service
-# syncs do not target, so preview secrets come from the linked Render env group
-# `ctf-preview-secrets` (env groups are inherited by previews). Services that
-# need secrets reference it via `fromGroup` below.
-#
-# IMPORTANT — populating `ctf-preview-secrets`:
-#   * Add the staging values as ENV VARS (use the env group's "Add from .env"
-#     bulk paste), NOT as a secret file. Render secret files are mounted on disk
-#     only and are never loaded into process.env, so the app would not see them.
-#   * Production must have Infisical sync every key the group contains. Service-
-#     level vars (Infisical → Render Sync) override env-group vars, so any group
-#     key NOT synced by Infisical would leak its staging value into production.
+# The `ctf-preview-secrets` env group (linked via `fromGroup` below) is a base
+# secret layer for the Production services. Service-level vars synced by
+# Infisical override env-group vars, so Infisical stays authoritative.
+# IMPORTANT: Production must have Infisical sync every key the group contains —
+# any group key NOT synced by Infisical would otherwise serve its env-group
+# value in production.
+#   * Populate the group via the "Add from .env" bulk paste as ENV VARS, NOT a
+#     secret file (secret files are disk-mounted only, never in process.env).
 #
 # For GitHub Actions (backup workflow), add two GitHub secrets:
 # INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET; the workflow fetches the rest
 # from Infisical at runtime.
-
-# Ephemeral preview environment per PR; auto-destroyed on merge/close.
-# expireAfterDays cleans up previews on abandoned-but-open PRs.
-previews:
-  generation: automatic
-  expireAfterDays: 5
 
 services:
   # ── Next.js web app ─────────────────────────────────────────────
@@ -51,9 +42,8 @@ services:
     plan: standard
     healthCheckPath: /api/health
     envVars:
-      # PREVIEW SECRETS: previews inherit staging values from this env group.
-      # In production these are overridden by Infisical → Render Sync, since
-      # service-level vars take precedence over env-group vars.
+      # Base secret layer; Infisical → Render Sync overrides these in production
+      # (service-level vars take precedence over env-group vars).
       - fromGroup: ctf-preview-secrets
       - key: PORT
         value: "3000"
@@ -82,7 +72,7 @@ services:
     region: ohio
     plan: starter
     envVars:
-      # PREVIEW SECRETS (see ctf-web). Prod overridden by Infisical Render Sync.
+      # Base secret layer (see ctf-web). Infisical Render Sync overrides in prod.
       - fromGroup: ctf-preview-secrets
 
   # ── PM MCP Server ────────────────────────────────────────────────
@@ -97,7 +87,7 @@ services:
     region: ohio
     plan: starter
     envVars:
-      # PREVIEW SECRETS (see ctf-web). Prod overridden by Infisical Render Sync.
+      # Base secret layer (see ctf-web). Infisical Render Sync overrides in prod.
       - fromGroup: ctf-preview-secrets
       - key: NODE_ENV
         value: production
@@ -113,7 +103,7 @@ services:
     region: ohio
     plan: standard
     # No fromGroup: ctf-ollama only serves a baked-in model and reads no app
-    # secrets, so previews need nothing from ctf-preview-secrets.
+    # secrets, so it needs nothing from ctf-preview-secrets.
     envVars:
       - key: OLLAMA_MODEL
         value: llama3.2
@@ -158,6 +148,6 @@ services:
     region: ohio
     plan: starter
     envVars:
-      # PREVIEW SECRETS (see ctf-web): previews need FORMANCE_POSTGRES_URI from the
-      # staging env group. Prod overridden by Infisical Render Sync.
+      # Base secret layer (see ctf-web): provides FORMANCE_POSTGRES_URI.
+      # Infisical Render Sync overrides in prod.
       - fromGroup: ctf-preview-secrets
