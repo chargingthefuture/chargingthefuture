@@ -18,7 +18,8 @@ REQUEST_ID="$(date +%s)"
 
 # FORMANCE_API_URL is the Render internal address (e.g. http://ctf-formance-ledger:3068),
 # reachable only from inside the Render private network. Run this from a Render
-# service shell, not from a local machine.
+# service shell (Render dashboard > ctf-web > Shell > $) to create the ledger namespace.
+# It cannot run from a local machine — the URL is internal-only.
 
 echo "[1/4] Bootstrapping ledger namespace: ${LEDGER_NAME}"
 bootstrap_status="$(curl -sS -o /tmp/formance-bootstrap-response.json -w "%{http_code}" \

@@ -11,7 +11,7 @@ FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 # Root manifest carries the pnpm `overrides`; without it --frozen-lockfile
 # reports an overrides mismatch against the lockfile.
-COPY package.json ./
+COPY package.json tsconfig.base.json ./
 # Copy every workspace member's package.json so pnpm can resolve the graph
 COPY packages/shared/package.json           packages/shared/package.json
 COPY packages/web/package.json              packages/web/package.json
