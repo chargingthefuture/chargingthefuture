@@ -90,36 +90,30 @@ services:
         value: llama3.2
 
   # ── Infisical (secrets management) ───────────────────────────────
-  # Private service — single source of truth for all secrets.
+  # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
+  # Railway Infisical instance configured with Render Sync integration to push
+  # secrets (DATABASE_URL, POSTGRES_URI, CLERK_*, etc.) to all Render services.
+  # TODO: migrate Infisical to Render when cost-benefit favors consolidation.
+  # Original pserv config preserved below for future re-migration:
   #
-  # BOOTSTRAP (one-time manual setup in Render dashboard):
-  #   ENCRYPTION_KEY  — random 32-char hex string (openssl rand -hex 16)
-  #   AUTH_SECRET     — random 32-byte base64 string (openssl rand -base64 32)
-  #   SITE_URL        — internal Render URL for this service
-  #   DATABASE_URL    — Neon PostgreSQL connection string
-  #   REDIS_URL       — Redis connection string (e.g., redis://host:port or a Render Redis service URL)
-  #
-  # These five are the ONLY secrets that must be set manually anywhere.
-  # Once Infisical is running, configure a Render Connection inside it
-  # to take over secret management for all other services.
-  - type: pserv
-    name: ctf-infisical
-    runtime: docker
-    dockerfilePath: ctf/ops/infisical/Dockerfile
-    dockerContext: ctf/ops/infisical
-    region: ohio
-    plan: starter
-    envVars:
-      - key: ENCRYPTION_KEY
-        sync: false
-      - key: AUTH_SECRET
-        sync: false
-      - key: SITE_URL
-        sync: false
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
+  # - type: pserv
+  #   name: ctf-infisical
+  #   runtime: docker
+  #   dockerfilePath: ctf/ops/infisical/Dockerfile
+  #   dockerContext: ctf/ops/infisical
+  #   region: ohio
+  #   plan: starter
+  #   envVars:
+  #     - key: ENCRYPTION_KEY
+  #       sync: false
+  #     - key: AUTH_SECRET
+  #       sync: false
+  #     - key: SITE_URL
+  #       sync: false
+  #     - key: DATABASE_URL
+  #       sync: false
+  #     - key: REDIS_URL
+  #       sync: false
 
   # ── Formance Ledger (financial ledger) ───────────────────────────
   # Private service — pinned to ghcr.io/formancehq/ledger:v2.3.15-dev.1
