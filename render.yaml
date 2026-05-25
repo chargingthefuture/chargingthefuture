@@ -10,6 +10,17 @@
 # changes locally / in Codespaces before merging to `main`. To get ephemeral
 # per-PR previews later, upgrade the workspace and re-add a `previews:` block.
 #
+# IMAGE BUILD ARCHITECTURE
+# ───────────────────────────────
+# Docker images are built by GitHub Actions (build-images.yml) and pushed to
+# GHCR (ghcr.io/chargingthefuture/*:latest). Render pulls pre-built images —
+# zero Render build pipeline minutes consumed.
+#
+# FIRST-TIME SETUP: after build-images.yml runs for the first time, go to
+# github.com/orgs/chargingthefuture/packages → each ctf-* image →
+# Package settings → Change visibility → Public.
+# This lets Render pull images without registry credentials.
+#
 # SECRET MANAGEMENT ARCHITECTURE
 # ───────────────────────────────
 # Infisical (self-hosted on Railway) is the single source of truth for secrets.
@@ -22,13 +33,13 @@
 
 services:
   # ── Next.js web app ─────────────────────────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-web:latest
   # All secrets injected by Infisical → Render Sync. No manual setup required
   # beyond configuring the Render Sync inside Infisical.
   - type: web
     name: ctf-web
-    runtime: docker
-    dockerfilePath: ctf/packages/web/Dockerfile
-    dockerContext: ctf
+    image:
+      url: ghcr.io/chargingthefuture/ctf-web:latest
     region: ohio
     # Standard (2GB/1CPU) — headroom for a production Next.js app (~159 routes).
     plan: standard
@@ -48,14 +59,14 @@ services:
       # automatically by Infisical via the Render Sync integration.
 
   # ── PM MCP Server ────────────────────────────────────────────────
-  # Background worker — stdio MCP transport for PM feedback workflows.
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
+  # Background worker — HTTP MCP transport for PM feedback workflows.
   # Part of 100% agentic infrastructure orchestration.
   # Secrets injected by Infisical → Render Sync.
   - type: worker
     name: ctf-pm-mcp-server
-    runtime: docker
-    dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
-    dockerContext: ctf/packages/pm-mcp-server
+    image:
+      url: ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
     region: ohio
     plan: starter
     envVars:
@@ -63,17 +74,16 @@ services:
         value: production
 
   # ── Ollama ────────────────────────────────────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-ollama:latest
   # Private service — reachable by other Render services via internal URL.
-  # Render has no persistent volumes; models are baked into the image at build time.
+  # Model (llama3.2) is baked into the image at build time. Image only rebuilt
+  # when ctf/ops/ollama/Dockerfile changes (path-filtered in build-images.yml).
   - type: pserv
     name: ctf-ollama
-    runtime: docker
-    dockerfilePath: ctf/ops/ollama/Dockerfile
-    dockerContext: ctf/ops/ollama
+    image:
+      url: ghcr.io/chargingthefuture/ctf-ollama:latest
     region: ohio
     plan: standard
-    # No fromGroup: ctf-ollama only serves a baked-in model and reads no app
-    # secrets, so it needs nothing from ctf-preview-secrets.
     envVars:
       - key: OLLAMA_MODEL
         value: llama3.2
@@ -87,9 +97,8 @@ services:
   #
   # - type: pserv
   #   name: ctf-infisical
-  #   runtime: docker
-  #   dockerfilePath: ctf/ops/infisical/Dockerfile
-  #   dockerContext: ctf/ops/infisical
+  #   image:
+  #     url: ghcr.io/chargingthefuture/ctf-infisical:latest
   #   region: ohio
   #   plan: starter
   #   envVars:
@@ -105,16 +114,16 @@ services:
   #       sync: false
 
   # ── Formance Ledger (financial ledger) ───────────────────────────
-  # Private service — pinned to ghcr.io/formancehq/ledger:v2.3.15-dev.1
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-formance-ledger:latest
+  # Private service — wraps ghcr.io/formancehq/ledger with Render-compatible config.
   # All state lives in Neon Postgres (no persistent disk on Render).
   # AUTO_UPGRADE=true handles schema migrations on container start.
   # Backups: daily pg_dump → Supabase Storage via backup-formance-supabase.yml.
   # FORMANCE_POSTGRES_URI injected by Infisical → Render Sync.
   - type: pserv
     name: ctf-formance-ledger
-    runtime: docker
-    dockerfilePath: ctf/ops/formance/Dockerfile.ledger
-    dockerContext: ctf/ops/formance
+    image:
+      url: ghcr.io/chargingthefuture/ctf-formance-ledger:latest
     region: ohio
     plan: starter
     envVars: []
