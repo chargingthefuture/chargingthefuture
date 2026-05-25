@@ -1,4 +1,4 @@
-name: Trigger Render deploy
+name: Render deploy
 
 # Redeploys a Render service without rebuilding the Docker image.
 # Use this to pick up new environment variables synced from Infisical,
