@@ -19,6 +19,8 @@ RUN npm run build && chmod +x dist/index.js
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Install curl for shell utilities (e.g. Formance ledger bootstrap script)
+RUN apk add --no-cache curl bash
 # Install only production deps
 COPY packages/agent-mcp-server/package.json ./
 RUN npm install --omit=dev
@@ -26,4 +28,6 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 # Copy agent definitions (loaded at runtime by discoverAgents)
 COPY agents ./agents
+# Copy scripts directory (includes formanceBootstrap.sh and other utilities)
+COPY scripts ./scripts
 CMD ["node", "dist/index.js"]

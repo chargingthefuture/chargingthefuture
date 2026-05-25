@@ -14,7 +14,8 @@ contract, one-time ledger bootstrap, and backup/restore.
 
 State lives entirely in external Neon Postgres (Render has no persistent
 volumes). `AUTO_UPGRADE=true` runs schema migrations on container start.
-`POSTGRES_URI` is injected from Infisical → Render Sync.
+`FORMANCE_POSTGRES_URI` is injected from Infisical → Render Sync (the
+`Dockerfile.ledger` entrypoint maps it to the `POSTGRES_URI` the binary expects).
 
 To update the pinned image, change the digest in `Dockerfile.ledger` after
 verifying it: `docker buildx imagetools inspect ghcr.io/formancehq/ledger:<tag>`.

@@ -6,7 +6,7 @@ required_env=("FORMANCE_API_URL" "FORMANCE_LEDGER" "FORMANCE_API_TOKEN")
 for key in "${required_env[@]}"; do
   if [[ -z "${!key:-}" ]]; then
     echo "Missing required env var: $key"
-    echo "Example: export FORMANCE_API_URL=http://ledger.railway.internal:8080"
+    echo "Example: export FORMANCE_API_URL=http://ctf-formance-ledger:3068"
     exit 1
   fi
 done
@@ -16,13 +16,10 @@ LEDGER_NAME="${FORMANCE_LEDGER}"
 AUTH_HEADER="Authorization: Bearer ${FORMANCE_API_TOKEN}"
 REQUEST_ID="$(date +%s)"
 
-if [[ "${BASE_URL}" == *".railway.internal"* ]]; then
-  if ! getent hosts "${BASE_URL#http://}" >/dev/null 2>&1 && ! getent hosts "${BASE_URL#https://}" >/dev/null 2>&1; then
-    echo "${BASE_URL} is a Railway private hostname and is not resolvable from this shell."
-    echo "Use https://<service>.up.railway.app when running bootstrap locally, or run this script inside Railway runtime."
-    exit 1
-  fi
-fi
+# FORMANCE_API_URL is the Render internal address (e.g. http://ctf-formance-ledger:3068),
+# reachable only from inside the Render private network. Run this from a Render
+# service shell (Render dashboard > ctf-web > Shell > $) to create the ledger namespace.
+# It cannot run from a local machine — the URL is internal-only.
 
 echo "[1/4] Bootstrapping ledger namespace: ${LEDGER_NAME}"
 bootstrap_status="$(curl -sS -o /tmp/formance-bootstrap-response.json -w "%{http_code}" \
@@ -77,4 +74,4 @@ curl -sS \
   "${BASE_URL}/v2/${LEDGER_NAME}/transactions" || true
 echo
 
-echo "Formance Railway bootstrap + smoke completed successfully."
+echo "Formance bootstrap + smoke completed successfully."
