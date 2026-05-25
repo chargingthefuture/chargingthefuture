@@ -59,26 +59,21 @@ RUN pnpm --filter @ctf/web run build:ci
 
 # ── 3. Production runner ──────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS runner
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
-# Run as a non-root user with a real home for least-privilege at runtime
+# Run as a non-root user for least-privilege at runtime
 RUN addgroup -S app && adduser -S -G app -h /home/app app
 WORKDIR /repo
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
-# Copy what `next start` needs at runtime, owned by the non-root user.
-# The pnpm store lives in the workspace-root node_modules; packages/web's
-# node_modules are relative symlinks into it (../../../node_modules/.pnpm/…),
-# so the root store must be copied too or `next` resolves to a dangling symlink.
-COPY --from=deps    --chown=app:app /repo/node_modules                node_modules
-COPY --from=builder --chown=app:app /repo/packages/web/.next          packages/web/.next
-COPY --from=builder --chown=app:app /repo/packages/web/public         packages/web/public
-COPY --from=builder --chown=app:app /repo/packages/web/package.json   packages/web/package.json
-COPY --from=deps    --chown=app:app /repo/packages/web/node_modules   packages/web/node_modules
-# @ctf/shared is bundled into .next but symlink resolution may need the dist
-COPY --from=builder --chown=app:app /repo/packages/shared/dist        packages/shared/dist
-COPY --from=builder --chown=app:app /repo/packages/shared/package.json packages/shared/package.json
-COPY --chown=app:app pnpm-workspace.yaml ./
+# Standalone output contains server.js + only the traced runtime deps.
+# With outputFileTracingRoot = /repo (workspace root), Next.js places
+# server.js at packages/web/server.js inside the standalone directory.
+COPY --from=builder --chown=app:app /repo/packages/web/.next/standalone ./
+# Static client assets are not included in the standalone output — copy separately.
+COPY --from=builder --chown=app:app /repo/packages/web/.next/static     ./packages/web/.next/static
+# Public directory (favicons, robots.txt, etc.)
+COPY --from=builder --chown=app:app /repo/packages/web/public           ./packages/web/public
 EXPOSE 3000
 USER app
-WORKDIR /repo/packages/web
-# PORT is injected by Render at runtime
-CMD ["sh", "-c", "node_modules/.bin/next start -p ${PORT:-3000}"]
+# HOSTNAME=0.0.0.0 binds to all interfaces inside the container.
+# PORT is injected by Render at runtime; server.js reads process.env.PORT.
+ENV HOSTNAME=0.0.0.0
+CMD ["sh", "-c", "PORT=${PORT:-3000} node packages/web/server.js"]
