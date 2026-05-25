@@ -43,14 +43,6 @@ else
   echo "Vercel CLI already installed."
 fi
 
-# Install/update Railway CLI (required by Railway MCP server)
-echo "Checking for Railway CLI..."
-if ! command -v railway &> /dev/null; then
-  npm install -g @railway/cli
-else
-  echo "Railway CLI already installed."
-fi
-
 # Install/update Render CLI (used to open a shell into Render services, e.g. to
 # run the one-time Formance ledger bootstrap from inside the private network).
 echo "Checking for Render CLI..."
