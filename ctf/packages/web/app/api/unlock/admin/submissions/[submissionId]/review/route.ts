@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
 import { getUnlockRuntimeConfig, insertUnlockAudit, markUnlockIncentiveGranted, reviewUnlockSubmission } from 'lib/unlock/repository';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
+import { grantUnleashFlagForUser } from 'lib/feature-flags/unleash-admin';
+import { UNLOCK_FLAGS } from '@ctf/shared';
 import type { ReviewUnlockSubmissionInput } from 'lib/unlock/types';
 
 type RouteParams = {
@@ -63,6 +65,13 @@ export async function POST(request: Request, { params }: RouteParams) {
         reviewStatus: body.reviewStatus,
       },
     });
+
+    if (body.reviewStatus === 'approved') {
+      // Grant the Unleash flag for this user so flag-based evaluation returns true on
+      // subsequent requests without requiring a DB lookup. Best-effort: if the Admin API
+      // is unavailable, the DB fallback in isUserUnlocked() remains authoritative.
+      await grantUnleashFlagForUser(UNLOCK_FLAGS.QUORA_ONBOARDING, submission.userId);
+    }
 
     if (body.reviewStatus === 'approved' && !submission.incentiveGrantedAt) {
       const runtimeConfig = await getUnlockRuntimeConfig();

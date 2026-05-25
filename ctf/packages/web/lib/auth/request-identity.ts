@@ -1,5 +1,4 @@
 import { cookies, headers } from 'next/headers';
-import type { UnlockAccessTier } from 'lib/unlock/types';
 import { authenticatePluginUser, type AuthProvider } from '@ctf/shared';
 
 type MaybeValue = string | null | undefined;
@@ -12,7 +11,6 @@ export type RequestIdentity = {
   role: string | null;
   isAdmin: boolean;
   isApproved: boolean;
-  unlockAccessTier: UnlockAccessTier | null;
 };
 
 function pickFirstNonEmpty(...values: MaybeValue[]): string | null {
@@ -38,19 +36,6 @@ function normalizeBoolean(value: MaybeValue): boolean | null {
   if (!normalized) return null;
   if (['1', 'true', 'yes', 'approved'].includes(normalized)) return true;
   if (['0', 'false', 'no', 'denied'].includes(normalized)) return false;
-  return null;
-}
-
-function normalizeUnlockAccessTier(value: MaybeValue): UnlockAccessTier | null {
-  const normalized = pickFirstNonEmpty(value);
-  if (
-    normalized === 'pending_readonly'
-    || normalized === 'locked_support_only'
-    || normalized === 'approved_full'
-  ) {
-    return normalized;
-  }
-
   return null;
 }
 
@@ -93,9 +78,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const isApproved = normalizeBoolean(
     readIdentityValue('x-ctf-user-approved', 'ctf_user_approved', headerStore, cookieStore),
   ) ?? isAuthenticated;
-  const unlockAccessTier = normalizeUnlockAccessTier(
-    readIdentityValue('x-ctf-unlock-tier', 'ctf_unlock_tier', headerStore, cookieStore),
-  );
 
   return {
     isAuthenticated,
@@ -105,7 +87,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
     role: isAuthenticated ? role : null,
     isAdmin: isAuthenticated ? role === 'admin' : false,
     isApproved: isAuthenticated ? isApproved : false,
-    unlockAccessTier: isAuthenticated ? unlockAccessTier : null,
   };
 }
 

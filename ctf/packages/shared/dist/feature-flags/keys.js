@@ -21,3 +21,13 @@ export function featureFlagKey(pluginSlug, featureName) {
 export function releaseFlagKey(agent, fixName) {
     return `release-${agent}-${fixName}`;
 }
+// Vendor-neutral evaluation context. The web/mobile/agent flag clients map this onto
+// their provider's native context (e.g. Unleash Context: userId + properties).
+// Per-user unlock feature flags. Admin approval grants the matching flag to the user
+// via Unleash targeting (see lib/feature-flags/unleash-admin.ts). The flag evaluation
+// falls back to the DB approval status for users approved before flag-driven gating.
+export const UNLOCK_FLAGS = {
+    // Controls access to the Quora-profile-verification onboarding flow.
+    // OFF (default) = user is in pending/review; ON = user has full access.
+    QUORA_ONBOARDING: 'feature-unlock-quora-onboarding',
+};
