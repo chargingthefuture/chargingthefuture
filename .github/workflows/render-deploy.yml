@@ -1,0 +1,63 @@
+name: Trigger Render deploy
+
+# Redeploys a Render service without rebuilding the Docker image.
+# Use this to pick up new environment variables synced from Infisical,
+# or to restart a service after a config change.
+#
+# Required secrets: RENDER_API_KEY + the service-specific RENDER_SERVICE_ID_*
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to redeploy'
+        required: true
+        type: choice
+        options:
+          - ctf-web
+          - ctf-pm-mcp-server
+          - ctf-ollama
+          - ctf-formance-ledger
+          - all
+
+jobs:
+  deploy:
+    name: Redeploy ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy(s)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_WEB: ${{ secrets.RENDER_SERVICE_ID_WEB }}
+          RENDER_SERVICE_ID_PM_MCP: ${{ secrets.RENDER_SERVICE_ID_PM_MCP }}
+          RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
+          RENDER_SERVICE_ID_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
+          SERVICE: ${{ inputs.service }}
+        run: |
+          deploy() {
+            local id="$1" name="$2"
+            if [ -z "$id" ]; then
+              echo "SKIP $name — service ID secret not set"
+              return
+            fi
+            echo "Deploying $name ($id)..."
+            curl -sf -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "https://api.render.com/v1/services/$id/deploys"
+            echo " done"
+          }
+
+          case "$SERVICE" in
+            ctf-web)            deploy "$RENDER_SERVICE_ID_WEB"     "ctf-web" ;;
+            ctf-pm-mcp-server)  deploy "$RENDER_SERVICE_ID_PM_MCP"  "ctf-pm-mcp-server" ;;
+            ctf-ollama)         deploy "$RENDER_SERVICE_ID_OLLAMA"   "ctf-ollama" ;;
+            ctf-formance-ledger) deploy "$RENDER_SERVICE_ID_FORMANCE" "ctf-formance-ledger" ;;
+            all)
+              deploy "$RENDER_SERVICE_ID_WEB"     "ctf-web"
+              deploy "$RENDER_SERVICE_ID_PM_MCP"  "ctf-pm-mcp-server"
+              deploy "$RENDER_SERVICE_ID_OLLAMA"  "ctf-ollama"
+              deploy "$RENDER_SERVICE_ID_FORMANCE" "ctf-formance-ledger"
+              ;;
+          esac
