@@ -91,7 +91,7 @@ services:
     name: ctf-pm-mcp-server
     runtime: docker
     dockerfilePath: ctf/packages/pm-mcp-server/Dockerfile
-    dockerContext: ctf
+    dockerContext: ctf/packages/pm-mcp-server
     region: ohio
     plan: starter
     envVars:

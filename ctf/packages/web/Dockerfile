@@ -9,11 +9,15 @@ WORKDIR /repo
 # ── 1. Install all workspace deps ────────────────────────────────
 FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+# Root manifest carries the pnpm `overrides`; without it --frozen-lockfile
+# reports an overrides mismatch against the lockfile.
+COPY package.json ./
 # Copy every workspace member's package.json so pnpm can resolve the graph
 COPY packages/shared/package.json           packages/shared/package.json
 COPY packages/web/package.json              packages/web/package.json
 COPY packages/pm-mcp-server/package.json    packages/pm-mcp-server/package.json
 COPY packages/economic-models/package.json  packages/economic-models/package.json
+COPY packages/education/package.json        packages/education/package.json
 COPY packages/eol/package.json              packages/eol/package.json
 COPY packages/mobile/package.json           packages/mobile/package.json
 RUN pnpm install --frozen-lockfile
