@@ -15,8 +15,17 @@
 # Its Render Sync integration pushes secrets into each production service below.
 #
 # Preview environments get suffixed service names that Infisical's per-service
-# syncs do not target, so preview secrets come from a linked Render env group
-# (env groups are inherited by previews). See PREVIEW SECRETS note per service.
+# syncs do not target, so preview secrets come from the linked Render env group
+# `ctf-preview-secrets` (env groups are inherited by previews). Services that
+# need secrets reference it via `fromGroup` below.
+#
+# IMPORTANT — populating `ctf-preview-secrets`:
+#   * Add the staging values as ENV VARS (use the env group's "Add from .env"
+#     bulk paste), NOT as a secret file. Render secret files are mounted on disk
+#     only and are never loaded into process.env, so the app would not see them.
+#   * Production must have Infisical sync every key the group contains. Service-
+#     level vars (Infisical → Render Sync) override env-group vars, so any group
+#     key NOT synced by Infisical would leak its staging value into production.
 #
 # For GitHub Actions (backup workflow), add two GitHub secrets:
 # INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET; the workflow fetches the rest
@@ -42,6 +51,10 @@ services:
     plan: standard
     healthCheckPath: /api/health
     envVars:
+      # PREVIEW SECRETS: previews inherit staging values from this env group.
+      # In production these are overridden by Infisical → Render Sync, since
+      # service-level vars take precedence over env-group vars.
+      - fromGroup: ctf-preview-secrets
       - key: PORT
         value: "3000"
       - key: NODE_ENV
@@ -66,6 +79,9 @@ services:
     dockerContext: ctf/packages/agent-mcp-server
     region: ohio
     plan: starter
+    envVars:
+      # PREVIEW SECRETS (see ctf-web). Prod overridden by Infisical Render Sync.
+      - fromGroup: ctf-preview-secrets
 
   # ── PM MCP Server ────────────────────────────────────────────────
   # Background worker — stdio MCP transport for PM feedback workflows.
@@ -79,6 +95,8 @@ services:
     region: ohio
     plan: starter
     envVars:
+      # PREVIEW SECRETS (see ctf-web). Prod overridden by Infisical Render Sync.
+      - fromGroup: ctf-preview-secrets
       - key: NODE_ENV
         value: production
 
@@ -92,6 +110,8 @@ services:
     dockerContext: ctf/ops/ollama
     region: ohio
     plan: standard
+    # No fromGroup: ctf-ollama only serves a baked-in model and reads no app
+    # secrets, so previews need nothing from ctf-preview-secrets.
     envVars:
       - key: OLLAMA_MODEL
         value: llama3.2
@@ -135,3 +155,7 @@ services:
     dockerContext: ctf/ops/formance
     region: ohio
     plan: starter
+    envVars:
+      # PREVIEW SECRETS (see ctf-web): previews need POSTGRES_URI from the
+      # staging env group. Prod overridden by Infisical Render Sync.
+      - fromGroup: ctf-preview-secrets
