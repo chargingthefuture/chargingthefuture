@@ -163,6 +163,18 @@ else
   echo "Add RAILWAY_API_TOKEN as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
 fi
 
+# Verify Render API key for MCP server access (.mcp.json uses RENDER_API_KEY to
+# authenticate against https://mcp.render.com/mcp — lets agents pull logs, trigger
+# deploys, and inspect services without copy-pasting from the dashboard).
+echo "Verifying Render MCP access..."
+if [ -n "$RENDER_API_KEY" ]; then
+  echo "Render MCP: RENDER_API_KEY is set — Render MCP server will be authenticated."
+else
+  echo "Warning: RENDER_API_KEY not set. Render MCP server will not work."
+  echo "Add RENDER_API_KEY as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
+  echo "Generate an API key at: https://dashboard.render.com/u/settings#api-keys"
+fi
+
 # Prompt for any remaining manual logins
 echo "If you need to log in to GitHub or Vercel, run:"
 echo "  gh auth login"
