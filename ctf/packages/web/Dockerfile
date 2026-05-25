@@ -64,7 +64,11 @@ RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 RUN addgroup -S app && adduser -S -G app -h /home/app app
 WORKDIR /repo
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
-# Copy only what `next start` needs at runtime, owned by the non-root user
+# Copy what `next start` needs at runtime, owned by the non-root user.
+# The pnpm store lives in the workspace-root node_modules; packages/web's
+# node_modules are relative symlinks into it (../../../node_modules/.pnpm/…),
+# so the root store must be copied too or `next` resolves to a dangling symlink.
+COPY --from=deps    --chown=app:app /repo/node_modules                node_modules
 COPY --from=builder --chown=app:app /repo/packages/web/.next          packages/web/.next
 COPY --from=builder --chown=app:app /repo/packages/web/public         packages/web/public
 COPY --from=builder --chown=app:app /repo/packages/web/package.json   packages/web/package.json
