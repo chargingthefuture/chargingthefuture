@@ -108,16 +108,17 @@ jobs:
             NEXT_PUBLIC_AUTH_PROVIDER=${{ secrets.NEXT_PUBLIC_AUTH_PROVIDER }}
 
       - name: Trigger Render deploy
-        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_WEB != '' }}
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{}' \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_WEB/deploys"
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_WEB: ${{ secrets.RENDER_SERVICE_ID_WEB }}
+        run: |
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_WEB" ]; then
+            curl -sf -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_WEB/deploys"
+          fi
 
   # ── ctf-pm-mcp-server ───────────────────────────────────────────
   build-pm-mcp-server:
@@ -155,16 +156,17 @@ jobs:
           cache-to: type=gha,scope=ctf-pm-mcp-server,mode=max
 
       - name: Trigger Render deploy
-        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_PM_MCP != '' }}
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{}' \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_PM_MCP/deploys"
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_PM_MCP: ${{ secrets.RENDER_SERVICE_ID_PM_MCP }}
+        run: |
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_PM_MCP" ]; then
+            curl -sf -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_PM_MCP/deploys"
+          fi
 
   # ── ctf-ollama ──────────────────────────────────────────────────
   # Only rebuilds when the Dockerfile changes — model bake takes ~1 hour.
@@ -204,16 +206,17 @@ jobs:
           cache-to: type=gha,scope=ctf-ollama,mode=max
 
       - name: Trigger Render deploy
-        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_OLLAMA != '' }}
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{}' \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_OLLAMA/deploys"
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
+        run: |
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_OLLAMA" ]; then
+            curl -sf -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_OLLAMA/deploys"
+          fi
 
   # ── ctf-formance-ledger ─────────────────────────────────────────
   build-formance-ledger:
@@ -251,13 +254,14 @@ jobs:
           cache-to: type=gha,scope=ctf-formance-ledger,mode=max
 
       - name: Trigger Render deploy
-        if: ${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID_FORMANCE != '' }}
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{}' \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_FORMANCE/deploys"
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
+        run: |
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_FORMANCE" ]; then
+            curl -sf -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_FORMANCE/deploys"
+          fi
