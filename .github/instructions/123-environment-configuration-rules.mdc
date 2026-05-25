@@ -167,6 +167,40 @@ The server-side check is the source of truth; the Clerk dashboard layer is defen
 - Update the Clerk dashboard on all three Clerk instances.
 - Document the new prefix in this rule.
 
+## Feature Flags (Unleash + OpenFeature)
+
+Release gating and progressive user access use **Unleash** (self-hosted on Railway) behind an
+**OpenFeature** client (vendor-neutral interface). Single production environment: code ships with
+flags OFF by default; flags are toggled per-agent-branch/PR or by rollout. See issues #103 (epic),
+#101 (unlock-as-flag), #102 (public-screen gating + demo-safe data).
+
+### Required environment variables (synced via Infisical → Render Sync)
+
+| Variable | Layer | Used by | Pairs with |
+|---|---|---|---|
+| `UNLEASH_API_URL` | Both | All services | Base URL of the Unleash instance. Server SDK uses the **Client API** (`/api/`); the frontend client uses the **Frontend API** (`/api/frontend`). |
+| `UNLEASH_API_TOKEN_BACKEND` | Server | web (Node), agents | Server-side `unleash-client` SDK (Client API). **Never exposed to the browser.** |
+| `UNLEASH_API_TOKEN_FRONTEND` | Client | mobile (Expo), browser | Client-side reads via the Unleash Frontend API. |
+
+Optional: `UNLEASH_APP_NAME` (default `ctf-web`), `UNLEASH_ENVIRONMENT`.
+
+When `UNLEASH_API_URL` + `UNLEASH_API_TOKEN_BACKEND` are absent (local/CI), the server flag client
+falls back to OpenFeature's default provider, which returns each call's supplied default — i.e. flags
+are safely OFF. This is the SDK's defined unconfigured behavior, not a placeholder.
+
+### Flag-key naming convention (source of truth: `ctf/packages/shared/src/feature-flags/keys.ts`)
+
+- `feature-{pluginSlug}-{featureName}` — user-facing feature gating (e.g. `feature-unlock-quora-onboarding`).
+- `release-{agent}-{fixName}` — release/rollout gating for a specific change.
+- System flags (cross-cutting): `demo-mode`, `public-surface`.
+
+### Targeting strategy
+
+- Per-user targeting and sticky percentage rollout key off the OpenFeature `targetingKey`
+  (mapped to the Unleash `userId`); use the caller's Clerk user id.
+- Segment/role/region targeting passes through `FeatureFlagContext.attributes` → Unleash `properties`.
+- Unleash logs every toggle (audit trail); flag changes are an operational step separate from deploys.
+
 ## Precedence
 This rule takes precedence over all other environment and deployment rules.
 Breaking this rule will directly cause Clerk authentication to fail and prevent users from signing in.
