@@ -3,16 +3,22 @@
 > Living tracking doc for PR `claude/production-readiness-plan-op4lA`.
 > Goal: bring every plugin, the full web app, and the Android app to production —
 > pixel-perfect to the `design/` submodule and complete to each plugin's feature inventory.
-> Companion infra work: PR #86 (Railway → Render migration).
+> Infra: the Railway → Render migration is **complete on `main`** (PRs #98–#117 superseded the
+> early PR #86 foundation). Deploy model is now a **single production environment** with
+> **Unleash + OpenFeature feature flags** for release gating and preview-per-branch (epic #103;
+> dependents #101 unlock-as-flag, #102 public-screen gating + demo-safe data). Infisical remains
+> the single source of truth for env variables.
 
 ## Locked strategic decisions (owner, 2026-05-20)
 
 1. **Branch/PR:** All production-readiness code lands on `claude/production-readiness-plan-op4lA`
    with its own draft PR. PR #74 (design-audit) stays separate. This doc is the progress channel.
-2. **Deploy target:** **Render**, deployed **incrementally**. PR #86's Render infra (Blueprint +
-   per-service Dockerfiles) is merged into this branch as the foundation, then each plugin wave
-   deploys to Render. No new Railway work; Railway is being retired (Formance + Ollama already
-   removed by owner — web app was never wired to them).
+2. **Deploy target:** **Render**, single **production** environment (no staging, no per-PR Render
+   preview environments — Hobby workspace can't host them). Railway → Render migration is complete on
+   `main`. Images are built in GitHub Actions, pushed to GHCR, and pulled by Render. Release gating is
+   done with **Unleash + OpenFeature feature flags** (epic #103): code ships to prod with flags OFF,
+   and previews are per-agent-branch/PR via flag targeting rather than ephemeral environments.
+   Infisical (self-hosted on Railway) remains the single source of truth for secrets.
 3. **Nothing is design-skippable** (Rule 127 updated 2026-05-20). Every rendered surface — including
    admin/internal (`clicklog`, `weekly-performance`, `skills-taxonomy` admin, `unlock`, `community`) —
    requires a design pass. The Replit design agent is producing these mockups **in parallel** in a
@@ -32,7 +38,8 @@
 | Android feature target | `ctf/packages/mobile/src/features/<plugin>/` |
 | Parity registry | `ctf/config/plugin-parity-contracts.json` |
 | Plugin registry | `ctf/packages/web/lib/plugins/repository.ts` + `ctf_plugin_registry` table |
-| Deploy infra | `ctf/render.yaml` + per-service Dockerfiles (from PR #86) |
+| Deploy infra | root `render.yaml` (GHCR pre-built images) + `.github/workflows/build-images.yml` + `render-deploy.yml` |
+| Feature flags | Unleash (self-hosted) via OpenFeature client; epic #103 |
 
 ## Per-plugin production-readiness pipeline (the repeatable gate sequence)
 
@@ -48,7 +55,9 @@ Every plugin passes the same gates, run by one agent on an isolated worktree, th
 5. **Gates green** — `typecheck`, `build:ci`, `check-eof-format.sh`,
    `check-web-android-parity.mjs`, `check-schema-drift.sh`.
 6. **Inventory sync** — update "Web and Android Delivery Status" + parity contract per CLAUDE.md drift policy.
-7. **Deploy increment** — merge to branch; Render auto-deploys the wave.
+7. **Deploy increment** — merge to `main`; GitHub Actions builds the image and Render pulls it. New
+   user-facing surfaces ship behind an OFF feature flag (epic #103), then are toggled on per-branch/PR
+   or by rollout once verified.
 
 ## Execution order (ordered task list, dependency-annotated)
 
@@ -114,17 +123,21 @@ It is tracked under `feed-announcements`, not as its own row. The Hub/Home shell
 
 Cross-cutting (non-plugin): Hub/Home shell (🎨 design exists), account, auth (Clerk), Sentry observability.
 
-## Infra / deploy status (Render, via PR #86)
+## Infra / deploy status (Render, single production environment)
 
-Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
-(ctf-web, ctf-agent-mcp-server, ctf-pm-mcp-server, ctf-ollama, ctf-infisical, ctf-formance-ledger).
+The Railway → Render migration is **complete on `main`** (PRs #98–#117 superseded the early PR #86
+foundation that this branch originally carried; that merge was dropped during the 2026-05-25 rebase).
+Current model: GitHub Actions builds Docker images → pushes to GHCR → Render pulls pre-built images.
+`ctf-web` health-check is green on Render. Infisical (Railway) → Render Sync injects secrets.
 
-- [x] Merge PR #86 Render Blueprint + Dockerfiles into this branch (commit `b5d8fc4`; all CI green)
-- [x] Remove dead `ctf/render.yaml` (infisical-only stub; root `render.yaml` is canonical)
-- [ ] **Owner**: connect Render to repo + apply `render.yaml` Blueprint
-- [ ] **Owner**: set 4 Infisical bootstrap secrets in Render dashboard (ctf-infisical), configure Render Sync
-- [ ] First successful Render deploy of `ctf-web` (`/api/health` green)
-- [ ] Sentry cron monitor (`workforce-incremental-sync`) green on Render
+- [x] Railway → Render migration merged to `main` (GHCR image build + Render pull)
+- [x] `ctf-web` deploy green on Render (`/api/health`)
+- [x] Removed dead `ctf/render.yaml` (root `render.yaml` is canonical)
+- [ ] **Feature-flag infra (epic #103)**: stand up Unleash + OpenFeature client (web, mobile, agents);
+      wire `UNLEASH_API_*` via Infisical → Render Sync
+- [ ] **#102**: gate public/non-auth screens behind flags + demo-safe data (Neon branch / synthetic)
+- [ ] **#101**: re-scope `unlock` as a user-facing Unleash flag (retire bespoke verification queue or
+      keep it as the grant mechanism — owner to confirm)
 
 ## How a future session / agent picks up work
 
@@ -132,7 +145,8 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
 2. Pick the next ⬜ plugin in the ordered list above whose dependencies are met.
 3. Run the 7-gate pipeline above on an isolated worktree.
 4. Update this checklist + the plugin inventory's Delivery Status in the same commit.
-5. Merge to `claude/production-readiness-plan-op4lA`; let Render deploy the increment.
+5. Merge to `main`; GitHub Actions builds + Render pulls the image. Ship new user-facing surfaces
+   behind an OFF feature flag (epic #103) and toggle per-branch/PR or by rollout once verified.
 
 ## Change log
 
@@ -184,3 +198,11 @@ Owner decision (2026-05-20): provision **all 6** services from `render.yaml`
   transfers, ledger, governance—6 key tables of 15 total), seedWeeklyPerformancePhase0.mjs (weeks, metrics—2 tables).
   All seeds use deterministic sha256-hashed IDs, idempotent ON CONFLICT patterns, and transactional integrity.
   **Final Backend Status: 17 backends ✅ production-ready, 2 remain 🟡 (drift-blocked: feed+workforce), 1 remains ⏳ (design-gated: foundation).**
+- 2026-05-25: Rebased branch onto `main` (Railway → Render migration complete, PRs #98–#117). The early
+  PR #86 Render merge commit this branch carried was dropped during rebase — its infra is superseded by
+  `main`'s GHCR-image model. Rebase was conflict-free (my work and the infra migration touched disjoint
+  files). Post-rebase verification: typecheck green, schema-drift gate green (incl. CI `--ref-range`),
+  EOF clean, workforce dedupe index intact. Refreshed all stale infra framing (PR #86 / incremental Render
+  waves → single prod + Unleash/OpenFeature feature-flag release gating; `rewrite-ci.yml` → `ci.yml`).
+  Aligned the plan with the new feature-flag epic (#103) and dependents #101 (unlock-as-flag) and #102
+  (public-screen gating + demo-safe data).

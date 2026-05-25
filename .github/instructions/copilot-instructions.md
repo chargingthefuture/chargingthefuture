@@ -45,9 +45,10 @@ rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
 - **No new repositories.** Going forward, ship changes as app versions only — `v3.0.1`, `v3.1.0`,
   `v3.1.1`, etc. (semver under the `v3` major). Do not propose or create a new repo for a "v4" or a
   fresh rewrite; increment the version instead.
-- Note: some identifiers retain the historical "rewrite" name for stability (e.g. the
-  `rewrite-ci.yml` workflow and the package name). These are intentionally left as-is to avoid CI and
-  build churn; do not rename them without an explicit instruction.
+- Note: the CI workflow was renamed `rewrite-ci.yml` → `ci.yml` during the Render migration (PRs
+  #98–#117 on `main`); its jobs (`pr-parity-status`, `formatting-eof`, `schema-drift-gate`, etc.) are
+  unchanged. The package name still retains the historical name for stability; do not rename it without
+  an explicit instruction.
 
 
 ## Product Rule Modules
@@ -127,7 +128,7 @@ Every PR title must start with one of these prefixes:
 
 Example: `feat: add Ollama chatbot integration to feed question answers`
 
-### PR Description — Parity Status (`pr-parity-status` in `rewrite-ci.yml`)
+### PR Description — Parity Status (`pr-parity-status` in `ci.yml`)
 
 Every PR description must include one of:
 
@@ -141,7 +142,7 @@ Parity Ticket: <GitHub issue URL or #issue-number>
 ```
 Use when Android parity is deferred; link to the tracking issue.
 
-### EOF Formatting (`formatting-eof` in `rewrite-ci.yml`)
+### EOF Formatting (`formatting-eof` in `ci.yml`)
 
 All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
 
