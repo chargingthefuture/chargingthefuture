@@ -46,8 +46,10 @@ services:
     plan: standard
     healthCheckPath: /api/health
     envVars:
-      - key: PORT
-        value: "3000"
+      # PORT is injected automatically by Render (default 10000) and consumed by
+      # the container's CMD (PORT=${PORT:-3000}). Do NOT hardcode PORT here — an
+      # explicit value makes the server bind to a port Render does not route to,
+      # causing health-check timeouts.
       - key: NODE_ENV
         value: production
       - key: NEXT_TELEMETRY_DISABLED
