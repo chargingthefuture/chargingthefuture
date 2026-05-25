@@ -65,7 +65,7 @@ services:
       - key: OBSERVABILITY_PROVIDER
         value: sentry
       # All remaining secrets (DATABASE_URL, CLERK_*, STREAM_*, SENTRY_DSN,
-      # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_*) are synced
+      # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_POSTGRES_URI) are synced
       # automatically by Infisical via the Render Sync integration.
 
   # ── Agent MCP Server ─────────────────────────────────────────────
@@ -119,7 +119,7 @@ services:
   # ── Infisical (secrets management) ───────────────────────────────
   # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
   # Railway Infisical instance configured with Render Sync integration to push
-  # secrets (DATABASE_URL, POSTGRES_URI, CLERK_*, etc.) to all Render services.
+  # secrets (DATABASE_URL, FORMANCE_POSTGRES_URI, CLERK_*, etc.) to all Render services.
   # TODO: migrate Infisical to Render when cost-benefit favors consolidation.
   # Original pserv config preserved below for future re-migration:
   #
@@ -147,7 +147,7 @@ services:
   # All state lives in Neon Postgres (no persistent disk on Render).
   # AUTO_UPGRADE=true handles schema migrations on container start.
   # Backups: daily pg_dump → Supabase Storage via backup-formance-supabase.yml.
-  # POSTGRES_URI injected by Infisical → Render Sync.
+  # FORMANCE_POSTGRES_URI injected by Infisical → Render Sync.
   - type: pserv
     name: ctf-formance-ledger
     runtime: docker
@@ -156,6 +156,6 @@ services:
     region: ohio
     plan: starter
     envVars:
-      # PREVIEW SECRETS (see ctf-web): previews need POSTGRES_URI from the
+      # PREVIEW SECRETS (see ctf-web): previews need FORMANCE_POSTGRES_URI from the
       # staging env group. Prod overridden by Infisical Render Sync.
       - fromGroup: ctf-preview-secrets

@@ -59,22 +59,6 @@ export async function evaluatePluginAccess(
     allowUnlockSupportOnly = false,
   } = options;
 
-  // DEV AUTH BYPASS: local QA only. Never honored in a deployed environment —
-  // Render runs NODE_ENV=production for prod AND previews, so a stray
-  // DEV_AUTH_BYPASS=true reaching a service via a synced env group can never
-  // grant admin in prod or previews.
-  if (process.env.NODE_ENV !== 'production' && process.env.DEV_AUTH_BYPASS === 'true') {
-    return {
-      allowed: true,
-      userId: 'dev-admin',
-      username: 'devadmin',
-      role: 'admin',
-      isAdmin: true,
-      isApproved: true,
-      unlockAccessTier: 'approved_full',
-    };
-  }
-
   const identity = await resolveRequestIdentity();
   const normalizedRequiredRoles = normalizeRequiredRoles(requiredRoles);
 

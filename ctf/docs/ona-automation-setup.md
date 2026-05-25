@@ -1,14 +1,17 @@
-# Ona Automation: Railway Failure Recovery
+# Ona Automation: Render Deployment Recovery
 
-Step-by-step guide to create the autonomous Railway debug and fix Automation in the Ona dashboard.
+> **Note:** This document is for reference only. Render infrastructure supersedes Railway.
+> Current secrets are managed via Infisical. See `AGENTS.md` for details.
+
+Step-by-step guide to create autonomous Render debug and fix Automation in the Ona dashboard (if needed).
 
 ## Prerequisites
 
 Before creating this Automation:
 
-1. `RAILWAY_TOKEN` is added to Ona project secrets (see `ona-secrets-inventory.md`)
-2. `railway-debug` and `railway-redeploy` tasks exist in `.ona/automations.yaml` (already done)
-3. The `railway-failure` GitHub issue label exists in the repo (create at: repo → Issues → Labels → New label, name: `railway-failure`, color: `#d73a4a`)
+1. Ona project secrets include `INFISICAL_TOKEN`, `INFISICAL_PROJECT_ID`, and `GITHUB_TOKEN` (configured per AGENTS.md)
+2. Render tasks exist in `.ona/automations.yaml` (currently railway-debug and railway-redeploy; can be adapted for Render)
+3. The `render-failure` or similar GitHub issue label exists in the repo (optional)
 
 ---
 
@@ -26,18 +29,20 @@ Select **Manual** trigger.
 
 Click **Save trigger**.
 
-### 3. Add Step 1 — Fetch Railway logs (Command)
+### 3. Add Step 1 — Fetch Render logs (Command)
 
 Click **+ Add Step** → **Command**
 
-**Name:** `Fetch Railway logs`
+**Name:** `Fetch Render logs`
 
 **Command:**
 ```bash
-gitpod automations task start railway-debug
+# Example: Use Render API via infisical secrets to fetch recent logs
+# For details, see AGENTS.md § "Railway CLI" (adapted for Render API)
+echo "Render deployment monitoring configured via GitHub Actions CI/CD"
 ```
 
-> This runs the `railway-debug` task defined in `.ona/automations.yaml`, which writes logs to `/tmp/railway-debug.log`.
+> Deploy logs are available via Render dashboard or GitHub Actions workflow runs.
 
 ### 4. Add Step 2 — Diagnose failure (Prompt)
 
@@ -45,18 +50,18 @@ Click **+ Add Step** → **Prompt**
 
 **Prompt:**
 ```
-Read the Railway deployment failure log at /tmp/railway-debug.log.
+Review the deployment failure from GitHub Actions logs or Render dashboard.
 
 Identify the root cause and classify it as exactly one of:
 - build_error: compilation, bundling, or dependency failure
-- missing_env_var: a required environment variable is absent or empty
+- missing_env_var: a required environment variable is absent or empty (add to Infisical)
 - runtime_crash: the app started but crashed after launch
 - schema_drift: database schema mismatch detected
 - unknown: cannot determine from logs alone
 
 Output your classification and a one-paragraph explanation of the specific error.
 
-If classification is missing_env_var: list the exact variable names that are missing.
+If classification is missing_env_var: list the exact variable names that are missing, then STOP.
 ```
 
 ### 5. Add Step 3 — Gate on missing env var (Command)
@@ -70,12 +75,9 @@ Click **+ Add Step** → **Command**
 # This step is a human checkpoint.
 # If the previous prompt classified the failure as missing_env_var,
 # the agent will have reported the variable names. Stop here and add
-# the missing secret to Ona project secrets and Railway dashboard,
-# then re-run the Automation.
-echo "If classification was missing_env_var, stop and add the secret before continuing."
+# the missing secret to Infisical (AGENTS.md has details), then re-run.
+echo "If classification was missing_env_var, add to Infisical and re-run."
 ```
-
-> In practice, the agent will halt and explain what's needed if it classified the failure as `missing_env_var`. The command step is a documentation anchor — the prompt in Step 2 instructs the agent to stop.
 
 ### 6. Add Step 4 — Apply code fix (Prompt)
 
@@ -83,7 +85,7 @@ Click **+ Add Step** → **Prompt**
 
 **Prompt:**
 ```
-Based on your diagnosis from the Railway logs, apply a targeted fix to the failing code.
+Based on your diagnosis, apply a targeted fix to the failing code.
 
 Rules:
 - Fix only what the logs identify as broken. Do not refactor unrelated code.
@@ -92,8 +94,8 @@ Rules:
 - For build_error or runtime_crash, locate the failing file from the stack trace and fix it.
 
 After applying the fix:
-1. Create a new branch: git checkout -b fix/railway-auto-$(date +%Y%m%d-%H%M%S)
-2. Stage and commit the fix: git add -A && git commit -m "fix: auto-fix Railway deployment failure"
+1. Create a new branch: git checkout -b fix/render-auto-$(date +%Y%m%d-%H%M%S)
+2. Stage and commit the fix: git add -A && git commit -m "fix: auto-fix Render deployment failure"
 3. Confirm the branch name in your output.
 ```
 
@@ -107,11 +109,11 @@ Click **+ Add Step** → **Command**
 ```bash
 set -euo pipefail
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH" == fix/railway-auto-* ]]; then
+if [[ "$BRANCH" == fix/render-auto-* ]]; then
   git push origin "$BRANCH"
   echo "Pushed branch: $BRANCH"
 else
-  echo "ERROR: Not on a fix branch. Expected fix/railway-auto-*. Got: $BRANCH"
+  echo "ERROR: Not on a fix branch. Expected fix/render-auto-*. Got: $BRANCH"
   exit 1
 fi
 ```
