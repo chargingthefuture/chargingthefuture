@@ -51,6 +51,15 @@ else
   echo "Railway CLI already installed."
 fi
 
+# Install/update Render CLI (used to open a shell into Render services, e.g. to
+# run the one-time Formance ledger bootstrap from inside the private network).
+echo "Checking for Render CLI..."
+if ! command -v render &> /dev/null; then
+  curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh || echo "Warning: Render CLI install failed — run 'curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh' manually."
+else
+  echo "Render CLI already installed."
+fi
+
 
 echo "Checking for eas-cli..."
 if ! command -v eas &> /dev/null; then
