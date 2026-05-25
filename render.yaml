@@ -47,21 +47,6 @@ services:
       # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_POSTGRES_URI) are synced
       # automatically by Infisical via the Render Sync integration.
 
-  # ── Agent MCP Server ─────────────────────────────────────────────
-  # Background worker — stdio MCP transport for agentic build/deploy/debug.
-  # Part of 100% agentic infrastructure orchestration.
-  # Secrets injected by Infisical → Render Sync.
-  - type: worker
-    name: ctf-agent-mcp-server
-    runtime: docker
-    dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
-    # Context is ctf/ (same proven pattern as ctf-web) so COPY can reach
-    # ctf/agents and ctf/scripts, which live outside the package directory.
-    dockerContext: ctf
-    region: ohio
-    plan: starter
-    envVars: []
-
   # ── PM MCP Server ────────────────────────────────────────────────
   # Background worker — stdio MCP transport for PM feedback workflows.
   # Part of 100% agentic infrastructure orchestration.
