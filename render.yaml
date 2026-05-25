@@ -76,7 +76,9 @@ services:
     name: ctf-agent-mcp-server
     runtime: docker
     dockerfilePath: ctf/packages/agent-mcp-server/Dockerfile
-    dockerContext: .
+    # Context is ctf/ (same proven pattern as ctf-web) so COPY can reach
+    # ctf/agents and ctf/scripts, which live outside the package directory.
+    dockerContext: ctf
     region: ohio
     plan: starter
     envVars:

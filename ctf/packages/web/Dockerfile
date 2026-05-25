@@ -25,7 +25,9 @@ RUN pnpm install --frozen-lockfile
 # ── 2. Build @ctf/shared + @ctf/web ──────────────────────────────
 FROM base AS builder
 WORKDIR /repo
-COPY pnpm-workspace.yaml ./
+# Root manifest (workspace root + pnpm overrides) and tsconfig.base.json, which
+# every package's tsconfig.json extends via `../../tsconfig.base.json`.
+COPY pnpm-workspace.yaml package.json tsconfig.base.json ./
 # Bring in node_modules from deps stage
 COPY --from=deps /repo/node_modules                      ./node_modules
 COPY --from=deps /repo/packages/shared/node_modules      ./packages/shared/node_modules
