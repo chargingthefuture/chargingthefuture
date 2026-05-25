@@ -55,9 +55,15 @@ services:
       # Observability — enables Sentry cron check-ins for workforce-incremental-sync
       - key: OBSERVABILITY_PROVIDER
         value: sentry
-      # All remaining secrets (DATABASE_URL, CLERK_*, STREAM_*, SENTRY_DSN,
-      # CRON_SECRET, INFISICAL_CLIENT_ID/SECRET, FORMANCE_POSTGRES_URI) are synced
-      # automatically by Infisical via the Render Sync integration.
+      # All remaining secrets are synced automatically by Infisical → Render Sync:
+      #   AUTH_SECRET_KEY               — Clerk secret key (sk_test_… / sk_live_…)
+      #   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY — Clerk publishable key (pk_…)
+      #   DATABASE_URL                  — Neon Postgres connection string
+      #   STREAM_API_KEY / STREAM_API_SECRET — Stream Chat
+      #   SENTRY_DSN / SENTRY_AUTH_TOKEN
+      #   CRON_SECRET
+      #   INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET
+      #   FORMANCE_POSTGRES_URI         — Neon Postgres URI for Formance ledger
 
   # ── PM MCP Server ────────────────────────────────────────────────
   # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
@@ -94,7 +100,7 @@ services:
   # ── Infisical (secrets management) ───────────────────────────────
   # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
   # Railway Infisical instance configured with Render Sync integration to push
-  # secrets (DATABASE_URL, FORMANCE_POSTGRES_URI, CLERK_*, etc.) to all Render services.
+  # secrets (DATABASE_URL, AUTH_SECRET_KEY, FORMANCE_POSTGRES_URI, etc.) to all Render services.
   # TODO: migrate Infisical to Render when cost-benefit favors consolidation.
   # Original pserv config preserved below for future re-migration:
   #
@@ -131,4 +137,9 @@ services:
       url: ghcr.io/chargingthefuture/ctf-formance-ledger:latest
     region: ohio
     plan: starter
-    envVars: []
+    envVars:
+      # FORMANCE_POSTGRES_URI is synced from Infisical → Render Sync.
+      # AUTO_UPGRADE=true (baked into image) runs schema migrations on startup —
+      # no manual SQL needed. Ensure this var is set before first deploy.
+      - key: FORMANCE_POSTGRES_URI
+        sync: false
