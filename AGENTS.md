@@ -71,7 +71,7 @@ infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --e
   <your command>
 ```
 
-See `ctf/docs/infisical-migration-guide.md` for full setup and `ctf/docs/ona-secrets-inventory.md` for the Ona-specific model.
+Infisical is the single source of truth for secrets; the bootstrap secrets above are all that is needed to authenticate `infisical run`.
 
 ---
 
@@ -90,7 +90,7 @@ railway up --ci         # trigger a deployment
 ```
 
 `RAILWAY_TOKEN` must be set as an Ona project secret. If it's missing, commands will fail.
-See `ctf/docs/ona-secrets-inventory.md` for the full secret list and setup instructions.
+It lives in Infisical alongside the other secrets.
 
 ---
 

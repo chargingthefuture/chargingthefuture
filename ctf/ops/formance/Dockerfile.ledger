@@ -2,7 +2,7 @@
 # Wraps the official GHCR image with Render-compatible configuration.
 #
 # State lives entirely in external Neon Postgres (Render has no persistent
-# volumes). POSTGRES_URI must be set in the Render dashboard. AUTO_UPGRADE
+# volumes). FORMANCE_POSTGRES_URI must be set in the Render dashboard. AUTO_UPGRADE
 # runs schema migrations on container start.
 #
 # The base image's ENTRYPOINT is `ledger`, so it is reset to [] here and the
@@ -11,7 +11,7 @@ FROM ghcr.io/formancehq/ledger:v2.3.15-dev.1.g1077fe2@sha256:5c280c2b1b397c6d910
 
 # Render has no persistent volumes — Formance state lives in the external
 # Neon Postgres database. AUTO_UPGRADE runs schema migrations on start.
-# POSTGRES_URI must be set in the Render dashboard (Neon connection string).
+# FORMANCE_POSTGRES_URI must be set in the Render dashboard (Neon connection string).
 ENV POSTGRES_MAX_OPEN_CONNS=40 \
     POSTGRES_MAX_IDLE_CONNS=40 \
     POSTGRES_CONN_MAX_IDLE_TIME=5m \
@@ -25,5 +25,7 @@ EXPOSE 3068
 # Reset the image's `ledger` ENTRYPOINT so the shell runs directly; it then
 # expands Render's injected $PORT and invokes `ledger serve` explicitly.
 # --worker=true runs ledger + worker in one process.
+# FORMANCE_POSTGRES_URI is renamed for clarity (multiple postgres instances exist);
+# map it to the standard POSTGRES_URI that the ledger binary expects.
 ENTRYPOINT []
-CMD ["sh", "-c", "ledger serve --bind=0.0.0.0:${PORT:-3068} --worker=true --worker-grpc-address=127.0.0.1:8081"]
+CMD ["sh", "-c", "POSTGRES_URI=${FORMANCE_POSTGRES_URI:-$POSTGRES_URI} ledger serve --bind=0.0.0.0:${PORT:-3068} --worker=true --worker-grpc-address=127.0.0.1:8081"]

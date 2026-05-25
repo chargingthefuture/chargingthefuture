@@ -59,19 +59,6 @@ export async function evaluatePluginAccess(
     allowUnlockSupportOnly = false,
   } = options;
 
-  // DEV AUTH BYPASS: If DEV_AUTH_BYPASS is set, always allow as admin for local QA
-  if (process.env.DEV_AUTH_BYPASS === 'true') {
-    return {
-      allowed: true,
-      userId: 'dev-admin',
-      username: 'devadmin',
-      role: 'admin',
-      isAdmin: true,
-      isApproved: true,
-      unlockAccessTier: 'approved_full',
-    };
-  }
-
   const identity = await resolveRequestIdentity();
   const normalizedRequiredRoles = normalizeRequiredRoles(requiredRoles);
 

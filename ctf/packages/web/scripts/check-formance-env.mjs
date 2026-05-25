@@ -1,19 +1,5 @@
-function inferRailwayRuntime() {
-  return Boolean(
-    process.env.RAILWAY_ENVIRONMENT_NAME
-    || process.env.RAILWAY_ENVIRONMENT
-    || process.env.RAILWAY_DEPLOYMENT_ENVIRONMENT,
-  );
-}
-
-function inferRailwayProduction() {
-  const name = (
-    process.env.RAILWAY_ENVIRONMENT_NAME
-    || process.env.RAILWAY_ENVIRONMENT
-    || process.env.RAILWAY_DEPLOYMENT_ENVIRONMENT
-    || ''
-  ).toLowerCase();
-  return name === 'production';
+function inferRenderProduction() {
+  return process.env.RENDER_ENVIRONMENT === 'production';
 }
 
 function isTruthy(value) {
@@ -42,10 +28,9 @@ function isRailwayInternalHost(hostname) {
   return normalized.endsWith('.railway.internal');
 }
 
-const runningOnRailway = inferRailwayRuntime();
-const railwayProduction = inferRailwayProduction();
+const renderProduction = inferRenderProduction();
 const requireFormance = isTruthy(process.env.SERVICE_CREDITS_REQUIRE_FORMANCE)
-  || railwayProduction;
+  || renderProduction;
 
 const requiredKeys = ['FORMANCE_API_URL', 'FORMANCE_LEDGER', 'FORMANCE_API_TOKEN'];
 
@@ -67,18 +52,8 @@ try {
   const parsed = new URL(String(process.env.FORMANCE_API_URL));
   const isInternalHost = isRailwayInternalHost(parsed.hostname);
 
-  if (runningOnRailway) {
-    if (!isInternalHost) {
-      console.error(`FORMANCE_API_URL must target Railway private networking when running on Railway. Use an internal host (for example: http://ledger.railway.internal:8080). Received: ${process.env.FORMANCE_API_URL}`);
-      process.exit(1);
-    }
-
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      console.error(`FORMANCE_API_URL must use http or https. Received: ${process.env.FORMANCE_API_URL}`);
-      process.exit(1);
-    }
-  } else if (parsed.protocol !== 'https:' && !isInternalHost) {
-    console.error(`FORMANCE_API_URL must use https for non-local runtimes unless targeting a private internal host. Received: ${process.env.FORMANCE_API_URL}`);
+  if (parsed.protocol !== 'https:' && !isInternalHost) {
+    console.error(`FORMANCE_API_URL must use https for external services unless targeting an internal host. Received: ${process.env.FORMANCE_API_URL}`);
     process.exit(1);
   }
 } catch {

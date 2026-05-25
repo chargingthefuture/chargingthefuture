@@ -1,8 +1,11 @@
 # Backend Infrastructure Migration Plan: Railway → Agent-Friendly Platform
 
-**Status:** Planning stage (May 10, 2026)  
-**Problem:** Railway doesn't expose MCP server or provide agent-friendly log/shell access  
-**Goal:** Month-to-month platform with full agent SSH access, <$20/mo budget, terminal-first
+> **Status:** ARCHIVED — Migrated to Render (May 2026).
+> See `AGENTS.md` and `render.yaml` for current infrastructure.
+
+**Historical Status:** Planning stage (May 10, 2026)  
+**Original Problem:** Railway doesn't expose MCP server or provide agent-friendly log/shell access  
+**Original Goal:** Month-to-month platform with full agent SSH access, <$20/mo budget, terminal-first
 
 ---
 
