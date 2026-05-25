@@ -6,8 +6,6 @@ on:
       service_id:
         description: 'Render service ID to debug (e.g. srv-xxx). Leave blank to use RENDER_INFISICAL_SERVICE_ID secret.'
         required: false
-  schedule:
-    - cron: '0 * * * *'
 
 jobs:
   debug:

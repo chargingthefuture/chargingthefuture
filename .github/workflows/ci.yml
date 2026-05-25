@@ -1,4 +1,4 @@
-name: Rewrite CI
+name: CI
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ on:
       - ".github/workflows/**"
 
 concurrency:
-  group: rewrite-ci-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -323,8 +323,8 @@ jobs:
               );
             }
 
-  rewrite-quality:
-    name: Rewrite Quality Gates
+  quality-gates:
+    name: Quality Gates
     runs-on: ubuntu-latest
     needs:
       - plugin-contract-templates
@@ -369,10 +369,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --dir ctf
 
-      - name: Run rewrite lint gate
+      - name: Run lint gate
         run: pnpm --dir ctf run lint
 
-      - name: Run rewrite typecheck gate
+      - name: Run typecheck gate
         run: pnpm --dir ctf run typecheck
 
       - name: Run web production build gate
