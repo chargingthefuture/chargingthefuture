@@ -11,7 +11,7 @@ name: Build and push Docker images
 #   This lets Render pull images without registry credentials.
 #
 # REQUIRED GITHUB SECRETS:
-#   NEXT_PUBLIC_APP_URL               — production URL, e.g. https://chargingthefuture.com
+#   NEXT_PUBLIC_APP_URL               — production URL, e.g. https://app.chargingthefuture.com
 #   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  — Clerk publishable key (pk_live_…)
 #   NEXT_PUBLIC_AUTH_SIGN_IN_URL      — e.g. /sign-in
 #   NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL — e.g. /

@@ -38,6 +38,7 @@ services:
   # beyond configuring the Render Sync inside Infisical.
   - type: web
     name: ctf-web
+    runtime: image
     image:
       url: ghcr.io/chargingthefuture/ctf-web:latest
     region: ohio
@@ -65,6 +66,7 @@ services:
   # Secrets injected by Infisical → Render Sync.
   - type: worker
     name: ctf-pm-mcp-server
+    runtime: image
     image:
       url: ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
     region: ohio
@@ -80,6 +82,7 @@ services:
   # when ctf/ops/ollama/Dockerfile changes (path-filtered in build-images.yml).
   - type: pserv
     name: ctf-ollama
+    runtime: image
     image:
       url: ghcr.io/chargingthefuture/ctf-ollama:latest
     region: ohio
@@ -97,6 +100,7 @@ services:
   #
   # - type: pserv
   #   name: ctf-infisical
+  #   runtime: image
   #   image:
   #     url: ghcr.io/chargingthefuture/ctf-infisical:latest
   #   region: ohio
@@ -122,6 +126,7 @@ services:
   # FORMANCE_POSTGRES_URI injected by Infisical → Render Sync.
   - type: pserv
     name: ctf-formance-ledger
+    runtime: image
     image:
       url: ghcr.io/chargingthefuture/ctf-formance-ledger:latest
     region: ohio
