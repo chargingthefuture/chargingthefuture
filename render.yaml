@@ -2,24 +2,31 @@
 # All v3 services migrated from Railway to Render.
 # v2 (legacy) remains on Railway until v3 is production-ready.
 #
+# ENVIRONMENT MODEL
+# ───────────────────────────────
+# Production is the only persistent environment — it deploys from `main`.
+# Every pull request gets a full ephemeral preview environment (all services
+# below), which Render destroys automatically when the PR merges or closes.
+# There is no permanent staging environment; test branches via previews.
+#
 # SECRET MANAGEMENT ARCHITECTURE
 # ───────────────────────────────
-# Infisical is the single source of truth for all secrets.
-# After deploying this blueprint:
+# Infisical (self-hosted on Railway) is the single source of truth for secrets.
+# Its Render Sync integration pushes secrets into each production service below.
 #
-# 1. Set Infisical bootstrap secrets manually in the Render dashboard
-#    for ctf-infisical only (4 values — see that service below).
+# Preview environments get suffixed service names that Infisical's per-service
+# syncs do not target, so preview secrets come from a linked Render env group
+# (env groups are inherited by previews). See PREVIEW SECRETS note per service.
 #
-# 2. Inside Infisical, configure a Render Connection (requires a Render
-#    API key) and create a Render Sync for each service below.
-#    Infisical will then push all secrets automatically.
-#
-# 3. For GitHub Actions (backup workflow), add only two GitHub secrets:
-#    INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET.
-#    The workflow fetches everything else from Infisical at runtime.
-#
-# sync: false entries are present only where Infisical cannot bootstrap
-# itself (ctf-infisical) or where a static value cannot come from Infisical.
+# For GitHub Actions (backup workflow), add two GitHub secrets:
+# INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET; the workflow fetches the rest
+# from Infisical at runtime.
+
+# Ephemeral preview environment per PR; auto-destroyed on merge/close.
+# expireAfterDays cleans up previews on abandoned-but-open PRs.
+previews:
+  generation: automatic
+  expireAfterDays: 5
 
 services:
   # ── Next.js web app ─────────────────────────────────────────────
