@@ -59,7 +59,7 @@ async function postTransactionToFormance(input: {
 }) {
   const config = getFormanceConfig();
 
-  const response = await fetch(`${config.apiUrl}/api/ledger/${encodeURIComponent(config.ledger)}/transactions`, {
+  const response = await fetch(`${config.apiUrl}/v2/${encodeURIComponent(config.ledger)}/transactions`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
