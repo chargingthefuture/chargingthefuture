@@ -13,16 +13,8 @@
 # SECRET MANAGEMENT ARCHITECTURE
 # ───────────────────────────────
 # Infisical (self-hosted on Railway) is the single source of truth for secrets.
-# Its Render Sync integration pushes secrets into each production service below.
-#
-# The `ctf-preview-secrets` env group (linked via `fromGroup` below) is a base
-# secret layer for the Production services. Service-level vars synced by
-# Infisical override env-group vars, so Infisical stays authoritative.
-# IMPORTANT: Production must have Infisical sync every key the group contains —
-# any group key NOT synced by Infisical would otherwise serve its env-group
-# value in production.
-#   * Populate the group via the "Add from .env" bulk paste as ENV VARS, NOT a
-#     secret file (secret files are disk-mounted only, never in process.env).
+# Its Render Sync integration pushes secrets into each production service below
+# via service-level environment variables (which take precedence over env groups).
 #
 # For GitHub Actions (backup workflow), add two GitHub secrets:
 # INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET; the workflow fetches the rest
@@ -42,9 +34,6 @@ services:
     plan: standard
     healthCheckPath: /api/health
     envVars:
-      # Base secret layer; Infisical → Render Sync overrides these in production
-      # (service-level vars take precedence over env-group vars).
-      - fromGroup: ctf-preview-secrets
       - key: PORT
         value: "3000"
       - key: NODE_ENV
@@ -71,9 +60,7 @@ services:
     dockerContext: ctf
     region: ohio
     plan: starter
-    envVars:
-      # Base secret layer (see ctf-web). Infisical Render Sync overrides in prod.
-      - fromGroup: ctf-preview-secrets
+    envVars: {}
 
   # ── PM MCP Server ────────────────────────────────────────────────
   # Background worker — stdio MCP transport for PM feedback workflows.
@@ -87,8 +74,6 @@ services:
     region: ohio
     plan: starter
     envVars:
-      # Base secret layer (see ctf-web). Infisical Render Sync overrides in prod.
-      - fromGroup: ctf-preview-secrets
       - key: NODE_ENV
         value: production
 
@@ -147,7 +132,4 @@ services:
     dockerContext: ctf/ops/formance
     region: ohio
     plan: starter
-    envVars:
-      # Base secret layer (see ctf-web): provides FORMANCE_POSTGRES_URI.
-      # Infisical Render Sync overrides in prod.
-      - fromGroup: ctf-preview-secrets
+    envVars: {}
