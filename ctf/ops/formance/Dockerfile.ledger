@@ -25,5 +25,7 @@ EXPOSE 3068
 # Reset the image's `ledger` ENTRYPOINT so the shell runs directly; it then
 # expands Render's injected $PORT and invokes `ledger serve` explicitly.
 # --worker=true runs ledger + worker in one process.
+# FORMANCE_POSTGRES_URI is renamed for clarity (multiple postgres instances exist);
+# map it to the standard POSTGRES_URI that the ledger binary expects.
 ENTRYPOINT []
-CMD ["sh", "-c", "ledger serve --bind=0.0.0.0:${PORT:-3068} --worker=true --worker-grpc-address=127.0.0.1:8081"]
+CMD ["sh", "-c", "POSTGRES_URI=${FORMANCE_POSTGRES_URI:-$POSTGRES_URI} ledger serve --bind=0.0.0.0:${PORT:-3068} --worker=true --worker-grpc-address=127.0.0.1:8081"]
