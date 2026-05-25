@@ -5,7 +5,8 @@ const shouldSkipSentryBuildPlugin = process.env.CTF_SKIP_SENTRY_NEXTJS === '1';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  outputFileTracingRoot: path.join(__dirname, '..', '..', '..'),
+  output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname, '..', '..'),
   reactStrictMode: true,
   typescript: {
     tsconfigPath: './tsconfig.json',
