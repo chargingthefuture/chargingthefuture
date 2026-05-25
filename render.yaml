@@ -57,6 +57,7 @@ services:
         value: sentry
       # All remaining secrets are synced automatically by Infisical → Render Sync:
       #   AUTH_SECRET_KEY               — Clerk secret key (sk_test_… / sk_live_…)
+      #   CLERK_ENCRYPTION_KEY          — random 32-char string (openssl rand -hex 16); required when secretKey is passed dynamically
       #   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY — Clerk publishable key (pk_…)
       #   DATABASE_URL                  — Neon Postgres connection string
       #   STREAM_API_KEY / STREAM_API_SECRET — Stream Chat
