@@ -55,12 +55,14 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
 ## Spin up a new environment (automated, pick one path)
 
 ### Path A — Clone prod via Neon branch (fastest; ledgers + data included)
+
 1. `neonctl branches create --project-id <formance-project> --name <env>` (or console).
 2. Set the new `ctf-formance-ledger` service's `FORMANCE_POSTGRES_URI` to the branch URL.
 3. Deploy the ledger image. `AUTO_UPGRADE` reconciles the schema; the named ledgers and
    data are already present from the branch. Done.
 
 ### Path B — Restore from the Supabase dump (cross-provider DR)
+
 1. Provision a fresh Postgres (new Neon project/branch) and set `FORMANCE_DATABASE_URL`
    to it.
 2. `FORMANCE_RESTORE_CONFIRM=1 pnpm --filter <root> formance:restore`
@@ -78,6 +80,7 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
 3. Deploy the ledger image pointed at that DB.
 
 ### Path C — Net-new empty environment (no data to restore)
+
 1. Provision a fresh Postgres; set `FORMANCE_POSTGRES_URI` on a new ledger service.
 2. Set `FORMANCE_API_TOKEN`, `FORMANCE_LEDGER` (e.g. `ctf-main`), and
    `FORMANCE_LEDGER_STAGING` (e.g. `ctf-demo`) on the **ledger service** (Infisical → Render Sync).

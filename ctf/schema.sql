@@ -1,8 +1,3 @@
--- === skills_taxonomy_dependency_graph view (from prod) ===
-CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
-  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
-  FROM skills_taxonomy_consumer_bindings
-  GROUP BY target_type, target_id;
 -- Combined schema.sql for CTF (rewrite, no /platform)
 
 BEGIN;
@@ -3088,3 +3083,12 @@ CREATE TABLE IF NOT EXISTS inventory_analysis_cache (
   last_analyzed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_analysis_cache_file_path ON inventory_analysis_cache(inventory_file_path);
+
+-- skills_taxonomy_dependency_graph view — defined at the END so its source table
+-- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
+-- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table
+-- that had not been created yet.
+CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
+  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
+  FROM skills_taxonomy_consumer_bindings
+  GROUP BY target_type, target_id;
