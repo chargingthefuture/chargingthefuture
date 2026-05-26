@@ -182,18 +182,38 @@ realization of "demo tables in the prod db, not mixed":
    inventory, owner-curated, that the seed implements (e.g. TrustTransport ride/food/package × payment
    methods).
 
-### Implementation order (after lock)
-1. ~~Per-user `isDemoMode()`~~ via `resolveRequestIdentity()` — **landed 2026-05-26** (the modular
-   participant mechanism for the existing Stream/Formance routing; fail-safe to current behavior).
-   Still to do: `demo` schema provisioning + demo-aware, **fail-closed** `postgres.ts` pool selection —
-   the highest-risk isolation code; build + **runtime-test** this against a live app/DB before relying on it.
-2. Migration runner migrates both schemas; schema-drift gate covers `demo`.
-3. Identity: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
+### Implementation order
+
+1. ~~Per-user `isDemoMode()`~~ — **landed 2026-05-26.** `isDemoMode()` resolves the caller via a new
+   lightweight `getRequestUserId()` (headers/cookies only — no token verify, no DB, hot-path safe) and
+   evaluates `demo-mode` with that id as the Unleash targeting key. The modular participant allowlist for
+   the existing Stream/Formance routing; fail-safe to current behavior outside a request scope.
+2. ~~Demo-aware, fail-closed DB pool~~ — **landed 2026-05-26.** `postgres.ts` now keeps two pools:
+   `public` (default, unchanged) and `demo` (`options: '-c search_path=demo,public'`). `getActivePool()`
+   picks the demo pool only when `isDemoMode()` is true for the request's user; the flag layer is imported
+   **lazily** so seed scripts/migrations don't pull Next-only deps. Fail-closed + dormant: with no
+   participants it is byte-identical to before; a demo request with no `demo` schema errors rather than
+   leaking. **Not yet runtime-tested** (no DB/app in the agent env) — validate on the Render deploy.
+3. **Demo schema provisioning (NEXT).** A `pnpm migrate:demo-schema` script must build a parallel `demo`
+   schema. Known hazards found in `schema.sql` (must be handled, not naive `search_path=demo`):
+   - **`users` is never `CREATE`d in schema.sql** — only `ALTER TABLE IF EXISTS public.users ...` (it is a
+     legacy/external table). Decide whether demo needs a `users` table at all (identity is header/cookie
+     based, so likely not) — if it does, add a `CREATE TABLE IF NOT EXISTS` for it.
+   - **7 `public.`-qualified statements** (schema.sql lines ~150-154 ALTERs, ~168 `CREATE INDEX ... ON
+     public.users`, ~173 a `RAISE NOTICE` referencing `public.users`) explicitly target `public` and will
+     NOT apply to `demo`. The provisioner must retarget the safe ones (`public.` → `demo.`) or the demo
+     tables will miss those columns/indexes.
+   - **Extensions** (`CREATE EXTENSION IF NOT EXISTS pgcrypto`, lines 19/181) are idempotent and resolve
+     via `public` in the search_path — fine.
+   - Make it **opt-in** (NOT in the default deploy migration path) so a provisioning bug can't block prod
+     deploys. Then make the schema-drift gate cover `demo`.
+4. **Identity**: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
    participant accounts (owner + testers) and auto-provision a demo profile on first demo login.
-4. Per-plugin demo seeds (scenario matrix), starting with credit-bearing plugins (service-credits,
-   trusttransport, lighthouse, socketrelay, foundation) so the Formance demo ledger is exercised E2E.
-5. Verify: `demo-mode` ON → app reads `demo`, owner logs in as a seeded persona, writes hit `demo` +
-   `ctf-demo` only; `demo-mode` OFF → prod untouched.
+5. **Per-plugin demo seeds (scenario matrix)** — run against the `demo` schema (seed runner sets
+   `search_path=demo`), starting with credit-bearing plugins (service-credits, trusttransport, lighthouse,
+   socketrelay, foundation) so the `ctf-demo` Formance ledger is exercised E2E.
+6. **Verify on Render**: target `demo-mode` to your own Clerk id, confirm your interactions read/write only
+   `demo` + `ctf-demo`; `demo-mode` OFF → prod untouched. Then add testers.
 
 ## Open Questions
 

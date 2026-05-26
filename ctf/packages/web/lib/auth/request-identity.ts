@@ -90,6 +90,21 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   };
 }
 
+// Lightweight: read only the request's user id from headers/cookies, for per-user
+// feature-flag targeting (e.g. demo-mode). Unlike resolveRequestIdentity it does NOT
+// verify the token (no JWT/crypto, no DB), so it is safe on hot paths like DB-pool
+// selection. Returns null outside a request scope (seed scripts, migrations) where
+// headers()/cookies() are unavailable.
+export async function getRequestUserId(): Promise<string | null> {
+  try {
+    const headerStore = await headers();
+    const cookieStore = await cookies();
+    return readIdentityValue('x-ctf-user-id', 'ctf_user_id', headerStore, cookieStore);
+  } catch {
+    return null;
+  }
+}
+
 export function buildIdentityDisplayName(username: string | null, userId: string | null): string {
   if (username) {
     return `@${username}`;

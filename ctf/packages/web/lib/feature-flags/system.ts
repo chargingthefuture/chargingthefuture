@@ -1,6 +1,6 @@
 import { SYSTEM_FLAGS } from '@ctf/shared';
 import { evaluateBooleanFlag } from './server';
-import { resolveRequestIdentity } from 'lib/auth/request-identity';
+import { getRequestUserId } from 'lib/auth/request-identity';
 
 // Demo participation is a per-user allowlist: the `demo-mode` flag is targeted to
 // specific Clerk ids in Unleash, so multiple real users (the owner + opted-in
@@ -9,13 +9,10 @@ import { resolveRequestIdentity } from 'lib/auth/request-identity';
 // ctf-public-surface-session-continuity.md. We evaluate the flag with the caller's
 // id as the targeting key; outside a request scope (seed scripts, migrations,
 // startup) there is no user, so the flag falls back to its global default (OFF).
+// `getRequestUserId` is a lightweight header/cookie read (no token verification or
+// DB access) so this is cheap enough to call on the DB-pool-selection hot path.
 async function resolveDemoTargetingKey(): Promise<string | undefined> {
-	try {
-		const identity = await resolveRequestIdentity();
-		return identity.userId ?? undefined;
-	} catch {
-		return undefined;
-	}
+	return (await getRequestUserId()) ?? undefined;
 }
 
 // Demo mode routes data surfaces to demo-safe data and routes Stream/Formance to

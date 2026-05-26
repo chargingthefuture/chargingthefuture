@@ -303,3 +303,10 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   existing Stream/Formance routing — fail-safe to current behavior outside a request scope. The remaining
   `demo`-schema + fail-closed DB-pool isolation is the highest-risk piece and must be runtime-tested
   against a live app/DB before any participant relies on it.
+- 2026-05-26: **#102 demo-tenant — step 2 (demo-aware DB pool) landed.** `postgres.ts` now keeps a
+  `public` and a `demo` pool (`search_path=demo,public`); `getActivePool()` routes demo participants to
+  `demo`, fail-closed + dormant (byte-identical with no participants; lazy flag-layer import keeps seed
+  scripts clean). Added a lightweight `getRequestUserId()` (header/cookie only) so per-user demo
+  resolution is hot-path safe. **Next:** `migrate:demo-schema` provisioning — `schema.sql` has hazards
+  (the `users` table is never CREATEd, and 7 `public.`-qualified statements) that the provisioner must
+  handle, documented in the continuity doc. Build + runtime-test on Render before enabling participants.
