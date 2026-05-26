@@ -1,25 +1,11 @@
 import { StreamChat } from 'stream-chat';
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
 export type TrustTransportStreamParticipantCredentials = {
   streamApiKey: string;
   streamUserId: string;
   streamToken: string;
 };
-
-function getStreamConfig(): StreamConfig | null {
-  const apiKey = process.env.STREAM_API_KEY?.trim();
-  const apiSecret = process.env.STREAM_API_SECRET?.trim();
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
-
-  return { apiKey, apiSecret };
-}
 
 function toStreamUserId(userId: string): string {
   return `trusttransport-${userId}`;
@@ -36,7 +22,7 @@ export async function ensureTrustTransportTripChannel(input: {
   requesterUserId: string;
   providerUserId: string;
 }): Promise<string | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
@@ -62,7 +48,7 @@ export async function ensureTrustTransportTripChannel(input: {
 }
 
 export async function createTrustTransportParticipantToken(userId: string): Promise<TrustTransportStreamParticipantCredentials | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }

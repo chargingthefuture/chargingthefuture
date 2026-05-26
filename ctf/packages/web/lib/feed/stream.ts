@@ -1,14 +1,7 @@
- // ...existing code...
-// ...existing code...
-
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
 import { StreamChat } from 'stream-chat';
 import type { EventTypes } from 'stream-chat';
 import type { MembershipEventType } from './types';
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
 export type FeedStreamCredentials = {
   streamApiKey: string;
@@ -18,7 +11,7 @@ export type FeedStreamCredentials = {
 };
 
 export async function getFeedStreamCredentials(userId: string, displayName: string): Promise<FeedStreamCredentials | null> {
-  const streamConfig = getStreamConfig();
+  const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) return null;
   const streamClient = StreamChat.getInstance(streamConfig.apiKey, streamConfig.apiSecret);
   const streamUserId = `feed-${userId}`;
@@ -51,17 +44,6 @@ export async function getFeedStreamCredentials(userId: string, displayName: stri
   };
 }
 
-function getStreamConfig(): StreamConfig | null {
-  const apiKey = process.env.STREAM_API_KEY?.trim();
-  const apiSecret = process.env.STREAM_API_SECRET?.trim();
-
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
-
-  return { apiKey, apiSecret };
-}
-
 export async function emitFeedMembershipEventToStream(input: {
   actorId: string;
   userId: string;
@@ -70,7 +52,7 @@ export async function emitFeedMembershipEventToStream(input: {
   requestId: string | null;
   traceId: string | null;
 }): Promise<boolean> {
-  const streamConfig = getStreamConfig();
+  const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
     return false;
   }

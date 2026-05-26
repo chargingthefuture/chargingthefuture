@@ -5,125 +5,86 @@
 - Governs environment setup, deployment topology, and Clerk authentication across three distinct deployment environments
 - Environment variables are a critical contract and cannot be renamed without explicit user consent
 
-## Three Deployment Environments (No Local Dev)
+## Single Production Environment (Render)
 
-The project operates across exactly three environments. Local development is not supported as an official environment.
+No local dev. The v3 app runs as a **single production environment on Render**:
+the `ctf-web` service plus supporting services (`ctf-formance-ledger`,
+`ctf-ollama`, `ctf-pm-mcp-server`). There is no separate staging *deployment* —
+splitting was constrained by Clerk's domain binding (one Clerk instance per
+domain), and v3 ships to the single production domain.
 
-### 1. Staging Railway (Frontend + Backend)
-- **Frontend**: Deployed on Railway
-- **Backend**: Deployed on Railway
-- **Domain**: Custom staging domain (e.g., `staging.chargingthefuture.com`)
-- **Clerk Identity**: Separate Clerk instance with unique API keys
-- **Use Case**: Full-stack testing of production-like configuration
-- **Environment Prefix**: `RAILWAY_STAGING_*`
+- **Frontend + Backend**: one Next.js app (`ctf-web`) on Render.
+- **Domain**: the production domain (e.g. `app.chargingthefuture.com`).
+- **Clerk Identity**: one production Clerk instance bound to that domain.
+- **Release gating**: feature flags (Unleash + OpenFeature), not separate
+  environments — see the Feature Flags section below.
 
-### 2. Staging Vercel (Frontend Only)
-- **Frontend**: Deployed on Vercel
-- **Backend**: Remains on Railway (shared with Staging Railway)
-- **Domain**: Custom staging domain (e.g., `staging-vercel.chargingthefuture.com`)
-- **Clerk Identity**: Separate Clerk instance with unique API keys
-- **Use Case**: v0 AI design integration (v0 requires Vercel hosting); frontend development and testing
-- **Important**: Vercel domains (`.vercel.app`) are NOT accepted by Clerk; custom domain is mandatory
-- **Cross-domain Note**: Frontend on Vercel with backend on Railway requires CORS configuration and API proxy handling
-- **Environment Prefix**: `VERCEL_STAGING_*` (if needed; otherwise use VERCEL_*)
+### Per-environment credentials for Stream and Formance (the exception)
 
-### 3. Production Railway (Frontend + Backend)
-- **Frontend**: Deployed on Railway
-- **Backend**: Deployed on Railway
-- **Domain**: Custom production domain (e.g., `app.chargingthefuture.com`)
-- **Clerk Identity**: Separate Clerk instance with unique API keys
-- **Use Case**: Production traffic and user data
-- **Environment Prefix**: `RAILWAY_PROD_*` or unprefixed standard variables
+Two third-party integrations still need a non-production credential set even
+though there is only one deployment, and `demo-mode` selects it at runtime:
+
+- **GetStream** — the Maker-tier quota is a hard ceiling (see
+  [110-stream-maker-tier-rules.mdc](110-stream-maker-tier-rules.mdc)). A separate
+  Stream app supplies `STREAM_API_KEY_STAGING` / `STREAM_API_SECRET_STAGING` so
+  demo/recording traffic never burns the production quota.
+- **Formance** — real financial data. A separate ledger book on the same Formance
+  instance (`FORMANCE_LEDGER_STAGING`, e.g. `ctf-demo`) keeps demo transactions
+  out of the production ledger (`FORMANCE_LEDGER` = `ctf-main`). API URL, token,
+  and asset are shared because both books live on the one instance.
+
+When `demo-mode` is ON, `resolveStreamCredentials()` (web Stream readers) and the
+Formance config reader select the `*_STAGING` values; if a `*_STAGING` value is
+missing they report "not configured" rather than falling back to production, so a
+demo session can never touch the production Stream quota or the real ledger.
 
 ## Clerk Authentication Requirements
 
-### Why Three Separate Clerk Instances
-Clerk authentication is strictly domain-bound. Each unique domain must have its own Clerk API keys:
-- Session cookies are domain-specific
-- Redirect URIs must match the exact domain
-- Custom domains are required because Clerk does not accept Vercel's `*.vercel.app` domains
-- Attempting to share Clerk keys across domains will break authentication
+### One production Clerk instance (domain-bound)
+Clerk authentication is strictly domain-bound: session cookies and redirect URIs
+must match the exact domain, and Clerk keys cannot be shared across domains.
+Because v3 ships to a single production domain, it uses **one** Clerk instance.
+This domain binding is precisely why the app could not be split into separate
+staging/prod deployments without a second domain and a second Clerk instance.
 
-### Expected Clerk Environment Variables
-Each environment requires these variables (with appropriate prefixes/domains):
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (or `{ENV}_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`)
-- `CLERK_SECRET_KEY` (or `{ENV}_CLERK_SECRET_KEY`)
-- `CLERK_SIGN_IN_URL` (or `{ENV}_CLERK_SIGN_IN_URL`)
-- `CLERK_ENCRYPTION_KEY` (shared encryption contract across deploy targets)
+### Expected auth environment variables
+The auth layer is provider-neutral (`lib/auth/provider-env.ts`); keys are not
+Clerk-name-specific:
+- `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
+- `AUTH_SECRET_KEY`
+- `NEXT_PUBLIC_AUTH_SIGN_IN_URL`
+- `CTF_AUTH_PROVIDER` (defaults to `clerk`)
+- `CLERK_ENCRYPTION_KEY`
 
 ### Clerk Configuration Constraints
-- Do not attempt to use Vercel deployment previews or auto-generated Vercel domains with Clerk
-- Do not share Clerk instances across domains
-- Always use environment-specific Clerk keys matching the deployment domain
-- Session/auth failures may indicate Clerk domain mismatch
+- Do not share a Clerk instance across domains.
+- The Clerk instance's redirect URIs must exactly match the production domain.
+- Session/auth failures often indicate a Clerk domain mismatch.
 
 ## Environment Variable Contract
 
-### The `.env.local.example` is Sacred
-The file `ctf/packages/web/.env.local.example` serves as the contract for all environment variables.
+### Infisical is the single source of truth
+All secrets live in the self-hosted Infisical instance, in a single `production`
+environment. There is no `.env.local.example` file and no per-environment prefix
+scheme (`RAILWAY_*` / `VERCEL_*` are retired). Render injects the Infisical
+`production` secrets into `ctf-web` at deploy time.
 
-**Critical Rule**: Environment variables CANNOT be renamed, removed, or restructured without explicit user consent.
+**Critical Rule**: Secret keys CANNOT be renamed, removed, or restructured
+without explicit user consent. New keys are added in Infisical (and documented
+here) only with the owner's approval.
 
-### Current Environment Variable Structure
-```
-# UNIVERSAL (shared across all environments)
-STREAM_API_SECRET=
-STREAM_API_KEY=
-DATABASE_URL=
-OBSERVABILITY_PROVIDER=
-CLERK_ENCRYPTION_KEY=
+### Stream and Formance staging keys
+The single `production` Infisical environment additionally holds the demo/staging
+credential set for the two integrations that need it:
 
-# RAILWAY (all Railway deployments)
-RAILWAY_NEXT_PUBLIC_APP_URL=
-RAILWAY_SENTRY_DSN=
-RAILWAY_STAGING_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-RAILWAY_STAGING_CLERK_SECRET_KEY=
-RAILWAY_STAGING_CLERK_SIGN_IN_URL=
-RAILWAY_PROD_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-RAILWAY_PROD_CLERK_SECRET_KEY=
-RAILWAY_PROD_CLERK_SIGN_IN_URL=
-EXPO_MOBILE_PROJECT_ID=
-EXPO_MOBILE_UPDATES_URL=
-EXPO_SENTRY_DSN=
+- `STREAM_API_KEY`, `STREAM_API_SECRET` (production) and `STREAM_API_KEY_STAGING`,
+  `STREAM_API_SECRET_STAGING` (the demo Stream app — separate per-app quota).
+- `FORMANCE_API_URL`, `FORMANCE_LEDGER` (= `ctf-main`), `FORMANCE_API_TOKEN`,
+  `FORMANCE_ASSET` (production) and `FORMANCE_LEDGER_STAGING` (= `ctf-demo`, the
+  demo ledger book on the same Formance instance).
 
-# VERCEL (Vercel staging frontend)
-VERCEL_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-VERCEL_CLERK_SECRET_KEY=
-VERCEL_CLERK_SIGN_IN_URL=
-VERCEL_NEXT_PUBLIC_APP_URL=
-VERCEL_SENTRY_DSN=
-```
-
-### Environment Variable Constraints
-1. **No Renaming**: Variables must remain exactly as specified in `.env.local.example`
-2. **No Removal**: Do not remove variables without user approval
-3. **No Restructuring**: Do not change the prefix scheme (e.g., do not rename `RAILWAY_*` to `STG_RAILWAY_*`)
-4. **No Consolidation**: Do not attempt to use a single set of auth keys across multiple environments
-5. **Addition Only**: New variables may only be added with explicit user consent and `.env.local.example` update
-
-## Vercel Frontend + Railway Backend Architecture
-
-### Special Configuration for Staging Vercel
-
-When frontend is on Vercel and backend is on Railway:
-
-1. **API Routing**: Frontend must make API calls to the Railway backend domain, not localhost
-2. **CORS Setup**: Railway backend must allow CORS requests from the Vercel frontend domain
-3. **Environment URL**: `VERCEL_NEXT_PUBLIC_APP_URL` must point to the Vercel frontend domain
-4. **Backend URL**: Must be explicitly configured to point to Railway backend API
-5. **Clerk Redirect URIs**: Clerk instance must include both:
-   - The Vercel frontend domain (for sign-in callback)
-   - The Railway backend domain (if backend handles any auth endpoints)
-
-### Why This Architecture Exists
-- **v0 Integration**: Vercel is required for v0 AI design tooling
-- **Cost Optimization**: Frontend can scale independently on Vercel; backend remains on Railway
-- **Separation of Concerns**: Allows frontend iteration without redeploying backend
-
-### Inherent Limitations
-- Increased latency from Vercel frontend to Railway backend API calls
-- Additional complexity in CORS and environment configuration
-- No shared session/request context across origin boundaries (Vercel domain ≠ Railway domain)
+`demo-mode` selects between the two sets at request time; see the
+per-environment-credentials note above.
 
 ## Implementation Rules
 
@@ -152,7 +113,7 @@ Skills Hunt auto-generates `community-<6hex>` handles for unclaimed Directory pr
 
 **Server-side defense:** `lib/auth/username-policy.ts` rejects submissions from any user whose Clerk `username` starts with a reserved prefix (returns `SKILLS_HUNT_RESERVED_USERNAME` 403).
 
-**Clerk dashboard configuration (REQUIRED on every Clerk instance — staging Railway, staging Vercel, production):**
+**Clerk dashboard configuration (REQUIRED on the production Clerk instance):**
 
 1. Open the Clerk dashboard for the instance.
 2. Go to **User & authentication → Username**.
@@ -164,7 +125,7 @@ The server-side check is the source of truth; the Clerk dashboard layer is defen
 
 **When this list changes:**
 - Update `SKILLS_HUNT_RESERVED_USERNAME_PREFIXES` in `lib/auth/username-policy.ts`.
-- Update the Clerk dashboard on all three Clerk instances.
+- Update the Clerk dashboard on the production Clerk instance.
 - Document the new prefix in this rule.
 
 ## Feature Flags (Unleash + OpenFeature)
@@ -207,12 +168,12 @@ Breaking this rule will directly cause Clerk authentication to fail and prevent 
 
 ## Summary Table
 
-| Aspect | Staging Railway | Staging Vercel | Production Railway |
-|--------|-----------------|-----------------|-------------------|
-| Frontend Host | Railway | Vercel | Railway |
-| Backend Host | Railway | Railway | Railway |
-| Domain Type | Custom | Custom | Custom |
-| Clerk Instance | Unique #1 | Unique #2 | Unique #3 |
-| Env Prefix | `RAILWAY_STAGING_*` | `VERCEL_*` | `RAILWAY_PROD_*` |
-| Use Case | Full-stack testing | v0 design, frontend dev | Production |
-| Auth Complexity | Standard | Cross-origin CORS | Standard |
+| Aspect | Production (Render) |
+|--------|---------------------|
+| Frontend Host | Render (`ctf-web`) |
+| Backend Host | Render (`ctf-web`) |
+| Domain | Custom production domain |
+| Clerk Instance | One, bound to the production domain |
+| Secrets | Infisical `production` (single source of truth) |
+| Per-env credentials | Stream + Formance `*_STAGING` keys, selected by `demo-mode` |
+| Release gating | Feature flags (Unleash + OpenFeature), not environments |

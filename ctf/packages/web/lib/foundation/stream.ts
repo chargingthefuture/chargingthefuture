@@ -1,26 +1,11 @@
 import { StreamChat } from 'stream-chat';
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
 export type FoundationStreamParticipantCredentials = {
   streamApiKey: string;
   streamUserId: string;
   streamToken: string;
 };
-
-function getStreamConfig(): StreamConfig | null {
-  const apiKey = process.env.STREAM_API_KEY?.trim();
-  const apiSecret = process.env.STREAM_API_SECRET?.trim();
-
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
-
-  return { apiKey, apiSecret };
-}
 
 function toStreamUserId(userId: string): string {
   return `foundation-${userId}`;
@@ -42,7 +27,7 @@ export async function ensureFoundationStreamChannel(input: {
   providerUserId: string;
   providerDisplayName: string;
 }): Promise<{ streamChannelId: string; credentials: FoundationStreamParticipantCredentials } | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
@@ -76,7 +61,7 @@ export async function ensureFoundationStreamChannel(input: {
 }
 
 export async function createFoundationParticipantToken(userId: string, displayName: string): Promise<FoundationStreamParticipantCredentials | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
@@ -96,7 +81,7 @@ export async function sendFoundationStreamMessage(input: {
   senderDisplayName: string;
   messageText: string;
 }): Promise<string | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }

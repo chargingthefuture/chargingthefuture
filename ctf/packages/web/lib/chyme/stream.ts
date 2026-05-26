@@ -1,11 +1,7 @@
 import { StreamChat } from 'stream-chat';
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
 export const CHYME_STREAM_CHANNEL_ID = 'chyme-main-room';
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
 
 export type StreamJoinCredentials = {
   streamApiKey: string;
@@ -13,17 +9,6 @@ export type StreamJoinCredentials = {
   streamUserId: string;
   streamToken: string;
 };
-
-function getStreamConfig(): StreamConfig | null {
-  const apiKey = process.env.STREAM_API_KEY?.trim();
-  const apiSecret = process.env.STREAM_API_SECRET?.trim();
-
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
-
-  return { apiKey, apiSecret };
-}
 
 function toStreamUserId(userId: string): string {
   return `chyme-${userId}`;
@@ -58,7 +43,7 @@ export async function createStreamJoinCredentials(
   userId: string,
   displayName: string,
 ): Promise<StreamJoinCredentials | null> {
-  const streamConfig = getStreamConfig();
+  const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
     return null;
   }
@@ -80,7 +65,7 @@ export async function sendChymeStreamMessage(input: {
   displayName: string;
   text: string;
 }): Promise<string | null> {
-  const streamConfig = getStreamConfig();
+  const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
     return null;
   }

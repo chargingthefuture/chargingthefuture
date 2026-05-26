@@ -24,13 +24,28 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
 ## Owner-Locked Decisions (2026-05-25)
 
 **Decision 1: Demo-mode data strategy → SYNTHETIC DATA via seed scripts + demo-tenant pattern.**
-- Chosen over a Neon branch to **eliminate all staging environments** (owner is deleting them,
-  keeping only the separate Clerk instances). No extra DB compute; seed scripts already exist
-  per plugin and are maintained against schema migrations.
-- Mechanism: a set of seeded records with known/deterministic IDs (a "demo tenant") live in the
-  production DB. When `isDemoMode()` is ON, reads are scoped to the demo tenant. The owner curates
-  seed-script diversity to cover all use cases.
+- Chosen over a Neon branch to avoid a separate staging *deployment*. The app DB is shared: a set of
+  seeded records with known/deterministic IDs (a "demo tenant") live in the production DB, and when
+  `isDemoMode()` is ON, reads are scoped to the demo tenant. No extra DB compute; seed scripts already
+  exist per plugin and are maintained against schema migrations.
+- There is one production deployment (Render) and one production Clerk instance (Clerk is
+  domain-bound, so a single domain ⇒ a single instance).
 - **Impact:** A demo-tenant scoping layer in the data/identity path; per-plugin reads honor it.
+
+**Decision 1b: Demo-mode routes Stream + Formance to non-production instances (2026-05-26).**
+- The shared app DB is fine for demo, but two third-party integrations must NOT use their production
+  resources during a recording session:
+  - **GetStream** — Maker-tier quota is a hard ceiling (rule 110). Demo uses a separate Stream app via
+    `STREAM_API_KEY_STAGING` / `STREAM_API_SECRET_STAGING` (per-app quota).
+  - **Formance** — real financial data. Demo writes to a separate ledger book
+    (`FORMANCE_LEDGER_STAGING` = `ctf-demo`) on the same Formance instance, isolated from the
+    production ledger (`FORMANCE_LEDGER` = `ctf-main`). This lets demos exercise *real* credit-exchange
+    transactions without touching production balances ("B1": one instance, two ledger books; API URL,
+    token, and asset shared).
+- Mechanism: `resolveStreamCredentials()` and the Formance config reader honor `isDemoMode()`. If a
+  `*_STAGING` value is missing they report "not configured" rather than falling back to production, so
+  a demo can never touch the production quota or the real ledger.
+- Both credential sets live in the single Infisical `production` environment (one source of truth).
 
 **Decision 2: Public visibility → auth-gate, per-plugin (RESOLVED, see Summary).**
 - No `public-surface` flag gating of individual routes. Directory public routes removed;
@@ -54,8 +69,9 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
 - **SocketRelay public** (`/api/socketrelay/public`, `/api/socketrelay/public/[id]`) is a real
   feature using `mapPublicRequestRow()` redaction. Left public; no flag.
 - **Chyme / Hub** — fully authenticated, no public surface.
-- No demo-mode data routing yet: `isDemoMode()` switch exists; the demo-tenant scoping layer is
-  the next build step.
+- Demo-mode now routes **Stream** (`resolveStreamCredentials()`) and **Formance** (ledger-book
+  switch to `FORMANCE_LEDGER_STAGING`) to non-prod instances (landed 2026-05-26). The demo-tenant
+  **DB** scoping layer remains the next build step.
 
 ## Roadmap: Foundation Now, UI After Design
 

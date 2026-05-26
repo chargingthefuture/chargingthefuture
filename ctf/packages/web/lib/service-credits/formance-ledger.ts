@@ -1,3 +1,5 @@
+import { isDemoMode } from 'lib/feature-flags';
+
 type FormanceTransactionResponse = {
   data?: {
     txid?: number | string;
@@ -14,9 +16,18 @@ type LedgerPosting = {
   asset: string;
 };
 
-function getFormanceConfig() {
+// Resolves the active Formance ledger configuration. Demo mode (a recording
+// session) writes to a separate ledger book on the same Formance instance
+// (FORMANCE_LEDGER_STAGING) so test transactions never touch the production
+// ledger's real balances. API URL, token, and asset are shared because both
+// books live on the one Formance instance. In demo mode we never fall back to the
+// production ledger: if FORMANCE_LEDGER_STAGING is unset the config is treated as
+// not configured, so no demo transaction can reach production financial data.
+async function getFormanceConfig() {
   const apiUrl = process.env.FORMANCE_API_URL?.trim();
-  const ledger = process.env.FORMANCE_LEDGER?.trim();
+  const ledger = (await isDemoMode())
+    ? process.env.FORMANCE_LEDGER_STAGING?.trim()
+    : process.env.FORMANCE_LEDGER?.trim();
 
   if (!apiUrl || !ledger) {
     throw new Error('external_ledger_not_configured');
@@ -57,7 +68,7 @@ async function postTransactionToFormance(input: {
   postings: LedgerPosting[];
   metadata: Record<string, unknown>;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
 
   const response = await fetch(`${config.apiUrl}/v2/${encodeURIComponent(config.ledger)}/transactions`, {
     method: 'POST',
@@ -99,7 +110,7 @@ export async function postEscrowHoldToFormance(input: {
   amount: number;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:escrow-hold:${input.senderUserId}:${input.idempotencyKey}`,
     postings: [
@@ -126,7 +137,7 @@ export async function postEscrowReleaseToFormance(input: {
   amount: number;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:escrow-release:${input.sourceUserId}:${input.idempotencyKey}`,
     postings: [
@@ -153,7 +164,7 @@ export async function postEscrowRefundToFormance(input: {
   amount: number;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:escrow-refund:${input.sourceUserId}:${input.idempotencyKey}`,
     postings: [
@@ -179,7 +190,7 @@ export async function postMintToFormance(input: {
   governanceTicketId: string;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:mint:${input.targetUserId}:${input.idempotencyKey}`,
     postings: [
@@ -205,7 +216,7 @@ export async function postBurnToFormance(input: {
   governanceTicketId: string;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:burn:${input.targetUserId}:${input.idempotencyKey}`,
     postings: [
@@ -232,7 +243,7 @@ export async function postTreasuryFeeToFormance(input: {
   originPlugin: string;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:treasury-fee:${input.sourceUserId}:${input.idempotencyKey}`,
     postings: [
@@ -260,7 +271,7 @@ export async function postDisputeAdjustmentToFormance(input: {
   disputeCaseId: string;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:dispute-adjust:${input.sourceUserId}:${input.idempotencyKey}`,
     postings: [
@@ -288,7 +299,7 @@ export async function postDeletionReclaimToFormance(input: {
   deletionRequestId: string;
   idempotencyKey: string;
 }) {
-  const config = getFormanceConfig();
+  const config = await getFormanceConfig();
   return postTransactionToFormance({
     reference: `service-credits:deletion-reclaim:${input.accountId}:${input.idempotencyKey}`,
     postings: [

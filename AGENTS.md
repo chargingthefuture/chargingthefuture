@@ -41,17 +41,18 @@ chargingthefuture/          ← repo root
 
 ---
 
-## Three Deployment Environments
+## Deployment Environment
 
-No local dev. All environments are cloud-hosted.
+No local dev. The v3 app runs as a **single production environment on Render**:
+the `ctf-web` service plus supporting services (`ctf-formance-ledger`,
+`ctf-ollama`, `ctf-pm-mcp-server`). There is no separate staging deployment.
 
-| Environment | Frontend | Backend | Secret prefix |
-|---|---|---|---|
-| Staging Railway | Railway | Railway | `RAILWAY_STAGING_*` |
-| Production Railway | Railway | Railway | `RAILWAY_PROD_*` |
-
-**Canonical env contract:** `ctf/packages/web/.env.local.example`
-Do not rename, remove, or restructure variables without explicit user approval.
+**Canonical env contract:** the Infisical `production` environment is the single
+source of truth for all secrets (see below). Two integrations — GetStream and
+Formance — additionally keep `*_STAGING` values in that same environment; demo
+mode selects them at runtime so recording sessions never touch the production
+Stream quota or the real ledger. Do not rename, remove, or restructure secret
+keys without explicit user approval.
 
 ---
 

@@ -148,6 +148,7 @@ Internal routes:
 2. External ledger operations execute through a Formance-first adapter seam with stable internal command contracts.
 3. Adapter fallbacks must preserve command schema and policy/audit behavior.
 4. Provider-specific IDs remain adapter-internal and must not leak into user-facing API contracts.
+5. Demo-mode ledger isolation (2026-05-26): the adapter resolves the ledger book by `isDemoMode()`. In demo mode it targets `FORMANCE_LEDGER_STAGING` (`ctf-demo`); otherwise the production ledger `FORMANCE_LEDGER` (`ctf-main`). Both books live on the same Formance instance (shared API URL/token/asset), so demo transactions exercise real ledger logic without touching production balances. If `FORMANCE_LEDGER_STAGING` is unset while in demo mode, the adapter reports `external_ledger_not_configured` rather than falling back to the production book.
 
 ---
 
@@ -256,7 +257,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - External ledger calls are routed through adapter interfaces only.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [ ] Define Service Credits plugin command contracts for v1.
   - Acceptance criteria:
@@ -271,7 +272,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - No-fiat-redeemability and mandatory cross-plugin-path constraints are documented and approved.
 
-### €” Schema and Integration
+### ï¿½ï¿½ Schema and Integration
 
 - [ ] Design Service Credits extension model on canonical profile.
   - Acceptance criteria:
@@ -286,7 +287,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Replay and rollback strategy documented before implementation.
 
-### €” Command Execution
+### ï¿½ï¿½ Command Execution
 
 - [ ] Implement `wallet.create` and `wallet.balance.get` command execution paths.
   - Acceptance criteria:
@@ -301,7 +302,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Adjustment reason coding and balance mutation ordering are deterministic.
 
-### €” Cross-Plugin Enforcement
+### ï¿½ï¿½ Cross-Plugin Enforcement
 
 - [ ] Enforce cross-plugin-path metadata for value-moving commands.
   - Acceptance criteria:
@@ -313,7 +314,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Commands implying fiat redemption, withdrawal, or cash-out are denied and audited.
 
-### €” Web and Android Parity
+### ï¿½ï¿½ Web and Android Parity
 
 - [ ] Deliver wallet, balance, transfer, and escrow critical path parity.
   - Acceptance criteria:
@@ -325,7 +326,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Each deferral has owner, due date, and risk note with closure evidence.
 
-### €” Admin and Compliance
+### ï¿½ï¿½ Admin and Compliance
 
 - [ ] Deliver governance, treasury, and dispute admin operations.
   - Acceptance criteria:
@@ -358,7 +359,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Account-deletion treasury returns are recorded as reserve reallocations and excluded from GDP recognition metrics.
 
-### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Command schema design documentation.
   - Acceptance criteria:
@@ -376,7 +377,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
   - Acceptance criteria:
     - Wallet/transfer/escrow/treasury/dispute seed scenarios are reproducible via deterministic seed scripts/data.
 
-### €” Docs Lifecycle
+### ï¿½ï¿½ Docs Lifecycle
 
 - [ ] Keep `ctf-service-credits-feature-inventory.md` updated per accepted scope change.
   - Acceptance criteria:

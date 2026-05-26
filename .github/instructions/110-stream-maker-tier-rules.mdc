@@ -46,6 +46,7 @@ These are hard limits and must be treated as non-burstable ceilings in feature d
 - Use a provider interface so Stream limits and behavior can be adjusted by config, not rewrites.
 - Keep quota thresholds and kill switches in environment/config control, not hard-coded.
 - Preserve compatibility for future paid-tier expansion by avoiding assumptions tied to Maker limits.
+- Isolate non-production traffic from the Maker-tier quota: demo/recording sessions must use a separate Stream app via `STREAM_API_KEY_STAGING` / `STREAM_API_SECRET_STAGING`, selected at runtime by `demo-mode` through `resolveStreamCredentials()` (`ctf/packages/web/lib/integrations/stream-credentials.ts`). Production Stream credentials are never used while `demo-mode` is ON; if the staging credentials are absent, Stream features degrade rather than billing the production quota.
 
 ## Observability and Alerting
 - Emit usage metrics and alerts at threshold transitions (70/85/95/100).

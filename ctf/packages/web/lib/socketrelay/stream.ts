@@ -1,25 +1,11 @@
 import { StreamChat } from 'stream-chat';
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
 export type SocketRelayStreamParticipantCredentials = {
   streamApiKey: string;
   streamUserId: string;
   streamToken: string;
 };
-
-function getStreamConfig(): StreamConfig | null {
-  const apiKey = process.env.STREAM_API_KEY?.trim();
-  const apiSecret = process.env.STREAM_API_SECRET?.trim();
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
-
-  return { apiKey, apiSecret };
-}
 
 function toStreamUserId(userId: string): string {
   return `socketrelay-${userId}`;
@@ -38,7 +24,7 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
   fulfillerUserId: string;
   fulfillerDisplayName: string;
 }): Promise<string | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
@@ -64,7 +50,7 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
 }
 
 export async function createSocketRelayParticipantToken(userId: string, displayName: string): Promise<SocketRelayStreamParticipantCredentials | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }

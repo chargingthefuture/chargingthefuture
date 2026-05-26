@@ -11,7 +11,7 @@ function isTruthy(value) {
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 }
 
-function isRailwayInternalHost(hostname) {
+function isInternalLedgerHost(hostname) {
   const normalized = String(hostname || '').trim().toLowerCase();
   if (!normalized) {
     return false;
@@ -21,11 +21,11 @@ function isRailwayInternalHost(hostname) {
     return true;
   }
 
-  if (normalized === 'ledger' || normalized === 'formance-ledger') {
-    return true;
-  }
-
-  return normalized.endsWith('.railway.internal');
+  // Render reaches the Formance ledger over its private network by bare service
+  // name (no public TLS), so plain http is acceptable for these internal hosts.
+  return normalized === 'ledger'
+    || normalized === 'formance-ledger'
+    || normalized === 'ctf-formance-ledger';
 }
 
 const renderProduction = inferRenderProduction();
@@ -50,7 +50,7 @@ if (missing.length > 0) {
 
 try {
   const parsed = new URL(String(process.env.FORMANCE_API_URL));
-  const isInternalHost = isRailwayInternalHost(parsed.hostname);
+  const isInternalHost = isInternalLedgerHost(parsed.hostname);
 
   if (parsed.protocol !== 'https:' && !isInternalHost) {
     console.error(`FORMANCE_API_URL must use https for external services unless targeting an internal host. Received: ${process.env.FORMANCE_API_URL}`);
