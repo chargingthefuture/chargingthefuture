@@ -145,30 +145,45 @@ realization of "demo tables in the prod db, not mixed":
   **scenario matrix** (every flow/role/payment-method per plugin).
 - **Formance**: demo seeds post realistic transactions to the `ctf-demo` ledger so the credit economy
   looks real in demos.
-- **Identity / login-as-demo-user**: the owner's real Clerk id(s) are seeded into `demo` as both an admin
-  and one or more user personas with realistic data. With `demo-mode` ON, the app reads `demo`, so the
-  owner sees/acts as their demo persona — one prod Clerk instance, demo mode only swaps the data schema.
+- **Identity / login-as-demo-user (MODULAR)**: demo participation is an **owner-curated allowlist of
+  real Clerk user IDs**, not a single hardcoded owner. Mechanism reuses the existing flag infra (#103):
+  `demo-mode` is evaluated **per-user** via Unleash user-id targeting (`evaluateBooleanFlag` already
+  accepts `{ targetingKey }`). A user is a "demo participant" iff `demo-mode` is targeted ON for their
+  Clerk id. Adding/removing a tester = a flag-targeting change in Unleash — no deploy, no schema edit.
+  Because demo-vs-prod resolves **per request by the requesting user**, multiple participants can be in
+  demo mode simultaneously while real production users are unaffected — this is what enables a live
+  two-sided demo (owner as TrustTransport driver in one window; an opted-in tester as the requester in
+  an incognito window, in real time).
 
-### Blast radius (contained — the point of the schema approach)
-- `ctf/packages/web/lib/db/postgres.ts` — demo-aware pool selection.
-- Migration runner (`runMigrationFile.mjs` / `migrate:*`) — provision + migrate the `demo` schema.
-- Per-plugin seed scripts — target `demo`; expand to the scenario matrix.
-- Identity path — seed the owner's Clerk id(s) into `demo`.
-- Repositories / routes — **unchanged**.
+### Modular demo participants — how the per-request routing works
+- `isDemoMode()` reads a **request-scoped context** (AsyncLocalStorage, set at the request/auth
+  boundary) holding the caller's Clerk id, and evaluates `demo-mode` with that id as the targeting key.
+  Existing callers (`stream-credentials.ts`, `formance-ledger.ts`) keep calling `isDemoMode()` with no
+  args and automatically become per-user.
+- The demo-aware DB pool in `postgres.ts` reads the same context to pick the `demo` vs `public` pool.
+  **Fail-closed**: if the request context marks demo but the `demo` schema/pool isn't available, the
+  query errors rather than silently hitting `public` — demo can never leak into prod, and vice versa.
+- **Demo participant profiles**: the demo seed creates accounts for the configured participant Clerk
+  IDs (owner + opted-in testers) so they can act immediately; the app also auto-provisions a demo
+  profile on a participant's first demo login, so newly-added testers "just work" without a reseed.
 
-### Decisions to lock before building (owner)
-1. **Approve the `demo` schema approach** (vs an `is_demo` column on every table, which is riskier — one
-   forgotten filter leaks real data). Recommended: `demo` schema.
-2. **Identity mapping**: seed the owner's real Clerk id directly into `demo` (login "just works" in demo
-   mode), and/or named demo personas the owner switches between. Which?
-3. **Mobile parity** (open Decision 3): does demo mode extend to the Expo app, or web-only for now?
-4. **Scenario-matrix ownership**: who enumerates "every scenario per plugin"? Proposal: a per-plugin
-   `demo-scenarios` checklist in each inventory, owner-curated, that the seed script implements.
+### Locked decisions (2026-05-26, owner)
+1. **`demo` Postgres schema** approach — confirmed (over the riskier per-row `is_demo` filter).
+2. **Identity** — seed the owner's real Clerk id into `demo`, and make participation a **modular
+   allowlist** of real Clerk ids via per-user `demo-mode` targeting (see above), for live multi-user demos.
+3. **Mobile parity** — ❓ still open: web-only first, or include the Expo app? (Recommend web-first; add
+   mobile once the web layer is proven.)
+4. **Scenario-matrix ownership** — proposal stands: a per-plugin `demo-scenarios` checklist in each
+   inventory, owner-curated, that the seed implements (e.g. TrustTransport ride/food/package × payment
+   methods).
 
 ### Implementation order (after lock)
-1. `demo` schema provisioning + demo-aware `postgres.ts` pool selection (contained core).
+1. Request-scoped demo context (AsyncLocalStorage) set at the request/auth boundary; per-user
+   `isDemoMode()`; `demo` schema provisioning + demo-aware, **fail-closed** `postgres.ts` pool selection
+   (the contained core, and the highest-risk isolation code — build + test this first).
 2. Migration runner migrates both schemas; schema-drift gate covers `demo`.
-3. Identity: seed owner Clerk id(s) + personas into `demo`.
+3. Identity: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
+   participant accounts (owner + testers) and auto-provision a demo profile on first demo login.
 4. Per-plugin demo seeds (scenario matrix), starting with credit-bearing plugins (service-credits,
    trusttransport, lighthouse, socketrelay, foundation) so the Formance demo ledger is exercised E2E.
 5. Verify: `demo-mode` ON → app reads `demo`, owner logs in as a seeded persona, writes hit `demo` +
