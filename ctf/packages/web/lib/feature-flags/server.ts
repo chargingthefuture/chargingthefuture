@@ -46,6 +46,8 @@ function ensureProvider(): Promise<void> {
 	if (!initPromise) {
 		initPromise = registerUnleashProvider().catch((error) => {
 			console.error('[feature-flags] failed to initialize Unleash provider; using defaults', error);
+			// Clear the cached promise so a later call can retry initialization.
+			initPromise = null;
 		});
 	}
 	return initPromise;

@@ -176,7 +176,6 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md
 - #file:ctf/docs/contracts/CHYME_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/CHYME_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/CHYME_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -294,8 +293,6 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-announcements-feature-inventory.md
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-announcements-feature-inventory.md
 - #file:ctf/docs/contracts/FEED_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/FEED_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
@@ -724,7 +721,6 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md
 - #file:ctf/docs/contracts/GDP_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/GDP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml

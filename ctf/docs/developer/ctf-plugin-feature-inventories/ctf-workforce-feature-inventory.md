@@ -275,7 +275,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Admin capabilities included in web and mobile parity contract/validation scope.
 
-### �� Legacy Review and Contract Lock
+### Legacy Review and Contract Lock
 
 - [ ] Review and correct sections 8 and 9 from legacy Workforce inventory before implementation starts.
   - Acceptance criteria:
@@ -301,7 +301,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Command/policy/audit contracts can be implemented in parallel with route handlers.
 
-### �� Canonical Metric Definition Lock
+### Canonical Metric Definition Lock
 
 - [ ] Define and lock `recruited` canonical metric in `ctf/config/canonical_metrics.yaml`.
   - Acceptance criteria:
@@ -321,7 +321,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - PR includes metric registry check output and explicit canonical metric identifier mapping.
 
-### �� Schema and Drift Readiness
+### Schema and Drift Readiness
 
 - [ ] Define Workforce schema and migration plan in `ctf/migrations/`.
   - Acceptance criteria:
@@ -341,7 +341,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - PR declares `Schema Drift: none`, `compatible`, or `versioned-breaking` with required details.
 
-### �� API and Behavior Implementation Readiness
+### API and Behavior Implementation Readiness
 
 - [ ] Finalize Workforce API route map and command mapping.
   - Acceptance criteria:
@@ -357,7 +357,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Validation gate fails if user/admin-triggered recruited event creation is introduced.
 
-### �� Security and Compliance Gates
+### Security and Compliance Gates
 
 - [ ] Verify authz + CSRF coverage for all state-changing operations.
   - Acceptance criteria:
@@ -373,7 +373,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Audit contract evidence includes both success and denied operation cases.
 
-### �� Validation, Seeds, and Non-Regression Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+### Validation, Seeds, and Non-Regression Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
 
 - [ ] Command/policy/audit schema design documentation. [MANUAL TESTING DEFERRED FOR MVP — see Rule 118.]
   - Acceptance criteria:
@@ -391,7 +391,7 @@ Canonical definition notes for `recruited`:
   - Acceptance criteria:
     - Lint gate fails if legacy accidental event artifact patterns are reintroduced.
 
-### �� PR Evidence and Release Readiness
+### PR Evidence and Release Readiness
 
 - [ ] Include schema drift and migration evidence in PR.
   - Acceptance criteria:

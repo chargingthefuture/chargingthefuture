@@ -1,5 +1,5 @@
 
-import { queryDb } from '../packages/web/lib/db/postgres.js';
+import { withDbTransaction } from '../packages/web/lib/db/postgres.ts';
 import crypto from 'crypto';
 
 const SEED_USER_IDS = [
@@ -47,27 +47,18 @@ function deterministicId(user_id, client_id, mood_value, note) {
 }
 
 async function seed() {
-  await queryDb('BEGIN');
-  try {
+  await withDbTransaction(async (client) => {
     for (const submission of MOOD_SUBMISSIONS) {
       const id = deterministicId(submission.user_id, submission.client_id, submission.mood_value, submission.note);
-      await queryDb(
+      await client.query(
         `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, submitted_at)
          VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (id) DO NOTHING`,
         [id, submission.user_id, submission.client_id, submission.mood_value, submission.note]
       );
     }
-    await queryDb('COMMIT');
-    console.log('Seeded mood submissions.');
-  } catch (err) {
-    try {
-      await queryDb('ROLLBACK');
-    } catch (rollbackErr) {
-      console.error('Rollback failed:', rollbackErr);
-    }
-    throw err;
-  }
+  });
+  console.log('Seeded mood submissions.');
 }
 
 seed().catch((err) => {

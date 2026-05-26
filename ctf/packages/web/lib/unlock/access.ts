@@ -10,10 +10,15 @@ import { getEffectiveUnlockAccessTier } from './repository';
 //
 // The DB fallback ensures no regression for existing approved users.
 export async function isUserUnlocked(userId: string): Promise<boolean> {
-	const flagEnabled = await evaluateBooleanFlag(UNLOCK_FLAGS.QUORA_ONBOARDING, false, {
-		targetingKey: userId,
-	});
-	if (flagEnabled) return true;
+	try {
+		const flagEnabled = await evaluateBooleanFlag(UNLOCK_FLAGS.QUORA_ONBOARDING, false, {
+			targetingKey: userId,
+		});
+		if (flagEnabled) return true;
+	} catch (error) {
+		// A flag-backend failure must never lock out approved users; fall through to the DB tier.
+		console.error('[unlock] flag evaluation failed; falling back to DB access tier', error);
+	}
 
 	// Fall back to DB for users approved before Unleash targeting was set, or when Unleash
 	// is unconfigured. The flag client returns the default (false) in both cases, so we

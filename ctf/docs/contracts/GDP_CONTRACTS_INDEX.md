@@ -17,7 +17,7 @@ This index groups the Gross Domestic Product (GDP) plugin planning contracts for
 
 1. Feature inventory:
    - `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md`
-2. Rewrite checklist:
+2. Build Checklist (in the feature inventory above):
    - `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md`
 
 ## Template and Rule References

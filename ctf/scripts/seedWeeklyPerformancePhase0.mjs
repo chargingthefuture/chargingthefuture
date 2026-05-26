@@ -1,5 +1,5 @@
 
-import { queryDb } from '../packages/web/lib/db/postgres.js';
+import { queryDb } from '../packages/web/lib/db/postgres.ts';
 import crypto from 'crypto';
 
 const WEEK_START = '2026-05-19';

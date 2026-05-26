@@ -262,7 +262,7 @@ Domain tables:
   - Acceptance criteria:
     - Web-first implementation accepted; Android follow-up tracked by ticket link in PR.
 
-### �� Contract and Naming Lock
+### Contract and Naming Lock
 
 - [x] Lock Feed command contracts.
   - Acceptance criteria:
@@ -277,7 +277,7 @@ Domain tables:
   - Acceptance criteria:
     - New implementation removes legacy typo
 
-### �� Schema and Migration Readiness
+### Schema and Migration Readiness
 
 - [x] Implement Feed extension and domain schema.
   - Acceptance criteria:
@@ -292,7 +292,7 @@ Domain tables:
   - Acceptance criteria:
     - Drift check between SQL migrations, app schema, and API contracts is attached as PR evidence.
 
-### �� API and Fan-Out Behavior
+### API and Fan-Out Behavior
 
 - [x] Implement timeline/read/dismiss API flows.
   - Acceptance criteria:
@@ -307,7 +307,7 @@ Domain tables:
   - Acceptance criteria:
     - Publish/archive/render-mode updates are role-gated and audited.
 
-### �� Web Delivery
+### Web Delivery
 
 - [x] Implement web timeline UI and item states.
   - Acceptance criteria:
@@ -322,7 +322,7 @@ Domain tables:
   - Acceptance criteria:
     - Admin can configure rendering, publish/archive items, and review change history.
 
-### �� Questions Channel and LLM Integration
+### Questions Channel and LLM Integration
 
 - [x] Implement `feed_questions`, `feed_answers`, `feed_answer_ratings`, and `llm_inference_log` schema.
   - Acceptance criteria:
@@ -341,7 +341,7 @@ Domain tables:
   - Acceptance criteria:
     - Timeline can filter to questions-only view; LLM answers render inline.
 
-### �� Community Support Channel
+### Community Support Channel
 
 - [x] Implement `feed_community_posts` and `feed_community_replies` schema.
   - Acceptance criteria:
@@ -354,7 +354,7 @@ Domain tables:
   - Acceptance criteria:
     - Timeline can filter to community-only view.
 
-### �� Android Parity (Required)
+### Android Parity (Required)
 
 - [ ] Implement Android feed timeline with three-channel support.
   - Acceptance criteria:
@@ -369,7 +369,7 @@ Domain tables:
   - Acceptance criteria:
     - All three channels pass parity validation; no web-only gaps remain.
 
-### �� Security, Compliance, and Hardening
+### Security, Compliance, and Hardening
 
 - [x] Validate policy enforcement and CSRF coverage.
   - Acceptance criteria:

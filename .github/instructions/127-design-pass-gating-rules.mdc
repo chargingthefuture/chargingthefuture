@@ -62,7 +62,7 @@ The owner may explicitly bypass the gate by including one of the following in th
 
 - `bypass design` — agent proceeds end-to-end without a design pass; document the bypass in the change-log entry and in the relevant `*-session-continuity.md` doc.
 - `design done` followed by a reference to the design submodule path or commit (e.g. `design done: design/skills-hunt/`) — agent treats the design as locked, reads the referenced design artifacts, and resumes.
-- `hotfix` — agent treats the change as a bug fix and applies the SKIPPABLE rules even if the surface is normally REQUIRED.
+- `hotfix` — agent treats the change as a bug fix and applies the "What The Gate Does Not Apply To (no UI surface)" rules even if the surface is normally REQUIRED.
 
 If the prompt is ambiguous, the agent must ask before proceeding.
 

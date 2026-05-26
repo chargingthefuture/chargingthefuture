@@ -130,10 +130,12 @@ The server-side check is the source of truth; the Clerk dashboard layer is defen
 
 ## Feature Flags (Unleash + OpenFeature)
 
-Release gating and progressive user access use **Unleash** (self-hosted on Railway) behind an
-**OpenFeature** client (vendor-neutral interface). Single production environment: code ships with
-flags OFF by default; flags are toggled per-agent-branch/PR or by rollout. See issues #103 (epic),
-#101 (unlock-as-flag), #102 (public-screen gating + demo-safe data).
+Release gating and progressive user access use **Unleash** behind an **OpenFeature** client
+(vendor-neutral interface). Runtime hosting and secret sync are separate concerns: the **Unleash
+server is self-hosted on Railway**, while the app's **environment variables sync from Infisical to
+Render** (where `ctf-web` runs). Single production environment: code ships with flags OFF by default;
+flags are toggled per-agent-branch/PR or by rollout. See issues #103 (epic), #101 (unlock-as-flag),
+#102 (public-screen gating + demo-safe data).
 
 ### Required environment variables (synced via Infisical → Render Sync)
 

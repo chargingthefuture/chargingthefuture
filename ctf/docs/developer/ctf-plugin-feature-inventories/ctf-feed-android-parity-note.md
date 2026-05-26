@@ -69,7 +69,6 @@ The current mobile parity shell exposes all four directories inside the `feed-an
 - [FEED_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml](../../contracts/FEED_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml)
 - [FEED_PLUGIN_AUDIT_CONTRACTS.yaml](../../contracts/FEED_PLUGIN_AUDIT_CONTRACTS.yaml)
 - [ctf-feed-feature-inventory.md](ctf-feed-feature-inventory.md)
-- [ctf-feed-feature-inventory.md](ctf-feed-feature-inventory.md) — Phase 6
 
 ## Change Log
 

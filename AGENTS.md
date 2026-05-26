@@ -76,25 +76,6 @@ Infisical is the single source of truth for secrets; the bootstrap secrets above
 
 ---
 
-## Railway CLI
-
-Railway CLI is pre-installed in this Ona environment via the `setup` task.
-
-**Always `cd ctf/` before running Railway commands** — `railway.toml` is there.
-
-```bash
-cd /workspaces/chargingthefuture/ctf
-
-railway status          # check connected project/environment
-railway logs --tail 200 # fetch recent deployment logs
-railway up --ci         # trigger a deployment
-```
-
-`RAILWAY_TOKEN` must be set as an Ona project secret. If it's missing, commands will fail.
-It lives in Infisical alongside the other secrets.
-
----
-
 ## Ona Tasks (`.ona/automations.yaml`)
 
 Run tasks with:
