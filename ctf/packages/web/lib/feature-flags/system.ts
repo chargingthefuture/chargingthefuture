@@ -1,11 +1,31 @@
 import { SYSTEM_FLAGS } from '@ctf/shared';
 import { evaluateBooleanFlag } from './server';
+import { resolveRequestIdentity } from 'lib/auth/request-identity';
 
-// Demo mode routes data-fetching surfaces to synthetic/demo-safe data so no real
-// production data is exposed during video/screenshot recordings. Defaults to false
-// (real data) — demo mode is an explicit operator action for a recording session.
-// The data-routing implementation (demo-tenant seed records) reads this switch; see
-// ctf-public-surface-session-continuity.md.
+// Demo participation is a per-user allowlist: the `demo-mode` flag is targeted to
+// specific Clerk ids in Unleash, so multiple real users (the owner + opted-in
+// testers) can be in demo mode simultaneously while production users are
+// unaffected — this is what enables live two-sided demos. See
+// ctf-public-surface-session-continuity.md. We evaluate the flag with the caller's
+// id as the targeting key; outside a request scope (seed scripts, migrations,
+// startup) there is no user, so the flag falls back to its global default (OFF).
+async function resolveDemoTargetingKey(): Promise<string | undefined> {
+	try {
+		const identity = await resolveRequestIdentity();
+		return identity.userId ?? undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+// Demo mode routes data surfaces to demo-safe data and routes Stream/Formance to
+// their non-prod instances so recordings never touch production data or quota.
+// Defaults to false (real data) unless the caller is an allowlisted demo participant.
 export async function isDemoMode(): Promise<boolean> {
-	return evaluateBooleanFlag(SYSTEM_FLAGS.DEMO_MODE, false);
+	const targetingKey = await resolveDemoTargetingKey();
+	return evaluateBooleanFlag(
+		SYSTEM_FLAGS.DEMO_MODE,
+		false,
+		targetingKey ? { targetingKey } : undefined,
+	);
 }

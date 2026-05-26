@@ -156,13 +156,18 @@ realization of "demo tables in the prod db, not mixed":
   an incognito window, in real time).
 
 ### Modular demo participants — how the per-request routing works
-- `isDemoMode()` reads a **request-scoped context** (AsyncLocalStorage, set at the request/auth
-  boundary) holding the caller's Clerk id, and evaluates `demo-mode` with that id as the targeting key.
-  Existing callers (`stream-credentials.ts`, `formance-ledger.ts`) keep calling `isDemoMode()` with no
-  args and automatically become per-user.
-- The demo-aware DB pool in `postgres.ts` reads the same context to pick the `demo` vs `public` pool.
-  **Fail-closed**: if the request context marks demo but the `demo` schema/pool isn't available, the
-  query errors rather than silently hitting `public` — demo can never leak into prod, and vice versa.
+- **[Landed 2026-05-26]** `isDemoMode()` resolves the caller's id via `resolveRequestIdentity()` — the
+  per-request identity choke point already used by `evaluatePluginAccess()` — and evaluates `demo-mode`
+  with that id as the Unleash targeting key. Existing callers (`stream-credentials.ts`,
+  `formance-ledger.ts`) keep calling `isDemoMode()` with no args and are now per-user. Outside a request
+  scope (seed scripts, migrations, startup) `resolveRequestIdentity()` throws on `headers()`/`cookies()`;
+  it's caught and the flag falls back to its global default (OFF) — fail-safe to today's behavior.
+- **[Next — must be runtime-tested before any participant relies on it]** the demo-aware DB pool in
+  `postgres.ts` will call `isDemoMode()` to pick the `demo` vs `public` pool. **Fail-closed**: if demo is
+  active but the `demo` schema/pool isn't available, the query errors rather than silently hitting
+  `public` — demo can never leak into prod, and vice versa. This is the highest-risk isolation code, so it
+  must be validated against a running app + DB (the owner becomes a demo participant and confirms writes
+  land only in `demo`/`ctf-demo`) before enabling additional participants.
 - **Demo participant profiles**: the demo seed creates accounts for the configured participant Clerk
   IDs (owner + opted-in testers) so they can act immediately; the app also auto-provisions a demo
   profile on a participant's first demo login, so newly-added testers "just work" without a reseed.
@@ -178,9 +183,10 @@ realization of "demo tables in the prod db, not mixed":
    methods).
 
 ### Implementation order (after lock)
-1. Request-scoped demo context (AsyncLocalStorage) set at the request/auth boundary; per-user
-   `isDemoMode()`; `demo` schema provisioning + demo-aware, **fail-closed** `postgres.ts` pool selection
-   (the contained core, and the highest-risk isolation code — build + test this first).
+1. ~~Per-user `isDemoMode()`~~ via `resolveRequestIdentity()` — **landed 2026-05-26** (the modular
+   participant mechanism for the existing Stream/Formance routing; fail-safe to current behavior).
+   Still to do: `demo` schema provisioning + demo-aware, **fail-closed** `postgres.ts` pool selection —
+   the highest-risk isolation code; build + **runtime-test** this against a live app/DB before relying on it.
 2. Migration runner migrates both schemas; schema-drift gate covers `demo`.
 3. Identity: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
    participant accounts (owner + testers) and auto-provision a demo profile on first demo login.

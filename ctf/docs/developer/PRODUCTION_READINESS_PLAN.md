@@ -297,3 +297,9 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   serving; degrades to manual `pnpm formance:bootstrap` if `curl`/env are absent. Requires
   `FORMANCE_API_TOKEN` + `FORMANCE_LEDGER` (+ `FORMANCE_LEDGER_STAGING`) on the **ledger** service.
   Needs a staging/deploy build test before the issue's final "deploys cleanly" criterion is checked.
+- 2026-05-26: **#102 demo-tenant — step 1 (per-user `isDemoMode`) landed.** `isDemoMode()` now resolves
+  the caller via `resolveRequestIdentity()` and evaluates `demo-mode` with their id as the Unleash
+  targeting key, so demo participation is a modular per-user allowlist (owner + opted-in testers) for the
+  existing Stream/Formance routing — fail-safe to current behavior outside a request scope. The remaining
+  `demo`-schema + fail-closed DB-pool isolation is the highest-risk piece and must be runtime-tested
+  against a live app/DB before any participant relies on it.
