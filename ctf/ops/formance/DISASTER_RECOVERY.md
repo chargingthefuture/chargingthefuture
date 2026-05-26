@@ -1,6 +1,6 @@
 # Formance Ledger — Backup & Disaster Recovery
 
-The Formance ledger holds **real production financial data** (the Service Credits
+The Formance ledger holds **real production financial data** (the ServiceCredits
 economy). This is the runbook for backing it up and for spinning up a new ledger
 environment from scratch or from a backup. Goal: never lose financial data, and be
 able to recover or clone the ledger in an automated, repeatable way.
