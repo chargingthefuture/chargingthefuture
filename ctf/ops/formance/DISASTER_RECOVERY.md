@@ -72,12 +72,14 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
 
 ### Path C — Net-new empty environment (no data to restore)
 1. Provision a fresh Postgres; set `FORMANCE_POSTGRES_URI` on a new ledger service.
-2. Deploy the ledger image (`AUTO_UPGRADE` creates the system schema).
-3. Create the ledger books: from a Render shell with `FORMANCE_API_URL`,
-   `FORMANCE_API_TOKEN`, `FORMANCE_LEDGER` (and `FORMANCE_LEDGER_STAGING`) set, run
-   `pnpm --filter <root> formance:bootstrap`. It idempotently creates `ctf-main` and
-   `ctf-demo`. (Optional `FORMANCE_BOOTSTRAP_SMOKE=1` posts one test transaction — to the
-   **demo** ledger only; it never touches the production book.)
+2. Set `FORMANCE_API_TOKEN`, `FORMANCE_LEDGER` (e.g. `ctf-main`), and
+   `FORMANCE_LEDGER_STAGING` (e.g. `ctf-demo`) on the **ledger service** (Infisical → Render Sync).
+3. Deploy the ledger image. `AUTO_UPGRADE` creates the system schema, and the image's
+   **entrypoint (`formance-entrypoint.sh`) auto-creates the named ledger books idempotently** once
+   the API is healthy — no manual SSH/bootstrap step (issue #106). If the env vars above are missing
+   or `curl` is unavailable, the ledger still serves; create the books once with
+   `pnpm --filter <root> formance:bootstrap`. (Optional `FORMANCE_BOOTSTRAP_SMOKE=1` on the manual
+   script posts one test transaction — to the **demo** ledger only; it never touches the production book.)
 
 ## Safety rails
 
@@ -87,8 +89,8 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
   rolling production back.
 - **Bootstrap never writes to the production ledger**: ledger creation is a no-op write;
   the optional smoke transaction targets `ctf-demo` only, so `ctf-main` stays clean.
-- **Why ledger creation is not baked into the long-running container**: it requires the
-  API to be up first and would otherwise re-run on every restart. It is a one-shot
-  bootstrap (Path C) or arrives with a restore/branch (Paths A/B). A self-bootstrapping
-  entrypoint is possible if desired, but changes prod startup behavior — raise it
-  explicitly before adding it.
+- **Ledger creation is automatic and idempotent**: the image entrypoint
+  (`formance-entrypoint.sh`) starts the server, waits for the API, then creates the named ledger
+  books — safe to re-run on every restart (existing books return 400/409 and are treated as present).
+  It runs the bootstrap in the background and never blocks `ledger serve`, so a bootstrap hiccup can
+  never take the ledger offline. The standalone `pnpm formance:bootstrap` remains as a manual fallback.

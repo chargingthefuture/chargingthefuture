@@ -290,3 +290,10 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   checklist items (added a note pointing to this plan as authoritative). Corrected the peer-programming
   inventory's stale "no seed script" claim. (GitHub issues #101/#102/#103/#106 close-out is pending —
   GitHub MCP auth is currently down; close text prepared for the owner.)
+- 2026-05-26: **#106 auto-bootstrap entrypoint.** Per the issue's exact spec, added
+  `ctf/ops/formance/formance-entrypoint.sh` and wired it into `Dockerfile.ledger`: it starts
+  `ledger serve`, waits for the API, then idempotently creates the named ledger books (`ctf-main` +
+  `ctf-demo`) in the background — eliminating the manual SSH/bootstrap operator step. Never blocks
+  serving; degrades to manual `pnpm formance:bootstrap` if `curl`/env are absent. Requires
+  `FORMANCE_API_TOKEN` + `FORMANCE_LEDGER` (+ `FORMANCE_LEDGER_STAGING`) on the **ledger** service.
+  Needs a staging/deploy build test before the issue's final "deploys cleanly" criterion is checked.
