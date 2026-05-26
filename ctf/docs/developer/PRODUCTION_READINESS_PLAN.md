@@ -91,6 +91,11 @@ in the `design/` submodule** — build backend now, circle back for UI.
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (parallel) · 🎨 design exists
 
+> **This table is the single source of truth for delivery status** (the production bar: backend to spec
+> + pixel-perfect to `design` + parity + gates + deploy). Some plugin inventories still carry an older
+> "Parity: web+android complete" line that describes prior feature parity, **not** this bar — where the two
+> differ, this table wins. Inventory wording is normalized per plugin during its UI circle-back.
+
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -133,11 +138,46 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
 - [x] Railway → Render migration merged to `main` (GHCR image build + Render pull)
 - [x] `ctf-web` deploy green on Render (`/api/health`)
 - [x] Removed dead `ctf/render.yaml` (root `render.yaml` is canonical)
-- [ ] **Feature-flag infra (epic #103)**: stand up Unleash + OpenFeature client (web, mobile, agents);
-      wire `UNLEASH_API_*` via Infisical → Render Sync
-- [ ] **#102**: gate public/non-auth screens behind flags + demo-safe data (Neon branch / synthetic)
-- [ ] **#101**: re-scope `unlock` as a user-facing Unleash flag (retire bespoke verification queue or
-      keep it as the grant mechanism — owner to confirm)
+- [x] **Feature-flag infra (epic #103)**: OpenFeature client + self-hosted Unleash provider landed
+      (web/mobile/agents share the flag-key registry); `UNLEASH_API_*` wired via Infisical → Render Sync.
+      Flags default safely OFF when unconfigured (local/CI).
+- [x] **#101**: `unlock` access re-scoped to the `feature-unlock-quora-onboarding` Unleash flag, with a
+      DB fallback so users approved before flag-gating aren't locked out (and hardened so a flag-backend
+      error falls through to the DB tier instead of throwing).
+- [x] **#102 foundation**: public visibility resolved as a per-plugin **auth-gate** (not a global flag) —
+      directory's dead v2 public routes removed (they leaked full profiles incl. payment addresses),
+      socketrelay stays public via `mapPublicRequestRow()` redaction, chyme/hub auth-only; `public-surface`
+      demoted to a reserved kill-switch. Demo mode landed for third-party isolation: `isDemoMode()` routes
+      **Stream** to a separate app (`STREAM_*_STAGING`) and **Formance** to a separate ledger book
+      (`FORMANCE_LEDGER_STAGING` = `ctf-demo`, same instance) so recordings never touch the prod Stream
+      Maker-tier quota or the real ledger.
+- [ ] **#102 remaining (non-UI, next)**: the demo-tenant **DB scoping layer** — seed synthetic
+      demo-tenant rows into the prod DB and scope per-plugin reads by `isDemoMode()`. Sizeable; scope with owner.
+- [ ] **#102 UI (design-gated)**: landing, sign-in/up, unlock public screens — circle back when designs land.
+- [ ] **#102 ops (owner, Infisical)**: move `FORMANCE_API_URL` + `FORMANCE_API_TOKEN` into the
+      `production` environment (currently present only in the Staging column, so prod Formance is
+      unconfigured). `FORMANCE_LEDGER` (`ctf-main`), `FORMANCE_LEDGER_STAGING` (`ctf-demo`), and
+      `STREAM_*_STAGING` are already set.
+
+## Known follow-ups / tech debt (tracked here, not blocking)
+
+Recorded in this progress channel rather than as separate issues (per decision 1).
+
+1. **workforce `inference_dedupe_key` hardening** — the column is nullable, so the
+   `uq_workforce_recruited_events_dedupe_key` index + `ON CONFLICT (inference_dedupe_key)` only dedupe
+   non-NULL keys (Postgres treats NULLs as distinct). Make it `NOT NULL` once the write path is confirmed
+   to always supply a key and any legacy NULL rows are backfilled (per the DB migration rules). Not
+   blocking — current inserts supply a key.
+2. **Seed-script `PhaseN` filenames** — `seed<Plugin>Phase{0,1,2,3}.mjs` violate the no-"phases" naming
+   rule but are wired into `package.json` + CI. Rename the whole suite (and update refs) in one dedicated
+   change, not piecemeal.
+3. **Inventory delivery-status normalization** — see the authority note under the progress checklist; the
+   table is authoritative, inventory "web+android complete" lines are normalized at each plugin's UI
+   circle-back.
+4. **Backend drift decisions (owner input)** — feed-announcements names `feed_user_extension`,
+   `announcement_targets`, `announcements_user_extension` in its inventory but code uses equivalent
+   existing tables; reconcile names (or the inventory) to clear feed's 🟡. Confirm no residual workforce
+   drift remains after the 2026-05-21 phantom-table removal so workforce can move 🟡 → ✅.
 
 ## How a future session / agent picks up work
 
@@ -206,3 +246,23 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
   waves → single prod + Unleash/OpenFeature feature-flag release gating; `rewrite-ci.yml` → `ci.yml`).
   Aligned the plan with the new feature-flag epic (#103) and dependents #101 (unlock-as-flag) and #102
   (public-screen gating + demo-safe data).
+- 2026-05-26: **Feature-flag foundation landed.** #103 OpenFeature + self-hosted Unleash client shipped
+  (shared flag-key registry; safe-OFF when unconfigured). #101 `unlock` re-scoped to the
+  `feature-unlock-quora-onboarding` flag with a DB fallback. #102 public visibility resolved as a
+  per-plugin auth-gate: removed directory's dead v2 public projection routes, kept socketrelay public via
+  field redaction, chyme/hub auth-only; `public-surface` demoted to a reserved kill-switch.
+- 2026-05-26: **Demo-mode third-party isolation (#102).** `isDemoMode()` now routes Stream
+  (`resolveStreamCredentials()`, centralizing 6 scattered readers) to a separate Stream app
+  (`STREAM_*_STAGING`) and Formance to a separate ledger book (`FORMANCE_LEDGER_STAGING` = `ctf-demo`,
+  same instance — "B1") so recordings never consume the prod Stream Maker-tier quota or write to the real
+  ledger. Safe default: a missing `*_STAGING` value reports "not configured" rather than falling back to
+  prod. Updated rules 110/123 and added a quota-impact note.
+- 2026-05-26: **Correction to the 2026-05-21 "100% backend" claim + review triage.** The 5 seed scripts
+  logged on 2026-05-21 (peer-programming, mood, gdp, service-credits, weekly-performance) actually
+  **crashed at import** — they referenced `../packages/web/lib/db/postgres.js`, which does not exist (only
+  `postgres.ts`). Fixed the extension in all 6 affected seeds and moved `seedMood` to `withDbTransaction`
+  (its manual BEGIN/COMMIT ran on different pool connections). Also: hardened the flag client to reset its
+  init promise on failure (retryable); deleted the unused shared `stream/chyme.ts` duplicate; cleaned
+  deprecated docs (removed the Railway CLI section from AGENTS.md, fixed `.env.local.example` references,
+  clarified Unleash-on-Railway vs env-sync-to-Render); fixed mojibake headings in 4 inventories and
+  duplicate file references in the contract indexes + agent task briefs.
