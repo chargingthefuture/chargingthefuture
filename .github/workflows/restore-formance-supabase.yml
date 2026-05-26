@@ -1,0 +1,71 @@
+name: Restore Formance from Supabase
+
+# On-demand restore of a Formance pg_dump backup (produced by
+# backup-formance-supabase.yml) into a TARGET database — for disaster recovery or
+# spinning up a fresh Formance environment. Manual trigger only.
+#
+# Safety: it restores into FORMANCE_RESTORE_TARGET_DATABASE_URL — a DISTINCT
+# secret from the backup's FORMANCE_DATABASE_URL — so a misconfiguration can never
+# overwrite the production ledger. Point that secret at the NEW environment's Neon
+# connection string before running. See ctf/ops/formance/DISASTER_RECOVERY.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_file:
+        description: 'Specific backup filename (e.g. formance-backup-<ts>.dump). Blank = latest.'
+        required: false
+        type: string
+
+jobs:
+  restore-formance:
+    name: Restore Formance backup into target DB
+    runs-on: ubuntu-latest
+    env:
+      # TARGET DB to restore INTO — a new/recovery database, never production.
+      FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_RESTORE_TARGET_DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.SUPABASE_URL_FALLBACK }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY_FALLBACK }}
+      FORMANCE_BACKUP_FILE: ${{ inputs.backup_file }}
+      FORMANCE_RESTORE_CONFIRM: '1'
+    steps:
+      - name: Guard — require an explicit target database
+        run: |
+          if [ -z "${FORMANCE_DATABASE_URL}" ]; then
+            echo "FORMANCE_RESTORE_TARGET_DATABASE_URL is not set. Set it to the NEW environment's Neon connection string before running. Refusing to restore." >&2
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Ensure pg_restore is available
+        run: command -v pg_restore >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Run Formance restore script
+        id: restore
+        run: |
+          set -e
+          node ctf/scripts/restoreFormanceFromSupabase.mjs 2> restore-error.log || {
+            echo "Restore script failed. See restore-error.log." >&2
+            exit 1
+          }
+
+      - name: Upload failure logs (if present)
+        if: failure() && steps.restore.outcome == 'failure' && hashFiles('restore-error.log') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: formance-restore-failure-logs
+          path: restore-error.log
+          retention-days: 7

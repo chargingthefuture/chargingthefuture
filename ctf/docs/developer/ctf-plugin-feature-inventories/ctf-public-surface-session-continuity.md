@@ -112,6 +112,68 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
 - [ ] **Neon branch setup** (if chosen) — infrastructure work, may be separate from code PR.
 - [ ] **Mobile parity** (if Decision 3 includes mobile): Expo feature + flag checks.
 
+## Demo-Tenant DB Scoping Layer — Design (2026-05-26)
+
+The next non-UI build item for #102. Owner requirements (2026-05-26):
+- Demo data lives in the **production DB** but must be **isolated** ("demo tables in the prod db, not
+  mixed with prod"), seeded by per-plugin scripts like the existing seeds — including the demo Formance
+  ledger (`ctf-demo`).
+- Demo must show **real interactions**, so seeded **user accounts** must exist and own realistic data.
+- **Every scenario per plugin** across all 17 (→18) apps — e.g. TrustTransport must seed ride + food +
+  package deliveries covering all payment methods. This replaces the manual multi-account testing the
+  owner did in v2 staging.
+- Roles are only **admin** and **user**.
+- During recordings the owner must **log in (real Clerk identity) and interact as a user**, not just
+  admin, without polluting prod. (v2 used two Clerk environments + multiple personal emails; the seed
+  scripts remove that manual work, but login-as-demo-user must still work.)
+
+### Recommended architecture: a separate `demo` Postgres schema (selected by `isDemoMode()`)
+
+The prod Neon DB gets a second schema `demo` with the **same table DDL** as `public` — the cleanest
+realization of "demo tables in the prod db, not mixed":
+
+- **Isolation by schema, not per-row filtering.** No `WHERE is_demo` to forget (a forgotten filter would
+  leak real PII/financial data into a demo, or vice versa). Demo writes can never touch prod rows.
+- **Repositories unchanged.** They use unqualified table names; the connection `search_path` resolves to
+  `demo` or `public`. The only code change is the DB layer.
+- **`postgres.ts` becomes demo-aware**: two pools (each pinned via the `-c search_path=` connection
+  option), selected by `isDemoMode()` per request (async/cached — evaluate once per request).
+- **Migrations** apply to both schemas: `CREATE SCHEMA IF NOT EXISTS demo;` then run `schema.sql` with
+  `search_path=demo` as well as `public`. The migration runner gains a "both schemas" mode; the schema-
+  drift gate covers `demo`.
+- **Seeds** run against `demo`; the existing per-plugin seed scripts are the basis, expanded to the full
+  **scenario matrix** (every flow/role/payment-method per plugin).
+- **Formance**: demo seeds post realistic transactions to the `ctf-demo` ledger so the credit economy
+  looks real in demos.
+- **Identity / login-as-demo-user**: the owner's real Clerk id(s) are seeded into `demo` as both an admin
+  and one or more user personas with realistic data. With `demo-mode` ON, the app reads `demo`, so the
+  owner sees/acts as their demo persona — one prod Clerk instance, demo mode only swaps the data schema.
+
+### Blast radius (contained — the point of the schema approach)
+- `ctf/packages/web/lib/db/postgres.ts` — demo-aware pool selection.
+- Migration runner (`runMigrationFile.mjs` / `migrate:*`) — provision + migrate the `demo` schema.
+- Per-plugin seed scripts — target `demo`; expand to the scenario matrix.
+- Identity path — seed the owner's Clerk id(s) into `demo`.
+- Repositories / routes — **unchanged**.
+
+### Decisions to lock before building (owner)
+1. **Approve the `demo` schema approach** (vs an `is_demo` column on every table, which is riskier — one
+   forgotten filter leaks real data). Recommended: `demo` schema.
+2. **Identity mapping**: seed the owner's real Clerk id directly into `demo` (login "just works" in demo
+   mode), and/or named demo personas the owner switches between. Which?
+3. **Mobile parity** (open Decision 3): does demo mode extend to the Expo app, or web-only for now?
+4. **Scenario-matrix ownership**: who enumerates "every scenario per plugin"? Proposal: a per-plugin
+   `demo-scenarios` checklist in each inventory, owner-curated, that the seed script implements.
+
+### Implementation order (after lock)
+1. `demo` schema provisioning + demo-aware `postgres.ts` pool selection (contained core).
+2. Migration runner migrates both schemas; schema-drift gate covers `demo`.
+3. Identity: seed owner Clerk id(s) + personas into `demo`.
+4. Per-plugin demo seeds (scenario matrix), starting with credit-bearing plugins (service-credits,
+   trusttransport, lighthouse, socketrelay, foundation) so the Formance demo ledger is exercised E2E.
+5. Verify: `demo-mode` ON → app reads `demo`, owner logs in as a seeded persona, writes hit `demo` +
+   `ctf-demo` only; `demo-mode` OFF → prod untouched.
+
 ## Open Questions
 
 1. **Demo-mode data strategy:** Synthetic data flag, Neon branch, or demo tenant? (blocks server.ts routing)

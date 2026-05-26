@@ -68,6 +68,13 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
    one via `FORMANCE_BACKUP_FILE`, and `pg_restore`s it). Needs `SUPABASE_URL` +
    `SUPABASE_SERVICE_ROLE_KEY`. The dump includes the system schema + ledger books +
    data, so no separate bootstrap is needed.
+
+   **Easiest trigger:** the manual GitHub Actions workflow `restore-formance-supabase.yml`
+   (Actions → "Restore Formance from Supabase" → Run workflow). It restores into the
+   `FORMANCE_RESTORE_TARGET_DATABASE_URL` **secret** — distinct from the prod
+   `FORMANCE_DATABASE_URL`, so it can never overwrite production — and sets the confirm flag
+   for you. Set that secret to the new environment's Neon URL before running; the optional
+   `backup_file` input pins a specific dump (blank = latest).
 3. Deploy the ledger image pointed at that DB.
 
 ### Path C — Net-new empty environment (no data to restore)
