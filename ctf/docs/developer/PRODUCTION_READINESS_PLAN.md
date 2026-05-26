@@ -138,6 +138,17 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
 - [x] Railway → Render migration merged to `main` (GHCR image build + Render pull)
 - [x] `ctf-web` deploy green on Render (`/api/health`)
 - [x] Removed dead `ctf/render.yaml` (root `render.yaml` is canonical)
+- [x] **Formance disaster recovery (#106)**: runbook at `ctf/ops/formance/DISASTER_RECOVERY.md`. Backup
+      verified (nightly `pg_dump -Fc` → Supabase, `backup-formance-supabase.yml`, with verification); added
+      the restore half (`restoreFormanceFromSupabase.mjs`, confirm-gated) and three automated spin-up paths
+      (Neon branch / `pg_restore` / `formanceBootstrap.sh`). Fixed `formanceBootstrap.sh` to create **both**
+      ledger books (`ctf-main` + `ctf-demo`) idempotently and to stop posting a smoke transaction into the
+      **production** ledger (smoke is now opt-in and demo-only). Removed the stale duplicate
+      `formance-backup.sh`; added `formance:backup`/`formance:restore` npm scripts.
+  - [ ] **#106 owner action**: enable Neon PITR (longest retention) on the Formance project as the primary
+        safety net, and learn `neonctl branches create` for instant clones — see the runbook's
+        "Recommended: also enable Neon's native backups". The `pg_dump`→Supabase dump stays as the portable
+        offsite secondary.
 - [x] **Feature-flag infra (epic #103)**: OpenFeature client + self-hosted Unleash provider landed
       (web/mobile/agents share the flag-key registry); `UNLEASH_API_*` wired via Infisical → Render Sync.
       Flags default safely OFF when unconfigured (local/CI).
@@ -163,11 +174,9 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
 
 Recorded in this progress channel rather than as separate issues (per decision 1).
 
-1. **workforce `inference_dedupe_key` hardening** — the column is nullable, so the
-   `uq_workforce_recruited_events_dedupe_key` index + `ON CONFLICT (inference_dedupe_key)` only dedupe
-   non-NULL keys (Postgres treats NULLs as distinct). Make it `NOT NULL` once the write path is confirmed
-   to always supply a key and any legacy NULL rows are backfilled (per the DB migration rules). Not
-   blocking — current inserts supply a key.
+1. ~~workforce `inference_dedupe_key` hardening~~ — **done 2026-05-26.** Column set `NOT NULL` (with a
+   deterministic backfill of any legacy NULL rows in `schema.sql`) so `ON CONFLICT (inference_dedupe_key)`
+   can't be silently bypassed by a null key. The write path already supplied a sha256 key at all sites.
 2. **Seed-script `PhaseN` filenames** — `seed<Plugin>Phase{0,1,2,3}.mjs` violate the no-"phases" naming
    rule but are wired into `package.json` + CI. Rename the whole suite (and update refs) in one dedicated
    change, not piecemeal.
@@ -266,3 +275,11 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   deprecated docs (removed the Railway CLI section from AGENTS.md, fixed `.env.local.example` references,
   clarified Unleash-on-Railway vs env-sync-to-Render); fixed mojibake headings in 4 inventories and
   duplicate file references in the contract indexes + agent task briefs.
+- 2026-05-26: **Formance DR + dedupe hardening (#106 / follow-up).** Verified the Formance backup is
+  complete and accurate (nightly `pg_dump -Fc` → Supabase, with verification) and added the missing
+  restore half: `restoreFormanceFromSupabase.mjs` (`pnpm formance:restore`) pulls the latest/specified dump
+  and `pg_restore`s it into a target DB (confirm-gated), so a fresh Formance env can be stood up
+  automatically (provision Neon → restore → deploy `Dockerfile.ledger`). Removed the stale duplicate
+  `formance-backup.sh`; added `formance:backup`/`formance:restore` npm scripts. Set
+  `workforce_recruited_events.inference_dedupe_key` `NOT NULL` (deterministic backfill) so the dedupe
+  upsert can't be bypassed by a null key.

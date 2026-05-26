@@ -194,7 +194,7 @@ command contract's `dataAccess` but does not exist in `ctf/schema.sql` and is no
 
 1. Recruited inference is derived from Directory profile create/update writes.
 2. Inference history is append-only for traceability of mapping changes.
-3. Inference writes use deterministic dedupe key (`inference_dedupe_key`), enforced by the unique index `uq_workforce_recruited_events_dedupe_key`; repository upserts and the seed rely on `ON CONFLICT (inference_dedupe_key)`.
+3. Inference writes use deterministic dedupe key (`inference_dedupe_key`, `NOT NULL`), enforced by the unique index `uq_workforce_recruited_events_dedupe_key`; repository upserts and the seed rely on `ON CONFLICT (inference_dedupe_key)`. The column is `NOT NULL` because Postgres treats NULLs as distinct in a unique index, so a null key would silently bypass dedup.
 4. Replay/backfill duplicates are idempotent no-op outcomes.
 5. Current-state dashboards read latest resolved state.
 6. Historical dashboards read weekly trend buckets from inferred event history.

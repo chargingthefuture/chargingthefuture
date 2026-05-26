@@ -2925,6 +2925,14 @@ ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS source
 -- Required by `ON CONFLICT (inference_dedupe_key)` in repository.ts and the workforce seed;
 -- recruited-event upserts fail without this unique index.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_recruited_events_dedupe_key ON workforce_recruited_events(inference_dedupe_key);
+-- Enforce a non-null dedupe key so ON CONFLICT (inference_dedupe_key) reliably
+-- deduplicates: Postgres treats NULLs as distinct in a unique index, so a NULL key
+-- would silently bypass the upsert. The write path always supplies a sha256 key;
+-- backfill any legacy NULL rows deterministically before enforcing NOT NULL.
+-- Idempotent: the UPDATE matches nothing on re-run, and SET NOT NULL on an
+-- already-constrained column is a no-op.
+UPDATE workforce_recruited_events SET inference_dedupe_key = 'legacy:' || id::text WHERE inference_dedupe_key IS NULL;
+ALTER TABLE IF EXISTS workforce_recruited_events ALTER COLUMN inference_dedupe_key SET NOT NULL;
 
 -- workforce_recruited_sync_cursor (1 missing)
 ALTER TABLE IF EXISTS workforce_recruited_sync_cursor ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
