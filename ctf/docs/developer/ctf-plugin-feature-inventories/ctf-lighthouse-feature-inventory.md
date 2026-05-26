@@ -201,7 +201,7 @@ Contract expectations:
 
 ## 7) Seed Coverage Status
 
-`ctf/scripts/seedLighthousePhase2.mjs` seeds deterministic profile, property, match, and block fixtures for dev validation.
+`ctf/scripts/seedLighthouse.mjs` seeds deterministic profile, property, match, and block fixtures for dev validation.
 
 ## 8) Gaps and Known Technical Debt
 
@@ -217,6 +217,11 @@ Contract expectations:
 
 ## Build Checklist
 
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) â€” not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
 
 ### Scope and Boundary
 
@@ -236,7 +241,7 @@ Contract expectations:
     - Included: profile CRUD, property browse/detail, host property CRUD, match lifecycle, announcements, admin operations, blocks.
     - No net-new non-parity discovery features are introduced without explicit approval.
 
-### €” Decision Lock and Contract Baseline
+### ï¿½ï¿½ Decision Lock and Contract Baseline
 
 - [ ] Lock canonical schema authority for LightHouse rewrite.
   - Acceptance criteria:
@@ -254,7 +259,7 @@ Contract expectations:
   - Acceptance criteria:
     - Critical user/admin/safety flows are marked parity-required across web and Android.
 
-### €” Data, Migration, and Contract Readiness
+### ï¿½ï¿½ Data, Migration, and Contract Readiness
 
 - [ ] Implement canonical schema contracts for LightHouse entities.
   - Acceptance criteria:
@@ -267,7 +272,7 @@ Contract expectations:
   - Acceptance criteria:
     - Profile/property/match/announcement/admin/blocks route contracts are versioned and documented.
 
-### €” API and Policy Gate Implementation
+### ï¿½ï¿½ API and Policy Gate Implementation
 
 - [ ] Enforce auth requirements across LightHouse user routes.
   - Acceptance criteria:
@@ -284,7 +289,7 @@ Contract expectations:
     - Block relationships are respected in affected interaction paths.
     - Policy-deny behavior is deterministic and documented.
 
-### €” Web Delivery
+### ï¿½ï¿½ Web Delivery
 
 - [ ] Implement dashboard parity with role-based entry behavior.
   - Acceptance criteria:
@@ -305,7 +310,7 @@ Contract expectations:
   - Acceptance criteria:
     - User block create/check/list/delete interactions are accessible and policy-aligned.
 
-### €” Android Delivery Parity
+### ï¿½ï¿½ Android Delivery Parity
 
 - [ ] Implement Android parity for core user flows.
   - Acceptance criteria:
@@ -317,7 +322,7 @@ Contract expectations:
   - Acceptance criteria:
     - Blocks lifecycle and enforcement behavior mirror shared contract outcomes.
 
-### €” Security, Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Security, Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API contracts design documentation for all route families.
   - Acceptance criteria:

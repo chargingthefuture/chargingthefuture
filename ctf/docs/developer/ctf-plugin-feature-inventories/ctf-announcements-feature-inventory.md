@@ -174,7 +174,7 @@ Domain tables:
 
 ## 8) Seed Coverage Status
 
-`ctf/scripts/seedFeedAnnouncementsPhase0.mjs` seeds deterministic announcement and feed fixtures for dev validation.
+`ctf/scripts/seedFeedAnnouncements.mjs` seeds deterministic announcement and feed fixtures for dev validation.
 
 ---
 

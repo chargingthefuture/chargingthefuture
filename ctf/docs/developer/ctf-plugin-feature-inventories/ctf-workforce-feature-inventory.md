@@ -230,7 +230,7 @@ Canonical definition notes for `recruited`:
 
 ## 7) Seed Coverage Status
 
-`ctf/scripts/seedWorkforcePhase1.mjs` seeds deterministic recruited-state fixtures and admin export inputs for dev validation.
+`ctf/scripts/seedWorkforce.mjs` seeds deterministic recruited-state fixtures and admin export inputs for dev validation.
 
 ## 8) Gaps and Known Technical Debt
 

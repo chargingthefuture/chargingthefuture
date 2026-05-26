@@ -95,7 +95,7 @@ Rule requirement: deterministic plugin seed script for manual validation in dev 
 
 Current status:
 
-- Deterministic Chyme seed script is present under `ctf/scripts/seedChymePhase0.mjs`.
+- Deterministic Chyme seed script is present under `ctf/scripts/seedChyme.mjs`.
 - Validation and release evidence live in `ctf/docs/testing/CHYME_FIRST_TEST_PASS.md` and `ctf/docs/quota-impact/2026-04-05-chyme-phase0-remediation.md`.
 
 ## Gaps and Known Technical Debt

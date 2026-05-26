@@ -132,7 +132,7 @@ Storage and projection rules:
 
 ## 7) Seed Coverage Status
 
-`ctf/scripts/seedSocketRelayPhase2.mjs` seeds deterministic request lifecycle, fulfillment outcomes, and announcement states for dev validation.
+`ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle, fulfillment outcomes, and announcement states for dev validation.
 
 ## 8) Gaps and Known Technical Debt
 
@@ -147,6 +147,11 @@ Storage and projection rules:
 
 ## Build Checklist
 
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) â€” not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
 
 ### Scope and Boundary
 
@@ -162,7 +167,7 @@ Storage and projection rules:
     - `ctf/docs/developer/socketrelay-feature-inventory.md` is unchanged.
     - `ctf/docs/developer/socketrelay-rewrite-checklist.md` is unchanged.
 
-### €” Decision Lock
+### ï¿½ï¿½ Decision Lock
 
 - [ ] Lock web-first delivery policy.
   - Acceptance criteria:
@@ -175,7 +180,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Schema authority, DTO authority, and module ownership are explicitly assigned.
 
-### €” Contract and Schema Lock
+### ï¿½ï¿½ Contract and Schema Lock
 
 - [ ] Finalize profile/request/fulfillment/message/announcement contracts.
   - Acceptance criteria:
@@ -190,7 +195,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Shared schema, migrations, and seeds align on fields and constraints.
 
-### €” API and Policy Controls
+### ï¿½ï¿½ API and Policy Controls
 
 - [ ] Implement user/authenticated API routes for core lifecycle flows.
   - Acceptance criteria:
@@ -205,7 +210,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - All admin write endpoints enforce identical CSRF contract behavior.
 
-### €” Web MVP Delivery (Release Gate)
+### ï¿½ï¿½ Web MVP Delivery (Release Gate)
 
 - [ ] Deliver dashboard and request lifecycle UX.
   - Acceptance criteria:
@@ -220,7 +225,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Public privacy contract and announcement filtering behavior are correct.
 
-### €” Android Deferrals Tracking (Not Strict Parity Gate)
+### ï¿½ï¿½ Android Deferrals Tracking (Not Strict Parity Gate)
 
 - [ ] Define Android in-scope and deferred SocketRelay surfaces.
   - Acceptance criteria:
@@ -232,7 +237,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - Tracker is updated in each PR that changes Android scope.
 
-### €” Risk Mitigation and Hardening
+### ï¿½ï¿½ Risk Mitigation and Hardening
 
 - [ ] Mitigate **schema drift** risk.
   - Acceptance criteria:
@@ -250,7 +255,7 @@ Storage and projection rules:
   - Acceptance criteria:
     - One uniform CSRF policy contract is enforced and verified for admin writes.
 
-### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API groups design documentation against contracts.
   - Acceptance criteria:

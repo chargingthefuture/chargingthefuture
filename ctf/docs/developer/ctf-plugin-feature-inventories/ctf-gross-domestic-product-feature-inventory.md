@@ -290,6 +290,11 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## Build Checklist
 
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) â€” not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
 
 ### Scope and Boundary
 
@@ -303,7 +308,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Core survivor-facing transparency flows marked parity-required.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [ ] Define GDP plugin command contracts for v1.
   - Acceptance criteria:
@@ -318,7 +323,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Metric ownership, publish cadence, correction policy, and public disclosure controls approved.
 
-### €” Metrics Registry and Model Definition
+### ï¿½ï¿½ Metrics Registry and Model Definition
 
 - [ ] Add canonical GDP metric definitions to `ctf/config/canonical_metrics.yaml`.
   - Acceptance criteria:
@@ -333,7 +338,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Aliases and deprecations are documented; ambiguous names avoided.
 
-### €” Schema and Migration Planning
+### ï¿½ï¿½ Schema and Migration Planning
 
 - [ ] Design GDP extension model on canonical profile.
   - Acceptance criteria:
@@ -348,7 +353,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Retention metadata is explicit for snapshots, events, and governance records.
 
-### €” API and Command Execution Planning
+### ï¿½ï¿½ API and Command Execution Planning
 
 - [ ] Define public read command projections.
   - Acceptance criteria:
@@ -360,7 +365,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Fallback payloads match declared contracts and avoid schema drift.
 
-### €” Web Delivery Planning
+### ï¿½ï¿½ Web Delivery Planning
 
 - [ ] Plan public GDP dashboard surfaces.
   - Acceptance criteria:
@@ -372,7 +377,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Freshness, ownership, and formula context visible to users.
 
-### €” Android Delivery Planning
+### ï¿½ï¿½ Android Delivery Planning
 
 - [ ] Plan critical path parity for survivor-facing GDP transparency.
   - Acceptance criteria:
@@ -381,7 +386,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
   - Acceptance criteria:
     - Deferrals tracked with owner, due date, and risk notes.
 
-### €” Compliance, Hardening, and Operations
+### ï¿½ï¿½ Compliance, Hardening, and Operations
 
 - [ ] Define observability and error-budget requirements.
   - Acceptance criteria:

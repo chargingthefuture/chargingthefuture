@@ -127,7 +127,7 @@ Consumer routes:
 
 ## 8) Seed Coverage Status
 
-- `ctf/scripts/seedSkillsTaxonomyPhase0.mjs` is the deterministic backfill script and imports canonical legacy source data.
+- `ctf/scripts/seedSkillsTaxonomy.mjs` is the deterministic backfill script and imports canonical legacy source data.
 - `ctf/scripts/syncSkillsTaxonomyFromPlatform.mjs` is the incremental sync script for repeat updates from the same legacy source.
 - Legacy source loader/sync engine lives under `ctf/scripts/lib/` and reads `platform/scripts/data/skills-data.ts` without modifying legacy files.
 
@@ -147,6 +147,11 @@ Consumer routes:
 
 ## Build Checklist
 
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) â€” not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
 
 ### Scope and Boundary
 
@@ -157,7 +162,7 @@ Consumer routes:
   - Acceptance criteria:
     - Stable plugin slug is `skills-taxonomy` across inventory, contracts, and routes.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [x] Define v1 plugin command contracts.
   - Acceptance criteria:
@@ -172,7 +177,7 @@ Consumer routes:
   - Acceptance criteria:
     - Clear allow/deny rules exist for sector/job-title/skill deletes with dependency thresholds.
 
-### €” Schema and Migrations
+### ï¿½ï¿½ Schema and Migrations
 
 - [x] Define taxonomy entities and constraints in `ctf/migrations/`.
   - Acceptance criteria:
@@ -184,7 +189,7 @@ Consumer routes:
   - Acceptance criteria:
     - Migration rollback and replay evidence plan is approved.
 
-### €” API and Policy Implementation
+### ï¿½ï¿½ API and Policy Implementation
 
 - [x] Implement hierarchy and flattened read endpoints.
   - Acceptance criteria:
@@ -199,7 +204,7 @@ Consumer routes:
   - Acceptance criteria:
     - Unauthorized or non-compliant writes are denied with stable reason categories.
 
-### €” Web and Mobile Parity
+### ï¿½ï¿½ Web and Mobile Parity
 
 - [ ] Deliver web admin hierarchy management surface. (Deferred: owner `taxonomy-web-admin-phase1`, target milestone `2026-03-22`)
   - Acceptance criteria:
@@ -211,7 +216,7 @@ Consumer routes:
   - Acceptance criteria:
     - Contract snapshots and parity checks detect web/mobile read-model divergence.
 
-### €” Security and Compliance
+### ï¿½ï¿½ Security and Compliance
 
 - [x] Verify authz/authn controls for all plugin routes.
   - Acceptance criteria:
@@ -223,7 +228,7 @@ Consumer routes:
   - Acceptance criteria:
     - Delete allow/deny outcomes include actor, purpose, target class, and timestamp metadata.
 
-### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [x] Command/access/audit parity design documentation.
   - Acceptance criteria:

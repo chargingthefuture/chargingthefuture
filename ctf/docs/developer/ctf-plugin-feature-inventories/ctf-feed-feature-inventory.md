@@ -220,7 +220,7 @@ Domain tables:
 
 ## 8) Seed Coverage Status
 
-`ctf/scripts/seedFeedAnnouncementsPhase0.mjs` seeds deterministic feed items, announcements, questions, community posts, replies, and membership/read/dismiss states for dev validation.
+`ctf/scripts/seedFeedAnnouncements.mjs` seeds deterministic feed items, announcements, questions, community posts, replies, and membership/read/dismiss states for dev validation.
 
 ---
 

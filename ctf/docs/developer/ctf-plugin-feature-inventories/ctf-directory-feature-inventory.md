@@ -97,7 +97,7 @@ Web and Android implementations:
 
 ## Seed Coverage Status
 
-Deterministic Directory seed script exists: `ctf/scripts/seedDirectoryPhase0.mjs`.
+Deterministic Directory seed script exists: `ctf/scripts/seedDirectory.mjs`.
 
 Seeded content:
 - Sample authenticated user profiles with claimed/unclaimed states.

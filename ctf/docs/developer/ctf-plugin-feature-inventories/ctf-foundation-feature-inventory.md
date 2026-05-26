@@ -91,7 +91,7 @@ Parity status: **web+android complete**.
 
 ## Seed Coverage Status
 
-Deterministic Foundation seed script: `ctf/scripts/seedFoundationPhase0.mjs`.
+Deterministic Foundation seed script: `ctf/scripts/seedFoundation.mjs`.
 
 Seeded content:
 - Sample survivors and providers with deterministic states.

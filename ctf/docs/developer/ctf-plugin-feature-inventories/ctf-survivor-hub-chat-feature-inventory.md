@@ -125,7 +125,7 @@ Parity status: **web+android complete**.
 
 ## Seed Coverage Status
 
-Deterministic Hub seed script: `ctf/scripts/seedHubPhase0.mjs`. Seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`, and any required `hub_dm_threads` fixtures.
+Deterministic Hub seed script: `ctf/scripts/seedHub.mjs`. Seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`, and any required `hub_dm_threads` fixtures.
 
 ## Gaps and Known Technical Debt
 
@@ -229,7 +229,7 @@ This checklist tracks the work needed to bring code into alignment with the inve
 
 #### Seed Coverage
 
-- [ ] Add `ctf/scripts/seedHubPhase0.mjs` that deterministically seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`.
+- [ ] Add `ctf/scripts/seedHub.mjs` that deterministically seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`.
 
 ---
 

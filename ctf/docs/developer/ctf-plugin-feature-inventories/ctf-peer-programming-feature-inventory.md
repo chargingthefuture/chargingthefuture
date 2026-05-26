@@ -125,7 +125,7 @@ The plugin:
 
 ## Seed Coverage Status
 
-The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script; cohort, topic, message, and feedback rows are exercised through admin assignment runs and runtime fixtures in development.
+Deterministic Peer Programming seed script: `ctf/scripts/seedPeerProgramming.mjs` (topics, cohorts, members, messages, feedback, notifications).
 
 ## Gaps and Known Technical Debt
 
@@ -140,6 +140,11 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
 
 ## Build Checklist
 
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) â€” not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
 
 ### Scope and Boundary
 
@@ -153,7 +158,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Weekly active-user selection (login within 7 days), 5-user cohorts, assignment notifications, fallback-open behavior, room UI, threaded async text, tiered participation, feedback loop, and admin topic guidance are all explicitly accepted.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [ ] Define plugin command contracts for v1.
   - Acceptance criteria:
@@ -168,7 +173,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Command set matches exactly across command, policy, and audit YAML.
 
-### €” Cohort Selection and Assignment
+### ï¿½ï¿½ Cohort Selection and Assignment
 
 - [ ] Implement weekly active-user selection based on login recency.
   - Acceptance criteria:
@@ -182,7 +187,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
     - In-app notification event is generated for each assigned member.
     - Notification retries are idempotent.
 
-### €” Room Experience and Persistence
+### ï¿½ï¿½ Room Experience and Persistence
 
 - [ ] Implement cohort room state retrieval.
   - Acceptance criteria:
@@ -197,7 +202,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Posts/replies remain available across reconnects and session restarts.
 
-### €” Fallback and Tiered Participation
+### ï¿½ï¿½ Fallback and Tiered Participation
 
 - [ ] Implement fallback-open activation path.
   - Acceptance criteria:
@@ -209,7 +214,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Non-cohort and unauthenticated users are blocked from unauthorized write actions.
 
-### €” Topic Guidance and Feedback Loop
+### ï¿½ï¿½ Topic Guidance and Feedback Loop
 
 - [ ] Implement admin weekly topic guidance set/get.
   - Acceptance criteria:
@@ -221,7 +226,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Feedback summaries are reviewed weekly and linked to follow-up planning decisions.
 
-### €” Web-First Delivery and Android Follow-Up
+### ï¿½ï¿½ Web-First Delivery and Android Follow-Up
 
 - [ ] Deliver MVP web-first release for all core commands.
   - Acceptance criteria:
@@ -233,7 +238,7 @@ The plugin does not yet have a dedicated `seedPeerProgrammingPhase0.mjs` script;
   - Acceptance criteria:
     - Completed Android items match web command outcomes and deny reason behavior.
 
-### €” Security, Audit, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Security, Audit, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Policy deny-by-default posture design.
   - Acceptance criteria:

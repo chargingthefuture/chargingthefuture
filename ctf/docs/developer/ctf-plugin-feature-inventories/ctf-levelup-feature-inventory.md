@@ -81,7 +81,7 @@ External value movement dependencies:
 
 Deterministic seed script added:
 
-- `ctf/scripts/seedLevelupPhase3.mjs`
+- `ctf/scripts/seedLevelup.mjs`
 
 Seed content:
 

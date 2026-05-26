@@ -177,12 +177,13 @@ Recorded in this progress channel rather than as separate issues (per decision 1
 1. ~~workforce `inference_dedupe_key` hardening~~ — **done 2026-05-26.** Column set `NOT NULL` (with a
    deterministic backfill of any legacy NULL rows in `schema.sql`) so `ON CONFLICT (inference_dedupe_key)`
    can't be silently bypassed by a null key. The write path already supplied a sha256 key at all sites.
-2. **Seed-script `PhaseN` filenames** — `seed<Plugin>Phase{0,1,2,3}.mjs` violate the no-"phases" naming
-   rule but are wired into `package.json` + CI. Rename the whole suite (and update refs) in one dedicated
-   change, not piecemeal.
-3. **Inventory delivery-status normalization** — see the authority note under the progress checklist; the
-   table is authoritative, inventory "web+android complete" lines are normalized at each plugin's UI
-   circle-back.
+2. ~~Seed-script `PhaseN` filenames~~ — **done 2026-05-26.** Renamed all 17 `seed<Plugin>Phase{N}.mjs`
+   → `seed<Plugin>.mjs`; updated `package.json` seed scripts and current doc references (dated historical
+   change-log entries left as-is). No CI workflow referenced them by name.
+3. ~~Inventory delivery-status normalization~~ — **done 2026-05-26.** Added a reconciliation note to the 5
+   flagged inventories (lighthouse, skills-taxonomy, socketrelay, gdp, peer-programming) clarifying that
+   unchecked Build Checklist items are obsolete web-first/Android-deferral artifacts + deferred MVP
+   validation (Rule 118), not missing features; this plan's table is authoritative.
 4. **Backend drift decisions (owner input)** — feed-announcements names `feed_user_extension`,
    `announcement_targets`, `announcements_user_extension` in its inventory but code uses equivalent
    existing tables; reconcile names (or the inventory) to clear feed's 🟡. Confirm no residual workforce
@@ -283,3 +284,9 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   `formance-backup.sh`; added `formance:backup`/`formance:restore` npm scripts. Set
   `workforce_recruited_events.inference_dedupe_key` `NOT NULL` (deterministic backfill) so the dedupe
   upsert can't be bypassed by a null key.
+- 2026-05-26: **(a)/(b) follow-ups cleared.** Renamed all 17 `seed*PhaseN.mjs` scripts to drop the banned
+  "phase" naming (`seed<Plugin>.mjs`), updating `package.json` and current docs. Reconciled the 5 flagged
+  inventories whose `web+android complete` status contradicted unchecked web-first/Android-deferral
+  checklist items (added a note pointing to this plan as authoritative). Corrected the peer-programming
+  inventory's stale "no seed script" claim. (GitHub issues #101/#102/#103/#106 close-out is pending —
+  GitHub MCP auth is currently down; close text prepared for the owner.)

@@ -233,7 +233,7 @@ Tables owned by this plugin:
 
 ## Seed Coverage Status
 
-`ctf/scripts/seedTrustTransportPhase2.mjs` seeds deterministic request/offer/trip/proof/dispute/rating data for dev validation.
+`ctf/scripts/seedTrustTransport.mjs` seeds deterministic request/offer/trip/proof/dispute/rating data for dev validation.
 
 ---
 

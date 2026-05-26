@@ -53,7 +53,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 9. Seed Coverage Status
 
-- See [scripts/seedClicklogPhase0.mjs](../../../scripts/seedClicklogPhase0.mjs)
+- See [scripts/seedClicklog.mjs](../../../scripts/seedClicklog.mjs)
 - 3–5 sample incidents with varied metadata
 
 ## 10. Gaps and Known Technical Debt
