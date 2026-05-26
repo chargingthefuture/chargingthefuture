@@ -205,8 +205,19 @@ realization of "demo tables in the prod db, not mixed":
      tables will miss those columns/indexes.
    - **Extensions** (`CREATE EXTENSION IF NOT EXISTS pgcrypto`, lines 19/181) are idempotent and resolve
      via `public` in the search_path — fine.
+   - **View-before-table ordering**: schema.sql's *first* statement (line 2) is a `CREATE OR REPLACE VIEW
+     skills_taxonomy_dependency_graph` that references `skills_taxonomy_consumer_bindings`, a table
+     created much later. Running schema.sql top-to-bottom into a **fresh** `demo` schema fails here (the
+     table doesn't exist yet); it only works against `public` because that table already exists from prior
+     migrations. The provisioner must therefore create tables before views (e.g. run table/index DDL
+     first, then views), or run schema.sql twice and tolerate the first view error. **This is why a naive
+     provisioner can't just be shipped — it needs a real DB to validate against.**
    - Make it **opt-in** (NOT in the default deploy migration path) so a provisioning bug can't block prod
      deploys. Then make the schema-drift gate cover `demo`.
+
+   **Status: deferred to runtime build.** The pool routing (step 2) is correct-by-design and dormant, but
+   the provisioner above genuinely needs a throwaway DB (e.g. a Neon branch) to validate the ordering +
+   `public.`-qualified handling + completeness. Build it there, not blind.
 4. **Identity**: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
    participant accounts (owner + testers) and auto-provision a demo profile on first demo login.
 5. **Per-plugin demo seeds (scenario matrix)** — run against the `demo` schema (seed runner sets
