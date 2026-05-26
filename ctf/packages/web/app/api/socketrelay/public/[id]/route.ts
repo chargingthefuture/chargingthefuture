@@ -2,16 +2,12 @@ import { NextResponse } from 'next/server';
 import { socketRelayErrorResponse } from 'lib/socketrelay/_lib';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { getPublicRequestById } from 'lib/socketrelay/repository';
-import { publicSurfaceGate } from 'lib/feature-flags';
 
 type RouteProps = {
   params: Promise<{ id: string }>;
 };
 
 export async function GET(_: Request, { params }: RouteProps) {
-  const gate = await publicSurfaceGate();
-  if (gate) return gate;
-
   const { id } = await params;
 
   try {

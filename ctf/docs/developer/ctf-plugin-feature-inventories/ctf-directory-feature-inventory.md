@@ -41,9 +41,11 @@ Implemented routes:
   - `GET /api/directory/sectors`
   - `GET /api/directory/job-titles`
   - `GET /api/directory/announcements`
-- Public:
-  - `GET /api/directory/public`
-  - `GET /api/directory/public/:id`
+- Public: none. The `GET /api/directory/public` and `GET /api/directory/public/:id` routes
+  (v2 anonymous projection) were removed 2026-05-25 â€” they leaked full profile data
+  (including payment addresses) to unauthenticated callers, contradicting the
+  no-public-facing decision above. `/apps/directory/[handle]` now redirects to the
+  authenticated Directory shell.
 - Admin:
   - `GET /api/directory/admin/profiles`
   - `POST /api/directory/admin/profiles`
@@ -135,7 +137,7 @@ Seeded content:
     - Android admin parity is required in v1.
     - Post-create public URL behavior remains display-only parity for v1.
 
-### €” Decision Lock and Ambiguity Resolution
+### ï¿½ï¿½ Decision Lock and Ambiguity Resolution
 
 - [x] Resolve all user-facing open decisions from inventory section A.
   - Acceptance criteria:
@@ -151,7 +153,7 @@ Seeded content:
     - Directory announcement and admin routes have explicit module ownership.
     - No unresolved route ownership ambiguity remains.
 
-### €” Unified UI and Policy Boundary
+### ï¿½ï¿½ Unified UI and Policy Boundary
 
 - [x] Implement one unified Directory UI surface for user + admin workflows.
   - Acceptance criteria:
@@ -164,7 +166,7 @@ Seeded content:
   - Acceptance criteria:
     - No mandatory copy/open action control is introduced in v1 parity scope.
 
-### €” API and Backend Policy Gates
+### ï¿½ï¿½ API and Backend Policy Gates
 
 - [x] Enforce server-side authz on every admin endpoint.
   - Acceptance criteria:
@@ -183,7 +185,7 @@ Seeded content:
   - Acceptance criteria:
     - Route-to-module ownership map is documented and validated in validation/lint gates.
 
-### €” Privacy and Anti-Scraping Controls
+### ï¿½ï¿½ Privacy and Anti-Scraping Controls
 
 - [x] Validate public projection privacy contract.
   - Acceptance criteria:
@@ -194,7 +196,7 @@ Seeded content:
     - Rate limit thresholds are documented.
     - Public ordering/privacy controls remain deterministic and policy-compliant.
 
-### €” Data, Schema, and Seed Consistency
+### ï¿½ï¿½ Data, Schema, and Seed Consistency
 
 - [ ] Confirm schema consistency for profile, announcement, and audit contracts.
   - Acceptance criteria:
@@ -207,7 +209,7 @@ Seeded content:
   - Acceptance criteria:
     - Automated checks fail on schema drift or incompatible seed assumptions.
 
-### €” Web and Android Delivery Parity (Required)
+### ï¿½ï¿½ Web and Android Delivery Parity (Required)
 
 - [ ] Ship web user + admin parity for in-scope Directory flows.
   - Acceptance criteria:
@@ -220,7 +222,7 @@ Seeded content:
   - Acceptance criteria:
     - Cross-client parity validation scope is documented for post-MVP testing.
 
-### €” Release Gates and Lifecycle Maintenance [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Release Gates and Lifecycle Maintenance [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Admin API authz design alignment.
   - Acceptance criteria:

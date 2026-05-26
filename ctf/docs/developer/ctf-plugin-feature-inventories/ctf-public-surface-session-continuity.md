@@ -4,54 +4,58 @@
 **Date:** 2026-05-25  
 
 ## Summary
-Implement two distinct gate layers for public/non-auth surfaces:
-1. **Visibility gating** — put public routes behind a `public-surface` feature flag (turned off disables all public access; turned on in production for normal ops).
-2. **Demo-safe data mode** — when flagged for demo mode, all screens (public + internal) render only synthetic/seeded data, never real production data.
+Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is handled:
 
-Together, these enable safe video/screenshot demos without real PII exposure. Infrastructure foundation (#103 epic) is in place; UI and data-routing decisions await owner input. **Design pass required for all public-facing screens.**
+1. **Visibility gating is an AUTH-GATE concern, not a feature flag.** Which content shows to
+   unauthenticated users is decided per-plugin in the auth layer, not by a global toggle:
+   - **Directory** — no public view in v3 (the v2 public projection routes were dead code that
+     leaked full profile data incl. payment addresses; removed). Auth required.
+   - **SocketRelay** — legitimately public *with field redaction*: `mapPublicRequestRow()`
+     exposes only title/category/city/status; owner id, details, contact are redacted. This IS
+     the auth-gate pattern; no flag.
+   - **Chyme, Hub** — fully authenticated; no public routes at all.
+   - **Landing `/`, `/sign-in`, `/sign-up`, `/plugin/unlock`** — permanently public by design;
+     the sign-in CTA already lives on these pages (per the v3 design).
+   The `public-surface` flag is therefore demoted to a *reserved* global kill-switch (incident /
+   pre-launch lockdown), not the mechanism for per-plugin visibility. Not currently wired.
+2. **Demo-safe data mode** — when `demo-mode` is ON, data surfaces render only synthetic
+   demo-tenant data, never real production data. This is the live deliverable for #102.
 
-## Owner-Locked Decisions
+## Owner-Locked Decisions (2026-05-25)
 
-**Decision 1: Demo-mode data strategy**
-- ❓ *Awaiting owner input:* Which approach to use for demo-safe data?
-  1. **Synthetic data flag** — `demo-mode` flag routes all reads to synthetic/seeded data pool (in-memory, from `ctf/scripts/seedXxxPhase0.mjs`); same DB, different data path.
-  2. **Neon database branch** — `demo-mode` flag switches database connection to a Neon branch (`demo-branch`) with seeded demo data; separate DB instance.
-  3. **Demo tenant account** — `demo-mode` flag switches to a pre-configured demo account; its data is synthetic; real users see real data.
-- **Trade-offs:**
-  - Synthetic data: cheapest (no extra DB), but data is static/limited.
-  - Neon branch: expensive (extra DB instance), but data is realistic, changeable within branch.
-  - Demo tenant: requires demo-account setup, but shared DB simplifies reasoning.
-- **Impact:** Changes server.ts routing, database client initialization, and API response paths.
+**Decision 1: Demo-mode data strategy → SYNTHETIC DATA via seed scripts + demo-tenant pattern.**
+- Chosen over a Neon branch to **eliminate all staging environments** (owner is deleting them,
+  keeping only the separate Clerk instances). No extra DB compute; seed scripts already exist
+  per plugin and are maintained against schema migrations.
+- Mechanism: a set of seeded records with known/deterministic IDs (a "demo tenant") live in the
+  production DB. When `isDemoMode()` is ON, reads are scoped to the demo tenant. The owner curates
+  seed-script diversity to cover all use cases.
+- **Impact:** A demo-tenant scoping layer in the data/identity path; per-plugin reads honor it.
 
-**Decision 2: Public route enumeration & gating strategy**
-- ❓ *Awaiting owner input:* Which routes should be gated behind `public-surface` flag?
-  - Suspected public routes (non-auth, Clerk middleware lets through):
-    - `/` (landing page)
-    - `/sign-in`, `/sign-up`, `/sign-out` (auth flows)
-    - `/plugin/unlock` (unlock onboarding, public by design)
-    - `/apps/directory/[handle]` (public profile view)
-    - `/api/directory/public/**` (public API for directory)
-  - Should `public-surface` gate be:
-    1. **Binary** — flag OFF means all public routes return 403, or
-    2. **Per-route** — separate flags for each public surface (e.g., `public-directory`, `public-unlock`), or
-    3. **Middleware-wide** — single flag in Clerk middleware blocks all non-auth routes.
-- **Impact:** Determines Clerk middleware changes, route structure, and flag-check placement.
+**Decision 2: Public visibility → auth-gate, per-plugin (RESOLVED, see Summary).**
+- No `public-surface` flag gating of individual routes. Directory public routes removed;
+  socketrelay keeps redaction-based public access; chyme/hub stay authenticated.
+- `/apps/directory/[handle]` (and legacy directory deep-links) **redirect to `/apps/directory`**
+  (sign-in CTA is on the shell). Pure redirect; no design pass needed.
 
-**Decision 3: Parity scope for public surfaces**
-- ❓ *Awaiting owner input:* Do public surfaces need mobile parity (rule 105)?
-  - Mobile (Expo) is typically authenticated (Clerk login required).
-  - Public surfaces are web-only (directory, landing page, sign-in flow).
-  - **Question:** Should mobile include a "demo mode" that surfaces public screens (e.g., directory) with demo data? Or is mobile always authenticated?
-- **Impact:** Determines whether this work extends to mobile or is web-only.
+**Decision 3: Parity scope** — ❓ still open: does demo mode extend to mobile (Expo), or web-only?
+  Mobile is normally authenticated; confirm whether a recording session ever uses the mobile app.
 
-## Audit Findings
+## Audit Findings (2026-05-25, verified)
 
-Current state (as of 2026-05-25):
-- Feature-flag infrastructure (#103 epic foundation) is **implemented and committed**: OpenFeature client + Unleash provider, shared flag-key registry.
-- `ctf/packages/web/middleware.ts` uses Clerk middleware; public routes are hardcoded.
-- Directory plugin has public routes: `ctf/packages/web/app/apps/directory/[handle]/page.tsx`, `/api/directory/public/**`.
-- Unlock plugin has public submission UI: `ctf/packages/web/components/unlock/UnlockSubmission.tsx`.
-- No demo-mode infrastructure yet: no Neon branching, no synthetic data routing, no demo-tenant setup.
+- Feature-flag infrastructure (#103) implemented and committed: OpenFeature + Unleash provider,
+  shared flag-key registry, server flag client.
+- Auth enforcement is **per-route** via `evaluatePluginAccess()` (not in middleware).
+- **Directory public routes were dead v2 code** — no v3 caller; the `[handle]` page had zero
+  incoming links and rendered full profiles (incl. Venmo/Bitcoin/Monero/Service-Credit addresses)
+  to anyone. Removed: `/api/directory/public`, `/api/directory/public/[id]`,
+  `listPublicDirectory`, `getPublicDirectoryById`, `getPublicDirectoryByHandle`,
+  `resolveClaimedUsernameForProfile`; `[handle]` page replaced with a redirect.
+- **SocketRelay public** (`/api/socketrelay/public`, `/api/socketrelay/public/[id]`) is a real
+  feature using `mapPublicRequestRow()` redaction. Left public; no flag.
+- **Chyme / Hub** — fully authenticated, no public surface.
+- No demo-mode data routing yet: `isDemoMode()` switch exists; the demo-tenant scoping layer is
+  the next build step.
 
 ## Roadmap: Foundation Now, UI After Design
 
