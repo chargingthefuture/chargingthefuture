@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(npx tsc *)",
       "Bash(grep -n \"service-credits\" app/api/service-credits/wallet/route.ts)",
@@ -21,8 +20,20 @@
       "Bash(pnpm --filter @ctf/mobile exec tsc --noEmit -p tsconfig.json)",
       "Bash(pnpm --filter @ctf/mobile exec tsc --version)",
       "Bash(pnpm --filter @ctf/mobile run typecheck)",
-      "Bash(pnpm --filter @ctf/mobile run lint)"
+      "Bash(pnpm --filter @ctf/mobile run lint)",
+      "Bash(xargs -I{} git remote set-url origin \"https://x-access-token:{}@github.com/chargingthefuture/chargingthefuture.git\")",
+      "Bash(git push *)",
+      "Bash(awk -F'|' '{print $2}')",
+      "Bash(gh pr *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('PR#', d['number'], '|', d['title']\\)\")",
+      "Bash(python3 -c \"import sys,json; [print\\(r['conclusion'] or r['status'], '|', r['name'], '|', r['databaseId']\\) for r in json.load\\(sys.stdin\\)]\")",
+      "Bash(pnpm --filter @ctf/web exec tsc --noEmit)",
+      "Bash(xargs -I{} basename {} .mjs)",
+      "Bash(python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)['body']\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(node /workspaces/chargingthefuture/ctf/scripts/generateDemoSchema.mjs)"
     ],
+    "defaultMode": "bypassPermissions",
     "additionalDirectories": [
       "/workspaces/chargingthefuture/ctf/packages/web"
     ]

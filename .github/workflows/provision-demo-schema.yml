@@ -1,0 +1,33 @@
+name: Provision demo schema in Neon
+
+on:
+  workflow_dispatch:
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate schema.demo.sql from schema.sql
+        run: node ctf/scripts/generateDemoSchema.mjs
+
+      - name: Install psql client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Provision demo schema
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          if [ -z "$DATABASE_URL_DIRECT" ]; then
+            echo "DATABASE_URL_DIRECT secret is not set. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+          psql "$DATABASE_URL_DIRECT" -v ON_ERROR_STOP=1 -f ctf/schema.demo.sql
+          echo "Demo schema provisioned."

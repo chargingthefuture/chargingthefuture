@@ -176,9 +176,13 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       request + fulfillment), feed + announcements, trust, mood, gentlepulse (library + play + rating +
       favorite), foundation (thread + capacity policy), chyme (room + members + messages), trusttransport
       (request + offer), peer-programming (topic + cohort + members), clicklog (3 incidents).
-- [ ] **#102 remaining**: runtime validation on Render — owner: (1) set `DATABASE_URL_DIRECT` in
-      Infisical `production`, (2) run `pnpm migrate:demo-schema` + `DEMO_OWNER_ID=<clerk-id> pnpm seed:demo`,
-      (3) target your Clerk ID to `demo-mode` in Unleash, (4) confirm writes land only in `demo`/`ctf-demo`.
+- [ ] **#102 remaining**: runtime validation — owner steps:
+      (1) Add `DATABASE_URL_DIRECT` (Neon unpooled URL) as a GitHub repo secret under Settings → Secrets → Actions.
+      (2) Go to Actions → **"Provision demo schema in Neon"** → Run workflow (pastes `schema.demo.sql` into Neon via psql).
+          _Alternative_: open `ctf/schema.demo.sql` from the repo, copy the full file, paste into Neon SQL Editor → Run.
+      (3) Go to Actions → **"Seed demo schema"** → Run workflow → enter your Clerk user ID in the `demo_owner_id` field.
+      (4) Target your Clerk ID to `demo-mode` flag in Unleash.
+      (5) Confirm writes land only in the `demo` Neon schema — check Neon console → Tables → schema: demo.
 - [ ] **#102 remaining (non-UI, next)**: the demo-tenant **DB scoping layer** — seed synthetic
       demo-tenant rows into the prod DB and scope per-plugin reads by `isDemoMode()`. Sizeable; scope with owner.
 - [ ] **#102 UI (design-gated)**: landing, sign-in/up, unlock public screens — circle back when designs land.
@@ -338,9 +342,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
 - 2026-05-27: **Demo seed script shipped (`pnpm seed:demo`).** `ctf/scripts/seedDemo.mjs` — idempotent
   orchestrator seeding all 19 plugins (all 17 production-seed equivalents + trust + gentlepulse) in
   the `demo` schema for a named `DEMO_OWNER_ID`. Uses `DATABASE_URL_DIRECT` + `search_path=demo,public`
-  (bypasses flag layer; safe to run without Unleash). Run after `pnpm migrate:demo-schema`. Full runtime
-  validation (Render + Unleash) is the remaining owner-gated step. Fixed stream-chat v8 API break:
+  (bypasses flag layer; safe to run without Unleash). Fixed stream-chat v8 API break:
   `new StreamChat(key, { apiSecret })` → `new StreamChat(key, apiSecret)` in all 6 plugin stream files.
+- 2026-05-27: **Demo provisioning via GitHub Actions (no CLI required).** Added two `workflow_dispatch`
+  workflows for owners who cannot run CLI against Neon: (1) `provision-demo-schema.yml` — runs
+  `schema.demo.sql` via psql against `DATABASE_URL_DIRECT` secret; (2) `seed-demo.yml` — runs
+  `seedDemo.mjs` with `demo_owner_id` entered in the GitHub UI. Also committed `ctf/schema.demo.sql`
+  (auto-generated from `schema.sql` via `generateDemoSchema.mjs`) as a paste-ready fallback for
+  direct Neon SQL Editor use.
 - 2026-05-27: **v2 → v3 schema migration validated + demo schema provisioner built (#102 step 3).**
   Ran `schema.sql` against a 62-user v2 Neon clone (Neon PG 17). Discovered and recorded all
   v2→v3 DDL hazards: (H1) `CREATE UNIQUE INDEX ON chyme_rooms(room_key)` fires inside the first
