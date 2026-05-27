@@ -26,6 +26,7 @@
     "migrate:file": "node ./scripts/runMigrationFile.mjs",
     "migrate:schema": "node ./scripts/runMigrationFile.mjs --file=./schema.sql",
     "migrate:demo-schema": "node ./scripts/migrateToDemo.mjs",
+    "seed:demo": "node ./scripts/seedDemo.mjs",
     "migrate:all": "pnpm run migrate:schema",
     "schema:report-live-drift": "bash ./scripts/audit_schema_drift.sh",
     "schema:audit-queries": "node ./scripts/audit-schema-queries.mjs",
