@@ -23,3 +23,4 @@ ctf/packages/mobile/.env.local
 # Local AI tool state (Refact.ai, Claude Code, etc.)
 .refact/
 .ai/
+.claude/settings.local.json
