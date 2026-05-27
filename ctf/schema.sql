@@ -1,8 +1,3 @@
--- === skills_taxonomy_dependency_graph view (from prod) ===
-CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
-  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
-  FROM skills_taxonomy_consumer_bindings
-  GROUP BY target_type, target_id;
 -- Combined schema.sql for CTF (rewrite, no /platform)
 
 BEGIN;
@@ -97,6 +92,8 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   metadata JSONB NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
+-- Chyme does not maintain its own service_credits_transactions table.
+-- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
 
 -- === peer-programming placeholder ===
@@ -2920,6 +2917,17 @@ ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS metada
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS resolved_recruited BOOLEAN;
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS source_event TEXT;
+-- Required by `ON CONFLICT (inference_dedupe_key)` in repository.ts and the workforce seed;
+-- recruited-event upserts fail without this unique index.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_recruited_events_dedupe_key ON workforce_recruited_events(inference_dedupe_key);
+-- Enforce a non-null dedupe key so ON CONFLICT (inference_dedupe_key) reliably
+-- deduplicates: Postgres treats NULLs as distinct in a unique index, so a NULL key
+-- would silently bypass the upsert. The write path always supplies a sha256 key;
+-- backfill any legacy NULL rows deterministically before enforcing NOT NULL.
+-- Idempotent: the UPDATE matches nothing on re-run, and SET NOT NULL on an
+-- already-constrained column is a no-op.
+UPDATE workforce_recruited_events SET inference_dedupe_key = 'legacy:' || id::text WHERE inference_dedupe_key IS NULL;
+ALTER TABLE IF EXISTS workforce_recruited_events ALTER COLUMN inference_dedupe_key SET NOT NULL;
 
 -- workforce_recruited_sync_cursor (1 missing)
 ALTER TABLE IF EXISTS workforce_recruited_sync_cursor ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -3075,3 +3083,12 @@ CREATE TABLE IF NOT EXISTS inventory_analysis_cache (
   last_analyzed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_analysis_cache_file_path ON inventory_analysis_cache(inventory_file_path);
+
+-- skills_taxonomy_dependency_graph view — defined at the END so its source table
+-- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
+-- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table
+-- that had not been created yet.
+CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
+  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
+  FROM skills_taxonomy_consumer_bindings
+  GROUP BY target_type, target_id;

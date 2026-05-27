@@ -1,5 +1,4 @@
 import { cookies, headers } from 'next/headers';
-import type { UnlockAccessTier } from 'lib/unlock/types';
 import { authenticatePluginUser, type AuthProvider } from '@ctf/shared';
 
 type MaybeValue = string | null | undefined;
@@ -12,7 +11,6 @@ export type RequestIdentity = {
   role: string | null;
   isAdmin: boolean;
   isApproved: boolean;
-  unlockAccessTier: UnlockAccessTier | null;
 };
 
 function pickFirstNonEmpty(...values: MaybeValue[]): string | null {
@@ -38,19 +36,6 @@ function normalizeBoolean(value: MaybeValue): boolean | null {
   if (!normalized) return null;
   if (['1', 'true', 'yes', 'approved'].includes(normalized)) return true;
   if (['0', 'false', 'no', 'denied'].includes(normalized)) return false;
-  return null;
-}
-
-function normalizeUnlockAccessTier(value: MaybeValue): UnlockAccessTier | null {
-  const normalized = pickFirstNonEmpty(value);
-  if (
-    normalized === 'pending_readonly'
-    || normalized === 'locked_support_only'
-    || normalized === 'approved_full'
-  ) {
-    return normalized;
-  }
-
   return null;
 }
 
@@ -93,9 +78,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const isApproved = normalizeBoolean(
     readIdentityValue('x-ctf-user-approved', 'ctf_user_approved', headerStore, cookieStore),
   ) ?? isAuthenticated;
-  const unlockAccessTier = normalizeUnlockAccessTier(
-    readIdentityValue('x-ctf-unlock-tier', 'ctf_unlock_tier', headerStore, cookieStore),
-  );
 
   return {
     isAuthenticated,
@@ -105,8 +87,22 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
     role: isAuthenticated ? role : null,
     isAdmin: isAuthenticated ? role === 'admin' : false,
     isApproved: isAuthenticated ? isApproved : false,
-    unlockAccessTier: isAuthenticated ? unlockAccessTier : null,
   };
+}
+
+// Lightweight: read only the request's user id from headers/cookies, for per-user
+// feature-flag targeting (e.g. demo-mode). Unlike resolveRequestIdentity it does NOT
+// verify the token (no JWT/crypto, no DB), so it is safe on hot paths like DB-pool
+// selection. Returns null outside a request scope (seed scripts, migrations) where
+// headers()/cookies() are unavailable.
+export async function getRequestUserId(): Promise<string | null> {
+  try {
+    const headerStore = await headers();
+    const cookieStore = await cookies();
+    return readIdentityValue('x-ctf-user-id', 'ctf_user_id', headerStore, cookieStore);
+  } catch {
+    return null;
+  }
 }
 
 export function buildIdentityDisplayName(username: string | null, userId: string | null): string {

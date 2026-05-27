@@ -91,7 +91,7 @@ Parity status: **web+android complete**.
 
 ## Seed Coverage Status
 
-Deterministic Foundation seed script: `ctf/scripts/seedFoundationPhase0.mjs`.
+Deterministic Foundation seed script: `ctf/scripts/seedFoundation.mjs`.
 
 Seeded content:
 - Sample survivors and providers with deterministic states.
@@ -109,3 +109,178 @@ Seeded content:
 
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing sections), Planned section headers, and planning ambiguities. Confirmed web+android complete delivery status. Clarified technical debt (quote schema, fallback copy, notification strategy, capacity assumptions) as known limitations, not unimplemented features.
 - 2026-02-24: Created initial Foundation CTF rewrite inventory with full-v1 scope for search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting, and scalability.
+
+
+## Build Checklist
+
+
+### Scope and Boundary
+
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No implementation changes are required in `platform/`.
+- [ ] Confirm plugin ID and command namespace.
+  - Acceptance criteria:
+    - All contracts/routes use stable slug `foundation`.
+- [ ] Confirm Directory boundary contract.
+  - Acceptance criteria:
+    - Foundation reads Directory data through read-only projections only.
+    - No Foundation command can mutate Directory behavior/data.
+
+### €” Contract and Policy Lock
+
+- [ ] Lock Foundation command contracts for full-v1.
+  - Acceptance criteria:
+    - Every command includes `pluginId`, `command`, `version`, `purpose`, `retentionClass`, and `idempotency`.
+- [ ] Lock Foundation access policy contracts.
+  - Acceptance criteria:
+    - Every command policy includes `consentRequirements`, `regionRestrictions`, `highRiskFlags`, and `denyConditions`.
+- [ ] Lock Foundation audit contracts.
+  - Acceptance criteria:
+    - Every command has audit shape covering allow/deny decisions and policy evidence checks.
+- [ ] Confirm Stream Maker-tier governance alignment.
+  - Acceptance criteria:
+    - Contracts and inventory align with `.github/instructions/110-stream-maker-tier-rules.mdc` threshold model and fallback rules.
+
+### €” Schema, Migrations, and Retention
+
+- [ ] Define Foundation extension/domain schema and migrations under `ctf/migrations/`.
+  - Acceptance criteria:
+    - Schema includes thread/message/call/quote/notification/rate-limit/audit entities.
+- [ ] Define quote lifecycle state model (`requested`, `provider_responded`, `closed`).
+  - Acceptance criteria:
+    - Invalid transitions are blocked and auditable.
+- [ ] Define retention classes for communication, transactional, and audit entities.
+  - Acceptance criteria:
+    - Retention tags are documented and mapped in contracts and schema notes.
+- [ ] Prepare rollback and replay notes.
+  - Acceptance criteria:
+    - Migration replay and rollback steps are captured for PR evidence.
+
+### €” Core Service and Command Execution
+
+- [ ] Implement provider search service using Directory read-only projections.
+  - Acceptance criteria:
+    - Search/filter/ranking does not write to Directory domain.
+- [ ] Implement 1:1 text thread create/send flows.
+  - Acceptance criteria:
+    - Thread membership is strictly survivor-provider pair only.
+- [ ] Implement 1:1 voice/video session creation and policy checks.
+  - Acceptance criteria:
+    - Participant cap, duration cap, and region pinning checks are enforced.
+- [ ] Implement quote create and state-transition commands.
+  - Acceptance criteria:
+    - Lifecycle transitions are deterministic and fully auditable.
+- [ ] Implement history and notification command family.
+  - Acceptance criteria:
+    - Actor ownership checks prevent cross-user history access.
+
+### €” Rate Limiting, Quotas, and Scalability
+
+- [ ] Implement command-level rate limiting for high-frequency actions.
+  - Acceptance criteria:
+    - Messaging/search/notification and quote updates enforce bounded request rates.
+- [ ] Implement Stream usage meters and threshold states.
+  - Acceptance criteria:
+    - Green/yellow/orange/red transitions are observable and trigger expected degrade behavior.
+- [ ] Implement graceful degradation strategy.
+  - Acceptance criteria:
+    - At orange/red states, non-critical behaviors degrade while core 1:1 messaging reliability is preserved.
+- [ ] Add quota impact documentation for Stream-consuming surfaces.
+  - Acceptance criteria:
+    - PR includes required note under `ctf/docs/quota-impact/` with fallback and observability sections.
+
+### €” Web Full-v1 Delivery
+
+- [ ] Deliver web provider search and profile preview flows.
+  - Acceptance criteria:
+    - Survivors can discover and select providers with accessibility-aware filters.
+- [ ] Deliver web 1:1 messaging and voice/video flows.
+  - Acceptance criteria:
+    - Survivors/providers can complete text, voice, and video interactions end-to-end.
+- [ ] Deliver web quote lifecycle flows.
+  - Acceptance criteria:
+    - Users can create, update, and review quote requests across 3-state lifecycle.
+- [ ] Deliver web history and notification settings.
+  - Acceptance criteria:
+    - Users can review interaction history and control notification channels/quiet hours.
+
+### €” Android Parity Follow-up Tracking
+
+- [ ] Create parity tracking table for all web-delivered Foundation capabilities.
+  - Acceptance criteria:
+    - Each capability includes owner, target sprint/date, risk, and parity validation status.
+- [ ] Implement Android parity for provider search and selection.
+  - Acceptance criteria:
+    - Android outcomes match web command semantics and policy decisions.
+- [ ] Implement Android parity for 1:1 text/voice/video.
+  - Acceptance criteria:
+    - Android interactions match web command outcomes and audit events.
+- [ ] Implement Android parity for quote lifecycle, history, and notifications.
+  - Acceptance criteria:
+    - Android supports requested/provider_responded/closed lifecycle and equivalent history/notification behavior.
+- [ ] Close parity deferments.
+  - Acceptance criteria:
+    - Any deferred item includes approved risk note and final completion date.
+
+### €” Trauma-Informed and Accessibility Validation
+
+- [ ] Validate trauma-informed UX constraints.
+  - Acceptance criteria:
+    - Language and interaction pacing avoid coercive urgency or harm-amplifying patterns.
+- [ ] Validate accessibility constraints on web and Android.
+  - Acceptance criteria:
+    - Screen-reader, keyboard navigation, contrast, and caption/call accessibility criteria pass.
+- [ ] Validate safety and reporting affordances.
+  - Acceptance criteria:
+    - Critical safety pathways are discoverable, clear, and policy-compliant.
+
+### €” Security, Compliance, and Deletion
+
+- [ ] Verify authz, consent, region, and deny-condition enforcement.
+  - Acceptance criteria:
+    - Enforcement exists server-side for all command families.
+- [ ] Verify audit integrity (allow + deny).
+  - Acceptance criteria:
+    - Audit records are append-only, redacted/tokenized, and correlation IDs are present.
+- [ ] Verify Foundation profile/deletion contract behavior.
+  - Acceptance criteria:
+    - Plugin-scoped deletion preserves canonical profile and Directory data.
+    - Full-account flow removes Foundation user-scoped data per orchestrator policy.
+
+### Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+
+- [ ] Command schema design documentation.
+  - Acceptance criteria:
+    - Unknown fields, type errors, bounds violations, and invalid enum values handling is documented.
+- [ ] Access policy enforcement design documentation.
+  - Acceptance criteria:
+    - Missing consent, wrong role, region restrictions, cross-tenant access, and deny conditions are documented.
+- [ ] Audit contract design documentation.
+  - Acceptance criteria:
+    - Allow and deny outcomes expected evidence fields and request/trace correlations are documented.
+- [ ] Quote lifecycle and history design documentation.
+  - Acceptance criteria:
+    - Requested/provider_responded/closed transitions and read permissions behavior is documented.
+- [ ] Stream degradation behavior documentation.
+  - Acceptance criteria:
+    - Yellow/orange/red threshold behavior aligns with Maker-tier rules.
+- [ ] Web + Android parity design scope. [MANUAL PARITY COVERAGE DEFERRED FOR MVP â€” see Rule 118.]
+  - Acceptance criteria:
+    - Parity-required flows are documented for post-MVP testing.
+
+### Documentation and Inventory Lifecycle
+
+- [ ] Keep `ctf-foundation-feature-inventory.md` updated with each accepted feature change.
+  - Acceptance criteria:
+    - Add/remove/behavior changes are reflected in same PR as implementation.
+- [ ] Keep Foundation contracts updated with version and compatibility notes.
+  - Acceptance criteria:
+    - Command/policy/audit changes include migration impact notes when relevant.
+- [ ] Implementation tracking. [EVIDENCE CAPTURE DEFERRED FOR MVP â€” see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked; evidence collection deferred to post-MVP.
+
+### Change Log
+
+- 2026-02-24: Created initial Foundation rewrite checklist with full-v1 gates for search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting/scalability, trauma-informed accessibility, and web-first to Android parity follow-up tracking.

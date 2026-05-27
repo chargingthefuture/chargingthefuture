@@ -10,7 +10,6 @@ This index links to canonical artifacts for Foundation.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-foundation-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

@@ -6,7 +6,7 @@
 >
 > Companion documents (read in this order after this file):
 > 1. `ctf-skills-hunt-feature-inventory.md` — implemented & planned feature inventory (kept in sync with code per Plugin Feature Inventory Sync Policy in CLAUDE.md).
-> 2. `ctf-skills-hunt-rewrite-checklist.md` — phase-by-phase implementation checklist with progress boxes.
+> 2. `ctf-skills-hunt-feature-inventory.md` — phase-by-phase implementation checklist with progress boxes.
 > 3. `ctf-directory-feature-inventory.md` — Directory plugin inventory (Skills Hunt depends on it for invited_by, unclaimed-handle, and source columns).
 > 4. `../../contracts/SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml` — command definitions.
 > 5. `../../contracts/SKILLS_HUNT_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml` — access policy contracts.
@@ -227,7 +227,7 @@ One-shot: for every `directory_profiles` row where `claimed_by_user_id IS NULL A
 
 ## 6. Implementation roadmap (Wave 1 + Wave 2)
 
-Track progress in `ctf-skills-hunt-rewrite-checklist.md`. This roadmap is the high-level plan.
+Track progress in `ctf-skills-hunt-feature-inventory.md`. This roadmap is the high-level plan.
 
 ### Wave 1 — Foundation + visible surface
 1. **Schema additions** (this session)
@@ -284,7 +284,7 @@ These should be resolved before the corresponding Wave 2 work begins.
 
 1. Read this file. Don't ask the owner to re-explain anything documented here.
 2. Run `git log --oneline claude/audit-skills-hunt-plugin-6yv3e -20` to see latest commits and what was last touched.
-3. Open `ctf-skills-hunt-rewrite-checklist.md` to see which boxes are checked.
+3. Open `ctf-skills-hunt-feature-inventory.md` to see which boxes are checked.
 4. Pick up at the next unchecked item.
 5. Update the checklist as you go.
 6. Commit with a message that names the item finished and links the session URL.

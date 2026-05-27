@@ -62,32 +62,32 @@ validate_contract_file() {
     return
   fi
 
-  if ! grep -Eq '^[[:space:]]*pluginId[[:space:]]*:' "$file"; then
+  if ! grep -Eq '^[[:space:]]*-?[[:space:]]*pluginId[[:space:]]*:' "$file"; then
     echo "Schema drift gate failed: missing 'pluginId' in contract file: $file" >&2
     contract_schema_failed=true
   fi
 
-  if ! grep -Eq '^[[:space:]]*contractVersion[[:space:]]*:' "$file"; then
-    echo "Schema drift gate failed: missing 'contractVersion' in contract file: $file" >&2
+  if ! grep -Eq '^[[:space:]]*-?[[:space:]]*(contractVersion|version)[[:space:]]*:' "$file"; then
+    echo "Schema drift gate failed: missing 'version' in contract file: $file" >&2
     contract_schema_failed=true
   fi
 
   if [[ "$file" =~ _PLUGIN_COMMAND_CONTRACTS\.ya?ml$ ]]; then
-    if ! grep -Eq '^[[:space:]]*commandId[[:space:]]*:' "$file"; then
-      echo "Schema drift gate failed: missing 'commandId' in command contract file: $file" >&2
+    if ! grep -Eq '^[[:space:]]*-?[[:space:]]*(commandId|command)[[:space:]]*:' "$file"; then
+      echo "Schema drift gate failed: missing 'command' in command contract file: $file" >&2
       contract_schema_failed=true
     fi
   fi
 
   if [[ "$file" =~ _PLUGIN_ACCESS_POLICY_CONTRACTS\.ya?ml$ ]]; then
-    if ! grep -Eq '^[[:space:]]*requiredRoles[[:space:]]*:' "$file"; then
+    if ! grep -Eq '^[[:space:]]*-?[[:space:]]*requiredRoles[[:space:]]*:' "$file"; then
       echo "Schema drift gate failed: missing 'requiredRoles' in access-policy contract file: $file" >&2
       contract_schema_failed=true
     fi
   fi
 
   if [[ "$file" =~ _PLUGIN_AUDIT_CONTRACTS\.ya?ml$ ]]; then
-    if ! grep -Eq '^[[:space:]]*eventId[[:space:]]*:' "$file"; then
+    if ! grep -Eq '^[[:space:]]*-?[[:space:]]*eventId[[:space:]]*:' "$file"; then
       echo "Schema drift gate failed: missing 'eventId' in audit contract file: $file" >&2
       contract_schema_failed=true
     fi

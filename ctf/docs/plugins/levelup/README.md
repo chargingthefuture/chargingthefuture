@@ -9,7 +9,6 @@ This index links to canonical artifacts for LevelUp.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-levelup-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-levelup-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

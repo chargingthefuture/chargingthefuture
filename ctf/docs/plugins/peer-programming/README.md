@@ -10,7 +10,6 @@ This index links to canonical artifacts for Peer Programming.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-peer-programming-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

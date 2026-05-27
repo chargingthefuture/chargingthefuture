@@ -1,25 +1,11 @@
 import { StreamChat } from 'stream-chat';
-
-type StreamConfig = {
-  apiKey: string;
-  apiSecret: string;
-};
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
 export type TrustTransportStreamParticipantCredentials = {
   streamApiKey: string;
   streamUserId: string;
   streamToken: string;
 };
-
-function getStreamConfig(): StreamConfig | null {
-  const apiKey = process.env.STREAM_API_KEY?.trim();
-  const apiSecret = process.env.STREAM_API_SECRET?.trim();
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
-
-  return { apiKey, apiSecret };
-}
 
 function toStreamUserId(userId: string): string {
   return `trusttransport-${userId}`;
@@ -36,43 +22,51 @@ export async function ensureTrustTransportTripChannel(input: {
   requesterUserId: string;
   providerUserId: string;
 }): Promise<string | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId);
-  const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId);
-
-  const streamChannelId = `trusttransport-trip-${input.tripId}`;
-  const channel = streamClient.channel('messaging', streamChannelId, {
-    created_by_id: requesterStreamUserId,
-    name: 'TrustTransport Trip Thread',
-  });
-
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
-    await channel.create();
-  } catch {
-    await channel.watch();
-  }
+    const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId);
+    const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId);
 
-  await channel.addMembers([requesterStreamUserId, providerStreamUserId]);
-  return streamChannelId;
+    const streamChannelId = `trusttransport-trip-${input.tripId}`;
+    const channel = streamClient.channel('messaging', streamChannelId, {
+      created_by_id: requesterStreamUserId,
+      name: 'TrustTransport Trip Thread',
+    });
+
+    try {
+      await channel.create();
+    } catch {
+      await channel.watch();
+    }
+
+    await channel.addMembers([requesterStreamUserId, providerStreamUserId]);
+    return streamChannelId;
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
 
 export async function createTrustTransportParticipantToken(userId: string): Promise<TrustTransportStreamParticipantCredentials | null> {
-  const config = getStreamConfig();
+  const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const streamUserId = await upsertStreamUser(streamClient, userId);
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
+  try {
+    const streamUserId = await upsertStreamUser(streamClient, userId);
 
-  return {
-    streamApiKey: config.apiKey,
-    streamUserId,
-    streamToken: streamClient.createToken(streamUserId),
-  };
+    return {
+      streamApiKey: config.apiKey,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }

@@ -1,13 +1,12 @@
 # Shared Package
 
 ## Purpose
-Platform-agnostic shared logic for authentication, mood, and messaging, used by both web and mobile clients.
+Platform-agnostic shared logic for authentication and mood, used by both web and mobile clients.
 
 ## Public API
-Exports three main domains:
+Exports two main domains:
 - **Auth:** `authenticatePluginUser()`, `AuthProvider`, provider-agnostic dispatch (Clerk implemented, others stubbed)
 - **Mood:** `MoodCheck`, `MoodEligibility` types, API calls, and React hooks
-- **Stream/Chyme:** GetStream.io integration, `createChymeStreamJoinCredentials()`, `sendChymeStreamMessage()`
 
 ## Directory Structure
 ```
@@ -17,8 +16,6 @@ auth/
 mood/
   index.ts
   hooks.ts
-stream/
-  chyme.ts
 ```
 
 ## Import Guidelines
@@ -61,7 +58,6 @@ See the [Clerk](#clerk) and [GetStream.io](#getstreamio) sections below for inte
 import { authenticatePluginUser } from '@ctf/shared/auth';
 import { MoodCheck } from '@ctf/shared/mood';
 import { useMoodCheck } from '@ctf/shared/mood/hooks'; // ✅ Recommended: direct hook import
-import { createChymeStreamJoinCredentials } from '@ctf/shared/stream/chyme';
 
 // Always import hooks directly from their file (see Import Guidelines above)
 ```

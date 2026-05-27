@@ -20,6 +20,13 @@ Manages Replit design submodule and ensures pixel-perfect UI implementation. Eli
 - Prevent hardcoded values that should use design tokens
 - Ensure design-to-code consistency across all components
 
+### Never Encode "Phases" Into Designs
+
+- Do **not** write "Phase 1", "Phase 2", "Phase 0", or any phased-rollout label into mockups,
+  copy, section headers, comments, or filenames. Phases are prohibited project-wide (see
+  `copilot-instructions.md` → "Task Planning — No Phases" and Rule 105). Designs show the delivered
+  feature, not a rollout schedule.
+
 ### Pixel-Perfect Requirements
 
 - Match spacing to 1px precision

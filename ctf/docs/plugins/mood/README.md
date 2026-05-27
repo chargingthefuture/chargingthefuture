@@ -10,7 +10,6 @@ This index links to canonical artifacts for Mood.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-mood-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-mood-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

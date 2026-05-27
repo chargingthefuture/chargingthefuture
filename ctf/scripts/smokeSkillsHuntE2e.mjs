@@ -7,7 +7,7 @@
  *   rounds list -> submit -> admin accept -> leaderboard rebuild
  *     -> notification fan-out -> unclaimed Directory profile with @handle
  *
- * Strategy: run against the live DB AFTER seedSkillsHuntPhase1.mjs has
+ * Strategy: run against the live DB AFTER seedSkillsHunt.mjs has
  * already populated deterministic fixtures (seed round + accepted seed
  * submission + linked community-generated profile). The smoke script
  * asserts on the post-state. If you re-run the seed and then this, all

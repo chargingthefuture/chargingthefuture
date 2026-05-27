@@ -38,6 +38,6 @@ The original Railway-era migration spec is preserved below for reference only.
 
 - `INFISICAL_TOKEN` and `INFISICAL_PROJECT_ID` are the only secrets that remain outside Infisical. They are the bootstrap credentials needed to reach Infisical.
 - Secret values must never be committed to the repository.
-- Secret names in Infisical must match `.env.local.example` exactly — no renaming.
+- Secret names in Infisical are the canonical contract — no renaming without explicit user approval.
 - The Infisical service on Railway cannot self-reference for its own secrets — it must be bootstrapped manually.
 - The Railway Postgres service is managed by Railway and does not need Infisical integration.

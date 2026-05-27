@@ -13,7 +13,6 @@ contracts:
       generatedAt:
         type: string
     dataAccess:
-      - workforce_report_snapshots
       - canonical_metrics_registry
     purpose: workforce_visibility
     retentionClass: derived_short_lived
@@ -325,7 +324,6 @@ contracts:
       status:
         type: string
     dataAccess:
-      - workforce_report_snapshots
       - workforce_export_jobs
     purpose: workforce_reporting_exports
     retentionClass: operational_medium_lived

@@ -10,7 +10,6 @@ This index links to canonical artifacts for Feed.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-feed-rewrite-checklist.md)
 - [Android Parity Note(../../developer/ctf-plugin-feature-inventories/ctf-feed-android-parity-note.md)
 
 ## Notes

@@ -3,8 +3,8 @@
 ## Intent
 Define mandatory CI enforcement using GitHub Actions for the rewrite product.
 
-## Mandatory (MVP Phase Exemption)
-**NOTE: For MVP phase only (temporary), automated test gates and contract validation are disabled per product decision. Lint and type-check remain required. These gates will be restored for post-MVP hardening phases.**
+## Mandatory (MVP Exemption)
+**NOTE: During MVP only (temporary), automated test gates and contract validation are disabled per product decision. Lint and type-check remain required. These gates will be restored for post-MVP hardening.**
 
 - All merge and release gates must run through GitHub Actions workflows.
 - Protect default branch with required status checks from GitHub Actions.

@@ -1,5 +1,5 @@
 Android parity: skills-taxonomy
 
-In-progress: implement mobile parity items for skills-taxonomy. Refer to checklist: ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-rewrite-checklist.md
+In-progress: implement mobile parity items for skills-taxonomy. Refer to checklist: ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md
 
 Work started by agent. Will add UI mocks and tests in follow-up commits.

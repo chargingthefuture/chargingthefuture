@@ -11,7 +11,6 @@ This index links to canonical artifacts for Skills Hunt.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-skills-hunt-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

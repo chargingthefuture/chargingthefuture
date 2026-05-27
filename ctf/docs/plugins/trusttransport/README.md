@@ -10,7 +10,6 @@ This index links to canonical artifacts for TrustTransport.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-trusttransport-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-trusttransport-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

@@ -22,10 +22,19 @@ ENV POSTGRES_MAX_OPEN_CONNS=40 \
     EXPERIMENTAL_NUMSCRIPT_INTERPRETER_FLAGS="experimental-overdraft-function experimental-get-asset-function experimental-get-amount-function experimental-oneof experimental-account-interpolation experimental-mid-script-function-call experimental-asset-colors"
 
 EXPOSE 3068
-# Reset the image's `ledger` ENTRYPOINT so the shell runs directly; it then
-# expands Render's injected $PORT and invokes `ledger serve` explicitly.
-# --worker=true runs ledger + worker in one process.
-# FORMANCE_POSTGRES_URI is renamed for clarity (multiple postgres instances exist);
-# map it to the standard POSTGRES_URI that the ledger binary expects.
-ENTRYPOINT []
-CMD ["sh", "-c", "POSTGRES_URI=${FORMANCE_POSTGRES_URI:-$POSTGRES_URI} ledger serve --bind=0.0.0.0:${PORT:-3068} --worker=true --worker-grpc-address=127.0.0.1:8081"]
+
+# curl is needed by the entrypoint's idempotent ledger-bootstrap step (issue #106).
+# Best-effort across alpine/debian bases; never fail the build — if curl can't be
+# installed the entrypoint logs and falls back to manual `pnpm formance:bootstrap`.
+RUN command -v curl >/dev/null 2>&1 \
+  || apk add --no-cache curl 2>/dev/null \
+  || (apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*) \
+  || true
+
+# The entrypoint starts `ledger serve` (preserving the FORMANCE_POSTGRES_URI ->
+# POSTGRES_URI mapping) and, once the API is healthy, idempotently creates the
+# named ledger books — eliminating the manual SSH + bootstrap operator step.
+COPY formance-entrypoint.sh /formance-entrypoint.sh
+RUN chmod +x /formance-entrypoint.sh
+
+ENTRYPOINT ["/formance-entrypoint.sh"]
