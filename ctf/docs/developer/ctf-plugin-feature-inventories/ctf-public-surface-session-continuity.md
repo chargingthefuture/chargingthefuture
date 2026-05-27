@@ -194,30 +194,30 @@ realization of "demo tables in the prod db, not mixed":
    **lazily** so seed scripts/migrations don't pull Next-only deps. Fail-closed + dormant: with no
    participants it is byte-identical to before; a demo request with no `demo` schema errors rather than
    leaking. **Not yet runtime-tested** (no DB/app in the agent env) — validate on the Render deploy.
-3. **Demo schema provisioning (NEXT).** A `pnpm migrate:demo-schema` script must build a parallel `demo`
-   schema. Known hazards found in `schema.sql` (must be handled, not naive `search_path=demo`):
-   - **`users` is never `CREATE`d in schema.sql** — only `ALTER TABLE IF EXISTS public.users ...` (it is a
-     legacy/external table). Decide whether demo needs a `users` table at all (identity is header/cookie
-     based, so likely not) — if it does, add a `CREATE TABLE IF NOT EXISTS` for it.
-   - **7 `public.`-qualified statements** (schema.sql lines ~150-154 ALTERs, ~168 `CREATE INDEX ... ON
-     public.users`, ~173 a `RAISE NOTICE` referencing `public.users`) explicitly target `public` and will
-     NOT apply to `demo`. The provisioner must retarget the safe ones (`public.` → `demo.`) or the demo
-     tables will miss those columns/indexes.
-   - **Extensions** (`CREATE EXTENSION IF NOT EXISTS pgcrypto`, lines 19/181) are idempotent and resolve
-     via `public` in the search_path — fine.
-   - **View-before-table ordering**: schema.sql's *first* statement (line 2) is a `CREATE OR REPLACE VIEW
-     skills_taxonomy_dependency_graph` that references `skills_taxonomy_consumer_bindings`, a table
-     created much later. Running schema.sql top-to-bottom into a **fresh** `demo` schema fails here (the
-     table doesn't exist yet); it only works against `public` because that table already exists from prior
-     migrations. The provisioner must therefore create tables before views (e.g. run table/index DDL
-     first, then views), or run schema.sql twice and tolerate the first view error. **This is why a naive
-     provisioner can't just be shipped — it needs a real DB to validate against.**
-   - Make it **opt-in** (NOT in the default deploy migration path) so a provisioning bug can't block prod
-     deploys. Then make the schema-drift gate cover `demo`.
-
-   **Status: deferred to runtime build.** The pool routing (step 2) is correct-by-design and dormant, but
-   the provisioner above genuinely needs a throwaway DB (e.g. a Neon branch) to validate the ordering +
-   `public.`-qualified handling + completeness. Build it there, not blind.
+3. ~~**Demo schema provisioning**~~ — **landed 2026-05-27.** `ctf/scripts/migrateToDemo.mjs`
+   (`pnpm migrate:demo-schema`) validated against the 62-user v2 Neon branch. All schema.sql hazards
+   handled by transforms in the script:
+   - **`public.users` block suppressed** — lines 145-147 (ALTER TABLE public.users) + DO block for
+     the unique index (lines 155-172) are no-ops for demo; `users` is Clerk-managed, demo schema has
+     no `users` table (identity is header/cookie-based).
+   - **`public.chyme_*` ALTERs retargeted** — lines 148-149 (`ALTER TABLE IF EXISTS public.chyme_room_members`
+     / `public.chyme_messages`) replaced with unqualified names; search_path routes them to `demo.*`.
+   - **`table_schema = 'public'` guards retargeted** — the lighthouse `move_in_date` DO block
+     (lines 1238-1254) guards with `WHERE table_schema = 'public'`; retargeted to `'demo'` so the guard
+     is false for a fresh demo table (column never existed there → UPDATE is skipped).
+   - **Extensions** — idempotent, schema-agnostic; left as-is.
+   - **View ordering** — already fixed: `skills_taxonomy_dependency_graph` moved to end of schema.sql.
+   - **Neon pooler restriction** — `search_path` in pg startup options is rejected by Neon's PgBouncer
+     pooler. `migrateToDemo.mjs` and `postgres.ts` use `DATABASE_URL_DIRECT` (unpooled endpoint). Owner
+     must add this to Infisical `production`.
+   - **v2→v3 pre-migration** also documented: chyme v2 tables must be DROPped (confirmed deprecated by
+     owner) and `skills_taxonomy_flattened_projection` VIEW must be DROPped (promoted to BASE TABLE in v3)
+     before running `schema.sql` on the real prod DB clone.
+   Validation: `demo` schema has 155 tables (all v3 tables; `public` has 204 including 49 v2-only
+   legacy tables). All key tables present, no `users` table, `chyme_rooms` has correct v3 columns.
+   **Owner action**: add `DATABASE_URL_DIRECT` (Neon unpooled endpoint) to Infisical `production`.
+   Then run `pnpm migrate:demo-schema` on Render (or via a one-off migration job) to provision the
+   `demo` schema on the production Neon DB.
 4. **Identity**: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
    participant accounts (owner + testers) and auto-provision a demo profile on first demo login.
 5. **Per-plugin demo seeds (scenario matrix)** — run against the `demo` schema (seed runner sets

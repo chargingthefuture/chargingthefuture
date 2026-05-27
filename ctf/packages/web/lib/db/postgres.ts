@@ -12,6 +12,16 @@ function getDatabaseUrl(): string {
   return databaseUrl;
 }
 
+// Neon's PgBouncer pooler rejects session-level startup params (e.g. search_path).
+// The demo pool needs search_path=demo,public; use the direct connection for it.
+// DATABASE_URL_DIRECT = unpooled Neon endpoint (same credentials, no -pooler in host).
+// Falls back to DATABASE_URL when not set (works on non-Neon Postgres or direct URLs).
+function getDemoDatabaseUrl(): string {
+  const direct = process.env.DATABASE_URL_DIRECT;
+  if (direct && direct.trim().length > 0) return direct;
+  return getDatabaseUrl();
+}
+
 function getPublicPool(): Pool {
   if (!publicPool) {
     publicPool = new Pool({
@@ -34,7 +44,7 @@ function getPublicPool(): Pool {
 function getDemoPool(): Pool {
   if (!demoPool) {
     demoPool = new Pool({
-      connectionString: getDatabaseUrl(),
+      connectionString: getDemoDatabaseUrl(),
       ssl: {
         rejectUnauthorized: false,
       },

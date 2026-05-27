@@ -16,15 +16,20 @@
  *   3. Extensions (`pgcrypto`) — idempotent and schema-agnostic; left as-is.
  *   4. Views (`skills_taxonomy_dependency_graph`) — already at the end of schema.sql so the
  *      source table exists when the view is created; no special handling needed.
+ *   5. Data-migration DO blocks that guard with `table_schema = 'public'` then update unqualified
+ *      table names (e.g. lighthouse `move_in_date` → `desired_move_in_date`). The guard is
+ *      retargeted to the target schema so a fresh demo table (which never had the old column)
+ *      causes the guard to be false and the data migration is correctly skipped.
+ *
+ * Neon pooler note: Neon's PgBouncer rejects `search_path` in startup options. Pass
+ * DATABASE_URL_DIRECT (unpooled endpoint) alongside DATABASE_URL so the demo pool can use
+ * `options: '-c search_path=demo,public'`. Falls back to DATABASE_URL when not set.
  */
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
-const { Pool } = require('pg');
+import { Pool } from 'pg';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,7 +56,7 @@ function parseArgs(argv) {
  * All unqualified table names go to the target schema via search_path.
  * Explicit `public.` qualifiers are retargeted or suppressed as described above.
  */
-function applyDemoTransforms(sql) {
+function applyDemoTransforms(sql, targetSchema) {
   // Retarget public.-qualified chyme tables to unqualified (resolves to demo via search_path)
   sql = sql.replace(/\bpublic\.chyme_room_members\b/g, 'chyme_room_members');
   sql = sql.replace(/\bpublic\.chyme_messages\b/g, 'chyme_messages');
@@ -69,6 +74,11 @@ function applyDemoTransforms(sql) {
     '-- [demo-skip: public.users username unique index suppressed]',
   );
 
+  // Data-migration DO blocks that guard with `table_schema = 'public'` then update unqualified
+  // table names (which resolve to the target schema via search_path). Retarget the guard to the
+  // target schema so the check looks at the actual table being modified, not prod.
+  sql = sql.replace(/table_schema = 'public'/g, `table_schema = '${targetSchema}'`);
+
   return sql;
 }
 
@@ -78,10 +88,14 @@ async function main() {
   if (!targetSchema) throw new Error('--schema value must be a valid identifier');
 
   const databaseUrl = requireEnv('DATABASE_URL');
+  // Neon's PgBouncer pooler rejects search_path in startup options.
+  // Use DATABASE_URL_DIRECT (unpooled endpoint) for the provisioning pool.
+  // Falls back to DATABASE_URL when not set (non-Neon or direct URL already).
+  const directUrl = process.env.DATABASE_URL_DIRECT || databaseUrl;
   const schemaFilePath = path.resolve(__dirname, '..', 'schema.sql');
 
   const rawSql = await fs.readFile(schemaFilePath, 'utf8');
-  const processedSql = applyDemoTransforms(rawSql);
+  const processedSql = applyDemoTransforms(rawSql, targetSchema);
 
   // Admin pool (no search_path override) — used only to CREATE the schema
   const adminPool = new Pool({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } });
@@ -92,9 +106,10 @@ async function main() {
     await adminPool.end();
   }
 
-  // Demo pool — all unqualified names resolve to the target schema
+  // Demo pool — all unqualified names resolve to the target schema.
+  // Must use directUrl (unpooled): Neon's pooler rejects search_path in startup options.
   const demoPool = new Pool({
-    connectionString: databaseUrl,
+    connectionString: directUrl,
     ssl: { rejectUnauthorized: false },
     options: `-c search_path=${targetSchema},public`,
   });

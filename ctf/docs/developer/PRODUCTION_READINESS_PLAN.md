@@ -162,6 +162,14 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       **Stream** to a separate app (`STREAM_*_STAGING`) and **Formance** to a separate ledger book
       (`FORMANCE_LEDGER_STAGING` = `ctf-demo`, same instance) so recordings never touch the prod Stream
       Maker-tier quota or the real ledger.
+- [x] **#102 step 3: `migrate:demo-schema` provisioner** — `ctf/scripts/migrateToDemo.mjs`
+      (`pnpm migrate:demo-schema`) creates the `demo` Postgres schema by running `schema.sql` with
+      `search_path=demo,public`, with transforms: retargets `public.chyme_*` ALTERs to unqualified
+      names (resolves to `demo` via search_path) and suppresses the `public.users` block (no users
+      table in demo). Validated against the 62-user v2 Neon branch 2026-05-27.
+- [ ] **#102 remaining**: per-plugin demo seed scripts (scenario matrix per plugin), runtime
+      validation on Render (owner becomes demo participant; confirms writes land only in
+      `demo`/`ctf-demo`), then add testers.
 - [ ] **#102 remaining (non-UI, next)**: the demo-tenant **DB scoping layer** — seed synthetic
       demo-tenant rows into the prod DB and scope per-plugin reads by `isDemoMode()`. Sizeable; scope with owner.
 - [ ] **#102 UI (design-gated)**: landing, sign-in/up, unlock public screens — circle back when designs land.
@@ -169,6 +177,9 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       `production` environment (currently present only in the Staging column, so prod Formance is
       unconfigured). `FORMANCE_LEDGER` (`ctf-main`), `FORMANCE_LEDGER_STAGING` (`ctf-demo`), and
       `STREAM_*_STAGING` are already set.
+- [ ] **#102 ops (owner, Infisical)**: add `DATABASE_URL_DIRECT` = the Neon **unpooled** connection
+      string (same credentials, no `-pooler` in hostname). Required by the demo pool in `postgres.ts`
+      and `migrateToDemo.mjs` — Neon's PgBouncer pooler rejects `search_path` in startup options.
 
 ## Known follow-ups / tech debt (tracked here, not blocking)
 
@@ -307,6 +318,22 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   `public` and a `demo` pool (`search_path=demo,public`); `getActivePool()` routes demo participants to
   `demo`, fail-closed + dormant (byte-identical with no participants; lazy flag-layer import keeps seed
   scripts clean). Added a lightweight `getRequestUserId()` (header/cookie only) so per-user demo
-  resolution is hot-path safe. **Next:** `migrate:demo-schema` provisioning — `schema.sql` has hazards
-  (the `users` table is never CREATEd, and 7 `public.`-qualified statements) that the provisioner must
-  handle, documented in the continuity doc. Build + runtime-test on Render before enabling participants.
+  resolution is hot-path safe.
+- 2026-05-27: **v2 → v3 schema migration validated + demo schema provisioner built (#102 step 3).**
+  Ran `schema.sql` against a 62-user v2 Neon clone (Neon PG 17). Discovered and recorded all
+  v2→v3 DDL hazards: (H1) `CREATE UNIQUE INDEX ON chyme_rooms(room_key)` fires inside the first
+  `BEGIN/COMMIT` before `ALTER TABLE ADD COLUMN room_key` (line 1403); (H2) same for
+  `chyme_messages.sent_at`; (H3) `skills_taxonomy_flattened_projection` was a VIEW in v2 but v3
+  promotes it to a BASE TABLE; (H4) demo provisioner: `public.`-qualified chyme ALTERs must be
+  retargeted + `public.users` block suppressed; (H5) lighthouse `move_in_date` data-migration DO
+  block checks `table_schema = 'public'` but then runs against unqualified (demo) table — guard
+  retargeted to the target schema so fresh demo table causes the guard to be false (skip). **Chyme
+  v2 confirmed deprecated (owner) — nothing carries over.** Pre-migration for prod: DROP 8 v2
+  chyme tables, DROP `skills_taxonomy_flattened_projection` VIEW, then `schema.sql` (204 tables,
+  all v3 tables present). `migrateToDemo.mjs` (`pnpm migrate:demo-schema`) applies all 5 transforms
+  automatically. **New infra requirement**: `DATABASE_URL_DIRECT` (Neon unpooled endpoint) must be
+  set alongside `DATABASE_URL` (pooler). Neon's PgBouncer pooler rejects `search_path` in startup
+  options; the demo pool (`postgres.ts`) and `migrateToDemo.mjs` both use `DATABASE_URL_DIRECT` for
+  `search_path=demo,public`. Demo schema validated: 155 tables in `demo`, all key v3 tables present,
+  no `users` table, `chyme_rooms` has correct v3 columns, `skills_taxonomy_flattened_projection` is
+  BASE TABLE. Per-plugin demo seeds (scenario matrix) are next.
