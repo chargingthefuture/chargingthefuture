@@ -32,32 +32,36 @@ export async function ensureFoundationStreamChannel(input: {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const survivorStreamUserId = await upsertStreamUser(streamClient, input.survivorUserId, input.survivorDisplayName);
-  const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId, input.providerDisplayName);
-
-  const streamChannelId = `foundation-thread-${input.threadId}`;
-  const channel = streamClient.channel('messaging', streamChannelId, {
-    created_by_id: survivorStreamUserId,
-    name: 'Foundation 1:1 Thread',
-  });
-
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
   try {
-    await channel.create();
-  } catch {
-    await channel.watch();
+    const survivorStreamUserId = await upsertStreamUser(streamClient, input.survivorUserId, input.survivorDisplayName);
+    const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId, input.providerDisplayName);
+
+    const streamChannelId = `foundation-thread-${input.threadId}`;
+    const channel = streamClient.channel('messaging', streamChannelId, {
+      created_by_id: survivorStreamUserId,
+      name: 'Foundation 1:1 Thread',
+    });
+
+    try {
+      await channel.create();
+    } catch {
+      await channel.watch();
+    }
+
+    await channel.addMembers([survivorStreamUserId, providerStreamUserId]);
+
+    return {
+      streamChannelId,
+      credentials: {
+        streamApiKey: config.apiKey,
+        streamUserId: survivorStreamUserId,
+        streamToken: streamClient.createToken(survivorStreamUserId),
+      },
+    };
+  } finally {
+    await streamClient.disconnectUser();
   }
-
-  await channel.addMembers([survivorStreamUserId, providerStreamUserId]);
-
-  return {
-    streamChannelId,
-    credentials: {
-      streamApiKey: config.apiKey,
-      streamUserId: survivorStreamUserId,
-      streamToken: streamClient.createToken(survivorStreamUserId),
-    },
-  };
 }
 
 export async function createFoundationParticipantToken(userId: string, displayName: string): Promise<FoundationStreamParticipantCredentials | null> {
@@ -66,13 +70,17 @@ export async function createFoundationParticipantToken(userId: string, displayNa
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
-  return {
-    streamApiKey: config.apiKey,
-    streamUserId,
-    streamToken: streamClient.createToken(streamUserId),
-  };
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  try {
+    const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
+    return {
+      streamApiKey: config.apiKey,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
 
 export async function sendFoundationStreamMessage(input: {
@@ -86,20 +94,24 @@ export async function sendFoundationStreamMessage(input: {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const streamUserId = await upsertStreamUser(streamClient, input.senderUserId, input.senderDisplayName);
-  const channel = streamClient.channel('messaging', input.streamChannelId);
-
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
   try {
-    await channel.watch();
-    const result = await channel.sendMessage({
-      text: input.messageText,
-      user_id: streamUserId,
-    });
+    const streamUserId = await upsertStreamUser(streamClient, input.senderUserId, input.senderDisplayName);
+    const channel = streamClient.channel('messaging', input.streamChannelId);
 
-    return result.message?.id ?? null;
-  } catch {
-    return null;
+    try {
+      await channel.watch();
+      const result = await channel.sendMessage({
+        text: input.messageText,
+        user_id: streamUserId,
+      });
+
+      return result.message?.id ?? null;
+    } catch {
+      return null;
+    }
+  } finally {
+    await streamClient.disconnectUser();
   }
 }
 

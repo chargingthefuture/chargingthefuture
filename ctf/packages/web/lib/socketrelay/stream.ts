@@ -29,24 +29,28 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId, input.requesterDisplayName);
-  const fulfillerStreamUserId = await upsertStreamUser(streamClient, input.fulfillerUserId, input.fulfillerDisplayName);
-
-  const streamChannelId = `socketrelay-fulfillment-${input.fulfillmentId}`;
-  const channel = streamClient.channel('messaging', streamChannelId, {
-    created_by_id: requesterStreamUserId,
-    name: 'SocketRelay Fulfillment Thread',
-  });
-
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
   try {
-    await channel.create();
-  } catch {
-    await channel.watch();
-  }
+    const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId, input.requesterDisplayName);
+    const fulfillerStreamUserId = await upsertStreamUser(streamClient, input.fulfillerUserId, input.fulfillerDisplayName);
 
-  await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);
-  return streamChannelId;
+    const streamChannelId = `socketrelay-fulfillment-${input.fulfillmentId}`;
+    const channel = streamClient.channel('messaging', streamChannelId, {
+      created_by_id: requesterStreamUserId,
+      name: 'SocketRelay Fulfillment Thread',
+    });
+
+    try {
+      await channel.create();
+    } catch {
+      await channel.watch();
+    }
+
+    await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);
+    return streamChannelId;
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
 
 export async function createSocketRelayParticipantToken(userId: string, displayName: string): Promise<SocketRelayStreamParticipantCredentials | null> {
@@ -55,12 +59,16 @@ export async function createSocketRelayParticipantToken(userId: string, displayN
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  try {
+    const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
 
-  return {
-    streamApiKey: config.apiKey,
-    streamUserId,
-    streamToken: streamClient.createToken(streamUserId),
-  };
+    return {
+      streamApiKey: config.apiKey,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }

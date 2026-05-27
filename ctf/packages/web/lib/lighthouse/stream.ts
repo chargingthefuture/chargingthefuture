@@ -29,24 +29,28 @@ export async function ensureLighthouseMatchChannel(input: {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const seekerStreamUserId = await upsertStreamUser(streamClient, input.seekerUserId, input.seekerDisplayName);
-  const hostStreamUserId = await upsertStreamUser(streamClient, input.hostUserId, input.hostDisplayName);
-
-  const streamChannelId = `lighthouse-match-${input.matchId}`;
-  const channel = streamClient.channel('messaging', streamChannelId, {
-    created_by_id: seekerStreamUserId,
-    name: 'LightHouse Match Thread',
-  });
-
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
   try {
-    await channel.create();
-  } catch {
-    await channel.watch();
-  }
+    const seekerStreamUserId = await upsertStreamUser(streamClient, input.seekerUserId, input.seekerDisplayName);
+    const hostStreamUserId = await upsertStreamUser(streamClient, input.hostUserId, input.hostDisplayName);
 
-  await channel.addMembers([seekerStreamUserId, hostStreamUserId]);
-  return streamChannelId;
+    const streamChannelId = `lighthouse-match-${input.matchId}`;
+    const channel = streamClient.channel('messaging', streamChannelId, {
+      created_by_id: seekerStreamUserId,
+      name: 'LightHouse Match Thread',
+    });
+
+    try {
+      await channel.create();
+    } catch {
+      await channel.watch();
+    }
+
+    await channel.addMembers([seekerStreamUserId, hostStreamUserId]);
+    return streamChannelId;
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
 
 export async function createLighthouseParticipantToken(userId: string, displayName: string): Promise<LighthouseStreamParticipantCredentials | null> {
@@ -55,12 +59,16 @@ export async function createLighthouseParticipantToken(userId: string, displayNa
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  try {
+    const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
 
-  return {
-    streamApiKey: config.apiKey,
-    streamUserId,
-    streamToken: streamClient.createToken(streamUserId),
-  };
+    return {
+      streamApiKey: config.apiKey,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }

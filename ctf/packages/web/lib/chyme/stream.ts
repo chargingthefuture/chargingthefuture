@@ -48,16 +48,20 @@ export async function createStreamJoinCredentials(
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(streamConfig.apiKey, streamConfig.apiSecret);
-  const streamUserId = await ensureMember(streamClient, userId, displayName);
-  const channel = await ensureChannel(streamClient, streamUserId);
+  const streamClient = new StreamChat(streamConfig.apiKey, { apiSecret: streamConfig.apiSecret });
+  try {
+    const streamUserId = await ensureMember(streamClient, userId, displayName);
+    const channel = await ensureChannel(streamClient, streamUserId);
 
-  return {
-    streamApiKey: streamConfig.apiKey,
-    streamChannelId: channel.id ?? CHYME_STREAM_CHANNEL_ID,
-    streamUserId,
-    streamToken: streamClient.createToken(streamUserId),
-  };
+    return {
+      streamApiKey: streamConfig.apiKey,
+      streamChannelId: channel.id ?? CHYME_STREAM_CHANNEL_ID,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
 
 export async function sendChymeStreamMessage(input: {
@@ -70,18 +74,22 @@ export async function sendChymeStreamMessage(input: {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(streamConfig.apiKey, streamConfig.apiSecret);
-  const streamUserId = await ensureMember(streamClient, input.userId, input.displayName);
-  const channel = await ensureChannel(streamClient, streamUserId);
-
+  const streamClient = new StreamChat(streamConfig.apiKey, { apiSecret: streamConfig.apiSecret });
   try {
-    const result = await channel.sendMessage({
-      text: input.text,
-      user_id: streamUserId,
-    });
+    const streamUserId = await ensureMember(streamClient, input.userId, input.displayName);
+    const channel = await ensureChannel(streamClient, streamUserId);
 
-    return result.message?.id ?? null;
-  } catch {
-    return null;
+    try {
+      const result = await channel.sendMessage({
+        text: input.text,
+        user_id: streamUserId,
+      });
+
+      return result.message?.id ?? null;
+    } catch {
+      return null;
+    }
+  } finally {
+    await streamClient.disconnectUser();
   }
 }

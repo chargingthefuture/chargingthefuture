@@ -1,5 +1,5 @@
 
-import { queryDb } from '../packages/web/lib/db/postgres.ts';
+import { Pool } from 'pg';
 import crypto from 'crypto';
 
 const WEEK_START = '2026-05-19';
@@ -20,50 +20,69 @@ function deterministicMetricId(weekDate, metricKey, sourcePlugin) {
   return crypto.createHash('sha256').update(weekDate + metricKey + sourcePlugin).digest('hex').slice(0, 32);
 }
 
-async function seed() {
-  await queryDb('BEGIN');
-  try {
-    // Seed week record
-    const weekId = deterministicWeekId(WEEK_START);
-    await queryDb(
-      `INSERT INTO weekly_performance_weeks (id, week_start_date, summary)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (id) DO NOTHING`,
-      [
-        weekId,
-        WEEK_START,
-        'Week ending ' + WEEK_START + ': strong engagement and retention metrics',
-      ]
-    );
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${name} is required.`);
+  }
+  return value;
+}
 
-    // Seed metrics
-    for (const metric of METRICS) {
-      const metricId = deterministicMetricId(WEEK_START, metric.key, 'analytics');
-      await queryDb(
-        `INSERT INTO weekly_performance_metrics
-         (id, week_start_date, metric_key, metric_value, metric_unit, source_plugin)
-         VALUES ($1, $2, $3, $4, $5, $6)
+async function seed() {
+  const pool = new Pool({
+    connectionString: requireEnv('DATABASE_URL'),
+    ssl: { rejectUnauthorized: false },
+  });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    try {
+      // Seed week record
+      const weekId = deterministicWeekId(WEEK_START);
+      await client.query(
+        `INSERT INTO weekly_performance_weeks (id, week_start_date, summary)
+         VALUES ($1, $2, $3)
          ON CONFLICT (id) DO NOTHING`,
         [
-          metricId,
+          weekId,
           WEEK_START,
-          metric.key,
-          metric.value,
-          metric.unit,
-          'analytics',
+          'Week ending ' + WEEK_START + ': strong engagement and retention metrics',
         ]
       );
-    }
 
-    await queryDb('COMMIT');
-    console.log('Seeded weekly performance weeks and metrics.');
-  } catch (err) {
-    try {
-      await queryDb('ROLLBACK');
-    } catch (rollbackErr) {
-      console.error('Rollback failed:', rollbackErr);
+      // Seed metrics
+      for (const metric of METRICS) {
+        const metricId = deterministicMetricId(WEEK_START, metric.key, 'analytics');
+        await client.query(
+          `INSERT INTO weekly_performance_metrics
+           (id, week_start_date, metric_key, metric_value, metric_unit, source_plugin)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            metricId,
+            WEEK_START,
+            metric.key,
+            metric.value,
+            metric.unit,
+            'analytics',
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+      console.log('Seeded weekly performance weeks and metrics.');
+    } catch (err) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('Rollback failed:', rollbackErr);
+      }
+      throw err;
     }
-    throw err;
+  } finally {
+    client.release();
+    await pool.end();
   }
 }
 

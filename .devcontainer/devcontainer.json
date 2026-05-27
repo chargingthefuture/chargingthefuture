@@ -31,9 +31,12 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "github.copilot",
+        "github.copilot-chat",
         "coderabbit.coderabbit-vscode",
         "smallcloud.codify"
       ]
     }
-  }
+  },
+  "workspaceFolder": "/workspaces/chargingthefuture"
 }

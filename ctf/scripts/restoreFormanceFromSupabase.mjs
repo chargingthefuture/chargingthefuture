@@ -1,23 +1,10 @@
 #!/usr/bin/env node
 
-// Restore a Formance Postgres backup (produced by backupFormanceToSupabase.mjs)
-// from Supabase Storage into a target Formance database. This is the automated
-// half of disaster recovery / spinning up a fresh Formance environment:
-//
-//   1. Provision a new Postgres (e.g. a Neon project) and set FORMANCE_DATABASE_URL
-//      to its connection string.
-//   2. Run this script to load the latest (or a specified) backup dump.
-//   3. Deploy the Formance ledger image (ops/formance/Dockerfile.ledger); its
-//      AUTO_UPGRADE brings the schema up to the current ledger version on start.
-//
-// The dump is pg_dump custom-format (-Fc), so it is restored with pg_restore.
-// Because restore is destructive, it refuses to run unless FORMANCE_RESTORE_CONFIRM=1
-// is set — automation sets it intentionally so the script can never clobber a
-// database by accident.
-
 import { execFileSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 import { writeFileSync, unlinkSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import os from 'node:os';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -25,6 +12,14 @@ function requireEnv(name) {
     throw new Error(`${name} is required.`);
   }
   return value;
+}
+
+function sanitizeFilename(filename) {
+  const safe = basename(filename);
+  if (!safe || safe.includes('..') || safe.startsWith('/')) {
+    throw new Error(`Invalid filename: ${filename}`);
+  }
+  return safe;
 }
 
 async function main() {
@@ -45,30 +40,36 @@ async function main() {
 
   // Pick the backup: an explicit FORMANCE_BACKUP_FILE, else the most recent dump.
   // Backup names are ISO-timestamped (formance-backup-<ts>.dump), so lexical sort
-  // ascending puts the newest last.
+  // descending puts the newest first.
   let filename = process.env.FORMANCE_BACKUP_FILE?.trim();
+  let safePath;
+
   if (!filename) {
     const { data: list, error: listError } = await supabase.storage.from('backups').list('formance/', {
-      sortBy: { column: 'name', order: 'asc' },
+      sortBy: { column: 'name', order: 'desc' },
+      limit: 1,
     });
     if (listError) {
       throw listError;
     }
-    const dumps = (list ?? []).filter((f) => f.name.endsWith('.dump')).map((f) => f.name).sort();
-    if (dumps.length === 0) {
+    if (!list || list.length === 0) {
       throw new Error('No Formance backups found in Supabase backups/formance/.');
     }
-    filename = dumps[dumps.length - 1];
+    filename = list[0].name;
   }
 
-  console.log(`Restoring Formance backup: ${filename}`);
+  // Sanitize filename to prevent path traversal
+  const safeName = sanitizeFilename(filename);
+  safePath = join(os.tmpdir(), safeName);
+
+  console.log(`Restoring Formance backup: ${safeName}`);
 
   const { data, error: downloadError } = await supabase.storage.from('backups').download(`formance/${filename}`);
   if (downloadError) {
     throw downloadError;
   }
   const buffer = Buffer.from(await data.arrayBuffer());
-  writeFileSync(filename, buffer);
+  writeFileSync(safePath, buffer);
 
   try {
     // --clean --if-exists makes the restore idempotent on both a fresh DB (drops
@@ -80,18 +81,18 @@ async function main() {
       '--clean',
       '--if-exists',
       '--dbname', FORMANCE_DATABASE_URL,
-      filename,
+      safePath,
     ], {
       stdio: 'inherit',
       env: process.env,
     });
 
-    console.log(`Restore successful: ${filename} -> target Formance database.`);
+    console.log(`Restore successful: ${safeName} -> target Formance database.`);
   } catch (err) {
     console.error('Restore failed:', err instanceof Error ? err.message : err);
     process.exit(1);
   } finally {
-    try { unlinkSync(filename); } catch {}
+    try { unlinkSync(safePath); } catch {}
   }
 }
 

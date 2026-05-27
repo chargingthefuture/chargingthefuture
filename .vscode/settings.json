@@ -53,7 +53,7 @@
     "npm.autoDetect": "off",
     "npm.enableScriptExplorer": false,
 
-    "workbench.editor.enablePreview": true,
+    "workbench.editor.enablePreview": false,
     "workbench.editor.enablePreviewFromCodeNavigation": true,
     "workbench.editor.limit.enabled": true,
     "workbench.editor.limit.perEditorGroup": true,

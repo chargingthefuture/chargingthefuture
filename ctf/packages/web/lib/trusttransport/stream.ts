@@ -27,24 +27,28 @@ export async function ensureTrustTransportTripChannel(input: {
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId);
-  const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId);
-
-  const streamChannelId = `trusttransport-trip-${input.tripId}`;
-  const channel = streamClient.channel('messaging', streamChannelId, {
-    created_by_id: requesterStreamUserId,
-    name: 'TrustTransport Trip Thread',
-  });
-
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
   try {
-    await channel.create();
-  } catch {
-    await channel.watch();
-  }
+    const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId);
+    const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId);
 
-  await channel.addMembers([requesterStreamUserId, providerStreamUserId]);
-  return streamChannelId;
+    const streamChannelId = `trusttransport-trip-${input.tripId}`;
+    const channel = streamClient.channel('messaging', streamChannelId, {
+      created_by_id: requesterStreamUserId,
+      name: 'TrustTransport Trip Thread',
+    });
+
+    try {
+      await channel.create();
+    } catch {
+      await channel.watch();
+    }
+
+    await channel.addMembers([requesterStreamUserId, providerStreamUserId]);
+    return streamChannelId;
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
 
 export async function createTrustTransportParticipantToken(userId: string): Promise<TrustTransportStreamParticipantCredentials | null> {
@@ -53,12 +57,16 @@ export async function createTrustTransportParticipantToken(userId: string): Prom
     return null;
   }
 
-  const streamClient = StreamChat.getInstance(config.apiKey, config.apiSecret);
-  const streamUserId = await upsertStreamUser(streamClient, userId);
+  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  try {
+    const streamUserId = await upsertStreamUser(streamClient, userId);
 
-  return {
-    streamApiKey: config.apiKey,
-    streamUserId,
-    streamToken: streamClient.createToken(streamUserId),
-  };
+    return {
+      streamApiKey: config.apiKey,
+      streamUserId,
+      streamToken: streamClient.createToken(streamUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
 }
