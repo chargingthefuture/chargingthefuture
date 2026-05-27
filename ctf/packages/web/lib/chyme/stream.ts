@@ -48,7 +48,7 @@ export async function createStreamJoinCredentials(
     return null;
   }
 
-  const streamClient = new StreamChat(streamConfig.apiKey, { apiSecret: streamConfig.apiSecret });
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const streamUserId = await ensureMember(streamClient, userId, displayName);
     const channel = await ensureChannel(streamClient, streamUserId);
@@ -74,7 +74,7 @@ export async function sendChymeStreamMessage(input: {
     return null;
   }
 
-  const streamClient = new StreamChat(streamConfig.apiKey, { apiSecret: streamConfig.apiSecret });
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const streamUserId = await ensureMember(streamClient, input.userId, input.displayName);
     const channel = await ensureChannel(streamClient, streamUserId);

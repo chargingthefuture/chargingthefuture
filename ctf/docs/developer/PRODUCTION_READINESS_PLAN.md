@@ -168,13 +168,14 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       names (resolves to `demo` via search_path) and suppresses the `public.users` block (no users
       table in demo). Validated against the 62-user v2 Neon branch 2026-05-27.
 - [x] **#102 demo seed**: `pnpm seed:demo` (`ctf/scripts/seedDemo.mjs`) — single idempotent
-      orchestrator that populates all 16 plugins in the `demo` schema for a named participant
+      orchestrator that populates all 19 plugins in the `demo` schema for a named participant
       (`DEMO_OWNER_ID`). Covers: service-credits (wallet + ledger + transfer), gdp, weekly-performance,
       levelup (cohort + enrollment), skills-hunt (active round + accepted submission + leaderboard),
-      directory (3 profiles), workforce (profile + occupation), lighthouse (seeker + host + 2 properties
-      + match), feed + announcements, trust, mood, gentlepulse (library + play + rating + favorite),
-      foundation (thread + capacity policy), chyme (room + members + messages), trusttransport (request
-      + offer), peer-programming (topic + cohort + members).
+      skills-taxonomy (sector + job-title + 2 skills), directory (3 profiles), workforce (profile +
+      occupation), lighthouse (seeker + host + 2 properties + match), socketrelay (user-extension +
+      request + fulfillment), feed + announcements, trust, mood, gentlepulse (library + play + rating +
+      favorite), foundation (thread + capacity policy), chyme (room + members + messages), trusttransport
+      (request + offer), peer-programming (topic + cohort + members), clicklog (3 incidents).
 - [ ] **#102 remaining**: runtime validation on Render — owner: (1) set `DATABASE_URL_DIRECT` in
       Infisical `production`, (2) run `pnpm migrate:demo-schema` + `DEMO_OWNER_ID=<clerk-id> pnpm seed:demo`,
       (3) target your Clerk ID to `demo-mode` in Unleash, (4) confirm writes land only in `demo`/`ctf-demo`.
@@ -335,10 +336,11 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   on pull — no per-session setup needed. `.claude/settings.local.json` added to `.gitignore` (was
   untracked but contained session-scoped Neon credentials; deleted).
 - 2026-05-27: **Demo seed script shipped (`pnpm seed:demo`).** `ctf/scripts/seedDemo.mjs` — idempotent
-  orchestrator seeding all 16 plugins in the `demo` schema for a named `DEMO_OWNER_ID`. Uses
-  `DATABASE_URL_DIRECT` + `search_path=demo,public` (bypasses flag layer; safe to run without Unleash).
-  Run after `pnpm migrate:demo-schema`. Full runtime validation (Render + Unleash) is the remaining
-  owner-gated step.
+  orchestrator seeding all 19 plugins (all 17 production-seed equivalents + trust + gentlepulse) in
+  the `demo` schema for a named `DEMO_OWNER_ID`. Uses `DATABASE_URL_DIRECT` + `search_path=demo,public`
+  (bypasses flag layer; safe to run without Unleash). Run after `pnpm migrate:demo-schema`. Full runtime
+  validation (Render + Unleash) is the remaining owner-gated step. Fixed stream-chat v8 API break:
+  `new StreamChat(key, { apiSecret })` → `new StreamChat(key, apiSecret)` in all 6 plugin stream files.
 - 2026-05-27: **v2 → v3 schema migration validated + demo schema provisioner built (#102 step 3).**
   Ran `schema.sql` against a 62-user v2 Neon clone (Neon PG 17). Discovered and recorded all
   v2→v3 DDL hazards: (H1) `CREATE UNIQUE INDEX ON chyme_rooms(room_key)` fires inside the first

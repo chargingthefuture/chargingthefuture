@@ -13,7 +13,7 @@ export type FeedStreamCredentials = {
 export async function getFeedStreamCredentials(userId: string, displayName: string): Promise<FeedStreamCredentials | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) return null;
-  const streamClient = new StreamChat(streamConfig.apiKey, { apiSecret: streamConfig.apiSecret });
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const streamUserId = `feed-${userId}`;
     await streamClient.upsertUser({ id: streamUserId, name: displayName });
@@ -61,7 +61,7 @@ export async function emitFeedMembershipEventToStream(input: {
     return false;
   }
 
-  const streamClient = new StreamChat(streamConfig.apiKey, { apiSecret: streamConfig.apiSecret });
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const channel = streamClient.channel('messaging', 'ctf-feed-membership-events', {
       created_by_id: `feed-${input.actorId}`,

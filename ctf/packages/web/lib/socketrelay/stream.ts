@@ -29,7 +29,7 @@ export async function ensureSocketRelayFulfillmentChannel(input: {
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId, input.requesterDisplayName);
     const fulfillerStreamUserId = await upsertStreamUser(streamClient, input.fulfillerUserId, input.fulfillerDisplayName);
@@ -59,7 +59,7 @@ export async function createSocketRelayParticipantToken(userId: string, displayN
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
 

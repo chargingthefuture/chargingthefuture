@@ -29,7 +29,7 @@ export async function ensureLighthouseMatchChannel(input: {
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const seekerStreamUserId = await upsertStreamUser(streamClient, input.seekerUserId, input.seekerDisplayName);
     const hostStreamUserId = await upsertStreamUser(streamClient, input.hostUserId, input.hostDisplayName);
@@ -59,7 +59,7 @@ export async function createLighthouseParticipantToken(userId: string, displayNa
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
 

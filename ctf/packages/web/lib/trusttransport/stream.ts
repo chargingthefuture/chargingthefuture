@@ -27,7 +27,7 @@ export async function ensureTrustTransportTripChannel(input: {
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId);
     const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId);
@@ -57,7 +57,7 @@ export async function createTrustTransportParticipantToken(userId: string): Prom
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const streamUserId = await upsertStreamUser(streamClient, userId);
 

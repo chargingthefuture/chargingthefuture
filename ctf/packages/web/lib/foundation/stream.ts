@@ -32,7 +32,7 @@ export async function ensureFoundationStreamChannel(input: {
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const survivorStreamUserId = await upsertStreamUser(streamClient, input.survivorUserId, input.survivorDisplayName);
     const providerStreamUserId = await upsertStreamUser(streamClient, input.providerUserId, input.providerDisplayName);
@@ -70,7 +70,7 @@ export async function createFoundationParticipantToken(userId: string, displayNa
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const streamUserId = await upsertStreamUser(streamClient, userId, displayName);
     return {
@@ -94,7 +94,7 @@ export async function sendFoundationStreamMessage(input: {
     return null;
   }
 
-  const streamClient = new StreamChat(config.apiKey, { apiSecret: config.apiSecret });
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
   try {
     const streamUserId = await upsertStreamUser(streamClient, input.senderUserId, input.senderDisplayName);
     const channel = streamClient.channel('messaging', input.streamChannelId);

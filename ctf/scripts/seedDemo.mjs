@@ -61,6 +61,12 @@ const ID = {
   ppCohort: 'ddd00000-0000-4000-8000-000000000025',
   enrollmentOwner: 'ddd00000-0000-4000-8000-000000000026',
   leaderboard: 'ddd00000-0000-4000-8000-000000000027',
+  srRequest: 'ddd00000-0000-4000-8000-000000000028',
+  srFulfillment: 'ddd00000-0000-4000-8000-000000000029',
+  taxSector: 'ddd00000-0000-4000-8000-000000000030',
+  taxJobTitle: 'ddd00000-0000-4000-8000-000000000031',
+  taxSkill1: 'ddd00000-0000-4000-8000-000000000032',
+  taxSkill2: 'ddd00000-0000-4000-8000-000000000033',
 };
 
 function sha256id(...parts) {
@@ -635,6 +641,94 @@ async function seedPeerProgramming(c) {
   console.log('  ✓ peer-programming');
 }
 
+async function seedSkillsTaxonomy(c) {
+  await c.query(
+    `INSERT INTO skills_taxonomy_sectors (id, name, display_order, workforce_share, is_active)
+     VALUES ($1::uuid, 'Technology', 1, 0.35, true)
+     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, is_active = true`,
+    [ID.taxSector],
+  );
+
+  await c.query(
+    `INSERT INTO skills_taxonomy_job_titles (id, sector_id, name, display_order, is_active)
+     VALUES ($1::uuid, $2::uuid, 'Platform Engineer', 1, true)
+     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, is_active = true`,
+    [ID.taxJobTitle, ID.taxSector],
+  );
+
+  for (const [id, name, order] of [
+    [ID.taxSkill1, 'TypeScript', 1],
+    [ID.taxSkill2, 'PostgreSQL', 2],
+  ]) {
+    await c.query(
+      `INSERT INTO skills_taxonomy_skills (id, job_title_id, name, display_order, aliases, is_active)
+       VALUES ($1::uuid, $2::uuid, $3, $4, '[]'::jsonb, true)
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, is_active = true`,
+      [id, ID.taxJobTitle, name, order],
+    );
+  }
+
+  console.log('  ✓ skills-taxonomy');
+}
+
+async function seedSocketRelay(c) {
+  for (const [uid, display, bio] of [
+    [OWNER, 'Demo Participant', 'Open to helping neighbours with logistics and community tasks.'],
+    [PEER_1, 'Alex Rivera', 'Community connector — ask me anything.'],
+  ]) {
+    await c.query(
+      `INSERT INTO socketrelay_user_extension
+       (user_id, display_name, bio, relay_preferences, presence_opt_in)
+       VALUES ($1, $2, $3, '{"notifications":"all"}'::jsonb, true)
+       ON CONFLICT (user_id) DO UPDATE SET
+         display_name = EXCLUDED.display_name, bio = EXCLUDED.bio, updated_at = NOW()`,
+      [uid, display, bio],
+    );
+  }
+
+  // Request owned by peer, fulfilled by owner — shows owner as helper
+  await c.query(
+    `INSERT INTO socketrelay_requests
+     (id, owner_user_id, title, details, category, city, is_public, status,
+      idempotency_key, reopened_count, claimed_fulfillment_id)
+     VALUES ($1::uuid, $2,
+       'Help moving a few boxes', 'Moving to a new place this weekend — need 2 hours of lifting help.',
+       'logistics', 'Oakland', true, 'claimed', 'demo-sr-req-001', 0, $3::uuid)
+     ON CONFLICT (owner_user_id, idempotency_key) DO UPDATE SET
+       status = EXCLUDED.status, claimed_fulfillment_id = EXCLUDED.claimed_fulfillment_id`,
+    [ID.srRequest, PEER_1, ID.srFulfillment],
+  );
+
+  await c.query(
+    `INSERT INTO socketrelay_fulfillments
+     (id, request_id, requester_user_id, fulfiller_user_id, status)
+     VALUES ($1::uuid, $2::uuid, $3, $4, 'active')
+     ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+    [ID.srFulfillment, ID.srRequest, PEER_1, OWNER],
+  );
+
+  console.log('  ✓ socketrelay');
+}
+
+async function seedClicklog(c) {
+  const incidents = [
+    { uid: OWNER, meta: { latitude: 37.7749, longitude: -122.4194, notes: 'Demo check-in — SF' } },
+    { uid: OWNER, meta: { latitude: 37.8044, longitude: -122.2712, notes: 'Demo check-in — Oakland' } },
+    { uid: PEER_1, meta: { latitude: 37.7749, longitude: -122.4194 } },
+  ];
+
+  for (const { uid, meta } of incidents) {
+    await c.query(
+      `INSERT INTO clicklog_incidents (user_id, metadata)
+       VALUES ($1, $2::jsonb)
+       ON CONFLICT (user_id, metadata_hash) DO NOTHING`,
+      [uid, JSON.stringify(meta)],
+    );
+  }
+
+  console.log('  ✓ clicklog');
+}
+
 async function main() {
   const connStr =
     process.env.DATABASE_URL_DIRECT ||
@@ -669,6 +763,9 @@ async function main() {
     await seedChyme(client);
     await seedTrustTransport(client);
     await seedPeerProgramming(client);
+    await seedSkillsTaxonomy(client);
+    await seedSocketRelay(client);
+    await seedClicklog(client);
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
