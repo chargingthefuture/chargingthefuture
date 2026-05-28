@@ -65,7 +65,6 @@ rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
 - [108-observability-provider-abstraction-rules.mdc](108-observability-provider-abstraction-rules.mdc)
 - [109-sentry-implementation-rules.mdc](109-sentry-implementation-rules.mdc)
 - [110-stream-maker-tier-rules.mdc](110-stream-maker-tier-rules.mdc)
-- [111-deployment-topology-rules.mdc](111-deployment-topology-rules.mdc)
 - [112-platform-architecture-rules.mdc](112-platform-architecture-rules.mdc)
 - [113-platform-coding-rules.mdc](113-platform-coding-rules.mdc)
 - [114-single-profile-and-plugin-extension-rules.mdc](114-single-profile-and-plugin-extension-rules.mdc)

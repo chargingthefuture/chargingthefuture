@@ -27,14 +27,6 @@ else
   echo "Infisical CLI already installed."
 fi
 
-# Install/update Vercel CLI
-echo "Checking for Vercel CLI..."
-if ! command -v vercel &> /dev/null; then
-  npm install -g vercel
-else
-  echo "Vercel CLI already installed."
-fi
-
 # Install/update Render CLI (used to open a shell into Render services, e.g. to
 # run the one-time Formance ledger bootstrap from inside the private network).
 echo "Checking for Render CLI..."
@@ -168,6 +160,5 @@ else
 fi
 
 # Prompt for any remaining manual logins
-echo "If you need to log in to GitHub or Vercel, run:"
+echo "If you need to log in to GitHub, run:"
 echo "  gh auth login"
-echo "  vercel login"
