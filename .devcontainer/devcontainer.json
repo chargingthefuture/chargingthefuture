@@ -33,8 +33,7 @@
       "extensions": [
         "github.copilot",
         "github.copilot-chat",
-        "coderabbit.coderabbit-vscode",
-        "smallcloud.codify"
+        "coderabbit.coderabbit-vscode"
       ]
     }
   },
