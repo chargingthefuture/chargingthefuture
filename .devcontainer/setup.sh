@@ -3,14 +3,6 @@ set -e
 
 FAST_MODE="${CTF_CODESPACES_FAST_MODE:-0}"
 
-# Install/update Snyk CLI
-echo "Checking for Snyk CLI..."
-if ! command -v snyk &> /dev/null; then
-  npm install -g snyk
-else
-  echo "Snyk CLI already installed."
-fi
-
 # Install/update GitHub CLI
 echo "Checking for GitHub CLI (gh)..."
 if ! command -v gh &> /dev/null; then
