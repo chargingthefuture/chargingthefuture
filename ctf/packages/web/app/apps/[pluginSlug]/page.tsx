@@ -19,6 +19,7 @@ import { TrustTransportShell } from '@/components/trusttransport/trusttransport-
 import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
 import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
+import { UnlockShell } from '@/components/unlock/unlock-shell';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -141,10 +142,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  const shouldRequireUsername = selectedPlugin.slug !== 'chyme';
+  const isUnlockPlugin = selectedPlugin.slug === 'unlock';
+  const shouldRequireUsername = selectedPlugin.slug !== 'chyme' && !isUnlockPlugin;
   const decision = await evaluatePluginAccess({
     requireUsername: shouldRequireUsername,
-    allowUnlockSupportOnly: selectedPlugin.slug === 'chyme',
+    allowUnlockSupportOnly: selectedPlugin.slug === 'chyme' || isUnlockPlugin,
     requireApprovedUserOrAdmin: selectedPlugin.slug === 'chyme',
   });
 
@@ -157,6 +159,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
         requestedPluginSlug={selectedPlugin.slug}
       />
     );
+  }
+
+  if (selectedPlugin.slug === 'unlock') {
+    return <UnlockShell />;
   }
 
   if (selectedPlugin.slug === 'clicklog') {

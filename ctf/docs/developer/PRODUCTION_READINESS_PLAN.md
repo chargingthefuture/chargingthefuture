@@ -97,7 +97,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| skills-taxonomy | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
+| skills-taxonomy | 🎨 | ✅ | 🟡 | ⬜ | ⬜ | ⬜ |
 | directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -109,15 +109,15 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| weekly-performance | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
+| weekly-performance | 🎨 | ✅ | 🟡 | ⬜ | ⬜ | ⬜ |
 | gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| clicklog | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
-| unlock | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
+| clicklog | 🎨 | ✅ | 🟡 | ⬜ | ⬜ | ⬜ |
+| unlock | 🎨 | ✅ | 🟡 | ⬜ | ⬜ | ⬜ |
 
-For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
+All plugins now have designs. Web pixel-perfect + android parity work is unblocked for all 20 plugins.
 
 Note: "community" is **not** a standalone plugin — it is a channel within the Feed plugin
 (`feed_render_config.enabled_channels` includes `community`; routes under `/api/feed/community/*`).
@@ -222,9 +222,10 @@ Recorded in this progress channel rather than as separate issues (per decision 1
 5. Merge to `main`; GitHub Actions builds + Render pulls the image. Ship new user-facing surfaces
    behind an OFF feature flag (epic #103) and toggle per-branch/PR or by rollout once verified.
 
-**Design submodule status (2026-05-28):** 16 of 20 plugins have full 4-state mockups confirmed
-in the submodule at commit `dcaaf15`. Missing: `SkillsTaxonomy`, `WeeklyPerformance`, `Clicklog`,
-`Unlock`. These 4 are marked ⏳ above and remain blocked on the design agent.
+**Design submodule status (2026-05-28):** All 20 plugins now have full 4-state mockups confirmed
+in the submodule at commit `643ae6d`. The 4 previously-pending plugins (`SkillsTaxonomy`,
+`WeeklyPerformance`, `ClickLog`, `Unlock`) all landed in this update. All ⏳ rows are now 🎨 —
+web pixel-perfect + android parity can proceed for all plugins.
 
 ## Change log
 
@@ -354,6 +355,11 @@ in the submodule at commit `dcaaf15`. Missing: `SkillsTaxonomy`, `WeeklyPerforma
   `seedDemo.mjs` with `demo_owner_id` entered in the GitHub UI. Also committed `ctf/schema.demo.sql`
   (auto-generated from `schema.sql` via `generateDemoSchema.mjs`) as a paste-ready fallback for
   direct Neon SQL Editor use.
+- 2026-05-28: **All 20 designs landed.** Design submodule updated to commit `643ae6d`. The 4
+  previously ⏳ plugins (`SkillsTaxonomy`, `WeeklyPerformance`, `ClickLog`, `Unlock`) now have full
+  4-state mockups (populated/empty/loading/public). All ⏳ rows promoted to 🎨. Web pixel-perfect
+  + android parity work is unblocked for all 20 plugins. Active work order: SkillsTaxonomy →
+  WeeklyPerformance → ClickLog → Unlock (in progress on this session), then remaining 16 plugins.
 - 2026-05-28: **UI circle-back pass opened.** PR #87 (backend pass) merged 2026-05-27. New branch
   `claude/production-readiness-ui-circle-back` opened for the UI circle-back pass. Design submodule
   verified: 16/20 plugins have full 4-state mockups (confirmed at commit `dcaaf15`). 4 plugins still
