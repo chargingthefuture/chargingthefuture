@@ -438,7 +438,7 @@ async function handleTransfer(transfer: TransferRequest) {
                   <div key={m.title} style={{ ...earnMethodCardStyle, border: `1px solid ${m.color}25` }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB", marginBottom: 4 }}>{m.title}</div>
-                      <Badge style={{ background: "rgba(255,255,255,0.04)", color: "#6B7280", border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{m.difficulty}</Badge>
+                      <Badge style={{ background: `${m.color}15`, color: m.color, border: `1px solid ${m.color}30`, fontSize: 11 }}>{m.difficulty}</Badge>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>{m.credits}</div>

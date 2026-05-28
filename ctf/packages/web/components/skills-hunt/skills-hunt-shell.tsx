@@ -278,7 +278,6 @@ export function SkillsHuntShell({
     } finally {
       setSubmitting(false);
     }
-  }
 
   function resetForm() {
     setDisplayName(""); setBio(""); setQuora("");
