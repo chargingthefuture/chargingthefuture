@@ -1,18 +1,16 @@
 # CTF Production Readiness Plan (Web + Android)
 
-> Living tracking doc for PR `claude/production-readiness-plan-op4lA`.
-> Goal: bring every plugin, the full web app, and the Android app to production —
-> pixel-perfect to the `design/` submodule and complete to each plugin's feature inventory.
-> Infra: the Railway → Render migration is **complete on `main`** (PRs #98–#117 superseded the
-> early PR #86 foundation). Deploy model is now a **single production environment** with
-> **Unleash + OpenFeature feature flags** for release gating and preview-per-branch (epic #103;
-> dependents #101 unlock-as-flag, #102 public-screen gating + demo-safe data). Infisical remains
-> the single source of truth for env variables.
+> Living tracking doc. PR #87 (`claude/production-readiness-plan-op4lA`) is **merged** — all backend
+> work, infra, feature flags, demo-mode, and Formance DR shipped. This doc now tracks the
+> **UI circle-back pass** on `claude/production-readiness-ui-circle-back`.
+> Goal: bring every plugin to production — pixel-perfect web + Android parity — against the
+> `design/` submodule mockups. All 16 plugins with completed designs can proceed. 4 plugins
+> (`skills-taxonomy`, `weekly-performance`, `clicklog`, `unlock`) still await designs (⏳).
 
 ## Locked strategic decisions (owner, 2026-05-20)
 
-1. **Branch/PR:** All production-readiness code lands on `claude/production-readiness-plan-op4lA`
-   with its own draft PR. PR #74 (design-audit) stays separate. This doc is the progress channel.
+1. **Branch/PR:** UI circle-back work lands on `claude/production-readiness-ui-circle-back`.
+   PR #87 (backend pass) merged 2026-05-27. This doc is the progress channel.
 2. **Deploy target:** **Render**, single **production** environment (no staging, no per-PR Render
    preview environments — Hobby workspace can't host them). Railway → Render migration is complete on
    `main`. Images are built in GitHub Actions, pushed to GHCR, and pulled by Render. Release gating is
@@ -99,7 +97,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-taxonomy | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
 | directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -111,13 +109,13 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| weekly-performance | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| weekly-performance | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
 | gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| clicklog | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| unlock | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| clicklog | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
+| unlock | ⏳ | ✅ | ⏳ | ⏳ | ⬜ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
 
@@ -215,12 +213,18 @@ Recorded in this progress channel rather than as separate issues (per decision 1
 
 ## How a future session / agent picks up work
 
-1. `git -C design fetch && git submodule update --init design` (designs are the only UI source of truth).
-2. Pick the next ⬜ plugin in the ordered list above whose dependencies are met.
+1. `git submodule update --init design` (designs are the only UI source of truth). Mockups live in
+   `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/`.
+2. Pick the next ⬜ plugin in the ordered list above whose dependencies are met **and whose design
+   exists** (skip ⏳ rows until the design submodule is updated with that plugin's mockup).
 3. Run the 7-gate pipeline above on an isolated worktree.
 4. Update this checklist + the plugin inventory's Delivery Status in the same commit.
 5. Merge to `main`; GitHub Actions builds + Render pulls the image. Ship new user-facing surfaces
    behind an OFF feature flag (epic #103) and toggle per-branch/PR or by rollout once verified.
+
+**Design submodule status (2026-05-28):** 16 of 20 plugins have full 4-state mockups confirmed
+in the submodule at commit `dcaaf15`. Missing: `SkillsTaxonomy`, `WeeklyPerformance`, `Clicklog`,
+`Unlock`. These 4 are marked ⏳ above and remain blocked on the design agent.
 
 ## Change log
 
@@ -350,6 +354,13 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   `seedDemo.mjs` with `demo_owner_id` entered in the GitHub UI. Also committed `ctf/schema.demo.sql`
   (auto-generated from `schema.sql` via `generateDemoSchema.mjs`) as a paste-ready fallback for
   direct Neon SQL Editor use.
+- 2026-05-28: **UI circle-back pass opened.** PR #87 (backend pass) merged 2026-05-27. New branch
+  `claude/production-readiness-ui-circle-back` opened for the UI circle-back pass. Design submodule
+  verified: 16/20 plugins have full 4-state mockups (confirmed at commit `dcaaf15`). 4 plugins still
+  await design: `skills-taxonomy`, `weekly-performance`, `clicklog`, `unlock` (remain ⏳). Web px +
+  Android parity work begins with the 16 design-complete plugins. Also fixed devcontainer setup.sh
+  sed command (was BRE mode with ERE-style groups; now uses `sed -En` + ERE capture group for
+  correct password extraction from `DATABASE_URL`).
 - 2026-05-27: **v2 → v3 schema migration validated + demo schema provisioner built (#102 step 3).**
   Ran `schema.sql` against a 62-user v2 Neon clone (Neon PG 17). Discovered and recorded all
   v2→v3 DDL hazards: (H1) `CREATE UNIQUE INDEX ON chyme_rooms(room_key)` fires inside the first
