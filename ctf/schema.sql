@@ -1,8 +1,3 @@
--- === skills_taxonomy_dependency_graph view (from prod) ===
-CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
-  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
-  FROM skills_taxonomy_consumer_bindings
-  GROUP BY target_type, target_id;
 -- Combined schema.sql for CTF (rewrite, no /platform)
 
 BEGIN;
@@ -97,6 +92,8 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   metadata JSONB NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
+-- Chyme does not maintain its own service_credits_transactions table.
+-- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
 
 -- === peer-programming placeholder ===
@@ -150,6 +147,29 @@ ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN 
 ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS quora_profile_url VARCHAR;
 ALTER TABLE IF EXISTS public.chyme_room_members ADD COLUMN IF NOT EXISTS username VARCHAR(64);
 ALTER TABLE IF EXISTS public.chyme_messages ADD COLUMN IF NOT EXISTS author_username VARCHAR(64);
+-- Username uniqueness (defense-in-depth — Clerk owns canonical assignment).
+-- Case-insensitive UNIQUE on LOWER(username) so @Farah and @farah cannot
+-- coexist. NULLs allowed for legacy users. Reserved prefix `community-`
+-- enforced at API layer (lib/auth/username-policy.ts). If duplicates exist
+-- the index creation is skipped with NOTICE; resolve manually and rerun.
+DO $public_users_username_unique$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE indexname = 'users_username_lower_key'
+  ) THEN
+    BEGIN
+      CREATE UNIQUE INDEX users_username_lower_key
+        ON public.users (LOWER(username))
+        WHERE username IS NOT NULL;
+    EXCEPTION
+      WHEN duplicate_table THEN NULL;
+      WHEN unique_violation THEN
+        RAISE NOTICE 'public.users: duplicate username values exist; users_username_lower_key not created. Resolve duplicates and rerun.';
+    END;
+  END IF;
+END
+$public_users_username_unique$;
 
 -- === skills-hunt-core-phase1 ===
 BEGIN;
@@ -178,6 +198,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   quora_profile_url TEXT NOT NULL,
   quora_profile_url_normalized TEXT NOT NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
+  proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'flagged')),
@@ -186,6 +207,13 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   review_notes TEXT NULL,
   score_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb,
   points_awarded INTEGER NOT NULL DEFAULT 0,
+  participation_points INTEGER NOT NULL DEFAULT 0,
+  credit_granted BOOLEAN NOT NULL DEFAULT FALSE,
+  url_validation_result TEXT NULL CHECK (url_validation_result IN ('valid', 'invalid', 'dead')),
+  url_validation_checked_at TIMESTAMPTZ NULL,
+  edit_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+  edited_at TIMESTAMPTZ NULL,
+  deleted_at TIMESTAMPTZ NULL,
   reviewed_at TIMESTAMPTZ NULL,
   directory_profile_generated_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -199,10 +227,13 @@ CREATE TABLE IF NOT EXISTS skills_hunt_leaderboard (
   rank INTEGER NOT NULL,
   score INTEGER NOT NULL,
   accepted_count INTEGER NOT NULL DEFAULT 0,
+  first_match_count INTEGER NOT NULL DEFAULT 0,
+  pending_points INTEGER NOT NULL DEFAULT 0,
   rare_skill_bonus INTEGER NOT NULL DEFAULT 0,
   user_id TEXT NULL,
   username_snapshot TEXT NULL,
   team_key TEXT NULL,
+  last_submission_at TIMESTAMPTZ NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (round_id, mode, rank)
@@ -213,10 +244,17 @@ CREATE TABLE IF NOT EXISTS skills_hunt_achievements (
   code TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
+  round_id UUID NULL REFERENCES skills_hunt_rounds(id) ON DELETE SET NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  archived_at TIMESTAMPTZ NULL,
   awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, code)
 );
+-- NOTE: Wave 2 will refactor UNIQUE(user_id, code) to support per-round badges
+-- (e.g., Leaderboard Champion earned across multiple rounds). For now the
+-- existing constraint is preserved so the in-tree generic badge inserts
+-- (accepted-first / accepted-five / accepted-ten) continue to work with their
+-- ON CONFLICT (user_id, code) DO NOTHING clause.
 CREATE TABLE IF NOT EXISTS skills_hunt_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -267,12 +305,70 @@ CREATE TABLE IF NOT EXISTS skills_hunt_audit_log (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS skills_hunt_submission_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  submission_id UUID NULL REFERENCES skills_hunt_submissions(id) ON DELETE SET NULL,
+  directory_profile_id TEXT NULL,
+  reporter_user_id TEXT NOT NULL,
+  reporter_username TEXT NULL,
+  reason TEXT NOT NULL CHECK (reason IN ('no_permission', 'inaccurate', 'duplicate', 'spam', 'other')),
+  details TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'dismissed', 'archived', 'removed')),
+  resolution_notes TEXT NULL,
+  resolved_by_user_id TEXT NULL,
+  resolved_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (submission_id IS NOT NULL OR directory_profile_id IS NOT NULL)
+);
+-- Missions: themed sub-goals within a round (post-design lock 2026-05-11,
+-- continuity 2.9). One mission belongs to one round; per-user progress is
+-- tracked in skills_hunt_mission_progress and recomputed on accept by the
+-- same review hook that rebuilds the leaderboard. goal_type drives the
+-- recompute strategy in lib/skills-hunt/missions.ts.
+CREATE TABLE IF NOT EXISTS skills_hunt_missions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NULL,
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors')),
+  goal_target INTEGER NOT NULL CHECK (goal_target > 0),
+  goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0),
+  color_hex TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'locked', 'archived')),
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_by_user_id TEXT NOT NULL,
+  updated_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mission_id UUID NOT NULL REFERENCES skills_hunt_missions(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  progress_count INTEGER NOT NULL DEFAULT 0 CHECK (progress_count >= 0),
+  completed_at TIMESTAMPTZ NULL,
+  bonus_credited_at TIMESTAMPTZ NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (mission_id, user_id)
+);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_rounds (status, starts_at DESC, ends_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_submissions (deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_tiebreak ON skills_hunt_leaderboard (round_id, mode, score DESC, first_match_count DESC, last_submission_at ASC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_user ON skills_hunt_achievements (user_id, archived_at, awarded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_round ON skills_hunt_achievements (round_id) WHERE round_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_notifications_user_unread ON skills_hunt_notifications (user_id, read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_audit_log_lookup ON skills_hunt_audit_log (created_at DESC, actor_id, command);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_status ON skills_hunt_submission_reports (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_submission ON skills_hunt_submission_reports (submission_id) WHERE submission_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skills_hunt_submission_reports (directory_profile_id) WHERE directory_profile_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
 COMMIT;
 
 -- === skills-hunt-service-credits ===
@@ -1337,7 +1433,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('directory',          'Directory',            'Unified user/admin profile surface with claimed/unclaimed policy controls.',                      'implemented_shell', 30,  TRUE),
   ('feed-announcements', 'Feed + Announcements', 'Timeline and announcement lifecycle in a coupled admin surface.',                                 'implemented_shell', 40,  TRUE),
   ('workforce',          'Workforce',            'Dashboard reporting and recruited-state derivation from upstream data.',                           'implemented_shell', 50,  TRUE),
-  ('skills-hunt',        'Skills Hunt',          'Rounds, moderation, scoring, leaderboards, and governed profile generation.',                     'implemented_shell', 60,  TRUE),
+  ('skills-hunt',        'Skills Hunt',          'Rounds, moderation, scoring, leaderboards, and governed profile generation.',                     'alpha',             60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Provider search and quote lifecycle using read-only Directory projections.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Profile/property/match parity scope with blocks lifecycle controls.',                             'implemented_shell', 80,  TRUE),
@@ -1490,14 +1586,21 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   headline TEXT,
   bio TEXT,
   profile_url TEXT,
-  is_public BOOLEAN NOT NULL DEFAULT FALSE,
   sector_id UUID,
   job_title_id UUID,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated')),
+  invited_by_username TEXT,
+  -- No inline UNIQUE: the case-insensitive unique index below owns uniqueness.
+  -- A constraint-backed index here cannot be dropped by the DROP INDEX in the
+  -- migration block (Postgres rejects it), which would break the fresh-schema
+  -- path. See the directory_profiles_unclaimed_handle_unique DO block.
+  unclaimed_handle TEXT,
   venmo_address TEXT,
   monero_address TEXT,
   bitcoin_address TEXT,
   service_credits_address TEXT,
+  deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1507,7 +1610,9 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS display_name T
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TEXT;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
+-- is_public was removed 2026-05-18 — Directory is no longer public-facing;
+-- all authenticated members see all active profiles. Drop is idempotent.
+ALTER TABLE IF EXISTS directory_profiles DROP COLUMN IF EXISTS is_public;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS job_title_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
@@ -1517,6 +1622,99 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_addres
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS service_credits_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Skills Hunt + Clerk username co-change (2026-05-11). See
+-- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §4.
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'admin';
+DO $directory_profiles_source_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'directory_profiles_source_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE directory_profiles
+        ADD CONSTRAINT directory_profiles_source_check
+        CHECK (source IN ('admin', 'self', 'community-generated'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$directory_profiles_source_check$;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+-- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
+-- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
+-- sensitive index if it exists, then recreates on lower(unclaimed_handle).
+DO $directory_profiles_unclaimed_handle_unique$
+BEGIN
+  -- If the legacy case-sensitive index exists, drop it so we can replace
+  -- with the case-insensitive variant below.
+  IF EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+      AND indexdef NOT ILIKE '%lower(unclaimed_handle)%'
+  ) THEN
+    -- A legacy DB may have created this name as a UNIQUE *constraint*
+    -- (constraint-backed index), which Postgres refuses to DROP INDEX. Drop
+    -- the constraint first (cascades to its index); the DROP INDEX then mops
+    -- up any standalone index left by an earlier migration run.
+    ALTER TABLE directory_profiles
+      DROP CONSTRAINT IF EXISTS directory_profiles_unclaimed_handle_key;
+    EXECUTE 'DROP INDEX IF EXISTS directory_profiles_unclaimed_handle_key';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE indexname = 'directory_profiles_unclaimed_handle_key'
+  ) THEN
+    BEGIN
+      CREATE UNIQUE INDEX directory_profiles_unclaimed_handle_key
+        ON directory_profiles (lower(unclaimed_handle))
+        WHERE unclaimed_handle IS NOT NULL;
+    EXCEPTION WHEN duplicate_table THEN
+      NULL;
+    END;
+  END IF;
+END
+$directory_profiles_unclaimed_handle_unique$;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_source ON directory_profiles (source) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed ON directory_profiles (claimed_by_user_id, deleted_at) WHERE claimed_by_user_id IS NULL AND deleted_at IS NULL;
+-- One-shot backfill: assign reserved community-<hex> handles to existing
+-- unclaimed Directory profiles so the @handle URL story is consistent on
+-- day one. Idempotent: only fires for rows without a handle and retries on
+-- collision by re-running gen_random_bytes until UNIQUE succeeds.
+DO $directory_profiles_backfill_handles$
+DECLARE
+  candidate TEXT;
+  attempts INTEGER;
+  row_record RECORD;
+BEGIN
+  FOR row_record IN
+    SELECT id FROM directory_profiles
+    WHERE claimed_by_user_id IS NULL
+      AND unclaimed_handle IS NULL
+      AND (deleted_at IS NULL)
+  LOOP
+    attempts := 0;
+    LOOP
+      candidate := 'community-' || encode(gen_random_bytes(3), 'hex');
+      BEGIN
+        UPDATE directory_profiles
+        SET unclaimed_handle = candidate, updated_at = NOW()
+        WHERE id = row_record.id;
+        EXIT;
+      EXCEPTION WHEN unique_violation THEN
+        attempts := attempts + 1;
+        IF attempts > 16 THEN
+          RAISE NOTICE 'directory_profiles: could not allocate unique unclaimed_handle for %', row_record.id;
+          EXIT;
+        END IF;
+      END;
+    END LOOP;
+  END LOOP;
+END
+$directory_profiles_backfill_handles$;
 
 CREATE TABLE IF NOT EXISTS directory_profile_skills (
   profile_id UUID NOT NULL,
@@ -2599,6 +2797,65 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- skills_hunt_submissions (1 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Skills Hunt v2 (2026-05-11). See
+-- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS participation_points INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS credit_granted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_validation_result TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_validation_checked_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+DO $skills_hunt_submissions_url_validation_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'skills_hunt_submissions_url_validation_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE skills_hunt_submissions
+        ADD CONSTRAINT skills_hunt_submissions_url_validation_check
+        CHECK (url_validation_result IS NULL OR url_validation_result IN ('valid', 'invalid', 'dead'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$skills_hunt_submissions_url_validation_check$;
+
+ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD COLUMN IF NOT EXISTS first_match_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD COLUMN IF NOT EXISTS pending_points INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD COLUMN IF NOT EXISTS last_submission_at TIMESTAMPTZ;
+
+ALTER TABLE IF EXISTS skills_hunt_achievements ADD COLUMN IF NOT EXISTS round_id UUID;
+ALTER TABLE IF EXISTS skills_hunt_achievements ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+DO $skills_hunt_achievements_round_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'skills_hunt_achievements_round_id_fkey'
+      AND table_name = 'skills_hunt_achievements'
+  ) THEN
+    BEGIN
+      ALTER TABLE skills_hunt_achievements
+        ADD CONSTRAINT skills_hunt_achievements_round_id_fkey
+        FOREIGN KEY (round_id) REFERENCES skills_hunt_rounds(id) ON DELETE SET NULL;
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$skills_hunt_achievements_round_fk$;
+
+-- Skills Hunt v2 Missions (post-design lock 2026-05-11). Defensive ALTERs
+-- so legacy DBs that already created the tables get any later additions.
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS color_hex TEXT;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS bonus_credited_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 -- trusttransport_admin_audit_trail (1 — defensive)
 ALTER TABLE IF EXISTS trusttransport_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -2660,6 +2917,17 @@ ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS metada
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS resolved_recruited BOOLEAN;
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS source_event TEXT;
+-- Required by `ON CONFLICT (inference_dedupe_key)` in repository.ts and the workforce seed;
+-- recruited-event upserts fail without this unique index.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_recruited_events_dedupe_key ON workforce_recruited_events(inference_dedupe_key);
+-- Enforce a non-null dedupe key so ON CONFLICT (inference_dedupe_key) reliably
+-- deduplicates: Postgres treats NULLs as distinct in a unique index, so a NULL key
+-- would silently bypass the upsert. The write path always supplies a sha256 key;
+-- backfill any legacy NULL rows deterministically before enforcing NOT NULL.
+-- Idempotent: the UPDATE matches nothing on re-run, and SET NOT NULL on an
+-- already-constrained column is a no-op.
+UPDATE workforce_recruited_events SET inference_dedupe_key = 'legacy:' || id::text WHERE inference_dedupe_key IS NULL;
+ALTER TABLE IF EXISTS workforce_recruited_events ALTER COLUMN inference_dedupe_key SET NOT NULL;
 
 -- workforce_recruited_sync_cursor (1 missing)
 ALTER TABLE IF EXISTS workforce_recruited_sync_cursor ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -2815,3 +3083,12 @@ CREATE TABLE IF NOT EXISTS inventory_analysis_cache (
   last_analyzed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_analysis_cache_file_path ON inventory_analysis_cache(inventory_file_path);
+
+-- skills_taxonomy_dependency_graph view — defined at the END so its source table
+-- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
+-- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table
+-- that had not been created yet.
+CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
+  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
+  FROM skills_taxonomy_consumer_bindings
+  GROUP BY target_type, target_id;

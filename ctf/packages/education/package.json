@@ -1,0 +1,15 @@
+{
+  "name": "@ctf/education",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "dependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "gray-matter": "^4.0.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "react-markdown": "^9.1.0"
+  }
+}

@@ -10,7 +10,6 @@ This index links to canonical artifacts for Unlock.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-unlock-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-unlock-rewrite-checklist.md)
 - [Android Parity Note(../../developer/ctf-plugin-feature-inventories/ctf-unlock-android-parity-note.md)
 
 ## Notes

@@ -1,0 +1,40 @@
+# Formance Ledger — Render private service.
+# Wraps the official GHCR image with Render-compatible configuration.
+#
+# State lives entirely in external Neon Postgres (Render has no persistent
+# volumes). FORMANCE_POSTGRES_URI must be set in the Render dashboard. AUTO_UPGRADE
+# runs schema migrations on container start.
+#
+# The base image's ENTRYPOINT is `ledger`, so it is reset to [] here and the
+# `serve` subcommand is invoked through a shell that expands Render's $PORT.
+FROM ghcr.io/formancehq/ledger:v2.3.15-dev.1.g1077fe2@sha256:5c280c2b1b397c6d910e88d7f1719666fadf3b2be18ab6dad31a905dee876db7
+
+# Render has no persistent volumes — Formance state lives in the external
+# Neon Postgres database. AUTO_UPGRADE runs schema migrations on start.
+# FORMANCE_POSTGRES_URI must be set in the Render dashboard (Neon connection string).
+ENV POSTGRES_MAX_OPEN_CONNS=40 \
+    POSTGRES_MAX_IDLE_CONNS=40 \
+    POSTGRES_CONN_MAX_IDLE_TIME=5m \
+    EXPERIMENTAL_FEATURES=true \
+    AUTO_UPGRADE=true \
+    BULK_PARALLEL=10 \
+    EXPERIMENTAL_NUMSCRIPT_INTERPRETER=true \
+    EXPERIMENTAL_NUMSCRIPT_INTERPRETER_FLAGS="experimental-overdraft-function experimental-get-asset-function experimental-get-amount-function experimental-oneof experimental-account-interpolation experimental-mid-script-function-call experimental-asset-colors"
+
+EXPOSE 3068
+
+# curl is needed by the entrypoint's idempotent ledger-bootstrap step (issue #106).
+# Best-effort across alpine/debian bases; never fail the build — if curl can't be
+# installed the entrypoint logs and falls back to manual `pnpm formance:bootstrap`.
+RUN command -v curl >/dev/null 2>&1 \
+  || apk add --no-cache curl 2>/dev/null \
+  || (apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*) \
+  || true
+
+# The entrypoint starts `ledger serve` (preserving the FORMANCE_POSTGRES_URI ->
+# POSTGRES_URI mapping) and, once the API is healthy, idempotently creates the
+# named ledger books — eliminating the manual SSH + bootstrap operator step.
+COPY formance-entrypoint.sh /formance-entrypoint.sh
+RUN chmod +x /formance-entrypoint.sh
+
+ENTRYPOINT ["/formance-entrypoint.sh"]

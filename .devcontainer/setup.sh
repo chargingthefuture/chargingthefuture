@@ -43,12 +43,13 @@ else
   echo "Vercel CLI already installed."
 fi
 
-# Install/update Railway CLI (required by Railway MCP server)
-echo "Checking for Railway CLI..."
-if ! command -v railway &> /dev/null; then
-  npm install -g @railway/cli
+# Install/update Render CLI (used to open a shell into Render services, e.g. to
+# run the one-time Formance ledger bootstrap from inside the private network).
+echo "Checking for Render CLI..."
+if ! command -v render &> /dev/null; then
+  curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh || echo "Warning: Render CLI install failed — run 'curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh' manually."
 else
-  echo "Railway CLI already installed."
+  echo "Render CLI already installed."
 fi
 
 
@@ -160,6 +161,18 @@ if [ -n "$RAILWAY_API_TOKEN" ]; then
 else
   echo "Warning: RAILWAY_API_TOKEN not set. Railway MCP server will not work."
   echo "Add RAILWAY_API_TOKEN as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
+fi
+
+# Verify Render API key for MCP server access (.mcp.json uses RENDER_API_KEY to
+# authenticate against https://mcp.render.com/mcp — lets agents pull logs, trigger
+# deploys, and inspect services without copy-pasting from the dashboard).
+echo "Verifying Render MCP access..."
+if [ -n "$RENDER_API_KEY" ]; then
+  echo "Render MCP: RENDER_API_KEY is set — Render MCP server will be authenticated."
+else
+  echo "Warning: RENDER_API_KEY not set. Render MCP server will not work."
+  echo "Add RENDER_API_KEY as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
+  echo "Generate an API key at: https://dashboard.render.com/u/settings#api-keys"
 fi
 
 # Prompt for any remaining manual logins

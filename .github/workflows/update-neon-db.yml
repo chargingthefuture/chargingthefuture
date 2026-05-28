@@ -2,16 +2,8 @@ name: Update Neon DB with schema.sql
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Target environment (staging or production)"
-        required: true
-        default: production
-        type: choice
-        options:
-          - production
-          - staging
   push:
+    branches: [main]
     paths:
       - "ctf/schema.sql"
       - ".github/workflows/update-neon-db.yml"
@@ -31,23 +23,10 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Set ENVIRONMENT var (manual or push)
-        id: set_env
-        run: |
-          if [ -n "${{ github.event.inputs.environment }}" ]; then
-            echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          fi
-
-      - name: Set DATABASE_URL for environment
+      - name: Set DATABASE_URL
         id: set_db_url
         run: |
-          if [ "$ENVIRONMENT" = "staging" ]; then
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL_STAGING != '' && secrets.DATABASE_URL_STAGING || vars.DATABASE_URL_STAGING }}" >> $GITHUB_ENV
-          else
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || vars.DATABASE_URL }}" >> $GITHUB_ENV
-          fi
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || vars.DATABASE_URL }}" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -57,7 +36,7 @@ jobs:
       - name: Validate DATABASE_URL secret
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "Missing DATABASE_URL for $ENVIRONMENT in GitHub Actions secrets/variables."
+            echo "Missing DATABASE_URL in GitHub Actions secrets/variables."
             exit 1
           fi
 

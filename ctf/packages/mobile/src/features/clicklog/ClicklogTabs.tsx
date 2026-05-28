@@ -1,8 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ClicklogCounter } from './ClicklogCounter';
 import { ClicklogHistory } from './ClicklogHistory';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 type ClicklogTabParamList = {
   Counter: undefined;

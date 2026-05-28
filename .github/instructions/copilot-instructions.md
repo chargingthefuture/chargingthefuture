@@ -10,13 +10,45 @@
 - Use this portable shell pattern when needed:
   - `if command -v rg >/dev/null 2>&1; then rg -n "pattern" path; else grep -RIn "pattern" path; fi`
 
+## Task Planning — No Phases (Critical)
+
+Do **not** organize work into "phases." No "Phase 0 / Phase 1 / Phase 2", no "Phase F", no
+phased-rollout buckets — anywhere: plans, inventories, checklists, design artifacts, mockups, code
+comments, PR descriptions, or commit messages. Phases confuse humans and agents and have been
+hard-coded into design mockups by mistake.
+
+Instead, when given an objective, break it into discrete tasks and **list them one after another in
+the order they must happen**. Where order matters, state it as an explicit blocking dependency, not a
+phase:
+
+- ✅ "Task B is blocked by Task A — do A first."
+- ✅ A flat, ordered, numbered task list (1, 2, 3 …) where each item may name what it depends on.
+- ❌ "Phase 1: …", "Phase 2: …", "do this in a later phase."
+
+A task with no dependency can be done at any time or in parallel; say so plainly ("no dependencies;
+can run anytime"). Reserve the word "phase" only for fixed product-maturity terms already in the
+rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
+
 # Product Rules Index
 
 ## Scope
 
-- Applies to the rewrite web/Android product under `ctf/`.
+- Applies to the v3 web/Android product under `ctf/`.
 - The `/platform` folder is strictly for reference-only during migration and must never be referenced, deployed, or used for routing or domain configuration unless explicitly requested.
 - Governs architecture, coding standards, delivery quality, and compliance.
+
+## App Versioning and Repository Policy
+
+- This is **v3** of the app. The legacy app has been removed; the codebase under `ctf/` is the
+  single, mature product. Do not describe it as "the rewrite" — that label has lost its meaning now
+  that there is only one app. Prefer "the v3 app" or just "the app".
+- **No new repositories.** Going forward, ship changes as app versions only — `v3.0.1`, `v3.1.0`,
+  `v3.1.1`, etc. (semver under the `v3` major). Do not propose or create a new repo for a "v4" or a
+  fresh rewrite; increment the version instead.
+- Note: the CI workflow was renamed `rewrite-ci.yml` → `ci.yml` during the Render migration (PRs
+  #98–#117 on `main`); its jobs (`pr-parity-status`, `formatting-eof`, `schema-drift-gate`, etc.) are
+  unchanged. The package name still retains the historical name for stability; do not rename it without
+  an explicit instruction.
 
 
 ## Product Rule Modules
@@ -96,7 +128,7 @@ Every PR title must start with one of these prefixes:
 
 Example: `feat: add Ollama chatbot integration to feed question answers`
 
-### PR Description — Parity Status (`pr-parity-status` in `rewrite-ci.yml`)
+### PR Description — Parity Status (`pr-parity-status` in `ci.yml`)
 
 Every PR description must include one of:
 
@@ -110,7 +142,7 @@ Parity Ticket: <GitHub issue URL or #issue-number>
 ```
 Use when Android parity is deferred; link to the tracking issue.
 
-### EOF Formatting (`formatting-eof` in `rewrite-ci.yml`)
+### EOF Formatting (`formatting-eof` in `ci.yml`)
 
 All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
 
@@ -123,6 +155,29 @@ All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with e
 - When unclear, prefer broader safety/compliance and boundary rules over feature-level rules.
 
 ## CTF Contract
+
+## Security and Secrets Policy (Critical)
+
+**This is an open source repository.** Everything committed to this codebase is publicly visible. Never expose secrets, credentials, API keys, encryption keys, tokens, or any sensitive information through:
+
+- **Code commits** — no secrets hardcoded or in examples
+- **GitHub Actions logs/stdout** — no auto-generated secrets printed to console
+- **Job summaries or outputs** — no sensitive values in workflow summaries
+- **Documentation or comments** — no example credentials or keys
+- **Error messages or debugging output** — scrub sensitive info from error handling
+
+**Correct pattern for secrets:**
+1. User generates secrets locally (e.g., `openssl rand -hex 16` in a terminal)
+2. User stores them securely as GitHub repository secrets
+3. Workflows pass them to scripts as masked environment variables
+4. Scripts consume them but never print or output them
+5. Error messages that fail validation refer users to the generation command, not the secret itself
+
+**If a secret is ever exposed** (even locally in logs or momentarily in a PR):
+- Rotate it immediately via the GitHub Actions secrets UI or service dashboard
+- Do not commit the exposed value to the repo
+
+This applies to all development: deploy scripts, CI/CD workflows, seed scripts, test fixtures, and any infrastructure code.
 
 ## Local Build and Error Checking Requirement
 
@@ -163,16 +218,16 @@ When making code changes, consult this table to identify which inventory section
 | **Modify column constraints/type** | `ctf/schema.sql` | Data Model and Storage Contracts | Update column definition; document breaking changes and migration impact |
 | **Add/modify seed script** | `ctf/scripts/seed{PluginName}Phase0.mjs` | Seed Coverage Status | Update what data is seeded; note any new columns/tables; document deterministic UUIDs |
 | **Add mobile feature** | `ctf/packages/mobile/src/features/{plugin}/**` | Web and Android Delivery Status; Mobile Parity Contracts | Update delivery status; create/update `ctf/config/plugin-parity-contracts.json` entry; update milestone dates |
-| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; Target User Features | Move feature to changelog section; update phase/milestone dates; document deprecation reason |
+| **Remove/deprecate feature** | Web or mobile package | Web and Android Delivery Status; Target User Features | Move feature to changelog section; update milestone dates; document deprecation reason |
 | **Create entirely new plugin** | Full stack (see below) | All sections | See new plugin checklist below |
 
 ### New Plugin Lifecycle Checklist
 
 When creating a new plugin from scratch, ALL of the following must be completed before PR approval:
 
-1. **Inventory Files**
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all 10 required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Risks & Known Technical Debt)
-   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-rewrite-checklist.md` with implementation phases
+1. **Inventory File** (single combined document — see [120-plugin-feature-inventory-lifecycle-rules.mdc](120-plugin-feature-inventory-lifecycle-rules.mdc))
+   - Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-{plugin-slug}-feature-inventory.md` with all required sections (Scope & Boundary, Intent, Target User Features, Target Admin Features, API Surface and Route Map, Data Model and Storage Contracts, Security/Privacy/Compliance Controls, Web and Android Delivery Status, Seed Coverage Status, Gaps & Known Technical Debt, Change Log)
+   - Include a `## Build Checklist` section in that same file: an ordered, dependency-based task list (no phases). There is no separate checklist file.
 
 2. **Schema & Migrations**
    - Add all plugin tables to `ctf/schema.sql` using `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` pattern

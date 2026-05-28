@@ -23,80 +23,38 @@ Hard or strong dependencies found in rules and inventory/checklist docs:
 
 Everything else is mostly independent at plugin-boundary level and can be parallelized once foundational dependencies are stable.
 
-## Recommended implementation sequence
+## Recommended implementation order
 
-### Phase -1 — Baseline foundation (mandatory)
+No phases. Flat, ordered list — each item names what blocks it. Items marked "no dependency" can
+run anytime / in parallel. The canonical live version with status is
+`ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`.
 
-BF-01. `auth-foundation`
-BF-02. `railway-baseline`
-BF-03. `vercel-integration`
-BF-04. `expo-baseline`
+Baseline (do before any plugin; no dependency): auth integration, canonical deployment baseline
+(Render), and Expo Android release path known-good. Plugin work should not begin until auth domains,
+runtime topology, and mobile release paths are stable.
 
-Why first:
+Then, in order:
 
-- This repository is being rebuilt from boilerplate and cannot assume prior auth/deployment stability.
-- Plugin work should not begin until auth domains, runtime topology, and mobile release paths are known-good.
+1. `skills-taxonomy` — no dependency. Authoritative for sectors/job-titles/skills; **blocks** directory & workforce.
+2. `directory` — blocked by #1 (consumes taxonomy). Upstream authority; **blocks** workforce, skills-hunt, foundation.
+3. `chyme` — no dependency (fresh implementation target in this reset).
+4. `feed` + `announcements` — no dependency; operationally coupled, build together to avoid divergent contracts.
+5. `workforce` — blocked by #1 and #2 (consumes Directory writes + stabilized taxonomy selectors).
+6. `skills-hunt` — blocked by #2 (generates unclaimed Directory profiles, must honor ownership policy).
+7. `foundation` — blocked by #2 (reads Directory projections, read-only boundary).
+8. `lighthouse` — no dependency.
+9. `socketrelay` — no dependency.
+10. `trusttransport` — no dependency.
+11. `peer-programming` — no dependency.
+12. `mood` — no dependency.
+13. `gentlepulse` — no dependency.
+14. `weekly-performance` — no dependency.
+15. `gross-domestic-product` — best after upstream metric/event semantics settle (#5–#14).
+16. `service-credits` — blocked by #15 (GDP accounting/reclaim coupling); sequencing it after GDP reduces rework.
 
-### Phase 0 — Core primitives for downstream plugins
-
-0. `chyme`
-1. `skills-taxonomy`
-2. `directory`
-3. `feed`
-4. `announcements`
-
-Why now:
-
-- Chyme is a fresh implementation target in this reset.
-- Taxonomy + Directory are upstream data authorities for multiple plugins.
-- Feed + Announcements are operationally coupled and should avoid divergent contracts.
-
-### Phase 1 — Direct downstream dependents
-
-5. `workforce`
-6. `skills-hunt`
-7. `foundation`
-
-Why now:
-
-- `workforce` depends on Directory writes and should consume stabilized selector/taxonomy outputs.
-- `skills-hunt` generates unclaimed Directory profiles and must honor Directory ownership policies.
-- `foundation` explicitly reads Directory projections and enforces read-only boundary.
-
-### Phase 2 — Independent product surfaces (parallel wave)
-
-8. `lighthouse`
-9. `socketrelay`
-10. `trusttransport`
-11. `peer-programming`
-12. `mood`
-13. `gentlepulse`
-14. `weekly-performance`
-
-Why now:
-
-- No hard upstream plugin dependency is declared that blocks coding start.
-- These can be dispatched to separate agents in parallel, with contract governance checks.
-
-### Phase 3 — Finance/reporting coupling wave
-
-15. `gross-domestic-product`
-16. `service-credits`
-
-Why last:
-
-- GDP + Service Credits have policy/semantic coupling around accounting treatment.
-- Sequencing them late reduces rework risk after upstream event/metric semantics settle.
-
-## Agent dispatch packs (practical)
-
-If you want high parallelism without violating dependencies:
-
-- Pack BF (mandatory first): `clerk-foundation` → `railway-baseline` → `vercel-integration` → `expo-baseline`
-- Pack A (start after Pack BF): `chyme`, `skills-taxonomy`, `directory`, `feed+announcements` (same stream)
-- Pack B (start after Pack A contract lock): `workforce`, `skills-hunt`, `foundation`
-- Pack C (parallel after Pack A): `lighthouse`, `socketrelay`, `trusttransport`, `peer-programming`, `mood`, `gentlepulse`, `weekly-performance`
-- Pack D (after Pack B/C metric and event contracts stabilize): `gross-domestic-product`, `service-credits`
+Items with "no dependency" (#3, #4, #8–#14) can be dispatched to separate agents in parallel, with
+contract governance checks. Reconcile shared files (`schema.sql`, `plugin-parity-contracts.json`,
+`repository.ts`) at merge.
 
 ## Notes
 

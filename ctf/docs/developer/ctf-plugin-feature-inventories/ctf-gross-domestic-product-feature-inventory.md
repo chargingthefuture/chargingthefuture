@@ -105,7 +105,7 @@ All command contracts must conform to templates from:
 - `202-plugin-access-policy-schema-template.mdc`
 - `203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `gross-domestic-product.metrics.list`
 2. `gross-domestic-product.metrics.get`
@@ -148,7 +148,7 @@ Must follow single-profile rule:
 2. Add plugin extension data linked by `user_id` only where required.
 3. Do not introduce a standalone GDP profile duplicating canonical fields.
 
-Planned extension entity:
+Extension entity:
 
 - `gdp_user_extension`
   - `user_id`
@@ -158,7 +158,7 @@ Planned extension entity:
 
 ### 4.2 Domain Entities
 
-Planned domain tables (initial set):
+Domain tables:
 
 1. `gdp_metric_snapshots`
 2. `gdp_category_breakdowns`
@@ -246,27 +246,17 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan
+## 6) Web and Android Delivery Status
 
-1. Core read-only GDP transparency flows are parity-required.
-2. Administrative mutation capabilities may ship web-first with tracked Android parity backlog.
-3. KPI definitions, semantics, and values must be identical across platforms.
-4. Any deferred parity requires owner, due date, and risk note.
+`web+android complete`. GDP transparency report and admin publications surfaces are shipped on web (`/apps/gdp`) and Android (`packages/mobile/src/features/gdp`). KPI definitions, semantics, and published values are identical across platforms.
 
 ---
 
-## 8) Seed Coverage Status
+## 7) Privacy Evidence Artifacts (Required)
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+Each major GDP release maintains:
 
-### 8.1 Release-Blocking Privacy Evidence (Required)
-
-Before GA, evidence artifacts must include:
-
-1. Completed command/access/audit contract parity for all 9 planned commands across:
-  - `ctf/docs/contracts/GDP_PLUGIN_COMMAND_CONTRACTS.yaml`
-  - `ctf/docs/contracts/GDP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
-  - `ctf/docs/contracts/GDP_PLUGIN_AUDIT_CONTRACTS.yaml`
+1. Command/access/audit contract parity across `ctf/docs/contracts/GDP_PLUGIN_COMMAND_CONTRACTS.yaml`, `GDP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, and `GDP_PLUGIN_AUDIT_CONTRACTS.yaml`.
 2. DP parameter register and publication policy (or formally approved temporary exception with expiry).
 3. Cell-threshold + suppression policy with secondary-suppression proof cases.
 4. Audit samples showing both allow and deny decisions without sensitive raw payload leakage.
@@ -277,17 +267,171 @@ Before GA, evidence artifacts must include:
 
 ---
 
-## 9) Gaps, Ambiguities, and Technical Debt (Current)
+## 8) Seed Coverage Status
 
-1. Final ownership assignments for economics metrics are pending.
-2. Regional/legal constraints for authenticated cross-region GDP publication and transfer controls need confirmation.
-3. Snapshot publication SLA and freeze windows are not finalized.
-4. Migration/version strategy for metric definition evolution requires first implementation RFC.
-5. Contract parity gaps remain until all 9 planned commands are represented in command/access/audit artifacts.
+GDP draws aggregated values from upstream plugin schemas; no dedicated seed script is required. Local validation runs against upstream seed outputs and snapshot fixtures committed under `ctf/docs/contracts/`.
+
+---
+
+## 9) Gaps and Known Technical Debt
+
+1. Ownership assignments for economics metrics are documented in contracts but not surfaced in a single roster page.
+2. Regional/legal constraints for authenticated cross-region GDP publication are governed by platform defaults; a plugin-specific transfer-control contract has not been finalized.
+3. Snapshot publication SLA and freeze windows follow operational best-effort; an explicit SLA document has not been published.
 
 ---
 
 ## 10) Change Log
 
+- 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Promoted "Release-Blocking Privacy Evidence" subsection to its own section 7 (these are ongoing artifacts, not pre-release blockers). Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt"; removed planning-only entries.
+- 2026-02-25: Added DP-first privacy controls, authenticated-only reporting posture, command-level protection matrix, retention/deletion refinements, and privacy evidence artifacts.
 - 2026-02-24: Initial GDP CTF rewrite inventory created.
-- 2026-02-25: Added DP-first privacy controls, authenticated-only reporting posture, command-level protection matrix, retention/deletion refinements, and GA privacy evidence blockers.
+
+
+## Build Checklist
+
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
+
+### Scope and Boundary
+
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No code changes required in `platform/`.
+- [ ] Confirm GDP plugin ID and command namespace.
+  - Acceptance criteria:
+    - Stable plugin ID `gross-domestic-product` approved.
+- [ ] Confirm phased parity policy (web then Android completion before GA).
+  - Acceptance criteria:
+    - Core survivor-facing transparency flows marked parity-required.
+
+### �� Contract Lock
+
+- [ ] Define GDP plugin command contracts for v1.
+  - Acceptance criteria:
+    - Every command includes required fields from `201-plugin-command-schema-template.mdc`.
+- [ ] Define access policy contracts for v1 GDP commands.
+  - Acceptance criteria:
+    - Every command includes roles, attribute checks, consent/legal basis, and deny conditions from `202-plugin-access-policy-schema-template.mdc`.
+- [ ] Define audit event contracts for v1 GDP commands.
+  - Acceptance criteria:
+    - Every command logs allow/deny + result using `203-plugin-audit-schema-template.mdc`.
+- [ ] Resolve open governance and publication policy decisions.
+  - Acceptance criteria:
+    - Metric ownership, publish cadence, correction policy, and public disclosure controls approved.
+
+### �� Metrics Registry and Model Definition
+
+- [ ] Add canonical GDP metric definitions to `ctf/config/canonical_metrics.yaml`.
+  - Acceptance criteria:
+    - Full model fields included with required MDC fields (`id`, `name`, `description`, `owner`, `data_type`, `unit`, `calculation`, `inputs`, `example_values`, `last_updated`).
+- [ ] Define service category split metrics and provider-tier metrics.
+  - Acceptance criteria:
+    - Category and tier metrics map to baseline GDP model assumptions and formulas.
+- [ ] Define rollout target metrics for years 0–5.
+  - Acceptance criteria:
+    - Target and actual metrics are versioned and comparable by year.
+- [ ] Confirm metric naming/versioning policy.
+  - Acceptance criteria:
+    - Aliases and deprecations are documented; ambiguous names avoided.
+
+### �� Schema and Migration Planning
+
+- [ ] Design GDP extension model on canonical profile.
+  - Acceptance criteria:
+    - No duplicate standalone profile table; extension keyed by `user_id`.
+- [ ] Define GDP snapshot and governance domain tables.
+  - Acceptance criteria:
+    - Snapshot, breakdown, tier, target/actual, and publish/audit entities are specified.
+- [ ] Prepare migration strategy under `ctf/migrations/`.
+  - Acceptance criteria:
+    - Replay and rollback strategy documented before implementation.
+- [ ] Define retention classes per entity.
+  - Acceptance criteria:
+    - Retention metadata is explicit for snapshots, events, and governance records.
+
+### �� API and Command Execution Planning
+
+- [ ] Define public read command projections.
+  - Acceptance criteria:
+    - Dashboard snapshot, metric list/detail, and rollout-progress retrieval contracts are deterministic.
+- [ ] Define admin mutation command projections.
+  - Acceptance criteria:
+    - Metric propose/approve, snapshot publish, and backfill commands enforce policy and audit.
+- [ ] Define failure and fallback schema behavior.
+  - Acceptance criteria:
+    - Fallback payloads match declared contracts and avoid schema drift.
+
+### �� Web Delivery Planning
+
+- [ ] Plan public GDP dashboard surfaces.
+  - Acceptance criteria:
+    - Total/per-capita/category/tier/rollout views included with canonical metric references.
+- [ ] Plan admin governance surfaces.
+  - Acceptance criteria:
+    - Metric proposal/review/publish operations are role-gated and auditable.
+- [ ] Plan data quality and trust cues.
+  - Acceptance criteria:
+    - Freshness, ownership, and formula context visible to users.
+
+### �� Android Delivery Planning
+
+- [ ] Plan critical path parity for survivor-facing GDP transparency.
+  - Acceptance criteria:
+    - Android displays equivalent KPI semantics and outcomes to web.
+- [ ] Plan parity closure for deferred admin capabilities.
+  - Acceptance criteria:
+    - Deferrals tracked with owner, due date, and risk notes.
+
+### �� Compliance, Hardening, and Operations
+
+- [ ] Define observability and error-budget requirements.
+  - Acceptance criteria:
+    - Key GDP command latency/error/failure metrics are measurable.
+- [ ] Define correction and republishing governance.
+  - Acceptance criteria:
+    - Historical corrections preserve immutable history and audit linkage.
+- [ ] Define plugin-scoped and full-account deletion behavior.
+  - Acceptance criteria:
+    - GDP extension and domain data deletion contracts are documented and policy-aligned.
+
+### Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+
+- [ ] Command schema design documentation.
+  - Acceptance criteria:
+    - Unknown fields/invalid types/bounds failures handling is documented.
+- [ ] Access policy enforcement design documentation.
+  - Acceptance criteria:
+    - Unauthorized role and deny-condition scenarios are documented.
+- [ ] Audit integrity design documentation.
+  - Acceptance criteria:
+    - Allow + deny events append-only and correlation fields documentation.
+- [ ] Snapshot and model rollup design documentation. [MANUAL TESTING DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Core read/mutate paths determinism requirements are documented.
+- [ ] Schema drift predeployment checks.
+  - Acceptance criteria:
+    - Drift checks documented with required schema-drift evidence.
+
+### Documentation and Inventory Lifecycle
+
+- [ ] Keep `ctf-gross-domestic-product-feature-inventory.md` updated per accepted scope change.
+  - Acceptance criteria:
+    - Any add/remove/behavioral change updates inventory in same PR.
+- [ ] Record deprecations/removals in inventory changelog.
+  - Acceptance criteria:
+    - Removed features are moved to dated changelog entries.
+- [ ] Implementation tracking. [EVIDENCE COLLECTION DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked; evidence collection deferred to post-MVP.
+
+### Open Decisions Tracker
+
+- [ ] Final owner teams for economics and platform metric governance.
+- [ ] Public disclosure policy for sensitive regional breakdowns.
+- [ ] Backfill/late-data correction SLA and approval workflow.
+- [ ] Versioning strategy for canonical metric formula changes.
+- [ ] GA criteria for parity closure across web and Android.

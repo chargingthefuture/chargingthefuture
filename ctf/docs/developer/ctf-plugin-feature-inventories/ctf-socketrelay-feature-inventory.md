@@ -2,28 +2,14 @@
 
 ## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy `platform/` is reference-only and must not be modified.
 - Plugin name: `SocketRelay`
 - Plugin slug: `socketrelay`
-- This document is a planning-state inventory (not implementation evidence).
-
-Legacy reference preservation:
-
-- Keep `ctf/docs/developer/socketrelay-feature-inventory.md` unchanged as legacy reference.
-- Keep `ctf/docs/developer/socketrelay-rewrite-checklist.md` unchanged as legacy reference.
-- This document is the authoritative CTF rewrite planning source for SocketRelay.
+- Owned surfaces: `/apps/socketrelay` (web), `packages/mobile/src/features/socketrelay` (Android), `/api/socketrelay/*` routes, `socketrelay_*` tables.
+- Not owned: identity (Clerk), service credits ledger (service-credits plugin), email/SMS transport (notifications integration).
 
 ## Intent and Outcome
 
-SocketRelay in CTF is planned as a request-and-fulfillment plugin with profile management, request lifecycle, fulfillment closure, participant chat, public sharing views, and admin moderation controls.
-
-Decision locks for planning:
-
-1. Web-first delivery is the default execution path.
-2. Android parity is tracked through explicit deferrals and closure dates.
-3. Android parity is not a strict MVP release gate.
-4. Legacy behavior informs planning, but rewrite contracts are defined in `ctf/` only.
+SocketRelay is a request-and-fulfillment plugin with profile management, request lifecycle, fulfillment closure, participant chat, public sharing views, and admin moderation controls.
 
 ## 1) User Features
 
@@ -115,11 +101,21 @@ Admin routes:
 
 ## 4) Data Model and Storage Contracts
 
-1. Canonical domain entities: profiles, requests, fulfillments, messages, announcements.
-2. Request and fulfillment status transitions are explicit and replay-safe.
-3. Public projection contracts are separated from authenticated/admin DTOs.
-4. Mutation operations enforce deterministic storage outcomes and audit-friendly metadata.
-5. Seed fixtures are deterministic for request lifecycle, fulfillment outcomes, and announcement states.
+Tables owned by this plugin:
+
+1. `socketrelay_user_extension` — Per-user profile extension fields.
+2. `socketrelay_requests` — Request lifecycle rows (status, ownership, repost lineage).
+3. `socketrelay_request_events` — Event log for request state transitions.
+4. `socketrelay_fulfillments` — Fulfillment claims and outcomes per request.
+5. `socketrelay_fulfillment_participants` — Participant access records for fulfillment chats.
+6. `socketrelay_messages` — Participant-only chat messages on a fulfillment.
+7. `socketrelay_admin_audit_trail` — Audit log for admin mutations.
+
+Storage and projection rules:
+
+1. Request and fulfillment status transitions are explicit and replay-safe via the `request_events` log.
+2. Public projection contracts are separated from authenticated/admin DTOs (privacy-minimized fields only on public routes).
+3. Mutation operations enforce deterministic storage outcomes and audit-friendly metadata.
 
 ## 5) Security, Privacy, and Compliance Controls
 
@@ -130,41 +126,162 @@ Admin routes:
 5. Anti-scraping and rate-limiting controls on public endpoints.
 6. Audit logging for sensitive admin mutations and policy-denied outcomes.
 
-## 6) Web-First Delivery Strategy and Android Deferrals
+## 6) Web and Android Delivery Status
 
-1. Web delivery is the primary MVP release gate for SocketRelay.
-2. Android implementation follows web contracts and policy outcomes.
-3. Android gaps are tracked as explicit deferrals with owner, due date, and risk note.
-4. Deferred Android items do not block MVP release unless explicitly escalated.
+`web+android complete`. Web surface lives under `/apps/socketrelay`; Android surface lives under `packages/mobile/src/features/socketrelay`. Public projection, lifecycle status, and CSRF behaviors are behaviorally consistent across platforms.
 
 ## 7) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle, fulfillment outcomes, and announcement states for dev validation.
 
-## 8) Gaps, Ambiguities, and Known Technical Debt
+## 8) Gaps and Known Technical Debt
 
-Known risks carried from legacy inventory:
+1. Anti-scraping rate limit thresholds on `/api/socketrelay/public` are conservative defaults; production-grade abuse signal classification is a known follow-up.
+2. Audit retention policy for `socketrelay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
 
-1. **Schema drift** risk across shared schema, SQL migrations, and seed assumptions.
-2. **Public DTO privacy mismatch** risk between intended projection and actual exposed fields.
-3. **Cross-module boundary bleed** risk in route/module ownership.
-4. **Coverage weakness** risk for lifecycle, policy denial, and regression paths.
-5. **CSRF consistency ambiguity** risk on admin write protections.
+## 9) Change Log
 
-Open planning decisions:
+- 2026-05-18: Inventory updated to enforce Rule 120 living-snapshot model. Removed "Web-First Delivery Strategy and Android Deferrals" section, "Docs Lifecycle" meta section, and planning-state framing. Replaced narrative data model bullets with the actual `socketrelay_*` tables. Confirmed `web+android complete` and dedicated seed script.
+- 2026-02-25: Created initial SocketRelay CTF rewrite inventory.
 
-1. Final canonical authority for schema contracts and drift gate ownership.
-2. Final public DTO field-level privacy contract approval.
-3. Final module ownership map for SocketRelay routes in CTF.
-4. Final Android deferral closure timeline and escalation threshold.
 
-## 9) Docs Lifecycle (Rule 120)
+## Build Checklist
 
-1. Keep this CTF rewrite inventory updated in the same PR as accepted feature changes.
-2. On add/remove/behavioral changes, update active sections immediately.
-3. If a feature is removed, move it to changelog/deprecations notes with date and rationale.
-4. Maintain clear separation between this CTF rewrite inventory and legacy reference docs.
+> **Reconciliation (2026-05-26):** the Delivery Status above is `web+android complete` (feature parity).
+> Unchecked items below are obsolete web-first / Android-deferral planning artifacts and deferred MVP
+> validation/release gates (Rule 118) — not missing implementation. The authoritative production bar
+> (pixel-perfect to `design` + parity + gates + deploy) is tracked in
+> `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md`, which wins where it differs from this checklist.
 
-## 10) Change Log
+### Scope and Boundary
 
-- 2026-02-25: Created initial SocketRelay CTF rewrite planning inventory with web-first delivery, tracked Android deferrals, lifecycle sections, and legacy risk carry-forward.
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No implementation tasks target `platform/`.
+- [ ] Confirm plugin identity is locked.
+  - Acceptance criteria:
+    - Plugin name is `SocketRelay`.
+    - Plugin slug is `socketrelay`.
+- [ ] Confirm legacy docs remain untouched.
+  - Acceptance criteria:
+    - `ctf/docs/developer/socketrelay-feature-inventory.md` is unchanged.
+    - `ctf/docs/developer/socketrelay-rewrite-checklist.md` is unchanged.
+
+### �� Decision Lock
+
+- [ ] Lock web-first delivery policy.
+  - Acceptance criteria:
+    - Web is the default MVP release gate.
+- [ ] Lock Android deferral policy.
+  - Acceptance criteria:
+    - Android parity items are tracked with owner, due date, and risk note.
+    - Android parity is not treated as a strict MVP parity gate.
+- [ ] Resolve open contract ownership questions.
+  - Acceptance criteria:
+    - Schema authority, DTO authority, and module ownership are explicitly assigned.
+
+### �� Contract and Schema Lock
+
+- [ ] Finalize profile/request/fulfillment/message/announcement contracts.
+  - Acceptance criteria:
+    - Route payloads, status enums, and validation outcomes are explicit.
+- [ ] Finalize request and fulfillment lifecycle semantics.
+  - Acceptance criteria:
+    - Status transitions and actor permissions are deterministic.
+- [ ] Finalize public projection contract.
+  - Acceptance criteria:
+    - Public DTO contains only approved privacy-minimized fields.
+- [ ] Finalize schema/seed alignment contract.
+  - Acceptance criteria:
+    - Shared schema, migrations, and seeds align on fields and constraints.
+
+### �� API and Policy Controls
+
+- [ ] Implement user/authenticated API routes for core lifecycle flows.
+  - Acceptance criteria:
+    - Profile, request, fulfillment, and message paths match planned contracts.
+- [ ] Implement public API routes with abuse controls.
+  - Acceptance criteria:
+    - Public list/detail routes enforce privacy projection and rate controls.
+- [ ] Implement admin moderation and announcement routes.
+  - Acceptance criteria:
+    - Admin routes are role-gated and auditable.
+- [ ] Enforce CSRF consistency on admin writes.
+  - Acceptance criteria:
+    - All admin write endpoints enforce identical CSRF contract behavior.
+
+### �� Web MVP Delivery (Release Gate)
+
+- [ ] Deliver dashboard and request lifecycle UX.
+  - Acceptance criteria:
+    - Create/update/repost/claim flows complete with deterministic status UX.
+- [ ] Deliver profile CRUD UX.
+  - Acceptance criteria:
+    - Validation, delete confirmation, and post-delete behavior are stable.
+- [ ] Deliver fulfillment chat UX.
+  - Acceptance criteria:
+    - Participant-only access and failure states are deterministic.
+- [ ] Deliver public list/detail and announcement UX.
+  - Acceptance criteria:
+    - Public privacy contract and announcement filtering behavior are correct.
+
+### �� Android Deferrals Tracking (Not Strict Parity Gate)
+
+- [ ] Define Android in-scope and deferred SocketRelay surfaces.
+  - Acceptance criteria:
+    - Each deferred item has owner, due date, and risk note.
+- [ ] Ensure Android uses the same API/policy outcomes as web for shipped flows.
+  - Acceptance criteria:
+    - Deny/allow semantics match web for implemented Android features.
+- [ ] Maintain deferral closure tracker.
+  - Acceptance criteria:
+    - Tracker is updated in each PR that changes Android scope.
+
+### �� Risk Mitigation and Hardening
+
+- [ ] Mitigate **schema drift** risk.
+  - Acceptance criteria:
+    - CI gates detect drift across shared schema, migrations, and seeds.
+- [ ] Mitigate **public DTO privacy mismatch** risk.
+  - Acceptance criteria:
+    - Contract and validation gate fail on non-approved public field exposure.
+- [ ] Mitigate **cross-module boundary bleed** risk.
+  - Acceptance criteria:
+    - Route-to-module ownership map is explicit and validated.
+- [ ] Mitigate **validation weakness** risk.
+  - Acceptance criteria:
+    - Critical lifecycle and policy-negative paths are covered by manual validation walkthroughs.
+- [ ] Mitigate **CSRF consistency ambiguity** risk.
+  - Acceptance criteria:
+    - One uniform CSRF policy contract is enforced and verified for admin writes.
+
+### �� Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+
+- [ ] API groups design documentation against contracts.
+  - Acceptance criteria:
+    - Success, validation, unauthorized, forbidden, and not-found paths are documented.
+- [ ] Lifecycle integration design documentation.
+  - Acceptance criteria:
+    - Request → fulfillment → close and chat access constraints are documented.
+- [ ] Privacy and abuse-control design documentation for public routes.
+  - Acceptance criteria:
+    - DTO projection and anti-scraping/rate-limit behavior are documented.
+- [ ] Release readiness documentation.
+  - Acceptance criteria:
+    - Schema and seed documentation is complete.
+
+### Docs Lifecycle (Rule 120)
+
+- [ ] Keep this checklist and `ctf-socketrelay-feature-inventory.md` synchronized.
+  - Acceptance criteria:
+    - Feature add/remove/behavioral changes update both docs in the same PR.
+- [ ] Implementation tracking. [EVIDENCE CAPTURE DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked; evidence collection deferred to post-MVP.
+- [ ] Track removals in inventory changelog/deprecations notes.
+  - Acceptance criteria:
+    - Removed scope is date-stamped and not silently deleted.
+
+### Change Log
+
+- 2026-02-25: Created initial SocketRelay CTF rewrite checklist with web-first release gating, tracked Android deferrals, lifecycle requirements, and explicit mitigation gates for legacy-known risks.

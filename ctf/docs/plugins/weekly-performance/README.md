@@ -10,7 +10,6 @@ This index links to canonical artifacts for Weekly Performance.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-weekly-performance-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-weekly-performance-rewrite-checklist.md)
 - [Android Parity Note(../../developer/ctf-plugin-feature-inventories/ctf-weekly-performance-android-parity-note.md)
 
 ## Notes

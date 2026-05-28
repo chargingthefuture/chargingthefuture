@@ -20,5 +20,7 @@ ctf/packages/mobile/.env.local
 .DS_Store
 *.log
 
-# Local AI prompt scratch notes
+# Local AI tool state (Refact.ai, Claude Code, etc.)
+.refact/
 .ai/
+.claude/settings.local.json

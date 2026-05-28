@@ -283,6 +283,54 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.submission.report
+    commandVersion: 1.0.0
+    purpose: community_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submission_reports
+    targetContext:
+      workspaceId: workspace_identifier
+      submissionId: submission_identifier
+      directoryProfileId: profile_identifier
+      reason: report_reason_code
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.profile.delete
+    commandVersion: 1.0.0
+    purpose: gdpr_self_delete
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submissions
+      - skills_hunt_audit_log
+    targetContext:
+      workspaceId: workspace_identifier
+      userId: caller_identifier
+      softDeletedSubmissions: count
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
 changelog:
   - date: 2026-02-24
     change: Initial Skills Hunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
+  - date: 2026-05-12
+    change: Added audit event templates for skills-hunt.submission.report and skills-hunt.profile.delete.

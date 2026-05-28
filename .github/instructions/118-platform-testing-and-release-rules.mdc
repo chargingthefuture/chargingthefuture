@@ -3,8 +3,8 @@
 ## Intent
 Define minimum quality and safety gates before code reaches users.
 
-## Mandatory (MVP Phase Exemption)
-**NOTE: For MVP phase only (temporary), automated testing requirements are deferred per product decision. Testing will be restored for post-MVP hardening phases. See Rule 119 for CI gate changes.**
+## Mandatory (MVP Exemption)
+**NOTE: During MVP only (temporary), automated testing requirements are deferred per product decision. Testing will be restored for post-MVP hardening. See Rule 119 for CI gate changes.**
 
 - ~~Every feature must include automated tests at the right layer (unit/integration/e2e as applicable).~~ [DEFERRED FOR MVP]
 - ~~Plugin commands and permission checks must have positive and negative tests.~~ [DEFERRED FOR MVP]

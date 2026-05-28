@@ -97,6 +97,56 @@ function walkDir(dir, ext = ['.ts', '.tsx']) {
   return results;
 }
 
+// ── 2b. Strip comments (preserve string/template literals + line numbers) ──
+
+/**
+ * Removes JS/TS line (`//`) and block (`/* *\/`) comments from source so that
+ * comment prose (e.g. "...overrides from scoring_config") is never mistaken for
+ * a SQL query. String and template literals are preserved verbatim, and removed
+ * comment characters are replaced with spaces so reported line numbers stay
+ * accurate. Template literals are treated as opaque (their SQL content is kept).
+ */
+function stripComments(source) {
+  const NORMAL = 0, LINE = 1, BLOCK = 2, SQ = 3, DQ = 4, TPL = 5;
+  let state = NORMAL;
+  let out = '';
+  const n = source.length;
+  for (let i = 0; i < n; i++) {
+    const c = source[i];
+    const next = i + 1 < n ? source[i + 1] : '';
+    if (state === NORMAL) {
+      if (c === '/' && next === '/') { state = LINE; out += '  '; i++; continue; }
+      if (c === '/' && next === '*') { state = BLOCK; out += '  '; i++; continue; }
+      if (c === "'") { state = SQ; out += c; continue; }
+      if (c === '"') { state = DQ; out += c; continue; }
+      if (c === '`') { state = TPL; out += c; continue; }
+      out += c;
+      continue;
+    }
+    if (state === LINE) {
+      if (c === '\n') { state = NORMAL; out += c; } else { out += ' '; }
+      continue;
+    }
+    if (state === BLOCK) {
+      if (c === '*' && next === '/') { state = NORMAL; out += '  '; i++; continue; }
+      out += c === '\n' ? '\n' : ' ';
+      continue;
+    }
+    // String / template literal states: copy verbatim, honoring escapes.
+    if (c === '\\') {
+      out += c;
+      if (i + 1 < n) out += source[i + 1];
+      i++;
+      continue;
+    }
+    out += c;
+    if (state === SQ && c === "'") state = NORMAL;
+    else if (state === DQ && c === '"') state = NORMAL;
+    else if (state === TPL && c === '`') state = NORMAL;
+  }
+  return out;
+}
+
 // ── 3. Extract SQL table references from source files ─────────────────
 
 /**
@@ -340,7 +390,8 @@ const allColumnRefs = [];
 
 for (const f of files) {
   const src = readFileSync(f, 'utf8');
-  const refs = extractTableRefs(f, src);
+  const code = stripComments(src);
+  const refs = extractTableRefs(f, code);
   for (const r of refs) {
     if (!tableUsage.has(r.table)) tableUsage.set(r.table, []);
     tableUsage.get(r.table).push({
@@ -349,7 +400,7 @@ for (const f of files) {
       snippet: r.snippet,
     });
   }
-  const colRefs = extractColumnRefs(f, src);
+  const colRefs = extractColumnRefs(f, code);
   allColumnRefs.push(...colRefs);
 }
 

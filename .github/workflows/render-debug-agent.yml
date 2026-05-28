@@ -1,0 +1,35 @@
+name: Render Debug Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_id:
+        description: 'Render service ID to debug (e.g. srv-xxx). Leave blank to use RENDER_SERVICE_ID_WEB secret.'
+        required: false
+
+jobs:
+  debug:
+    name: Fetch logs and auto-fix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Diagnose and fix Render errors
+        id: debug
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ inputs.service_id || secrets.RENDER_SERVICE_ID_WEB }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ctf/scripts/render-debug-agent.sh
+          ctf/scripts/render-debug-agent.sh
+
+      - name: Post PR link to summary
+        if: steps.debug.outputs.PR_URL != ''
+        run: |
+          echo "### Fix PR opened" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.debug.outputs.PR_URL }}" >> $GITHUB_STEP_SUMMARY

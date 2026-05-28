@@ -4,7 +4,7 @@
 Prevent schema and contract drift from reaching any deployment target.
 
 ## Scope
-- Applies to all rewrite changes under `ctf/` that affect DB schema, DB constraints/indexes, shared DTO/schema contracts, API payloads, plugin command schemas, audit/access-policy schemas, seed scripts/data, or fallback response objects.
+- Applies to all changes under `ctf/` that affect DB schema, DB constraints/indexes, shared DTO/schema contracts, API payloads, plugin command schemas, audit/access-policy schemas, seed scripts/data, or fallback response objects.
 - Applies to pull requests and deployment workflows for all environments (preview, staging, production).
 
 ## Drift Classes

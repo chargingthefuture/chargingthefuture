@@ -1,0 +1,148 @@
+# render.yaml — Render Blueprint for chargingthefuture v3
+# All v3 services migrated from Railway to Render.
+# v2 (legacy) remains on Railway until v3 is production-ready.
+#
+# ENVIRONMENT MODEL
+# ───────────────────────────────
+# Production is the only environment — it deploys from `main`. Render preview
+# environments are NOT used: they require a paid (non-Hobby) workspace, and a
+# `previews:` block here blocks Blueprint sync on a Hobby workspace. Test
+# changes locally / in Codespaces before merging to `main`. To get ephemeral
+# per-PR previews later, upgrade the workspace and re-add a `previews:` block.
+#
+# IMAGE BUILD ARCHITECTURE
+# ───────────────────────────────
+# Docker images are built by GitHub Actions (build-images.yml) and pushed to
+# GHCR (ghcr.io/chargingthefuture/*:latest). Render pulls pre-built images —
+# zero Render build pipeline minutes consumed.
+#
+# FIRST-TIME SETUP: after build-images.yml runs for the first time, go to
+# github.com/orgs/chargingthefuture/packages → each ctf-* image →
+# Package settings → Change visibility → Public.
+# This lets Render pull images without registry credentials.
+#
+# SECRET MANAGEMENT ARCHITECTURE
+# ───────────────────────────────
+# Infisical (self-hosted on Railway) is the single source of truth for secrets.
+# Its Render Sync integration pushes secrets into each production service below
+# via service-level environment variables (which take precedence over env groups).
+#
+# For GitHub Actions (backup workflow), add two GitHub secrets:
+# INFISICAL_CLIENT_ID + INFISICAL_CLIENT_SECRET; the workflow fetches the rest
+# from Infisical at runtime.
+
+services:
+  # ── Next.js web app ─────────────────────────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-web:latest
+  # All secrets injected by Infisical → Render Sync. No manual setup required
+  # beyond configuring the Render Sync inside Infisical.
+  - type: web
+    name: ctf-web
+    runtime: image
+    image:
+      url: ghcr.io/chargingthefuture/ctf-web:latest
+    region: ohio
+    # Standard (2GB/1CPU) — headroom for a production Next.js app (~159 routes).
+    plan: standard
+    healthCheckPath: /api/health
+    envVars:
+      # PORT is injected automatically by Render (default 10000) and consumed by
+      # the container's CMD (PORT=${PORT:-3000}). Do NOT hardcode PORT here — an
+      # explicit value makes the server bind to a port Render does not route to,
+      # causing health-check timeouts.
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      # Observability — enables Sentry cron check-ins for workforce-incremental-sync
+      - key: OBSERVABILITY_PROVIDER
+        value: sentry
+      # All remaining secrets are synced automatically by Infisical → Render Sync:
+      #   AUTH_SECRET_KEY               — Clerk secret key (sk_test_… / sk_live_…)
+      #   CLERK_ENCRYPTION_KEY          — random 32-char string (openssl rand -hex 16); required when secretKey is passed dynamically
+      #   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY — Clerk publishable key (pk_…)
+      #   DATABASE_URL                  — Neon Postgres connection string
+      #   STREAM_API_KEY / STREAM_API_SECRET — Stream Chat
+      #   SENTRY_DSN / SENTRY_AUTH_TOKEN
+      #   CRON_SECRET
+      #   INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET
+      #   FORMANCE_POSTGRES_URI         — Neon Postgres URI for Formance ledger
+
+  # ── PM MCP Server ────────────────────────────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
+  # Background worker — HTTP MCP transport for PM feedback workflows.
+  # Part of 100% agentic infrastructure orchestration.
+  # Secrets injected by Infisical → Render Sync.
+  - type: worker
+    name: ctf-pm-mcp-server
+    runtime: image
+    image:
+      url: ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
+    region: ohio
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # ── Ollama ────────────────────────────────────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-ollama:latest
+  # Private service — reachable by other Render services via internal URL.
+  # Model (llama3.2) is baked into the image at build time. Image only rebuilt
+  # when ctf/ops/ollama/Dockerfile changes (path-filtered in build-images.yml).
+  - type: pserv
+    name: ctf-ollama
+    runtime: image
+    image:
+      url: ghcr.io/chargingthefuture/ctf-ollama:latest
+    region: ohio
+    plan: standard
+    envVars:
+      - key: OLLAMA_MODEL
+        value: llama3.2
+
+  # ── Infisical (secrets management) ───────────────────────────────
+  # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
+  # Railway Infisical instance configured with Render Sync integration to push
+  # secrets (DATABASE_URL, AUTH_SECRET_KEY, FORMANCE_POSTGRES_URI, etc.) to all Render services.
+  # TODO: migrate Infisical to Render when cost-benefit favors consolidation.
+  # Original pserv config preserved below for future re-migration:
+  #
+  # - type: pserv
+  #   name: ctf-infisical
+  #   runtime: image
+  #   image:
+  #     url: ghcr.io/chargingthefuture/ctf-infisical:latest
+  #   region: ohio
+  #   plan: starter
+  #   envVars:
+  #     - key: ENCRYPTION_KEY
+  #       sync: false
+  #     - key: AUTH_SECRET
+  #       sync: false
+  #     - key: SITE_URL
+  #       sync: false
+  #     - key: DATABASE_URL
+  #       sync: false
+  #     - key: REDIS_URL
+  #       sync: false
+
+  # ── Formance Ledger (financial ledger) ───────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-formance-ledger:latest
+  # Private service — wraps ghcr.io/formancehq/ledger with Render-compatible config.
+  # All state lives in Neon Postgres (no persistent disk on Render).
+  # AUTO_UPGRADE=true handles schema migrations on container start.
+  # Backups: daily pg_dump → Supabase Storage via backup-formance-supabase.yml.
+  # FORMANCE_POSTGRES_URI injected by Infisical → Render Sync.
+  - type: pserv
+    name: ctf-formance-ledger
+    runtime: image
+    image:
+      url: ghcr.io/chargingthefuture/ctf-formance-ledger:latest
+    region: ohio
+    plan: starter
+    envVars:
+      # FORMANCE_POSTGRES_URI is synced from Infisical → Render Sync.
+      # AUTO_UPGRADE=true (baked into image) runs schema migrations on startup —
+      # no manual SQL needed. Ensure this var is set before first deploy.
+      - key: FORMANCE_POSTGRES_URI
+        sync: false

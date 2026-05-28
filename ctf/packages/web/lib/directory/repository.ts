@@ -26,18 +26,25 @@ type DirectoryProfileRow = {
   headline: string | null;
   bio: string | null;
   profile_url: string | null;
-  is_public: boolean;
   sector_id: string | null;
   sector_name: string | null;
   job_title_id: string | null;
   job_title_name: string | null;
   is_active: boolean;
+  // Skills Hunt + Clerk username co-change. Optional on the row type so
+  // existing SELECTs that don't yet pull these columns still typecheck;
+  // mapProfileRow defaults to safe values.
+  source?: 'admin' | 'self' | 'community-generated' | null;
+  invited_by_username?: string | null;
+  unclaimed_handle?: string | null;
+  // Optional on the row type so SELECTs that don't pull the payment columns
+  // still typecheck; mapProfileRow defaults each to null.
+  venmo_address?: string | null;
+  monero_address?: string | null;
+  bitcoin_address?: string | null;
+  service_credits_address?: string | null;
   created_at: Date;
   updated_at: Date;
-    venmo_address: string | null;
-    monero_address: string | null;
-    bitcoin_address: string | null;
-    service_credits_address: string | null;
 };
 
 type DirectorySkillRow = {
@@ -129,19 +136,21 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     headline: row.headline,
     bio: row.bio,
     profileUrl: row.profile_url,
-    isPublic: row.is_public,
     sectorId: row.sector_id,
     sectorName: row.sector_name,
     jobTitleId: row.job_title_id,
     jobTitleName: row.job_title_name,
     skills: await loadProfileSkills(client, row.id),
     isActive: row.is_active,
+    source: row.source ?? 'admin',
+    invitedByUsername: row.invited_by_username ?? null,
+    unclaimedHandle: row.unclaimed_handle ?? null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
-      venmoAddress: row.venmo_address,
-      moneroAddress: row.monero_address,
-      bitcoinAddress: row.bitcoin_address,
-      serviceCreditsAddress: row.service_credits_address,
+    venmoAddress: row.venmo_address ?? null,
+    moneroAddress: row.monero_address ?? null,
+    bitcoinAddress: row.bitcoin_address ?? null,
+    serviceCreditsAddress: row.service_credits_address ?? null,
   };
 }
 
@@ -168,7 +177,6 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
     !headline || headline.length <= DIRECTORY_MAX_HEADLINE_LENGTH,
     !bio || bio.length <= DIRECTORY_MAX_BIO_LENGTH,
     !profileUrl || profileUrl.length <= DIRECTORY_MAX_URL_LENGTH,
-    typeof input.isPublic === 'boolean',
     !input.skillIds || Array.isArray(input.skillIds),
   ];
 
@@ -266,12 +274,14 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
         p.headline,
         p.bio,
         p.profile_url,
-        p.is_public,
         p.sector_id,
         s.name AS sector_name,
         p.job_title_id,
         jt.name AS job_title_name,
         p.is_active,
+        p.source,
+        p.invited_by_username,
+        p.unclaimed_handle,
         p.created_at,
         p.updated_at
       FROM directory_profiles p
@@ -322,25 +332,24 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
             headline = $3,
             bio = $4,
             profile_url = $5,
-            is_public = $6,
-            sector_id = $7::uuid,
-            job_title_id = $8::uuid,
+            sector_id = $6::uuid,
+            job_title_id = $7::uuid,
             is_active = true,
             updated_at = NOW()
           WHERE id = $1
         `,
-        [profileId, displayName, headline, bio, profileUrl, input.isPublic, sectorId, jobTitleId],
+        [profileId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
       );
     } else {
       const inserted = await client.query<{ id: string }>(
         `
           INSERT INTO directory_profiles
-            (claimed_by_user_id, display_name, headline, bio, profile_url, is_public, sector_id, job_title_id, is_active)
+            (claimed_by_user_id, display_name, headline, bio, profile_url, sector_id, job_title_id, is_active, source)
           VALUES
-            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, true)
+            ($1, $2, $3, $4, $5, $6::uuid, $7::uuid, true, 'self')
           RETURNING id
         `,
-        [userId, displayName, headline, bio, profileUrl, input.isPublic, sectorId, jobTitleId],
+        [userId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
       );
 
       profileId = inserted.rows[0].id;
@@ -348,21 +357,21 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
 
     await replaceProfileSkills(client, profileId, skillIds);
 
+    // Directory is no longer public-facing; every authenticated member sees
+    // every profile (subject to soft-delete + claimed_by_user_id). The
+    // user_extension visibility row is hard-coded to 'workspace' so legacy
+    // 'public' rows stop being created.
     await client.query(
       `
         INSERT INTO directory_user_extension (user_id, profile_visibility, service_deleted_at, updated_at)
-        VALUES ($1, CASE WHEN $2 THEN 'public' ELSE 'workspace' END, NULL, NOW())
+        VALUES ($1, 'workspace', NULL, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
           profile_visibility = EXCLUDED.profile_visibility,
-                        venmo_address = $9,
-                        monero_address = $10,
-                        bitcoin_address = $11,
-                        service_credits_address = $12,
           service_deleted_at = NULL,
           updated_at = NOW()
       `,
-      [userId, input.isPublic],
+      [userId],
     );
 
     await client.query(
@@ -384,12 +393,15 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           p.headline,
           p.bio,
           p.profile_url,
-          p.is_public,
+
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -448,115 +460,14 @@ export async function listDirectoryForMember(
     const offset = (pagination.page - 1) * pagination.pageSize;
     const normalizedFilters = normalizeListFilters(filters);
 
+    // Directory is no longer public-facing; every authenticated member sees
+    // every active profile. The viewer's userId is no longer needed for a
+    // visibility filter, so the WHERE clause + first param were dropped.
     const countResult = await client.query<CountRow>(
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
         WHERE p.is_active = true
-          AND (p.is_public = true OR p.claimed_by_user_id = $1)
-          AND ($2::uuid IS NULL OR p.sector_id = $2::uuid)
-          AND ($3::uuid IS NULL OR p.job_title_id = $3::uuid)
-          AND (
-            $4::uuid IS NULL
-            OR EXISTS (
-              SELECT 1 FROM directory_profile_skills dps
-              WHERE dps.profile_id = p.id AND dps.skill_id = $4::uuid
-            )
-          )
-          AND (
-            $5::text IS NULL
-            OR lower(p.display_name) LIKE $5::text
-            OR lower(COALESCE(p.headline, '')) LIKE $5::text
-            OR lower(COALESCE(p.bio, '')) LIKE $5::text
-          )
-      `,
-      [
-        userId,
-        normalizedFilters.sectorId,
-        normalizedFilters.jobTitleId,
-        normalizedFilters.skillId,
-        normalizedFilters.searchTerm,
-      ],
-    );
-
-    const rows = await client.query<DirectoryProfileRow>(
-      `
-        SELECT
-          p.id,
-          p.claimed_by_user_id,
-          p.display_name,
-          p.headline,
-          p.bio,
-          p.profile_url,
-          p.is_public,
-          p.sector_id,
-          s.name AS sector_name,
-          p.job_title_id,
-          jt.name AS job_title_name,
-          p.is_active,
-          p.created_at,
-          p.updated_at
-        FROM directory_profiles p
-        LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
-        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.is_active = true
-          AND (p.is_public = true OR p.claimed_by_user_id = $1)
-          AND ($2::uuid IS NULL OR p.sector_id = $2::uuid)
-          AND ($3::uuid IS NULL OR p.job_title_id = $3::uuid)
-          AND (
-            $4::uuid IS NULL
-            OR EXISTS (
-              SELECT 1 FROM directory_profile_skills dps
-              WHERE dps.profile_id = p.id AND dps.skill_id = $4::uuid
-            )
-          )
-          AND (
-            $5::text IS NULL
-            OR lower(p.display_name) LIKE $5::text
-            OR lower(COALESCE(p.headline, '')) LIKE $5::text
-            OR lower(COALESCE(p.bio, '')) LIKE $5::text
-          )
-        ORDER BY p.updated_at DESC
-        OFFSET $6 LIMIT $7
-      `,
-      [
-        userId,
-        normalizedFilters.sectorId,
-        normalizedFilters.jobTitleId,
-        normalizedFilters.skillId,
-        normalizedFilters.searchTerm,
-        offset,
-        pagination.pageSize,
-      ],
-    );
-
-    const items = await Promise.all(rows.rows.map(async (row) => mapProfileRow(client, row)));
-
-    return {
-      items,
-      pagination: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
-      },
-    };
-  });
-}
-
-export async function listPublicDirectory(
-  pagination: { page: number; pageSize: number },
-  filters: ListFilters,
-): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination }> {
-  return withDbTransaction(async (client) => {
-    const offset = (pagination.page - 1) * pagination.pageSize;
-    const searchTerm = buildSearchTerm(filters.q);
-
-    const countResult = await client.query<CountRow>(
-      `
-        SELECT COUNT(*)::text AS total
-        FROM directory_profiles p
-        WHERE p.is_active = true
-          AND p.is_public = true
           AND ($1::uuid IS NULL OR p.sector_id = $1::uuid)
           AND ($2::uuid IS NULL OR p.job_title_id = $2::uuid)
           AND (
@@ -573,7 +484,12 @@ export async function listPublicDirectory(
             OR lower(COALESCE(p.bio, '')) LIKE $4::text
           )
       `,
-      [filters.sectorId ?? null, filters.jobTitleId ?? null, filters.skillId ?? null, searchTerm],
+      [
+        normalizedFilters.sectorId,
+        normalizedFilters.jobTitleId,
+        normalizedFilters.skillId,
+        normalizedFilters.searchTerm,
+      ],
     );
 
     const rows = await client.query<DirectoryProfileRow>(
@@ -585,7 +501,6 @@ export async function listPublicDirectory(
           p.headline,
           p.bio,
           p.profile_url,
-          p.is_public,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -597,7 +512,6 @@ export async function listPublicDirectory(
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
         WHERE p.is_active = true
-          AND p.is_public = true
           AND ($1::uuid IS NULL OR p.sector_id = $1::uuid)
           AND ($2::uuid IS NULL OR p.job_title_id = $2::uuid)
           AND (
@@ -617,19 +531,16 @@ export async function listPublicDirectory(
         OFFSET $5 LIMIT $6
       `,
       [
-        filters.sectorId ?? null,
-        filters.jobTitleId ?? null,
-        filters.skillId ?? null,
-        searchTerm,
+        normalizedFilters.sectorId,
+        normalizedFilters.jobTitleId,
+        normalizedFilters.skillId,
+        normalizedFilters.searchTerm,
         offset,
         pagination.pageSize,
       ],
     );
 
-    const items: DirectoryProfile[] = [];
-    for (const row of rows.rows) {
-      items.push(await mapProfileRow(client, row));
-    }
+    const items = await Promise.all(rows.rows.map(async (row) => mapProfileRow(client, row)));
 
     return {
       items,
@@ -639,41 +550,6 @@ export async function listPublicDirectory(
         total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
       },
     };
-  });
-}
-
-export async function getPublicDirectoryById(profileId: string): Promise<DirectoryProfile | null> {
-  return withDbTransaction(async (client) => {
-    const rows = await client.query<DirectoryProfileRow>(
-      `
-        SELECT
-          p.id,
-          p.claimed_by_user_id,
-          p.display_name,
-          p.headline,
-          p.bio,
-          p.profile_url,
-          p.is_public,
-          p.sector_id,
-          s.name AS sector_name,
-          p.job_title_id,
-          jt.name AS job_title_name,
-          p.is_active,
-          p.created_at,
-          p.updated_at
-        FROM directory_profiles p
-        LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
-        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id = $1::uuid AND p.is_active = true AND p.is_public = true
-      `,
-      [profileId],
-    );
-
-    if (rows.rows.length === 0) {
-      return null;
-    }
-
-    return mapProfileRow(client, rows.rows[0]);
   });
 }
 
@@ -724,7 +600,6 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
             headline = NULL,
             bio = NULL,
             profile_url = NULL,
-            is_public = false,
             is_active = false,
             updated_at = NOW()
           WHERE id = $1
@@ -824,7 +699,7 @@ export async function listAdminProfiles(
           p.headline,
           p.bio,
           p.profile_url,
-          p.is_public,
+
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -873,12 +748,12 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const inserted = await client.query<{ id: string }>(
       `
         INSERT INTO directory_profiles
-          (claimed_by_user_id, display_name, headline, bio, profile_url, is_public, sector_id, job_title_id, is_active)
+          (claimed_by_user_id, display_name, headline, bio, profile_url, sector_id, job_title_id, is_active)
         VALUES
-          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, true)
+          (NULL, $1, $2, $3, $4, $5::uuid, $6::uuid, true)
         RETURNING id
       `,
-      [displayName, headline, bio, profileUrl, input.isPublic, sectorId, jobTitleId],
+      [displayName, headline, bio, profileUrl, sectorId, jobTitleId],
     );
 
     const profileId = inserted.rows[0].id;
@@ -903,7 +778,7 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
           p.headline,
           p.bio,
           p.profile_url,
-          p.is_public,
+
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -952,14 +827,13 @@ export async function updateAdminProfile(
           headline = $3,
           bio = $4,
           profile_url = $5,
-          is_public = $6,
-          sector_id = $7::uuid,
-          job_title_id = $8::uuid,
+          sector_id = $6::uuid,
+          job_title_id = $7::uuid,
           is_active = true,
           updated_at = NOW()
         WHERE id = $1::uuid
       `,
-      [profileId, displayName, headline, bio, profileUrl, input.isPublic, sectorId, jobTitleId],
+      [profileId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
     );
 
     await replaceProfileSkills(client, profileId, skillIds);
@@ -983,7 +857,7 @@ export async function updateAdminProfile(
           p.headline,
           p.bio,
           p.profile_url,
-          p.is_public,
+
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -1058,7 +932,7 @@ export async function assignAdminProfile(
           p.headline,
           p.bio,
           p.profile_url,
-          p.is_public,
+
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,

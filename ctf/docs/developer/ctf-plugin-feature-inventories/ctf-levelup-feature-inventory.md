@@ -81,7 +81,7 @@ External value movement dependencies:
 
 Deterministic seed script added:
 
-- `ctf/scripts/seedLevelupPhase3.mjs`
+- `ctf/scripts/seedLevelup.mjs`
 
 Seed content:
 
@@ -101,3 +101,66 @@ Parity status: **web+android complete**.
 
 - 2026-05-17: Updated inventory to enforce Rule 105 parity baseline and Rule 120 living-snapshot model. Removed Android parity deferral language; confirmed web+android complete delivery status. Clarified technical debt (attachment storage) as genuine limitation, not unimplemented feature.
 - 2026-03-24: Initial LevelUp phase-3 implementation inventory created (schema, repository, API routes, shell components, seed script, contracts).
+
+
+## Build Checklist
+
+
+### Scope and Boundary
+
+- [x] Confirm implementation scope is `ctf/` only.
+- [x] Confirm plugin slug and route namespace (`levelup`).
+- [x] Confirm no Prisma usage; SQL migration + repository pattern only.
+
+### Schema and Registry
+
+- [x] Add core migration for LevelUp domain tables.
+- [x] Add plugin registry availability entry for `levelup`.
+- [x] Add baseline policy config (`starter_credits`, split defaults).
+
+### Repository and Business Rules
+
+- [x] Implement cohort creation/list/detail repository methods.
+- [x] Implement enrollment and escrow allocation logic with idempotency.
+- [x] Implement milestone validation and release settlement.
+- [x] Implement dispute open/resolve and admin adjust credit flows.
+- [x] Implement persisted DB rate-limit counters for enroll/validate.
+
+### API Surface
+
+- [x] Implement route helpers for authz, CSRF, and error mapping.
+- [x] Add zod validation to LevelUp mutation/query handlers.
+- [x] Add routes for cohorts, enrollments, milestones, transfers, disputes, admin adjustment.
+
+### Web UI Shell
+
+- [x] Add `LevelupShell` under plugin app route.
+- [x] Add `CohortList`, `CohortDetail`, `EnrollModal` components.
+- [x] Add `UserDashboard`, `TrainerDashboard`, `AdminPanel` components.
+- [x] Add `/admin/levelup` page.
+
+### Contracts and Inventory
+
+- [x] Add command contracts file.
+- [x] Add access policy contracts file.
+- [x] Add audit contracts file.
+- [x] Add plugin feature inventory file.
+- [x] Add rewrite checklist file.
+
+### Seed and Release Readiness
+
+- [x] Add deterministic seed script for sample users/cohort/milestones.
+- [ ] Android parity implementation (follow-up required before GA).
+  - Ticket: `PARITY-LEVELUP-ANDROID-001` (placeholder)
+  - Owner: Mobile plugin parity owner (TBD)
+  - Deadline: Before LevelUp GA release
+  - Risk note: Web-only critical training flow until parity closes
+- [x] Observability KPI finalization for non-placeholder admin metrics.
+
+### MVP Testing Note
+
+- [x] Automated test suites deferred for MVP per Rule 118.
+
+### Change Log
+
+- 2026-03-24: Initial checklist created and baseline implementation items marked.

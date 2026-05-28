@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { EducationModal } from '@ctf/plugin-education';
-import { loadEducationContent } from '@ctf/plugin-education/content/loader';
+import { EducationModal } from '@ctf/education';
+import { loadEducationContent } from '@ctf/education/content/loader';
 
 export const EOLEducation: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const [skipped, setSkipped] = useState(false);

@@ -1,0 +1,396 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ctf/**"
+      - ".github/instructions/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "ctf/**"
+      - ".github/instructions/**"
+      - ".github/workflows/**"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rules-integrity:
+    name: Rules Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required rule files
+        run: |
+          set -euo pipefail
+          required=(
+            ".github/instructions/copilot-instructions.md"
+            ".github/instructions/100-product-context-and-experience-rules.mdc"
+            ".github/instructions/014-compliance-rules-index.mdc"
+            ".github/instructions/101-monorepo-layout-rules.mdc"
+            ".github/instructions/102-shared-boundary-rules.mdc"
+            ".github/instructions/103-web-nextjs-structure-rules.mdc"
+            ".github/instructions/104-mobile-react-native-android-rules.mdc"
+            ".github/instructions/105-web-android-feature-parity-rules.mdc"
+            ".github/instructions/106-expo-eas-mobile-workflow-rules.mdc"
+            ".github/instructions/112-platform-architecture-rules.mdc"
+            ".github/instructions/113-platform-coding-rules.mdc"
+            ".github/instructions/115-neon-migration-delivery-rules.mdc"
+            ".github/instructions/116-file-size-and-modularity-rules.mdc"
+            ".github/instructions/117-agent-readability-and-cost-rules.mdc"
+            ".github/instructions/118-platform-testing-and-release-rules.mdc"
+            ".github/instructions/119-github-actions-ci-rules.mdc"
+            ".github/instructions/122-schema-drift-predeployment-rules.mdc"
+            ".github/instructions/107-integration-stack-rules.mdc"
+            ".github/instructions/108-observability-provider-abstraction-rules.mdc"
+            ".github/instructions/109-sentry-implementation-rules.mdc"
+            ".github/instructions/110-stream-maker-tier-rules.mdc"
+            ".github/instructions/111-deployment-topology-rules.mdc"
+            ".github/instructions/200-plugin-command-contract-templates.mdc"
+            ".github/instructions/201-plugin-command-schema-template.mdc"
+            ".github/instructions/202-plugin-access-policy-schema-template.mdc"
+            ".github/instructions/203-plugin-audit-schema-template.mdc"
+          )
+
+          for file in "${required[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Missing required rules file: $file"
+              exit 1
+            fi
+          done
+
+  plugin-contract-templates:
+    name: Plugin Contract Templates
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate template required keys
+        run: |
+          set -euo pipefail
+
+          grep -q "pluginId" .github/instructions/201-plugin-command-schema-template.mdc
+          grep -q "inputSchema" .github/instructions/201-plugin-command-schema-template.mdc
+          grep -q "requiredRoles" .github/instructions/202-plugin-access-policy-schema-template.mdc
+          grep -q "consentRequirements" .github/instructions/202-plugin-access-policy-schema-template.mdc
+          grep -q "eventId" .github/instructions/203-plugin-audit-schema-template.mdc
+          grep -q "policyDecision" .github/instructions/203-plugin-audit-schema-template.mdc
+
+  rules-link-coverage:
+    name: Rules Link Coverage
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure all rule files are linked from index files
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          root = Path('.github/instructions')
+          index = root / 'copilot-instructions.md'
+          compliance = root / '014-compliance-rules-index.mdc'
+
+          if not index.exists() or not compliance.exists():
+              print('Missing required index files for rule coverage check.')
+              sys.exit(1)
+
+          all_rules = sorted(p.name for p in root.glob('*.mdc'))
+
+          link_re = re.compile(r'\[[^\]]+\]\(([^)]+\.mdc)\)')
+
+          def links(path: Path):
+              text = path.read_text(encoding='utf-8')
+              return [Path(match).name for match in link_re.findall(text)]
+
+          linked = set(links(index) + links(compliance))
+          allowed_unlinked = {
+              '098-agent-communication-rules.mdc',
+              '123-environment-and-clerk-auth-rules.mdc',
+          }
+
+          missing = [name for name in all_rules if name not in linked and name not in allowed_unlinked]
+          if missing:
+              print('Unlinked rule files detected:')
+              for name in missing:
+                  print(f'- {name}')
+              sys.exit(1)
+
+          print('Rule link coverage check passed.')
+          PY
+
+  formatting-eof:
+    name: Formatting EOF
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate single trailing newline
+        run: |
+          set -euo pipefail
+          bash ctf/scripts/check-eof-format.sh
+
+  modularity-governance:
+    name: Modularity and Complexity Governance
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Install ctf dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Enforce modularity and complexity governance
+        run: |
+          set -euo pipefail
+          bash ctf/scripts/check-modularity-governance.sh
+
+  prompt-leak-guard:
+    name: Prompt Leak Guard
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block AI prompt content in changed files
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            head_sha="${{ github.event.pull_request.head.sha }}"
+            bash scripts/check-no-ai-prompts.sh --ref-range "$base_sha...$head_sha"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            bash scripts/check-no-ai-prompts.sh --ref-range "${{ github.event.before }}...${{ github.sha }}"
+          else
+            bash scripts/check-no-ai-prompts.sh --all
+          fi
+
+  stream-quota-policy:
+    name: Stream Quota Policy
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Stream Maker tier policy coverage
+        run: |
+          set -euo pipefail
+
+          file=".github/instructions/110-stream-maker-tier-rules.mdc"
+
+          test -f "$file"
+          grep -q "Chat: 2,000 MAU per month" "$file"
+          grep -q "Activity Feeds: 125,000 API calls per month" "$file"
+          grep -q "Video: 333,000 participant minutes per month" "$file"
+          grep -q "AI Moderation: \$100 monthly credits" "$file"
+          grep -q "Green: 0–70% budget used" "$file"
+          grep -q "Yellow: 70–85% budget used" "$file"
+          grep -q "Orange: 85–95% budget used" "$file"
+          grep -q "Red: 95–100% budget used" "$file"
+          grep -q "fallback UX behavior" "$file"
+          grep -q "feature flag/kill switch" "$file"
+
+  stream-quota-impact-note:
+    name: Stream Quota Impact Note
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require quota-impact note for Stream-related changes
+        run: |
+          set -euo pipefail
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+
+          changed_files=$(git diff --name-only "$base_sha" "$head_sha")
+
+          if echo "$changed_files" | grep -Eiq '^ctf/.*(stream|getstream)'; then
+            echo "Detected Stream-related code changes in this PR."
+
+            quota_notes=$(echo "$changed_files" | grep -E '^ctf/docs/quota-impact/.+\.md$' | grep -Ev '^ctf/docs/quota-impact/TEMPLATE\.md$' || true)
+
+            if [ -z "$quota_notes" ]; then
+              echo "Missing required quota impact note."
+              echo "Add or update a file under ctf/docs/quota-impact/, e.g.:"
+              echo "ctf/docs/quota-impact/2026-02-19-stream-feature-name.md"
+              exit 1
+            fi
+
+            required_headings=(
+              "## Summary"
+              "## Stream Surfaces Affected"
+              "## Estimated Monthly Impact"
+              "## Budget Threshold Risk"
+              "## Fallback and Degradation Plan"
+              "## Observability"
+              "## Validation"
+            )
+
+            while IFS= read -r note_file; do
+              [ -z "$note_file" ] && continue
+              echo "Validating quota note headings in $note_file"
+              for heading in "${required_headings[@]}"; do
+                if ! grep -Fq "$heading" "$note_file"; then
+                  echo "Missing required heading '$heading' in $note_file"
+                  exit 1
+                fi
+              done
+            done <<< "$quota_notes"
+          else
+            echo "No Stream-related code changes detected; quota impact note not required."
+          fi
+
+  schema-drift-gate:
+    name: Schema Drift Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce schema drift policy
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            head_sha="${{ github.event.pull_request.head.sha }}"
+            bash ctf/scripts/check-schema-drift.sh --ref-range "$base_sha...$head_sha"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            bash ctf/scripts/check-schema-drift.sh --ref-range "${{ github.event.before }}...${{ github.sha }}"
+          else
+            bash ctf/scripts/check-schema-drift.sh
+          fi
+
+  pr-parity-status:
+    name: PR Parity Status
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate parity status in PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const hasComplete = /Parity Status:\s*web\+android complete/i.test(body);
+            const hasTicket = /Parity Ticket:\s*https?:\/\//i.test(body) || /Parity Ticket:\s*#\d+/i.test(body);
+
+            if (!hasComplete && !hasTicket) {
+              core.setFailed(
+                'PR description must include either "Parity Status: web+android complete" or "Parity Ticket: <link-or-issue>".'
+              );
+            }
+
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs:
+      - plugin-contract-templates
+      - rules-link-coverage
+      - formatting-eof
+      - modularity-governance
+      - prompt-leak-guard
+      - stream-quota-policy
+      - stream-quota-impact-note
+      - schema-drift-gate
+      - pr-parity-status
+    if: |
+      always() &&
+      needs.plugin-contract-templates.result == 'success' &&
+      needs.rules-link-coverage.result == 'success' &&
+      needs.formatting-eof.result == 'success' &&
+      needs.modularity-governance.result == 'success' &&
+      needs.prompt-leak-guard.result == 'success' &&
+      needs.stream-quota-policy.result == 'success' &&
+      (needs.stream-quota-impact-note.result == 'success' || needs.stream-quota-impact-note.result == 'skipped') &&
+      needs.schema-drift-gate.result == 'success' &&
+      (needs.pr-parity-status.result == 'success' || needs.pr-parity-status.result == 'skipped')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Check lockfile/package.json sync
+        run: bash ctf/scripts/check-lockfile-sync.sh
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Run lint gate
+        run: pnpm --dir ctf run lint
+
+      - name: Run typecheck gate
+        run: pnpm --dir ctf run typecheck
+
+      - name: Run web production build gate
+        run: pnpm --dir ctf --filter @ctf/web run build:ci
+
+      - name: Run Android export build gate
+        run: pnpm --dir ctf --filter @ctf/mobile run build:android:ci
+
+      - name: Run web-android parity gate
+        run: node ctf/scripts/check-web-android-parity.mjs
+
+      - name: Run performance budget audit (warning mode)
+        run: pnpm --dir ctf run perf:budgets:ci
+
+      - name: Upload performance budget artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-budget-${{ github.run_id }}
+          path: ctf/artifacts/performance/perf-budget-report.json
+          if-no-files-found: warn
+          retention-days: 14

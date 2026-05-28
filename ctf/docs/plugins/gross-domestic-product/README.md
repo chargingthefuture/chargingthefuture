@@ -11,7 +11,6 @@ This index links to canonical artifacts for Gross Domestic Product.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

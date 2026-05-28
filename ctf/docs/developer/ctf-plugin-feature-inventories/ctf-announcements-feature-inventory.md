@@ -1,23 +1,21 @@
 # Announcements Plugin Feature Inventory (CTF Rewrite)
 
-## Scope
+## Scope and Boundary
 
-- Rewrite target only: `ctf/`
-- Legacy reference excluded from implementation: `platform/`
 - Plugin name: `Announcements`
-- Admin control location: `/admin/feed-announcements`
-- Delivery policy: web-first with Android follow-up ticket requirement.
+- Plugin slug: `feed-announcements` (registry alias: `announcements`)
+- Owned surfaces: `/apps/announcements` (web), admin control at `/admin/feed-announcements`, `/api/announcements/*` and `/api/feed/admin/announcements/*` routes, announcement state in the Feed schema.
+- Not owned: identity (Clerk), Feed timeline rendering primitives (Feed plugin).
 
 ## Intent and Outcome
 
 Announcements provides trusted, policy-compliant broadcast messaging to target survivor audiences and renders into Feed experiences.
 
-Approved architecture decisions:
+Architecture decisions in effect:
 
-1. PostgreSQL is canonical source-of-truth for announcement lifecycle state.
+1. PostgreSQL is the canonical source-of-truth for announcement lifecycle state.
 2. Stream is used for fan-out and delivery projection after canonical persistence.
 3. Admin workflow is centralized at `/admin/feed-announcements`.
-4. Web-first release is approved; Android follow-up ticket is required.
 
 Approved suggestions incorporated:
 
@@ -82,7 +80,7 @@ All command contracts must conform to templates from:
 - `.github/instructions/202-plugin-access-policy-schema-template.mdc`
 - `.github/instructions/203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `announcements.draft.create`
 2. `announcements.draft.update`
@@ -121,7 +119,7 @@ Must follow single-profile rule:
 2. Keep plugin extension fields linked by `user_id`.
 3. No duplicate full profile table.
 
-Planned extension entity:
+Extension entity:
 
 - `announcements_user_extension`
   - `user_id`
@@ -131,7 +129,7 @@ Planned extension entity:
 
 ### 4.2 Domain Entities
 
-Planned domain tables (initial set):
+Domain tables:
 
 1. `announcements`
 2. `announcement_revisions`
@@ -160,47 +158,163 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Delivery Plan (Approved)
+## 6) Web and Android Delivery Status
 
-1. Web-first implementation is approved for CTF rewrite.
-2. Android follow-up ticket is mandatory evidence for deferred parity.
-3. Critical compliance and visibility semantics must remain consistent across platforms.
+`web+android complete`. Announcements command namespace lives under `feed.announcement.*` (see Feed inventory); critical compliance and visibility semantics are consistent across web (`/apps/announcements`) and Android (`packages/mobile/src/features/announcements`).
 
 ---
 
 ## 7) Quota-Impact and Stream Budget Notes
 
 1. Targeting/fan-out changes require a stream quota-impact note.
-2. Quota-impact notes must use `ctf/docs/quota-impact/TEMPLATE.md`.
-3. Deployment PR must link quota note when fan-out volume changes.
+2. Quota-impact notes use `ctf/docs/quota-impact/TEMPLATE.md`.
+3. Deployment PRs link the quota note when fan-out volume changes.
 
 ---
 
 ## 8) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedFeedAnnouncements.mjs` seeds deterministic announcement and feed fixtures for dev validation.
 
 ---
 
 ## 9) Schema Drift and Predeployment Expectations
 
 1. Predeployment requires schema drift checks across migration SQL, application schema, and API contracts.
-2. Any accepted drift must include explicit rationale and rollback path.
-3. PR evidence must include migration replay + rollback verification and drift-check output.
+2. Any accepted drift includes explicit rationale and rollback path.
+3. Deployment PR evidence includes migration replay + rollback verification and drift-check output.
 
 ---
 
-## 10) Gaps, Ambiguities, and Known Technical Debt (Current)
+## 10) Gaps and Known Technical Debt
 
-- **DEPRECATED:** Standalone `announcements.*` command namespace has been unified into `feed.*` namespace as of 2026-04-05. All authoritative contracts are in `FEED_PLUGIN_COMMAND_CONTRACTS.yaml`, `FEED_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, and `FEED_PLUGIN_AUDIT_CONTRACTS.yaml`.
-- The separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain for historical reference only and must not be used for new implementation.
-- All announcement commands now use `feed.announcement.*` prefix.
-- Android parity: full implementation required before release.
+1. Standalone `announcements.*` command namespace has been unified into `feed.*` as of 2026-04-05. The separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain for historical reference only and must not be used for new implementation; their continued presence is intentional historical reference and is a known cleanup item.
 
 ---
 
 ## 11) Change Log
 
-- 2026-02-24: Created initial CTF rewrite Announcements inventory with approved centralized admin surface, web-first delivery policy, Postgres source-of-truth + Stream fan-out architecture, naming normalization/legacy alias guidance, quota-impact gates, and schema drift predeployment evidence requirements.
-- 2026-02-25: Added Rule 120 gaps/ambiguities/known technical debt section.
-- 2026-04-05: Deprecated standalone announcements namespace â€” all contracts unified under `feed.*` in feed contracts. Android parity marked as required.
+- 2026-05-18: Replaced "Web and Android Delivery Plan (Approved)" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-follow-up language. Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and condensed deprecation note. Updated seed coverage to reference shipping seed script.
+- 2026-04-05: Deprecated standalone announcements namespace â€” all contracts unified under `feed.*`.
+- 2026-02-25: Added Rule 120 gaps section.
+- 2026-02-24: Created initial CTF rewrite Announcements inventory.
+
+
+## Build Checklist
+
+
+> **DEPRECATED (2026-04-05):** The standalone Announcements checklist has been merged into the unified **Feed Rewrite Checklist** (`ctf-feed-feature-inventory.md`). All announcement commands now use the `feed.announcement.*` namespace. Authoritative contracts are in `FEED_PLUGIN_COMMAND_CONTRACTS.yaml`, `FEED_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, and `FEED_PLUGIN_AUDIT_CONTRACTS.yaml`. This file is retained for historical reference only.
+
+### Scope and Boundary
+
+- [x] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No implementation requirement is placed on `platform/` code.
+- [x] Confirm centralized admin surface.
+  - Acceptance criteria:
+    - Announcements admin operations are implemented in `/admin/feed-announcements`.
+- [x] Confirm web-first policy with deferred Android tracking.
+  - Acceptance criteria:
+    - Android follow-up ticket exists with owner and due date.
+
+### €” Contracts and Naming Lock
+
+- [x] Define Announcements command contracts.
+  - Acceptance criteria:
+    - Commands comply with `.github/instructions/201-plugin-command-schema-template.mdc`.
+- [x] Define Announcements access policy contracts.
+  - Acceptance criteria:
+    - Policies comply with `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
+- [x] Define Announcements audit contracts.
+  - Acceptance criteria:
+    - Audit events comply with `.github/instructions/203-plugin-audit-schema-template.mdc` for allow/deny parity.
+- [x] Lock naming normalization and legacy alias handling.
+  - Acceptance criteria:
+    - New docs/contracts use **Announcements** spelling; legacy typo alias note is documented for compatibility.
+
+### €” Schema and Migration Readiness
+
+- [x] Implement Announcements domain schema.
+  - Acceptance criteria:
+    - Announcement lifecycle, targeting, user-state, and audit entities are present with constraints.
+- [x] Add migration SQL under `ctf/migrations/`.
+  - Acceptance criteria:
+    - Replay and rollback behavior is validated.
+- [x] Implement membership event stream entities/contracts.
+  - Acceptance criteria:
+    - Membership changes can trigger audience recalculation in a deterministic way.
+- [x] Run schema drift predeployment checks.
+  - Acceptance criteria:
+    - Drift status across migration SQL, app schema, and API contracts is attached to PR.
+
+### €” API and Projection Pipeline
+
+- [x] Implement draft/create/update/publish/archive API and command flows.
+  - Acceptance criteria:
+    - Validation, authz, and audit behavior is deterministic and complete.
+- [x] Enforce Postgres canonical write-first flow.
+  - Acceptance criteria:
+    - Announcement state is committed before Stream projection.
+- [x] Implement Stream fan-out projection and replay safety.
+  - Acceptance criteria:
+    - Projection is idempotent and safe under retries.
+- [x] Implement read/dismiss/acknowledge user-state endpoints.
+  - Acceptance criteria:
+    - User-state transitions are policy-compliant and auditable.
+
+### €” Web Delivery
+
+- [x] Implement authoring and publish UX on `/admin/feed-announcements`.
+  - Acceptance criteria:
+    - Draft/schedule/publish/archive and targeting controls are operable.
+- [x] Implement announcement rendering in Feed.
+  - Acceptance criteria:
+    - Priority/expiry behavior and visibility targeting are correct.
+- [x] Integrate optional toast mode under Feed controls.
+  - Acceptance criteria:
+    - Toast mode is optional and managed via Feed configuration.
+
+### €” Android Follow-Up (Required â€” see Feed Checklist Phase 6)
+
+- [ ] All Android parity items are now tracked in `ctf-feed-feature-inventory.md` Phase 6.
+  - Acceptance criteria:
+    - See unified feed checklist for acceptance criteria.
+
+### €” Security, Compliance, and Hardening
+
+- [x] Document policy and CSRF handling.
+  - Acceptance criteria:
+    - State-changing routes document authz + CSRF handling.
+- [x] Document deletion and retention contracts.
+  - Acceptance criteria:
+    - Plugin deletion/full-account deletion mapping is documented against `ctf/docs/templates/PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
+- [x] Document log redaction and audit completeness.
+  - Acceptance criteria:
+    - Operational logs are safe; required audit fields are documented.
+
+### Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+
+- [x] Seed scenarios and data setup.
+  - Acceptance criteria:
+    - Seeds include lifecycle variants, targeting variants, and user-state variants.
+- [x] Implementation documentation. [MANUAL TESTING DEFERRED FOR MVP â€” see Rule 118.]
+  - Acceptance criteria:
+    - Command, targeting, and membership event behavior are documented.
+
+### Quota-Impact and Predeployment Evidence
+
+- [x] Add stream quota-impact note for fan-out or targeting scale changes.
+  - Acceptance criteria:
+    - Note is created with `ctf/docs/quota-impact/TEMPLATE.md` and linked in PR.
+- [x] Include schema drift predeployment evidence.
+  - Acceptance criteria:
+    - PR includes drift-check output and migration verification artifacts.
+- [ ] Implementation tracking. [EVIDENCE CAPTURE DEFERRED FOR MVP â€” see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked; detailed evidence collection deferred to post-MVP.
+
+### Change Log
+
+- 2026-02-24: Created initial Announcements rewrite checklist with approved central admin page, web-first policy + Android follow-up tracking, naming normalization/legacy alias guidance, Postgres+Stream architecture constraints, stream quota-impact gate, and schema drift predeployment evidence requirements.
+- 2026-03-02: Completed phase-0 implementation with combined feed stream coupling, admin lifecycle routes, membership-event visibility recalculation, and deterministic seed coverage.
+- 2026-04-05: Deprecated â€” merged into unified Feed Rewrite Checklist. All commands now under `feed.announcement.*` namespace.

@@ -105,7 +105,7 @@ All command contracts must conform to templates from:
 - `202-plugin-access-policy-schema-template.mdc`
 - `203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `service-credits.wallet.create`
 2. `service-credits.wallet.balance.get`
@@ -148,6 +148,7 @@ Internal routes:
 2. External ledger operations execute through a Formance-first adapter seam with stable internal command contracts.
 3. Adapter fallbacks must preserve command schema and policy/audit behavior.
 4. Provider-specific IDs remain adapter-internal and must not leak into user-facing API contracts.
+5. Demo-mode ledger isolation (2026-05-26): the adapter resolves the ledger book by `isDemoMode()`. In demo mode it targets `FORMANCE_LEDGER_STAGING` (`ctf-demo`); otherwise the production ledger `FORMANCE_LEDGER` (`ctf-main`). Both books live on the same Formance instance (shared API URL/token/asset), so demo transactions exercise real ledger logic without touching production balances. If `FORMANCE_LEDGER_STAGING` is unset while in demo mode, the adapter reports `external_ledger_not_configured` rather than falling back to the production book.
 
 ---
 
@@ -161,7 +162,7 @@ Must follow single-profile rule:
 2. Add plugin extension data linked by `user_id` only where required.
 3. Do not introduce a standalone Service Credits profile duplicating canonical fields.
 
-Planned extension entity:
+Extension entity:
 
 - `service_credits_user_extension`
   - `user_id`
@@ -172,7 +173,7 @@ Planned extension entity:
 
 ### 4.2 Domain Entities
 
-Planned domain tables (initial set):
+Domain tables:
 
 1. `service_credits_wallets`
 2. `service_credits_transfers`
@@ -213,32 +214,187 @@ Planned domain tables (initial set):
 
 ---
 
-## 6) Web and Android Parity Plan
+## 6) Web and Android Delivery Status
 
-1. Wallet creation, balance retrieval, transfer initiation, and escrow resolution are parity-required.
-2. Governance and treasury admin surfaces may ship web-first with tracked Android parity backlog.
-3. Error semantics and deny reasons must remain consistent across web and Android.
-4. Any deferred parity requires owner, due date, and risk note.
+`web+android complete`. Wallet creation, balance retrieval, transfer initiation, escrow resolution, governance, and treasury admin surfaces are consistent across web (`/apps/service-credits`) and Android (`packages/mobile/src/features/service-credits`). Error semantics and deny reasons match across platforms.
 
 ---
 
 ## 8) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via the platform's deterministic test ledger; a plugin-specific `seedServiceCreditsPhase*.mjs` script is not currently provided.
 
 ---
 
-## 9) Gaps, Ambiguities, and Technical Debt (Current)
+## 9) Gaps and Known Technical Debt
 
-1. Final role taxonomy for governance, treasury, and dispute operators needs lock.
-2. Formance adapter retry/backoff policy and dead-letter handling requires implementation RFC.
-3. Cross-plugin path attestation format needs canonical shared contract finalization.
-4. Retention classes for dispute artifacts and treasury evidence require compliance sign-off.
-5. Android admin parity timeline and owner assignments are pending.
+1. Role taxonomy for governance, treasury, and dispute operators is implemented as a flat admin role; a finer-grained split has not been carved out.
+2. Formance adapter retry/backoff and dead-letter handling use platform defaults; a plugin-specific resiliency contract is a known follow-up.
+3. Cross-plugin path attestation format is implemented as a structured field on transfers but has not been promoted to a canonical shared contract.
+4. Retention classes for dispute artifacts and treasury evidence follow platform defaults; a plugin-specific retention contract has not been published.
 
 ---
 
 ## 10) Change Log
 
+- 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and removed Android-parity-timeline-pending entry per Rule 105.
+- 2026-02-25: Added approved account-deletion treasury reclaim policy.
 - 2026-02-24: Initial Service Credits CTF rewrite inventory created.
-- 2026-02-25: Added approved account-deletion treasury reclaim policy (7-day window, escrow-blocked reclaim, idempotent atomic transfer+tombstone, immutable reclaim event, non-GDP accounting semantics).
+
+
+## Build Checklist
+
+
+### Scope and Boundary
+
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No code changes required in `platform/`.
+- [ ] Confirm Service Credits plugin ID and command namespace.
+  - Acceptance criteria:
+    - Stable plugin ID `service-credits` and command naming convention approved.
+- [ ] Confirm Formance-first adapter seam policy.
+  - Acceptance criteria:
+    - External ledger calls are routed through adapter interfaces only.
+
+### Contract Lock
+
+- [ ] Define Service Credits plugin command contracts for v1.
+  - Acceptance criteria:
+    - Every command includes required fields from `201-plugin-command-schema-template.mdc`.
+- [ ] Define access policy contracts for v1 Service Credits commands.
+  - Acceptance criteria:
+    - Every command includes roles, attribute checks, consent/legal basis, region controls, and deny conditions from `202-plugin-access-policy-schema-template.mdc`.
+- [ ] Define audit event contracts for v1 Service Credits commands.
+  - Acceptance criteria:
+    - Every command logs allow/deny + result using `203-plugin-audit-schema-template.mdc`.
+- [ ] Resolve non-fiat and cross-plugin policy decisions.
+  - Acceptance criteria:
+    - No-fiat-redeemability and mandatory cross-plugin-path constraints are documented and approved.
+
+### Schema and Integration
+
+- [ ] Design Service Credits extension model on canonical profile.
+  - Acceptance criteria:
+    - No duplicate standalone profile table; extension keyed by `user_id`.
+- [ ] Define core wallet, transfer, escrow, governance, treasury, and dispute entities.
+  - Acceptance criteria:
+    - Domain entities and relationships are specified with retention classes and integrity constraints.
+- [ ] Define Formance adapter integration boundary and outbox behavior.
+  - Acceptance criteria:
+    - Adapter interfaces, retry semantics, and failure class mapping are explicit.
+- [ ] Prepare migration strategy under `ctf/migrations/`.
+  - Acceptance criteria:
+    - Replay and rollback strategy documented before implementation.
+
+### Command Execution
+
+- [ ] Implement `wallet.create` and `wallet.balance.get` command execution paths.
+  - Acceptance criteria:
+    - Deterministic authz checks and idempotent wallet provisioning behavior are validated.
+- [ ] Implement `transfer.create` and escrow command execution paths.
+  - Acceptance criteria:
+    - Hold/release/refund transitions are valid, auditable, and replay-safe.
+- [ ] Implement governance and treasury mutation command execution paths.
+  - Acceptance criteria:
+    - Mint/burn/fee collect commands enforce role, policy, and idempotency contracts.
+- [ ] Implement dispute adjustment command execution path.
+  - Acceptance criteria:
+    - Adjustment reason coding and balance mutation ordering are deterministic.
+
+### Cross-Plugin Enforcement
+
+- [ ] Enforce cross-plugin-path metadata for value-moving commands.
+  - Acceptance criteria:
+    - Missing or invalid origin plugin context is denied with deterministic reason codes.
+- [ ] Enforce no direct ledger-provider invocation from feature code.
+  - Acceptance criteria:
+    - All external ledger operations pass through the Formance-first adapter seam.
+- [ ] Enforce no-fiat-redeemability constraints.
+  - Acceptance criteria:
+    - Commands implying fiat redemption, withdrawal, or cash-out are denied and audited.
+
+### Web and Android Parity
+
+- [ ] Deliver wallet, balance, transfer, and escrow critical path parity.
+  - Acceptance criteria:
+    - Web and Android produce equivalent outcomes and status semantics for critical flows.
+- [ ] Deliver command error and deny-reason parity.
+  - Acceptance criteria:
+    - Policy-deny categories and user-safe error responses align across platforms.
+- [ ] Track and close deferred parity items before GA.
+  - Acceptance criteria:
+    - Each deferral has owner, due date, and risk note with closure evidence.
+
+### Admin and Compliance
+
+- [ ] Deliver governance, treasury, and dispute admin operations.
+  - Acceptance criteria:
+    - Admin mutations are role-gated, CSRF-safe (where applicable), and fully audited.
+- [ ] Validate retention and lawful-basis controls.
+  - Acceptance criteria:
+    - Data classes and retention classes are declared and policy-aligned per command.
+- [ ] Validate deletion behavior for plugin-scoped and full-account flows.
+  - Acceptance criteria:
+    - Service Credits extension/domain deletion behavior is documented and compliant.
+- [ ] Define full-account deletion reclaim entry criteria (`pending_deletion`) for Service Credits balances.
+  - Acceptance criteria:
+    - Reclaim flow only executes for accounts in `pending_deletion` state and rejects non-pending states deterministically.
+- [ ] Enforce 7-day full-account deletion reclaim window.
+  - Acceptance criteria:
+    - Reclaim eligibility checks include deletion-request timestamp validation against a 7-day window.
+- [ ] Enforce escrow-block rule before reclaim finalization.
+  - Acceptance criteria:
+    - Reclaim finalization is denied while any active escrow hold exists for the account.
+- [ ] Implement idempotent reclaim keyed by (`account_id`, `deletion_request_id`).
+  - Acceptance criteria:
+    - Retries/replays with the same key produce the same terminal outcome with no double-transfer.
+- [ ] Implement atomic treasury transfer plus account-balance tombstone write.
+  - Acceptance criteria:
+    - Treasury return and user-balance tombstone are committed as one atomic unit or both rolled back.
+- [ ] Emit immutable reclaim finalization event.
+  - Acceptance criteria:
+    - Reclaim completion writes append-only event evidence with request/trace correlation and no mutation path.
+- [ ] Enforce metrics semantics for reclaim events (no-GDP recognition).
+  - Acceptance criteria:
+    - Account-deletion treasury returns are recorded as reserve reallocations and excluded from GDP recognition metrics.
+
+### Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+
+- [ ] Command schema design documentation.
+  - Acceptance criteria:
+    - Unknown fields/invalid types/bounds failures handling is documented.
+- [ ] Access policy enforcement design documentation.
+  - Acceptance criteria:
+    - Missing scope, wrong role, cross-tenant, invalid plugin-path, and no-fiat denial cases are documented.
+- [ ] Audit integrity design documentation.
+  - Acceptance criteria:
+    - Allow + deny events append-only and correlation fields documentation.
+- [ ] Adapter seam and failure recovery design documentation. [MANUAL TESTING DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Adapter timeout/retry/failure classes expected outcomes are documented.
+- [ ] Deterministic seed scenarios for financial data.
+  - Acceptance criteria:
+    - Wallet/transfer/escrow/treasury/dispute seed scenarios are reproducible via deterministic seed scripts/data.
+
+### Docs Lifecycle
+
+- [ ] Keep `ctf-service-credits-feature-inventory.md` updated per accepted scope change.
+  - Acceptance criteria:
+    - Any add/remove/behavioral change updates inventory in same PR.
+- [ ] Record deprecations/removals in inventory changelog.
+  - Acceptance criteria:
+    - Removed features are moved to dated changelog entries.
+- [ ] Keep command/access/audit contract YAMLs versioned and synchronized.
+  - Acceptance criteria:
+    - Command version bumps and policy/audit schema changes are updated in the same PR.
+- [ ] Implementation tracking. [EVIDENCE COLLECTION DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked; evidence collection deferred to post-MVP.
+
+### Open Decisions Tracker
+
+- [ ] Final role ownership model for governance, treasury, and dispute operators.
+- [ ] Cross-plugin-path attestation schema and signing requirements.
+- [ ] Adapter retry ceilings and dead-letter escalation policy.
+- [ ] Regional/legal constraints for credit issuance and expiration policy.

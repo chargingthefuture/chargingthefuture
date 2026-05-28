@@ -15,7 +15,7 @@ chargingthefuture/          ← repo root
 │   │   ├── mobile/         ← React Native / Expo app (@ctf/mobile)
 │   │   ├── shared/         ← shared types, contracts, utilities
 │   │   ├── pm-mcp-server/  ← project management MCP server
-│   │   ├── plugin-education/
+│   │   ├── education/
 │   │   ├── economic-models/
 │   │   └── eol/
 │   ├── scripts/            ← operational helpers (migrations, audits, seeds)
@@ -41,17 +41,18 @@ chargingthefuture/          ← repo root
 
 ---
 
-## Three Deployment Environments
+## Deployment Environment
 
-No local dev. All environments are cloud-hosted.
+No local dev. The v3 app runs as a **single production environment on Render**:
+the `ctf-web` service plus supporting services (`ctf-formance-ledger`,
+`ctf-ollama`, `ctf-pm-mcp-server`). There is no separate staging deployment.
 
-| Environment | Frontend | Backend | Secret prefix |
-|---|---|---|---|
-| Staging Railway | Railway | Railway | `RAILWAY_STAGING_*` |
-| Production Railway | Railway | Railway | `RAILWAY_PROD_*` |
-
-**Canonical env contract:** `ctf/packages/web/.env.local.example`
-Do not rename, remove, or restructure variables without explicit user approval.
+**Canonical env contract:** the Infisical `production` environment is the single
+source of truth for all secrets (see below). Two integrations — GetStream and
+Formance — additionally keep `*_STAGING` values in that same environment; demo
+mode selects them at runtime so recording sessions never touch the production
+Stream quota or the real ledger. Do not rename, remove, or restructure secret
+keys without explicit user approval.
 
 ---
 
@@ -71,26 +72,7 @@ infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --e
   <your command>
 ```
 
-See `ctf/docs/infisical-migration-guide.md` for full setup and `ctf/docs/ona-secrets-inventory.md` for the Ona-specific model.
-
----
-
-## Railway CLI
-
-Railway CLI is pre-installed in this Ona environment via the `setup` task.
-
-**Always `cd ctf/` before running Railway commands** — `railway.toml` is there.
-
-```bash
-cd /workspaces/chargingthefuture/ctf
-
-railway status          # check connected project/environment
-railway logs --tail 200 # fetch recent deployment logs
-railway up --ci         # trigger a deployment
-```
-
-`RAILWAY_TOKEN` must be set as an Ona project secret. If it's missing, commands will fail.
-See `ctf/docs/ona-secrets-inventory.md` for the full secret list and setup instructions.
+Infisical is the single source of truth for secrets; the bootstrap secrets above are all that is needed to authenticate `infisical run`.
 
 ---
 

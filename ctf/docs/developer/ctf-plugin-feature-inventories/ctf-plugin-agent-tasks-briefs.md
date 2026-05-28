@@ -176,7 +176,6 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-rewrite-checklist.md
 - #file:ctf/docs/contracts/CHYME_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/CHYME_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/CHYME_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -216,7 +215,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md
 - #file:ctf/docs/contracts/SKILLS_TAXONOMY_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SKILLS_TAXONOMY_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SKILLS_TAXONOMY_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -255,7 +254,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md
 - #file:ctf/docs/contracts/DIRECTORY_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/DIRECTORY_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/DIRECTORY_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -294,9 +293,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-rewrite-checklist.md
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-announcements-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-announcements-rewrite-checklist.md
 - #file:ctf/docs/contracts/FEED_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/FEED_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/FEED_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -339,7 +336,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md
 - #file:ctf/docs/contracts/WORKFORCE_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/WORKFORCE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/WORKFORCE_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -378,7 +375,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md
 - #file:ctf/docs/contracts/SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SKILLS_HUNT_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SKILLS_HUNT_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -417,7 +414,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md
 - #file:ctf/docs/contracts/FOUNDATION_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/FOUNDATION_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/FOUNDATION_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -456,7 +453,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md
 - #file:ctf/docs/contracts/LIGHTHOUSE_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/LIGHTHOUSE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/LIGHTHOUSE_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -495,7 +492,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socketrelay-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socketrelay-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socketrelay-feature-inventory.md
 - #file:ctf/docs/contracts/SOCKETRELAY_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SOCKETRELAY_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SOCKETRELAY_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -533,7 +530,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trusttransport-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trusttransport-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trusttransport-feature-inventory.md
 - #file:ctf/docs/contracts/TRUSTTRANSPORT_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/TRUSTTRANSPORT_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/TRUSTTRANSPORT_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -571,7 +568,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md
 - #file:ctf/docs/contracts/PEER_PROGRAMMING_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/PEER_PROGRAMMING_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/PEER_PROGRAMMING_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -609,7 +606,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mood-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mood-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mood-feature-inventory.md
 - #file:ctf/docs/contracts/MOOD_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/MOOD_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/MOOD_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -648,7 +645,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentlepulse-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentlepulse-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentlepulse-feature-inventory.md
 - #file:ctf/docs/contracts/GENTLEPULSE_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/GENTLEPULSE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/GENTLEPULSE_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -687,7 +684,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-weekly-performance-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-weekly-performance-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-weekly-performance-feature-inventory.md
 - #file:ctf/docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -725,7 +722,6 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-rewrite-checklist.md
 - #file:ctf/docs/contracts/GDP_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/GDP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/GDP_PLUGIN_AUDIT_CONTRACTS.yaml
@@ -763,7 +759,7 @@ Handoff output:
 Read this first: #file:index.mdc
 Then read:
 - #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-rewrite-checklist.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md
 - #file:ctf/docs/contracts/SERVICE_CREDITS_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SERVICE_CREDITS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/SERVICE_CREDITS_PLUGIN_AUDIT_CONTRACTS.yaml

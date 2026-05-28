@@ -53,15 +53,16 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 9. Seed Coverage Status
 
-- See [scripts/seedClicklogPhase0.mjs](../../../scripts/seedClicklogPhase0.mjs)
+- See [scripts/seedClicklog.mjs](../../../scripts/seedClicklog.mjs)
 - 3–5 sample incidents with varied metadata
 
-## 10. Risks & Known Technical Debt
+## 10. Gaps and Known Technical Debt
 
-- No admin UI for global view/delete yet
-- No rate limiting on incident creation
-- No advanced search/filtering
+- No admin UI for global view/delete; admin access is via direct DB tooling.
+- No rate limiting on incident creation beyond shared platform defaults.
+- No advanced search/filtering on incident history.
 
 ## Change Log
 
-- 2026-04-13: Initial implementation and registration
+- 2026-05-18: Renamed "Risks & Known Technical Debt" to "Gaps and Known Technical Debt" per Rule 120 canonical heading.
+- 2026-04-13: Initial implementation and registration.

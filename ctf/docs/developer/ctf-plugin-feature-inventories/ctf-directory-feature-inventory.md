@@ -15,8 +15,7 @@ Directory in CTF provides authenticated users with a deterministic profile-and-d
 
 1. Authenticated dashboard/profile experience for create, update, and delete profile operations.
 2. Directory list and profile discovery experience for authenticated users.
-3. Public profile controls (`isPublic`) and deterministic profile visibility outcomes.
-4. Public directory projection routes for unauthenticated list/detail consumption.
+3. **Directory is no longer public-facing** (2026-05-18). The `isPublic` toggle was removed; every authenticated member sees every active, non-deleted profile. There is no anonymous projection route. Legacy public URLs are not redirected — backwards compatibility is intentionally not preserved.
 5. Announcement consumption in user-visible contexts.
 6. Deterministic validation limits for description, selectors, and URL fields.
 
@@ -42,9 +41,11 @@ Implemented routes:
   - `GET /api/directory/sectors`
   - `GET /api/directory/job-titles`
   - `GET /api/directory/announcements`
-- Public:
-  - `GET /api/directory/public`
-  - `GET /api/directory/public/:id`
+- Public: none. The `GET /api/directory/public` and `GET /api/directory/public/:id` routes
+  (v2 anonymous projection) were removed 2026-05-25 — they leaked full profile data
+  (including payment addresses) to unauthenticated callers, contradicting the
+  no-public-facing decision above. `/apps/directory/[handle]` now redirects to the
+  authenticated Directory shell.
 - Admin:
   - `GET /api/directory/admin/profiles`
   - `POST /api/directory/admin/profiles`
@@ -63,6 +64,17 @@ Implemented routes:
 3. Skills hierarchy (shared taxonomy) — Selector-backed taxonomy data.
 4. Profile policy contracts — Claimed/unclaimed state and assignment constraints.
 5. Public projection contracts — Privacy-filtered output shape for unauthenticated callers.
+
+### New columns on `directory_profiles` (Skills Hunt + Clerk username co-change, 2026-05-11)
+
+1. `source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated'))` — drives the "Community generated profile" badge in the UI.
+2. `invited_by_username TEXT NULL` — denormalized from `skills_hunt_directory_profiles.invited_by_username` so the (auth-gated) profile page renders attribution without a join.
+3. `unclaimed_handle TEXT NULL` — auto-generated vanity handle for unclaimed profiles. Format: `community-<6char-hex>` (no leading `@` in storage; `@` is presentation only). Cleared/ignored once `claimed_by_user_id` is set. Uniqueness is enforced by a case-insensitive partial unique index (`directory_profiles_unclaimed_handle_key` on `lower(unclaimed_handle)` WHERE `unclaimed_handle IS NOT NULL`), not an inline column constraint — so `Community-7F3A2B` and `community-7f3a2b` cannot coexist, and the migration block can drop/recreate the index without tripping over a constraint-backed index on the fresh-schema path.
+4. `deleted_at TIMESTAMPTZ NULL` — soft-delete for GDPR and moderation removals; `is_active` remains in place but `deleted_at` takes precedence for visibility filters.
+
+### Backfill (one-shot, idempotent)
+
+For every `directory_profiles` row where `claimed_by_user_id IS NULL AND unclaimed_handle IS NULL`, assign `unclaimed_handle = 'community-' || encode(gen_random_bytes(3), 'hex')`. Retry on case-insensitive unique-index collision. Establishes consistent `@handle` URLs on day one.
 
 ## Security, Privacy, and Compliance Controls
 
@@ -85,7 +97,7 @@ Web and Android implementations:
 
 ## Seed Coverage Status
 
-Deterministic Directory seed script exists: `ctf/scripts/seedDirectoryPhase0.mjs`.
+Deterministic Directory seed script exists: `ctf/scripts/seedDirectory.mjs`.
 
 Seeded content:
 - Sample authenticated user profiles with claimed/unclaimed states.
@@ -102,3 +114,142 @@ Seeded content:
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language, Planned section headers, and planning-phase ambiguities list. Confirmed web+android complete delivery status. Clarified technical debt (skills compatibility, route ownership codification) as known limitations, not unimplemented features.
 - 2026-03-02: Implemented backend and unified web surface (user/admin role-gated sections) with resolved list/pagination/claimed-delete decisions.
 - 2026-02-25: Created initial unified Directory CTF rewrite inventory merging user and admin flows into one planned UI surface.
+
+
+## Build Checklist
+
+
+### Scope and Boundary
+
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No implementation work is required in `platform/`.
+- [ ] Confirm legacy references remain intact.
+  - Acceptance criteria:
+    - `ctf/docs/developer/directory-feature-inventory.md` is unchanged.
+    - `ctf/docs/developer/directory-admin-feature-inventory.md` is unchanged.
+- [ ] Confirm unified rewrite surface decision is locked.
+  - Acceptance criteria:
+    - Directory rewrite uses one combined user/admin UI page/surface.
+    - Admin controls are role-gated on that same surface.
+- [ ] Confirm v1 parity decisions are locked.
+  - Acceptance criteria:
+    - Android admin parity is required in v1.
+    - Post-create public URL behavior remains display-only parity for v1.
+
+### Decision Lock and Ambiguity Resolution
+
+- [x] Resolve all user-facing open decisions from inventory section A.
+  - Acceptance criteria:
+    - Each A-item in `ctf-directory-feature-inventory.md` has an explicit decision, owner, and date.
+- [x] Resolve all admin open decisions from inventory section B.
+  - Acceptance criteria:
+    - Each B-item in `ctf-directory-feature-inventory.md` has an explicit decision, owner, and date.
+- [ ] Resolve migration-risk handling plan from inventory section C.
+  - Acceptance criteria:
+    - Each C-item has a mitigation strategy and verification gate.
+- [x] Lock route ownership for announcements and admin APIs.
+  - Acceptance criteria:
+    - Directory announcement and admin routes have explicit module ownership.
+    - No unresolved route ownership ambiguity remains.
+
+### Unified UI and Policy Boundary
+
+- [x] Implement one unified Directory UI surface for user + admin workflows.
+  - Acceptance criteria:
+    - Shared page/surface supports user flows and role-gated admin controls.
+- [x] Ensure frontend admin hiding is UX-only.
+  - Acceptance criteria:
+    - Security posture does not rely on client visibility checks.
+    - Server policy checks remain authoritative.
+- [ ] Preserve post-create public URL display-only behavior.
+  - Acceptance criteria:
+    - No mandatory copy/open action control is introduced in v1 parity scope.
+
+### API and Backend Policy Gates
+
+- [x] Enforce server-side authz on every admin endpoint.
+  - Acceptance criteria:
+    - Unauthorized admin API attempts return deny outcomes.
+    - Deny outcomes are covered by manual validation walkthroughs.
+- [x] Enforce CSRF protection on every admin write endpoint.
+  - Acceptance criteria:
+    - Missing/invalid CSRF tokens are rejected for admin writes.
+    - CSRF failure paths are covered by manual validation walkthroughs.
+- [x] Enforce claimed/unclaimed guardrails.
+  - Acceptance criteria:
+    - Unclaimed-only delete behavior is preserved.
+    - Assignment transition constraints are validated server-side.
+    - Guardrail violation paths are covered by manual validation walkthroughs.
+- [ ] Enforce route ownership constraints.
+  - Acceptance criteria:
+    - Route-to-module ownership map is documented and validated in validation/lint gates.
+
+### Privacy and Anti-Scraping Controls
+
+- [x] Validate public projection privacy contract.
+  - Acceptance criteria:
+    - Public list/detail responses expose only approved privacy-minimized fields.
+    - Non-public profiles remain inaccessible via public detail routes.
+- [ ] Anti-scraping controls design. [TESTING DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Rate limit thresholds are documented.
+    - Public ordering/privacy controls remain deterministic and policy-compliant.
+
+### Data, Schema, and Seed Consistency
+
+- [ ] Confirm schema consistency for profile, announcement, and audit contracts.
+  - Acceptance criteria:
+    - Schema and migration artifacts are consistent with planned contracts.
+- [ ] Confirm deterministic seed consistency.
+  - Acceptance criteria:
+    - Claimed/unclaimed, announcement, and skills fixtures are deterministic.
+    - Seed outputs are stable across CI and local runs.
+- [ ] Validate schema/seed compatibility gates.
+  - Acceptance criteria:
+    - Automated checks fail on schema drift or incompatible seed assumptions.
+
+### Web and Android Delivery Parity (Required)
+
+- [ ] Ship web user + admin parity for in-scope Directory flows.
+  - Acceptance criteria:
+    - Unified UI behavior and policy outcomes match inventory requirements.
+- [ ] Ship Android user + admin parity for in-scope Directory flows.
+  - Acceptance criteria:
+    - Android admin parity is complete in v1 and not deferred.
+    - Android and web share equivalent server deny/allow outcomes.
+- [ ] Parity coverage tracking. [AUTOMATED PARITY COVERAGE TESTING DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Cross-client parity validation scope is documented for post-MVP testing.
+
+### Release Gates and Lifecycle Maintenance [MVP: VALIDATION DEFERRED — see Rule 118.]
+
+- [ ] Admin API authz design alignment.
+  - Acceptance criteria:
+    - All admin endpoints document expected authz constraints.
+- [ ] CSRF protection documentation.
+  - Acceptance criteria:
+    - Each admin write route documents CSRF token handling.
+- [ ] Guardrail and constraint documentation.
+  - Acceptance criteria:
+    - Assignment and unclaimed-delete constraints are documented.
+- [ ] Public projection privacy and anti-scraping documentation.
+  - Acceptance criteria:
+    - Public response field exposure and anti-scraping constraints are documented.
+- [ ] Schema and seed consistency gates.
+  - Acceptance criteria:
+    - CI gates fail when schema/seed or route ownership contracts drift.
+
+### Docs Lifecycle
+
+- [ ] Keep inventory/checklist lifecycle synchronized with implementation changes.
+  - Acceptance criteria:
+    - `ctf-directory-feature-inventory.md` and this checklist are updated in the same PR as behavior or contract changes.
+- [ ] Implementation evidence tracking. [EVIDENCE CAPTURE DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked in docs; evidence collection deferred to post-MVP.
+
+### Change Log
+
+- 2026-02-25: Created initial Directory rewrite checklist with unified UI scope, backend policy gates, open-decision resolution requirements, security/privacy validation gates, schema/seed consistency checks, and required Android admin parity in v1.
+- 2026-03-02: Prompt 02 phase-0 backend/UI implementation completed for key decision-lock and API/policy checklist items (remaining parity/release gates tracked separately).

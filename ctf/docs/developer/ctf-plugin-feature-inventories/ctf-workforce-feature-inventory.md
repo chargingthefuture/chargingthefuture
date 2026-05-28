@@ -5,7 +5,7 @@
 - Rewrite target only: `ctf/`
 - Legacy `platform/` is reference-only and must not be modified.
 - Unified plugin scope slug: `workforce`
-- This document is a planning inventory (not implementation evidence yet).
+- This document is the living snapshot of Workforce per Rule 120.
 - V1 scope is full legacy parity plus approved rewrite enhancements.
 - Legacy accidental event artifacts from Workforce Recruiter are explicitly out of scope and must not be carried into rewrite design.
 
@@ -17,7 +17,7 @@ Legacy reference preservation:
 
 ## Intent and Outcome
 
-Workforce in CTF is planned as a deterministic workforce planning and reporting plugin with canonical metrics, auditable admin operations, migration-safe contracts, and full parity with legacy Workforce Recruiter capabilities.
+Workforce is a deterministic workforce planning and reporting plugin with canonical metrics, auditable admin operations, migration-safe contracts, and full parity with legacy Workforce Recruiter capabilities.
 
 Planning constraints applied:
 
@@ -102,7 +102,7 @@ All command contracts must conform to:
 - `.github/instructions/202-plugin-access-policy-schema-template.mdc`
 - `.github/instructions/203-plugin-audit-schema-template.mdc`
 
-Planned command groups:
+Command groups:
 
 1. `workforce.dashboard.fetch`
 2. `workforce.profile.fetch`
@@ -172,19 +172,29 @@ Admin routes:
 2. Workforce extension entities keyed by canonical `user_id`.
 3. Directory writes are upstream source for recruited-state inference.
 
-### 4.2 Planned Domain Entities
+### 4.2 Domain Entities
+
+Tables owned by the plugin and present in `ctf/schema.sql`:
 
 1. `workforce_profiles` (plugin extension shape only)
-2. `workforce_config`
-3. `workforce_report_snapshots`
-4. `workforce_recruited_events` (append-only inferred events)
-5. `workforce_admin_audit_trail`
+2. `workforce_occupations`
+3. `workforce_announcements`
+4. `workforce_user_extension`
+5. `workforce_recruited_events` (append-only inferred events; unique on `inference_dedupe_key`)
+6. `workforce_config`
+7. `workforce_recruited_sync_cursor`
+8. `workforce_export_jobs`
+9. `workforce_admin_audit_trail`
+
+Not yet implemented: `workforce_report_snapshots` is named in the `workforce.dashboard.fetch`
+command contract's `dataAccess` but does not exist in `ctf/schema.sql` and is not read by code
+(`getDashboard()` derives state live). See Gaps and Known Technical Debt.
 
 ### 4.3 Storage and Derivation Rules
 
 1. Recruited inference is derived from Directory profile create/update writes.
 2. Inference history is append-only for traceability of mapping changes.
-3. Inference writes use deterministic dedupe key (`inference_dedupe_key`) and unique constraint semantics.
+3. Inference writes use deterministic dedupe key (`inference_dedupe_key`, `NOT NULL`), enforced by the unique index `uq_workforce_recruited_events_dedupe_key`; repository upserts and the seed rely on `ON CONFLICT (inference_dedupe_key)`. The column is `NOT NULL` because Postgres treats NULLs as distinct in a unique index, so a null key would silently bypass dedup.
 4. Replay/backfill duplicates are idempotent no-op outcomes.
 5. Current-state dashboards read latest resolved state.
 6. Historical dashboards read weekly trend buckets from inferred event history.
@@ -193,9 +203,9 @@ Admin routes:
 
 ## 5) Canonical Metrics — Recruited Semantics
 
-Metric planning must be locked in `ctf/config/canonical_metrics.yaml` before implementation starts.
+Metric definitions are locked in `ctf/config/canonical_metrics.yaml`.
 
-Planned canonical definition notes for `recruited`:
+Canonical definition notes for `recruited`:
 
 1. **Primary metric:** current-state recruited count from latest resolved inferred state per user.
 2. **Automatic derivation only:** event is inferred from Directory profile create/update writes.
@@ -220,17 +230,180 @@ Planned canonical definition notes for `recruited`:
 
 ## 7) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+`ctf/scripts/seedWorkforce.mjs` seeds deterministic recruited-state fixtures and admin export inputs for dev validation.
 
-## 8) Gaps, Ambiguities, and Known Debt (Planning)
+## 8) Gaps and Known Technical Debt
 
-1. Retention/legal-basis final confirmation for workforce recruited inference and exports still requires policy sign-off.
-2. Export schema versioning and backward-compatibility policy need explicit contract version plan.
-3. Migration and backfill strategy for first production cutover requires runbook detail.
-4. Command-level role matrix for every admin mutation command needs implementation-time sign-off.
+1. Retention and legal-basis wording for workforce recruited inference and exports has not been explicitly signed off; the plugin runs under platform defaults.
+2. Export schema versioning has no documented backward-compatibility contract; exporters consume the current shape.
+3. Migration and backfill strategy for first production cutover relies on the generic platform migration runbook; no plugin-specific runbook exists.
+4. `workforce_report_snapshots` drift: the `workforce.dashboard.fetch` command contract lists it under `dataAccess`, but no such table exists in `ctf/schema.sql` and no code reads it (the dashboard derives state live). Decision needed: either build/wire the snapshot table or remove it from the command contract's `dataAccess`. Tracked, not yet reconciled.
+5. Sync routes `POST /api/workforce/admin/sync` and `POST /api/workforce/internal/sync` exist in code but are not enumerated in the API Surface section above; they back the incremental recruited-state sync cron.
 
 ## 9) Change Log
 
-- 2026-02-24: Created initial Workforce CTF rewrite planning inventory with unified `workforce` slug, canonical recruited metric semantics, contract-template alignment, and explicit exclusion of accidental legacy event artifacts.
+- 2026-05-21: Added the missing unique index `uq_workforce_recruited_events_dedupe_key` on `workforce_recruited_events(inference_dedupe_key)` — without it the `ON CONFLICT (inference_dedupe_key)` upserts in `repository.ts` and the seed fail at runtime. Reconciled Domain Entities (4.2) to the 9 tables actually in `ctf/schema.sql`; flagged the `workforce_report_snapshots` contract drift and undocumented sync routes in Gaps.
+- 2026-05-18: Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120. Updated seed coverage status to reference shipping seed script. Removed unimplemented-feature-as-debt entry for command-level role matrix sign-off.
+- 2026-02-24: Created initial Workforce CTF rewrite inventory.
 - 2026-02-24: Merged legacy parity scope (profile, occupations, announcements, export, admin flows) with new Workforce rewrite capabilities; standardized audit-events route, explicit skill-level/sector report endpoints, async export job model, mobile admin v1 inclusion, and weekly ET Saturday bucket policy.
 - 2026-03-03: Began phase-1 implementation under `ctf/packages/web` with migration-backed API/admin routes, deterministic recruited recompute sourced from Directory profiles, seed fixtures, and export workflow deferment.
+
+
+## Build Checklist
+
+
+### Scope and Boundary
+
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No implementation work is required in `platform/`.
+- [ ] Confirm legacy reference files remain intact.
+  - Acceptance criteria:
+    - `ctf/docs/developer/workforce-recruiter-feature-inventory.md` is unchanged.
+    - `ctf/docs/developer/workforce-recruiter-rewrite-checklist.md` is unchanged.
+- [ ] Confirm unified plugin slug and naming.
+  - Acceptance criteria:
+    - New rewrite assets use `workforce` (not `workforce-recruiter`) unless explicitly documented as legacy reference.
+- [ ] Confirm accidental legacy event artifacts are excluded.
+  - Acceptance criteria:
+    - No legacy scaffold/event code paths from old Workforce Recruiter are included in rewrite contracts, schema, or routes.
+- [ ] Confirm v1 feature scope includes full parity plus approved enhancements.
+  - Acceptance criteria:
+    - Included parity features: profile, occupations, announcements, reports, export, and admin management flows.
+    - Included enhancements: deterministic recruited inference, canonical metric lock, recompute controls, and standardized audit-events route.
+- [ ] Confirm mobile admin is in v1 scope.
+  - Acceptance criteria:
+    - Admin capabilities included in web and mobile parity contract/validation scope.
+
+### Legacy Review and Contract Lock
+
+- [ ] Review and correct sections 8 and 9 from legacy Workforce inventory before implementation starts.
+  - Acceptance criteria:
+    - A reviewed/corrected planning note is committed and linked from implementation kickoff PR.
+- [ ] Lock plugin command contract shape.
+  - Acceptance criteria:
+    - Workforce commands conform to `.github/instructions/201-plugin-command-schema-template.mdc`.
+- [ ] Lock access policy contract shape.
+  - Acceptance criteria:
+    - Workforce access policies conform to `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
+- [ ] Lock audit contract shape.
+  - Acceptance criteria:
+    - Workforce audit events conform to `.github/instructions/203-plugin-audit-schema-template.mdc`.
+- [ ] Confirm template bundle compliance.
+  - Acceptance criteria:
+    - Planning evidence references `.github/instructions/200-plugin-command-contract-templates.mdc` and all required template files.
+- [ ] Lock route shape and naming decisions.
+  - Acceptance criteria:
+    - Drilldowns are explicit routes: `reports/skill-level/:skillLevel` and `reports/sector/:sector`.
+    - Admin audit route is standardized: `GET /api/workforce/admin/audit-events`.
+    - Export uses async jobs: create/status/result route family.
+- [ ] Confirm contract-first-in-parallel execution mode.
+  - Acceptance criteria:
+    - Command/policy/audit contracts can be implemented in parallel with route handlers.
+
+### Canonical Metric Definition Lock
+
+- [ ] Define and lock `recruited` canonical metric in `ctf/config/canonical_metrics.yaml`.
+  - Acceptance criteria:
+    - Metric entry includes required fields from `.github/instructions/121-canonical-metric-registry-rules.mdc` (`id`, `name`, `description`, `owner`, `data_type`, `unit`, `calculation`, `inputs`, `example_values`, `last_updated`).
+- [ ] Lock recruited derivation semantics.
+  - Acceptance criteria:
+    - Definition states automatic derivation from Directory profile create/update writes only.
+    - Definition states no manual admin/user trigger exists.
+    - Definition states append-only inferred history for mapping changes.
+    - Definition states live dashboard uses current state and historical dashboard uses weekly trend buckets from event history.
+- [ ] Lock historical bucket and correction policy.
+  - Acceptance criteria:
+    - Week start day is Saturday.
+    - Timezone is `America/New_York`.
+    - Late-arrival correction window is T+14 days then bucket freeze.
+- [ ] Record metric check evidence.
+  - Acceptance criteria:
+    - PR includes metric registry check output and explicit canonical metric identifier mapping.
+
+### Schema and Drift Readiness
+
+- [ ] Define Workforce schema and migration plan in `ctf/migrations/`.
+  - Acceptance criteria:
+    - Migration replay and rollback strategy are documented.
+- [ ] Add append-only inferred recruited event storage model.
+  - Acceptance criteria:
+    - Model supports immutable history and weekly historical bucketing inputs.
+- [ ] Add deterministic inference idempotency model.
+  - Acceptance criteria:
+    - `inference_dedupe_key` is deterministic hash over canonical source/user/version fields.
+    - Unique constraint prevents duplicate replay/backfill writes.
+    - Duplicate replays produce idempotent no-op behavior.
+- [ ] Run schema drift checks and capture evidence.
+  - Acceptance criteria:
+    - Drift validation aligns to `.github/instructions/122-schema-drift-predeployment-rules.mdc` and is attached in PR evidence.
+- [ ] Enforce schema/contract version compatibility decision.
+  - Acceptance criteria:
+    - PR declares `Schema Drift: none`, `compatible`, or `versioned-breaking` with required details.
+
+### API and Behavior Implementation Readiness
+
+- [ ] Finalize Workforce API route map and command mapping.
+  - Acceptance criteria:
+    - Planned routes/commands are versioned and mapped to policy/audit contracts.
+- [ ] Implement full parity API groups in Workforce namespace.
+  - Acceptance criteria:
+    - Profile/config/occupations/reports/announcements/export/admin routes exist under `workforce` slug.
+    - No new API contract uses `workforce-recruiter` slug.
+- [ ] Validate recruited inference trigger boundaries.
+  - Acceptance criteria:
+    - Only Directory create/update writes can produce recruited inference events.
+- [ ] Add regression guard against manual recruited event mutation paths.
+  - Acceptance criteria:
+    - Validation gate fails if user/admin-triggered recruited event creation is introduced.
+
+### Security and Compliance Gates
+
+- [ ] Verify authz + CSRF coverage for all state-changing operations.
+  - Acceptance criteria:
+    - No state-changing endpoint bypasses CSRF or role policy checks.
+- [ ] Lock unified web/mobile deny taxonomy.
+  - Acceptance criteria:
+    - Shared deny reasons are enforced for both web and mobile server-side policy outcomes.
+    - At minimum include: `unauthenticated`, `insufficient_role`, `cross_workspace_access`, `missing_consent`, `region_not_permitted`, `csrf_missing`, `csrf_invalid`, `invalid_source_event`, `idempotency_replay`.
+- [ ] Verify deletion/profile contract alignment.
+  - Acceptance criteria:
+    - Workforce behavior is documented against `ctf/docs/templates/PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
+- [ ] Verify audit parity for allow/deny outcomes.
+  - Acceptance criteria:
+    - Audit contract evidence includes both success and denied operation cases.
+
+### Validation, Seeds, and Non-Regression Gates [MVP: VALIDATION DEFERRED — see Rule 118.]
+
+- [ ] Command/policy/audit schema design documentation. [MANUAL TESTING DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Valid and invalid payload paths for all core commands are documented.
+- [ ] Recruited derivation and dashboard semantics design documentation.
+  - Acceptance criteria:
+    - Live current-state and historical weekly-bucket behavior is documented.
+- [ ] Parity user/admin flows design scope. [PARITY TESTING DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Profile, occupations, announcements, report drilldowns, and export job flows are documented for post-MVP testing.
+- [ ] Deterministic seed fixtures for Directory-write-derived recruited history.
+  - Acceptance criteria:
+    - Seed outputs are deterministic and schema-compatible.
+- [ ] Non-regression guard for legacy event artifacts.
+  - Acceptance criteria:
+    - Lint gate fails if legacy accidental event artifact patterns are reintroduced.
+
+### PR Evidence and Release Readiness
+
+- [ ] Include schema drift and migration evidence in PR.
+  - Acceptance criteria:
+    - PR includes drift check output, migration replay evidence, rollback notes, and compatibility decision.
+- [ ] Implementation tracking. [EVIDENCE COLLECTION DEFERRED FOR MVP — see Rule 118.]
+  - Acceptance criteria:
+    - Implementation status is tracked; detailed evidence collection deferred to post-MVP.
+- [ ] Confirm inventory + checklist lifecycle compliance.
+  - Acceptance criteria:
+    - `ctf-workforce-feature-inventory.md` and this checklist are updated in the same PR as behavior/contract changes.
+
+### Change Log
+
+- 2026-02-24: Created initial Workforce rewrite checklist with phase gates for legacy section review, canonical metric lock, schema drift evidence, and non-regression controls preventing accidental legacy event artifacts.
+- 2026-03-03: Phase-1 implementation initiated with workforce migration, API/admin route baseline, canonical metric alignment update, and schema drift gate validation evidence.

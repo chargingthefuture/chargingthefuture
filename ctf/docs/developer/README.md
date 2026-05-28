@@ -1,23 +1,40 @@
 # Developer Docs
 
-## Purpose
-Runbooks, implementation plans, and feature inventories for developers.
+Runbooks, plans, and feature inventories. Indexed by concept below — each
+concept points to the one file that owns it (multi-file topics were
+consolidated). Authoritative implementation lives in code; these docs cover
+what code does not.
 
-## Runbooks Index
-- [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md)
-- [AUDIT_CHECKLIST.md](AUDIT_CHECKLIST.md)
-- [COMMIT_WORKFLOW.md](COMMIT_WORKFLOW.md)
-- [REVERT_PROTOCOL.md](REVERT_PROTOCOL.md)
-- [PERFORMANCE_ROLLOUT_TRACKER.md](PERFORMANCE_ROLLOUT_TRACKER.md)
-- [PERFORMANCE_BENCHMARK_RUNBOOK.md](PERFORMANCE_BENCHMARK_RUNBOOK.md)
-- [FORMANCE_LEDGER_SELF_HOST_RUNBOOK.md](FORMANCE_LEDGER_SELF_HOST_RUNBOOK.md)
-- [FORMANCE_LEDGER_RAILWAY_CURL_COMMANDS.md](FORMANCE_LEDGER_RAILWAY_CURL_COMMANDS.md)
-- [FORMANCE_BACKUP_RUNBOOK.md](FORMANCE_BACKUP_RUNBOOK.md)
+## Infrastructure & Services
 
-## PM Documentation
-- [PM_MCP_IMPLEMENTATION_PLAN.md](PM_MCP_IMPLEMENTATION_PLAN.md)
-- Other PM docs in this directory
+- [FORMANCE.md](FORMANCE.md) — Formance ledger: runtime contract, bootstrap, backup/restore.
+- [OLLAMA.md](OLLAMA.md) — Ollama model management on Render (baking models, sizing, failures).
 
-## Plugin Feature Inventories
-- `ctf-plugin-feature-inventories/` subdirectory contains per-plugin inventories.
-- See its README for details.
+## Architecture
+
+- [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md) — authentication architecture.
+- [economic-models-plugin-plan.md](economic-models-plugin-plan.md) — economic models plugin design.
+- [EXTERNAL_LINK_FEATURE.md](EXTERNAL_LINK_FEATURE.md) — external link feature.
+
+## PM & Performance
+
+- [PM.md](PM.md) — feedback → matching → approval → implementation pipeline (MCP server + agents).
+- [PERFORMANCE.md](PERFORMANCE.md) — performance budgets + manual benchmark runbook.
+
+## Process & Quality
+
+- [COMMIT_WORKFLOW.md](COMMIT_WORKFLOW.md) — commit conventions.
+- [REVERT_PROTOCOL.md](REVERT_PROTOCOL.md) — revert + incident escalation protocol.
+- [AUDIT_CHECKLIST.md](AUDIT_CHECKLIST.md) — release/security audit checklist.
+- [SYNTHETIC_TEST_LIBRARY.md](SYNTHETIC_TEST_LIBRARY.md) — synthetic test library.
+
+## CI, Secrets & Ops Runbooks
+
+- [GITHUB_ACTIONS_BILLING_TOKEN_RUNBOOK.md](GITHUB_ACTIONS_BILLING_TOKEN_RUNBOOK.md) — Actions billing token.
+- [PRODUCT_UPDATE_PIPELINE_SECRETS_RUNBOOK.md](PRODUCT_UPDATE_PIPELINE_SECRETS_RUNBOOK.md) — product-update pipeline secrets.
+- [MOCKUPS_SUBMODULE_SYNC_RUNBOOK.md](MOCKUPS_SUBMODULE_SYNC_RUNBOOK.md) — design/mockups submodule sync.
+
+## Per-Plugin References (policy-governed, not consolidated)
+
+- `ctf-plugin-feature-inventories/` — one authoritative inventory per plugin (see its README).
+- `../contracts/` — per-plugin command/access/audit contracts.

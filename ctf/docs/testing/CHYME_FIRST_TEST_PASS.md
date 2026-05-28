@@ -24,7 +24,7 @@ Updated: 2026-04-05
 Run from `ctf/`:
 
 - `pnpm run migrate:schema`
-- `node ./scripts/seedChymePhase0.mjs`
+- `node ./scripts/seedChyme.mjs`
 
 Expected Chyme tables:
 

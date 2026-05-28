@@ -1,6 +1,6 @@
-import type { UnlockAccessTier } from 'lib/unlock/types';
 import { resolveRequestIdentity } from './request-identity';
 import { pluginAuthDeny, type PluginDenyResponse } from './deny-taxonomy';
+import { isUserUnlocked } from 'lib/unlock/access';
 
 export type AllowDecision = {
   allowed: true;
@@ -9,7 +9,6 @@ export type AllowDecision = {
   role: string | null;
   isAdmin: boolean;
   isApproved: boolean;
-  unlockAccessTier: UnlockAccessTier | null;
 };
 
 export type PluginAuthDecision = AllowDecision | PluginDenyResponse;
@@ -18,6 +17,8 @@ type EvaluatePluginAccessOptions = {
   requiredRoles?: string[];
   requireUsername?: boolean;
   requireApprovedUserOrAdmin?: boolean;
+  // When true, users who have not yet been unlocked (pending / rejected) can still
+  // reach the route (e.g. unlock submission, chyme, hub, account endpoints).
   allowUnlockSupportOnly?: boolean;
 };
 
@@ -26,7 +27,6 @@ function buildAllowDecision(
   username: string | null,
   role: string | null,
   isApproved: boolean,
-  unlockAccessTier: UnlockAccessTier | null,
 ): AllowDecision {
   return {
     allowed: true,
@@ -35,7 +35,6 @@ function buildAllowDecision(
     role,
     isAdmin: role === 'admin',
     isApproved,
-    unlockAccessTier,
   };
 }
 
@@ -59,19 +58,6 @@ export async function evaluatePluginAccess(
     allowUnlockSupportOnly = false,
   } = options;
 
-  // DEV AUTH BYPASS: If DEV_AUTH_BYPASS is set, always allow as admin for local QA
-  if (process.env.DEV_AUTH_BYPASS === 'true') {
-    return {
-      allowed: true,
-      userId: 'dev-admin',
-      username: 'devadmin',
-      role: 'admin',
-      isAdmin: true,
-      isApproved: true,
-      unlockAccessTier: 'approved_full',
-    };
-  }
-
   const identity = await resolveRequestIdentity();
   const normalizedRequiredRoles = normalizeRequiredRoles(requiredRoles);
 
@@ -90,12 +76,14 @@ export async function evaluatePluginAccess(
     }
   }
 
-  if (
-    !allowUnlockSupportOnly
-    && identity.unlockAccessTier === 'locked_support_only'
-    && identity.role !== 'admin'
-  ) {
-    return pluginAuthDeny.forbiddenPolicy('unlock_support_only');
+  // Unlock access gate: check flag + DB rather than cookie/header tier.
+  // Admins bypass this check entirely; routes that allow unapproved users (e.g. unlock
+  // submission, chyme, hub) pass allowUnlockSupportOnly: true to opt out.
+  if (!allowUnlockSupportOnly && identity.role !== 'admin') {
+    const unlocked = await isUserUnlocked(identity.userId);
+    if (!unlocked) {
+      return pluginAuthDeny.forbiddenPolicy('unlock_support_only');
+    }
   }
 
   if (requireApprovedUserOrAdmin && identity.role !== 'admin' && !identity.isApproved) {
@@ -107,6 +95,5 @@ export async function evaluatePluginAccess(
     identity.username,
     identity.role,
     identity.isApproved,
-    identity.unlockAccessTier,
   );
 }

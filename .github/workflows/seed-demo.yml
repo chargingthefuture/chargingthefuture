@@ -1,0 +1,43 @@
+name: Seed demo schema
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo_owner_id:
+        description: "Your Clerk user ID (find it in the Clerk dashboard)"
+        required: true
+        type: string
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: |
+          cd ctf
+          pnpm install
+
+      - name: Run demo seed
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEMO_OWNER_ID: ${{ inputs.demo_owner_id }}
+        run: |
+          if [ -z "$DATABASE_URL_DIRECT" ] && [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
+            exit 1
+          fi
+          cd ctf
+          node scripts/seedDemo.mjs
+          echo "Demo schema seeded for $DEMO_OWNER_ID."

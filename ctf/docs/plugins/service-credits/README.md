@@ -10,7 +10,6 @@ This index links to canonical artifacts for Service Credits.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-service-credits-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.

@@ -23,12 +23,12 @@ This plugin must:
 
 ## 1) User and Admin Feature Scope
 
-### 1.1 Planned User-Facing Scope
+### 1.1 User-Facing Scope
 
-1. No general user-facing dashboard is planned for v1.
-2. Optional read-only summary cards for authorized non-admin stakeholders remain an open decision.
+1. Weekly Performance is admin-only; there is no general user-facing dashboard.
+2. Authorized non-admin read-only access is not currently exposed.
 
-### 1.2 Planned Admin Feature Scope
+### 1.2 Admin Feature Scope
 
 1. Saturday-based week selection (`yyyy-MM-dd`) with deterministic parsing and display range labels.
 2. Previous/current/next week navigation with future-week guardrails.
@@ -44,7 +44,7 @@ This plugin must:
 
 All command/access/audit contracts follow templates `201`/`202`/`203`.
 
-Planned command groups:
+Command groups:
 
 1. `weekly-performance.week.list`
 2. `weekly-performance.week.get`
@@ -79,26 +79,129 @@ Admin routes:
 4. Audit coverage for allow/deny decisions and report exports.
 5. Privacy-safe field handling for sensitive operator metrics and exports.
 
-## 5) Web and Android Parity Notes
+## 5) Web and Android Delivery Status
 
-1. Web admin delivery is initial release baseline for week selection and metric comparison.
-2. Android parity targets read-equivalent weekly summaries for authorized operators.
-3. Week-selector behavior, current-week polling policy, and empty/error semantics must remain cross-platform consistent.
-4. Metric definitions, formatting semantics, and deny reasons must remain cross-platform consistent.
+`web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/apps/weekly-performance`) and Android (`packages/mobile/src/features/weekly-performance`).
 
 ## 6) Seed Coverage Status
 
-Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
+Weekly performance metrics are derived from upstream plugin tables (workforce, service-credits, etc.); no dedicated seed script is required. Local validation runs against fixtures produced by upstream plugin seed scripts.
 
-## 7) Open Decisions
+## 7) Gaps and Known Technical Debt
 
-1. Final non-financial metric dictionary and formula ownership/governance model.
-2. Whether export/report commands ship in v1 or v1.1.
-3. Authorized non-admin read-only access model, if any.
-4. Android admin/operator parity release milestone.
-5. Final keep/compute/remove decision for mood-related comparison fields.
+1. Non-financial metric dictionary and formulas live in code; no canonical governance document captures the dictionary outside the implementation.
+2. Authorized non-admin read-only access is not surfaced; all read paths require admin role.
+3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
 
 ## 8) Change Log
 
-- 2026-02-25: Created initial Weekly Performance plugin inventory as plugin-owned CTF rewrite scope with planned command/API surface, data dependencies, security/compliance controls, parity notes, and open decisions.
-- 2026-02-25: Updated Weekly Performance plugin scope to remove financial/revenue metric reporting from dashboard parity and keep rewrite authority in plugin-inventory documents.
+- 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-milestone entry per Rule 105.
+- 2026-02-25: Created initial Weekly Performance plugin inventory.
+- 2026-02-25: Updated Weekly Performance plugin scope to remove financial/revenue metric reporting from dashboard parity.
+
+
+## Build Checklist
+
+
+### Scope and Boundary
+
+- [ ] Confirm implementation scope is `ctf/` only.
+  - Acceptance criteria:
+    - No implementation work is required in `platform/`.
+- [ ] Confirm plugin slug and namespace lock.
+  - Acceptance criteria:
+    - Stable plugin slug is `weekly-performance` across inventory, contracts, and routes.
+
+### €” Contract Lock
+
+- [ ] Define v1 plugin command contracts.
+  - Acceptance criteria:
+    - Command set conforms to `.github/instructions/201-plugin-command-schema-template.mdc`.
+- [ ] Define v1 access policy contracts.
+  - Acceptance criteria:
+    - Each command includes role/attribute checks, legal basis metadata, and deny conditions under `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
+- [ ] Define v1 audit contracts.
+  - Acceptance criteria:
+    - Each command has allow/deny and result audit coverage under `.github/instructions/203-plugin-audit-schema-template.mdc`.
+- [ ] Lock week-boundary and metric dictionary semantics.
+  - Acceptance criteria:
+    - Week start policy and non-financial metric formulas are documented and approved.
+
+### €” Schema and Migrations
+
+- [ ] Define weekly performance plugin tables/materializations in `ctf/migrations/`.
+  - Acceptance criteria:
+    - Week windows, metric snapshots, and comparison entities are represented.
+- [ ] Define retention and rebuild strategy for aggregated metrics.
+  - Acceptance criteria:
+    - Retention class, recompute policy, and rollback/replay notes are documented.
+
+### €” API and Policy Implementation
+
+- [ ] Implement admin week list/get and metrics/comparison endpoints.
+  - Acceptance criteria:
+    - Required fields and deterministic ordering match command contracts.
+    - `weekStart` parsing/validation and default-week behavior are deterministic and contract-documented.
+- [ ] Implement current-week polling policy.
+  - Acceptance criteria:
+    - Polling and focus-refetch behavior are enabled only for current-week queries.
+- [ ] Implement report export mutation path (if in locked scope).
+  - Acceptance criteria:
+    - Export action is policy-gated, replay-safe, and contract-tested.
+- [ ] Enforce deny-by-default policy checks server-side.
+  - Acceptance criteria:
+    - Unauthorized role/scope access is denied with stable reason categories.
+
+### €” Web and Mobile Parity
+
+- [ ] Deliver web admin weekly review surface.
+  - Acceptance criteria:
+    - Week selector, metrics cards, and comparison table are functional and contract-aligned.
+    - Previous/current/next controls enforce future-week guardrails.
+    - Loading/empty/missing-metrics/error states are deterministic and testable.
+- [ ] Deliver Android parity for approved operator read scope.
+  - Acceptance criteria:
+    - Android outputs equivalent metric values and week semantics for parity scope.
+- [ ] Validate cross-platform consistency.
+  - Acceptance criteria:
+    - Error/deny semantics and metric formatting are equivalent across platforms.
+
+### €” Security and Compliance
+
+- [ ] Verify authz/authn controls for all plugin routes.
+  - Acceptance criteria:
+    - Admin-protected endpoints enforce server-side RBAC/ABAC and session requirements.
+- [ ] Verify CSRF controls for mutation routes.
+  - Acceptance criteria:
+    - All state-changing endpoints reject missing/invalid CSRF tokens.
+- [ ] Verify audit evidence coverage.
+  - Acceptance criteria:
+    - Allow/deny outcomes and report exports are captured with actor/action/outcome/timestamp correlation fields.
+
+### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+
+- [ ] Command/access/audit parity design documentation.
+  - Acceptance criteria:
+    - Command names and required fields are documented across contract files.
+- [ ] Week selection and comparison design documentation. [MANUAL TESTING DEFERRED FOR MVP â€” see Rule 118.]
+  - Acceptance criteria:
+    - Current/previous week calculation behavior is documented.
+    - Current-week-only polling and focus-refetch behavior are documented.
+- [ ] Deterministic seed fixtures for weekly metrics scenarios.
+  - Acceptance criteria:
+    - Seeded week datasets are reproducible via deterministic seed scripts/data.
+- [ ] Release gate review.
+  - Acceptance criteria:
+    - Inventory + checklist are updated in the same PR as accepted scope changes.
+
+### Open Decisions Tracker
+
+- [ ] Final v1 export/report scope.
+- [ ] Final Android operator parity breadth.
+- [ ] Final non-financial metric set for v1 GA.
+- [ ] Final mood-field inclusion decision for comparison outputs.
+
+### Change Log
+
+- 2026-02-25: Created initial Weekly Performance rewrite checklist with contract, schema, API/policy, parity, security/compliance, and validation/release phases.
+- 2026-02-25: Updated checklist scope to enforce non-financial weekly metric parity for v1 dashboard reporting.

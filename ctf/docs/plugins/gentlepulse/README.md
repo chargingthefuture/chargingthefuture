@@ -10,7 +10,6 @@ This index links to canonical artifacts for GentlePulse.
 
 ## Feature Inventory
 - [Feature Inventory(../../developer/ctf-plugin-feature-inventories/ctf-gentlepulse-feature-inventory.md)
-- [Rewrite Checklist(../../developer/ctf-plugin-feature-inventories/ctf-gentlepulse-rewrite-checklist.md)
 
 ## Notes
 - Canonical contract storage location remains docs/contracts.
