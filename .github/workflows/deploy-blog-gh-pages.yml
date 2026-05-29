@@ -1,13 +1,13 @@
 name: Deploy Blog to GitHub Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "wiki-site"          # submodule pointer bump (gitlink path)
-      - "wiki-site/**"
-      - ".github/workflows/deploy-blog-gh-pages.yml"
+  # Triggered by the product-update workflow after it publishes to wiki-site,
+  # and runnable on demand. wiki-site is a separate repo and the single source
+  # of truth; this workflow clones its main branch at build time, so there is
+  # no submodule pin to keep in sync.
   workflow_dispatch:
+  repository_dispatch:
+    types: [wiki-site-updated]
 
 permissions:
   contents: read
@@ -22,29 +22,18 @@ jobs:
   build:
     name: Build Pages artifact
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: wiki-site/wiki-blog
-
     steps:
-      # Check out WITHOUT submodules, then init only the wiki-site submodule.
-      # submodules: true would init every sibling submodule (ctf-v2-deprecated,
-      # landing-page, etc.) — unnecessary here, and some have broken/unreachable
-      # pinned refs that fail the whole checkout. We only need wiki-site, and not
-      # recursively: the blog build reads the committed articles.ts and fetches
-      # wiki markdown at runtime, so wiki-site's nested submodules aren't needed.
-      # Content validation / articles.ts sync are enforced by wiki-site's own CI.
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-
-      - name: Check out wiki-site submodule only
-        working-directory: ${{ github.workspace }}
-        run: git submodule update --init wiki-site
+      # Clone wiki-site main (recursing its nested wiki/ submodule, which the
+      # article sync reads). The nested wiki-site/ directory is the pnpm
+      # workspace root; everything is built and uploaded from there.
+      - name: Clone wiki-site (main)
+        run: |
+          git clone --recurse-submodules --depth 1 \
+            https://github.com/chargingthefuture/wiki-site.git wiki-site-src
 
       - uses: pnpm/action-setup@v4
         with:
-          package_json_file: wiki-site/wiki-blog/package.json
+          package_json_file: wiki-site-src/wiki-site/package.json
 
       - uses: actions/setup-node@v4
         with:
@@ -54,15 +43,17 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
+        working-directory: wiki-site-src/wiki-site
         run: pnpm install --frozen-lockfile
 
       - name: Build for GitHub Pages
-        run: pnpm blog:build:pages
+        working-directory: wiki-site-src/wiki-site
+        run: pnpm wiki:build:pages
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: wiki-site/wiki-blog/artifacts/blog/dist/public
+          path: wiki-site-src/wiki-site/artifacts/wiki/dist/public
 
   deploy:
     name: Deploy to Pages
