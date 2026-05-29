@@ -81,6 +81,7 @@ rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
 - [125-railway-mcp-debugging-rules.mdc](125-railway-mcp-debugging-rules.mdc)
 - [126-design-mockup-implementation-rules.mdc](126-design-mockup-implementation-rules.mdc)
 - [127-design-pass-gating-rules.mdc](127-design-pass-gating-rules.mdc)
+- [128-design-sync-workflow-rules.mdc](128-design-sync-workflow-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](202-plugin-access-policy-schema-template.mdc)

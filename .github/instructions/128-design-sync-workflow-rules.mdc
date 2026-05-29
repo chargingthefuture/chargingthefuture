@@ -1,0 +1,109 @@
+# Design Sync Workflow Rules
+
+## Intent
+
+Define exactly how design flows from the Replit design repo into this app repo without
+either agent overstepping — i.e. without a sync ever deleting a design the owner wants to keep, and
+without the app agent ever editing or pushing to the design repo. Companion rules: `126-` (what to
+do once a design exists) and `127-` (when to stop and wait for a design). This rule (`128-`) covers
+the mechanics of the sync itself.
+
+## Two Repos, One Direction
+
+- Design repo (`https://github.com/chargingthefuture/design`, vendored here as the `design/`
+  submodule, authored by the Replit design agent) — owns mockup components, the landing page, the
+  slideshow deck, and design tokens.
+- App repo (this repo) — owns production application code, backend, schema, infra.
+
+```
+design-repo  ──(reference only, one way)──▶  app-repo
+```
+
+The app repo never writes back to the design repo. The design agent never reaches into app
+business logic. This one-directional rule is what makes a sync safe: a sync is a *pull of a known
+pointer*, never a "make both sides match" reconciliation that could delete wanted work.
+
+## How The App Consumes Designs: Submodule-Pin (NOT file-copy)
+
+This app does not copy mockup `.tsx` files into its own tree. There is no
+`ctf/.../components/mockups/` directory and there must not be one. The app vendors the entire design
+repo as the `design/` git submodule and:
+
+1. Pins a specific design-repo commit via the submodule pointer.
+2. Implements separate production shells (e.g. `ctf/packages/web/components/clicklog/clicklog-shell.tsx`)
+   that are *informed by* the mockups in `design/`, per rule `126-`.
+
+> The design repo's `sync-manifest.json` describes a `dest_dir` of
+> `<APP_REPO>/src/components/mockups/survivor-hub` and a file-copy + `// design-sync` marker model.
+> That file-copy model is for a hypothetical app that vendors mockups directly. This app does
+> not. Here the manifest and the `// design-sync` markers serve a different, still-useful purpose:
+> they are the design-side deletion guard (see below) and the authoritative *list* of which
+> mockup files are live. The app reads mockups in place from the submodule at
+> `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/`; it never copies them.
+
+## App-Side Sync Procedure (read-only against the design repo)
+
+Run the helper or the equivalent commands. None of these write to the design repo.
+
+```bash
+ctf/scripts/sync-design.sh        # fetch + update --remote + show what changed
+```
+
+Equivalent manual steps:
+
+1. `git -C design fetch` — see what the Replit agent has pushed (the in-tree pointer often lags).
+2. `git -C design log --oneline -10` — review new design commits.
+3. `git submodule update --remote design` — advance the local checkout to the design remote HEAD.
+4. `git add design && git commit` — record the new pinned design SHA in the app repo. The commit
+   message should name the design commits being adopted.
+5. Implement / update production shells against the new mockups per rule `126-`. UI gated by `127-`.
+
+A "design sync" in this repo is steps 1–4: bumping the pinned design pointer. It copies no
+mockup files, deletes nothing, and touches nothing under `design/`.
+
+## The Deletion Guard (why neither agent oversteps)
+
+The risk the owner flagged: an agent treats a sync as "make both sides identical" and deletes a
+design that was intentionally kept. These rules prevent that on both sides:
+
+- App side: A sync only advances the submodule pointer. It performs no `rm`, no `git rm`, no
+  file deletion, and never edits files under `design/`. If the design repo removed a component,
+  the app agent flags it for the owner (and removes the corresponding production shell only on
+  explicit owner instruction) — it never auto-deletes app code to "match."
+- Design side (Replit, enforced by `design/DESIGN_BOUNDARY.md` + `sync-manifest.json`): The
+  design agent copies/edits only files listed in `sync-manifest.json`, never deletes app-repo files,
+  and lists retired components under "Deprecated components" in `DESIGN_BOUNDARY.md` rather than
+  deleting them downstream.
+- The `// design-sync` marker on line 1 of each mockup marks it design-owned. It is the design
+  repo's signal of "this is mine to regenerate." The app never strips or relies on copying it,
+  because the app does not vendor the files.
+
+## Fixing Mockup Copy / Visuals: List It, Never Direct Edit
+
+The app agent must not edit files under `design/` or push to the design remote (one-way rule).
+When the app agent or owner spots a design issue (wrong copy, currency reference, color, missing
+state), the app agent produces a precise, file-by-file list for the Replit design agent:
+
+```
+design/ list (for Replit)
+- ServiceCredits.tsx:168 — remove "≈ $242 USD purchasing power…"; credits are not pegged to fiat.
+- MobileServiceCredits.tsx:64 — remove "credits ≈ $242 USD".
+```
+
+Replit applies the fix in the design repo, commits with the manifest, and the app picks it up on the
+next pointer bump. The app implements the corrected design afterward.
+
+## Adding / Removing Designs (summary; full text in `design/DESIGN_BOUNDARY.md`)
+
+- Add: Replit builds the component under `…/survivor-hub/`, adds `// design-sync` line 1, adds
+  the filename to `sync-manifest.json`, commits both together. App picks it up on next sync.
+- Remove: Replit deletes it from the design repo and the manifest, and notes it under
+  "Deprecated components." The app removes the matching shell only on explicit owner instruction.
+
+## Cross-References
+
+- `126-design-mockup-implementation-rules.mdc` — implementing a mockup once it exists.
+- `127-design-pass-gating-rules.mdc` — when to stop and wait for a design; resume protocol.
+- `design/DESIGN_BOUNDARY.md` — the design-repo-side contract (authoritative for the design agent).
+- `design/sync-manifest.json` — the authoritative list of live mockup files.
+- `ctf/agents/design.agent.md` — the app-side index into the design submodule.
