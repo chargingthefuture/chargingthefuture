@@ -71,18 +71,22 @@ jobs:
 
       # ── Secrets (Infisical → env) ─────────────────────────────────────────────
       # Intended to inject APP_URL and INTERNAL_SERVICE_SECRET into the job env
-      # for the "Post to in-app feed" step. recursive:true so secrets nested in
-      # a sub-folder of the production environment (not just the root path) are
-      # picked up. The feed step also falls back to same-named GitHub Actions
-      # secrets, so it still works if Infisical injection is unavailable.
+      # for the "Post to in-app feed" step. env-slug is the Infisical environment
+      # *slug* (not its display name) — the Production environment's default slug
+      # is "prod", so env-slug: production returns a 404. recursive:true picks up
+      # secrets nested in sub-folders, not just the root path.
+      # This step is non-fatal: if Infisical is unreachable or misconfigured, the
+      # job continues and downstream steps fall back to same-named GitHub Actions
+      # secrets (APP_URL, INTERNAL_SERVICE_SECRET — see the feed step below).
       # GitHub-direct secrets (not via Infisical): ANTHROPIC_API_KEY, GH_PAT, GITHUB_TOKEN
       - name: Inject secrets from Infisical
         uses: Infisical/secrets-action@v1.0.16
+        continue-on-error: true
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
-          env-slug: production
+          env-slug: prod
           domain: ${{ secrets.INFISICAL_URL }}
           secret-path: /
           recursive: true
