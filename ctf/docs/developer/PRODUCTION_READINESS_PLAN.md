@@ -105,7 +105,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| lighthouse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -384,10 +384,23 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   also removed the unused `userId`/`isAdmin` props. API wiring untouched; typecheck, lint, modularity,
   build:ci, EOF, parity, and schema-drift gates green. Marked directory Web px ✅; Android pixel parity
   (`MobileDirectory.tsx` → RN feature) remains ⬜.
+- 2026-05-29: UI circle-back — lighthouse web pixel pass + modularity refactor. Aligned `LighthouseShell`
+  to `design/.../survivor-hub/LightHouse.tsx` and its Loading mockup: replaced emoji glyphs with lucide
+  icons, added the previously-missing filter sidebar (real data-backed filters: All / Available Now /
+  Accepts Credits, with real stats) and right panel (Pricing Guide + Privacy by Design + an
+  informational Emergency Housing note), moved the property detail from a modal to the mockup's
+  full-page view, and added a skeleton loading state. Counts/filters derive from real data only — the
+  mockup's "Verified Only / Female-only / Emergency" filters and "5 slots" count have no backing in the
+  data model and were omitted rather than faked (noted in the inventory). The oversized single-function
+  shell (274 lines / complexity 29) was decomposed into modular sub-components within the
+  200-line / complexity-10 limits, and lint debt was cleared (typed chat credentials; removed unused
+  `isAdmin`/`role`/`announcements` + empty catch binding; dropped unused props). typecheck, lint,
+  modularity, build:ci, EOF, parity, and schema-drift gates green. Marked lighthouse Web px ✅; Android
+  pixel parity (`MobileLightHouse.tsx` → RN feature) remains ⬜.
 - 2026-05-29: Design re-pin `dcaaf15` → `c5d83c0` (76 commits; separate design-sync PR) + copy
   reconcile. The newer design removed all user-facing "GetStream" wording and added mockups for the
   four previously design-gated plugins (skills-taxonomy, weekly-performance, clicklog, unlock). Began
-  reconciling the shipped shells to the new copy: chyme and directory (this PR) and lighthouse (folded
+  reconciling the shipped shells to the new copy: chyme and directory and lighthouse (folded
   into its open PR) drop "GetStream" branding for "end-to-end encrypted" wording; Directory's detail
   "Reviews" → "Endorsements". Copy-only; no structural/API changes. Follow-up: `ChymeLiveShell` remains
   a pre-existing rule-116 violation (359 lines / complexity 40) not introduced here — a chyme
