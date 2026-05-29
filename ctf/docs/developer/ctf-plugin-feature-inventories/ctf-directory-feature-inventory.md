@@ -113,6 +113,7 @@ Seeded content:
 
 ## Change Log
 
+- 2026-05-29: Design-sync reconcile to `c5d83c0`. Removed user-facing "GetStream" wording from the profile detail (dropped the badge; "GetStream Chat" → "Encrypted Chat") and right panel ("All interactions are end-to-end encrypted"); renamed the detail "Reviews" section to "Endorsements" per the revised mockup. Copy-only.
 - 2026-05-29: Web UI circle-back. Aligned `DirectoryShell` to the `Directory.tsx` mockup and its Loading/Empty states; corrected the app surface background to `#0F1117`, added the skeleton loading state and the mockup's empty-state category grid (real sector data), and restored the `📇` heading glyphs. Decomposed the previously oversized shell into modular sub-components to satisfy rule-116 limits and removed the unused `userId`/`isAdmin` props (cleared a lint error). API wiring unchanged.
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language, Planned section headers, and planning-phase ambiguities list. Confirmed web+android complete delivery status. Clarified technical debt (skills compatibility, route ownership codification) as known limitations, not unimplemented features.
 - 2026-03-02: Implemented backend and unified web surface (user/admin role-gated sections) with resolved list/pagination/claimed-delete decisions.
