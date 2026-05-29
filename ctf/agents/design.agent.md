@@ -7,7 +7,7 @@ Manages Replit design submodule and ensures pixel-perfect UI implementation. Eli
 ### Responsibilities
 
 - Pull and sync latest design changes from Replit submodule
-- Update command: `git submodule update --init --recursive`
+- Sync command (submodule-pin model — see `128-design-sync-workflow-rules.mdc`): `ctf/scripts/sync-design.sh`, or manually `git -C design fetch && git submodule update --remote design && git add design && git commit`. A sync advances the pinned design SHA only — it copies no mockup files and deletes nothing.
 - Implement design mockups with pixel-perfect accuracy
 - Audit UI components against design specifications
 - Extract and apply design tokens (colors, spacing, typography)
@@ -19,6 +19,8 @@ Manages Replit design submodule and ensures pixel-perfect UI implementation. Eli
 - Enforce pixel-perfect compliance for all visual elements
 - Prevent hardcoded values that should use design tokens
 - Ensure design-to-code consistency across all components
+- One-way only: never edit files under `design/` or push to the design remote. Design flows design→app. To request a mockup change (copy, currency, color, missing state), produce a file-by-file list for the Replit design agent — do not fix the mockup yourself. See `128-design-sync-workflow-rules.mdc`.
+- Never copy mockups into the app tree. The app reads them in place from the `design/` submodule; there is no `ctf/.../components/mockups/` directory.
 
 ### Never Encode "Phases" Into Designs
 
