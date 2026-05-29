@@ -11,6 +11,7 @@
     "verify:mobile": "pnpm --filter @ctf/mobile run lint && pnpm --filter @ctf/mobile run typecheck && pnpm --filter @ctf/mobile run build:android:ci && node ./scripts/check-web-android-parity.mjs",
     "verify:pre-push": "pnpm run verify:web && pnpm run verify:mobile",
     "test": "pnpm -r --if-present run test",
+    "seed:currencies": "node ./scripts/seedCurrenciesPhase0.mjs",
     "seed:skills-taxonomy": "node ./scripts/seedSkillsTaxonomy.mjs",
     "seed:directory": "node ./scripts/seedDirectory.mjs",
     "seed:feed-announcements": "node ./scripts/seedFeedAnnouncements.mjs",

@@ -13,6 +13,64 @@ CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(
 CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- === currencies (app-wide reference table; see issue #120) ===
+-- Curated catalog of currencies usable across value-bearing plugins. Defined early so any table
+-- that FK-references currencies(code) (LightHouse rent, Foundation provider rate, TrustTransport,
+-- SocketRelay, LevelUp, Unlock) can be created/altered after it. ServiceCredits is the platform
+-- utility token: code 'SC' is internal-only — UI always renders the label 'ServiceCredits', and a
+-- ServiceCredits amount is NEVER shown at a fiat equivalent. GDP USD-normalization lives only in the
+-- aggregate GDP layer (issue #121), never per-wallet.
+CREATE TABLE IF NOT EXISTS currencies (
+  code TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('token','fiat','crypto','barter')),
+  is_service_credits BOOLEAN NOT NULL DEFAULT FALSE,
+  symbol TEXT,
+  decimal_places INTEGER NOT NULL DEFAULT 2,
+  requires_amount BOOLEAN NOT NULL DEFAULT TRUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 100,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS code TEXT;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS label TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'fiat';
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_service_credits BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS symbol TEXT;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS decimal_places INTEGER NOT NULL DEFAULT 2;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS requires_amount BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 100;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_currencies_active_sort ON currencies(is_active, sort_order);
+
+-- Seed the owner-curated launch set (inline + idempotent, like ctf_plugin_registry). Owner updates
+-- this catalog over time. ServiceCredits sorts first (preferred wherever multiple options appear).
+INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_places, requires_amount, sort_order) VALUES
+  ('SC',  'ServiceCredits',        'token',  TRUE,  NULL,  0, TRUE, 0),
+  ('USD', 'United States Dollar',  'fiat',   FALSE, '$',   2, TRUE, 10),
+  ('EUR', 'Euro',                  'fiat',   FALSE, '€',   2, TRUE, 20),
+  ('JPY', 'Japanese Yen',          'fiat',   FALSE, '¥',   0, TRUE, 30),
+  ('GBP', 'British Pound Sterling','fiat',   FALSE, '£',   2, TRUE, 40),
+  ('CHF', 'Swiss Franc',           'fiat',   FALSE, 'CHF', 2, TRUE, 50),
+  ('CAD', 'Canadian Dollar',       'fiat',   FALSE, 'CA$', 2, TRUE, 60),
+  ('AUD', 'Australian Dollar',     'fiat',   FALSE, 'A$',  2, TRUE, 70),
+  ('CNY', 'Chinese Yuan',          'fiat',   FALSE, 'CN¥', 2, TRUE, 80),
+  ('INR', 'Indian Rupee',          'fiat',   FALSE, '₹',   2, TRUE, 90),
+  ('BRL', 'Brazilian Real',        'fiat',   FALSE, 'R$',  2, TRUE, 100),
+  ('BTC', 'Bitcoin',               'crypto', FALSE, '₿',   8, TRUE, 110)
+ON CONFLICT (code) DO UPDATE SET
+  label              = EXCLUDED.label,
+  kind               = EXCLUDED.kind,
+  is_service_credits = EXCLUDED.is_service_credits,
+  symbol             = EXCLUDED.symbol,
+  decimal_places     = EXCLUDED.decimal_places,
+  requires_amount    = EXCLUDED.requires_amount,
+  sort_order         = EXCLUDED.sort_order,
+  updated_at         = NOW();
+
 -- === weekly_performance_weeks ===
 CREATE TABLE IF NOT EXISTS weekly_performance_weeks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1175,6 +1233,21 @@ CREATE TABLE IF NOT EXISTS lighthouse_properties (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Multi-currency (issue #120): monthly_rent is the listed amount; rent_currency names its currency.
+-- "Accepts ServiceCredits" (and any other accepted currency) is a SEPARATE field, never derived from
+-- rent_currency. A fiat rent shown beside an "Accepts ServiceCredits" badge is two distinct fields.
+ALTER TABLE IF EXISTS lighthouse_properties ADD COLUMN IF NOT EXISTS rent_currency TEXT REFERENCES currencies(code);
+-- Backfill: everything to date is USD; Canadian rows with no cost yet keep NULL rent (no currency).
+UPDATE lighthouse_properties SET rent_currency = 'USD' WHERE monthly_rent IS NOT NULL AND rent_currency IS NULL;
+
+CREATE TABLE IF NOT EXISTS lighthouse_property_accepted_currencies (
+  property_id UUID NOT NULL REFERENCES lighthouse_properties(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (property_id, currency_code)
+);
+ALTER TABLE IF EXISTS lighthouse_property_accepted_currencies ADD COLUMN IF NOT EXISTS property_id UUID;
+ALTER TABLE IF EXISTS lighthouse_property_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_lighthouse_property_accepted_currencies_property ON lighthouse_property_accepted_currencies(property_id);
 
 CREATE TABLE IF NOT EXISTS lighthouse_matches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
