@@ -56,12 +56,21 @@ if (!response.ok) {
 }
 
 const result = await response.json();
-const content = result.content[0].text.trim();
+const rawContent = result.content[0].text.trim();
+
+// Models sometimes wrap JSON in markdown code fences despite instructions not to.
+// Strip a leading ```json / ``` fence and a trailing ``` fence before parsing.
+function stripCodeFences(text) {
+  const fenced = text.match(/^```(?:json)?\s*\n([\s\S]*?)\n?```$/i);
+  return fenced ? fenced[1].trim() : text;
+}
+
+const content = stripCodeFences(rawContent);
 
 try {
   JSON.parse(content);
 } catch {
-  console.error('Model returned invalid JSON:\n', content);
+  console.error('Model returned invalid JSON:\n', rawContent);
   process.exit(1);
 }
 

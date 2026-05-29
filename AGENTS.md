@@ -109,7 +109,6 @@ For autonomous recovery, use the Ona Automation documented in `ctf/docs/ona-auto
 | Topic | Rule file |
 |---|---|
 | Environment variables | `123-environment-configuration-rules.mdc` |
-| Deployment topology | `111-deployment-topology-rules.mdc` |
 | CI gates | `119-github-actions-ci-rules.mdc` |
 | Monorepo layout | `101-monorepo-layout-rules.mdc` |
 | Schema drift | `122-schema-drift-predeployment-rules.mdc` |

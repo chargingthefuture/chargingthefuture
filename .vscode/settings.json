@@ -7,29 +7,21 @@
         "**/.next/**": true,
         "**/.pnpm/**": true
     },
-    // Lower memory for large files
+  "workbench.sideBar.location": "right",
+  "workbench.startupEditor": "none",
+  "window.restoreWindows": "all",
+  "window.openFoldersInNewWindow": "off",
     "files.maxMemoryForLargeFilesMB": 16,
-    // Disable following symlinks in search
     "search.followSymlinks": false,
-    // Use minimal tree indent
     "workbench.tree.indent": 8,
-    "editor.minimap.enabled": false,
-    // Limit open editors
-    "workbench.editor.limit.value": 1,
-    // Disable smooth scrolling for less GPU/memory
     "editor.smoothScrolling": false,
-    // Hide breadcrumbs
     "breadcrumbs.enabled": false,
-    // Hide unused side bar
-    "workbench.sideBar.location": "right",
-    // Lower tab close delay
     "workbench.editor.closeOnFileDelete": true,
     "workbench.colorTheme": "Dark+",
     "editor.fontSize": 18,
     "editor.fontFamily": "Fira Code, Menlo, Monaco, 'Courier New', monospace",
     "editor.lineHeight": 26,
     "editor.cursorBlinking": "phase",
-    
     "editor.renderWhitespace": "none",
     "editor.bracketPairColorization.enabled": false,
     "editor.scrollbar.vertical": "hidden",    
@@ -63,21 +55,19 @@
     "extensions.autoUpdate": false,
     "extensions.ignoreRecommendations": true,
     "workbench.extensions.showRecommendationsOnInstall": false,
-  "workbench.sideBar.location": "right",
   "workbench.editor.showTabs": "multiple",
   "workbench.panel.defaultLocation": "bottom",
-  "workbench.panel.opensMaximized": false,
+  "workbench.panel.opensMaximized": "never",
   "workbench.panel.size": 300,
-  "terminal.integrated.defaultLocation": "bottom",
+  "terminal.integrated.defaultLocation": "view",
   "terminal.integrated.splitCside": "horizontal",
   "markdown.preview.breaks": true,
   "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "coderabbit.coderabbit-vscode",
     "editor.formatOnSave": true
   },
   "markdown.extension.preview.autoShowPreviewToSide": true,
   "files.autoSave": "afterDelay",
   "editor.minimap.enabled": false,
   "editor.wordWrap": "on",
-  "workbench.startupEditor": "none"
 }

@@ -27,14 +27,6 @@ else
   echo "Infisical CLI already installed."
 fi
 
-# Install/update Vercel CLI
-echo "Checking for Vercel CLI..."
-if ! command -v vercel &> /dev/null; then
-  npm install -g vercel
-else
-  echo "Vercel CLI already installed."
-fi
-
 # Install/update Render CLI (used to open a shell into Render services, e.g. to
 # run the one-time Formance ledger bootstrap from inside the private network).
 echo "Checking for Render CLI..."
@@ -43,7 +35,6 @@ if ! command -v render &> /dev/null; then
 else
   echo "Render CLI already installed."
 fi
-
 
 echo "Checking for eas-cli..."
 if ! command -v eas &> /dev/null; then
@@ -68,7 +59,6 @@ if [ "$FAST_MODE" != "1" ]; then
 else
   echo "Fast mode enabled: skipping Expo/React Native DevTools system libraries."
 fi
-
 
 # Install dependencies for the root project, ctf workspace, and standalone apps.
 echo "Installing root pnpm dependencies..."
@@ -138,21 +128,12 @@ else
   echo "No pre-commit hook found to set as executable."
 fi
 
-# Configure repo-level Husky hooks path for ctf rewrite workspace
+# Configure repo-level Husky hooks path
 if [ -d /workspaces/chargingthefuture/.git ] && [ -d /workspaces/chargingthefuture/ctf/.husky ]; then
   git -C /workspaces/chargingthefuture config core.hooksPath ctf/.husky
   chmod +x /workspaces/chargingthefuture/ctf/.husky/pre-commit || true
   chmod +x /workspaces/chargingthefuture/ctf/.husky/pre-push || true
   echo "Configured git hooksPath to ctf/.husky"
-fi
-
-# Verify Railway token for MCP server access (CLI uses RAILWAY_TOKEN; .mcp.json maps RAILWAY_API_TOKEN → RAILWAY_TOKEN)
-echo "Verifying Railway MCP access..."
-if [ -n "$RAILWAY_API_TOKEN" ]; then
-  echo "Railway MCP: RAILWAY_API_TOKEN is set — will be forwarded as RAILWAY_TOKEN to the MCP server."
-else
-  echo "Warning: RAILWAY_API_TOKEN not set. Railway MCP server will not work."
-  echo "Add RAILWAY_API_TOKEN as a Codespaces secret (Settings > Secrets > Codespaces) and re-open the Codespace."
 fi
 
 # Verify Render API key for MCP server access (.mcp.json uses RENDER_API_KEY to
@@ -168,6 +149,5 @@ else
 fi
 
 # Prompt for any remaining manual logins
-echo "If you need to log in to GitHub or Vercel, run:"
+echo "If you need to log in to GitHub, run:"
 echo "  gh auth login"
-echo "  vercel login"

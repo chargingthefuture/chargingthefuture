@@ -5,7 +5,6 @@ Do not use this file for implementation or planning decisions.
 Canonical sources:
 - `index.mdc`
 - `123-environment-configuration-rules.mdc`
-- `111-deployment-topology-rules.mdc`
 
 Reason:
 - This legacy file duplicated Rule 123 guidance and risked governance drift.
