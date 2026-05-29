@@ -26,14 +26,20 @@ jobs:
         working-directory: wiki-site/wiki-blog
 
     steps:
-      # submodules: true fetches the wiki-site submodule (which contains the
-      # blog). It deliberately does NOT recurse: the blog build reads the
-      # already-committed articles.ts and fetches wiki markdown at runtime, so
-      # wiki-site's own nested submodules (wiki, design/mockups) are not needed.
+      # Check out WITHOUT submodules, then init only the wiki-site submodule.
+      # submodules: true would init every sibling submodule (ctf-v2-deprecated,
+      # landing-page, etc.) — unnecessary here, and some have broken/unreachable
+      # pinned refs that fail the whole checkout. We only need wiki-site, and not
+      # recursively: the blog build reads the committed articles.ts and fetches
+      # wiki markdown at runtime, so wiki-site's nested submodules aren't needed.
       # Content validation / articles.ts sync are enforced by wiki-site's own CI.
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+
+      - name: Check out wiki-site submodule only
+        working-directory: ${{ github.workspace }}
+        run: git submodule update --init wiki-site
 
       - uses: pnpm/action-setup@v4
         with:
