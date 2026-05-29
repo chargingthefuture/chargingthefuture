@@ -32,7 +32,7 @@ type Props = {
 
 export function SkillsTaxonomyBrowser({ hierarchy, totalSkillCount, isAdmin }: Props) {
   const [selectedSectorId, setSelectedSectorId] = useState(hierarchy[0]?.id ?? "");
-  const [openJobTitleId, setOpenJobTitleId] = useState(hierarchy[0]?.jobTitles[0]?.id ?? null);
+  const [openJobTitleId, setOpenJobTitleId] = useState<string | null>(hierarchy[0]?.jobTitles[0]?.id ?? null);
   const [search, setSearch] = useState("");
 
   const selectedSector = hierarchy.find((s) => s.id === selectedSectorId) ?? hierarchy[0];
