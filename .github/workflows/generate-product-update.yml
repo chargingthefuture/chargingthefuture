@@ -134,9 +134,11 @@ jobs:
           git push
 
       # ── Blog registry (wiki-site) ─────────────────────────────────────────────
-      # Adds the update to the wiki-site blog (category "Updates") and bumps the
-      # wiki-site submodule pointer in THIS repo so deploy-blog-gh-pages.yml
-      # rebuilds and publishes the post to the live site.
+      # Adds the update to the wiki-site blog (category "Updates") on wiki-site's
+      # main branch, then triggers deploy-blog-gh-pages.yml to rebuild the live
+      # site. wiki-site is a separate repo with its own layout: the pnpm
+      # workspace lives in the nested wiki-site/ directory, with scripts
+      # wiki:validate / wiki:sync and articles at artifacts/wiki/src/lib.
       - name: Publish to wiki-site blog registry
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -150,13 +152,12 @@ jobs:
           CATEGORY="Updates"
           DATE=$(date +%Y-%m-%d)
 
-          # Clone wiki-site with its nested submodules: blog:sync infers extra
-          # "folder" articles from the nested wiki/ submodule, so it must be
-          # present or sync would drop them from articles.ts.
+          # Recurse submodules: wiki:sync infers extra "folder" articles from the
+          # nested wiki/ submodule, so it must be present or sync drops them.
           git clone --recurse-submodules \
             "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/wiki-site.git" /tmp/wiki-site
 
-          cd /tmp/wiki-site/wiki-blog
+          cd /tmp/wiki-site/wiki-site
           SLUG="$SLUG" TITLE="$TITLE" EXCERPT="$EXCERPT" CATEGORY="$CATEGORY" DATE="$DATE" \
           yq -i '.articles += [{
             "slug": strenv(SLUG), "title": strenv(TITLE),
@@ -167,37 +168,29 @@ jobs:
 
           corepack enable
           pnpm install --frozen-lockfile
-          pnpm blog:validate
-          pnpm blog:sync
+          pnpm wiki:validate
+          pnpm wiki:sync
 
           cd /tmp/wiki-site
           git config user.name  "CTF CI Bot"
           git config user.email "ci@chargingthefuture.org"
-          git add wiki-blog/content-index.yaml wiki-blog/artifacts/blog/src/lib/articles.ts
+          git add wiki-site/content-index.yaml wiki-site/artifacts/wiki/src/lib/articles.ts
           if git commit -m "feat(blog): publish ${DATE} product update — ${SLUG}"; then
             git push
-            WIKI_SITE_SHA=$(git rev-parse HEAD)
+            PUBLISHED=1
           else
-            echo "No content-index changes; skipping wiki-site push."
-            WIKI_SITE_SHA=""
+            echo "No content-index changes; nothing to publish."
+            PUBLISHED=0
           fi
 
-          # Bump the wiki-site submodule pointer in this repo so the Pages deploy
-          # rebuilds from the new content. deploy-blog-gh-pages.yml triggers on
-          # changes to the "wiki-site" gitlink (see its paths filter).
-          if [ -n "$WIKI_SITE_SHA" ]; then
-            cd "$GITHUB_WORKSPACE"
-            git submodule update --init wiki-site
-            git -C wiki-site fetch origin
-            git -C wiki-site checkout "$WIKI_SITE_SHA"
-            git config user.name  "CTF CI Bot"
-            git config user.email "ci@chargingthefuture.org"
-            git add wiki-site
-            git commit -m "chore(blog): bump wiki-site to publish ${DATE} update — ${SLUG}"
-            # Push with GH_PAT (not GITHUB_TOKEN) so deploy-blog-gh-pages.yml is
-            # triggered — pushes authored by GITHUB_TOKEN do not start workflows.
-            git push "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/chargingthefuture.git" \
-              "HEAD:${GITHUB_REF_NAME}"
+          # Trigger the Pages deploy, which clones wiki-site main and rebuilds.
+          if [ "$PUBLISHED" = "1" ]; then
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${GH_PAT}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/chargingthefuture/chargingthefuture/dispatches \
+              -d '{"event_type":"wiki-site-updated"}'
+            echo "Dispatched wiki-site-updated to trigger Pages deploy."
           fi
 
       # ── Quora draft issue ─────────────────────────────────────────────────────
