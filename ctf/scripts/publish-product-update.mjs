@@ -27,6 +27,27 @@ const secret = process.env.INTERNAL_SERVICE_SECRET;
 const ghPat = process.env.GH_PAT;
 const today = new Date().toISOString().split('T')[0];
 
+// Fail fast with an actionable message when required config is absent, rather
+// than letting fetch throw a cryptic "Failed to parse URL from undefined/...".
+// These are injected from Infisical (APP_URL, INTERNAL_SERVICE_SECRET) and the
+// GitHub Actions secret store (GH_PAT) by generate-product-update.yml.
+const missing = [
+  ['APP_URL', appUrl],
+  ['INTERNAL_SERVICE_SECRET', secret],
+  ['GH_PAT', ghPat],
+]
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
+
+if (missing.length > 0) {
+  console.error(
+    `Missing required env var(s): ${missing.join(', ')}. ` +
+      'APP_URL and INTERNAL_SERVICE_SECRET must be defined in the Infisical ' +
+      'production environment; GH_PAT must be set as a GitHub Actions secret.',
+  );
+  process.exit(1);
+}
+
 // ── 1. Post to in-app feed ────────────────────────────────────────────────────
 
 const feedRes = await fetch(`${appUrl}/api/internal/product-update`, {
