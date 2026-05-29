@@ -61,6 +61,40 @@ jobs:
         with:
           node-version: '20'
 
+      name: Publish to wiki-site blog registry
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          SLUG: ${{ steps.generate.outputs.slug }}
+          TITLE: ${{ steps.generate.outputs.title }}
+          EXCERPT: ${{ steps.generate.outputs.excerpt }}
+          CATEGORY: "Updates"
+          TODAY: ${{ steps.meta.outputs.today }}   # YYYY-MM-DD
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/wiki-site.git" /tmp/wiki-site
+          cd /tmp/wiki-site/wiki-site
+
+          # Append registry entry (yq v4)
+          SLUG="$SLUG" TITLE="$TITLE" EXCERPT="$EXCERPT" CATEGORY="$CATEGORY" DATE="$TODAY" \
+          yq -i '.articles += [{
+            "slug": strenv(SLUG), "title": strenv(TITLE),
+            "repo": "chargingthefuture/chargingthefuture",
+            "date": strenv(DATE), "excerpt": strenv(EXCERPT),
+            "category": strenv(CATEGORY)
+          }]' content-index.yaml
+
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm wiki:validate
+          pnpm wiki:sync
+
+          cd /tmp/wiki-site
+          git config user.name  "ctf-bot"
+          git config user.email "bot@chargingthefuture.org"
+          git add wiki-site/content-index.yaml wiki-site/artifacts/wiki/src/lib/articles.ts
+          git commit -m "feat(blog): publish ${TODAY} product update" || { echo "no changes"; exit 0; }
+          git push
+
       # ── Secrets (Infisical → env) ─────────────────────────────────────────────
       # Injects: ANTHROPIC_API_KEY, APP_URL, INTERNAL_SERVICE_SECRET
       # GitHub-direct secrets (not in Infisical): GH_PAT, GITHUB_TOKEN
