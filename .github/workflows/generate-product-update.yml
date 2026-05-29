@@ -70,18 +70,17 @@ jobs:
           node-version: '22'
 
       # ── Secrets (Infisical → env) ─────────────────────────────────────────────
-      # Intended to inject APP_URL and INTERNAL_SERVICE_SECRET into the job env
-      # for the "Post to in-app feed" step. env-slug is the Infisical environment
-      # *slug* (not its display name) — the Production environment's default slug
-      # is "prod", so env-slug: production returns a 404. recursive:true picks up
-      # secrets nested in sub-folders, not just the root path.
-      # This step is non-fatal: if Infisical is unreachable or misconfigured, the
-      # job continues and downstream steps fall back to same-named GitHub Actions
-      # secrets (APP_URL, INTERNAL_SERVICE_SECRET — see the feed step below).
-      # GitHub-direct secrets (not via Infisical): ANTHROPIC_API_KEY, GH_PAT, GITHUB_TOKEN
+      # Infisical is the single source of truth for runtime secrets. This step
+      # injects APP_URL and INTERNAL_SERVICE_SECRET into the job env for the
+      # "Post to in-app feed" step. env-slug is the environment *slug* (not its
+      # display name): the Production environment's slug is "prod", so
+      # env-slug: production returns a 404. recursive:true also reads secrets
+      # nested in sub-folders, not just the root path. If Infisical is
+      # unreachable this step fails the job, by design.
+      # GitHub-native secrets (cannot live in Infisical): GH_PAT, GITHUB_TOKEN,
+      # and the INFISICAL_* bootstrap credentials below.
       - name: Inject secrets from Infisical
         uses: Infisical/secrets-action@v1.0.16
-        continue-on-error: true
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
@@ -108,12 +107,8 @@ jobs:
       - name: Post to in-app feed
         env:
           UPDATE_JSON: ${{ steps.content.outputs.json }}
-          # Prefer the Infisical-injected value (env context, populated by the
-          # step above); fall back to a same-named GitHub Actions repo secret.
-          # This mirrors how ANTHROPIC_API_KEY is sourced and unblocks the step
-          # when Infisical injection does not deliver these keys.
-          APP_URL: ${{ env.APP_URL || secrets.APP_URL }}
-          INTERNAL_SERVICE_SECRET: ${{ env.INTERNAL_SERVICE_SECRET || secrets.INTERNAL_SERVICE_SECRET }}
+          # APP_URL and INTERNAL_SERVICE_SECRET are injected into the job env by
+          # the Infisical step above — Infisical is the single source of truth.
         run: node ctf/scripts/publish-product-update.mjs
 
       # ── GitHub wiki page ──────────────────────────────────────────────────────
