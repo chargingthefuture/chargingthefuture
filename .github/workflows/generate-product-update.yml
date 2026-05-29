@@ -94,8 +94,7 @@ jobs:
       - name: Generate update content via Claude
         id: content
         env:
-          # Sourced directly from the GitHub Actions repo secret (not Infisical)
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ANTHROPIC_API_KEY is injected by the Infisical step (single source).
           COMMITS: ${{ needs.check-changes.outputs.commits }}
         run: |
           OUTPUT=$(node ctf/scripts/generate-update.mjs)
