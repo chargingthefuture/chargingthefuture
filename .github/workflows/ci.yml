@@ -51,7 +51,6 @@ jobs:
             ".github/instructions/108-observability-provider-abstraction-rules.mdc"
             ".github/instructions/109-sentry-implementation-rules.mdc"
             ".github/instructions/110-stream-maker-tier-rules.mdc"
-            ".github/instructions/111-deployment-topology-rules.mdc"
             ".github/instructions/200-plugin-command-contract-templates.mdc"
             ".github/instructions/201-plugin-command-schema-template.mdc"
             ".github/instructions/202-plugin-access-policy-schema-template.mdc"
