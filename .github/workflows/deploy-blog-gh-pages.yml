@@ -26,9 +26,14 @@ jobs:
         working-directory: wiki-site/wiki-blog
 
     steps:
+      # submodules: true fetches the wiki-site submodule (which contains the
+      # blog). It deliberately does NOT recurse: the blog build reads the
+      # already-committed articles.ts and fetches wiki markdown at runtime, so
+      # wiki-site's own nested submodules (wiki, design/mockups) are not needed.
+      # Content validation / articles.ts sync are enforced by wiki-site's own CI.
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
 
       - uses: pnpm/action-setup@v4
         with:
@@ -43,20 +48,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Validate content index
-        run: pnpm blog:validate
-
-      - name: Sync article registry
-        run: pnpm blog:sync
-
-      - name: Ensure generated articles.ts is committed
-        run: |
-          if ! git diff --exit-code -- artifacts/blog/src/lib/articles.ts; then
-            echo "articles.ts is out of sync with content-index.yaml"
-            echo "Run 'pnpm blog:sync' locally and commit the result."
-            exit 1
-          fi
 
       - name: Build for GitHub Pages
         run: pnpm blog:build:pages
