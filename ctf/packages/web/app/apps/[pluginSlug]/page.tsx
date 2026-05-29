@@ -160,7 +160,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'clicklog') {
-    return <ClicklogShell userId={decision.userId} />;
+    return <ClicklogShell />;
   }
 
   if (selectedPlugin.slug === 'chyme') {
