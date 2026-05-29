@@ -392,3 +392,10 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   "Reviews" → "Endorsements". Copy-only; no structural/API changes. Follow-up: `ChymeLiveShell` remains
   a pre-existing rule-116 violation (359 lines / complexity 40) not introduced here — a chyme
   modularity decomposition (matching the directory/lighthouse pattern) is tracked next.
+- 2026-05-29: Chyme modularity decomposition (the tracked follow-up above). Split the oversized
+  `ChymeLiveShell` (359 lines / complexity 40) into modular sub-components — `chyme-header`,
+  `chyme-sidebar`, `chyme-room-view`, `chyme-stage`, `chyme-chat-panel`, `chyme-controls`, and a
+  `chyme-shared` module — each within the 200-line / complexity-10 limits. No behavior, API, or copy
+  change; data wiring and the c5d83c0 copy are preserved. typecheck, lint, modularity, build:ci, EOF,
+  parity, and schema-drift gates green. All three circle-backed plugins (chyme, directory, lighthouse)
+  now satisfy rule 116.
