@@ -119,7 +119,6 @@ export function LighthouseShell() {
             <div style={{ fontSize: 12, color: "#6B7280" }}>Verified listings · Privacy-first</div>
           </div>
           <span style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>✓ Privacy Protected</span>
-          <span style={{ background: "rgba(14,165,233,0.12)", color: "#38BDF8", border: "1px solid rgba(14,165,233,0.2)", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>GetStream ⚡</span>
         </header>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>

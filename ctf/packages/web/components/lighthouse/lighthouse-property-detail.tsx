@@ -10,7 +10,6 @@ export function LighthousePropertyDetail({ property, onBack }: { property: Prope
       <div style={{ height: 56, borderBottom: `1px solid ${COLOR}25`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14" }}>
         <button onClick={onBack} style={{ color: COLOR, background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>← Back</button>
         <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>🏠 Listing Detail</div>
-        <span style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}40`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>GetStream ⚡</span>
       </div>
       <div style={{ flex: 1, padding: "32px 40px", overflow: "auto" }}>
         <div style={{ fontSize: 48, marginBottom: 20, textAlign: "center", padding: "40px 0", background: "rgba(255,255,255,0.02)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)" }}>{l.img || "🏠"}</div>
@@ -37,7 +36,7 @@ export function LighthousePropertyDetail({ property, onBack }: { property: Prope
                 <Lock size={12} style={{ color: COLOR }} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: COLOR }}>Privacy Protected</span>
               </div>
-              <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your exact location is never shown to hosts until you confirm a booking. All communications via GetStream encrypted channel.</div>
+              <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your exact location is never shown to hosts until you confirm a booking. All communications are end-to-end encrypted.</div>
             </div>
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
@@ -46,7 +45,7 @@ export function LighthousePropertyDetail({ property, onBack }: { property: Prope
               {l.credits && <div style={{ fontSize: 12, color: "#F59E0B", marginBottom: 16 }}>✓ Accepts Service Credits</div>}
               <button style={{ width: "100%", padding: "12px", borderRadius: 10, background: COLOR, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>Apply Now</button>
               <button style={{ width: "100%", padding: "12px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><MessageSquare size={14} /> Message Host</button>
-              <div style={{ marginTop: 12, fontSize: 12, color: "#4B5563", textAlign: "center", lineHeight: 1.6 }}>Secure booking via GetStream · No deposit until confirmed</div>
+              <div style={{ marginTop: 12, fontSize: 12, color: "#4B5563", textAlign: "center", lineHeight: 1.6 }}>Secure booking · No deposit until confirmed</div>
             </div>
           </div>
         </div>
