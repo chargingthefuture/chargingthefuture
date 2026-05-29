@@ -209,7 +209,9 @@ Contract expectations:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Core user journeys, admin moderation operations, and safety/privacy/compliance controls behave consistently across web (`/apps/lighthouse`) and Android (`packages/mobile/src/features/lighthouse`). UI conventions differ by platform; functional outcomes match.
+`web+android complete` (feature parity). Core user journeys, admin moderation operations, and safety/privacy/compliance controls behave consistently across web (`/apps/lighthouse`) and Android (`packages/mobile/src/features/lighthouse`). UI conventions differ by platform; functional outcomes match.
+
+Web pixel pass: `LighthouseShell` is aligned to `design/.../survivor-hub/LightHouse.tsx` and its Loading mockup. Emoji glyphs were replaced with the mockup's lucide-react icons; the missing filter sidebar (data-backed filters: All / Available Now / Accepts Credits, with real stats) and the right panel (Pricing Guide + Privacy by Design + an informational Emergency Housing note) were added; the property detail moved from a modal to the mockup's full-page view; and a skeleton loading state was added. Filters/stats and counts derive from real data only (no fabricated counts; the mockup's "Verified Only / Female-only / Emergency" filters and "5 slots" count are not backed by the current data model and were omitted rather than faked). The shell was decomposed into modular sub-components (`lighthouse-icon-rail`, `lighthouse-filter-sidebar`, `lighthouse-right-panel`, `lighthouse-browse`, `lighthouse-matches`, `lighthouse-chat`, `lighthouse-property-detail`, `lighthouse-loading-skeleton`, `shared`) so each unit stays within the rule-116 limits. API wiring is unchanged. The Android pixel pass to `MobileLightHouse.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
 
 ## 7) Seed Coverage Status
 
@@ -223,6 +225,7 @@ Contract expectations:
 
 ## 9) Change Log
 
+- 2026-05-29: Web UI circle-back. Aligned `LighthouseShell` to the `LightHouse.tsx` mockup and its Loading state: replaced emoji with lucide icons, added the filter sidebar (real data-backed filters/stats) and the right panel (Pricing Guide + Privacy by Design + emergency note), moved the property detail from a modal to the mockup's full-page view, and added a skeleton loading state. Decomposed the previously oversized shell (274 lines / complexity 29) into modular sub-components and cleared lint debt (typed the chat credentials, removed the unused `isAdmin`/`role`/`announcements` and the empty catch binding; dropped the unused props). API wiring unchanged.
 - 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`). Removed "Design References (Inventory Phase)" section (planning-phase artifact, not current state). Renamed "Open Decisions, Ambiguities, and Migration Risks" to canonical "Gaps and Known Technical Debt" and trimmed entries that were unimplemented-feature-as-debt.
 - 2026-02-25: Created initial LightHouse CTF rewrite inventory.
 
