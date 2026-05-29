@@ -92,7 +92,7 @@
     return Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
-  export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: boolean }) {
+  export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
     const [nav, setNav] = useState<NavKey>('browse');
     const [track, setTrack] = useState('All Tracks');
     const [search, setSearch] = useState('');
