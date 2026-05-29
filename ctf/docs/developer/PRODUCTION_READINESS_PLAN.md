@@ -384,3 +384,11 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   also removed the unused `userId`/`isAdmin` props. API wiring untouched; typecheck, lint, modularity,
   build:ci, EOF, parity, and schema-drift gates green. Marked directory Web px ✅; Android pixel parity
   (`MobileDirectory.tsx` → RN feature) remains ⬜.
+- 2026-05-29: Design re-pin `dcaaf15` → `c5d83c0` (76 commits; separate design-sync PR) + copy
+  reconcile. The newer design removed all user-facing "GetStream" wording and added mockups for the
+  four previously design-gated plugins (skills-taxonomy, weekly-performance, clicklog, unlock). Began
+  reconciling the shipped shells to the new copy: chyme and directory (this PR) and lighthouse (folded
+  into its open PR) drop "GetStream" branding for "end-to-end encrypted" wording; Directory's detail
+  "Reviews" → "Endorsements". Copy-only; no structural/API changes. Follow-up: `ChymeLiveShell` remains
+  a pre-existing rule-116 violation (359 lines / complexity 40) not introduced here — a chyme
+  modularity decomposition (matching the directory/lighthouse pattern) is tracked next.

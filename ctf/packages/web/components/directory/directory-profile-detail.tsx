@@ -13,7 +13,6 @@ export function DirectoryProfileDetail({ member, onBack }: { member: Member; onB
           ← Back
         </button>
         <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>📇 Provider Profile</div>
-        <Badge style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}40`, fontSize: 11 }}>GetStream ⚡</Badge>
       </div>
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ flex: 1, padding: "32px 40px", overflow: "auto" }}>
@@ -43,9 +42,9 @@ export function DirectoryProfileDetail({ member, onBack }: { member: Member; onB
               ) : (
                 <div style={{ fontSize: 13, color: "#4B5563", marginBottom: 24 }}>No skills listed yet.</div>
               )}
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Reviews</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Endorsements</div>
               <div style={{ padding: "20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#4B5563", fontSize: 13, textAlign: "center" }}>
-                No reviews yet.
+                No endorsements yet.
               </div>
             </div>
             <div>
@@ -56,7 +55,7 @@ export function DirectoryProfileDetail({ member, onBack }: { member: Member; onB
                 ))}
               </div>
               <div style={{ padding: "20px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 8 }}>GetStream Chat</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 8 }}>Encrypted Chat</div>
                 <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>All messages are end-to-end encrypted and trauma-informed by design.</div>
               </div>
             </div>
