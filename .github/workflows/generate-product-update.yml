@@ -103,12 +103,14 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       # ── Feed (in-app) ─────────────────────────────────────────────────────────
-      - name: Post to in-app feed
-        env:
-          UPDATE_JSON: ${{ steps.content.outputs.json }}
-          # APP_URL and INTERNAL_SERVICE_SECRET are injected into the job env by
-          # the Infisical step above — Infisical is the single source of truth.
-        run: node ctf/scripts/publish-product-update.mjs
+      # DISABLED: the in-app feed/announcements feature is still in final
+      # validation and not ready to receive product updates. Re-enable this step
+      # once the announcements backend is live. (APP_URL and INTERNAL_SERVICE_SECRET
+      # are injected by the Infisical step above when this runs again.)
+      # - name: Post to in-app feed
+      #   env:
+      #     UPDATE_JSON: ${{ steps.content.outputs.json }}
+      #   run: node ctf/scripts/publish-product-update.mjs
 
       # ── GitHub wiki page ──────────────────────────────────────────────────────
       - name: Create GitHub wiki page
