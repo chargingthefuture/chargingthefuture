@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "wiki-site"          # submodule pointer bump (gitlink path)
       - "wiki-site/**"
       - ".github/workflows/deploy-blog-gh-pages.yml"
   workflow_dispatch:
