@@ -100,7 +100,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -374,3 +374,13 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   in the backend pass). Loading/empty states render inline; no public state by design (Chyme is
   auth-only per #102). API wiring untouched; typecheck/EOF/parity/schema-drift gates green. Marked
   chyme Web px ✅ in the table above; Android pixel parity (`MobileChyme.tsx` → RN feature) remains ⬜.
+- 2026-05-29: UI circle-back — directory web pixel pass + modularity refactor. Aligned `DirectoryShell`
+  to `design/.../survivor-hub/Directory.tsx` and its Loading/Empty mockups: corrected the app-surface
+  background to `#0F1117` (the shell had used the mockup's dead `BG` constant `#0C1A3D`), added the
+  skeleton loading state, rebuilt the empty state to the mockup's category-grid + Browse All / Clear
+  Filters treatment (real sector data, no dummy counts), and restored the `📇` heading glyphs. The
+  oversized single-function shell (382 lines / complexity 16, a pre-existing rule-116 violation) was
+  decomposed into modular sub-components so every unit is within the 200-line / complexity-10 limits;
+  also removed the unused `userId`/`isAdmin` props. API wiring untouched; typecheck, lint, modularity,
+  build:ci, EOF, parity, and schema-drift gates green. Marked directory Web px ✅; Android pixel parity
+  (`MobileDirectory.tsx` → RN feature) remains ⬜.
