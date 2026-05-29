@@ -1,11 +1,17 @@
 name: Generate Product Update
 
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: "0 */8 * * *"   # 00:00, 08:00, 16:00 UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force update even with no feat/fix/perf commits (testing)"
+        type: boolean
+        default: false
 
 jobs:
-  # ── Job 1: decide whether this push warrants a product update ───────────────
+  # ── Job 1: decide whether this window warrants a product update ─────────────
   check-changes:
     name: Check for meaningful commits
     runs-on: ubuntu-latest
@@ -42,11 +48,13 @@ jobs:
             echo "No feat/fix/perf commits found — skipping update."
           fi
 
-  # ── Job 2: generate content and publish to all three destinations ───────────
+  # ── Job 2: generate content and publish to all destinations ─────────────────
   generate-and-publish:
     name: Generate and publish product update
     needs: check-changes
-    if: needs.check-changes.outputs.has_changes == 'true'
+    if: >-
+      needs.check-changes.outputs.has_changes == 'true' ||
+      inputs.force == true
     runs-on: ubuntu-latest
     permissions:
       contents: write   # push update/* tag
@@ -59,7 +67,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # ── Secrets (Infisical → env) ─────────────────────────────────────────────
       # Injects: ANTHROPIC_API_KEY, APP_URL, INTERNAL_SERVICE_SECRET
@@ -77,7 +85,8 @@ jobs:
       - name: Generate update content via Claude
         id: content
         env:
-          # ANTHROPIC_API_KEY is in env after Infisical step
+          # Sourced directly from the GitHub Actions repo secret (not Infisical)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           COMMITS: ${{ needs.check-changes.outputs.commits }}
         run: |
           OUTPUT=$(node ctf/scripts/generate-update.mjs)
@@ -85,12 +94,11 @@ jobs:
           echo "$OUTPUT" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
-      # ── Feed + wiki-site ─────────────────────────────────────────────────────
-      - name: Post to in-app feed and update wiki-site index
+      # ── Feed (in-app) ─────────────────────────────────────────────────────────
+      - name: Post to in-app feed
         env:
           UPDATE_JSON: ${{ steps.content.outputs.json }}
           # APP_URL and INTERNAL_SERVICE_SECRET are in env after Infisical step
-          GH_PAT: ${{ secrets.GH_PAT }}
         run: node ctf/scripts/publish-product-update.mjs
 
       # ── GitHub wiki page ──────────────────────────────────────────────────────
@@ -112,6 +120,43 @@ jobs:
           cp /tmp/wiki-page.md "${WIKI_PAGE_NAME}.md"
           git add "${WIKI_PAGE_NAME}.md"
           git commit -m "Add product update: ${WIKI_PAGE_NAME}"
+          git push
+
+      # ── Blog registry (wiki-site) ─────────────────────────────────────────────
+      - name: Publish to wiki-site blog registry
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          UPDATE_JSON: ${{ steps.content.outputs.json }}
+        run: |
+          set -euo pipefail
+
+          SLUG=$(echo "$UPDATE_JSON"     | jq -r '.wikiPageName')
+          TITLE=$(echo "$UPDATE_JSON"    | jq -r '.feedTitle')
+          EXCERPT=$(echo "$UPDATE_JSON"  | jq -r '.excerpt // .feedTitle')
+          CATEGORY="Updates"
+          DATE=$(date +%Y-%m-%d)
+
+          git clone "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/wiki-site.git" /tmp/wiki-site
+          cd /tmp/wiki-site/wiki-site
+
+          SLUG="$SLUG" TITLE="$TITLE" EXCERPT="$EXCERPT" CATEGORY="$CATEGORY" DATE="$DATE" \
+          yq -i '.articles += [{
+            "slug": strenv(SLUG), "title": strenv(TITLE),
+            "repo": "chargingthefuture/chargingthefuture",
+            "date": strenv(DATE), "excerpt": strenv(EXCERPT),
+            "category": strenv(CATEGORY)
+          }]' content-index.yaml
+
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm wiki:validate
+          pnpm wiki:sync
+
+          cd /tmp/wiki-site
+          git config user.name  "CTF CI Bot"
+          git config user.email "ci@chargingthefuture.org"
+          git add wiki-site/content-index.yaml wiki-site/artifacts/wiki/src/lib/articles.ts
+          git commit -m "feat(blog): publish ${DATE} product update — ${SLUG}" || { echo "no changes"; exit 0; }
           git push
 
       # ── Quora draft issue ─────────────────────────────────────────────────────
