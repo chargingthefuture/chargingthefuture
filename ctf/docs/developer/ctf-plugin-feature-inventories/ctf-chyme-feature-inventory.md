@@ -87,7 +87,8 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 
 1. Web implementation is delivered for room/chat/join/deletion workflows.
 2. Android implementation is delivered for room/chat/join/deletion workflows using runtime-configured request identity and the same protected API surface.
-3. Current parity status is **web+android complete**.
+3. Current feature-parity status is web+android complete.
+4. Web pixel pass: `chyme-live-shell` is aligned to `design/.../survivor-hub/Chyme.tsx`, using lucide-react iconography in place of emoji glyphs. Loading and empty states render inline; there is no public state by design (Chyme is auth-only per the #102 visibility decision). The Android pixel pass to `MobileChyme.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
 
 ## Seed Coverage Status
 
@@ -106,6 +107,7 @@ Current status:
 
 ## Change Log
 
+- 2026-05-29: Web UI circle-back. Aligned `chyme-live-shell` to the `Chyme.tsx` mockup by replacing emoji glyphs with the mockup's lucide-react icons (Radio, Mic/MicOff, Hand, Phone, MessageSquare, Hash, Send, Volume2, Users, Lock, RefreshCw); structure and palette already matched. API wiring unchanged.
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section); confirmed implementation is complete across web and Android. Renamed section to "Gaps and Known Technical Debt" (Rule 120 format).
 - 2026-04-05: Completed Android parity on the real Chyme API surface, queued Service Credits reclaim dependency on full-account delete, and aligned Chyme docs to `ctf/schema.sql` plus shared Stream wrappers.
 - 2026-02-25: Created initial Chyme CTF rewrite inventory and documented governance/parity requirements.

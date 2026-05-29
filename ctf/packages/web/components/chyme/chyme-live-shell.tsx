@@ -1,6 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  Hand,
+  Hash,
+  Lock,
+  MessageSquare,
+  Mic,
+  MicOff,
+  Phone,
+  Radio,
+  RefreshCw,
+  Send,
+  Users,
+  Volume2,
+} from 'lucide-react';
 import { StreamVideoPanel } from '../shared/stream-video-panel';
 import type {
   ChymeDeletionResponse,
@@ -161,8 +175,8 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
       {/* Top bar */}
       <header style={{ height: 60, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, background: '#030d05', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${PRIMARY}25`, border: `1px solid ${PRIMARY}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-            🎙️
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${PRIMARY}25`, border: `1px solid ${PRIMARY}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Radio size={18} style={{ color: PRIMARY }} />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: '#F0FDF4' }}>Chyme 🎙️</div>
@@ -180,9 +194,10 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
         </span>
         <button
           onClick={() => void refreshMessages()}
-          style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280', fontSize: 16 }}
+          style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}
+          title="Refresh messages"
         >
-          🔄
+          <RefreshCw size={16} />
         </button>
       </header>
 
@@ -195,7 +210,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
               disabled={joinState === 'joining' || joinState === 'ready'}
               style={{ width: '100%', padding: '12px 16px', borderRadius: 12, background: `linear-gradient(135deg, ${PRIMARY} 0%, #16A34A 100%)`, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: joinState === 'idle' ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: joinState !== 'idle' ? 0.7 : 1 }}
             >
-              <span>🎤</span>
+              <Mic size={16} />
               {joinState === 'joining' ? 'Joining…' : joinState === 'ready' ? '✓ Joined' : 'Join Room'}
             </button>
           </div>
@@ -217,7 +232,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                   #{room.callActive ? 'live' : 'idle'}
                 </span>
                 <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: '#4B5563', fontSize: 12 }}>
-                  👥 {room.participants.length}
+                  <Users size={12} /> {room.participants.length}
                 </span>
               </div>
             </div>
@@ -252,8 +267,8 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
 
           {!room && !loading && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-              <div style={{ width: 80, height: 80, borderRadius: 24, background: `${PRIMARY}18`, border: `2px solid ${PRIMARY}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>
-                🎙️
+              <div style={{ width: 80, height: 80, borderRadius: 24, background: `${PRIMARY}18`, border: `2px solid ${PRIMARY}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Radio size={36} style={{ color: PRIMARY }} />
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#F0FDF4' }}>Join a Room</div>
               <div style={{ fontSize: 15, color: '#4B5563', textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
@@ -274,7 +289,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                         {room.callActive ? '🔴 Live' : 'Idle'}
                       </span>
                       <span style={{ fontSize: 12, color: '#4B5563' }}>Safe Space Room</span>
-                      <span style={{ fontSize: 12, color: '#4B5563' }}>🔒</span>
+                      <Lock size={12} style={{ color: '#4B5563' }} />
                     </div>
                     <div style={{ fontSize: 20, fontWeight: 800, color: '#F0FDF4', lineHeight: 1.3, marginBottom: 4 }}>{room.roomName}</div>
                     <div style={{ fontSize: 13, color: '#16A34A' }}>{room.participants.length} participants · Signed in as {currentUser.displayName}</div>
@@ -283,7 +298,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                     onClick={() => setShowChat(!showChat)}
                     style={{ padding: '8px 14px', borderRadius: 10, background: showChat ? `${PRIMARY}20` : 'rgba(255,255,255,0.04)', border: `1px solid ${showChat ? PRIMARY + '40' : 'rgba(255,255,255,0.08)'}`, color: showChat ? PRIMARY : '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
                   >
-                    💬 Chat
+                    <MessageSquare size={14} /> Chat
                   </button>
                 </div>
               </div>
@@ -319,8 +334,8 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                               <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${PRIMARY}20`, border: `3px solid ${participant.userId === currentUser.userId ? PRIMARY : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: participant.userId === currentUser.userId ? `0 0 20px ${PRIMARY}50` : 'none' }}>
                                 <span style={{ fontSize: 20, fontWeight: 800, color: PRIMARY }}>{initials(participant.displayName)}</span>
                               </div>
-                              <div style={{ position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: '50%', background: PRIMARY, border: '2px solid #021006', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>
-                                🎤
+                              <div style={{ position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: '50%', background: PRIMARY, border: '2px solid #021006', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Mic size={10} style={{ color: '#fff' }} />
                               </div>
                             </div>
                             <div style={{ fontSize: 12, fontWeight: 600, color: '#E8EAF0', textAlign: 'center' }}>{participant.displayName}</div>
@@ -345,7 +360,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                 {showChat && (
                   <div style={{ width: 300, borderLeft: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', background: '#030d05', flexShrink: 0 }}>
                     <div style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, color: PRIMARY }}>#</span>
+                      <Hash size={14} style={{ color: PRIMARY }} />
                       <span style={{ fontSize: 14, fontWeight: 600, color: '#F0FDF4' }}>Room Chat</span>
                       <span style={{ marginLeft: 'auto', background: `${PRIMARY}15`, color: PRIMARY, border: `1px solid ${PRIMARY}25`, fontSize: 10, padding: '2px 8px', borderRadius: 12 }}>GetStream</span>
                     </div>
@@ -377,9 +392,9 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                         <button
                           onClick={() => void handleSend()}
                           disabled={sending || !draft.trim()}
-                          style={{ width: 28, height: 28, borderRadius: 6, background: draft.trim() ? PRIMARY : 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: draft.trim() ? 'pointer' : 'not-allowed', fontSize: 14 }}
+                          style={{ width: 28, height: 28, borderRadius: 6, background: draft.trim() ? PRIMARY : 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: draft.trim() ? 'pointer' : 'not-allowed' }}
                         >
-                          <span style={{ color: draft.trim() ? '#fff' : '#4B5563' }}>➤</span>
+                          <Send size={12} style={{ color: draft.trim() ? '#fff' : '#4B5563' }} />
                         </button>
                       </div>
                     </div>
@@ -393,24 +408,26 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
                   onClick={() => setMuted(!muted)}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, background: muted ? 'rgba(239,68,68,0.15)' : `${PRIMARY}18`, border: `1px solid ${muted ? 'rgba(239,68,68,0.4)' : PRIMARY + '40'}`, color: muted ? '#F87171' : PRIMARY, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                 >
-                  {muted ? '🔇 Unmute' : '🎤 Mute'}
+                  {muted ? <MicOff size={16} /> : <Mic size={16} />}
+                  {muted ? 'Unmute' : 'Mute'}
                 </button>
                 <button
                   onClick={() => setHandRaised(!handRaised)}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, background: handRaised ? 'rgba(234,179,8,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${handRaised ? 'rgba(234,179,8,0.4)' : 'rgba(255,255,255,0.08)'}`, color: handRaised ? '#FDE047' : '#9CA3AF', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                 >
-                  ✋ {handRaised ? 'Lower Hand' : 'Raise Hand'}
+                  <Hand size={16} />
+                  {handRaised ? 'Lower Hand' : 'Raise Hand'}
                 </button>
                 <div style={{ flex: 1 }} />
                 <div style={{ fontSize: 12, color: '#4B5563', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🔊 Audio via GetStream
+                  <Volume2 size={14} /> Audio via GetStream
                 </div>
                 {joinState === 'ready' && (
                   <button
                     onClick={() => { setJoinState('idle'); setJoinInfo(null); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                   >
-                    📞 Leave
+                    <Phone size={16} /> Leave
                   </button>
                 )}
               </div>

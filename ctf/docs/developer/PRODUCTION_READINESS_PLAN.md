@@ -98,7 +98,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
-| chyme | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -368,3 +368,9 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   `search_path=demo,public`. Demo schema validated: 155 tables in `demo`, all key v3 tables present,
   no `users` table, `chyme_rooms` has correct v3 columns, `skills_taxonomy_flattened_projection` is
   BASE TABLE. Per-plugin demo seeds (scenario matrix) are next.
+- 2026-05-29: UI circle-back — chyme web pixel pass. Aligned `chyme-live-shell` to the
+  `design/.../survivor-hub/Chyme.tsx` mockup by replacing emoji glyphs with the mockup's lucide-react
+  icons (the layout, palette, and spacing already matched, since the shell was built from this mockup
+  in the backend pass). Loading/empty states render inline; no public state by design (Chyme is
+  auth-only per #102). API wiring untouched; typecheck/EOF/parity/schema-drift gates green. Marked
+  chyme Web px ✅ in the table above; Android pixel parity (`MobileChyme.tsx` → RN feature) remains ⬜.
