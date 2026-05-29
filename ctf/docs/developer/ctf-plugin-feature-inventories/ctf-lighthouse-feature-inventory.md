@@ -173,10 +173,22 @@
 Required entities for parity scope:
 
 1. `lighthouse_profiles`
-2. `lighthouse_properties`
+2. `lighthouse_properties` — includes `monthly_rent` (listed amount) and `rent_currency`
+   (FK → `currencies(code)`; the currency the rent is listed in). Backfilled to `USD` for existing
+   non-null rents; Canadian listings with no cost yet keep NULL.
 3. `lighthouse_matches`
 4. `lighthouse_announcements`
 5. `lighthouse_blocks`
+6. `lighthouse_property_accepted_currencies` — join (`property_id`, `currency_code` FK →
+   `currencies`) listing every currency a property accepts. "Accepts ServiceCredits" is true iff a
+   row with `currency_code='SC'` exists here — it is never derived from `rent_currency`.
+
+Multi-currency / no-fiat-parity (issue #120):
+
+1. Rent is shown in its own `rent_currency`; a fiat rent may appear beside a separate "Accepts
+   ServiceCredits" badge (two distinct fields) — never as a ServiceCredits↔fiat equivalence.
+2. ServiceCredits (`currencies.code='SC'`) renders as the label "ServiceCredits", never the bare code,
+   and never at a fiat figure.
 
 Contract expectations:
 

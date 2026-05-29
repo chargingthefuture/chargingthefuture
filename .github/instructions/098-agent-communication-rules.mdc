@@ -16,6 +16,12 @@ Enforce direct, efficient communication from agents to this user by eliminating 
 - Use line breaks for visual separation instead of verbose transitions.
 - Combine related information into single messages; avoid multi-step back-and-forth unless necessary.
 
+## Text Formatting
+- Minimize bold text. Applies to both chat responses and any `.md` (or other) files agents create or edit.
+- Do not bold for emphasis, do not bold every list-item label, and do not bold whole sentences. Bold has no logical value when overused; it adds visual noise without adding information.
+- Acceptable bold use is rare and structural only: e.g. a single table header or a one-word inline label where the surrounding document already uses that convention. When in doubt, do not bold.
+- Prefer plain prose, lists, headings, and tables to carry structure instead of bold.
+
 ## Prohibited
 - Verbose explanations of obvious operations.
 - Unnecessary elaboration on what the agent is about to do ("I will now...", "I'm going to...").
@@ -37,3 +43,11 @@ Fixed 3 errors in schema.sql:
 - Min transitional or explanatory language.
 - Facts before context.
 - Structured data before narrative summary.
+
+## Excluded Vocabulary
+Owner-maintained list of words and phrases agents must not use when communicating in this repo (chat responses, commit messages, PR text, and created/edited files). Use the plain replacement instead. This list is continuously updated; treat every entry as mandatory.
+
+| Do not use | Use instead | Reason |
+|---|---|---|
+| punch list | list | Jargon; unclear meaning. |
+| stale | deprecated | "Stale" is consistently misused; "deprecated" is the intended meaning. |
