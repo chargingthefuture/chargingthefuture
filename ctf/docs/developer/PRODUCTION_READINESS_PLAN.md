@@ -99,7 +99,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -445,3 +445,15 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   modular sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity,
   and schema-drift gates green. Marked weekly-performance Design 🎨 / Web px ✅; Android pixel parity
   (`MobileWeeklyPerformance.tsx`) remains ⬜. One design-gated plugin remains: skills-taxonomy.
+- 2026-05-29: UI circle-back — skills-taxonomy web pixel pass (the last of the four plugins unblocked
+  by the `c5d83c0` re-pin). Rebuilt the `/apps/skills-taxonomy` browser from a summary/snapshot shell to
+  the `SkillsTaxonomy.tsx` mockup: the full-height 3-column hierarchy (sectors → job titles → skills)
+  with icon rail, breadcrumb, and in-role skill search, plus Empty (needs-seeding) and Loading states.
+  Loads the nested tree from the existing `GET /api/skills-taxonomy/hierarchy` (response `{ items }`) and
+  derives the columns client-side; sector/title counts use the real `jobTitles.length`/`skills.length`.
+  The mockup's demand/level/category chips have no backing in the data model and were omitted rather
+  than faked; admin add/edit/delete affordances link to `/admin/skills-taxonomy`. Decomposed into modular
+  sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity, and
+  schema-drift gates green. Marked skills-taxonomy Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileSkillsTaxonomy.tsx`) remains ⬜. All four previously design-gated plugins are now web-pixel
+  complete; no design-gated plugins remain.
