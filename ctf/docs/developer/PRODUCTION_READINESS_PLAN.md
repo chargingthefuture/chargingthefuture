@@ -117,7 +117,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| unlock | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
 
@@ -423,3 +423,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   parity, and schema-drift gates green. Marked clicklog Design 🎨 / Web px ✅; Android pixel parity
   (`MobileClickLog.tsx`) remains ⬜. Three design-gated plugins remain: skills-taxonomy,
   weekly-performance, unlock.
+- 2026-05-29: UI circle-back — unlock web pixel pass (second of the four plugins unblocked by the
+  `c5d83c0` re-pin). Rebuilt the user-facing `/plugin/unlock` page to the `Unlock.tsx` mockup +
+  Empty/Loading states. `UnlockShell` reads `GET /api/unlock/status` and renders loading → submission
+  form (no submission) → status view (pending/approved/rejected, with a re-submit form on rejection);
+  submit/re-submit POST to `/api/unlock/submission`. This replaces the prior `UnlockSubmission` stub,
+  which had a TODO and never called the API (removed). Status label, timeline, the unlock checklist, and
+  the approved/rejected variants are driven by the real `UnlockStatus`; the mockup's dummy URL, rejection
+  text, and timestamps (not exposed by the status endpoint) are not fabricated. Decomposed into nine
+  modular sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity,
+  and schema-drift gates green. Marked unlock Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileUnlock.tsx`) remains ⬜. Two design-gated plugins remain: skills-taxonomy, weekly-performance.
