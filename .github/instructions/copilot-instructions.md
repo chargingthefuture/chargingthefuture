@@ -162,6 +162,34 @@ label **only when the change is genuinely complex/risky**, and **no more than on
 - Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
   review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
 
+#### Draft vs. ready, and the one-review-per-hour gate
+
+CodeRabbit's auto-review **does not fire on a draft PR** even when the `coderabbit` label is present
+(`.coderabbit.yaml` sets `auto_review.drafts: false`). The review only triggers when the PR is
+**marked ready for review** while carrying the label. This is a useful property, not a bug: it lets
+agents keep shipping work into the backlog while the owner's one-review-per-hour budget is occupied.
+
+Rules for agents:
+
+- **Never treat the CodeRabbit review as a blocker.** Do all work as asked — open PRs, keep building
+  the backlog — regardless of whether any PR is currently awaiting/holding a review. A pending review
+  must not stall other tasks.
+- **Open PRs as draft by default** (the standard for this repo).
+- **Marking ready (which triggers the labeled review) is something agents can do programmatically**
+  via the GitHub MCP `update_pull_request` with `draft: false`. So:
+  - **No long backlog:** when a PR is finished and you are *not* sitting on a queue of other ready
+    work, leave qualifying PRs as draft only if they don't need review; for a PR that should be
+    reviewed, **mark it ready for review yourself** (`update_pull_request { draft: false }`) — do not
+    leave it as a draft.
+  - **Long backlog (the one-per-hour budget is contended):** keep the labeled PR as a **draft** so it
+    doesn't consume the hour's single review slot, and **notify the owner** with the PR number and a
+    suggested time/interval (e.g. "ready to review in ~1h") so they (or you, on a timer) can flip it
+    to ready when the slot frees up. Because flipping to ready is programmatic, an agent may instead
+    schedule/flip it itself once the prior review has cleared — just don't exceed one labeled,
+    ready-for-review PR per hour.
+- Net effect: **labeled + draft = queued (no review yet); labeled + ready = review fires.** Use draft
+  state as the throttle against the free-tier one-review-per-hour limit.
+
 ### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
 
 When several plugin PRs are open at once, all appending narrative to the **same** change-log section
