@@ -115,7 +115,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 
@@ -488,3 +488,15 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   All counts derive from real data; unbacked mockup figures omitted. typecheck, lint, modularity,
   build:ci, EOF, parity, and schema-drift gates green. Marked levelup Web px ✅; Android pixel parity
   (`MobileLevelUp.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — trust web pixel pass. Trust is a right-rail widget (not a standalone
+  page), so the pass aligned the hub right-rail card to `design/.../survivor-hub/Trust.tsx`: new
+  inline-styled `TrustWidgetCard` (blue brand palette, ShieldCheck header + Verified/Unverified pill,
+  onboarding steps, static visibility row), wired through the shared `TrustRightRailCard`. Honest-data
+  calls per the real-data-only rule: omitted the design's verified-state signal buckets (the
+  signal-snapshot route is a stub with no backing table) and render the real `trustEvidence` list
+  instead; kept the truthful "verification handled manually by admins" note and a static visibility
+  row rather than the non-functional Request-Verification CTA / visibility dropdown (both backing
+  routes are stubs). Removed the now-unreachable `compact` branch from `TrustEvidencePanel`.
+  Loading/Public design states don't apply (widget renders only authenticated inside the hub).
+  typecheck, lint, modularity, build:ci, EOF, parity, and schema-drift gates green. Marked trust
+  Web px ✅; Android pixel parity (`MobileTrust.tsx`) remains ⬜ for the dedicated Android sweep.
