@@ -125,6 +125,8 @@ Consumer routes:
 
 `web+android complete`. Web admin taxonomy management lives under `/apps/skills-taxonomy`; Android consumes the same read models via `packages/mobile/src/features/skills-taxonomy`. Hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards are consistent across platforms.
 
+Web pixel pass (design `c5d83c0`): the user-facing `/apps/skills-taxonomy` surface is rebuilt to `design/.../survivor-hub/SkillsTaxonomy.tsx` and its Empty/Loading states — the full-height 3-column browser (sectors → job titles → skills) with icon rail, breadcrumb, and in-role skill search. The whole tree loads from the existing `GET /api/skills-taxonomy/hierarchy` route (response `{ items }`); sectors/titles/skills are derived client-side from that nested payload, and sector/title counts use the real `jobTitles.length` / `skills.length`. The mockup's demand/level/category chips and per-sector totals have no backing in the data model and were omitted rather than faked; admin create/edit/delete affordances link to the dedicated `/admin/skills-taxonomy` route. Decomposed into modular sub-components within the rule-116 limits. The Android pixel pass to `MobileSkillsTaxonomy.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## 8) Seed Coverage Status
 
 - `ctf/scripts/seedSkillsTaxonomy.mjs` is the deterministic backfill script and imports canonical legacy source data.
