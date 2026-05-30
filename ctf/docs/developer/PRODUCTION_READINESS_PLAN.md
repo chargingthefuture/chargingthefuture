@@ -111,7 +111,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| weekly-performance | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -434,3 +434,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   modular sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity,
   and schema-drift gates green. Marked unlock Design 🎨 / Web px ✅; Android pixel parity
   (`MobileUnlock.tsx`) remains ⬜. Two design-gated plugins remain: skills-taxonomy, weekly-performance.
+- 2026-05-29: UI circle-back — weekly-performance web pixel pass (third of the four plugins unblocked by
+  the `c5d83c0` re-pin). Replaced the baseline server-rendered summary shell with the full client
+  dashboard from `WeeklyPerformance.tsx` (+ Empty/Loading): icon rail, week-history sidebar, metric
+  cards, a this-week-vs-last-week comparison chart, and the week-summary right rail. Week selection
+  drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate`
+  for deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's
+  fabricated daily series became a real per-metric current-vs-compare chart (scaled relative to the max
+  in view), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into ten
+  modular sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity,
+  and schema-drift gates green. Marked weekly-performance Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileWeeklyPerformance.tsx`) remains ⬜. One design-gated plugin remains: skills-taxonomy.
