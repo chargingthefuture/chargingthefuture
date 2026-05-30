@@ -106,7 +106,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| socketrelay | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -457,3 +457,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   schema-drift gates green. Marked skills-taxonomy Design 🎨 / Web px ✅; Android pixel parity
   (`MobileSkillsTaxonomy.tsx`) remains ⬜. All four previously design-gated plugins are now web-pixel
   complete; no design-gated plugins remain.
+- 2026-05-29: UI circle-back — non-gated web pixel passes (designs existed since `dcaaf15`): mood,
+  gentlepulse, and socketrelay. Each aligned/rebuilt its shell to the design mockup + Loading/Empty
+  states and was decomposed into modular sub-components within the rule-116 limits. Real bugs fixed
+  along the way: mood (eligibility `?clientId=` + submission `{ clientId, moodValue, note }` + CSRF —
+  prior shell 400'd), gentlepulse (removed a dead duplicate `components/gentle-pulse/` dir), socketrelay
+  (prior shell read the paged `requests` response as a bare array and POSTed non-existent
+  `type`/`description`/`credits` fields without CSRF — rebuilt to the real request/claim/fulfillment
+  model). All counts derive from real data; unbacked mockup figures were omitted, not faked. typecheck,
+  lint, modularity, build:ci, EOF, parity, and schema-drift gates green for each. Marked mood,
+  gentlepulse, socketrelay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
+  `MobileGentlePulse.tsx`, `MobileSocketRelay.tsx`) remains ⬜ for the dedicated Android sweep.

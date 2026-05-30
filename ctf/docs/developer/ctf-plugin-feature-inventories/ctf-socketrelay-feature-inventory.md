@@ -130,6 +130,8 @@ Storage and projection rules:
 
 `web+android complete`. Web surface lives under `/apps/socketrelay`; Android surface lives under `packages/mobile/src/features/socketrelay`. Public projection, lifecycle status, and CSRF behaviors are behaviorally consistent across platforms.
 
+Web pixel pass (design `c5d83c0`): the `/apps/socketrelay` shell is rebuilt to `design/.../survivor-hub/SocketRelay.tsx` (feed / post / chat tabs, sidebar category filters + live stats, right impact panel) and its Loading/Empty states. The prior shell was broken against the real backend — it read `GET /api/socketrelay/requests` as a bare array (the route returns `{ items, page, pageSize, total }`) and POSTed `{ type, description, location, credits, urgency }` with no CSRF header, none of which the backend accepts. The rebuilt shell uses the real `SocketRelayRequest` model (`title`, `details`, `category`, `city`, `isPublic`, `status`), unwraps the paged response, claims via `POST /requests/:id/fulfill`, and lists fulfillment chats via `my-fulfillments` + `fulfillments/:id/chat`, with `x-ctf-csrf` on mutations. The mockup's need/offer/credits/urgency framing is not backed by the data model and was omitted rather than faked. Decomposed into modular sub-components (`sr-shared`, `sr-loading`, `sr-icon-rail`, `sr-sidebar`, `sr-feed`, `sr-post`, `sr-chat`, `sr-right-panel`) within the rule-116 limits. No schema/API change. The Android pixel pass to `MobileSocketRelay.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## 7) Seed Coverage Status
 
 `ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle, fulfillment outcomes, and announcement states for dev validation.
@@ -141,6 +143,7 @@ Storage and projection rules:
 
 ## 9) Change Log
 
+- 2026-05-29: Web UI circle-back (design `c5d83c0`). Rebuilt the `/apps/socketrelay` shell to the `SocketRelay.tsx` mockup + Loading/Empty; fixed runtime bugs in the prior shell (read the paged `requests` response as a bare array; POSTed non-existent `type`/`description`/`location`/`credits` fields without CSRF). The rebuild uses the real request/claim/fulfillment model + `x-ctf-csrf` header and unwraps `{ items, ... }`; decomposed into modular sub-components within rule-116 limits; the mockup's unbacked need/offer/credits/urgency framing was omitted. No schema/API change.
 - 2026-05-18: Inventory updated to enforce Rule 120 living-snapshot model. Removed "Web-First Delivery Strategy and Android Deferrals" section, "Docs Lifecycle" meta section, and planning-state framing. Replaced narrative data model bullets with the actual `socketrelay_*` tables. Confirmed `web+android complete` and dedicated seed script.
 - 2026-02-25: Created initial SocketRelay CTF rewrite inventory.
 
