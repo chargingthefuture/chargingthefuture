@@ -107,6 +107,8 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -488,6 +490,20 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   All counts derive from real data; unbacked mockup figures omitted. typecheck, lint, modularity,
   build:ci, EOF, parity, and schema-drift gates green. Marked levelup Web px ✅; Android pixel parity
   (`MobileLevelUp.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — peer-programming web pixel pass. Like trusttransport, the existing
+  shell was already a real-data adaptation of `design/.../survivor-hub/PeerProgramming.tsx` (it drops
+  the design's mock COHORTS list / AI chat / fabricated Global Stats and binds the real assigned
+  `/api/peer-programming/room` + `/messages` + `/feedback`, reflecting the deterministic-placement
+  model). This pass (1) decomposed the 366-line / complexity-46 monolith into modular sub-components
+  within rule-116 limits (`pp-shared.ts`, `pp-loading.tsx`, `pp-icon-rail`, `pp-sidebar`,
+  `pp-cohorts-tab`, `pp-session-tab`, `pp-chat-tab`, `pp-right-panel`, thin shell; extracted a
+  `fetchRoomData` helper to drop the loader's complexity), (2) swapped the emoji icons for the
+  design's lucide icons (Users/Video/MessageSquare/Bell/Settings/Search/Send), (3) aligned the
+  GetStream-branded "Video session via GetStream" copy to the design's "Video session — encrypted",
+  and (4) dropped the fabricated "Forming: 2" sidebar badge. Dropped the unused `userId`/`isAdmin`
+  props at the call site. typecheck, lint, modularity, build:ci, EOF, parity, and schema-drift gates
+  green. Marked peer-programming Web px ✅; Android pixel parity (`MobilePeerProgramming.tsx`) remains
+  ⬜ for the dedicated Android sweep.
 - 2026-05-30: UI circle-back — trust web pixel pass. Trust is a right-rail widget (not a standalone
   page), so the pass aligned the hub right-rail card to `design/.../survivor-hub/Trust.tsx`: new
   inline-styled `TrustWidgetCard` (blue brand palette, ShieldCheck header + Verified/Unverified pill,

@@ -218,7 +218,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'peer-programming') {
-    return <PeerProgrammingShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <PeerProgrammingShell />;
   }
 
   if (selectedPlugin.slug === 'mood') {
