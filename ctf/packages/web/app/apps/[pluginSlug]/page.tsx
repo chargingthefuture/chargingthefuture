@@ -234,7 +234,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell isAdmin={decision.isAdmin} />;
+    return <GdpShell />;
   }
 
   if (selectedPlugin.slug === 'service-credits') {

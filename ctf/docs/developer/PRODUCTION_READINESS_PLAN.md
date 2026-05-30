@@ -112,7 +112,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
