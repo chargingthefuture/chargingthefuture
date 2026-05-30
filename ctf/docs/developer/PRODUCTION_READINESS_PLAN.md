@@ -114,7 +114,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -477,3 +477,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   instead of the prior shell's fabricated 7-day averages and distribution percentages (no aggregate-stats
   backend exists). Decomposed into modular sub-components within rule-116 limits; removed banned
   "Phase 2" text.
+- 2026-05-30: UI circle-back — levelup web pixel pass. Decomposed the 520-line monolith
+  `levelup-shell.tsx` into modular sub-components within the rule-116 limits: `lu-shared.ts`
+  (palette/types/helpers), `lu-loading.tsx` (full-screen design splash), `lu-sidebar.tsx`,
+  `lu-cohort-card.tsx`, `lu-browse.tsx`, `lu-progress.tsx`, `lu-right-panel.tsx`, and a thin shell
+  that composes them. Removed 6 dead unreferenced components (`AdminPanel`, `CohortDetail`,
+  `CohortList`, `EnrollModal`, `TrainerDashboard`, `UserDashboard`). Shell binds real routes:
+  `GET /api/levelup/cohorts?track=`, `GET /api/service-credits/wallet`, `POST /api/levelup/enroll`
+  (`{ cohortId, idempotencyKey, depositCredits }`), `POST /api/levelup/milestones/[id]/validate`.
+  All counts derive from real data; unbacked mockup figures omitted. typecheck, lint, modularity,
+  build:ci, EOF, parity, and schema-drift gates green. Marked levelup Web px ✅; Android pixel parity
+  (`MobileLevelUp.tsx`) remains ⬜ for the dedicated Android sweep.
