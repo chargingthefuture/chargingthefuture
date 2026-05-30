@@ -162,6 +162,27 @@ label **only when the change is genuinely complex/risky**, and **no more than on
 - Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
   review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
 
+#### Draft vs. ready: agents leave PRs as draft; the owner marks them ready
+
+CodeRabbit needs **both** the `coderabbit` label **and** ready-for-review state before it reviews.
+A labeled **draft** is not reviewed (`.coderabbit.yaml` sets `auto_review.drafts: false`); the review
+fires only once the PR is **marked ready for review while carrying the label**. (A "Review in
+progress" commit status may briefly appear on a draft, but no walkthrough or findings are posted until
+the PR is ready — treat that status as non-blocking noise.)
+
+Workflow (owner-controlled ready):
+
+- **Agents always open PRs as draft** and apply the `coderabbit` label when the change qualifies (per
+  the self-triage list above). Then **stop** — do not mark the PR ready for review yourself.
+- **The owner marks the PR ready for review.** This is deliberate: it lets the owner catch
+  "needs-more-work" before a scarce review slot is ever spent, and paces reviews to the free-tier
+  one-review-per-hour budget without agents juggling timers. Marking ready + the label present =
+  CodeRabbit reviews it.
+- **Never treat a pending/absent CodeRabbit review as a blocker.** Keep doing all work as asked and
+  building the backlog regardless of review state; a labeled draft simply waits for the owner.
+- Net effect: **labeled + draft = waiting for the owner to mark ready; labeled + ready (owner) =
+  review fires.** Agents control the label; the owner controls ready.
+
 ### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
 
 When several plugin PRs are open at once, all appending narrative to the **same** change-log section
