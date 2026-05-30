@@ -10,6 +10,10 @@
 # Note: a committed .coderabbit.yaml overrides the CodeRabbit org-UI settings
 # for this repository.
 reviews:
+  # Suppress the "Review skipped / in progress / completed" status COMMENT in the
+  # PR thread. Real reviews (walkthrough + inline comments) still post when a review
+  # actually runs; the skipped state remains visible as the CodeRabbit commit status.
+  review_status: false
   auto_review:
     enabled: true
     # Never spend review credits on draft PRs.
