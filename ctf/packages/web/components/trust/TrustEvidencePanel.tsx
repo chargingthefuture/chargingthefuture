@@ -6,10 +6,9 @@ import { TrustVisibilityBadge } from "./TrustVisibilityBadge";
 
 export interface TrustEvidencePanelProps {
   trust: TrustUserExtension;
-  compact?: boolean;
 }
 
-export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, compact }) => {
+export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust }) => {
   // The tooltip is toggled by the info button. Keep it accessible.
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -65,38 +64,23 @@ export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, c
       <ul className="space-y-3">
         {trust.trustEvidence.length === 0 ? (
           <li>
-            {compact ? (
-              <div className="flex flex-col items-center text-center py-3">
-                <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-dashed border-gray-600 mb-2 bg-transparent text-gray-400">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
-                    <path d="M12 2L20 5V11C20 16.55 16.42 21.74 12 23C7.58 21.74 4 16.55 4 11V5L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M9 11L11 13L15 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <div className="text-sm font-semibold text-gray-200">No trust signals yet</div>
-                <div className="text-xs text-muted-foreground mt-1">Signals appear as you participate in the community.</div>
-                <div className="mt-2 text-xs text-muted-foreground">Verification is handled manually by admins.</div>
-                <div className="mt-2 text-xs text-muted-foreground">Visible to: {trust.trustVisibility.charAt(0).toUpperCase() + trust.trustVisibility.slice(1)}</div>
+            <div className="flex flex-col items-center text-center py-5">
+              <div className="w-16 h-16 flex items-center justify-center rounded-full border-2 border-dashed border-gray-600 mb-3 bg-transparent text-gray-400">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
+                  <path d="M12 2L20 5V11C20 16.55 16.42 21.74 12 23C7.58 21.74 4 16.55 4 11V5L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 11L11 13L15 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-            ) : (
-              <div className="flex flex-col items-center text-center py-5">
-                <div className="w-16 h-16 flex items-center justify-center rounded-full border-2 border-dashed border-gray-600 mb-3 bg-transparent text-gray-400">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
-                    <path d="M12 2L20 5V11C20 16.55 16.42 21.74 12 23C7.58 21.74 4 16.55 4 11V5L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M9 11L11 13L15 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <h4 className="text-sm font-semibold text-gray-200 mb-1">No trust signals yet</h4>
-                <p className="text-xs text-muted-foreground mb-3">Trust signals appear as you participate in the community.</p>
-                <ol className="text-sm text-left space-y-2 w-full max-w-[320px] list-inside">
-                  <li className="flex items-start gap-2"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs text-gray-200">1</span> Complete your profile</li>
-                  <li className="flex items-start gap-2"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs text-gray-200">2</span> Make your first transaction</li>
-                  <li className="flex items-start gap-2"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs text-gray-200">3</span> Use at least one plugin</li>
-                </ol>
-                <div className="mt-3 text-xs text-muted-foreground">Verification is handled manually by admins.</div>
-                <div className="mt-3 text-xs text-muted-foreground">Visible to: {trust.trustVisibility.charAt(0).toUpperCase() + trust.trustVisibility.slice(1)}</div>
-              </div>
-            )}
+              <h4 className="text-sm font-semibold text-gray-200 mb-1">No trust signals yet</h4>
+              <p className="text-xs text-muted-foreground mb-3">Trust signals appear as you participate in the community.</p>
+              <ol className="text-sm text-left space-y-2 w-full max-w-[320px] list-inside">
+                <li className="flex items-start gap-2"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs text-gray-200">1</span> Complete your profile</li>
+                <li className="flex items-start gap-2"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs text-gray-200">2</span> Make your first transaction</li>
+                <li className="flex items-start gap-2"><span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs text-gray-200">3</span> Use at least one plugin</li>
+              </ol>
+              <div className="mt-3 text-xs text-muted-foreground">Verification is handled manually by admins.</div>
+              <div className="mt-3 text-xs text-muted-foreground">Visible to: {trust.trustVisibility.charAt(0).toUpperCase() + trust.trustVisibility.slice(1)}</div>
+            </div>
           </li>
         ) : (
           trust.trustEvidence.map((item: TrustEvidenceItem, idx: number) => (
