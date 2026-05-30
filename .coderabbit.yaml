@@ -1,0 +1,19 @@
+# CodeRabbit configuration
+# Docs: https://docs.coderabbit.ai/reference/configuration
+#
+# This repo has agents opening PRs frequently. To control review spend,
+# auto-review is gated on a label: CodeRabbit only reviews PRs that carry
+# the "coderabbit" label. Apply that label to large or complex PRs (or any
+# PR you want reviewed). For an unlabeled PR, trigger a one-off review by
+# commenting "@coderabbitai review".
+#
+# Note: a committed .coderabbit.yaml overrides the CodeRabbit org-UI settings
+# for this repository.
+reviews:
+  auto_review:
+    enabled: true
+    # Never spend review credits on draft PRs.
+    drafts: false
+    # Only auto-review PRs that carry one of these labels.
+    labels:
+      - coderabbit
