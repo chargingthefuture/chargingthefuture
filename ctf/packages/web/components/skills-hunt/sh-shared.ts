@@ -1,0 +1,86 @@
+// Shared constants, types, and helpers for the Skills Hunt web shell.
+// Palette/layout derive from design/.../survivor-hub/SkillsHunt.tsx.
+import { Search, Trophy, Target, Users } from "lucide-react";
+import type {
+  SkillsHuntRound,
+  SkillsHuntLeaderboardItem,
+  SkillsHuntAchievement,
+  SkillsHuntNotification,
+  SkillsHuntSubmission,
+  SkillsHuntMissionWithProgress,
+} from "lib/skills-hunt/types";
+
+export type {
+  SkillsHuntRound,
+  SkillsHuntLeaderboardItem,
+  SkillsHuntAchievement,
+  SkillsHuntNotification,
+  SkillsHuntSubmission,
+  SkillsHuntMissionWithProgress,
+};
+
+export const COLOR = "#D946EF";
+export const BG = "#0F1117";
+export const BIO_MAX = 280;
+export const MAX_SKILLS = 10;
+
+export const SKILL_TAXONOMY: Record<string, string[]> = {
+  "Technology":         ["Software Engineering", "UI/UX Design", "Data Analysis", "Cybersecurity", "Web Development", "IT Support"],
+  "Healthcare":         ["Nursing", "Counseling", "Mental Health", "Physical Therapy", "Home Health Aide"],
+  "Trades":             ["Carpentry", "Plumbing", "Electrical", "Welding", "HVAC", "Masonry", "Auto Repair"],
+  "Creative":           ["Graphic Design", "Photography", "Video Editing", "Music Production", "Writing & Editing"],
+  "Education":          ["Teaching", "Tutoring", "Translation", "Sign Language Interpretation"],
+  "Business & Legal":   ["Accounting", "Legal Aid", "Paralegal", "Marketing", "Bookkeeping"],
+  "Food & Hospitality": ["Cooking", "Catering", "Barista", "Event Planning"],
+  "Agriculture":        ["Farming", "Landscaping", "Animal Care"],
+  "Beauty & Wellness":  ["Hair Styling", "Cosmetology", "Massage Therapy", "Esthetics"],
+};
+
+export const BADGE_META: Record<string, { emoji: string; desc: string }> = {
+  "first-finder":         { emoji: "🔍", desc: "First accepted submission for a URL" },
+  "diversity-champion":   { emoji: "🌍", desc: "Skills spanning 3+ sectors" },
+  "rare-talent-scout":    { emoji: "💎", desc: "Found a rare skill (<50% recruited)" },
+  "quality-contributor":  { emoji: "⭐", desc: "10 accepted with no admin edits" },
+  "leaderboard-champion": { emoji: "🏆", desc: "Reached top 10 on the leaderboard" },
+  "accepted-first":       { emoji: "✅", desc: "First accepted submission" },
+  "accepted-five":        { emoji: "🎯", desc: "5 accepted submissions" },
+  "accepted-ten":         { emoji: "🌟", desc: "10 accepted submissions" },
+};
+
+export function badgeMeta(code: string, fallbackDesc: string): { emoji: string; desc: string } {
+  return BADGE_META[code] ?? { emoji: "🏅", desc: fallbackDesc };
+}
+
+export type Tab = "scout" | "leaderboard" | "missions" | "my-finds";
+
+export const TABS: { key: Tab; icon: typeof Search; label: string }[] = [
+  { key: "scout",       icon: Search, label: "Scout" },
+  { key: "leaderboard", icon: Trophy, label: "Leaderboard" },
+  { key: "missions",    icon: Target, label: "Missions" },
+  { key: "my-finds",    icon: Users,  label: "My Finds" },
+];
+
+export function rankDisplay(rank: number): string {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return `#${rank}`;
+}
+
+export function rankColor(rank: number): string {
+  if (rank === 1) return "#F59E0B";
+  if (rank === 2) return "#9CA3AF";
+  if (rank === 3) return "#CD7C2F";
+  return "#6B7280";
+}
+
+export function submissionStatusStyle(status: string): { bg: string; color: string; border: string; label: string } {
+  if (status === "accepted") return { bg: "#22C55E20", color: "#22C55E", border: "#22C55E40", label: "✓ Accepted" };
+  if (status === "rejected") return { bg: "rgba(239,68,68,0.12)", color: "#EF4444", border: "rgba(239,68,68,0.3)", label: "✗ Rejected" };
+  if (status === "flagged")  return { bg: `${COLOR}20`, color: COLOR, border: `${COLOR}40`, label: "⚑ Flagged" };
+  return { bg: "rgba(255,165,0,0.15)", color: "#F59E0B", border: "rgba(255,165,0,0.3)", label: "⏳ Pending" };
+}
+
+export function initials(name: string): string {
+  return name.split(" ").map((n) => n[0] ?? "").join("").slice(0, 2).toUpperCase();
+}

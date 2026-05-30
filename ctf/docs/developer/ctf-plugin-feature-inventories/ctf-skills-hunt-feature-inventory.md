@@ -182,7 +182,7 @@ Admin/moderator routes:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`).
+`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`). Web pixel pass complete for the user shell: `skills-hunt-shell.tsx` + `sh-*` sub-components are aligned to `design/.../survivor-hub/SkillsHunt.tsx` (brand color #D946EF, aria-labeled lucide icon rail, taxonomy skills picker, scout/leaderboard/missions/my-finds tabs) and decomposed within rule-116 limits; all tabs bind real round/leaderboard/missions/submissions/achievements/notifications routes (no fabricated figures). The admin moderation shell (`/admin/skills-hunt`) is a tracked rule-116 follow-up. Android pixel parity (`MobileSkillsHunt.tsx`) is tracked for the dedicated Android sweep.
 
 ## 7) Seed Coverage Status
 
@@ -195,6 +195,8 @@ Admin/moderator routes:
 3. Team leaderboard aggregation by profession taxonomy depends on Skills Taxonomy sign-off on grouping semantics.
 
 ## 9) Change Log
+
+- 2026-05-30: Web pixel pass for the user shell. Aligned to the design mockup (brand color #A855F7 -> #D946EF; aria-labeled lucide icon rail with unread badge) and decomposed the 845-line monolith into modular sub-components within rule-116 limits: sh-shared.ts, sh-use-nomination-form.ts, sh-icon-rail, sh-notifications, sh-sidebar, sh-skills-picker, sh-scout-tab, sh-leaderboard-tab, sh-missions-tab, sh-my-finds-tab, sh-right-panel, thin shell. All data stays bound to the real routes; no mocks. Admin shell (/admin/skills-hunt) left as a tracked rule-116 follow-up. No schema/route/contract changes.
 
 - 2026-05-18: Renamed "Web and Android Delivery Strategy" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt". Removed Android-parity-deferral entry per Rule 105.
 - 2026-02-24: Created initial Skills Hunt CTF rewrite inventory.
