@@ -216,7 +216,7 @@ Domain tables:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Wallet creation, balance retrieval, transfer initiation, escrow resolution, governance, and treasury admin surfaces are consistent across web (`/apps/service-credits`) and Android (`packages/mobile/src/features/service-credits`). Error semantics and deny reasons match across platforms.
+`web+android complete` (functional). Wallet creation, balance retrieval, transfer initiation, escrow resolution, governance, and treasury admin surfaces are consistent across web (`/apps/service-credits`) and Android (`packages/mobile/src/features/service-credits`). Error semantics and deny reasons match across platforms. Web pixel pass complete: the shell (`service-credits-shell.tsx` + `sc-*` sub-components) is aligned to `design/.../survivor-hub/ServiceCredits.tsx` and decomposed within rule-116 limits. Per brand rules, balances render as "credits" only (never a fiat equivalent); per the real-data-only rule the design's hardcoded platform stats (issued/circulating/avg balance) and per-row "Start"/"chat" actions are omitted. Android pixel parity (`MobileServiceCredits.tsx`) is tracked for the dedicated Android sweep.
 
 ---
 
@@ -237,6 +237,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 
 ## 10) Change Log
 
+- 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/ServiceCredits.tsx` and decomposed the 556-line monolith into modular sub-components (`sc-shared.ts`, `sc-icon-rail`, `sc-sidebar`, `sc-wallet-tab`, `sc-earn-tab`, `sc-info-tab`, `sc-send-panel`, thin shell) within rule-116 limits. Fixed a real transfer bug: the prior shell POSTed `{ toUserId, amount }` with no `idempotencyKey` and no `x-ctf-csrf` header, so `/api/service-credits/transfers` rejected every peer transfer (CSRF + required-field 400s); the Send panel now sends `{ recipientUserId, amount, idempotencyKey }` with the CSRF header. Brand: fixed "Service Credits" → "ServiceCredits" in the info copy; balances render as "credits" only (no fiat). Per real-data-only, omitted the design's hardcoded platform stats and the non-functional per-row "Start"/chat actions; aria-labels added to icon rail + transfer inputs. Dropped unused `userId`/`isAdmin` props at the call site. No schema/route/contract changes.
 - 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and removed Android-parity-timeline-pending entry per Rule 105.
 - 2026-02-25: Added approved account-deletion treasury reclaim policy.
 - 2026-02-24: Initial Service Credits CTF rewrite inventory created.
