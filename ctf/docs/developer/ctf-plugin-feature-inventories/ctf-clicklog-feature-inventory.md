@@ -51,6 +51,17 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Android: Implemented shell, full parity
 - See [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json)
 
+Web pixel pass (design `c5d83c0`): `ClicklogShell` is rebuilt to `design/.../survivor-hub/ClickLog.tsx`
+and its Empty/Loading states. The plain shell was replaced with the mockup's dark (`#0F1117` / brand
+`#E91E8C`) layout — icon rail, sidebar (total + this-week strip + encryption note), the large circular
+"Log Incident" button with an inline note form, the recent-incidents list, and the right-rail stats +
+safety reminder — decomposed into modular sub-components within the rule-116 limits. All counters
+(total, this-week weekday strip, this-week/this-month/with-notes/with-location stats) are derived from
+the real `/api/clicklog` data; none are dummy. The note form posts to `/api/clicklog` (optional
+geolocation via the browser), delete calls `DELETE /api/clicklog/:id`. ClickLog is a private, auth-only
+tool, so there is no public state (the `ClickLogPublic.tsx` mockup is not implemented by design). The
+Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## 9. Seed Coverage Status
 
 - See [scripts/seedClicklog.mjs](../../../scripts/seedClicklog.mjs)
@@ -64,5 +75,6 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## Change Log
 
+- 2026-05-29: Web UI circle-back (first design pass; unblocked by the `c5d83c0` design re-pin). Rebuilt `ClicklogShell` to the `ClickLog.tsx` mockup + Empty/Loading states, decomposed into modular sub-components (`clicklog-shared`, `clicklog-icon-rail`, `clicklog-sidebar`, `clicklog-right-rail`, `clicklog-log-panel`, `clicklog-incident-list`, `clicklog-empty-state`, `clicklog-loading`). All counts derive from real `/api/clicklog` data; the modal note form became the mockup's inline form; cleared the prior `any` lint debt; dropped the unused `userId` prop. No schema/API change.
 - 2026-05-18: Renamed "Risks & Known Technical Debt" to "Gaps and Known Technical Debt" per Rule 120 canonical heading.
 - 2026-04-13: Initial implementation and registration.

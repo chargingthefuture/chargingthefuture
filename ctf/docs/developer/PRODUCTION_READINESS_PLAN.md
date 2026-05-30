@@ -116,7 +116,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| clicklog | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | unlock | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
@@ -412,3 +412,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   change; data wiring and the c5d83c0 copy are preserved. typecheck, lint, modularity, build:ci, EOF,
   parity, and schema-drift gates green. All three circle-backed plugins (chyme, directory, lighthouse)
   now satisfy rule 116.
+- 2026-05-29: UI circle-back — clicklog web pixel pass (first of the four plugins unblocked by the
+  `c5d83c0` design re-pin). Rebuilt the plain Tailwind `ClicklogShell` to the `ClickLog.tsx` mockup and
+  its Empty/Loading states: the dark (`#0F1117` / brand `#E91E8C`) icon-rail + sidebar (total +
+  this-week strip + encryption note) + circular log button with inline note form + recent-incidents
+  list + right-rail stats/safety-reminder layout. All counters derive from real `/api/clicklog` data
+  (no dummy counts); the modal became the mockup's inline form. Decomposed into modular sub-components
+  within the rule-116 limits, cleared the prior `any` lint debt, and dropped the unused `userId` prop.
+  No public state by design (ClickLog is private/auth-only). typecheck, lint, modularity, build:ci, EOF,
+  parity, and schema-drift gates green. Marked clicklog Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileClickLog.tsx`) remains ⬜. Three design-gated plugins remain: skills-taxonomy,
+  weekly-performance, unlock.
