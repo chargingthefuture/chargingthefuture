@@ -56,6 +56,12 @@ jobs:
       needs.check-changes.outputs.has_changes == 'true' ||
       inputs.force == true
     runs-on: ubuntu-latest
+    # Stamp all dates (wiki page slug, Quora draft issue, update tag) in US
+    # Eastern rather than the runner's UTC, so they match the project's local
+    # day. Applies to shell `date` and Node `new Date()`/toLocaleString in the
+    # steps below.
+    env:
+      TZ: America/New_York
     permissions:
       contents: write   # push update/* tag
       issues: write     # create Quora draft issue
