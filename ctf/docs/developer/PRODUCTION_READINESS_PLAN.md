@@ -107,7 +107,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -500,3 +500,15 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   Loading/Public design states don't apply (widget renders only authenticated inside the hub).
   typecheck, lint, modularity, build:ci, EOF, parity, and schema-drift gates green. Marked trust
   Web px ✅; Android pixel parity (`MobileTrust.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — trusttransport web pixel pass. The existing shell was already a sound
+  real-data adaptation of `design/.../survivor-hub/TrustTransport.tsx` (it drops the design's mock
+  DRIVERS / ACTIVE_ORDERS / inflated stats and uses real `/api/trusttransport/modes` + `requests` and
+  the real per-trip Stream chat). This pass (1) decomposed the 358-line / complexity-28 monolith into
+  modular sub-components within the rule-116 limits (`tt-shared.ts`, `tt-loading.tsx`, `tt-icon-rail`,
+  `tt-sidebar`, `tt-book-tab`, `tt-tracking-tab`, `tt-chat-tab`, `tt-right-panel`, thin shell), and
+  (2) stripped the remaining unbacked values per the real-data-only rule: removed the hardcoded
+  "Safety Rating 4.9" and "Safety Incidents 0 today", and aligned the GetStream-branded copy to the
+  design's wording ("End-to-end encrypted", "All comms encrypted") — the Stream chat integration
+  itself is unchanged. Dropped the unused `userId`/`isAdmin` props at the call site. typecheck, lint,
+  modularity, build:ci, EOF, parity, and schema-drift gates green. Marked trusttransport Web px ✅;
+  Android pixel parity (`MobileTrustTransport.tsx`) remains ⬜ for the dedicated Android sweep.

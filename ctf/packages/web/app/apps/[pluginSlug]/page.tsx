@@ -214,7 +214,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'trusttransport') {
-    return <TrustTransportShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <TrustTransportShell />;
   }
 
   if (selectedPlugin.slug === 'peer-programming') {

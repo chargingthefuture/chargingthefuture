@@ -227,7 +227,7 @@ Tables owned by this plugin:
 
 ## Web and Android Delivery Status
 
-`web+android complete`. Web surface lives under `/apps/trusttransport`; Android surface lives under `packages/mobile/src/features/trusttransport`. Booking, tracking, completion, safety controls, and deletion behave consistently across platforms.
+`web+android complete` (functional). Web surface lives under `/apps/trusttransport`; Android surface lives under `packages/mobile/src/features/trusttransport`. Booking, tracking, completion, safety controls, and deletion behave consistently across platforms. Web pixel pass complete: the shell (`trusttransport-shell.tsx` + `tt-*` sub-components) is aligned to `design/.../survivor-hub/TrustTransport.tsx` and decomposed within rule-116 limits; per the real-data-only rule it binds real `/api/trusttransport/modes` + `requests` + per-trip Stream chat and omits the design's mock driver/stat figures. Android pixel parity (`MobileTrustTransport.tsx`) is tracked for the dedicated Android sweep.
 
 ---
 
@@ -245,6 +245,7 @@ Tables owned by this plugin:
 
 ## Change Log
 
+- 2026-05-30: Web pixel pass â€” aligned the shell to `design/.../survivor-hub/TrustTransport.tsx` and decomposed the 358-line / complexity-28 monolith into modular sub-components (`tt-shared.ts`, `tt-loading.tsx`, `tt-icon-rail`, `tt-sidebar`, `tt-book-tab`, `tt-tracking-tab`, `tt-chat-tab`, `tt-right-panel`, thin shell) within rule-116 limits. Per real-data-only, stripped remaining unbacked values (hardcoded "Safety Rating 4.9" and "Safety Incidents 0 today") and aligned GetStream-branded copy to the design's "End-to-end encrypted" / "All comms encrypted" wording (Stream chat integration unchanged). Dropped the unused `userId`/`isAdmin` props at the call site. No schema/route/contract changes.
 - 2026-05-18: Inventory updated to enforce Rule 120 living-snapshot model. Removed "(Planned)" annotation from the HTTP Projection Routes heading and removed "Planned" prefixes on command groups, extension entities, and domain entities. Synced route list (added trips chat, emergency-stop, service-credits) and table list (added `market_config`, `admin_audit_trail`; removed unshipped `deliveries`, `food_orders`) with `ctf/schema.sql` and `ctf/packages/web/app/api/trusttransport/`. Confirmed `web+android complete`.
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section) and unresolved decisions list.
 - 2026-04-06: Mobile rewrite with design-faithful UI (TrustTransport.tsx) for booking, tracking, chat flows and auth-gating. Admin features pending.
@@ -266,7 +267,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Ride/package/food booking and safety controls marked parity-required.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [ ] Define plugin command contracts for v1.
   - Acceptance criteria:
@@ -281,7 +282,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Launch regions, payout policy, verification, cancellation/refunds, and dispute SLA are approved.
 
-### €” Schema and Migrations
+### ï¿½ï¿½ Schema and Migrations
 
 - [ ] Implement TrustTransport extension model on canonical profile.
   - Acceptance criteria:
@@ -296,7 +297,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Retention class documented for proof, events, disputes, and financial records.
 
-### €” API and Command Execution
+### ï¿½ï¿½ API and Command Execution
 
 - [ ] Implement request/create and offer/list/accept flows.
   - Acceptance criteria:
@@ -311,7 +312,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Admin mutation endpoints enforce role + CSRF + audit logging.
 
-### €” Web Delivery
+### ï¿½ï¿½ Web Delivery
 
 - [ ] Build unified mode-selection and booking UX (ride/package/food).
   - Acceptance criteria:
@@ -326,7 +327,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Earnings, payout requests, ratings, and reliability indicators visible.
 
-### €” Android Delivery
+### ï¿½ï¿½ Android Delivery
 
 - [ ] Implement critical path parity for booking and tracking.
   - Acceptance criteria:
@@ -338,7 +339,7 @@ Tables owned by this plugin:
   - Acceptance criteria:
     - Critical journeys pass accessibility checks and avoid overload patterns.
 
-### €” Admin, Compliance, and Hardening
+### ï¿½ï¿½ Admin, Compliance, and Hardening
 
 - [ ] Build admin trust-and-safety operations UI.
   - Acceptance criteria:
