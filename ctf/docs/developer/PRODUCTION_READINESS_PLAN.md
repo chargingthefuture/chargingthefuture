@@ -108,7 +108,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
 | workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
