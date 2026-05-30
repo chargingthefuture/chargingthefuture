@@ -139,6 +139,8 @@ Consumer routes:
 
 ## 10) Change Log
 
+- 2026-05-29: Web UI circle-back (design `c5d83c0`; unblocked by the design re-pin). Rebuilt the `/apps/skills-taxonomy` browser from the prior summary/snapshot shell to the `SkillsTaxonomy.tsx` mockup (3-column hierarchy + Empty/Loading). Loads the nested tree from the existing `GET /api/skills-taxonomy/hierarchy` (response `{ items }`) and derives the columns client-side; no schema/API change. Decomposed into modular sub-components (`st-shared`, `st-loading`, `st-icon-rail`, `st-empty-state`, `st-sectors-column`, `st-titles-column`, `st-skills-detail`, plus the browser and shell). Real data only; the mockup's demand/level/category chips were omitted as unbacked.
+
 - 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Removed deferred-owner/milestone tracking and "Phase-0 baseline" framing per Rule 120. Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-deferral entries.
 - 2026-03-02: Delivered web/API runtime baseline (migration + hierarchy/flattened routes + admin CRUD + dependency preview + delete safeguards + audit + CSRF + deterministic seed).
 - 2026-03-02: Added Option B legacy-data migration path (one-time backfill + incremental sync) from `platform/scripts/data/skills-data.ts` into plugin-owned taxonomy tables.
