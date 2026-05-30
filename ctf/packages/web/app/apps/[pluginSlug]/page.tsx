@@ -238,7 +238,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'service-credits') {
-    return <ServiceCreditsShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <ServiceCreditsShell />;
   }
 
   if (selectedPlugin.slug === 'levelup') {
