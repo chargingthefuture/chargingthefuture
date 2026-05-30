@@ -162,33 +162,26 @@ label **only when the change is genuinely complex/risky**, and **no more than on
 - Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
   review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
 
-#### Draft vs. ready, and the one-review-per-hour gate
+#### Draft vs. ready: agents leave PRs as draft; the owner marks them ready
 
-CodeRabbit's auto-review **does not fire on a draft PR** even when the `coderabbit` label is present
-(`.coderabbit.yaml` sets `auto_review.drafts: false`). The review only triggers when the PR is
-**marked ready for review** while carrying the label. This is a useful property, not a bug: it lets
-agents keep shipping work into the backlog while the owner's one-review-per-hour budget is occupied.
+CodeRabbit needs **both** the `coderabbit` label **and** ready-for-review state before it reviews.
+A labeled **draft** is not reviewed (`.coderabbit.yaml` sets `auto_review.drafts: false`); the review
+fires only once the PR is **marked ready for review while carrying the label**. (A "Review in
+progress" commit status may briefly appear on a draft, but no walkthrough or findings are posted until
+the PR is ready — treat that status as non-blocking noise.)
 
-Rules for agents:
+Workflow (owner-controlled ready):
 
-- **Never treat the CodeRabbit review as a blocker.** Do all work as asked — open PRs, keep building
-  the backlog — regardless of whether any PR is currently awaiting/holding a review. A pending review
-  must not stall other tasks.
-- **Open PRs as draft by default** (the standard for this repo).
-- **Marking ready (which triggers the labeled review) is something agents can do programmatically**
-  via the GitHub MCP `update_pull_request` with `draft: false`. So:
-  - **No long backlog:** when a PR is finished and you are *not* sitting on a queue of other ready
-    work, leave qualifying PRs as draft only if they don't need review; for a PR that should be
-    reviewed, **mark it ready for review yourself** (`update_pull_request { draft: false }`) — do not
-    leave it as a draft.
-  - **Long backlog (the one-per-hour budget is contended):** keep the labeled PR as a **draft** so it
-    doesn't consume the hour's single review slot, and **notify the owner** with the PR number and a
-    suggested time/interval (e.g. "ready to review in ~1h") so they (or you, on a timer) can flip it
-    to ready when the slot frees up. Because flipping to ready is programmatic, an agent may instead
-    schedule/flip it itself once the prior review has cleared — just don't exceed one labeled,
-    ready-for-review PR per hour.
-- Net effect: **labeled + draft = queued (no review yet); labeled + ready = review fires.** Use draft
-  state as the throttle against the free-tier one-review-per-hour limit.
+- **Agents always open PRs as draft** and apply the `coderabbit` label when the change qualifies (per
+  the self-triage list above). Then **stop** — do not mark the PR ready for review yourself.
+- **The owner marks the PR ready for review.** This is deliberate: it lets the owner catch
+  "needs-more-work" before a scarce review slot is ever spent, and paces reviews to the free-tier
+  one-review-per-hour budget without agents juggling timers. Marking ready + the label present =
+  CodeRabbit reviews it.
+- **Never treat a pending/absent CodeRabbit review as a blocker.** Keep doing all work as asked and
+  building the backlog regardless of review state; a labeled draft simply waits for the owner.
+- Net effect: **labeled + draft = waiting for the owner to mark ready; labeled + ready (owner) =
+  review fires.** Agents control the label; the owner controls ready.
 
 ### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
 
