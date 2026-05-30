@@ -112,7 +112,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -488,3 +488,14 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   All counts derive from real data; unbacked mockup figures omitted. typecheck, lint, modularity,
   build:ci, EOF, parity, and schema-drift gates green. Marked levelup Web px ✅; Android pixel parity
   (`MobileLevelUp.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — gdp web pixel pass. The existing shell was already a faithful
+  real-data adaptation of `design/.../survivor-hub/GDP.tsx` (it renders sectors/countries/metrics
+  only from `/api/gdp/report/current` and omits the design's mock "Your Contribution", "Live Feed",
+  weekly-trend bars, and AI chat tab). This pass decomposed the 210-line / complexity-29 monolith into
+  modular sub-components within rule-116 limits (`gdp-shared.ts`, `gdp-loading.tsx`, `gdp-icon-rail`,
+  `gdp-sidebar`, `gdp-dashboard` with Hero/Sectors/Countries, `gdp-map`, thin shell with extracted
+  `GdpContent`), added a real loading splash, added aria-labels to the icon-only rail buttons, and
+  removed the sidebar's "By Phase" filter (a banned term that the design mockup does not include).
+  Dropped the unused `isAdmin` prop at the call site. typecheck, lint, modularity, build:ci, EOF,
+  parity, and schema-drift gates green. Marked gdp Web px ✅; Android pixel parity (`MobileGDP.tsx`)
+  remains ⬜ for the dedicated Android sweep.
