@@ -109,7 +109,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -468,3 +468,12 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   lint, modularity, build:ci, EOF, parity, and schema-drift gates green for each. Marked mood,
   gentlepulse, socketrelay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
   `MobileGentlePulse.tsx`, `MobileSocketRelay.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-29: UI circle-back — mood web pixel pass detail. Rebuilt the `/apps/mood` shell to `Mood.tsx`
+  + Empty/Loading. Fixed two real API-contract bugs in the prior shell: it called
+  `/api/mood/eligibility` with no `clientId` (route 400s without it) and POSTed `{ mood, note }` instead
+  of the required `{ clientId, moodValue, note }` + CSRF header — so check-in and submit both failed at
+  runtime. Now uses a per-device localStorage `clientId`, the eligibility cooldown gate, and a
+  CSRF-headed submit. Per owner ruling, the Community Pulse tab shows the design's honest empty state
+  instead of the prior shell's fabricated 7-day averages and distribution percentages (no aggregate-stats
+  backend exists). Decomposed into modular sub-components within rule-116 limits; removed banned
+  "Phase 2" text.
