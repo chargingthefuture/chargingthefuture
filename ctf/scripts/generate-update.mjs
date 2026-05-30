@@ -28,7 +28,10 @@ const brandVoice = readFileSync(
   'utf-8',
 ).slice(0, 3000);
 
-const today = new Date().toISOString().split('T')[0];
+// Date in the runner's local timezone (TZ env, set by the workflow) as
+// YYYY-MM-DD. Avoids toISOString(), which is always UTC and can land on the
+// next day shortly after local midnight. en-CA gives ISO-style YYYY-MM-DD.
+const today = new Date().toLocaleDateString('en-CA');
 
 const response = await fetch('https://api.anthropic.com/v1/messages', {
   method: 'POST',
