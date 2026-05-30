@@ -1,5 +1,5 @@
 import React from "react";
-import { TrustEvidencePanel } from "../../trust/TrustEvidencePanel";
+import { TrustWidgetCard } from "../../trust/TrustWidgetCard";
 import type { TrustUserExtension } from "../../../lib/trust/types";
 
 export interface TrustRightRailCardProps {
@@ -9,7 +9,7 @@ export interface TrustRightRailCardProps {
 export const TrustRightRailCard: React.FC<TrustRightRailCardProps> = ({ trust }) => {
   return (
     <div className="mb-4">
-      <TrustEvidencePanel trust={trust} compact />
+      <TrustWidgetCard trust={trust} />
     </div>
   );
 };
