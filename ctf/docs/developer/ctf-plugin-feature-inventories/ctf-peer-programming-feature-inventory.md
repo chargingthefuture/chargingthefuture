@@ -121,7 +121,7 @@ The plugin:
 
 ## Web and Android Delivery Status
 
-`web+android complete`. The web surface lives under `/apps/peer-programming` and the Android surface lives under `packages/mobile/src/features/peer-programming`. Notification, tier, and room behaviors are behaviorally consistent across platforms.
+`web+android complete` (functional). The web surface lives under `/apps/peer-programming` and the Android surface lives under `packages/mobile/src/features/peer-programming`. Notification, tier, and room behaviors are behaviorally consistent across platforms. Web pixel pass complete: the shell (`peer-programming-shell.tsx` + `pp-*` sub-components) is aligned to `design/.../survivor-hub/PeerProgramming.tsx` (lucide icons, encrypted-session copy) and decomposed within rule-116 limits; per the real-data-only rule it binds the real assigned `/api/peer-programming/room` + `/messages` + `/feedback` and omits the design's mock cohort list / fabricated global stats. Android pixel parity (`MobilePeerProgramming.tsx`) is tracked for the dedicated Android sweep.
 
 ## Seed Coverage Status
 
@@ -134,6 +134,7 @@ Deterministic Peer Programming seed script: `ctf/scripts/seedPeerProgramming.mjs
 
 ## Change Log
 
+- 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/PeerProgramming.tsx` and decomposed the 366-line / complexity-46 monolith into modular sub-components (`pp-shared.ts`, `pp-loading.tsx`, `pp-icon-rail`, `pp-sidebar`, `pp-cohorts-tab`, `pp-session-tab`, `pp-chat-tab`, `pp-right-panel`, thin shell; extracted a `fetchRoomData` helper) within rule-116 limits. Swapped emoji icons for the design's lucide icons, aligned "Video session via GetStream" to the design's "Video session — encrypted", and dropped the fabricated "Forming: 2" sidebar badge. Dropped the unused `userId`/`isAdmin` props at the call site. No schema/route/contract changes.
 - 2026-05-18: Inventory rewritten to enforce Rule 120 living-snapshot model. Removed "Web-First Delivery and Android Follow-Up" section and all web-first / Android-follow-up parity language; confirmed `web+android complete`. Replaced "planned" command groups and "Planned Domain Entities" with the actual shipped routes and tables. Synced table names with `ctf/schema.sql` and route list with `ctf/packages/web/app/api/peer-programming/`.
 - 2026-02-24: Initial Peer Programming CTF rewrite inventory created.
 
