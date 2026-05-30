@@ -112,10 +112,8 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
