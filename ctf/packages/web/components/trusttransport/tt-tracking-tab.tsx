@@ -1,8 +1,16 @@
 "use client";
 
-import { Car, Navigation, MessageSquare, AlertCircle } from "lucide-react";
+import { Car, Navigation, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { COLOR, type TripRequest } from "./tt-shared";
+
+function statusBadgeStyle(status: string) {
+  const s = status.toLowerCase();
+  if (s.includes("cancel")) return { background: "rgba(239,68,68,0.12)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.3)" };
+  if (s.includes("complet")) return { background: "#A855F720", color: "#A855F7", border: "1px solid #A855F740" };
+  if (s.includes("pend") || s.includes("form") || s.includes("wait")) return { background: "#F59E0B20", color: "#F59E0B", border: "1px solid #F59E0B40" };
+  return { background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E40" };
+}
 
 function TrackingEmpty({ onBook }: { onBook: () => void }) {
   return (
@@ -28,23 +36,15 @@ function TrackingCard({ request, onChat }: { request: TripRequest; onChat: (r: T
         <div style={{ width: 48, height: 48, borderRadius: 12, background: `${COLOR}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Car size={24} style={{ color: COLOR }} />
         </div>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
-          <div style={{ fontSize: 13, color: "#9CA3AF" }}>{status}</div>
-        </div>
-        <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E40", fontSize: 12, marginLeft: "auto" }}>{status}</Badge>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
+        <Badge style={{ ...statusBadgeStyle(status), fontSize: 12, marginLeft: "auto" }}>{status}</Badge>
       </div>
       <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center", color: "#4B5563", fontSize: 13, marginBottom: 16 }}>
         Live map — tracking in progress
       </div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <button type="button" onClick={() => onChat(request)} style={{ flex: 1, padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <MessageSquare size={14} /> Chat
-        </button>
-        <button type="button" style={{ flex: 1, padding: "12px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <AlertCircle size={14} /> Safety Alert
-        </button>
-      </div>
+      <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <MessageSquare size={14} /> Chat
+      </button>
     </div>
   );
 }

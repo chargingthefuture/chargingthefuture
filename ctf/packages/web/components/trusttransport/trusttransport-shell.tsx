@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Car } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BG, deriveRideTypes, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
@@ -43,6 +43,9 @@ export function TrustTransportShell() {
   const [chatCredentials, setChatCredentials] = useState<ChatCreds | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  // Tracks the most recently requested chat trip so a slower earlier response
+  // can't overwrite the credentials for a trip the user has since switched to.
+  const activeChatReqRef = useRef<string | null>(null);
 
   async function fetchRequests() {
     const res = await fetch("/api/trusttransport/requests");
@@ -86,6 +89,7 @@ export function TrustTransportShell() {
   }
 
   async function fetchChatForRequest(req: TripRequest) {
+    activeChatReqRef.current = req.id;
     setSelectedRequest(req);
     setChatCredentials(null);
     setChatError(null);
@@ -95,11 +99,13 @@ export function TrustTransportShell() {
       if (!res.ok) throw new Error("Failed to fetch chat credentials");
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "No chat credentials");
+      if (activeChatReqRef.current !== req.id) return;
       setChatCredentials(data);
     } catch (e: unknown) {
+      if (activeChatReqRef.current !== req.id) return;
       setChatError(e instanceof Error ? e.message : "Failed to load chat");
     } finally {
-      setChatLoading(false);
+      if (activeChatReqRef.current === req.id) setChatLoading(false);
     }
   }
 
