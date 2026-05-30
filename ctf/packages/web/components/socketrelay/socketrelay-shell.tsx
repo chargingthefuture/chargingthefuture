@@ -31,6 +31,21 @@ async function getJson<T>(url: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
+// Load all three feed datasets at once, normalizing missing payloads to empties.
+// Kept out of the component so the loader stays within the rule-116 complexity limit.
+async function loadSocketRelayData(): Promise<{ requests: SrRequest[]; myRequestCount: number; fulfillments: SrFulfillment[] }> {
+  const [reqData, myReqData, fulData] = await Promise.all([
+    getJson<SrListResponse>("/api/socketrelay/requests"),
+    getJson<SrListResponse>("/api/socketrelay/my-requests"),
+    getJson<SrFulfillmentsResponse>("/api/socketrelay/my-fulfillments"),
+  ]);
+  return {
+    requests: reqData?.items ?? [],
+    myRequestCount: myReqData?.total ?? 0,
+    fulfillments: fulData?.items ?? [],
+  };
+}
+
 type SocketRelayShellProps = {
   userId?: string;
   isAdmin?: boolean;
@@ -55,22 +70,18 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async (options?: { showLoading?: boolean }) => {
-    if (options?.showLoading !== false) setLoading(true);
+  const fetchData = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
     try {
-      const [reqData, myReqData, fulData] = await Promise.all([
-        getJson<SrListResponse>("/api/socketrelay/requests"),
-        getJson<SrListResponse>("/api/socketrelay/my-requests"),
-        getJson<SrFulfillmentsResponse>("/api/socketrelay/my-fulfillments"),
-      ]);
-      setRequests(reqData?.items ?? []);
-      setMyRequestCount(myReqData?.total ?? 0);
-      setFulfillments(fulData?.items ?? []);
+      const data = await loadSocketRelayData();
+      setRequests(data.requests);
+      setMyRequestCount(data.myRequestCount);
+      setFulfillments(data.fulfillments);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load SocketRelay.");
     } finally {
-      if (options?.showLoading !== false) setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -102,7 +113,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
       }
       setDraft(EMPTY_DRAFT);
       setPostSuccess(true);
-      await fetchData({ showLoading: false });
+      await fetchData(false);
     } catch (e) {
       setPostError(e instanceof Error ? e.message : "Failed to create request.");
     } finally {
@@ -117,7 +128,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
         method: "POST",
         headers: { "x-ctf-csrf": "1" },
       });
-      if (res.ok) await fetchData({ showLoading: false });
+      if (res.ok) await fetchData(false);
     } catch {
       // Refresh will reflect the latest state.
     } finally {
