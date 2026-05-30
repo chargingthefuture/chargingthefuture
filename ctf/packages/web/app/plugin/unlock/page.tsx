@@ -1,6 +1,6 @@
 import React from 'react';
-import UnlockSubmission from '../../../components/unlock/UnlockSubmission';
+import { UnlockShell } from '../../../components/unlock/unlock-shell';
 
 export default function UnlockPage() {
-  return <UnlockSubmission />;
+  return <UnlockShell />;
 }
