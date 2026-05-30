@@ -95,6 +95,11 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 > + pixel-perfect to `design` + parity + gates + deploy). Some plugin inventories still carry an older
 > "Parity: web+android complete" line that describes prior feature parity, **not** this bar — where the two
 > differ, this table wins. Inventory wording is normalized per plugin during its UI circle-back.
+>
+> **Editing convention (avoids merge conflicts):** a per-plugin PR should only flip its own row above;
+> put the detailed change-log narrative in that plugin's inventory file, not in the change log below.
+> Reserve the change log below for cross-cutting milestones. See the "Updating `PRODUCTION_READINESS_PLAN.md`"
+> note in `.github/instructions/copilot-instructions.md`.
 
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
