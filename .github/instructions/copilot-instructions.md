@@ -146,6 +146,37 @@ Use when Android parity is deferred; link to the tracking issue.
 
 All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
 
+### CodeRabbit Review Labeling (self-triage)
+
+CodeRabbit auto-review is gated on the `coderabbit` label (see `.coderabbit.yaml`), and the
+account is on the **free tier**, so reviews are a scarce resource. Agents self-triage and apply the
+label **only when the change is genuinely complex/risky**, and **no more than once per hour**.
+
+- **Label `coderabbit`** when the PR touches any of: money / ServiceCredits ledger, auth/authz, CSRF,
+  data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
+  whole new plugin.
+- **Do NOT label** pure restyles, rule-116 decompositions, icon swaps, or doc-sync PRs with **no
+  behavior change** — these are low-risk and waste the quota.
+- **Rate cap:** at most **one labeled PR per hour**. If several qualify in the same hour, label only
+  the riskiest and defer the rest to the next hour.
+- Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
+  review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
+
+### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
+
+When several plugin PRs are open at once, all appending narrative to the **same** change-log section
+of `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md` produces a merge conflict every time a sibling
+merges first. To avoid this:
+
+- In `PRODUCTION_READINESS_PLAN.md`, a per-plugin PR should **only flip that plugin's row** in the
+  progress table (the row is the single source of truth for delivery status). Do **not** append a
+  per-PR change-log entry there.
+- Put the detailed change-log narrative in that plugin's **own inventory file**
+  (`ctf/docs/developer/ctf-plugin-feature-inventories/ctf-<plugin>-feature-inventory.md`), which is
+  one file per plugin and therefore never collides with sibling PRs.
+- Reserve the plan's change-log section for cross-cutting milestones (infra, policy, multi-plugin
+  reconciliations), not routine per-plugin passes.
+
 ## Agent Startup Read Order
 
 - On each new task, read this `index.mdc` first.
