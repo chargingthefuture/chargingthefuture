@@ -83,6 +83,8 @@ Admin routes:
 
 `web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/apps/weekly-performance`) and Android (`packages/mobile/src/features/weekly-performance`).
 
+Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states — icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits. Android pixel pass to `MobileWeeklyPerformance.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## 6) Seed Coverage Status
 
 Weekly performance metrics are derived from upstream plugin tables (workforce, service-credits, etc.); no dedicated seed script is required. Local validation runs against fixtures produced by upstream plugin seed scripts.
@@ -95,6 +97,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
 
 ## 8) Change Log
 
+- 2026-05-29: Web UI circle-back (design `c5d83c0`; unblocked by the design re-pin). Rebuilt the user-facing weekly-performance shell from the baseline server summary to the full client dashboard in `WeeklyPerformance.tsx` (+ Empty/Loading), wired to the documented read routes and the admin export. Decomposed into modular sub-components (`wp-shared`, `wp-loading`, `wp-icon-rail`, `wp-sidebar`, `wp-metric-cards`, `wp-comparison-chart`, `wp-empty-main`, `wp-dashboard-main`, `wp-right-rail`, plus the shell). Real data only; the dummy daily chart became a real this-week-vs-last-week per-metric comparison and the unbacked "Top Apps" widget was omitted. No schema/API change.
 - 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-milestone entry per Rule 105.
 - 2026-02-25: Created initial Weekly Performance plugin inventory.
 - 2026-02-25: Updated Weekly Performance plugin scope to remove financial/revenue metric reporting from dashboard parity.
