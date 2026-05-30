@@ -248,7 +248,7 @@ Domain tables:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. GDP transparency report and admin publications surfaces are shipped on web (`/apps/gdp`) and Android (`packages/mobile/src/features/gdp`). KPI definitions, semantics, and published values are identical across platforms.
+`web+android complete` (functional). GDP transparency report and admin publications surfaces are shipped on web (`/apps/gdp`) and Android (`packages/mobile/src/features/gdp`). KPI definitions, semantics, and published values are identical across platforms. Web pixel pass complete: the shell (`gdp-shell.tsx` + `gdp-*` sub-components) is aligned to `design/.../survivor-hub/GDP.tsx` and decomposed within rule-116 limits; per the real-data-only rule it renders sectors/countries/metrics only from `/api/gdp/report/current` and omits the design's mock contribution/live-feed/trend/chat figures. Android pixel parity (`MobileGDP.tsx`) is tracked for the dedicated Android sweep.
 
 ---
 
@@ -283,6 +283,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/GDP.tsx` and decomposed the 210-line / complexity-29 monolith into modular sub-components (`gdp-shared.ts`, `gdp-loading.tsx`, `gdp-icon-rail`, `gdp-sidebar`, `gdp-dashboard` with Hero/Sectors/Countries, `gdp-map`, thin shell) within rule-116 limits. Added a real loading splash and aria-labels on the icon-only rail buttons; removed the sidebar's "By Phase" filter (a banned term absent from the design mockup). Per real-data-only, all figures derive from `/api/gdp/report/current`; the design's mock contribution/live-feed/trend/chat content stays omitted. Dropped the unused `isAdmin` prop at the call site. No schema/route/contract changes.
 - 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Promoted "Release-Blocking Privacy Evidence" subsection to its own section 7 (these are ongoing artifacts, not pre-release blockers). Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt"; removed planning-only entries.
 - 2026-02-25: Added DP-first privacy controls, authenticated-only reporting posture, command-level protection matrix, retention/deletion refinements, and privacy evidence artifacts.
 - 2026-02-24: Initial GDP CTF rewrite inventory created.
