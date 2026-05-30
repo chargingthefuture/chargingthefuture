@@ -42,7 +42,7 @@ export function ServiceCreditsShell() {
 
   async function refreshWallet() {
     const res = await fetch("/api/service-credits/wallet");
-    if (!res.ok) return;
+    if (!res.ok) throw new Error(`Failed to load wallet (${res.status}).`);
     const data = (await res.json()) as { wallet?: WalletData };
     if (data.wallet && typeof data.wallet.availableBalance === "number" && typeof data.wallet.escrowBalance === "number") {
       setWallet(data.wallet);

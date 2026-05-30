@@ -18,5 +18,9 @@ export function fmtCredits(n: number): string {
 }
 
 export function idempotencyKey(): string {
+  // Prefer a cryptographically strong UUID for this money-transfer key; fall back
+  // for non-secure contexts where crypto.randomUUID is unavailable.
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
