@@ -181,15 +181,23 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   (user, turn), re-rating updates in place. Mirrors the feed answer-rating pattern; feeds the CDD
   flywheel.
 
-Interim engine reality: **Ollama is deployed, Rasa is not.** `lib/comic/rasa.ts`
-`isRasaConfigured()` returns false until `RASA_BASE_URL` is set, so `policy.forceHumanReview()`
-routes **every** `@comic` draft to human review — nothing unreviewed is surfaced to the asker.
+Engine reality: **Ollama is deployed; the Rasa NLU service is now scaffolded** (image + Render
+pserv + CI) and **integrated** for intent/confidence. `lib/comic/rasa.ts` `isRasaConfigured()` is
+true iff `RASA_BASE_URL` is set; `parseComicIntent` POSTs to `${RASA_BASE_URL}/model/parse` with a
+timeout + try/catch, returning `{ intent, confidence }` (null on any failure). When configured,
+`routeComicMessage` attaches the **real** intent + `nlu_confidence` to the user turn; when not, the
+turn keeps the prior null/null (no Rasa call — byte-for-byte unchanged). **Critically,
+`policy.forceHumanReview()` now returns `true` unconditionally** (decoupled from Rasa config), so
+**every** `@comic` answer still goes to human review — Rasa supplies labels only, never an
+auto-publish bypass. Generation still happens in the app via Ollama (`generateComicDraft`), not via
+Rasa. See `ctf/ops/rasa/` + `ctf/docs/developer/RASA.md`.
 
 ### Target (`@comic`)
 - Mention routing also to ride the Hub message path (`POST /api/hub/messages`) once that stub
   is wired; today the dedicated `POST /api/comic/message` is the server entry point.
-- Auto-reply branch (above-threshold) activates only once Rasa supplies a real, calibratable
-  confidence; until then the interim policy forces human review on all drafts.
+- Auto-reply branch (above-threshold) is **deliberately deferred** — even though Rasa now supplies
+  a real, calibratable confidence, `forceHumanReview()` stays unconditionally true until the owner
+  chooses to raise the auto-respond threshold. No confidence-based auto-publish exists yet.
 - Rasa/Ollama are reached **server-side only**; no third-party LLM egress (parity with the
   Hub's stance — and Ollama is self-hosted, so it is not third-party).
 
@@ -207,8 +215,11 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
    [hub|feed], `status` text [open|closed], `created_at`, `updated_at`). Indexed on `user_id`,
    `created_at`.
 2. `comic_turns` — one row per turn (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
-   `role` ∈ user|bot|human, `body`, `intent` null, `nlu_confidence` numeric(5,4) null, `engine`
-   ∈ rasa|ollama|template|human, `created_at`). Indexed on `conversation_id`, `created_at`.
+   `role` ∈ user|bot|human, `body`, `intent` text null, `nlu_confidence` numeric(5,4) null [0..1],
+   `engine` ∈ rasa|ollama|template|human, `created_at`). Indexed on `conversation_id`, `created_at`.
+   **`intent` + `nlu_confidence` on the user turn are Rasa-sourced when `RASA_BASE_URL` is set**
+   (`routeComicMessage` → `parseComicIntent` → `/model/parse`); they remain null when Rasa is
+   unconfigured or the parse fails (graceful degradation). Bot/draft turns keep null intent/confidence.
 3. `comic_review_queue` — supervision state (`id` uuid pk, `turn_id` uuid FK→comic_turns
    ON DELETE CASCADE, `status` ∈ pending|approved|corrected|rejected, `reviewer_user_id` null,
    `corrected_body` null, `answer_turn_id` uuid null FK→comic_turns ON DELETE SET NULL,
@@ -230,7 +241,9 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
    is FK'd into `feed_answers` and cannot host comic turns, so comic gets its own ratings table.
 
 **Rasa tracker store:** Rasa's own SQL event store, provisioned in the same Neon Postgres
-(managed by Rasa, not hand-authored here). Deferred — Rasa is not deployed.
+(managed by Rasa, not hand-authored here). **Still deferred** — the scaffolded Rasa service is
+**NLU-only** (`/model/parse` is stateless and needs no tracker store); `endpoints.yml` leaves the
+`tracker_store` block commented. Provision it only when stateful dialogue (stories) is added.
 
 **Reused:** Note: `llm_inference_log` has NOT-NULL FKs into `feed_questions`/`feed_answers`, so
 comic generation is **not** forced into that feed-shaped table; comic captures request/response on
@@ -266,8 +279,16 @@ Target: `web+android` parity.
   (`/api/comic/message`, `/api/comic/review`, `/api/comic/review/[turnId]/resolve`,
   `/api/comic/training/export`), contracts, and a deterministic seed are landed. `@comic`
   mention routing, conversation/turn capture, Ollama drafting, the human-in-the-loop review
-  queue, correction→training, and Rasa NLU export are implemented. Interim policy forces human
-  review on every draft (Rasa undeployed).
+  queue, correction→training, and Rasa NLU export are implemented.
+- **Rasa NLU service: scaffolded + integrated (not yet trained/deployed in prod).** The
+  `ctf-rasa` private Render pserv (`ctf/ops/rasa/`: `config.yml` DIET+FallbackClassifier pipeline,
+  `domain.yml` with the 5 intents, seed `data/nlu.yml`, `credentials.yml`, deferred `endpoints.yml`,
+  `Dockerfile` that trains at build time) + the `build-images.yml` `ctf-rasa` image build +
+  `render.yaml` pserv block. The backend `lib/comic/rasa.ts` now implements `parseComicIntent`
+  (`POST /model/parse`, timeout + try/catch, nulls on failure); `routeComicMessage` stores the real
+  intent + `nlu_confidence` on the user turn when `RASA_BASE_URL` is set. **Policy is unchanged:
+  `forceHumanReview()` returns true unconditionally — every answer is still human-reviewed.** A real
+  `rasa train nlu`/deploy validation is required before enabling in prod (see RASA.md).
 - **Web UI: complete** (design `9a4a1af`, locked/owner-approved). Two surfaces delivered:
   - **Asker surface** in the unified community/home chat (`components/community-shell/`): AI
     Assistant answer cards (cyan #0EA5E9, Sparkles, "AI Assistant" label, 🤖 AI Q&A badge, Q/A)
@@ -286,13 +307,16 @@ Target: `web+android` parity.
     clear / "All caught up"), loading, and detail with editable corrected-text and Approve /
     Edit&approve / Reject actions; each item shows question, AI draft, provenance (engine/intent/
     safety category — real fields, no fabricated source documents), and confidence (the real
-    `nlu_confidence`, surfaced as "Not yet scored" while Rasa is undeployed). Wired to
-    `GET /api/comic/review` and `POST /api/comic/review/[turnId]/resolve`.
+    `nlu_confidence`, now Rasa-populated on the user turn when `RASA_BASE_URL` is set, otherwise
+    surfaced as "Not yet scored"). Wired to `GET /api/comic/review` and
+    `POST /api/comic/review/[turnId]/resolve`.
 - **Android: deferred — parity ticket.** The mobile `@comic` surfaces (Mobile*/MobileAIConsent
   designs) are not built in this pass; tracked for parity (`plugin-parity-contracts.json` entry +
   the feature dir land together when the mobile feature is built). Blocked behind a running Rasa for
   the auto-reply branch.
-- **Still deferred:** standing up the Rasa service + tracker store; replacing the home-chat
+- **Still deferred:** a real `rasa train nlu`/deploy validation + setting `RASA_BASE_URL` in prod;
+  the Rasa custom action that calls Ollama for generation; the SQL tracker store; raising the
+  auto-respond threshold / any confidence-based auto-publish; replacing the home-chat
   `getActionForText` router with Rasa-backed routing; the layered content filter / threshold
   tuning; RAG grounding.
 
@@ -373,6 +397,31 @@ here (web only).
 
 ## Change Log
 
+- 2026-05-31: **Stood up the self-hosted Rasa NLU service + wired the backend** on
+  `feat/rasa-assistant-service` (infra + a SAFE, label-only backend integration; no UI). Added the
+  Rasa 3.x **NLU-only** project under `ctf/ops/rasa/` (`config.yml` WhitespaceTokenizer →
+  featurizers → DIETClassifier → FallbackClassifier; `domain.yml` with the 5 comic intents +
+  minimal responses; seed `data/nlu.yml`; `credentials.yml` REST channel; `endpoints.yml` with the
+  action server + SQL tracker store left commented/deferred) and a `Dockerfile`
+  (`rasa/rasa:3.6.21`, trains the model at build time via `rasa train nlu`, serves
+  `run --enable-api` on 5005). Added the `ctf-rasa` private `pserv` to `render.yaml` (reached at
+  `http://ctf-rasa:5005`; `RASA_BASE_URL` injected on `ctf-web` via Infisical, same pattern as
+  `OLLAMA_BASE_URL`), the path-filtered `ctf-rasa` image build in `build-images.yml`, and the
+  `ctf/docs/developer/RASA.md` deploy runbook. **Backend (SAFE):** implemented `lib/comic/rasa.ts`
+  (`isRasaConfigured()` true iff `RASA_BASE_URL` set; `parseComicIntent(text)` POSTs to
+  `/model/parse` with a timeout + try/catch, returning `{ intent, confidence }` — null on any
+  failure, mirroring `lib/chatbot/ollama.ts`); `routeComicMessage` now stores the **real** intent +
+  `nlu_confidence` on the user turn when Rasa is configured (and the prior null/null, with **no**
+  Rasa call, when it is not — byte-for-byte unchanged). **Safety posture unchanged:**
+  `policy.forceHumanReview()` now returns `true` **unconditionally** (previously
+  `!isRasaConfigured()`, which would have stopped review the moment Rasa was configured) — **every**
+  answer still goes to human review; Rasa supplies labels only, never an auto-publish bypass.
+  Generation still happens in the app via Ollama (`generateComicDraft`), not via Rasa. **Deferred
+  (documented as next steps, not built):** the Rasa custom action → Ollama for generation; the SQL
+  tracker store; raising the auto-respond threshold / any confidence-based auto-publish. Web build +
+  typecheck pass; schema-drift + no-ai-prompts gates pass. A real `rasa train nlu`/deploy validation
+  is required before flipping `RASA_BASE_URL` on in prod (per RASA.md). Backend/infra only — no UI
+  (no design gate). Parity: web+android complete (backend/infra).
 - 2026-05-31: Built the **web UI** on `feat/comic-ai-assistant` against the LOCKED design `9a4a1af`
   (pointer bumped per rule 128). **Asker surface** in the community/home chat
   (`components/community-shell/`: `shell-chat-panel.tsx`, `use-home-chat.ts`, `comic-cards.tsx`,
@@ -443,10 +492,16 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
       `@comic` mention chip + helper, rating row, first-use consent modal. Done 2026-05-31 against
       design `9a4a1af`. Added asker read (`GET /api/comic/conversation`) and answer rating
       (`POST /api/comic/answers/[turnId]/rate` + `comic_answer_ratings`).
-- [ ] Stand up self-hosted Rasa; tracker store on Neon; custom action → Ollama; consume the
+- [~] Stand up self-hosted Rasa; tracker store on Neon; custom action → Ollama; consume the
       (fixed) NLU export.
-  - Blocked by: schema. Parallel to routing/console. Acceptance: Rasa returns intent + real
-    confidence; custom action calls Ollama with graceful fallback; export double-loop fixed.
+  - **NLU service scaffolded + integrated (2026-05-31):** `ctf/ops/rasa/` Rasa 3.x NLU project
+    (DIET + FallbackClassifier), `Dockerfile` (trains at build time), `render.yaml` `ctf-rasa`
+    pserv, `build-images.yml` `ctf-rasa` build (path-filtered), `RASA.md` runbook; `lib/comic/rasa.ts`
+    `parseComicIntent` (`/model/parse`) wired into `routeComicMessage` to populate the user turn's
+    intent + `nlu_confidence` when `RASA_BASE_URL` is set (graceful no-op otherwise). A real
+    `rasa train nlu`/deploy validation + prod `RASA_BASE_URL` is still required before enabling.
+  - **Still deferred:** the SQL tracker store; the custom action → Ollama for generation (generation
+    stays in the app); consuming the (still-double-looping) feed NLU export.
 - [ ] Replace home-chat `getActionForText` with Rasa-backed routing.
   - Blocked by: running Rasa. Acceptance: keyword map retired; routing comes from Rasa.
 - [ ] Export corrected turns → Rasa training; retrain loop; raise the auto-respond threshold

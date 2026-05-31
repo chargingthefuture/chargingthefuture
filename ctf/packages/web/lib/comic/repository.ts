@@ -22,6 +22,7 @@ import {
   passesComicModeration,
   stripComicMention,
 } from './policy';
+import { isRasaConfigured, parseComicIntent } from './rasa';
 import type {
   ComicAnswerRatingValue,
   ComicAskerStreamItem,
@@ -326,20 +327,32 @@ export async function routeComicMessage(
   const channel = normalizeChannel(input.channel);
   const safety = evaluateComicSafety(questionBody);
 
-  return withDbTransaction(async (client) => {
-    const allowed = await evaluateComicRateLimit(client, actorId);
-    if (!allowed) {
-      throw new Error('rate_limit_exceeded');
-    }
+  // Gate on the rate limit FIRST (its own short, read-only transaction) so a throttled user never
+  // triggers a (slow) Rasa call. The check is just a COUNT of recent turns, so running it separately
+  // from the insert below is safe — the tiny concurrency window is acceptable for a soft throttle.
+  const allowed = await withDbTransaction((client) => evaluateComicRateLimit(client, actorId));
+  if (!allowed) {
+    throw new Error('rate_limit_exceeded');
+  }
 
+  // Real NLU label for the user turn when Rasa is configured — only reached for allowed messages;
+  // otherwise the unchanged null/null default (no Rasa call). `parseComicIntent` never throws and
+  // returns nulls on any failure, so a Rasa outage degrades gracefully. This is label-only: it does
+  // NOT affect human-review routing (every answer is still reviewed) — it improves the reviewer's
+  // display and training data.
+  const nlu = isRasaConfigured()
+    ? await parseComicIntent(questionBody)
+    : { intent: null, confidence: null };
+
+  return withDbTransaction(async (client) => {
     const conversationId = await resolveConversation(client, actorId, channel, input.conversationId ?? null);
 
     const userTurnId = await insertTurn(client, {
       conversationId,
       role: 'user',
       body: questionBody,
-      intent: null,
-      nluConfidence: null,
+      intent: nlu.intent,
+      nluConfidence: nlu.confidence,
       engine: 'human',
     });
 
@@ -357,8 +370,9 @@ export async function routeComicMessage(
       };
     }
 
-    // Not safety-flagged: draft via Ollama, capture as a bot turn, enqueue for review. While
-    // Rasa is undeployed `forceHumanReview()` is always true, so nothing is auto-published.
+    // Not safety-flagged: draft via Ollama, capture as a bot turn, enqueue for review.
+    // `forceHumanReview()` is unconditionally true (no confidence-based auto-publish), so nothing
+    // is ever auto-published — Rasa only supplied the user turn's intent/confidence label above.
     const draft = await generateComicDraft(questionBody);
     const draftTurnId = await insertTurn(client, {
       conversationId,

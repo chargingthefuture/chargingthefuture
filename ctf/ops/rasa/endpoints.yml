@@ -1,0 +1,28 @@
+# Rasa endpoints for the CTF "AI Assistant" (@comic).
+#
+# Intentionally minimal. The only thing the comic backend uses today is the stateless NLU
+# `POST /model/parse` endpoint, which needs NO action server and NO tracker store. The blocks below
+# are DEFERRED and left commented as a record of the planned next steps (see
+# ctf/docs/developer/RASA.md → "Deferred next steps"):
+#
+#   1. action_endpoint — required only once a Rasa custom action calls Ollama for free-form answer
+#      generation. Until then, generation stays in the app (lib/comic/repository.ts →
+#      generateComicDraft) and no action server runs.
+#
+#   2. tracker_store — Rasa's SQL conversation event store, provisioned in the same Neon Postgres.
+#      Required only for stateful dialogue (multi-turn stories). NLU /model/parse is stateless, so
+#      no tracker store is needed yet. When enabled, inject the connection settings via Infisical →
+#      Render Sync (never commit credentials — this is a public repo).
+#
+# DEFERRED — do not uncomment until the corresponding feature is built:
+#
+# action_endpoint:
+#   url: "http://ctf-rasa-actions:5055/webhook"
+#
+# tracker_store:
+#   type: SQL
+#   dialect: "postgresql"
+#   url: ${RASA_TRACKER_DB_HOST}
+#   db: ${RASA_TRACKER_DB_NAME}
+#   username: ${RASA_TRACKER_DB_USER}
+#   password: ${RASA_TRACKER_DB_PASSWORD}
