@@ -99,7 +99,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 ### Sidebar — Bots
 
 1. The hub manages system bots that appear in the DM list and respond on Hub channels and Hub DMs.
-2. `@comic` bot: hub-owned bot. Persona: lightweight assistive bot that introduces survivor stories and onboarding nudges, and routes users to plugins. Appears in DMs and is addressable from channels.
+2. `@comic` bot: hub-owned bot. Persona: lightweight assistive bot that introduces survivor stories and onboarding nudges, and routes users to plugins. Appears in DMs and is addressable from channels. Its conversational Q&A behavior (Rasa + Ollama, human-in-the-loop supervision) is specified in `ctf-comic-feature-inventory.md`, the source of truth for the AI assistant.
 3. Bots are first-class Hub entities with a canonical profile (slug, display name, avatar, persona copy), routing rules in `hub_bot_routes`, and deterministic seed coverage.
 4. Bot messages render with the bot's avatar and are visually distinguishable from human Hub-team responses.
 
