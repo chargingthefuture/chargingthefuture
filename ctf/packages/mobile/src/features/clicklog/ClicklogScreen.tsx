@@ -141,13 +141,15 @@ function ClicklogPublic() {
 
         <View style={styles.featureCards}>
           {features.map(({ label }) => (
-            <View key={label} style={styles.featureCard}>
-              {/* Emojis from mockup are decorative; rendered as text */}
-              <Text style={styles.featureCardEmoji}>
-                {label === 'One tap' ? '👆' : label === 'Private' ? '🔒' : '📍'}
-              </Text>
-              <Text style={styles.featureCardLabel}>{label}</Text>
-            </View>
+            <React.Fragment key={label}>
+              <View style={styles.featureCard}>
+                {/* Emojis from mockup are decorative; rendered as text */}
+                <Text style={styles.featureCardEmoji}>
+                  {label === 'One tap' ? '👆' : label === 'Private' ? '🔒' : '📍'}
+                </Text>
+                <Text style={styles.featureCardLabel}>{label}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
       </View>
@@ -155,10 +157,12 @@ function ClicklogPublic() {
       {/* Bottom nav — locked / non-interactive per public mockup */}
       <View style={styles.bottomNav}>
         {(['warning-outline', 'time-outline', 'document-text-outline'] as const).map((icon, i) => (
-          <View key={icon} style={[styles.navItem, styles.navItemLocked]}>
-            <Ionicons name={icon} size={20} color={SUBTLE} />
-            <Text style={styles.navLabelLocked}>{['Log', 'History', 'Export'][i]}</Text>
-          </View>
+          <React.Fragment key={icon}>
+            <View style={[styles.navItem, styles.navItemLocked]}>
+              <Ionicons name={icon} size={20} color={SUBTLE} />
+              <Text style={styles.navLabelLocked}>{['Log', 'History', 'Export'][i]}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
     </View>
@@ -202,12 +206,14 @@ function ClicklogEmpty({ onLog }: { onLog: () => void }) {
 
         <View style={styles.featureCards}>
           {features.map(({ label }) => (
-            <View key={label} style={styles.featureCard}>
-              <Text style={styles.featureCardEmoji}>
-                {label === 'One tap' ? '👆' : label === 'Private' ? '🔒' : '📍'}
-              </Text>
-              <Text style={styles.featureCardLabel}>{label}</Text>
-            </View>
+            <React.Fragment key={label}>
+              <View style={styles.featureCard}>
+                <Text style={styles.featureCardEmoji}>
+                  {label === 'One tap' ? '👆' : label === 'Private' ? '🔒' : '📍'}
+                </Text>
+                <Text style={styles.featureCardLabel}>{label}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
 
@@ -225,10 +231,12 @@ function ClicklogEmpty({ onLog }: { onLog: () => void }) {
           { icon: 'time-outline' as const, label: 'History', active: false },
           { icon: 'document-text-outline' as const, label: 'Export', active: false },
         ].map(({ icon, label, active }) => (
-          <View key={label} style={styles.navItem}>
-            <Ionicons name={icon} size={20} color={active ? BRAND : SUBTLE} />
-            <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
-          </View>
+          <React.Fragment key={label}>
+            <View style={styles.navItem}>
+              <Ionicons name={icon} size={20} color={active ? BRAND : SUBTLE} />
+              <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
     </View>
@@ -241,12 +249,11 @@ function ClicklogMain({
   totalCount,
   onLog,
   onDelete,
-  refreshing,
 }: {
   incidents: ClicklogIncident[];
   totalCount: number;
-  onLog: (notes: string, includeLocation: boolean) => Promise<void>;
-  onDelete: (id: string) => void;
+  onLog: (_notes: string, _includeLocation: boolean) => Promise<void>;
+  onDelete: (_id: string) => void;
   refreshing: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>('log');
@@ -401,31 +408,33 @@ function ClicklogMain({
               <Text style={styles.emptyHistory}>No incidents yet.</Text>
             ) : (
               incidents.map((incident) => (
-                <View key={incident.id} style={styles.incidentRow}>
-                  <View style={styles.incidentIconWrap}>
-                    <Ionicons name="warning-outline" size={13} color={BRAND} />
+                <React.Fragment key={incident.id}>
+                  <View style={styles.incidentRow}>
+                    <View style={styles.incidentIconWrap}>
+                      <Ionicons name="warning-outline" size={13} color={BRAND} />
+                    </View>
+                    <View style={styles.incidentBody}>
+                      <Text style={styles.incidentTime}>{formatIncidentTime(incident.created_at)}</Text>
+                      {!!incident.metadata?.notes && (
+                        <Text style={styles.incidentNotes}>{incident.metadata.notes}</Text>
+                      )}
+                      {!!(incident.metadata?.latitude && incident.metadata?.longitude) && (
+                        <View style={styles.incidentLocation}>
+                          <Ionicons name="location-outline" size={9} color={SUBTLE} />
+                          <Text style={styles.incidentLocationText}>Location</Text>
+                        </View>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => onDelete(incident.id)}
+                      style={styles.deleteBtn}
+                      accessibilityLabel="Delete incident"
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="trash-outline" size={13} color={SUBTLE} />
+                    </TouchableOpacity>
                   </View>
-                  <View style={styles.incidentBody}>
-                    <Text style={styles.incidentTime}>{formatIncidentTime(incident.created_at)}</Text>
-                    {!!incident.metadata?.notes && (
-                      <Text style={styles.incidentNotes}>{incident.metadata.notes}</Text>
-                    )}
-                    {!!(incident.metadata?.latitude && incident.metadata?.longitude) && (
-                      <View style={styles.incidentLocation}>
-                        <Ionicons name="location-outline" size={9} color={SUBTLE} />
-                        <Text style={styles.incidentLocationText}>Location</Text>
-                      </View>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => onDelete(incident.id)}
-                    style={styles.deleteBtn}
-                    accessibilityLabel="Delete incident"
-                    accessibilityRole="button"
-                  >
-                    <Ionicons name="trash-outline" size={13} color={SUBTLE} />
-                  </TouchableOpacity>
-                </View>
+                </React.Fragment>
               ))
             )}
           </View>
