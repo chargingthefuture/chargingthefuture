@@ -881,22 +881,11 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS incentive_granted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE TABLE IF NOT EXISTS unlock_audit_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  action TEXT NOT NULL,
-  details JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS unlock_runtime_config (
-  singleton_id INTEGER PRIMARY KEY DEFAULT 1,
-  submission_window_hours INTEGER NOT NULL DEFAULT 168,
-  reminder_schedule_hours INTEGER[] NOT NULL DEFAULT ARRAY[0,24,72,168],
-  incentive_amount TEXT NOT NULL DEFAULT '100',
-  support_only_after_expiry BOOLEAN NOT NULL DEFAULT TRUE
-);
+-- Duplicate CREATE TABLE blocks for unlock_audit_log and unlock_runtime_config
+-- were removed here; the canonical definitions are above (unlock_audit_log
+-- keeps its richer column set). The ALTER ... ADD COLUMN reconciliation for
+-- unlock_runtime_config (for databases created before some columns existed)
+-- follows.
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS singleton_id INTEGER DEFAULT 1;
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS submission_window_hours INTEGER NOT NULL DEFAULT 168;
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS reminder_schedule_hours INTEGER[] NOT NULL DEFAULT ARRAY[0,24,72,168];
