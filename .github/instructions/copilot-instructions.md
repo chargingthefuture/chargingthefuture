@@ -35,6 +35,25 @@ A task with no dependency can be done at any time or in parallel; say so plainly
 can run anytime"). Reserve the word "phase" only for fixed product-maturity terms already in the
 rules (e.g. "MVP", "post-MVP hardening") — never as a unit of work breakdown.
 
+## Plain Language — No Jargon (Critical — all agents)
+
+Write in plain, everyday language. **Do not use jargon, acronyms, or insider terminology** in
+human-facing output — chat replies, PR titles and descriptions, review comments, commit messages,
+issue comments, and documentation. Jargon is a distraction and is confusing; it slows the reader down
+and hides meaning.
+
+- **Default to simple words.** Prefer the plain term over the technical or marketing one (e.g. "test
+  it before you rely on it" over "validate end-to-end"; "make sure" over "ensure idempotency"; "the
+  background service" over "the daemon/pserv"). Write so a non-specialist can follow.
+- **If a technical term is genuinely necessary, define it in plain words on first use** — one short
+  parenthetical is enough (e.g. "Rasa (the tool that works out what a question is asking)"). Don't
+  assume the reader knows acronyms; spell them out the first time.
+- **Explain, don't just name.** Say what something does and why it matters, not only its label.
+- **Exempt:** real code identifiers, file paths, command names, and established proper nouns (service
+  names, library names) — name those accurately; just don't pile extra jargon around them.
+- Applies to **every agent** and all human-facing communication. When in doubt, choose the wording a
+  newcomer would understand.
+
 # Product Rules Index
 
 ## Scope
