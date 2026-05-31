@@ -118,7 +118,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| service-credits | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
