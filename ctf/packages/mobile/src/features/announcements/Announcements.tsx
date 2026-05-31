@@ -12,7 +12,6 @@ import type { AnnouncementItem } from './api';
 
 const COLOR = '#84CC16';
 const BG = '#0F1117';
-const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
@@ -37,7 +36,7 @@ function AnnouncementCard({
   onRead,
 }: {
   item: AnnouncementItem;
-  onRead: (id: string) => void;
+  onRead: (_id: string) => void;
 }) {
   const urgent = isUrgent(item);
   const accent = '#A78BFA';

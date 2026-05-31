@@ -12,7 +12,6 @@ import type { CommunityItem } from './api';
 
 const COLOR = '#22C55E';
 const BG = '#0F1117';
-const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
@@ -42,7 +41,7 @@ function CommunityCard({
   onRead,
 }: {
   item: CommunityItem;
-  onRead: (id: string) => void;
+  onRead: (_id: string) => void;
 }) {
   const category = item.community?.category ?? 'general';
   const replyCount = item.community?.replyCount ?? 0;
@@ -77,9 +76,11 @@ function CommunityCard({
             {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
           </Text>
           {replies.slice(0, 2).map((reply) => (
-            <Text key={reply.id} style={styles.replyText} numberOfLines={2}>
-              {reply.body}
-            </Text>
+            <React.Fragment key={reply.id}>
+              <Text style={styles.replyText} numberOfLines={2}>
+                {reply.body}
+              </Text>
+            </React.Fragment>
           ))}
           {replyCount > 2 && (
             <Text style={styles.moreReplies}>+{replyCount - 2} more</Text>

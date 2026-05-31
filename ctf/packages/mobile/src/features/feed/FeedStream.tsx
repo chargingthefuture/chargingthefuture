@@ -90,7 +90,7 @@ function FeedCard({
   onRead,
 }: {
   item: FeedTimelineItem;
-  onRead: (id: string) => void;
+  onRead: (_id: string) => void;
 }) {
   const accent = itemAccentColor(item);
   const urgent = isUrgent(item);
