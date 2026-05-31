@@ -93,10 +93,10 @@ Parity status: **web+android complete**.
 
 Deterministic Foundation seed script: `ctf/scripts/seedFoundation.mjs`.
 
-Seeded content:
-- Sample survivors and providers with deterministic states.
-- Sample connection threads and messages.
-- Sample quote requests in various lifecycle states.
+Seeded content (deterministic):
+- A provider Directory profile (fixed UUID).
+- One survivor-provider connection thread (keyed by `thread_key`).
+- One notification event.
 
 ## Gaps and Known Technical Debt
 
@@ -285,4 +285,4 @@ Seeded content:
 
 - 2026-02-24: Created initial Foundation rewrite checklist with full-v1 gates for search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting/scalability, trauma-informed accessibility, and web-first to Android parity follow-up tracking.
 - 2026-05-31: Documented the transaction-scoped messaging lifecycle per platform rule 100 ("Messaging Scope and Lifecycle"): the 1:1 text/voice/video channel is bound to an active connection/quote and closes on terminal state (read-only window + records retained for moderation/abuse evidence); no 1:1 messaging outside an active connection/quote. Aligning the deletion contract to mirror this retention is a tracked follow-up.
-- 2026-05-31: Backend reconciliation (🟡→✅). Fixed a runtime bug — added the `notification_preferences`/`accessibility_runtime_prefs`/`trauma_informed_defaults` JSONB columns to `foundation_user_extension` that `upsertNotificationPreferences` writes (the `PUT /api/foundation/notifications/preferences` path would otherwise fail). Fixed the broken seed: removed the phantom `foundation_service_credits_transactions` INSERT (table never existed; Foundation owns no credits ledger) and corrected the connection-thread fixture to set the required `thread_key` (`NOT NULL UNIQUE`, matching the repository's sorted `survivor:provider` key) with `ON CONFLICT (thread_key)` — it previously omitted `thread_key` and conflicted on a non-existent unique pair index, so it could never run. Reconciled the data model: dropped the non-existent `foundation_notification_preferences` (prefs are JSONB on `foundation_user_extension`) and `foundation_quota_threshold_states` (derived at evaluation time) entries; flagged the duplicated idempotent `ALTER` lines in `foundation_connection_threads` as schema-hygiene debt.
+- 2026-05-31: Backend reconciliation (🟡→✅). Fixed a runtime bug — added the `notification_preferences`/`accessibility_runtime_prefs`/`trauma_informed_defaults` JSONB columns to `foundation_user_extension` that `upsertNotificationPreferences` writes (the `PUT /api/foundation/notifications/preferences` path would otherwise fail). Fixed the broken seed: removed the phantom `foundation_service_credits_transactions` INSERT (table never existed; Foundation owns no credits ledger) and corrected the connection-thread fixture to set the required `thread_key` (`NOT NULL UNIQUE`, matching the repository's sorted `survivor:provider` key) with `ON CONFLICT (thread_key)` — it previously omitted `thread_key` and conflicted on a non-existent unique pair index, so it could never run. Reconciled the data model: dropped the non-existent `foundation_notification_preferences` (prefs are JSONB on `foundation_user_extension`) and `foundation_quota_threshold_states` (derived at evaluation time) entries so the data model matches the implemented schema.
