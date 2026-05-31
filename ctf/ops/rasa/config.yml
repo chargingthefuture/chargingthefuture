@@ -1,0 +1,42 @@
+# Rasa 3.x NLU pipeline for the CTF "AI Assistant" (@comic).
+#
+# This is an NLU-only project: it classifies an inbound @comic question into one of the
+# comic intent categories (housing / services / general / safety / benefits) and returns a
+# calibratable confidence. The /model/parse endpoint is stateless — no dialogue policies are
+# needed yet, so the `policies:` block is intentionally omitted (dialogue management,
+# rules/stories, and the Ollama custom action are deferred; see ctf/docs/developer/RASA.md).
+#
+# recipe + assistant_id are required by Rasa 3.x. assistant_id is a stable identifier for the
+# trained model; bump it if you fork the project.
+recipe: default.v1
+assistant_id: ctf-comic-nlu
+
+# `language` controls the spaCy/whitespace tokenizer + featurizer language. English for now.
+language: en
+
+pipeline:
+  # Tokenize on whitespace. Swap to SpacyTokenizer + SpacyFeaturizer later if richer linguistic
+  # features are needed; WhitespaceTokenizer keeps the image small and the build fast.
+  - name: WhitespaceTokenizer
+  # Bag-of-words style featurizers feeding the intent classifier.
+  - name: RegexFeaturizer
+  - name: LexicalSyntacticFeaturizer
+  - name: CountVectorsFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 1
+    max_ngram: 4
+  # DIET is Rasa's transformer-based intent classifier. 100 epochs is a reasonable starter for a
+  # small seed set; raise as the corrected-turn export grows the training data.
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+  # EntitySynonymMapper normalizes any synonym-annotated entities (none seeded yet, harmless).
+  - name: EntitySynonymMapper
+  # FallbackClassifier converts low-confidence predictions into the special `nlu_fallback` intent.
+  # The backend does NOT auto-publish on confidence today (every answer goes to human review), so
+  # this threshold only affects how an uncertain turn is *labeled* for the reviewer. The threshold
+  # is a starting point and will be calibrated once the correction flywheel accumulates data.
+  - name: FallbackClassifier
+    threshold: 0.5
+    ambiguity_threshold: 0.1

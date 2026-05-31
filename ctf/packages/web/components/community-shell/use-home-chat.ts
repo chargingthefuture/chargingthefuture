@@ -1,12 +1,32 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HubJoinResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
-import type { ChatMessage, ShellCurrentUser } from './shell-types';
+import type { ChatMessage, ComicAnswerRating, ComicStreamItem, ShellCurrentUser } from './shell-types';
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
 
 type MessageAction = Pick<ChatMessage, 'actionLabel' | 'actionSlug'>;
+
+// localStorage key for the one-time AI-processing consent (the llm_consent_granted gate the
+// backend expects). Scoped per user so a shared browser does not leak consent between accounts.
+const COMIC_CONSENT_STORAGE_PREFIX = 'ctf.comic.consentGranted';
+
+// A message routes to the AI Assistant only when it mentions `@comic` (word-boundary, case
+// insensitive — must match the server-side COMIC_MENTION_REGEX). No mention → peer-to-peer post.
+const COMIC_MENTION_REGEX = /(^|\s)@comic\b/i;
+
+function mentionsComic(text: string): boolean {
+  return COMIC_MENTION_REGEX.test(text);
+}
+
+function stripComicMention(text: string): string {
+  return text.replace(COMIC_MENTION_REGEX, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function consentStorageKey(userId: string): string {
+  return `${COMIC_CONSENT_STORAGE_PREFIX}.${userId}`;
+}
 
 function formatTimeLabel(value: string | Date | null | undefined): string {
   if (!value) return 'Now';
@@ -65,13 +85,16 @@ function buildChatMessage(
 
 function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessage {
   const from = message.userId === currentUserId ? 'user' : 'hub';
-  return buildChatMessage(
-    message.id,
-    from,
-    message.text,
-    formatTimeLabel(message.sentAtIso),
-    message.displayName,
-  );
+  return {
+    ...buildChatMessage(
+      message.id,
+      from,
+      message.text,
+      formatTimeLabel(message.sentAtIso),
+      message.displayName,
+    ),
+    sentAtIso: message.sentAtIso,
+  };
 }
 
 function getMessageDedupKey(message: ChatMessage): string {
@@ -95,6 +118,41 @@ function mergeMessages(existing: ChatMessage[], next: ChatMessage[]): ChatMessag
   return merged;
 }
 
+function normalizeQuestion(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+// Merge the server comic stream over the local one. Optimistic placeholders are dropped only as the
+// server catches up, COUNT-aware per normalized question text: if the asker sent the same question
+// twice (two optimistic cards) and the server now reports one, exactly one optimistic card is
+// retained. A plain text-membership check dropped all duplicates as soon as the first landed.
+function mergeComicItems(serverItems: ComicStreamItem[], optimistic: ComicStreamItem[]): ComicStreamItem[] {
+  const serverCounts = new Map<string, number>();
+  for (const item of serverItems) {
+    const key = normalizeQuestion(item.question);
+    serverCounts.set(key, (serverCounts.get(key) ?? 0) + 1);
+  }
+
+  // Newest optimistic cards retire first against each matching server item; the remainder survive.
+  const remainingToRetire = new Map(serverCounts);
+  const survivingOptimistic: ComicStreamItem[] = [];
+  for (let i = optimistic.length - 1; i >= 0; i -= 1) {
+    const item = optimistic[i];
+    if (!item.optimistic) {
+      continue;
+    }
+    const key = normalizeQuestion(item.question);
+    const retireCount = remainingToRetire.get(key) ?? 0;
+    if (retireCount > 0) {
+      remainingToRetire.set(key, retireCount - 1);
+      continue;
+    }
+    survivingOptimistic.unshift(item);
+  }
+
+  return [...serverItems, ...survivingOptimistic];
+}
+
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     cache: 'no-store',
@@ -112,17 +170,59 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+type ComicConversationResponse = {
+  ok: true;
+  items: Array<{
+    questionTurnId: string;
+    conversationId: string;
+    status: 'pending' | 'answered';
+    question: string;
+    answer: string | null;
+    answerTurnId: string | null;
+    currentUserRating: ComicAnswerRating | null;
+    askedAtIso: string;
+  }>;
+};
+
+type ComicMessageResponse = {
+  ok: true;
+  routedToAssistant: boolean;
+  status?: 'review_pending' | 'human_first';
+  conversationId?: string;
+  holdingResponse?: string;
+};
+
 export function useHomeChat(currentUser: ShellCurrentUser) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [comicItems, setComicItems] = useState<ComicStreamItem[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<ChatConnectionState>('loading');
   const [isSending, setIsSending] = useState(false);
+  const [consentGranted, setConsentGranted] = useState(false);
+  const [consentModalOpen, setConsentModalOpen] = useState(false);
+  // The question text held while the first-use consent modal is open. Confirming sends it.
+  const [pendingConsentText, setPendingConsentText] = useState<string | null>(null);
+
+  // Whether the composer currently contains an @comic mention — used to show the mention chip
+  // affordance live as the asker types.
+  const composerMentionsComic = useMemo(() => mentionsComic(input), [input]);
 
   const refreshHistory = useCallback(async () => {
     const payload = await requestJson<HubMessagesResponse>('/api/hub/messages?limit=50');
     const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
     setMessages((previous) => mergeMessages(previous, nextMessages));
+  }, [currentUser.userId]);
+
+  const refreshComic = useCallback(async () => {
+    const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30');
+    const serverItems: ComicStreamItem[] = payload.items.map((item) => ({ ...item }));
+    setComicItems((previous) => mergeComicItems(serverItems, previous));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setConsentGranted(window.localStorage.getItem(consentStorageKey(currentUser.userId)) === '1');
   }, [currentUser.userId]);
 
   useEffect(() => {
@@ -132,10 +232,11 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setConnectionState('loading');
     setError(null);
     setMessages([]);
+    setComicItems([]);
 
     async function bootstrapChat() {
       try {
-        await refreshHistory();
+        await Promise.all([refreshHistory(), refreshComic().catch(() => undefined)]);
       } catch (loadError) {
         if (active) {
           setError(loadError instanceof Error ? loadError.message : 'Unable to load live chat history.');
@@ -152,6 +253,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
           void refreshHistory().catch(() => {
             // Keep polling while the shell is mounted.
           });
+          void refreshComic().catch(() => {
+            // The comic stream poll is best-effort; failures must not break hub polling.
+          });
         }, 10000);
       } catch (joinError) {
         if (!active) return;
@@ -161,6 +265,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         pollId = window.setInterval(() => {
           void refreshHistory().catch(() => {
             // Polling keeps trying in fallback mode.
+          });
+          void refreshComic().catch(() => {
+            // Best-effort comic refresh in fallback mode.
           });
         }, 15000);
       }
@@ -174,7 +281,49 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         window.clearInterval(pollId);
       }
     };
-  }, [currentUser.displayName, currentUser.userId, refreshHistory]);
+  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic]);
+
+  // Route an @comic question to the assistant. The server returns ONLY a holding response (202) —
+  // never the unreviewed draft — so we optimistically render the pending "Reviewing for safety"
+  // card and rely on the polling stream to surface the answer once a human approves it.
+  const routeToComic = useCallback(
+    async (questionText: string) => {
+      const question = stripComicMention(questionText);
+      // Unique per ask (random suffix) so two rapid identical-text asks get distinct React keys and
+      // are tracked independently by the count-aware merge.
+      const localId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const optimisticItem: ComicStreamItem = {
+        questionTurnId: localId,
+        conversationId: 'optimistic',
+        status: 'pending',
+        question,
+        answer: null,
+        answerTurnId: null,
+        currentUserRating: null,
+        askedAtIso: new Date().toISOString(),
+        optimistic: true,
+      };
+      setComicItems((previous) => [...previous, optimisticItem]);
+
+      try {
+        await requestJson<ComicMessageResponse>('/api/comic/message', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-ctf-csrf': '1',
+          },
+          body: JSON.stringify({ body: questionText, channel: 'hub', consentGranted: true }),
+        });
+        // Pull the server stream so the pending card reflects the persisted turn.
+        await refreshComic().catch(() => undefined);
+      } catch (sendError) {
+        // Drop the optimistic card on failure and surface the error.
+        setComicItems((previous) => previous.filter((item) => item.questionTurnId !== optimisticItem.questionTurnId));
+        setError(sendError instanceof Error ? sendError.message : 'Unable to reach the AI Assistant right now.');
+      }
+    },
+    [refreshComic],
+  );
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
@@ -182,9 +331,28 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       return;
     }
 
+    // @comic mention → AI Assistant. Gate the first use behind the consent modal.
+    if (mentionsComic(text)) {
+      if (!consentGranted) {
+        setPendingConsentText(text);
+        setConsentModalOpen(true);
+        return;
+      }
+
+      setIsSending(true);
+      setError(null);
+      setInput('');
+      try {
+        await routeToComic(text);
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    // No mention → peer-to-peer community post via the existing hub path.
     setIsSending(true);
     setError(null);
-
     setInput('');
 
     try {
@@ -203,13 +371,82 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     } finally {
       setIsSending(false);
     }
-  }, [currentUser.displayName, currentUser.userId, input, isSending]);
+  }, [consentGranted, currentUser.userId, input, isSending, routeToComic]);
+
+  // Consent modal "Confirm": persist consent and send the held @comic question.
+  const confirmConsent = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(consentStorageKey(currentUser.userId), '1');
+    }
+    setConsentGranted(true);
+    setConsentModalOpen(false);
+
+    const held = pendingConsentText;
+    setPendingConsentText(null);
+    if (!held) return;
+
+    setIsSending(true);
+    setError(null);
+    setInput('');
+    try {
+      await routeToComic(held);
+    } finally {
+      setIsSending(false);
+    }
+  }, [currentUser.userId, pendingConsentText, routeToComic]);
+
+  // Consent modal "Not now": do not route; keep the question in the composer so the asker can edit
+  // or send it as a normal post.
+  const dismissConsent = useCallback(() => {
+    setConsentModalOpen(false);
+    if (pendingConsentText) {
+      setInput(pendingConsentText);
+    }
+    setPendingConsentText(null);
+  }, [pendingConsentText]);
+
+  // Rate an answered AI Assistant card. Optimistically reflects the choice; reverts on failure.
+  const rateComicAnswer = useCallback(
+    async (turnId: string, rating: ComicAnswerRating) => {
+      let previousRating: ComicAnswerRating | null = null;
+      setComicItems((previous) =>
+        previous.map((item) => {
+          if (item.answerTurnId !== turnId) return item;
+          previousRating = item.currentUserRating;
+          return { ...item, currentUserRating: rating };
+        }),
+      );
+
+      try {
+        await requestJson<{ ok: true }>(`/api/comic/answers/${turnId}/rate`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-ctf-csrf': '1',
+          },
+          body: JSON.stringify({ rating }),
+        });
+      } catch (rateError) {
+        setComicItems((previous) =>
+          previous.map((item) => (item.answerTurnId === turnId ? { ...item, currentUserRating: previousRating } : item)),
+        );
+        setError(rateError instanceof Error ? rateError.message : 'Unable to record your rating right now.');
+      }
+    },
+    [],
+  );
 
   return {
     messages,
+    comicItems,
     input,
     setInput,
     sendMessage,
+    rateComicAnswer,
+    composerMentionsComic,
+    consentModalOpen,
+    confirmConsent,
+    dismissConsent,
     isSending,
     isLoading: connectionState === 'loading',
     isLive: connectionState === 'live',
