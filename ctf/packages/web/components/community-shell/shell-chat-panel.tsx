@@ -6,7 +6,7 @@ import { AtSign } from 'lucide-react';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
-import { ComicAnswerCard, ComicPendingCard } from './comic-stream-cards';
+import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { ComicConsentModal } from './comic-consent-modal';
 import styles from './community-shell.module.css';
 
