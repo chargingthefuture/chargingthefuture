@@ -1,17 +1,23 @@
 policies:
-  - command: clicklog.incident.create
+  - pluginId: clicklog
+    command: clicklog.incident.create
+    version: 1.0.0
     requiredRoles: [user]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
     consentRequirements: []
-  - command: clicklog.incident.list
+  - pluginId: clicklog
+    command: clicklog.incident.list
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
     consentRequirements: []
-  - command: clicklog.incident.delete
+  - pluginId: clicklog
+    command: clicklog.incident.delete
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies:
       - attribute: id
