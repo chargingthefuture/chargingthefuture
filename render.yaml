@@ -123,6 +123,11 @@ services:
     # Standard (2GB/1CPU) — DIET-based NLU model load + inference needs more than
     # the starter tier; mirrors the ctf-ollama sizing.
     plan: standard
+    envVars:
+      # Pin the listen port so Render's injected PORT matches the Dockerfile's fixed `-p 5005` and
+      # ctf-web's RASA_BASE_URL (http://ctf-rasa:5005), removing any ambiguity for health checks.
+      - key: PORT
+        value: "5005"
 
   # ── Infisical (secrets management) ───────────────────────────────
   # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
