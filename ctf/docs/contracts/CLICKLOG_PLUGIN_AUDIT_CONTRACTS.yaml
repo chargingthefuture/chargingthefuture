@@ -1,21 +1,21 @@
 auditEvents:
   - pluginId: clicklog
     command: clicklog.incident.create
-    version: 1.0.0
+    commandVersion: 1.0.0
     eventId: clicklog.incident.create
     policyDecision: allow
     dataClassesAccessed: [user_event]
     targetContext: user
   - pluginId: clicklog
     command: clicklog.incident.list
-    version: 1.0.0
+    commandVersion: 1.0.0
     eventId: clicklog.incident.list
     policyDecision: allow
     dataClassesAccessed: [user_event]
     targetContext: user
   - pluginId: clicklog
     command: clicklog.incident.delete
-    version: 1.0.0
+    commandVersion: 1.0.0
     eventId: clicklog.incident.delete
     policyDecision: allow
     dataClassesAccessed: [user_event]

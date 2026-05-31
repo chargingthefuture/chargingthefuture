@@ -1,4 +1,4 @@
-audits:
+auditEvents:
   # ─── Feedback Submission Audit ──────────────────────────────────────
   - pluginId: feedback
     command: feedback.submit
