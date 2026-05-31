@@ -7,11 +7,21 @@ import type { ComicReviewResolveInput } from 'lib/comic/types';
 
 type ResolveBody = Partial<ComicReviewResolveInput>;
 
-function parseBody(body: ResolveBody): ComicReviewResolveInput {
+const RESOLUTIONS = ['approve', 'correct', 'reject'] as const;
+
+function isResolution(value: unknown): value is ComicReviewResolveInput['resolution'] {
+  return typeof value === 'string' && (RESOLUTIONS as readonly string[]).includes(value);
+}
+
+function parseBody(body: ResolveBody): ComicReviewResolveInput | null {
+  // Reject (rather than silently coerce to 'approve') any resolution outside the allowed set so a
+  // malformed/unknown value cannot accidentally publish a draft.
+  if (!isResolution(body.resolution)) {
+    return null;
+  }
+
   return {
-    resolution: body.resolution === 'approve' || body.resolution === 'correct' || body.resolution === 'reject'
-      ? body.resolution
-      : 'approve',
+    resolution: body.resolution,
     correctedBody: typeof body.correctedBody === 'string' ? body.correctedBody : null,
     reason: typeof body.reason === 'string' ? body.reason : null,
   };
@@ -43,6 +53,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   }
 
   const input = parseBody(body);
+  if (!input) {
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid review resolution payload.' },
+      { status: 400 },
+    );
+  }
 
   try {
     const result = await resolveComicReview(gate.auth.userId, reviewId, input);
@@ -91,7 +107,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
       );
     }
 
-    if (code === 'invalid_resolution' || code === 'correction_required' || code === 'correction_too_long' || code === 'reason_too_long') {
+    if (
+      code === 'invalid_resolution'
+      || code === 'correction_required'
+      || code === 'correction_too_long'
+      || code === 'reason_too_long'
+      || code === 'approve_requires_content'
+    ) {
       return NextResponse.json(
         { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid review resolution payload.' },
         { status: 400 },

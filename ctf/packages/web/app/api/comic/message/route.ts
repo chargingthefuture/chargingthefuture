@@ -7,11 +7,23 @@ import type { ComicMessageInput } from 'lib/comic/types';
 
 type MessageBody = Partial<ComicMessageInput>;
 
-function parseBody(body: MessageBody): ComicMessageInput {
+// Accepts a canonical lowercase UUID (the shape pg's `gen_random_uuid()` returns). A malformed
+// conversationId must 400 in parseBody rather than reach the DB and surface as a 503.
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function parseBody(body: MessageBody): ComicMessageInput | null {
+  let conversationId: string | null = null;
+  if (typeof body.conversationId === 'string' && body.conversationId.length > 0) {
+    if (!UUID_REGEX.test(body.conversationId)) {
+      return null;
+    }
+    conversationId = body.conversationId;
+  }
+
   return {
     body: typeof body.body === 'string' ? body.body : '',
     channel: body.channel === 'feed' ? 'feed' : 'hub',
-    conversationId: typeof body.conversationId === 'string' ? body.conversationId : null,
+    conversationId,
     consentGranted: body.consentGranted === true,
   };
 }
@@ -38,7 +50,7 @@ export async function POST(request: Request) {
   }
 
   const input = parseBody(body);
-  if (!validateComicMessageInput(input)) {
+  if (!input || !validateComicMessageInput(input)) {
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Invalid message payload.' },
       { status: 400 },

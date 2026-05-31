@@ -547,25 +547,9 @@ export async function resolveComicReview(
       throw new Error('review_already_resolved');
     }
 
-    const newStatus: ComicReviewStatus =
-      resolution === 'approve' ? 'approved' : resolution === 'correct' ? 'corrected' : 'rejected';
-
-    const updated = await client.query<{ decided_at: Date }>(
-      `
-        UPDATE comic_review_queue
-        SET status = $2,
-            reviewer_user_id = $3,
-            corrected_body = $4,
-            reason = COALESCE($5, reason),
-            decided_at = NOW()
-        WHERE id = $1::uuid
-        RETURNING decided_at
-      `,
-      [reviewId, newStatus, reviewerUserId, correctedBody, reason],
-    );
-
-    // The reviewed turn (the draft for review_pending; the user turn for human_first). Fetch its
-    // body + conversation so corrections become training data tied to the source turn.
+    // The reviewed turn (the bot draft for review_pending; the user turn for human_first). Fetch
+    // its role/body/conversation up front so we can branch correctly and so corrections become
+    // training data tied to the source turn.
     const turnResult = await client.query<TurnRow>(
       `
         SELECT id, conversation_id, role, body, intent, nlu_confidence::text, engine, created_at
@@ -576,6 +560,17 @@ export async function resolveComicReview(
       [review.turn_id],
     );
     const turn = turnResult.rows[0];
+
+    // A queued turn is publishable as-is only if it is an existing bot/human answer (review_pending
+    // draft). A human-first queued turn is the asker's own `user` turn — there is no draft to
+    // publish, so approval REQUIRES reviewer-authored content (correctedBody) to surface an answer.
+    const queuedTurnIsAnswer = turn.role === 'bot' || turn.role === 'human';
+    if (resolution === 'approve' && !queuedTurnIsAnswer && !correctedBody) {
+      throw new Error('approve_requires_content');
+    }
+
+    const newStatus: ComicReviewStatus =
+      resolution === 'approve' ? 'approved' : resolution === 'correct' ? 'corrected' : 'rejected';
 
     // The asker's question for this turn (the most recent preceding user turn).
     const questionResult = await client.query<{ body: string }>(
@@ -592,15 +587,22 @@ export async function resolveComicReview(
     );
     const questionBody = questionResult.rows[0]?.body ?? turn.body;
 
+    const safetyCategory = extractSafetyCategory(review.reason);
+    const intentLabel = deriveIntentLabel(safetyCategory);
+
     let trainingExampleId: string | null = null;
+    // The turn that becomes the asker's visible, rateable answer. Linked on the review row so the
+    // asker stream and rating both resolve to the exact published text:
+    //   - correct → a new `human` turn with the corrected body;
+    //   - approve of a bot draft → the queued draft turn itself;
+    //   - approve of a human-first turn → a new `human` turn with the reviewer's content;
+    //   - reject → none.
+    let answerTurnId: string | null = null;
 
-    // A correction is a supervised training signal: persist the asker's question text under a
-    // coarse intent label so the export feeds Rasa NLU. (Approvals/rejections are not training
-    // examples — only owner-authored corrections are.)
     if (resolution === 'correct' && correctedBody) {
-      const safetyCategory = extractSafetyCategory(review.reason);
-      const intentLabel = deriveIntentLabel(safetyCategory);
-
+      // A correction is a supervised training signal: persist the asker's question text under a
+      // coarse intent label so the export feeds Rasa NLU. (Approvals/rejections are not training
+      // examples — only owner-authored corrections are.)
       const trainingInsert = await client.query<{ id: string }>(
         `
           INSERT INTO comic_training_examples (source_turn_id, intent_label, text, status)
@@ -613,7 +615,7 @@ export async function resolveComicReview(
 
       // Record the corrected answer as a human turn so the conversation reflects the approved
       // text and future exports can pair question → corrected answer.
-      await insertTurn(client, {
+      answerTurnId = await insertTurn(client, {
         conversationId: turn.conversation_id,
         role: 'human',
         body: correctedBody,
@@ -621,7 +623,37 @@ export async function resolveComicReview(
         nluConfidence: null,
         engine: 'human',
       });
+    } else if (resolution === 'approve') {
+      if (queuedTurnIsAnswer) {
+        // Approving an existing bot/human draft publishes that turn as-is.
+        answerTurnId = review.turn_id;
+      } else if (correctedBody) {
+        // Approving a human-first turn publishes the reviewer's authored content as a human turn.
+        answerTurnId = await insertTurn(client, {
+          conversationId: turn.conversation_id,
+          role: 'human',
+          body: correctedBody,
+          intent: intentLabel,
+          nluConfidence: null,
+          engine: 'human',
+        });
+      }
     }
+
+    const updated = await client.query<{ decided_at: Date }>(
+      `
+        UPDATE comic_review_queue
+        SET status = $2,
+            reviewer_user_id = $3,
+            corrected_body = $4,
+            reason = COALESCE($5, reason),
+            answer_turn_id = $6::uuid,
+            decided_at = NOW()
+        WHERE id = $1::uuid
+        RETURNING decided_at
+      `,
+      [reviewId, newStatus, reviewerUserId, correctedBody, reason, answerTurnId],
+    );
 
     return {
       reviewId,
@@ -693,13 +725,15 @@ type AskerStreamRow = {
 };
 
 function mapAskerStreamRow(row: AskerStreamRow): ComicAskerStreamItem {
-  // Only approved/corrected reviews expose answer text; everything else is still pending and the
-  // asker must never see the unreviewed draft. A corrected answer uses the owner's corrected_body.
-  const isAnswered = row.review_status === 'approved' || row.review_status === 'corrected';
+  // Only approved/corrected reviews with a linked, published answer turn surface answer text;
+  // everything else is still pending and the asker must never see the unreviewed draft. The linked
+  // answer turn already holds the published text (the corrected human turn for corrections, the bot
+  // draft for an approved draft, the reviewer's human turn for an approved human-first turn), so its
+  // body is authoritative — fall back to corrected_body only if the link is somehow missing.
+  const isAnswered =
+    (row.review_status === 'approved' || row.review_status === 'corrected') && row.answer_turn_id !== null;
   const status: ComicAskerStreamStatus = isAnswered ? 'answered' : 'pending';
-  const answer = isAnswered
-    ? (row.review_status === 'corrected' ? row.corrected_body : row.answer_body)
-    : null;
+  const answer = isAnswered ? (row.answer_body ?? row.corrected_body) : null;
 
   return {
     questionTurnId: row.question_turn_id,
@@ -732,8 +766,8 @@ export async function listComicAskerStream(
         uq.created_at AS asked_at,
         q.status AS review_status,
         q.corrected_body AS corrected_body,
-        CASE WHEN bt.id IS NOT NULL THEN bt.id ELSE NULL END AS answer_turn_id,
-        bt.body AS answer_body,
+        ans.id AS answer_turn_id,
+        ans.body AS answer_body,
         r.rating AS rating
       FROM comic_review_queue q
       JOIN comic_turns qt ON qt.id = q.turn_id
@@ -748,10 +782,11 @@ export async function listComicAskerStream(
         ORDER BY ut.created_at DESC
         LIMIT 1
       ) uq ON TRUE
-      -- The bot draft turn (present for review_pending; for human_first the queued turn IS the
-      -- user turn, so there is no bot draft to expose).
-      LEFT JOIN comic_turns bt ON bt.id = q.turn_id AND bt.role = 'bot'
-      LEFT JOIN comic_answer_ratings r ON r.turn_id = q.turn_id AND r.user_id = $1
+      -- The published answer turn (linked when the review is approved/corrected): an approved bot
+      -- draft, or the reviewer's human turn for a correction / approved human-first turn. Null
+      -- while pending/rejected, so an unreviewed draft is never exposed.
+      LEFT JOIN comic_turns ans ON ans.id = q.answer_turn_id
+      LEFT JOIN comic_answer_ratings r ON r.turn_id = q.answer_turn_id AND r.user_id = $1
       WHERE c.user_id = $1
       ORDER BY uq.created_at DESC
       LIMIT $2
@@ -777,7 +812,7 @@ export async function rateComicAnswer(
         SELECT t.id
         FROM comic_turns t
         JOIN comic_conversations c ON c.id = t.conversation_id
-        JOIN comic_review_queue q ON q.turn_id = t.id
+        JOIN comic_review_queue q ON q.answer_turn_id = t.id
         WHERE t.id = $1::uuid
           AND c.user_id = $2
           AND q.status IN ('approved', 'corrected')

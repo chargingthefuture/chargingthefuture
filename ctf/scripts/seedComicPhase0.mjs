@@ -19,15 +19,24 @@ const pool = new Pool({
 const seedUserId = 'seed-comic-user-001';
 const seedReviewerId = 'seed-comic-admin-001';
 
+// Fixed timestamp so re-running the seed is byte-for-byte deterministic (no `new Date()` drift).
+const DECIDED_AT = '2026-05-31T00:00:00.000Z';
+
 // Deterministic UUIDs so re-running the seed is idempotent (ON CONFLICT (id) DO UPDATE).
 const CONVERSATION_ID = '00000000-c0m1-4000-a000-000000000001';
 
-// Turn ids: pairs of (user question, bot/human draft) plus one safety-flagged user turn.
+// Turn ids: pairs of (user question, bot/human draft) plus one safety-flagged user turn, plus the
+// reviewer's published human answer turn for the corrected item.
 const TURN_USER_HOUSING = '00000000-c0m1-4000-a000-000000000101';
 const TURN_BOT_HOUSING = '00000000-c0m1-4000-a000-000000000102';
 const TURN_USER_SERVICES = '00000000-c0m1-4000-a000-000000000103';
 const TURN_BOT_SERVICES = '00000000-c0m1-4000-a000-000000000104';
 const TURN_USER_SAFETY = '00000000-c0m1-4000-a000-000000000105';
+const TURN_HUMAN_SERVICES = '00000000-c0m1-4000-a000-000000000106';
+
+// The reviewer's corrected answer for the services item (published as a human turn + linked).
+const SERVICES_CORRECTED_BODY =
+  'Use the Foundation provider directory to find verified providers, and keep first contact inside the platform.';
 
 const REVIEW_HOUSING = '00000000-c0m1-4000-a000-000000000201';
 const REVIEW_SERVICES = '00000000-c0m1-4000-a000-000000000202';
@@ -71,13 +80,14 @@ async function upsertTurn(client, turn) {
 async function upsertReview(client, review) {
   await client.query(
     `
-      INSERT INTO comic_review_queue (id, turn_id, status, reviewer_user_id, corrected_body, reason, decided_at)
-      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7::timestamptz)
+      INSERT INTO comic_review_queue (id, turn_id, status, reviewer_user_id, corrected_body, answer_turn_id, reason, decided_at)
+      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6::uuid, $7, $8::timestamptz)
       ON CONFLICT (id) DO UPDATE SET
         turn_id = EXCLUDED.turn_id,
         status = EXCLUDED.status,
         reviewer_user_id = EXCLUDED.reviewer_user_id,
         corrected_body = EXCLUDED.corrected_body,
+        answer_turn_id = EXCLUDED.answer_turn_id,
         reason = EXCLUDED.reason,
         decided_at = EXCLUDED.decided_at
     `,
@@ -87,6 +97,7 @@ async function upsertReview(client, review) {
       review.status,
       review.reviewerUserId ?? null,
       review.correctedBody ?? null,
+      review.answerTurnId ?? null,
       review.reason ?? null,
       review.decidedAt ?? null,
     ],
@@ -141,6 +152,13 @@ async function main() {
         engine: 'ollama',
       },
       {
+        id: TURN_HUMAN_SERVICES,
+        role: 'human',
+        body: SERVICES_CORRECTED_BODY,
+        intent: 'general',
+        engine: 'human',
+      },
+      {
         id: TURN_USER_SAFETY,
         role: 'user',
         body: 'I think I am being followed and I feel threatened.',
@@ -166,9 +184,10 @@ async function main() {
         turnId: TURN_BOT_SERVICES,
         status: 'corrected',
         reviewerUserId: seedReviewerId,
-        correctedBody: 'Use the Foundation provider directory to find verified providers, and keep first contact inside the platform.',
+        correctedBody: SERVICES_CORRECTED_BODY,
+        answerTurnId: TURN_HUMAN_SERVICES,
         reason: 'interim_human_review',
-        decidedAt: new Date().toISOString(),
+        decidedAt: DECIDED_AT,
       },
       {
         id: REVIEW_SAFETY,

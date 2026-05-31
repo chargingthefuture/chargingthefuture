@@ -3172,7 +3172,7 @@ CREATE INDEX IF NOT EXISTS idx_inventory_analysis_cache_file_path ON inventory_a
 CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
-  channel TEXT NOT NULL DEFAULT 'hub',
+  channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -3213,6 +3213,11 @@ CREATE TABLE IF NOT EXISTS comic_review_queue (
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'corrected', 'rejected')),
   reviewer_user_id TEXT NULL,
   corrected_body TEXT NULL,
+  -- The published answer turn the asker actually sees + rates once the review is approved/corrected:
+  -- an approved bot draft, or the reviewer's human turn for a correction / approved human-first turn.
+  -- NULL while pending/rejected (no answer is ever surfaced). SET NULL so deleting that turn does not
+  -- drop the review row.
+  answer_turn_id UUID NULL REFERENCES comic_turns(id) ON DELETE SET NULL,
   reason TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   decided_at TIMESTAMPTZ NULL
@@ -3222,11 +3227,13 @@ ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS turn_id UUID;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reviewer_user_id TEXT NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS corrected_body TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS answer_turn_id UUID NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reason TEXT NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ NULL;
 CREATE INDEX IF NOT EXISTS idx_comic_review_queue_status ON comic_review_queue(status);
 CREATE INDEX IF NOT EXISTS idx_comic_review_queue_turn_id ON comic_review_queue(turn_id);
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_answer_turn_id ON comic_review_queue(answer_turn_id);
 CREATE INDEX IF NOT EXISTS idx_comic_review_queue_created_at ON comic_review_queue(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS comic_training_examples (
@@ -3272,6 +3279,144 @@ ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS rating TEXT 
 ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_comic_answer_ratings_turn_id ON comic_answer_ratings(turn_id);
+
+-- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
+-- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
+DO $comic_conversations_channel_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_conversations_channel_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_conversations
+        ADD CONSTRAINT comic_conversations_channel_check
+        CHECK (channel IN ('hub', 'feed'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_conversations_channel_check$;
+
+DO $comic_conversations_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_conversations_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_conversations
+        ADD CONSTRAINT comic_conversations_status_check
+        CHECK (status IN ('open', 'closed'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_conversations_status_check$;
+
+DO $comic_turns_role_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_turns_role_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_turns
+        ADD CONSTRAINT comic_turns_role_check
+        CHECK (role IN ('user', 'bot', 'human'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_turns_role_check$;
+
+DO $comic_turns_engine_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_turns_engine_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_turns
+        ADD CONSTRAINT comic_turns_engine_check
+        CHECK (engine IN ('rasa', 'ollama', 'template', 'human'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_turns_engine_check$;
+
+DO $comic_turns_nlu_confidence_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_turns_nlu_confidence_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_turns
+        ADD CONSTRAINT comic_turns_nlu_confidence_check
+        CHECK (nlu_confidence IS NULL OR (nlu_confidence >= 0 AND nlu_confidence <= 1));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_turns_nlu_confidence_check$;
+
+DO $comic_review_queue_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_review_queue_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_review_queue
+        ADD CONSTRAINT comic_review_queue_status_check
+        CHECK (status IN ('pending', 'approved', 'corrected', 'rejected'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_review_queue_status_check$;
+
+DO $comic_training_examples_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_training_examples_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_training_examples
+        ADD CONSTRAINT comic_training_examples_status_check
+        CHECK (status IN ('pending', 'exported', 'discarded'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_training_examples_status_check$;
+
+DO $comic_answer_ratings_rating_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_answer_ratings_rating_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_answer_ratings
+        ADD CONSTRAINT comic_answer_ratings_rating_check
+        CHECK (rating IN ('helpful', 'not_helpful', 'flagged'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_answer_ratings_rating_check$;
 
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the

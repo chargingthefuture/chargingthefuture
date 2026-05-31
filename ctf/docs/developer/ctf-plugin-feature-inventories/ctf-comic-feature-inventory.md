@@ -55,8 +55,12 @@ are intentionally left for a later tuning pass — see "Future Notes."
    (`exportQuestionsForRasa` → Rasa NLU YAML). Retrain → raise the auto-respond threshold →
    shrink the human-review share. **This flywheel is the path from 62 users to ~5M.**
 5. **New data layer = deterministic conversation/training tables + a Rasa SQL tracker
-   store** in the same Neon Postgres. Existing `llm_inference_log` (generation audit) and
-   `feed_answer_ratings` (quality signal) are reused. Seed UUIDs are deterministic.
+   store** in the same Neon Postgres. The existing `llm_inference_log` reuse note holds only
+   as a pattern reference — its NOT-NULL FKs target the feed tables, so comic emits a
+   structured `[comic.inference]` console audit instead of writing rows there (see Data Model).
+   Answer ratings are **not** reused from `feed_answer_ratings` (that table is FK'd into
+   `feed_answers` and cannot host comic turns); comic ratings live in the dedicated
+   `comic_answer_ratings` table. Seed UUIDs are deterministic.
    - **Naming = `comic_*` (confirmed 2026-05-31).** Matches the dominant `<domain>_*`
      convention used by all ~156 domain tables (`feed_*`, `chyme_*`, …); the `ctf_` prefix
      stays reserved for the one global table (`ctf_plugin_registry`).
@@ -88,8 +92,10 @@ design that this plan unifies:
 - Subsystem name: `comic`. Bot handle: `@comic`.
 - Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → Survivor Hub homepage;
   Android `packages/mobile/src/features/feed`).
-- Owned data layer (target): new conversation/training tables + Rasa tracker store; reuses
-  `llm_inference_log`, `feed_answer_ratings`.
+- Owned data layer: `comic_*` conversation/training/rating tables + (target) a Rasa tracker
+  store. `llm_inference_log` and `feed_answer_ratings` are **not** reused (their FKs target the
+  feed tables); comic uses a `[comic.inference]` console audit and the `comic_answer_ratings`
+  table instead.
 - Owned services (target): self-hosted Rasa service + the existing `ctf-ollama` service.
 - Command namespace (target): `comic.*` (interplays with the `feed.*` timeline).
 - **Out of scope here:** announcements, peer-to-peer posts, feed timeline rendering, Stream
@@ -191,7 +197,11 @@ routes **every** `@comic` draft to human review — nothing unreviewed is surfac
 
 **Conversation/training tables (`comic_*`; implemented in `ctf/schema.sql` with guarded DDL —
 `CREATE TABLE IF NOT EXISTS` + per-column `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`;
-all FKs `ON DELETE CASCADE`):**
+FKs `ON DELETE CASCADE` except `comic_review_queue.answer_turn_id` which is `ON DELETE SET NULL`).
+Enum/range columns are guarded by named, idempotent CHECK constraints (DO-block pattern) so legacy
+DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine, nlu_confidence
+0..1)`, `comic_review_queue(status)`, `comic_training_examples(status)`,
+`comic_answer_ratings(rating)`:**
 
 1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `channel` text
    [hub|feed], `status` text [open|closed], `created_at`, `updated_at`). Indexed on `user_id`,
@@ -199,11 +209,16 @@ all FKs `ON DELETE CASCADE`):**
 2. `comic_turns` — one row per turn (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
    `role` ∈ user|bot|human, `body`, `intent` null, `nlu_confidence` numeric(5,4) null, `engine`
    ∈ rasa|ollama|template|human, `created_at`). Indexed on `conversation_id`, `created_at`.
-3. `comic_review_queue` — supervision state (`id` uuid pk, `turn_id` uuid FK→comic_turns,
-   `status` ∈ pending|approved|corrected|rejected, `reviewer_user_id` null, `corrected_body`
-   null, `reason` null, `created_at`, `decided_at` null). Indexed on `status`, `turn_id`,
-   `created_at`. (`reason` carries `safety:<category>` for human-first turns or
-   `interim_human_review` for drafts.)
+3. `comic_review_queue` — supervision state (`id` uuid pk, `turn_id` uuid FK→comic_turns
+   ON DELETE CASCADE, `status` ∈ pending|approved|corrected|rejected, `reviewer_user_id` null,
+   `corrected_body` null, `answer_turn_id` uuid null FK→comic_turns ON DELETE SET NULL,
+   `reason` null, `created_at`, `decided_at` null). Indexed on `status`, `turn_id`,
+   `answer_turn_id`, `created_at`. (`reason` carries `safety:<category>` for human-first turns or
+   `interim_human_review` for drafts.) `answer_turn_id` is the published turn the asker sees + rates
+   once a review is approved/corrected — an approved bot draft, or the reviewer's `human` turn for a
+   correction / approved human-first turn; null while pending/rejected so an unreviewed draft is
+   never surfaced. Named CHECK constraints (`comic_review_queue_status_check`) guard the status enum
+   on legacy DBs.
 4. `comic_training_examples` — curated training data exported to Rasa (`id` uuid pk,
    `source_turn_id` uuid FK→comic_turns, `intent_label` text, `text` text, `entities` jsonb
    default `[]`, `story` jsonb null, `status` ∈ pending|exported|discarded, `exported_at` null,
@@ -283,11 +298,13 @@ Target: `web+android` parity.
 
 ## Seed Coverage Status
 
-**Implemented:** `ctf/scripts/seedComicPhase0.mjs` (deterministic UUIDs, idempotent
-`ON CONFLICT (id) DO UPDATE`). Seeds: one conversation; five turns (housing + services
-question/draft pairs, plus a safety-flagged user turn); a populated `comic_review_queue`
-(one pending interim-review draft, one corrected/resolved item, one pending safety-flagged
-human-first turn); two `comic_training_examples`. Requires `DATABASE_URL`.
+**Implemented:** `ctf/scripts/seedComicPhase0.mjs` (deterministic UUIDs and a fixed
+`decided_at` constant, idempotent `ON CONFLICT (id) DO UPDATE`). Seeds: one conversation; six
+turns (housing + services question/draft pairs, the reviewer's published `human` answer turn for
+the corrected services item, plus a safety-flagged user turn); a populated `comic_review_queue`
+(one pending interim-review draft, one corrected/resolved item with its `answer_turn_id` linked to
+the human answer turn, one pending safety-flagged human-first turn); two `comic_training_examples`.
+Requires `DATABASE_URL`.
 
 The `@comic` bot profile previously sketched against the dropped `hub_bots` design is not
 reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the real data layer.
@@ -340,7 +357,7 @@ The design pointer was bumped to `9a4a1af` (rule 128) and the web UI was built a
 
 **Previously "Missing" — now DELIVERED against `9a4a1af`:**
 1. **AI answer "pending human review" state** — the `ai_pending` "Reviewing for safety" card
-   (`comic-stream-cards.tsx` → `ComicPendingCard`). Interim mode holds every AI draft; the asker
+   (`comic-cards.tsx` → `ComicPendingCard`). Interim mode holds every AI draft; the asker
    sees only this card until a human approves an answer.
 2. **Owner review/correction console** (admin) — `comic-review-console.tsx` at `/admin/comic`;
    queue / empty / loading / detail-edit; approve/edit/reject; shows question, AI draft, provenance,
@@ -358,7 +375,7 @@ here (web only).
 
 - 2026-05-31: Built the **web UI** on `feat/comic-ai-assistant` against the LOCKED design `9a4a1af`
   (pointer bumped per rule 128). **Asker surface** in the community/home chat
-  (`components/community-shell/`: `shell-chat-panel.tsx`, `use-home-chat.ts`, `comic-stream-cards.tsx`,
+  (`components/community-shell/`: `shell-chat-panel.tsx`, `use-home-chat.ts`, `comic-cards.tsx`,
   `comic-consent-modal.tsx`, `community-shell.module.css`, `shell-types.ts`): AI Assistant answer
   cards + the `ai_pending` "Reviewing for safety" card interleaved with hub messages; the unified
   composer (no toggle) routes `@comic` mentions to `POST /api/comic/message` and everything else to
