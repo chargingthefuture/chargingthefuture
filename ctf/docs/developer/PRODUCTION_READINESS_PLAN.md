@@ -210,8 +210,12 @@ Recorded in this progress channel rather than as separate issues (per decision 1
    validation (Rule 118), not missing features; this plan's table is authoritative.
 4. **Backend drift decisions (owner input)** — feed-announcements names `feed_user_extension`,
    `announcement_targets`, `announcements_user_extension` in its inventory but code uses equivalent
-   existing tables; reconcile names (or the inventory) to clear feed's 🟡. Confirm no residual workforce
-   drift remains after the 2026-05-21 phantom-table removal so workforce can move 🟡 → ✅.
+   existing tables. **Owner decision (2026-05-31): reconcile to real table names — remove the phantom
+   references.** This is folded into the Survivor Hub consolidation (see change log + the Survivor Hub
+   inventory): the phantom `feed_user_extension` seed `INSERT`/contract/data-model entries are removed in
+   the consolidation coding PR (which carries the `schema.sql` public-channel change that unblocks the
+   seed/schema gate), clearing feed's 🟡. Confirm no residual workforce drift remains after the
+   2026-05-21 phantom-table removal so workforce can move 🟡 → ✅.
 
 ## How a future session / agent picks up work
 
@@ -374,3 +378,18 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   in the backend pass). Loading/empty states render inline; no public state by design (Chyme is
   auth-only per #102). API wiring untouched; typecheck/EOF/parity/schema-drift gates green. Marked
   chyme Web px ✅ in the table above; Android pixel parity (`MobileChyme.tsx` → RN feature) remains ⬜.
+- 2026-05-31: **Survivor Hub ⟵ Feed consolidation — decisions locked + design-prompt staged
+  (docs only).** Owner consolidated `feed-announcements` into the **Survivor Hub**, which is the single
+  app homepage. The Hub presents **one blended, publicly-viewable `community` channel** interleaving
+  admin-only announcements + AI Q&A + peer-to-peer posts (the sole user-authored social surface; public
+  by design). **Data layer = the existing Feed backend** (`feed_items` + `lib/feed/inference.ts`); the
+  previously-specified Hub-owned `hub_channels`/`hub_messages`/`hub_bot_routes` tables are **dropped**
+  (single source of truth). Homepage UI already exists/design-backed (`design/.../survivor-hub/`); the
+  wireframes need a *modification* (the one-time-use prompt is handed to Replit out-of-band, not
+  committed). Recorded the decision
+  in the Survivor Hub + Feed inventories and resolved backend-drift decision #4 (reconcile to real table
+  names; remove phantom `feed_user_extension`). **Next coding PR (ordered, no phases):** (1) wire Hub
+  channel to Feed backend + add `schema.sql` public-channel flag; (2) remove phantom `feed_user_extension`
+  refs (blocked by #1's schema change per the seed/schema gate); (3) retire `feed-announcements` as a
+  standalone app via registry alias (blocked by #1); (4) reconcile contracts to the `feed.*` namespace
+  (blocked by #1); (5) mobile parity (blocked by #1).
