@@ -28,6 +28,29 @@ jobs:
           cd ctf
           pnpm install
 
+      - name: Regenerate schema.demo.sql from schema.sql
+        run: node ctf/scripts/generateDemoSchema.mjs
+
+      - name: Install psql client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Bring the demo schema up to date
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          DB="${DATABASE_URL_DIRECT:-$DATABASE_URL}"
+          if [ -z "$DB" ]; then
+            echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
+            exit 1
+          fi
+          # Re-applying is safe: every statement uses IF NOT EXISTS / IF EXISTS
+          # guards. This makes sure the demo schema has every table, column, and
+          # constraint the seed relies on (for example the unique keys the seed
+          # upserts against) before we try to seed it.
+          psql "$DB" -v ON_ERROR_STOP=1 -f ctf/schema.demo.sql
+          echo "Demo schema is up to date."
+
       - name: Run demo seed
         env:
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}

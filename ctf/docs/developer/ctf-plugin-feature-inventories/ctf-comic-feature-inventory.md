@@ -397,6 +397,12 @@ here (web only).
 
 ## Change Log
 
+- 2026-05-31: Normalized the audit contract to the canonical audit shape (template 203): removed the
+  redundant `version: 1.0.0` line that duplicated `commandVersion: 1.0.0` on each of the seven audit
+  events. That duplicate had only been added to satisfy the schema-drift gate, which previously did
+  not recognize `commandVersion` as a version key; the gate now accepts it, so the workaround is no
+  longer needed. Each audit event keeps its `eventId`, `command`, and `commandVersion`. No behaviour,
+  schema, route, or API change.
 - 2026-05-31: **Stood up the self-hosted Rasa NLU service + wired the backend** on
   `feat/rasa-assistant-service` (infra + a SAFE, label-only backend integration; no UI). Added the
   Rasa 3.x **NLU-only** project under `ctf/ops/rasa/` (`config.yml` WhitespaceTokenizer →
