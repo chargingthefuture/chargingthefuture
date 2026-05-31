@@ -87,7 +87,8 @@ Cross-plugin read dependencies (read-only):
 
 ## Web and Android Delivery Status
 
-Parity status: **web+android complete**.
+- **Web:** delivered. `FoundationShell` (`ctf/packages/web/components/foundation/`) renders the survivor-facing experience against the live Foundation API — provider search/browse (`displayName`, `headline`, `bio`), provider profile, real two-step quote request (open connection thread → create quote on it), and quote history with lifecycle status. Decomposed under Rule 116 into `foundation-ui`, `foundation-rails`, `foundation-panels`, `foundation-profile`, and the orchestrating `foundation-shell`. Aligned to the canonical `survivor-hub/Foundation` design mockup; mockup-only fields with no backing API (star rating, job counts, hourly price, availability, inflated platform stats) are intentionally omitted rather than mocked, per the real-data-only rule.
+- **Android:** pending UI circle-back; tracked in the readiness table (Android ⬜).
 
 ## Seed Coverage Status
 
@@ -107,6 +108,7 @@ Seeded content:
 
 ## Change Log
 
+- 2026-05-31: Web pixel pass. Rebuilt `FoundationShell` to match the canonical `survivor-hub/Foundation` design mockup and bind to real API contracts only. Fixed three pre-existing data bugs: provider search now reads `{ items }` (was treating the response as a raw array), quote history now calls `GET /api/foundation/quotes/history` (was calling the GET-less `/api/foundation/quotes`), and "Request Quote" now performs the real two-step flow (POST `/connections/threads` then POST `/quotes` with `x-ctf-csrf: 1`) instead of posting an unsupported `{ providerId, description }` body. Decomposed the shell into five Rule-116-compliant files. Dropped mockup fields with no backing API (rating, jobs, price, availability, hard-coded platform stats). Web px flipped to ✅ in the readiness table.
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing sections), Planned section headers, and planning ambiguities. Confirmed web+android complete delivery status. Clarified technical debt (quote schema, fallback copy, notification strategy, capacity assumptions) as known limitations, not unimplemented features.
 - 2026-02-24: Created initial Foundation CTF rewrite inventory with full-v1 scope for search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting, and scalability.
 
