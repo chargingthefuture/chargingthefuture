@@ -120,7 +120,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trust | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 

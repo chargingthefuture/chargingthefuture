@@ -1,7 +1,3 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-
-export const MockTrust = () => (
-  <View style={styles.container}><Text style={styles.title}>Trust (mock)</Text><Text>Trust UI placeholders</Text></View>
-);
-const styles = StyleSheet.create({container:{flex:1,padding:12},title:{fontSize:18,fontWeight:'700',marginBottom:12}});
+// Retired — replaced by Trust.tsx with real API bindings (feat/trust-android-pixel-pass).
+// This file is kept as an empty stub to avoid breaking any static imports that reference it.
+export {};
