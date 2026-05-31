@@ -1530,14 +1530,10 @@ ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS created_
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === CHYME ROOMS ===
-CREATE TABLE IF NOT EXISTS chyme_rooms (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_key TEXT NOT NULL UNIQUE,
-  room_name TEXT NOT NULL,
-  call_active BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- The canonical chyme_rooms definition is earlier in this file (placed before
+-- its dependent indexes). The duplicate CREATE TABLE that used to be here was
+-- removed; the ALTER ... ADD COLUMN reconciliation below still brings older
+-- databases up to date.
 ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS room_key TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS room_name TEXT NOT NULL DEFAULT '';
