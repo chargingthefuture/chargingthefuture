@@ -29,7 +29,6 @@ async function ensureFeedConfig(client) {
         render_mode = EXCLUDED.render_mode,
         kill_switch_enabled = EXCLUDED.kill_switch_enabled,
         max_timeline_page_size = EXCLUDED.max_timeline_page_size,
-        is_public = EXCLUDED.is_public,
         updated_by_user_id = EXCLUDED.updated_by_user_id,
         updated_at = NOW()
     `,

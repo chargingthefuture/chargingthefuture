@@ -117,12 +117,14 @@ export async function POST(request: Request) {
     // A message posted from the Hub input is a peer-to-peer community post.
     const result = await createFeedCommunityPost(gate.auth.userId, input);
 
+    // Normalize to the same public author shape as mapTimelineItemToHubMessage so the
+    // optimistic send and the next polled copy share a dedup key (from, senderLabel, text, time).
     const message: HubMessage = {
       id: result.postId,
       userId: gate.identity.userId,
-      username: gate.identity.username,
-      displayName: gate.identity.displayName,
-      avatarUrl: gate.identity.avatarUrl,
+      username: null,
+      displayName: 'Community member',
+      avatarUrl: null,
       text,
       sentAtIso: result.createdAtIso,
     };
