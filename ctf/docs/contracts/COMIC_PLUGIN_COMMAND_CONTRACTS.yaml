@@ -1,0 +1,116 @@
+contracts:
+  # ─── @comic message routing ────────────────────────────────────────────
+  - pluginId: comic
+    command: comic.message.route
+    version: 1.0.0
+    description: Route an inbound chat message to the AI Assistant when it mentions @comic; capture the user turn, run consent/moderation/safety checks, and branch to draft+review or human-first. Messages without an @comic mention are peer-to-peer and never reach the assistant.
+    inputSchema:
+      body:
+        type: string
+        required: true
+      channel:
+        type: string
+        enum: [hub, feed]
+        required: false
+      conversationId:
+        type: string
+        required: false
+      consentGranted:
+        type: boolean
+        required: true
+    outputSchema:
+      routedToAssistant:
+        type: boolean
+      status:
+        type: string
+        enum: [review_pending, human_first, not_mentioned]
+      conversationId:
+        type: string
+      holdingResponse:
+        type: string
+    dataAccess:
+      - comic_conversations
+      - comic_turns
+      - comic_review_queue
+    purpose: assistant_message_routing
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: comic
+    command: comic.reply.generate
+    version: 1.0.0
+    description: Generate an AI Assistant draft reply for a captured @comic turn via the self-hosted Ollama backend. While Rasa is undeployed the draft is enqueued for human review and never surfaced to the asker.
+    inputSchema:
+      turnId:
+        type: string
+        required: true
+    outputSchema:
+      draftTurnId:
+        type: string
+      engine:
+        type: string
+        enum: [rasa, ollama, template, human]
+      reviewId:
+        type: string
+    dataAccess:
+      - comic_turns
+      - comic_review_queue
+    purpose: assistant_reply_generation
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.review.resolve
+    version: 1.0.0
+    description: Owner resolution of a pending AI Assistant draft — approve, correct (edit), or reject. A corrected resolution persists the asker's question as a training example for the Rasa export.
+    inputSchema:
+      reviewId:
+        type: string
+        required: true
+      resolution:
+        type: string
+        enum: [approve, correct, reject]
+        required: true
+      correctedBody:
+        type: string
+        required: false
+      reason:
+        type: string
+        required: false
+    outputSchema:
+      reviewId:
+        type: string
+      status:
+        type: string
+        enum: [approved, corrected, rejected]
+      trainingExampleId:
+        type: string
+      decidedAt:
+        type: string
+    dataAccess:
+      - comic_review_queue
+      - comic_turns
+      - comic_training_examples
+    purpose: assistant_human_review
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: comic
+    command: comic.training.export
+    version: 1.0.0
+    description: Export accumulated AI Assistant training examples (asker questions plus owner-assigned intent labels from corrections) as Rasa NLU YAML. Supersedes the feed category-only export by sourcing real turns and corrections.
+    inputSchema:
+      format:
+        type: string
+        enum: [yaml, json]
+        required: false
+    outputSchema:
+      totalExamples:
+        type: integer
+      byIntent:
+        type: object
+    dataAccess:
+      - comic_training_examples
+    purpose: assistant_training_export
+    retentionClass: derived_short_lived
+    idempotency: true

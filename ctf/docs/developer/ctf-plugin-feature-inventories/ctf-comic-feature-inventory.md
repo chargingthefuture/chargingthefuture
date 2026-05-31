@@ -146,36 +146,65 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
   `POST /api/hub/messages` is a stub).
 
+### Implemented (backend foundation, server-only — `comic.*`)
+Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface), under
+`ctf/packages/web/app/api/comic/`. Each route gates auth via `lib/auth/server-authz`
+(`evaluatePluginAccess`) and CSRF via `_lib.ensureMutationCsrf`, mirroring the feed plugin.
+
+- `POST /api/comic/message` (`comic.message.route`) — member/approved-or-admin. Detects the
+  `@comic` mention; no mention → `routedToAssistant:false` no-op (peer-to-peer never reaches
+  the bot). On mention: consent + moderation + safety checks, captures the user turn, drafts
+  via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
+  safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
+  generation and are queued human-first.
+- `GET /api/comic/review` (`comic.reply.generate` data surface) — admin. Paginated list of
+  pending review items (asker question + draft + intent/confidence + safety category).
+- `POST /api/comic/review/[turnId]/resolve` (`comic.review.resolve`) — admin. Approve / correct
+  (edit) / reject a queued draft; a correction persists a `comic_training_examples` row.
+- `GET /api/comic/training/export` (`comic.training.export`) — admin. Rasa NLU YAML (or JSON
+  via `?format=json`) from accumulated turns + corrections; single-loop (no double counting).
+
+Interim engine reality: **Ollama is deployed, Rasa is not.** `lib/comic/rasa.ts`
+`isRasaConfigured()` returns false until `RASA_BASE_URL` is set, so `policy.forceHumanReview()`
+routes **every** `@comic` draft to human review — nothing unreviewed is surfaced to the asker.
+
 ### Target (`@comic`)
-- Mention routing rides the Hub message path (`POST /api/hub/messages`): detect `@comic` →
-  append a `comic_turns` row → evaluate confidence/safety → auto-reply **or** preset+queue
-  **or** human-first.
-- `GET/POST /api/comic/review/*` — owner review queue + resolution (admin-gated).
-- `POST /api/comic/training/export` — push corrected turns to Rasa (supersedes the
-  category-only export).
+- Mention routing also to ride the Hub message path (`POST /api/hub/messages`) once that stub
+  is wired; today the dedicated `POST /api/comic/message` is the server entry point.
+- Auto-reply branch (above-threshold) activates only once Rasa supplies a real, calibratable
+  confidence; until then the interim policy forces human review on all drafts.
 - Rasa/Ollama are reached **server-side only**; no third-party LLM egress (parity with the
   Hub's stance — and Ollama is self-hosted, so it is not third-party).
 
 ## Data Model and Storage Contracts
 
-**New conversation/training tables (proposed; `comic_*`; guarded DDL per migration rules):**
+**Conversation/training tables (`comic_*`; implemented in `ctf/schema.sql` with guarded DDL —
+`CREATE TABLE IF NOT EXISTS` + per-column `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`;
+all FKs `ON DELETE CASCADE`):**
 
-1. `comic_conversations` — a chat thread (`id`, `user_id`, channel context, `status`,
-   timestamps).
-2. `comic_turns` — one row per turn (`id`, `conversation_id`, `role` ∈ user|bot|human,
-   `body`, `intent`, `nlu_confidence`, `engine` ∈ rasa|ollama|template|human, `created_at`).
-3. `comic_review_queue` — supervision state (`id`, `turn_id`, `status` ∈
-   pending|approved|corrected|rejected, `reviewer_user_id`, `corrected_body`, `reason`,
-   `decided_at`).
-4. `comic_training_examples` — curated training data exported to Rasa (`id`,
-   `source_turn_id`, `intent_label`, `text`, `entities` jsonb, `story` jsonb, `status`,
-   `exported_at`).
+1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `channel` text
+   [hub|feed], `status` text [open|closed], `created_at`, `updated_at`). Indexed on `user_id`,
+   `created_at`.
+2. `comic_turns` — one row per turn (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
+   `role` ∈ user|bot|human, `body`, `intent` null, `nlu_confidence` numeric(5,4) null, `engine`
+   ∈ rasa|ollama|template|human, `created_at`). Indexed on `conversation_id`, `created_at`.
+3. `comic_review_queue` — supervision state (`id` uuid pk, `turn_id` uuid FK→comic_turns,
+   `status` ∈ pending|approved|corrected|rejected, `reviewer_user_id` null, `corrected_body`
+   null, `reason` null, `created_at`, `decided_at` null). Indexed on `status`, `turn_id`,
+   `created_at`. (`reason` carries `safety:<category>` for human-first turns or
+   `interim_human_review` for drafts.)
+4. `comic_training_examples` — curated training data exported to Rasa (`id` uuid pk,
+   `source_turn_id` uuid FK→comic_turns, `intent_label` text, `text` text, `entities` jsonb
+   default `[]`, `story` jsonb null, `status` ∈ pending|exported|discarded, `exported_at` null,
+   `created_at`). Indexed on `intent_label`, `status`, `source_turn_id`.
 
 **Rasa tracker store:** Rasa's own SQL event store, provisioned in the same Neon Postgres
-(managed by Rasa, not hand-authored here).
+(managed by Rasa, not hand-authored here). Deferred — Rasa is not deployed.
 
-**Reused:** `llm_inference_log` (generation audit), `feed_answer_ratings` (quality signal),
-`feed_questions` (current Rasa-export source).
+**Reused:** `feed_answer_ratings` (quality signal). Note: `llm_inference_log` has NOT-NULL FKs
+into `feed_questions`/`feed_answers`, so comic generation is **not** forced into that feed-shaped
+table; comic captures request/response on its own `comic_turns` and emits a structured
+`[comic.inference]` console audit for parity (revisit if a comic-native inference log is needed).
 
 ## Security, Privacy, and Compliance Controls
 
@@ -186,23 +215,46 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 3. **Consent:** LLM-processing consent verified before any generation (carry forward the
    current `llm_consent_granted` gate).
 4. Server-side authz + CSRF on all state-changing routes; admin gating on review/training.
-5. Audit: allow/deny + generation logged (`llm_inference_log`); sensitive payload redaction.
+   **Implemented:** `_lib.requireComicReadAccess` / `requireComicAdminAccess` /
+   `ensureMutationCsrf` (mirrors feed `_lib`).
+5. Audit: allow/deny logged via `lib/comic/audit.ts` (`logComicAudit`, pluginId `comic`);
+   generation logged via the `[comic.inference]` structured console audit (see Data Model note
+   on the `llm_inference_log` FK constraint). Sensitive-payload redaction is a later pass.
 6. Server-side-only Rasa/Ollama calls; no third-party LLM egress.
-7. Deletion: a `comic` profile/deletion contract is required before GA (what is purged on
-   service/account deletion across the comic tables + tracker store).
+7. Deletion: `COMIC_PROFILE_AND_DELETION_CONTRACT.md` authored (draft) — documents what is
+   purged on service/account deletion across the comic tables; CASCADE FKs mean deleting a
+   conversation removes its turns/queue/training rows.
 
 ## Web and Android Delivery Status
 
-Target: `web+android` parity. **Unified `@comic` not started.** Precursors exist (Feed Q&A,
-Rasa NLU export, home-chat router) but are disconnected; no Rasa service, no `@comic`
-mention routing, no conversation store, no human-in-the-loop.
+Target: `web+android` parity.
+
+- **Web backend: complete (foundation).** Schema (`comic_*` tables), library
+  (`lib/comic/{types,constants,audit,rasa,policy,repository}.ts`), server-only API
+  (`/api/comic/message`, `/api/comic/review`, `/api/comic/review/[turnId]/resolve`,
+  `/api/comic/training/export`), contracts, and a deterministic seed are landed. `@comic`
+  mention routing, conversation/turn capture, Ollama drafting, the human-in-the-loop review
+  queue, correction→training, and Rasa NLU export are implemented. Interim policy forces human
+  review on every draft (Rasa undeployed).
+- **Web UI: not started — design-gated (rule 127).** No `@comic` chat rendering, no owner
+  review/correction console. `DESIGN PASS REQUIRED` for both surfaces (see this file's "Design
+  Status & Guidance — Missing"). No React/`.tsx` was created in this pass.
+- **Android: not started.** Deferred behind the web UI + a running Rasa; tracked for parity
+  (`plugin-parity-contracts.json` entry to be added when the mobile feature lands).
+- **Still deferred:** standing up the Rasa service + tracker store; replacing the home-chat
+  `getActionForText` router with Rasa-backed routing; the layered content filter / threshold
+  tuning; RAG grounding.
 
 ## Seed Coverage Status
 
-None yet for comic tables. A future `seedComicPhase0.mjs` (deterministic UUIDs) should seed
-sample conversations, turns, a populated review queue, and training examples. `@comic`'s
-bot profile is currently seeded (per the Hub inventory) into the now-dropped `hub_bots`
-design — reconcile to the real data layer.
+**Implemented:** `ctf/scripts/seedComicPhase0.mjs` (deterministic UUIDs, idempotent
+`ON CONFLICT (id) DO UPDATE`). Seeds: one conversation; five turns (housing + services
+question/draft pairs, plus a safety-flagged user turn); a populated `comic_review_queue`
+(one pending interim-review draft, one corrected/resolved item, one pending safety-flagged
+human-first turn); two `comic_training_examples`. Requires `DATABASE_URL`.
+
+The `@comic` bot profile previously sketched against the dropped `hub_bots` design is not
+reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the real data layer.
 
 ## Gaps and Known Technical Debt
 
@@ -262,6 +314,20 @@ review pending), Auth+Empty (no Q&A yet), Auth+Populated (answered).
 
 ## Change Log
 
+- 2026-05-31: Built the production backend foundation (non-UI) on `feat/comic-ai-assistant`.
+  Added the `comic_*` schema (conversations, turns, review queue, training examples) with
+  guarded DDL + CASCADE FKs; `lib/comic/{types,constants,audit,rasa,policy,repository}.ts`
+  (mention detection, input moderation, keyword safety-category detection, interim
+  force-human-review, conversation/turn capture, Ollama drafting reusing
+  `SURVIVOR_SYSTEM_PROMPT`, review queue create/list/resolve, correction→training,
+  Rasa NLU YAML export); server-only API under `/api/comic/` (`message`, `review`,
+  `review/[turnId]/resolve`, `training/export`) mirroring the feed `_lib` authz/CSRF;
+  `COMIC_PLUGIN_{COMMAND,ACCESS_POLICY,AUDIT}_CONTRACTS.yaml` + `COMIC_PROFILE_AND_DELETION_CONTRACT.md`
+  (namespace `comic.*`); and `seedComicPhase0.mjs`. Interim policy: Rasa undeployed
+  (`isRasaConfigured()` false) → every `@comic` draft is enqueued for human review and the
+  asker sees only a safe holding response. Web build + typecheck + lint pass. **All UI is
+  deferred (design-gated, rule 127): `DESIGN PASS REQUIRED` for `@comic` chat rendering and the
+  owner review/correction console.**
 - 2026-05-31: Pulled design `a460914`; reconciled to owner decisions — `@comic` mention stays
   the trigger (design toggle superseded), adopt the "AI Assistant" reply treatment, keep the
   `comic` internal slug. Added Design Status & Guidance (covered / modify / missing) to steer
@@ -280,16 +346,19 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
 - [x] Lock owner decisions (this document). No dependencies.
 - [x] Confirm table-name prefix (`comic_*`) and `@comic` placement (dedicated file =
       source of truth; Hub inventory points here). Decided 2026-05-31.
-- [ ] Add the conversation/training schema + provision the Rasa SQL tracker store in Neon.
-  - Blocked by: naming decision. Acceptance: guarded DDL; deterministic keys; drift check.
-- [ ] Implement `@comic` mention routing in the Hub message path; no-`@` stays peer.
-  - Blocked by: schema. Acceptance: `@comic` creates a turn; non-mentions never reach the bot.
-- [ ] Capture every `@comic` turn; compute confidence/safety; branch auto-reply vs
-      preset+queue vs human-first.
-  - Blocked by: schema + routing. Acceptance: below-threshold never emits generated content;
-    safety-flagged is human-first; above-threshold is queued.
-- [ ] Owner review/correction console. **UI — announce DESIGN PASS REQUIRED before building.**
-  - Blocked by: turn capture. Acceptance: approve/edit/reject; corrections persist as training.
+- [x] Add the conversation/training schema. (Rasa SQL tracker store deferred — Rasa undeployed.)
+  - Done 2026-05-31: `comic_*` tables in `ctf/schema.sql`, guarded DDL, CASCADE FKs; drift gate
+    satisfied by the schema.sql change.
+- [x] Implement `@comic` mention routing; no-`@` stays peer.
+  - Done 2026-05-31: `POST /api/comic/message` + `policy.mentionsComic`/`routeComicMessage`.
+    Non-mentions return `routedToAssistant:false` and never reach the bot.
+- [x] Capture every `@comic` turn; compute safety; branch draft+queue vs human-first.
+  - Done 2026-05-31: every turn captured; safety-flagged → human-first (no draft);
+    non-flagged → Ollama draft enqueued to review (never auto-published). Confidence-gated
+    auto-reply waits on Rasa (interim force-human-review).
+- [ ] Owner review/correction console. **UI — DESIGN PASS REQUIRED before building.**
+  - Backend done 2026-05-31 (`GET /api/comic/review`, `POST /api/comic/review/[turnId]/resolve`;
+    approve/edit/reject; corrections persist as `comic_training_examples`). UI design-gated.
 - [ ] Stand up self-hosted Rasa; tracker store on Neon; custom action → Ollama; consume the
       (fixed) NLU export.
   - Blocked by: schema. Parallel to routing/console. Acceptance: Rasa returns intent + real
@@ -298,12 +367,15 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
   - Blocked by: running Rasa. Acceptance: keyword map retired; routing comes from Rasa.
 - [ ] Export corrected turns → Rasa training; retrain loop; raise the auto-respond threshold
       as data accumulates.
-  - Blocked by: console + Rasa. Acceptance: corrected turns become NLU/story training;
-    human-review share is observable and trends down.
-- [ ] Author `comic.*` command / access-policy / audit / deletion contracts.
-  - Blocked by: schema. Acceptance: conform to the plugin command/policy/audit templates.
-- [ ] Deterministic `seedComicPhase0.mjs`.
-  - Blocked by: schema. Acceptance: seeds conversations, turns, review queue, training set.
+  - Export mechanism done 2026-05-31: corrections persist to `comic_training_examples`;
+    `GET /api/comic/training/export` emits Rasa NLU YAML (single loop, no double counting).
+    Still blocked by Rasa for the retrain loop + threshold raise.
+- [x] Author `comic.*` command / access-policy / audit / deletion contracts.
+  - Done 2026-05-31: `COMIC_PLUGIN_{COMMAND,ACCESS_POLICY,AUDIT}_CONTRACTS.yaml` +
+    `COMIC_PROFILE_AND_DELETION_CONTRACT.md` (commands `comic.message.route`,
+    `comic.reply.generate`, `comic.review.resolve`, `comic.training.export`).
+- [x] Deterministic `seedComicPhase0.mjs`.
+  - Done 2026-05-31: seeds a conversation, turns, a populated review queue, and training set.
 - [ ] Android parity for `@comic`.
   - Blocked by: routing + turn capture. Acceptance: mention, reply, preset, rating work on
     Android; `plugin-parity-contracts.json` updated.

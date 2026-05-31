@@ -3157,6 +3157,97 @@ CREATE TABLE IF NOT EXISTS inventory_analysis_cache (
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_analysis_cache_file_path ON inventory_analysis_cache(inventory_file_path);
 
+-- === comic AI Assistant (@comic) — conversation + supervision + training layer ===
+-- The @comic assistant captures every turn, drafts via Ollama, and (while Rasa is not
+-- deployed) routes every draft to human review before the asker ever sees it. These tables
+-- back conversation capture, the owner review/correction queue, and the Rasa training export.
+-- Guarded DDL (CREATE TABLE IF NOT EXISTS + per-column ALTER ... ADD COLUMN IF NOT EXISTS)
+-- per the migration rules so fresh and legacy DBs converge.
+
+CREATE TABLE IF NOT EXISTS comic_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'hub',
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_conversations_user_id ON comic_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_comic_conversations_created_at ON comic_conversations(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comic_turns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES comic_conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'bot', 'human')),
+  body TEXT NOT NULL,
+  intent TEXT NULL,
+  nlu_confidence NUMERIC(5,4) NULL,
+  engine TEXT NOT NULL DEFAULT 'ollama' CHECK (engine IN ('rasa', 'ollama', 'template', 'human')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS conversation_id UUID;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS intent TEXT NULL;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS nlu_confidence NUMERIC(5,4) NULL;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS engine TEXT NOT NULL DEFAULT 'ollama';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_turns_conversation_id ON comic_turns(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_comic_turns_created_at ON comic_turns(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comic_review_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'corrected', 'rejected')),
+  reviewer_user_id TEXT NULL,
+  corrected_body TEXT NULL,
+  reason TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  decided_at TIMESTAMPTZ NULL
+);
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS turn_id UUID;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reviewer_user_id TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS corrected_body TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reason TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_status ON comic_review_queue(status);
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_turn_id ON comic_review_queue(turn_id);
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_created_at ON comic_review_queue(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comic_training_examples (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,
+  intent_label TEXT NOT NULL DEFAULT 'general',
+  text TEXT NOT NULL,
+  entities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  story JSONB NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'exported', 'discarded')),
+  exported_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS source_turn_id UUID;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS intent_label TEXT NOT NULL DEFAULT 'general';
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS entities JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS story JSONB NULL;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS exported_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_training_examples_intent_label ON comic_training_examples(intent_label);
+CREATE INDEX IF NOT EXISTS idx_comic_training_examples_status ON comic_training_examples(status);
+CREATE INDEX IF NOT EXISTS idx_comic_training_examples_source_turn_id ON comic_training_examples(source_turn_id);
+
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
 -- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table
