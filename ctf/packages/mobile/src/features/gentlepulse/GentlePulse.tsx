@@ -247,7 +247,9 @@ export function GentlePulse() {
         {!loading && !error && activeNav === 'sessions' && sessions.length > 0 && (
           <View style={styles.sessionGrid}>
             {sessions.map((s) => (
-              <SessionCard key={s.id} session={s} onPress={() => handleSelectSession(s.id)} />
+              <React.Fragment key={s.id}>
+                <SessionCard session={s} onPress={() => handleSelectSession(s.id)} />
+              </React.Fragment>
             ))}
           </View>
         )}
