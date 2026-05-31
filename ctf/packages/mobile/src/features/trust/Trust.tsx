@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
@@ -53,10 +52,12 @@ function TrustPublicView() {
         you — you reveal nothing beyond what you choose.
       </Text>
       {PUBLIC_SIGNALS.map((s) => (
-        <View key={s} style={styles.publicSignalRow}>
-          <View style={styles.publicSignalDot} />
-          <Text style={styles.publicSignalText}>{s}</Text>
-        </View>
+        <React.Fragment key={s}>
+          <View style={styles.publicSignalRow}>
+            <View style={styles.publicSignalDot} />
+            <Text style={styles.publicSignalText}>{s}</Text>
+          </View>
+        </React.Fragment>
       ))}
       <View style={styles.previewCard}>
         <View style={styles.previewIconWrap}>
@@ -115,10 +116,12 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
             { label: 'Transactions', value: '0' },
             { label: 'Active Plugins', value: '0' },
           ] as { label: string; value: string }[]).map(({ label, value }) => (
-            <View key={label} style={styles.statItem}>
-              <Text style={[styles.statValue, { color: SUBTLE }]}>{value}</Text>
-              <Text style={styles.statLabel}>{label}</Text>
-            </View>
+            <React.Fragment key={label}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: SUBTLE }]}>{value}</Text>
+                <Text style={styles.statLabel}>{label}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
         <View style={styles.progressRow}>
@@ -195,23 +198,24 @@ function TrustMainView({ trust }: { trust: TrustUserExtension }) {
       <View style={styles.evidenceCard}>
         <Text style={styles.sectionLabel}>RECENT ACTIVITY</Text>
         {trust.trustEvidence.map((item: TrustEvidenceItem, i: number) => (
-          <View
-            key={`${item.type}-${i}`}
-            style={[
-              styles.evidenceRow,
-              i === trust.trustEvidence.length - 1 && styles.evidenceRowLast,
-            ]}
-          >
-            <View style={styles.evidenceIconWrap}>
-              <Text style={styles.evidenceIconText}>✦</Text>
+          <React.Fragment key={`${item.type}-${i}`}>
+            <View
+              style={[
+                styles.evidenceRow,
+                i === trust.trustEvidence.length - 1 && styles.evidenceRowLast,
+              ]}
+            >
+              <View style={styles.evidenceIconWrap}>
+                <Text style={styles.evidenceIconText}>✦</Text>
+              </View>
+              <View style={styles.evidenceBody}>
+                <Text style={styles.evidenceLabel}>{item.summary}</Text>
+                <Text style={styles.evidenceTime}>
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
             </View>
-            <View style={styles.evidenceBody}>
-              <Text style={styles.evidenceLabel}>{item.summary}</Text>
-              <Text style={styles.evidenceTime}>
-                {new Date(item.createdAt).toLocaleDateString()}
-              </Text>
-            </View>
-          </View>
+          </React.Fragment>
         ))}
       </View>
     </ScrollView>

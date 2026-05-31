@@ -4,7 +4,6 @@ const getApiBaseUrl = () => {
   if (__DEV__) {
     return Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
   }
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Config = require('react-native-config').default;
   return (Config?.API_BASE_URL as string | undefined) ?? 'https://api.example.com';
 };
