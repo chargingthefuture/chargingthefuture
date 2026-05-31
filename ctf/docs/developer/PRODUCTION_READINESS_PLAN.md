@@ -119,7 +119,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| levelup | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
