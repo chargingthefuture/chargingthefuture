@@ -729,6 +729,70 @@ async function seedClicklog(c) {
   console.log('  ✓ clicklog');
 }
 
+async function seedWhatworks(c) {
+  const endorsers = [OWNER, PEER_1, PEER_2, 'demo-ww-001', 'demo-ww-002', 'demo-ww-003'];
+  const problems = [
+    {
+      slug: 'noise-verbal-harassment', emoji: '🎧', title: 'Noise & Verbal Harassment',
+      context: 'Slurs through the wall, street harassment, or constant noise meant to wear you down.',
+      products: [
+        { emoji: '🎧', name: 'Sony WH-1000XM5', kind: 'Over-ear · active noise cancelling', note: 'Blocks voices, not just hum. The only thing that quieted the through-wall talking for me.', verified: 6 },
+        { emoji: '🔇', name: 'Loop Quiet 2', kind: 'Reusable ear plugs', note: 'Discreet and comfortable enough to sleep in. Takes the edge off without total silence.', verified: 4 },
+        { emoji: '🎵', name: 'JLab Go Air Pop', kind: 'Budget ANC earbuds', note: 'Cheap, pocketable, and good enough to get me through a shift.', verified: 3 },
+      ],
+    },
+    {
+      slug: 'sleep-disruption', emoji: '🌙', title: 'Sleep Disruption',
+      context: 'Noise, light, or hypervigilance keeping you up at night.',
+      products: [
+        { emoji: '🌑', name: 'Manta Sleep Mask', kind: 'Blackout eye mask', note: 'Zero pressure on the eyes, total darkness. First full night of sleep in months.', verified: 5 },
+        { emoji: '🌬️', name: 'Yogasleep Dohm', kind: 'White noise machine', note: 'A real fan inside, not a loop. Masks footsteps and voices outside the door.', verified: 4 },
+      ],
+    },
+    {
+      slug: 'vehicle-tampering', emoji: '🚗', title: 'Vehicle Tampering',
+      context: 'Worried about hidden trackers or tampering on your car.',
+      products: [
+        { emoji: '📡', name: 'GPS Tracker Detector', kind: 'RF bug sweeper', note: 'Found a tracker tucked under my bumper in about ten minutes.', verified: 3 },
+        { emoji: '🛞', name: 'Tire Pressure Monitor', kind: 'Solar cap sensors (TPMS)', note: 'Catches slow leaks before they strand me somewhere at night.', verified: 2 },
+      ],
+    },
+  ];
+
+  let sortOrder = 0;
+  for (const problem of problems) {
+    const problemId = sha256id('whatworks-problem', problem.slug);
+    await c.query(
+      `INSERT INTO whatworks_problems (id, slug, emoji, title, context, sort_order, is_active, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [problemId, problem.slug, problem.emoji, problem.title, problem.context, sortOrder, OWNER],
+    );
+    sortOrder += 1;
+
+    for (const product of problem.products) {
+      const productId = sha256id('whatworks-product', problem.slug, product.name);
+      await c.query(
+        `INSERT INTO whatworks_products
+           (id, problem_id, emoji, name, kind, note, purchase_url, status, suggested_by, reviewed_by, reviewed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, $9, NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [productId, problemId, product.emoji, product.name, product.kind, product.note, `https://duckduckgo.com/?q=${encodeURIComponent(product.name)}`, endorsers[0], OWNER],
+      );
+      for (let index = 0; index < product.verified; index += 1) {
+        await c.query(
+          `INSERT INTO whatworks_endorsements (id, product_id, user_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (product_id, user_id) DO NOTHING`,
+          [sha256id('whatworks-endorsement', productId, endorsers[index % endorsers.length]), productId, endorsers[index % endorsers.length]],
+        );
+      }
+    }
+  }
+
+  console.log('  ✓ whatworks');
+}
+
 async function main() {
   const connStr =
     process.env.DATABASE_URL_DIRECT ||
@@ -766,6 +830,7 @@ async function main() {
     await seedSkillsTaxonomy(client);
     await seedSocketRelay(client);
     await seedClicklog(client);
+    await seedWhatworks(client);
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
