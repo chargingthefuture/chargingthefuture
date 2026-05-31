@@ -236,4 +236,3 @@ function FeedCommunityDetail({ community, busyPostId, replyDraft, onReplyChange,
     </div>
   );
 }
-

@@ -569,4 +569,3 @@ function AdminTab({ items, alertCount, unreadCount, isAdmin }: AdminTabProps) {
     </div>
   );
 }
-
