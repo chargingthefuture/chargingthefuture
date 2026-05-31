@@ -230,6 +230,15 @@ CREATE TABLE IF NOT EXISTS chyme_messages (
   text TEXT NOT NULL CHECK (char_length(text) BETWEEN 1 AND 1000),
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Column reconciliation so older databases converge on the current shape
+-- (added nullable / with safe defaults so they never fail on populated tables).
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS room_id UUID;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS text TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_chyme_messages_room_sent_at ON chyme_messages(room_id, sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chyme_messages_user_id ON chyme_messages(user_id);
 CREATE TABLE IF NOT EXISTS chyme_deletion_events (

@@ -566,16 +566,17 @@ async function seedChyme(c) {
     );
   }
 
+  const memberDisplayNames = { [OWNER]: 'Demo Participant', [PEER_1]: 'Alex Rivera' };
   const messages = [
     [PEER_1, 'Hey — welcome to the demo environment!'],
     [OWNER, 'Thanks! Just exploring the platform. Looks great.'],
     [PEER_1, 'Let me know if you have any questions about how it works.'],
   ];
-  for (const [uid, body] of messages) {
+  for (const [uid, text] of messages) {
     await c.query(
-      `INSERT INTO chyme_messages (room_id, sender_user_id, body)
-       VALUES ($1::uuid, $2, $3)`,
-      [ID.room, uid, body],
+      `INSERT INTO chyme_messages (room_id, user_id, display_name, text)
+       VALUES ($1::uuid, $2, $3, $4)`,
+      [ID.room, uid, memberDisplayNames[uid] ?? 'Demo User', text],
     );
   }
 
