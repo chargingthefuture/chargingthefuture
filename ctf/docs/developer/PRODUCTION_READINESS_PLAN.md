@@ -110,7 +110,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | workforce | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | foundation | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| lighthouse | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
