@@ -221,7 +221,7 @@ async function seedLevelup(c) {
     `INSERT INTO levelup_curriculum_items
      (id, cohort_id, title, description, sequence_no, required)
      VALUES ($1::uuid, $2::uuid, 'API Design & Delivery', 'Ship one milestone-gated service endpoint.', 1, true)
-     ON CONFLICT (cohort_id, sequence_no) DO UPDATE SET title = EXCLUDED.title`,
+     ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title`,
     [ID.curriculumItem, ID.cohort],
   );
 
@@ -231,7 +231,7 @@ async function seedLevelup(c) {
      VALUES
        ($1::uuid, $3::uuid, 'Foundation Review', 30, 'Submit and pass the foundation task review.', 1),
        ($2::uuid, $3::uuid, 'Final Sprint', 70, 'Complete mock client sprint + final assessment.', 2)
-     ON CONFLICT (cohort_id, sequence_no) DO UPDATE SET name = EXCLUDED.name`,
+     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
     [ID.milestone1, ID.milestone2, ID.cohort],
   );
 
@@ -240,7 +240,7 @@ async function seedLevelup(c) {
     `INSERT INTO levelup_enrollments
      (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
      VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
-     ON CONFLICT (cohort_id, user_id) DO UPDATE SET
+     ON CONFLICT (id) DO UPDATE SET
        status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
     [ID.enrollmentOwner, ID.cohort, OWNER, TRAINER],
   );
@@ -783,7 +783,7 @@ async function seedWhatworks(c) {
         await c.query(
           `INSERT INTO whatworks_endorsements (id, product_id, user_id)
            VALUES ($1, $2, $3)
-           ON CONFLICT (product_id, user_id) DO NOTHING`,
+           ON CONFLICT (id) DO NOTHING`,
           [sha256id('whatworks-endorsement', productId, endorsers[index % endorsers.length]), productId, endorsers[index % endorsers.length]],
         );
       }

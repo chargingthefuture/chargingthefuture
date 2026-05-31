@@ -2042,7 +2042,6 @@ ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS sequence
 ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE UNIQUE INDEX IF NOT EXISTS levelup_curriculum_items_cohort_id_sequence_no_key ON levelup_curriculum_items(cohort_id, sequence_no);
 
 CREATE TABLE IF NOT EXISTS levelup_milestones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2062,7 +2061,6 @@ ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS required_task 
 ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE UNIQUE INDEX IF NOT EXISTS levelup_milestones_cohort_id_sequence_no_key ON levelup_milestones(cohort_id, sequence_no);
 
 CREATE TABLE IF NOT EXISTS levelup_command_idempotency (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
