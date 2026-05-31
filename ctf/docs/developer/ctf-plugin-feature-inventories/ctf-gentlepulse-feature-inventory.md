@@ -116,6 +116,8 @@ Excluded route groups:
 
 `web+android complete`. Core library/filter/sort/favorite/rating/play behaviors are consistent across web (`/apps/gentlepulse`) and Android (`packages/mobile/src/features/gentlepulse`). App-level settings parity is tracked in the non-plugin inventory.
 
+Web pixel pass (design `c5d83c0`): the `/apps/gentlepulse` shell matches `design/.../survivor-hub/GentlePulse.tsx` (sessions grid, player, supportive chat, sidebar categories, right panel) with the mockup's 💚 header glyphs; Loading/Empty states added. Library browse, play tracking, and favorite toggles bind to the real `/api/gentlepulse/library*` routes; sessions, categories, and counts derive from that data (no dummy session list). The previously oversized shell was decomposed into modular sub-components (`gp-shared`, `gp-loading`, `gp-icon-rail`, `gp-sidebar`, `gp-sessions`, `gp-player`, `gp-chat`, `gp-right-panel`) within the rule-116 limits, and a dead duplicate `components/gentle-pulse/` directory was removed. Android pixel pass to `MobileGentlePulse.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## 7) Seed Coverage Status
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
@@ -127,6 +129,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-05-29: Web UI circle-back (design `c5d83c0`). Aligned the gentlepulse shell to the `GentlePulse.tsx` mockup + Loading/Empty states; restored the 💚 header glyphs; decomposed the oversized shell into modular sub-components within rule-116 limits; removed the dead duplicate `components/gentle-pulse/` directory. Real `/api/gentlepulse/library*` wiring unchanged.
 - 2026-05-18: Renamed "Web and Android Parity Plan" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
 - 2026-02-25: Created initial GentlePulse CTF rewrite inventory.
 - 2026-02-25: Removed Mood integration from GentlePulse parity scope; GentlePulse and Mood are documented as separate plugins.

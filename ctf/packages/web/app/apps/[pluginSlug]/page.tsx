@@ -160,7 +160,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'clicklog') {
-    return <ClicklogShell userId={decision.userId} />;
+    return <ClicklogShell />;
   }
 
   if (selectedPlugin.slug === 'chyme') {
@@ -176,7 +176,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'directory') {
-    return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <DirectoryShell />;
   }
 
   if (selectedPlugin.slug === 'feed-announcements') {
@@ -206,7 +206,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'lighthouse') {
-    return <LighthouseShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
+    return <LighthouseShell />;
   }
 
   if (selectedPlugin.slug === 'socketrelay') {
@@ -214,11 +214,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'trusttransport') {
-    return <TrustTransportShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <TrustTransportShell />;
   }
 
   if (selectedPlugin.slug === 'peer-programming') {
-    return <PeerProgrammingShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <PeerProgrammingShell />;
   }
 
   if (selectedPlugin.slug === 'mood') {
@@ -234,11 +234,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell isAdmin={decision.isAdmin} />;
+    return <GdpShell />;
   }
 
   if (selectedPlugin.slug === 'service-credits') {
-    return <ServiceCreditsShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <ServiceCreditsShell />;
   }
 
   if (selectedPlugin.slug === 'levelup') {

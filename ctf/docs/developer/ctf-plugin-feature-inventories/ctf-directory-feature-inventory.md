@@ -95,6 +95,8 @@ Web and Android implementations:
 - Admin role-gated controls reach parity (same policy outcomes and deny taxonomy across platforms).
 - Unified UI contract governs both clients, with platform-specific presentation only.
 
+Web pixel pass: the `DirectoryShell` is aligned to `design/.../survivor-hub/Directory.tsx` and its Loading/Empty states (`DirectoryLoading.tsx`, `DirectoryEmpty.tsx`). The app surface background was corrected to `#0F1117` (the mockup's rendered surface), the loading state now renders the skeleton layout, and the empty state matches the mockup's category-grid + "Browse All / Clear Filters" treatment (driven by real sector data). The shell was decomposed into modular sub-components (`directory-profile-detail`, `directory-browse`, `directory-chat-tab`, `directory-right-panel`, `directory-loading-skeleton`, `directory-empty-state`, `shared`) so each unit stays within the rule-116 complexity/length limits. API wiring is unchanged. The Android pixel pass to `MobileDirectory.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## Seed Coverage Status
 
 Deterministic Directory seed script exists: `ctf/scripts/seedDirectory.mjs`.
@@ -111,6 +113,8 @@ Seeded content:
 
 ## Change Log
 
+- 2026-05-29: Design-sync reconcile to `c5d83c0`. Removed user-facing "GetStream" wording from the profile detail (dropped the badge; "GetStream Chat" → "Encrypted Chat") and right panel ("All interactions are end-to-end encrypted"); renamed the detail "Reviews" section to "Endorsements" per the revised mockup. Copy-only.
+- 2026-05-29: Web UI circle-back. Aligned `DirectoryShell` to the `Directory.tsx` mockup and its Loading/Empty states; corrected the app surface background to `#0F1117`, added the skeleton loading state and the mockup's empty-state category grid (real sector data), and restored the `📇` heading glyphs. Decomposed the previously oversized shell into modular sub-components to satisfy rule-116 limits and removed the unused `userId`/`isAdmin` props (cleared a lint error). API wiring unchanged.
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language, Planned section headers, and planning-phase ambiguities list. Confirmed web+android complete delivery status. Clarified technical debt (skills compatibility, route ownership codification) as known limitations, not unimplemented features.
 - 2026-03-02: Implemented backend and unified web surface (user/admin role-gated sections) with resolved list/pagination/claimed-delete decisions.
 - 2026-02-25: Created initial unified Directory CTF rewrite inventory merging user and admin flows into one planned UI surface.

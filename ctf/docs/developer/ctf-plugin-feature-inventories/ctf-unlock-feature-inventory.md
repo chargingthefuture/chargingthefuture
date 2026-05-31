@@ -116,6 +116,7 @@ Admin page:
 1. Backend-first delivery with web admin moderation shell.
 2. Android parity for submission/status surfaces follows shared contracts.
 3. Access-tier semantics remain consistent across web and Android.
+4. Web pixel pass (design `c5d83c0`): the user-facing `/plugin/unlock` page is rebuilt to `design/.../survivor-hub/Unlock.tsx` and its Empty/Loading states. `UnlockShell` reads `GET /api/unlock/status` and renders the loading state, the submission form (no submission), or the status view (pending/approved/rejected, with a re-submit form on rejection). Submission and re-submission POST to `/api/unlock/submission` (replacing the previous stub form, which never called the API). Status label, the timeline, the "what you unlock" checklist, and the approved/rejected variants are driven by the real `UnlockStatus`; the mockup's dummy URL, rejection text, and timestamps (absent from the status endpoint) are not fabricated. ClickLog-style dark layout decomposed into modular sub-components within rule-116 limits. Android pixel pass to `MobileUnlock.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
 
 ## 7) Seed Coverage Status
 
@@ -130,6 +131,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-05-29: Web UI circle-back (first design pass; unblocked by the `c5d83c0` design re-pin). Rebuilt the `/plugin/unlock` page to the `Unlock.tsx` mockup + Empty/Loading states, wired to `/api/unlock/status` and `/api/unlock/submission` (the prior `UnlockSubmission` stub never posted; removed). Decomposed into modular sub-components (`unlock-shared`, `unlock-loading`, `unlock-icon-rail`, `unlock-submission-view`, `unlock-sidebar`, `unlock-status-card`, `unlock-right-rail`, `unlock-status-view`, `unlock-shell`). Status/timeline driven by real data; no fabricated URL/reason/timestamps. No schema/API change.
 - 2026-03-25: Created initial Unlock CTF rewrite inventory with staged access, admin moderation queue, and one-time approval incentive scope.
 - 2026-03-25: Updated for platform-wide enforcement, runtime-config incentive, and status endpoint implementation.
 

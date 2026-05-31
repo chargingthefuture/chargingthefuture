@@ -1,0 +1,136 @@
+"use client";
+
+// Right-rail Trust widget. Pixel-aligned to
+// design/.../survivor-hub/Trust.tsx (the "Trust Widget — Both States" card).
+//
+// Honest-data notes (real-data-only principle):
+// - The design's verified-state "signal buckets" (Last Active / Activity /
+//   Transactions / Active Plugins) have no backing — the signal-snapshot route
+//   is a stub and no snapshot table exists — so we render the real
+//   `trustEvidence` list instead of fabricating bucket values.
+// - There is no "request verification" endpoint (verification is admin-only),
+//   and the visibility-update route is a stub, so we render the truthful admin
+//   note and a static visibility row rather than non-functional controls.
+import React from "react";
+import { ShieldCheck, Eye, CheckCircle2 } from "lucide-react";
+import type { TrustUserExtension, TrustEvidenceItem } from "../../lib/trust/types";
+
+const BRAND = "#0284C7";
+const BRAND_DIM = "rgba(14,165,233,0.15)";
+const BRAND_BORDER = "rgba(14,165,233,0.25)";
+const CARD_BG = "rgba(14,165,233,0.06)";
+const CARD_BORDER = "rgba(14,165,233,0.18)";
+const HAIRLINE = "rgba(255,255,255,0.05)";
+
+const STEPS = ["Complete your profile", "Make your first transaction", "Use at least one plugin"];
+
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function WidgetHeader({ verified }: { verified: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <ShieldCheck size={14} style={{ color: BRAND }} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#38BDF8", letterSpacing: "0.06em", textTransform: "uppercase" }}>Trust</span>
+      </div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 4,
+        background: verified ? BRAND_DIM : "rgba(255,255,255,0.05)",
+        color: verified ? "#38BDF8" : "#6B7280",
+        border: `1px solid ${verified ? BRAND_BORDER : "rgba(255,255,255,0.08)"}`,
+        fontSize: 10, padding: "2px 8px", borderRadius: 20,
+      }}>
+        <ShieldCheck size={9} />
+        {verified ? "Verified" : "Unverified"}
+      </div>
+    </div>
+  );
+}
+
+function VisibilityRow({ visibility, bordered }: { visibility: string; bordered: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: bordered ? "9px 0 0" : 0, marginTop: bordered ? 0 : 4, borderTop: bordered ? `1px solid ${HAIRLINE}` : "none" }}>
+      <Eye size={11} style={{ color: "#4B5563" }} />
+      <span style={{ fontSize: 11, color: "#4B5563" }}>Visible to: {titleCase(visibility)}</span>
+    </div>
+  );
+}
+
+function EmptyBody({ visibility }: { visibility: string }) {
+  return (
+    <div style={{ padding: "4px 14px 14px" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0 14px", borderTop: `1px solid ${HAIRLINE}` }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(14,165,233,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+          <ShieldCheck size={22} style={{ color: "rgba(14,165,233,0.4)" }} />
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 4 }}>No trust signals yet</div>
+        <div style={{ fontSize: 11, color: "#4B5563", textAlign: "center", lineHeight: 1.5 }}>
+          Trust signals appear as you participate in the community
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+        {STEPS.map((label) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${HAIRLINE}` }}>
+            <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: "#6B7280" }}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11, color: "#4B5563", textAlign: "center", lineHeight: 1.5, marginBottom: 10 }}>
+        Verification is handled manually by admins.
+      </div>
+
+      <VisibilityRow visibility={visibility} bordered />
+    </div>
+  );
+}
+
+function EvidenceItem({ item }: { item: TrustEvidenceItem }) {
+  return (
+    <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px", border: `1px solid ${HAIRLINE}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+        <CheckCircle2 size={12} style={{ color: "#38BDF8", flexShrink: 0 }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#E2E8F0" }}>{titleCase(item.type)}</span>
+        <span style={{ fontSize: 10, color: "#4B5563", marginLeft: "auto" }}>{new Date(item.createdAt).toLocaleDateString()}</span>
+      </div>
+      <div style={{ fontSize: 11, color: "#CBD5E1", lineHeight: 1.5 }}>{item.summary}</div>
+      {item.details && <div style={{ fontSize: 10, color: "#6B7280", marginTop: 3, lineHeight: 1.5 }}>{item.details}</div>}
+    </div>
+  );
+}
+
+function EvidenceBody({ evidence, visibility }: { evidence: TrustEvidenceItem[]; visibility: string }) {
+  return (
+    <div style={{ padding: "4px 14px 14px", borderTop: `1px solid ${HAIRLINE}` }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "12px 0 10px" }}>
+        {evidence.map((item, idx) => (
+          <EvidenceItem key={idx} item={item} />
+        ))}
+      </div>
+      <div style={{ paddingTop: 7, borderTop: `1px solid ${HAIRLINE}` }}>
+        <VisibilityRow visibility={visibility} bordered={false} />
+      </div>
+    </div>
+  );
+}
+
+export interface TrustWidgetCardProps {
+  trust: TrustUserExtension;
+}
+
+export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust }) => {
+  const verified = trust.trustStatus === "verified";
+  const hasEvidence = trust.trustEvidence.length > 0;
+  return (
+    <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <WidgetHeader verified={verified} />
+      {hasEvidence
+        ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} />
+        : <EmptyBody visibility={trust.trustVisibility} />}
+    </div>
+  );
+};

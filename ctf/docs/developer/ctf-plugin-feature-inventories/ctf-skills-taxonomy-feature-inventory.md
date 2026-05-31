@@ -125,6 +125,8 @@ Consumer routes:
 
 `web+android complete`. Web admin taxonomy management lives under `/apps/skills-taxonomy`; Android consumes the same read models via `packages/mobile/src/features/skills-taxonomy`. Hierarchy/flattened reads, admin CRUD, dependency-impact preview, and destructive delete safeguards are consistent across platforms.
 
+Web pixel pass (design `c5d83c0`): the user-facing `/apps/skills-taxonomy` surface is rebuilt to `design/.../survivor-hub/SkillsTaxonomy.tsx` and its Empty/Loading states — the full-height 3-column browser (sectors → job titles → skills) with icon rail, breadcrumb, and in-role skill search. The whole tree loads from the existing `GET /api/skills-taxonomy/hierarchy` route (response `{ items }`); sectors/titles/skills are derived client-side from that nested payload, and sector/title counts use the real `jobTitles.length` / `skills.length`. The mockup's demand/level/category chips and per-sector totals have no backing in the data model and were omitted rather than faked; admin create/edit/delete affordances link to the dedicated `/admin/skills-taxonomy` route. Decomposed into modular sub-components within the rule-116 limits. The Android pixel pass to `MobileSkillsTaxonomy.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+
 ## 8) Seed Coverage Status
 
 - `ctf/scripts/seedSkillsTaxonomy.mjs` is the deterministic backfill script and imports canonical legacy source data.
@@ -138,6 +140,8 @@ Consumer routes:
 3. Read-model evolution has no formal contract versioning process; consumers track shape changes through code review.
 
 ## 10) Change Log
+
+- 2026-05-29: Web UI circle-back (design `c5d83c0`; unblocked by the design re-pin). Rebuilt the `/apps/skills-taxonomy` browser from the prior summary/snapshot shell to the `SkillsTaxonomy.tsx` mockup (3-column hierarchy + Empty/Loading). Loads the nested tree from the existing `GET /api/skills-taxonomy/hierarchy` (response `{ items }`) and derives the columns client-side; no schema/API change. Decomposed into modular sub-components (`st-shared`, `st-loading`, `st-icon-rail`, `st-empty-state`, `st-sectors-column`, `st-titles-column`, `st-skills-detail`, plus the browser and shell). Real data only; the mockup's demand/level/category chips were omitted as unbacked.
 
 - 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Removed deferred-owner/milestone tracking and "Phase-0 baseline" framing per Rule 120. Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-deferral entries.
 - 2026-03-02: Delivered web/API runtime baseline (migration + hierarchy/flattened routes + admin CRUD + dependency preview + delete safeguards + audit + CSRF + deterministic seed).

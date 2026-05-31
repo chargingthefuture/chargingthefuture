@@ -182,7 +182,7 @@ Admin/moderator routes:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`).
+`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`). Web pixel pass complete for the user shell: `skills-hunt-shell.tsx` + `sh-*` sub-components are aligned to `design/.../survivor-hub/SkillsHunt.tsx` (brand color #D946EF, aria-labeled lucide icon rail, taxonomy skills picker, scout/leaderboard/missions/my-finds tabs) and decomposed within rule-116 limits; all tabs bind real round/leaderboard/missions/submissions/achievements/notifications routes (no fabricated figures). The admin moderation shell (`/admin/skills-hunt`) is a tracked rule-116 follow-up. Android pixel parity (`MobileSkillsHunt.tsx`) is tracked for the dedicated Android sweep.
 
 ## 7) Seed Coverage Status
 
@@ -195,6 +195,9 @@ Admin/moderator routes:
 3. Team leaderboard aggregation by profession taxonomy depends on Skills Taxonomy sign-off on grouping semantics.
 
 ## 9) Change Log
+
+- 2026-05-30: Admin moderation shell rule-116 follow-up (the deferred item from the user-shell pass). Decomposed the 253-line `skills-hunt-admin-shell.tsx` (213-line render + a complexity-11 action arrow) into `sha-shared.ts` (constants, reject-reason prompt), `sha-filters.tsx` (round/status chips + bulk toolbar), `sha-table.tsx` (table + extracted `SubmissionRow`/`RowActions`), and a thin shell. Behavior preserved exactly (review/bulk-review POST `{ action, notes }` with `x-ctf-csrf`, pending-only selection, sequential bulk apply); added aria-labels on the row checkboxes. No design mockup exists for this internal surface and none is required â€” pure behavior-preserving decomposition, no new rendered surface. No schema/route/contract changes.
+- 2026-05-30: Web pixel pass for the user shell. Aligned to the design mockup (brand color #A855F7 -> #D946EF; aria-labeled lucide icon rail with unread badge) and decomposed the 845-line monolith into modular sub-components within rule-116 limits: sh-shared.ts, sh-use-nomination-form.ts, sh-icon-rail, sh-notifications, sh-sidebar, sh-skills-picker, sh-scout-tab, sh-leaderboard-tab, sh-missions-tab, sh-my-finds-tab, sh-right-panel, thin shell. All data stays bound to the real routes; no mocks. Admin shell (/admin/skills-hunt) left as a tracked rule-116 follow-up. No schema/route/contract changes.
 
 - 2026-05-18: Renamed "Web and Android Delivery Strategy" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt". Removed Android-parity-deferral entry per Rule 105.
 - 2026-02-24: Created initial Skills Hunt CTF rewrite inventory.
@@ -214,7 +217,7 @@ Admin/moderator routes:
 - [x] Confirm Directory boundary semantics.
   - Only governed generation of unclaimed profiles is allowed; ownership lifecycle remains Directory-authoritative. Reaffirmed 2026-05-11.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [x] Define Skills Hunt plugin command contracts for v1.
   - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml`.
@@ -224,7 +227,7 @@ Admin/moderator routes:
   - Evidence: `ctf/docs/contracts/SKILLS_HUNT_PLUGIN_AUDIT_CONTRACTS.yaml`.
 - [x] Add command for `skills-hunt.submission.report` (community moderation report) and `skills-hunt.profile.delete` (GDPR delete) to all three contracts. Landed in `SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml`, `..._ACCESS_POLICY_CONTRACTS.yaml`, `..._AUDIT_CONTRACTS.yaml` (2026-05-12 changelog entries).
 
-### €” Schema, Migrations, and Retention
+### ï¿½ï¿½ Schema, Migrations, and Retention
 
 - [x] Define Skills Hunt domain schema for v1 baseline.
 - [x] **Add new columns/tables for v2 (Wave 1):** Landed in commit `f3aeb3f`.
@@ -249,7 +252,7 @@ Admin/moderator routes:
   - **Rollback path** (only if the rewrite must be reverted): each new column has a defined default; rollback can `DROP COLUMN IF EXISTS` per column safely. No data loss for pre-rewrite rows since the legacy code didn't read the new columns. Do NOT drop `directory_profiles.deleted_at` or `directory_profiles.unclaimed_handle` without first clearing UI/route handlers that consume them (see `app/apps/directory/[handle]/page.tsx`).
   - **No `DROP TABLE` rollback is supported** â€” `skills_hunt_submission_reports` and `skills_hunt_missions` may carry production data; backup before drop.
 
-### €” Core Contributor Flow
+### ï¿½ï¿½ Core Contributor Flow
 
 - [x] Implement rounds list/get surfaces.
   - `GET /api/skills-hunt/rounds`, `GET /api/skills-hunt/admin/rounds`.
@@ -265,7 +268,7 @@ Admin/moderator routes:
   - [x] Taxonomy-driven skills parsing â€” submission POST forwards `proposedSkills` and `validateSubmissionInput` enforces `skills + proposedSkills â‰¤ 10`, each label â‰¤ 40 chars, `proposedSkills â‰¤ 10`. `createSubmission` persists `proposed_skills` to the JSONB column on insert.
   - [x] Align display name (2â€“100 chars, letters/digits/spaces only) and bio (â‰¤ 280, optional) limits with spec. Server validator uses `SKILLS_HUNT_MIN_DISPLAY_NAME_LENGTH`, `SKILLS_HUNT_MAX_DISPLAY_NAME_LENGTH`, `SKILLS_HUNT_DISPLAY_NAME_PATTERN`, and `SKILLS_HUNT_MAX_BIO_LENGTH` constants. UI already enforces matching limits in the shell.
 
-### €” Review and Scoring Flow
+### ï¿½ï¿½ Review and Scoring Flow
 
 - [x] Implement moderator/admin submission review actions (accept/reject/edit/flag).
 - [x] Implement baseline scoring engine.
@@ -284,7 +287,7 @@ Admin/moderator routes:
   - [x] Read-only `getReputationProfile(userId)` exported for future admin dashboard / submit-time UI hint.
 - [x] Enforce rejection-rate guardrails (existing 80% block â€” to be replaced by reputation system in Wave 2).
 
-### €” Leaderboard, Rewards, and Notifications
+### ï¿½ï¿½ Leaderboard, Rewards, and Notifications
 
 - [x] Implement baseline leaderboard rebuild and retrieval (individual + team mode columns).
 - [x] Implement achievements (3 generic count-based codes).
@@ -319,7 +322,7 @@ Admin/moderator routes:
   - [x] `round-ending-soon` â€” `notifyRoundsEndingSoon()` cron entry point at `POST /api/skills-hunt/admin/notifications/round-ending-soon` (admin-gated, CSRF). Idempotent per `(user, round)`; wire a daily scheduler to invoke.
 - [x] **Wave 2 â€” notification center UI** (web + mobile) with unread badge. Web: bell icon in the icon rail toggles a popover anchored above the secondary sidebar, with a red `unreadCount` badge and per-row mark-read on click. Mobile: top-bar bell with the same badge opens an inline inbox above the tabbar. Both poll `/api/skills-hunt/notifications` every 30s.
 
-### €” Directory Projection and Safety
+### ï¿½ï¿½ Directory Projection and Safety
 
 - [x] Implement governed unclaimed Directory profile generation via `maybeAutoGenerateDirectoryProfile`.
 - [x] **Wave 1 â€” Directory schema additions** (commit `f3aeb3f`):
@@ -337,7 +340,7 @@ Admin/moderator routes:
   - `app/apps/directory/[handle]/page.tsx` renders the purple "Community generated" pill, the `@unclaimed_handle` monospace line, and "Nominated by @handle" attribution. Uses design's `#A855F7` palette per rule 126.
 - [x] **Wave 1 â€” backfill migration** assigning `community-<6hex>` to existing 60 unclaimed profiles (commit `f3aeb3f`, idempotent DO block).
 
-### €” Security, Compliance, and Deletion
+### ï¿½ï¿½ Security, Compliance, and Deletion
 
 - [x] Verify authz/deny conditions and audit integrity on existing endpoints.
 - [x] **Wave 2 â€” soft-delete + GDPR endpoint:**
@@ -353,13 +356,13 @@ Admin/moderator routes:
     - Exports `evaluateUsernamePolicy` and `isReservedUsername`. Submissions POST returns `SKILLS_HUNT_RESERVED_USERNAME` (403) when caller's Clerk username matches a reserved prefix.
   - [x] Document Clerk dashboard configuration in `123-environment-configuration-rules.mdc`. New "Reserved Username Prefixes" section instructs operators to add `community-` to the disallowed-prefix blocklist on every Clerk instance.
 
-### €” Validation, Seeds, and Release Gates
+### ï¿½ï¿½ Validation, Seeds, and Release Gates
 
 - [x] Update seed script `ctf/scripts/seedSkillsHunt.mjs` for new schema columns (`proposed_skills`, `participation_points`, `credit_granted`, `url_validation_result`, leaderboard `first_match_count` / `pending_points` / `last_submission_at`) and new test case: a `community-generated` Directory profile with `@community-seed01` handle linked to the seed submission via `skills_hunt_directory_profiles`.
 - [x] Update plugin registry availability state: `'implemented_shell'` â†’ `'alpha'`. `PluginAvailabilityState` widened to include `'alpha' | 'beta'`. Flip to `'beta'` after the e2e smoke test and a real staging cohort run.
 - [x] Add type-safe end-to-end smoke: rounds list â†’ submit â†’ admin accept â†’ leaderboard rebuild â†’ notification fan-out â†’ unclaimed Directory profile with `@handle`. `ctf/scripts/smokeSkillsHuntE2e.mjs` asserts on the deterministic post-state left by `seed:skills-hunt`. Invoke with `pnpm smoke:skills-hunt`. Both scripts are idempotent, so the seed + smoke can be chained safely in CI / on-demand.
 
-### €” UI Surfaces (consolidated)
+### ï¿½ï¿½ UI Surfaces (consolidated)
 
 - [x] **Wave 1 â€” submission flow** (replaces the planned modal). Post-design lock (continuity Â§2.4) replaced the in-place Directory modal with a navigation to `/apps/skills-hunt?tab=scout`. The form lives in `skills-hunt-shell.tsx` Scout tab and satisfies every original sub-item:
   - [x] Heading: "Nominate a Survivor" (Replit lexicon â€” see continuity Â§2.8).

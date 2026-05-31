@@ -1,0 +1,57 @@
+"use client";
+
+import { Download } from "lucide-react";
+import { BORDER, BRAND, FAINT, SUBTLE, TEXT, type WpWeek, formatWeekRange, isLiveWeek } from "./wp-shared";
+
+export function WeeklyPerformanceSidebar({
+  weeks,
+  selectedWeekStart,
+  onSelect,
+  isAdmin,
+  onExport,
+}: {
+  weeks: WpWeek[];
+  selectedWeekStart: string | null;
+  onSelect: (weekStartDate: string) => void;
+  isAdmin: boolean;
+  onExport: () => void;
+}) {
+  return (
+    <aside style={{ width: 240, background: "#0D0F14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+      <div style={{ padding: "20px 16px 12px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: SUBTLE, textTransform: "uppercase", marginBottom: 4 }}>📊 Weekly Performance</div>
+        <div style={{ fontSize: 12, color: FAINT, lineHeight: 1.5 }}>Week-over-week platform metrics</div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 12px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#374151", textTransform: "uppercase", padding: "4px 10px 8px" }}>Week History</div>
+        {weeks.length === 0 ? (
+          <div style={{ padding: "8px 10px", fontSize: 12, color: SUBTLE }}>No weeks tracked yet.</div>
+        ) : (
+          weeks.map((week) => {
+            const selected = week.weekStartDate === selectedWeekStart;
+            const live = isLiveWeek(week);
+            return (
+              <button key={week.weekStartDate} onClick={() => onSelect(week.weekStartDate)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 8, cursor: "pointer", background: selected ? `${BRAND}18` : "transparent", borderLeft: selected ? `2px solid ${BRAND}` : "2px solid transparent", marginLeft: 2, marginBottom: 2, border: "none", textAlign: "left" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: selected ? TEXT : "#9CA3AF", fontWeight: selected ? 600 : 400 }}>{formatWeekRange(week)}</div>
+                </div>
+                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 10, background: live ? `${BRAND}20` : "rgba(255,255,255,0.05)", color: live ? BRAND : SUBTLE, fontWeight: 600 }}>{live ? "LIVE" : "Closed"}</span>
+              </button>
+            );
+          })
+        )}
+      </div>
+      {isAdmin && (
+        <div style={{ padding: 12, borderTop: `1px solid ${BORDER}` }}>
+          <div style={{ padding: "10px 12px", borderRadius: 10, background: `${BRAND}08`, border: `1px solid ${BRAND}20` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: BRAND, marginBottom: 6 }}>Admin Controls</div>
+            <a href="/admin/weekly-performance" style={{ width: "100%", padding: "7px", borderRadius: 7, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, cursor: "pointer", marginBottom: 5, display: "block", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}>Manage weeks</a>
+            <button onClick={onExport} style={{ width: "100%", padding: "7px", borderRadius: 7, background: `${BRAND}15`, border: `1px solid ${BRAND}30`, color: BRAND, fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+              <Download size={11} /> Export CSV
+            </button>
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+}

@@ -146,6 +146,58 @@ Use when Android parity is deferred; link to the tracking issue.
 
 All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
 
+### CodeRabbit Review Labeling (self-triage)
+
+CodeRabbit auto-review is gated on the `coderabbit` label (see `.coderabbit.yaml`), and the
+account is on the **free tier**, so reviews are a scarce resource. Agents self-triage and apply the
+label **only when the change is genuinely complex/risky**, and **no more than once per hour**.
+
+- **Label `coderabbit`** when the PR touches any of: money / ServiceCredits ledger, auth/authz, CSRF,
+  data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
+  whole new plugin.
+- **Do NOT label** pure restyles, rule-116 decompositions, icon swaps, or doc-sync PRs with **no
+  behavior change** — these are low-risk and waste the quota.
+- **Rate cap:** at most **one labeled PR per hour**. If several qualify in the same hour, label only
+  the riskiest and defer the rest to the next hour.
+- Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
+  review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
+
+#### Draft vs. ready: agents leave PRs as draft; the owner marks them ready
+
+CodeRabbit needs **both** the `coderabbit` label **and** ready-for-review state before it reviews.
+A labeled **draft** is not reviewed (`.coderabbit.yaml` sets `auto_review.drafts: false`); the review
+fires only once the PR is **marked ready for review while carrying the label**. (A "Review in
+progress" commit status may briefly appear on a draft, but no walkthrough or findings are posted until
+the PR is ready — treat that status as non-blocking noise.)
+
+Workflow (owner-controlled ready):
+
+- **Agents always open PRs as draft** and apply the `coderabbit` label when the change qualifies (per
+  the self-triage list above). Then **stop** — do not mark the PR ready for review yourself.
+- **The owner marks the PR ready for review.** This is deliberate: it lets the owner catch
+  "needs-more-work" before a scarce review slot is ever spent, and paces reviews to the free-tier
+  one-review-per-hour budget without agents juggling timers. Marking ready + the label present =
+  CodeRabbit reviews it.
+- **Never treat a pending/absent CodeRabbit review as a blocker.** Keep doing all work as asked and
+  building the backlog regardless of review state; a labeled draft simply waits for the owner.
+- Net effect: **labeled + draft = waiting for the owner to mark ready; labeled + ready (owner) =
+  review fires.** Agents control the label; the owner controls ready.
+
+### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
+
+When several plugin PRs are open at once, all appending narrative to the **same** change-log section
+of `ctf/docs/developer/PRODUCTION_READINESS_PLAN.md` produces a merge conflict every time a sibling
+merges first. To avoid this:
+
+- In `PRODUCTION_READINESS_PLAN.md`, a per-plugin PR should **only flip that plugin's row** in the
+  progress table (the row is the single source of truth for delivery status). Do **not** append a
+  per-PR change-log entry there.
+- Put the detailed change-log narrative in that plugin's **own inventory file**
+  (`ctf/docs/developer/ctf-plugin-feature-inventories/ctf-<plugin>-feature-inventory.md`), which is
+  one file per plugin and therefore never collides with sibling PRs.
+- Reserve the plan's change-log section for cross-cutting milestones (infra, policy, multi-plugin
+  reconciliations), not routine per-plugin passes.
+
 ## Agent Startup Read Order
 
 - On each new task, read this `index.mdc` first.

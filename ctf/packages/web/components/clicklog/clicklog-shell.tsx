@@ -1,160 +1,147 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
-import { MAX_NOTES_LENGTH } from "../../lib/clicklog/constants";
+import { useEffect, useState } from "react";
 import type { ClicklogIncident } from "../../lib/clicklog/types";
+import { BG, BORDER, BRAND, SUBTLE, TEXT, deriveClicklogStats } from "./clicklog-shared";
+import { ClicklogIconRail } from "./clicklog-icon-rail";
+import { ClicklogSidebar } from "./clicklog-sidebar";
+import { ClicklogRightRail } from "./clicklog-right-rail";
+import { ClicklogLogPanel } from "./clicklog-log-panel";
+import { ClicklogIncidentList } from "./clicklog-incident-list";
+import { ClicklogEmptyState } from "./clicklog-empty-state";
+import { ClicklogLoading } from "./clicklog-loading";
+import { AlertTriangle } from "lucide-react";
 
-interface ClicklogShellProps {
-  userId: string;
-}
+type Geo = { latitude?: number; longitude?: number };
 
-export function ClicklogShell({ userId }: ClicklogShellProps) {
-  const [loading, setLoading] = useState(false);
+export function ClicklogShell() {
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [incidents, setIncidents] = useState<ClicklogIncident[]>([]);
-  const [count, setCount] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [geo, setGeo] = useState<{ latitude?: number; longitude?: number }>({});
+  const [showForm, setShowForm] = useState(false);
+  const [note, setNote] = useState("");
+  const [geo, setGeo] = useState<Geo>({});
+  const [logged, setLogged] = useState(false);
 
-  const fetchIncidents = async () => {
-    setLoading(true);
+  async function fetchIncidents(initial = false): Promise<void> {
+    if (initial) setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/clicklog");
       if (!res.ok) throw new Error("Failed to fetch incidents");
-      const data = await res.json();
+      const data = (await res.json()) as { incidents: ClicklogIncident[]; count: number };
       setIncidents(data.incidents);
-      setCount(data.count);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to fetch incidents");
     } finally {
-      setLoading(false);
+      if (initial) setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchIncidents();
+    void fetchIncidents(true);
   }, []);
 
-  const handleLogIncident = async () => {
-    setShowModal(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        },
-        () => {
-          setGeo({});
-        }
-      );
-    }
-  };
+  function flashLogged(): void {
+    setLogged(true);
+    setTimeout(() => setLogged(false), 2000);
+  }
 
-  const submitIncident = async () => {
-    setLoading(true);
+  function addLocation(): void {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+      () => setGeo({}),
+    );
+  }
+
+  async function postIncident(metadata: Record<string, unknown>): Promise<void> {
+    setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/clicklog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metadata: { ...geo, notes } }),
+        body: JSON.stringify({ metadata }),
       });
       if (!res.ok) throw new Error("Failed to log incident");
-      setShowModal(false);
-      setNotes("");
+      setShowForm(false);
+      setNote("");
       setGeo({});
+      flashLogged();
       await fetchIncidents();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to log incident");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this incident?')) {
-      return;
-    }
-    setLoading(true);
+  async function handleDelete(id: string): Promise<void> {
+    if (!window.confirm("Are you sure you want to delete this incident?")) return;
+    setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/clicklog/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete incident");
       await fetchIncidents();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete incident");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
+  }
+
+  if (loading) return <ClicklogLoading />;
+
+  if (incidents.length === 0 && !showForm) {
+    return <ClicklogEmptyState onLog={() => setShowForm(true)} />;
+  }
+
+  const stats = deriveClicklogStats(incidents);
 
   return (
-    <div className="flex h-full">
-      <aside className="w-[72px] bg-muted flex flex-col items-center py-4">
-        <span className="text-3xl">📍</span>
-      </aside>
-      <main className="flex-1 p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="text-4xl font-bold">{count}</div>
-          <div className="text-lg">Incidents logged</div>
-          <Button onClick={handleLogIncident} disabled={loading} className="ml-auto">
-            Log Incident
-          </Button>
-        </div>
-        {error && <div className="text-red-500 mb-2">{error}</div>}
-        <ScrollArea className="h-96 border rounded-lg p-2 bg-white">
-          {incidents.length === 0 ? (
-            <div className="text-muted-foreground text-center py-8">No incidents logged yet.</div>
-          ) : (
-            incidents.map((incident) => (
-              <div key={incident.id} className="flex items-center justify-between border-b py-2">
-                <div>
-                  <div className="font-mono text-xs text-muted-foreground">
-                    {new Date(incident.created_at).toLocaleString()}
-                  </div>
-                  {incident.metadata.latitude && incident.metadata.longitude && (
-                    <div className="text-xs">
-                      Location: {incident.metadata.latitude.toFixed(4)}, {incident.metadata.longitude.toFixed(4)}
-                    </div>
-                  )}
-                  {incident.metadata.notes && (
-                    <div className="text-xs italic">{incident.metadata.notes}</div>
-                  )}
-                </div>
-                <Button variant="ghost" onClick={() => handleDelete(incident.id)} disabled={loading}>
-                  Delete
-                </Button>
-              </div>
-            ))
-          )}
-        </ScrollArea>
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-80 shadow-lg">
-              <h2 className="text-lg font-semibold mb-2">Log Incident</h2>
-              <textarea
-                className="w-full border rounded p-2 mb-2"
-                rows={3}
-                placeholder="Optional notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                maxLength={MAX_NOTES_LENGTH}
-              />
-              <div className="flex gap-2 mt-2">
-                <Button onClick={submitIncident} disabled={loading}>
-                  Submit
-                </Button>
-                <Button variant="outline" onClick={() => setShowModal(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
+    <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
+      <ClicklogIconRail />
+      <ClicklogSidebar total={stats.total} weekdayCounts={stats.weekdayCounts} />
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <header style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
+          <AlertTriangle size={18} color={BRAND} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Incident Log</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>Personal safety tracking — {stats.total} incidents total</div>
           </div>
-        )}
-      </main>
+        </header>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "32px 48px" }}>
+          {error && (
+            <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fecaca", fontSize: 13 }}>
+              {error}
+            </div>
+          )}
+
+          <ClicklogLogPanel
+            logged={logged}
+            showForm={showForm}
+            note={note}
+            submitting={busy}
+            locationAdded={typeof geo.latitude === "number"}
+            onToggleForm={() => setShowForm((s) => !s)}
+            onNoteChange={setNote}
+            onAddLocation={addLocation}
+            onSubmit={() => void postIncident({ ...geo, notes: note })}
+            onCancel={() => { setShowForm(false); setNote(""); setGeo({}); }}
+          />
+
+          {incidents.length > 0 && (
+            <ClicklogIncidentList incidents={incidents} onDelete={(id) => void handleDelete(id)} />
+          )}
+        </div>
+      </div>
+
+      <ClicklogRightRail stats={stats} loading={busy} onQuickLog={() => void postIncident({})} />
     </div>
   );
 }

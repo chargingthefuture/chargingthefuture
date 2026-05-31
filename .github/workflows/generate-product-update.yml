@@ -56,6 +56,12 @@ jobs:
       needs.check-changes.outputs.has_changes == 'true' ||
       inputs.force == true
     runs-on: ubuntu-latest
+    # Stamp all dates (wiki page slug, Quora draft issue, update tag) in US
+    # Eastern rather than the runner's UTC, so they match the project's local
+    # day. Applies to shell `date` and Node `new Date()`/toLocaleString in the
+    # steps below.
+    env:
+      TZ: America/New_York
     permissions:
       contents: write   # push update/* tag
       issues: write     # create Quora draft issue
@@ -70,23 +76,31 @@ jobs:
           node-version: '22'
 
       # ── Secrets (Infisical → env) ─────────────────────────────────────────────
-      # Injects: ANTHROPIC_API_KEY, APP_URL, INTERNAL_SERVICE_SECRET
-      # GitHub-direct secrets (not in Infisical): GH_PAT, GITHUB_TOKEN
+      # Infisical is the single source of truth for runtime secrets. This step
+      # injects APP_URL and INTERNAL_SERVICE_SECRET into the job env for the
+      # "Post to in-app feed" step. env-slug is the environment *slug* (not its
+      # display name): the Production environment's slug is "prod", so
+      # env-slug: production returns a 404. recursive:true also reads secrets
+      # nested in sub-folders, not just the root path. If Infisical is
+      # unreachable this step fails the job, by design.
+      # GitHub-native secrets (cannot live in Infisical): GH_PAT, GITHUB_TOKEN,
+      # and the INFISICAL_* bootstrap credentials below.
       - name: Inject secrets from Infisical
         uses: Infisical/secrets-action@v1.0.16
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
-          env-slug: production
+          env-slug: prod
           domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
 
       # ── Generate ─────────────────────────────────────────────────────────────
       - name: Generate update content via Claude
         id: content
         env:
-          # Sourced directly from the GitHub Actions repo secret (not Infisical)
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ANTHROPIC_API_KEY is injected by the Infisical step (single source).
           COMMITS: ${{ needs.check-changes.outputs.commits }}
         run: |
           OUTPUT=$(node ctf/scripts/generate-update.mjs)
@@ -95,11 +109,14 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       # ── Feed (in-app) ─────────────────────────────────────────────────────────
-      - name: Post to in-app feed
-        env:
-          UPDATE_JSON: ${{ steps.content.outputs.json }}
-          # APP_URL and INTERNAL_SERVICE_SECRET are in env after Infisical step
-        run: node ctf/scripts/publish-product-update.mjs
+      # DISABLED: the in-app feed/announcements feature is still in final
+      # validation and not ready to receive product updates. Re-enable this step
+      # once the announcements backend is live. (APP_URL and INTERNAL_SERVICE_SECRET
+      # are injected by the Infisical step above when this runs again.)
+      # - name: Post to in-app feed
+      #   env:
+      #     UPDATE_JSON: ${{ steps.content.outputs.json }}
+      #   run: node ctf/scripts/publish-product-update.mjs
 
       # ── GitHub wiki page ──────────────────────────────────────────────────────
       - name: Create GitHub wiki page
@@ -123,6 +140,11 @@ jobs:
           git push
 
       # ── Blog registry (wiki-site) ─────────────────────────────────────────────
+      # Adds the update to the wiki-site blog (category "Updates") on wiki-site's
+      # main branch, then triggers deploy-blog-gh-pages.yml to rebuild the live
+      # site. wiki-site is a separate repo with its own layout: the pnpm
+      # workspace lives in the nested wiki-site/ directory, with scripts
+      # wiki:validate / wiki:sync and articles at artifacts/wiki/src/lib.
       - name: Publish to wiki-site blog registry
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -132,13 +154,16 @@ jobs:
 
           SLUG=$(echo "$UPDATE_JSON"     | jq -r '.wikiPageName')
           TITLE=$(echo "$UPDATE_JSON"    | jq -r '.feedTitle')
-          EXCERPT=$(echo "$UPDATE_JSON"  | jq -r '.excerpt // .feedTitle')
+          EXCERPT=$(echo "$UPDATE_JSON"  | jq -r '.wikiSiteExcerpt // .feedTitle')
           CATEGORY="Updates"
           DATE=$(date +%Y-%m-%d)
 
-          git clone "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/wiki-site.git" /tmp/wiki-site
-          cd /tmp/wiki-site/wiki-site
+          # Recurse submodules: wiki:sync infers extra "folder" articles from the
+          # nested wiki/ submodule, so it must be present or sync drops them.
+          git clone --recurse-submodules \
+            "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/wiki-site.git" /tmp/wiki-site
 
+          cd /tmp/wiki-site/wiki-site
           SLUG="$SLUG" TITLE="$TITLE" EXCERPT="$EXCERPT" CATEGORY="$CATEGORY" DATE="$DATE" \
           yq -i '.articles += [{
             "slug": strenv(SLUG), "title": strenv(TITLE),
@@ -156,8 +181,23 @@ jobs:
           git config user.name  "CTF CI Bot"
           git config user.email "ci@chargingthefuture.org"
           git add wiki-site/content-index.yaml wiki-site/artifacts/wiki/src/lib/articles.ts
-          git commit -m "feat(blog): publish ${DATE} product update — ${SLUG}" || { echo "no changes"; exit 0; }
-          git push
+          if git commit -m "feat(blog): publish ${DATE} product update — ${SLUG}"; then
+            git push
+            PUBLISHED=1
+          else
+            echo "No content-index changes; nothing to publish."
+            PUBLISHED=0
+          fi
+
+          # Trigger the Pages deploy, which clones wiki-site main and rebuilds.
+          if [ "$PUBLISHED" = "1" ]; then
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${GH_PAT}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/chargingthefuture/chargingthefuture/dispatches \
+              -d '{"event_type":"wiki-site-updated"}'
+            echo "Dispatched wiki-site-updated to trigger Pages deploy."
+          fi
 
       # ── Quora draft issue ─────────────────────────────────────────────────────
       - name: Create Quora draft issue

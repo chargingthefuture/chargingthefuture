@@ -15,6 +15,6 @@ export const SPEND_OPTIONS = [
 ];
 
 export const INFO_MSGS = [
-  { id: 1, text: "Service Credits are your utility tokens for the entire Survivor Hub economy. Earn, spend, trade — across all mini-apps." },
+  { id: 1, text: "ServiceCredits are your utility tokens for the entire Survivor Hub economy. Earn, spend, trade — across all mini-apps." },
   { id: 2, text: "5 ways to earn right now: Skills Hunt round (+200), Facilitating a cohort (+500), Profile verification (+50), Referrals (+100 each), or 30-day GentlePulse streak (+150).", action: "Verify Profile Now" },
 ];

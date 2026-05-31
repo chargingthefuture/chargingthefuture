@@ -95,29 +95,34 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 > + pixel-perfect to `design` + parity + gates + deploy). Some plugin inventories still carry an older
 > "Parity: web+android complete" line that describes prior feature parity, **not** this bar — where the two
 > differ, this table wins. Inventory wording is normalized per plugin during its UI circle-back.
+>
+> **Editing convention (avoids merge conflicts):** a per-plugin PR should only flip its own row above;
+> put the detailed change-log narrative in that plugin's inventory file, not in the change log below.
+> Reserve the change log below for cross-cutting milestones. See the "Updating `PRODUCTION_READINESS_PLAN.md`"
+> note in `.github/instructions/copilot-instructions.md`.
 
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| skills-taxonomy | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| directory | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| workforce | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
-| skills-hunt | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| workforce | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| lighthouse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| socketrelay | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| trusttransport | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| peer-programming | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| mood | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| gentlepulse | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| weekly-performance | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| gdp | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| service-credits | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| levelup | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| trust | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| clicklog | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
-| unlock | ⏳ | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| service-credits | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
 
@@ -378,18 +383,169 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   in the backend pass). Loading/empty states render inline; no public state by design (Chyme is
   auth-only per #102). API wiring untouched; typecheck/EOF/parity/schema-drift gates green. Marked
   chyme Web px ✅ in the table above; Android pixel parity (`MobileChyme.tsx` → RN feature) remains ⬜.
-- 2026-05-31: **Survivor Hub ⟵ Feed consolidation — decisions locked + design-prompt staged
-  (docs only).** Owner consolidated `feed-announcements` into the **Survivor Hub**, which is the single
-  app homepage. The Hub presents **one blended, publicly-viewable `community` channel** interleaving
-  admin-only announcements + AI Q&A + peer-to-peer posts (the sole user-authored social surface; public
-  by design). **Data layer = the existing Feed backend** (`feed_items` + `lib/feed/inference.ts`); the
-  previously-specified Hub-owned `hub_channels`/`hub_messages`/`hub_bot_routes` tables are **dropped**
-  (single source of truth). Homepage UI already exists/design-backed (`design/.../survivor-hub/`); the
-  wireframes need a *modification* (the one-time-use prompt is handed to Replit out-of-band, not
-  committed). Recorded the decision
-  in the Survivor Hub + Feed inventories and resolved backend-drift decision #4 (reconcile to real table
-  names; remove phantom `feed_user_extension`). **Next coding PR (ordered, no phases):** (1) wire Hub
-  channel to Feed backend + add `schema.sql` public-channel flag; (2) remove phantom `feed_user_extension`
-  refs (blocked by #1's schema change per the seed/schema gate); (3) retire `feed-announcements` as a
-  standalone app via registry alias (blocked by #1); (4) reconcile contracts to the `feed.*` namespace
-  (blocked by #1); (5) mobile parity (blocked by #1).
+- 2026-05-29: UI circle-back — directory web pixel pass + modularity refactor. Aligned `DirectoryShell`
+  to `design/.../survivor-hub/Directory.tsx` and its Loading/Empty mockups: corrected the app-surface
+  background to `#0F1117` (the shell had used the mockup's dead `BG` constant `#0C1A3D`), added the
+  skeleton loading state, rebuilt the empty state to the mockup's category-grid + Browse All / Clear
+  Filters treatment (real sector data, no dummy counts), and restored the `📇` heading glyphs. The
+  oversized single-function shell (382 lines / complexity 16, a pre-existing rule-116 violation) was
+  decomposed into modular sub-components so every unit is within the 200-line / complexity-10 limits;
+  also removed the unused `userId`/`isAdmin` props. API wiring untouched; typecheck, lint, modularity,
+  build:ci, EOF, parity, and schema-drift gates green. Marked directory Web px ✅; Android pixel parity
+  (`MobileDirectory.tsx` → RN feature) remains ⬜.
+- 2026-05-29: UI circle-back — lighthouse web pixel pass + modularity refactor. Aligned `LighthouseShell`
+  to `design/.../survivor-hub/LightHouse.tsx` and its Loading mockup: replaced emoji glyphs with lucide
+  icons, added the previously-missing filter sidebar (real data-backed filters: All / Available Now /
+  Accepts Credits, with real stats) and right panel (Pricing Guide + Privacy by Design + an
+  informational Emergency Housing note), moved the property detail from a modal to the mockup's
+  full-page view, and added a skeleton loading state. Counts/filters derive from real data only — the
+  mockup's "Verified Only / Female-only / Emergency" filters and "5 slots" count have no backing in the
+  data model and were omitted rather than faked (noted in the inventory). The oversized single-function
+  shell (274 lines / complexity 29) was decomposed into modular sub-components within the
+  200-line / complexity-10 limits, and lint debt was cleared (typed chat credentials; removed unused
+  `isAdmin`/`role`/`announcements` + empty catch binding; dropped unused props). typecheck, lint,
+  modularity, build:ci, EOF, parity, and schema-drift gates green. Marked lighthouse Web px ✅; Android
+  pixel parity (`MobileLightHouse.tsx` → RN feature) remains ⬜.
+- 2026-05-29: Design re-pin `dcaaf15` → `c5d83c0` (76 commits; separate design-sync PR) + copy
+  reconcile. The newer design removed all user-facing "GetStream" wording and added mockups for the
+  four previously design-gated plugins (skills-taxonomy, weekly-performance, clicklog, unlock). Began
+  reconciling the shipped shells to the new copy: chyme and directory and lighthouse (folded
+  into its open PR) drop "GetStream" branding for "end-to-end encrypted" wording; Directory's detail
+  "Reviews" → "Endorsements". Copy-only; no structural/API changes. Follow-up: `ChymeLiveShell` remains
+  a pre-existing rule-116 violation (359 lines / complexity 40) not introduced here — a chyme
+  modularity decomposition (matching the directory/lighthouse pattern) is tracked next.
+- 2026-05-29: Chyme modularity decomposition (the tracked follow-up above). Split the oversized
+  `ChymeLiveShell` (359 lines / complexity 40) into modular sub-components — `chyme-header`,
+  `chyme-sidebar`, `chyme-room-view`, `chyme-stage`, `chyme-chat-panel`, `chyme-controls`, and a
+  `chyme-shared` module — each within the 200-line / complexity-10 limits. No behavior, API, or copy
+  change; data wiring and the c5d83c0 copy are preserved. typecheck, lint, modularity, build:ci, EOF,
+  parity, and schema-drift gates green. All three circle-backed plugins (chyme, directory, lighthouse)
+  now satisfy rule 116.
+- 2026-05-29: UI circle-back — clicklog web pixel pass (first of the four plugins unblocked by the
+  `c5d83c0` design re-pin). Rebuilt the plain Tailwind `ClicklogShell` to the `ClickLog.tsx` mockup and
+  its Empty/Loading states: the dark (`#0F1117` / brand `#E91E8C`) icon-rail + sidebar (total +
+  this-week strip + encryption note) + circular log button with inline note form + recent-incidents
+  list + right-rail stats/safety-reminder layout. All counters derive from real `/api/clicklog` data
+  (no dummy counts); the modal became the mockup's inline form. Decomposed into modular sub-components
+  within the rule-116 limits, cleared the prior `any` lint debt, and dropped the unused `userId` prop.
+  No public state by design (ClickLog is private/auth-only). typecheck, lint, modularity, build:ci, EOF,
+  parity, and schema-drift gates green. Marked clicklog Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileClickLog.tsx`) remains ⬜. Three design-gated plugins remain: skills-taxonomy,
+  weekly-performance, unlock.
+- 2026-05-29: UI circle-back — unlock web pixel pass (second of the four plugins unblocked by the
+  `c5d83c0` re-pin). Rebuilt the user-facing `/plugin/unlock` page to the `Unlock.tsx` mockup +
+  Empty/Loading states. `UnlockShell` reads `GET /api/unlock/status` and renders loading → submission
+  form (no submission) → status view (pending/approved/rejected, with a re-submit form on rejection);
+  submit/re-submit POST to `/api/unlock/submission`. This replaces the prior `UnlockSubmission` stub,
+  which had a TODO and never called the API (removed). Status label, timeline, the unlock checklist, and
+  the approved/rejected variants are driven by the real `UnlockStatus`; the mockup's dummy URL, rejection
+  text, and timestamps (not exposed by the status endpoint) are not fabricated. Decomposed into nine
+  modular sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity,
+  and schema-drift gates green. Marked unlock Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileUnlock.tsx`) remains ⬜. Two design-gated plugins remain: skills-taxonomy, weekly-performance.
+- 2026-05-29: UI circle-back — weekly-performance web pixel pass (third of the four plugins unblocked by
+  the `c5d83c0` re-pin). Replaced the baseline server-rendered summary shell with the full client
+  dashboard from `WeeklyPerformance.tsx` (+ Empty/Loading): icon rail, week-history sidebar, metric
+  cards, a this-week-vs-last-week comparison chart, and the week-summary right rail. Week selection
+  drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate`
+  for deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's
+  fabricated daily series became a real per-metric current-vs-compare chart (scaled relative to the max
+  in view), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into ten
+  modular sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity,
+  and schema-drift gates green. Marked weekly-performance Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileWeeklyPerformance.tsx`) remains ⬜. One design-gated plugin remains: skills-taxonomy.
+- 2026-05-29: UI circle-back — skills-taxonomy web pixel pass (the last of the four plugins unblocked
+  by the `c5d83c0` re-pin). Rebuilt the `/apps/skills-taxonomy` browser from a summary/snapshot shell to
+  the `SkillsTaxonomy.tsx` mockup: the full-height 3-column hierarchy (sectors → job titles → skills)
+  with icon rail, breadcrumb, and in-role skill search, plus Empty (needs-seeding) and Loading states.
+  Loads the nested tree from the existing `GET /api/skills-taxonomy/hierarchy` (response `{ items }`) and
+  derives the columns client-side; sector/title counts use the real `jobTitles.length`/`skills.length`.
+  The mockup's demand/level/category chips have no backing in the data model and were omitted rather
+  than faked; admin add/edit/delete affordances link to `/admin/skills-taxonomy`. Decomposed into modular
+  sub-components within the rule-116 limits. typecheck, lint, modularity, build:ci, EOF, parity, and
+  schema-drift gates green. Marked skills-taxonomy Design 🎨 / Web px ✅; Android pixel parity
+  (`MobileSkillsTaxonomy.tsx`) remains ⬜. All four previously design-gated plugins are now web-pixel
+  complete; no design-gated plugins remain.
+- 2026-05-29: UI circle-back — non-gated web pixel passes (designs existed since `dcaaf15`): mood,
+  gentlepulse, and socketrelay. Each aligned/rebuilt its shell to the design mockup + Loading/Empty
+  states and was decomposed into modular sub-components within the rule-116 limits. Real bugs fixed
+  along the way: mood (eligibility `?clientId=` + submission `{ clientId, moodValue, note }` + CSRF —
+  prior shell 400'd), gentlepulse (removed a dead duplicate `components/gentle-pulse/` dir), socketrelay
+  (prior shell read the paged `requests` response as a bare array and POSTed non-existent
+  `type`/`description`/`credits` fields without CSRF — rebuilt to the real request/claim/fulfillment
+  model). All counts derive from real data; unbacked mockup figures were omitted, not faked. typecheck,
+  lint, modularity, build:ci, EOF, parity, and schema-drift gates green for each. Marked mood,
+  gentlepulse, socketrelay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
+  `MobileGentlePulse.tsx`, `MobileSocketRelay.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-29: UI circle-back — mood web pixel pass detail. Rebuilt the `/apps/mood` shell to `Mood.tsx`
+  + Empty/Loading. Fixed two real API-contract bugs in the prior shell: it called
+  `/api/mood/eligibility` with no `clientId` (route 400s without it) and POSTed `{ mood, note }` instead
+  of the required `{ clientId, moodValue, note }` + CSRF header — so check-in and submit both failed at
+  runtime. Now uses a per-device localStorage `clientId`, the eligibility cooldown gate, and a
+  CSRF-headed submit. Per owner ruling, the Community Pulse tab shows the design's honest empty state
+  instead of the prior shell's fabricated 7-day averages and distribution percentages (no aggregate-stats
+  backend exists). Decomposed into modular sub-components within rule-116 limits; removed banned
+  "Phase 2" text.
+- 2026-05-30: UI circle-back — levelup web pixel pass. Decomposed the 520-line monolith
+  `levelup-shell.tsx` into modular sub-components within the rule-116 limits: `lu-shared.ts`
+  (palette/types/helpers), `lu-loading.tsx` (full-screen design splash), `lu-sidebar.tsx`,
+  `lu-cohort-card.tsx`, `lu-browse.tsx`, `lu-progress.tsx`, `lu-right-panel.tsx`, and a thin shell
+  that composes them. Removed 6 dead unreferenced components (`AdminPanel`, `CohortDetail`,
+  `CohortList`, `EnrollModal`, `TrainerDashboard`, `UserDashboard`). Shell binds real routes:
+  `GET /api/levelup/cohorts?track=`, `GET /api/service-credits/wallet`, `POST /api/levelup/enroll`
+  (`{ cohortId, idempotencyKey, depositCredits }`), `POST /api/levelup/milestones/[id]/validate`.
+  All counts derive from real data; unbacked mockup figures omitted. typecheck, lint, modularity,
+  build:ci, EOF, parity, and schema-drift gates green. Marked levelup Web px ✅; Android pixel parity
+  (`MobileLevelUp.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — peer-programming web pixel pass. Like trusttransport, the existing
+  shell was already a real-data adaptation of `design/.../survivor-hub/PeerProgramming.tsx` (it drops
+  the design's mock COHORTS list / AI chat / fabricated Global Stats and binds the real assigned
+  `/api/peer-programming/room` + `/messages` + `/feedback`, reflecting the deterministic-placement
+  model). This pass (1) decomposed the 366-line / complexity-46 monolith into modular sub-components
+  within rule-116 limits (`pp-shared.ts`, `pp-loading.tsx`, `pp-icon-rail`, `pp-sidebar`,
+  `pp-cohorts-tab`, `pp-session-tab`, `pp-chat-tab`, `pp-right-panel`, thin shell; extracted a
+  `fetchRoomData` helper to drop the loader's complexity), (2) swapped the emoji icons for the
+  design's lucide icons (Users/Video/MessageSquare/Bell/Settings/Search/Send), (3) aligned the
+  GetStream-branded "Video session via GetStream" copy to the design's "Video session — encrypted",
+  and (4) dropped the fabricated "Forming: 2" sidebar badge. Dropped the unused `userId`/`isAdmin`
+  props at the call site. typecheck, lint, modularity, build:ci, EOF, parity, and schema-drift gates
+  green. Marked peer-programming Web px ✅; Android pixel parity (`MobilePeerProgramming.tsx`) remains
+  ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — trust web pixel pass. Trust is a right-rail widget (not a standalone
+  page), so the pass aligned the hub right-rail card to `design/.../survivor-hub/Trust.tsx`: new
+  inline-styled `TrustWidgetCard` (blue brand palette, ShieldCheck header + Verified/Unverified pill,
+  onboarding steps, static visibility row), wired through the shared `TrustRightRailCard`. Honest-data
+  calls per the real-data-only rule: omitted the design's verified-state signal buckets (the
+  signal-snapshot route is a stub with no backing table) and render the real `trustEvidence` list
+  instead; kept the truthful "verification handled manually by admins" note and a static visibility
+  row rather than the non-functional Request-Verification CTA / visibility dropdown (both backing
+  routes are stubs). Removed the now-unreachable `compact` branch from `TrustEvidencePanel`.
+  Loading/Public design states don't apply (widget renders only authenticated inside the hub).
+  typecheck, lint, modularity, build:ci, EOF, parity, and schema-drift gates green. Marked trust
+  Web px ✅; Android pixel parity (`MobileTrust.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-30: UI circle-back — trusttransport web pixel pass. The existing shell was already a sound
+  real-data adaptation of `design/.../survivor-hub/TrustTransport.tsx` (it drops the design's mock
+  DRIVERS / ACTIVE_ORDERS / inflated stats and uses real `/api/trusttransport/modes` + `requests` and
+  the real per-trip Stream chat). This pass (1) decomposed the 358-line / complexity-28 monolith into
+  modular sub-components within the rule-116 limits (`tt-shared.ts`, `tt-loading.tsx`, `tt-icon-rail`,
+  `tt-sidebar`, `tt-book-tab`, `tt-tracking-tab`, `tt-chat-tab`, `tt-right-panel`, thin shell), and
+  (2) stripped the remaining unbacked values per the real-data-only rule: removed the hardcoded
+  "Safety Rating 4.9" and "Safety Incidents 0 today", and aligned the GetStream-branded copy to the
+  design's wording ("End-to-end encrypted", "All comms encrypted") — the Stream chat integration
+  itself is unchanged. Dropped the unused `userId`/`isAdmin` props at the call site. typecheck, lint,
+  modularity, build:ci, EOF, parity, and schema-drift gates green. Marked trusttransport Web px ✅;
+  Android pixel parity (`MobileTrustTransport.tsx`) remains ⬜ for the dedicated Android sweep.
+- 2026-05-31: Survivor Hub ⟵ Feed consolidation — decisions locked (docs only). Owner consolidated
+  `feed-announcements` into the Survivor Hub, which is the single app homepage. The Hub presents one
+  blended, publicly-viewable `community` channel interleaving admin-only announcements + AI Q&A +
+  peer-to-peer posts (the sole user-authored social surface; public by design). Data layer = the
+  existing Feed backend (`feed_items` + `lib/feed/inference.ts`); the previously-specified Hub-owned
+  `hub_channels`/`hub_messages`/`hub_bot_routes` tables are dropped (single source of truth). Homepage
+  UI already exists/design-backed (`design/.../survivor-hub/`); the wireframes need a modification only
+  (the one-time-use Replit prompt is handed off out-of-band, not committed). Recorded the decision in
+  the Survivor Hub + Feed inventories and resolved backend-drift decision #4 (reconcile to real table
+  names; remove phantom `feed_user_extension`). Next coding PR (ordered, no phases): (1) wire Hub
+  channel to Feed backend + add `schema.sql` public-channel flag; (2) remove phantom
+  `feed_user_extension` refs (blocked by #1's schema change per the seed/schema gate); (3) retire
+  `feed-announcements` as a standalone app via registry alias (blocked by #1); (4) reconcile contracts
+  to the `feed.*` namespace (blocked by #1); (5) mobile parity (blocked by #1).
