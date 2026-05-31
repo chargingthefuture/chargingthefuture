@@ -26,9 +26,15 @@
 Decided now to unblock the build; specifics (threshold values, the layered content filter)
 are intentionally left for a later tuning pass — see "Future Notes."
 
-1. **Bot handle = `comic`. Invocation = `@comic`.** A chat message containing `@comic`
-   routes to the AI assistant and renders its reply inline. A message with **no `@`** is
-   peer-to-peer (human-to-human) and **never touches the bot.**
+1. **Internal slug = `comic`; user-facing label = "AI Assistant". Invocation = `@comic`
+   mention.** A chat message containing `@comic` routes to the assistant and renders its
+   reply inline; a message with **no `@`** is peer-to-peer (human-to-human) and **never
+   touches the bot.** Bot replies use the design's **"AI Assistant"** treatment (cyan card,
+   Sparkles avatar, 🤖 AI Q&A badge — `design/.../survivor-hub/Desktop.tsx` @ `a460914`).
+   The design's composer **post/ask mode toggle is superseded** by `@comic`-mention (owner
+   decision 2026-05-31) — the design agent must drop the toggle from the composer. `comic`
+   stays the internal slug (tables `comic_*`, routes `/api/comic/*`, namespace `comic.*`);
+   users only ever see "AI Assistant".
 2. **Target architecture = self-hosted Rasa + self-hosted Ollama, layered.**
    - **Rasa** = orchestration: NLU (intent + entity extraction), dialogue management
      (rules/stories), a **real, calibratable confidence** (the `FallbackClassifier`
@@ -224,8 +230,42 @@ design — reconcile to the real data layer.
 - **Replace `getActionForText`.** Move plugin routing from the hardcoded client keyword map
   to Rasa-backed routing (already on the Hub consolidation roadmap).
 
+## Design Status & Guidance (design submodule @ `a460914`)
+
+Pulled 2026-05-31 (`design` `origin/main`, ahead of the pinned pointer). Designs are
+placeholder-data mockups; **this inventory is the authoritative spec.** A design-pointer
+bump is a separate step (rule 128), not part of this docs work.
+
+**Covered — adopt as-is:**
+- AI answer card in the unified community stream: cyan treatment, Sparkles avatar, label
+  **"AI Assistant"**, **🤖 AI Q&A** badge, "Asked by … · time", Q:/A: layout
+  (`Desktop.tsx`, `HubPublic.tsx`), interleaved with announcement + community-post cards.
+- Public (unauthenticated) stream shows AI answers read-only ("sign in to post or ask the
+  assistant").
+
+**Modify — design diverges from a locked decision:**
+- **Composer:** design uses a post/ask mode toggle; the owner kept **`@comic`-mention** as
+  the trigger. Use the normal chat input; typing `@comic …` routes to the assistant. Remove
+  the post/ask toggle.
+
+**Missing — no mockup yet; must be designed before that UI is built (gated):**
+1. **AI answer "pending human review" state** — interim mode holds every AI draft for owner
+   approval before the asker sees it. Show the asker "AI Assistant is preparing an answer — a
+   teammate is reviewing"; never surface a partial/unreviewed answer publicly.
+2. **Owner review/correction console** (admin) — queue of pending drafts; approve/edit/reject;
+   show question, model draft, sources, confidence; corrected-text path; empty + loading.
+3. **LLM-consent affordance** at first `@comic` use (one-time consent to AI processing).
+4. **Rating control** on AI cards (helpful / not_helpful / flagged).
+
+Required states per rule 126 for the AI surfaces: Unauthenticated, Auth+Loading (generating /
+review pending), Auth+Empty (no Q&A yet), Auth+Populated (answered).
+
 ## Change Log
 
+- 2026-05-31: Pulled design `a460914`; reconciled to owner decisions — `@comic` mention stays
+  the trigger (design toggle superseded), adopt the "AI Assistant" reply treatment, keep the
+  `comic` internal slug. Added Design Status & Guidance (covered / modify / missing) to steer
+  the design agent.
 - 2026-05-31: Created. Captured owner-locked decisions (`@comic` invocation; Rasa+Ollama
   target; hybrid confidence/safety with a safe preset below threshold; human-in-the-loop
   CDD flywheel for 62→5M; deterministic conversation/training tables + Rasa tracker store).
