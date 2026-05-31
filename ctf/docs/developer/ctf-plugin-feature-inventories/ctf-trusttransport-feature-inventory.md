@@ -81,7 +81,7 @@ The plugin must provide equivalent core behavior across web and Android.
 ### 1.5 Order/Trip Lifecycle and Communications
 
 1. Canonical lifecycle states by mode (ride/package/food) with shared status vocabulary.
-2. In-context communication channel for each order/trip.
+2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, cancelled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
 
 ### 1.6 Earnings, Payouts, and Reputation
@@ -250,6 +250,7 @@ Tables owned by this plugin:
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section) and unresolved decisions list.
 - 2026-04-06: Mobile rewrite with design-faithful UI (TrustTransport.tsx) for booking, tracking, chat flows and auth-gating. Admin features pending.
 - 2026-02-24: Created initial CTF rewrite inventory for TrustTransport (net-new plugin) with user/admin/API/data/security/parity scope.
+- 2026-05-31: Documented the transaction-scoped messaging lifecycle per platform rule 100 ("Messaging Scope and Lifecycle"): the per-trip 1:1 chat opens with the trip and closes on terminal state (read-only window + retained for moderation/abuse evidence); no messaging outside an active trip. Aligning the deletion contract to mirror this retention is a tracked follow-up.
 
 
 ## Build Checklist
