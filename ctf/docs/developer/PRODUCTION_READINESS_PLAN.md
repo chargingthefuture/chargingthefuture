@@ -103,7 +103,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
-| chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| chyme | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements (Hub data layer) | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
