@@ -29,7 +29,7 @@ type Props = {
   messages: ChatMessage[];
   input: string;
   sending: boolean;
-  onChangeInput: (text: string) => void;
+  onChangeInput: (_text: string) => void;
   onSend: () => void;
   onBack: () => void;
 };

@@ -31,7 +31,7 @@ export type RoomSummary = {
 type Props = {
   room: RoomSummary;
   tab: 'live' | 'upcoming';
-  onTabChange: (tab: 'live' | 'upcoming') => void;
+  onTabChange: (_tab: 'live' | 'upcoming') => void;
   onJoinRoom: () => void;
   onStartRoom: () => void;
 };
