@@ -29,11 +29,11 @@ function formatScaledValue(value: number | null, prefix = ''): string {
 }
 
 // One unified stream entry: either a peer/hub chat message or an AI Assistant (@comic) Q&A item.
-// Hub messages keep their API (chronological) order; comic items are time-sorted and appended, so
-// AI cards interleave with community posts as the design shows.
+// Each entry carries a numeric `epoch` (ms) so hub messages and comic items interleave in true
+// chronological order — the design shows AI cards woven among community posts, not appended after.
 type StreamEntry =
-  | { kind: 'message'; message: ChatMessage }
-  | { kind: 'comic'; item: ComicStreamItem };
+  | { kind: 'message'; message: ChatMessage; epoch: number; order: number }
+  | { kind: 'comic'; item: ComicStreamItem; epoch: number; order: number };
 
 type AuthenticatedChatPanelProps = {
   stats: ShellStats;
@@ -135,19 +135,33 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
 
-  // Build the interleaved, time-ordered stream. Hub messages keep insertion order; comic items are
-  // sorted by their absolute askedAt timestamp and merged in. The asker's own questions show their
+  // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
+  // epoch, then sort once so AI cards weave chronologically among community posts. `order` (source
+  // index) is a stable tiebreaker for equal/absent timestamps. The asker's own questions show their
   // display name; this hub only renders the current user's @comic items (server-scoped).
   const streamEntries = useMemo<StreamEntry[]>(() => {
-    const entries: StreamEntry[] = messages.map((message) => ({ kind: 'message', message }));
+    const toEpoch = (iso: string | undefined, fallback: number): number => {
+      if (!iso) return fallback;
+      const epoch = new Date(iso).getTime();
+      return Number.isNaN(epoch) ? fallback : epoch;
+    };
 
-    comicItems
-      .slice()
-      .sort((a, b) => new Date(a.askedAtIso).getTime() - new Date(b.askedAtIso).getTime())
-      .forEach((item) => {
-        entries.push({ kind: 'comic', item });
-      });
+    const entries: StreamEntry[] = [
+      ...messages.map((message, index): StreamEntry => ({
+        kind: 'message',
+        message,
+        epoch: toEpoch(message.sentAtIso, index),
+        order: index,
+      })),
+      ...comicItems.map((item, index): StreamEntry => ({
+        kind: 'comic',
+        item,
+        epoch: toEpoch(item.askedAtIso, index),
+        order: index,
+      })),
+    ];
 
+    entries.sort((a, b) => (a.epoch - b.epoch) || (a.order - b.order));
     return entries;
   }, [messages, comicItems]);
 

@@ -85,13 +85,16 @@ function buildChatMessage(
 
 function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessage {
   const from = message.userId === currentUserId ? 'user' : 'hub';
-  return buildChatMessage(
-    message.id,
-    from,
-    message.text,
-    formatTimeLabel(message.sentAtIso),
-    message.displayName,
-  );
+  return {
+    ...buildChatMessage(
+      message.id,
+      from,
+      message.text,
+      formatTimeLabel(message.sentAtIso),
+      message.displayName,
+    ),
+    sentAtIso: message.sentAtIso,
+  };
 }
 
 function getMessageDedupKey(message: ChatMessage): string {
@@ -115,13 +118,38 @@ function mergeMessages(existing: ChatMessage[], next: ChatMessage[]): ChatMessag
   return merged;
 }
 
-// Merge the server comic stream over the local one, dropping any optimistic placeholder whose
-// question the server now reports (matched on normalized question text).
+function normalizeQuestion(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+// Merge the server comic stream over the local one. Optimistic placeholders are dropped only as the
+// server catches up, COUNT-aware per normalized question text: if the asker sent the same question
+// twice (two optimistic cards) and the server now reports one, exactly one optimistic card is
+// retained. A plain text-membership check dropped all duplicates as soon as the first landed.
 function mergeComicItems(serverItems: ComicStreamItem[], optimistic: ComicStreamItem[]): ComicStreamItem[] {
-  const serverQuestions = new Set(serverItems.map((item) => item.question.trim().toLowerCase()));
-  const survivingOptimistic = optimistic.filter(
-    (item) => item.optimistic && !serverQuestions.has(item.question.trim().toLowerCase()),
-  );
+  const serverCounts = new Map<string, number>();
+  for (const item of serverItems) {
+    const key = normalizeQuestion(item.question);
+    serverCounts.set(key, (serverCounts.get(key) ?? 0) + 1);
+  }
+
+  // Newest optimistic cards retire first against each matching server item; the remainder survive.
+  const remainingToRetire = new Map(serverCounts);
+  const survivingOptimistic: ComicStreamItem[] = [];
+  for (let i = optimistic.length - 1; i >= 0; i -= 1) {
+    const item = optimistic[i];
+    if (!item.optimistic) {
+      continue;
+    }
+    const key = normalizeQuestion(item.question);
+    const retireCount = remainingToRetire.get(key) ?? 0;
+    if (retireCount > 0) {
+      remainingToRetire.set(key, retireCount - 1);
+      continue;
+    }
+    survivingOptimistic.unshift(item);
+  }
+
   return [...serverItems, ...survivingOptimistic];
 }
 
@@ -261,8 +289,11 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const routeToComic = useCallback(
     async (questionText: string) => {
       const question = stripComicMention(questionText);
+      // Unique per ask (random suffix) so two rapid identical-text asks get distinct React keys and
+      // are tracked independently by the count-aware merge.
+      const localId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const optimisticItem: ComicStreamItem = {
-        questionTurnId: `optimistic-${Date.now()}`,
+        questionTurnId: localId,
         conversationId: 'optimistic',
         status: 'pending',
         question,

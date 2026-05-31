@@ -19,21 +19,59 @@ const POINTS = [
   { icon: Lock, title: 'Your safety comes first', desc: 'The assistant will never reveal your location or identity, or ask you to.' },
 ];
 
+// Tab-focusable elements inside the dialog, used to cycle focus (focus trap).
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
 export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentModalProps) {
   const confirmRef = useRef<HTMLButtonElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+
+    // Remember the opener so focus can be restored when the dialog closes.
+    const opener = document.activeElement as HTMLElement | null;
     confirmRef.current?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         onDismiss();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      // Focus trap: keep Tab / Shift+Tab cycling within the dialog.
+      const root = modalRef.current;
+      if (!root) return;
+
+      const focusable = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (element) => element.offsetParent !== null || element === document.activeElement,
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey) {
+        if (active === first || !root.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !root.contains(active)) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      // Restore focus to the opener on close/unmount.
+      opener?.focus?.();
+    };
   }, [open, onDismiss]);
 
   if (!open) {
@@ -52,7 +90,7 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
         }
       }}
     >
-      <div className={styles.comicConsentModal}>
+      <div className={styles.comicConsentModal} ref={modalRef}>
         <div className={styles.comicConsentHeader}>
           <button type="button" className={styles.comicConsentClose} onClick={onDismiss} aria-label="Close">
             <X size={15} />

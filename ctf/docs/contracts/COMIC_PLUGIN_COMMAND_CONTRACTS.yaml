@@ -60,6 +60,30 @@ contracts:
     idempotency: true
 
   - pluginId: comic
+    command: comic.review.list
+    version: 1.0.0
+    description: Admin list of pending AI Assistant review items for the owner review console. Paginated; each item carries the asker's question, the draft body, intent/confidence, and the safety category.
+    inputSchema:
+      page:
+        type: integer
+        required: false
+      pageSize:
+        type: integer
+        required: false
+    outputSchema:
+      items:
+        type: array
+      pagination:
+        type: object
+    dataAccess:
+      - comic_review_queue
+      - comic_turns
+      - comic_conversations
+    purpose: admin_review_queue
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
     command: comic.review.resolve
     version: 1.0.0
     description: Owner resolution of a pending AI Assistant draft — approve, correct (edit), or reject. A corrected resolution persists the asker's question as a training example for the Rasa export.
@@ -77,6 +101,16 @@ contracts:
       reason:
         type: string
         required: false
+    # A `correct` resolution must carry the reviewer's corrected text. Expressed as JSON-Schema
+    # if/then and enforced in the resolve repository (`correction_required`) so the contract matches
+    # the code.
+    if:
+      properties:
+        resolution:
+          const: correct
+    then:
+      required:
+        - correctedBody
     outputSchema:
       reviewId:
         type: string

@@ -64,6 +64,35 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: comic
+    command: comic.conversation.read
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_asker_stream
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        ownConversationsCheck: pass_or_fail
+        unreviewedDraftSuppressionCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_conversation_metadata
+      - comic_turn_metadata
+      - comic_review_queue_metadata
+      - comic_answer_rating_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      askerUserId: principal
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
     command: comic.answer.rate
     version: 1.0.0
     commandVersion: 1.0.0
@@ -89,6 +118,33 @@ auditEvents:
       errorCategory: none_or_error_class
 
   # ─── Owner review / training ───────────────────────────────────────────
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.review.list
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: admin_review_queue
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_review_queue_metadata
+      - comic_turn_metadata
+      - comic_conversation_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      page: page_number
+      pageSize: page_size
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal

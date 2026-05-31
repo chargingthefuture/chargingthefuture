@@ -76,11 +76,26 @@ export function ComicReviewConsole() {
 
   const refresh = useCallback(async () => {
     try {
-      const payload = await requestJson<ReviewListResponse>('/api/comic/review?pageSize=50');
-      setItems(payload.items);
+      // Follow pagination so the full pending queue shows, not just the first page. Page size is
+      // capped server-side (COMIC_MAX_PAGE_SIZE); loop until every pending item is collected.
+      const pageSize = 100;
+      const collected: ComicReviewItem[] = [];
+      let page = 1;
+      // Guard against an unbounded loop if total/pageSize ever disagree.
+      for (let safety = 0; safety < 1000; safety += 1) {
+        const payload = await requestJson<ReviewListResponse>(
+          `/api/comic/review?page=${page}&pageSize=${pageSize}`,
+        );
+        collected.push(...payload.items);
+        if (collected.length >= payload.pagination.total || payload.items.length === 0) {
+          break;
+        }
+        page += 1;
+      }
+      setItems(collected);
       setLoadState('ready');
       setError(null);
-      return payload.items;
+      return collected;
     } catch (loadError) {
       setLoadState('error');
       setError(loadError instanceof Error ? loadError.message : 'Unable to load the review queue.');
@@ -247,8 +262,8 @@ export function ComicReviewConsole() {
         {error ? <div className={styles.errorBanner} role="status">{error}</div> : null}
 
         <div className={styles.mainBody}>
-          {!selected ? (
-            // STATE: Authenticated + Empty (queue clear, nothing selected).
+          {!selected && pendingCount === 0 && loadState === 'ready' && !error ? (
+            // STATE: Authenticated + Empty (queue genuinely clear — no pending items).
             <div className={styles.allCaughtUp}>
               <div className={styles.allCaughtUpIcon} aria-hidden="true">
                 <Check size={42} color="#22C55E" />
@@ -256,6 +271,22 @@ export function ComicReviewConsole() {
               <div className={styles.allCaughtUpTitle}>All caught up</div>
               <div className={styles.allCaughtUpText}>
                 Every AI Assistant answer has been reviewed. Survivors only ever see answers a human has approved.
+              </div>
+            </div>
+          ) : !selected ? (
+            // Items remain (or the queue failed to load) but none is selected: prompt to pick one
+            // rather than implying the queue is clear.
+            <div className={styles.allCaughtUp}>
+              <div className={styles.allCaughtUpIcon} aria-hidden="true">
+                <Inbox size={42} color="#0EA5E9" />
+              </div>
+              <div className={styles.allCaughtUpTitle}>
+                {error ? 'Queue unavailable' : 'Select an answer to review'}
+              </div>
+              <div className={styles.allCaughtUpText}>
+                {error
+                  ? 'The review queue could not be loaded. Retry in a moment.'
+                  : 'Choose an item from the queue to approve, correct, or reject the AI Assistant draft.'}
               </div>
             </div>
           ) : (

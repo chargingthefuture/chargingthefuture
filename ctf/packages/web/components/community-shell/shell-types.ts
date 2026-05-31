@@ -19,6 +19,9 @@ export type ChatMessage = {
   from: 'hub' | 'user';
   text: string;
   time: string;
+  // Original ISO timestamp (when known) used to time-sort the unified stream; `time` is the
+  // display-only formatted label. Optional because optimistic/synthetic messages may lack one.
+  sentAtIso?: string;
   senderLabel?: string;
   actionLabel?: string;
   actionSlug?: string;
