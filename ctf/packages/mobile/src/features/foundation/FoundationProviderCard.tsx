@@ -18,7 +18,7 @@ function initials(name: string): string {
 
 interface FoundationProviderCardProps {
   provider: Provider;
-  onPress: (provider: Provider) => void;
+  onPress: (_provider: Provider) => void;
 }
 
 /**
