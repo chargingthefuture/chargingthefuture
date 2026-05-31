@@ -73,6 +73,7 @@ This document is the canonical source of truth for brand language across:
 - gang stalker -> Specterati operator
 - victims -> survivors (except legal or statutory contexts)
 - generic chat -> plugin-context phrasing (for example Chyme chat)
+- punch list -> remaining work (or task list)
 
 ## Prohibited Patterns
 
@@ -80,6 +81,9 @@ This document is the canonical source of truth for brand language across:
 - Demeaning language about users or third parties.
 - Manipulative urgency language on product surfaces.
 - Ambiguous euphemisms that hide product behavior.
+- Borrowed industry jargon that adds no meaning. Do not use "punch list" — it is opaque
+  construction-trade jargon; say "remaining work" or "task list". Applies to docs, code comments,
+  PR/commit text, and inventories, not just user-facing copy.
 
 ## Canonical Capability Names (Public Surfaces)
 

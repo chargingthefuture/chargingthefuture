@@ -11,16 +11,17 @@
 > Consequences tracked in the coding follow-up (ordered list in the Survivor Hub
 > inventory):
 >
-> - `feed-announcements` is retired as a separately navigable app; its slug (and the
->   `feed` / `announcements` aliases) will alias into the Hub. The `/api/feed/*` routes
->   and schema tables remain — they are now the Hub's data layer.
-> - The phantom `feed_user_extension` references (seed `INSERT`, deletion contract, and
->   the data-model entry in §4.1 below) will be removed — no code reads them and there is
->   no real per-user feed-preference table (render mode is global via
->   `feed_render_config`). This resolves the long-pending feed 🟡 drift
->   (`PRODUCTION_READINESS_PLAN` backend-drift decision #4).
-> - A public-channel visibility flag will be added to `ctf/schema.sql` to support the
->   publicly-viewable Hub channel.
+> - `feed-announcements` is retired as a separately navigable app (registry `isVisible: false`);
+>   the `feed` / `announcements` aliases still resolve and the admin surface remains at
+>   `/admin/feed-announcements`. The `/api/feed/*` routes and schema tables are now the Hub's
+>   data layer; the Hub home channel reads them via `GET /api/hub/messages`.
+> - The phantom `feed_user_extension` references (seed `INSERT`, deletion contract, and the
+>   data-model entry in §4.1 below) have been removed — no code read them and there is no real
+>   per-user feed-preference table (render mode is global via `feed_render_config`). This resolves
+>   the long-pending feed 🟡 drift (`PRODUCTION_READINESS_PLAN` backend-drift decision #4).
+> - A public-channel visibility flag (`feed_render_config.is_public`, default TRUE) has been added
+>   to `ctf/schema.sql` and read into `FeedConfig` to support the publicly-viewable Hub channel.
+>   Public unauthenticated read enforcement is the tracked follow-up.
 >
 > See the full decision + ordered next steps in
 > `ctf-survivor-hub-chat-feature-inventory.md`.
@@ -174,13 +175,12 @@ Must follow single-profile rule:
 2. Plugin extension data is keyed by `user_id` only.
 3. No duplicate full profile table for Feed.
 
-Extension entity:
-
-- `feed_user_extension`
-  - `user_id`
-  - feed preference flags,
-  - read-state settings,
-  - toast rendering preference where permitted.
+Extension entity: none. Feed has no dedicated per-user extension table (the previously-named
+`feed_user_extension` was never created and is not used by any code). Per-user state is keyed by
+`user_id` across `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`, and
+`announcement_user_state`. Render mode is a global singleton in `feed_render_config`, which also
+carries the `is_public` flag for the publicly-viewable Hub channel — there is no per-user
+preference/toast table.
 
 ### 4.2 Domain Entities
 
@@ -192,7 +192,7 @@ Domain tables:
 2. `feed_item_targets`
 3. `feed_user_read_state`
 4. `feed_user_dismissals`
-5. `feed_render_config`
+5. `feed_render_config` — global singleton; columns include `is_public BOOLEAN NOT NULL DEFAULT TRUE` (publicly-viewable Hub channel flag).
 6. `feed_membership_events`
 7. `announcements`
 8. `announcement_revisions`

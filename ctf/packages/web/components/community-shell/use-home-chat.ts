@@ -192,6 +192,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
+          'x-ctf-csrf': '1',
         },
         body: JSON.stringify({ text }),
       });
