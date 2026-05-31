@@ -1,5 +1,7 @@
 commands:
-  - id: clicklog.incident.create
+  - pluginId: clicklog
+    command: clicklog.incident.create
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -12,7 +14,9 @@ commands:
       - clicklog_incidents (insert)
     purpose: Log a new incident for the authenticated user
     retentionClass: user_event
-  - id: clicklog.incident.list
+  - pluginId: clicklog
+    command: clicklog.incident.list
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -32,7 +36,9 @@ commands:
       - clicklog_incidents (select)
     purpose: List incidents for a user
     retentionClass: user_event
-  - id: clicklog.incident.delete
+  - pluginId: clicklog
+    command: clicklog.incident.delete
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
