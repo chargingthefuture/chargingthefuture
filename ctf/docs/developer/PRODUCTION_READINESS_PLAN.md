@@ -116,7 +116,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
