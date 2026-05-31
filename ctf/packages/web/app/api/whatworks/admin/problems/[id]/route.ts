@@ -61,6 +61,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     patch.isActive = body.isActive;
   }
 
+  if (Object.keys(patch).length === 0) {
+    return whatworksError('No fields to update.', 'whatworks_no_fields', 400);
+  }
+
   const problem = await updateProblem(id, patch);
   return NextResponse.json({ ok: true, problem });
 }

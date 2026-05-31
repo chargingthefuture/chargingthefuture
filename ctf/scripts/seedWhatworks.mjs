@@ -1,9 +1,28 @@
-import { queryDb } from '../packages/web/lib/db/postgres.ts';
+#!/usr/bin/env node
+
+import { Pool } from 'pg';
 import crypto from 'crypto';
 
 // Deterministic, idempotent seed for the WhatWorks shared list. Mirrors the design sample so a
 // fresh DB renders the exact populated mockup: 3 problems, 7 approved tools, 27 endorsements
 // (sum of per-tool verified counts === the design's "Survivors helped" headline of 27).
+//
+// Uses a self-contained pg Pool + a single client-bound transaction (the canonical seed pattern,
+// like seedFoundation/seedSocketRelay) so every statement runs atomically on one connection and
+// the script loads under plain `node` without a TypeScript loader.
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${name} is required.`);
+  }
+  return value;
+}
+
+const pool = new Pool({
+  connectionString: requireEnv('DATABASE_URL'),
+  ssl: { rejectUnauthorized: false },
+});
 
 const SEED_USER_POOL = [
   'whatworks-seed-user-001',
@@ -58,13 +77,15 @@ const PROBLEMS = [
   },
 ];
 
-async function seed() {
-  await queryDb('BEGIN');
+async function main() {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     let sortOrder = 0;
     for (const problem of PROBLEMS) {
       const problemId = det(`whatworks-problem-${problem.slug}`);
-      await queryDb(
+      await client.query(
         `INSERT INTO whatworks_problems (id, slug, emoji, title, context, sort_order, is_active, created_by)
          VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
          ON CONFLICT (id) DO NOTHING`,
@@ -74,7 +95,7 @@ async function seed() {
 
       for (const product of problem.products) {
         const productId = det(`whatworks-product-${problem.slug}-${product.name}`);
-        await queryDb(
+        await client.query(
           `INSERT INTO whatworks_products
              (id, problem_id, emoji, name, kind, note, purchase_url, status, suggested_by, reviewed_by, reviewed_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, $9, NOW())
@@ -84,7 +105,7 @@ async function seed() {
 
         for (let index = 0; index < product.verified; index += 1) {
           const userId = SEED_USER_POOL[index % SEED_USER_POOL.length];
-          await queryDb(
+          await client.query(
             `INSERT INTO whatworks_endorsements (id, product_id, user_id)
              VALUES ($1, $2, $3)
              ON CONFLICT (product_id, user_id) DO NOTHING`,
@@ -94,19 +115,20 @@ async function seed() {
       }
     }
 
-    await queryDb('COMMIT');
+    await client.query('COMMIT');
     console.log('Seeded WhatWorks problems, tools, and endorsements.');
   } catch (err) {
-    try {
-      await queryDb('ROLLBACK');
-    } catch (rollbackErr) {
+    await client.query('ROLLBACK').catch((rollbackErr) => {
       console.error('Rollback failed:', rollbackErr);
-    }
+    });
     throw err;
+  } finally {
+    client.release();
+    await pool.end();
   }
 }
 
-seed().catch((err) => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

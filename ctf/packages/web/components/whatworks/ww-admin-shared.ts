@@ -46,8 +46,15 @@ export async function adminMutate(
       headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const data = (await res.json().catch(() => null)) as { message?: string } | null;
-    return { ok: res.ok, message: data?.message };
+    // WhatWorks errors carry `message`; auth-gate denials (deny-taxonomy) carry `reason`/`code`
+    // instead, so fall back through those to a usable message rather than a generic string.
+    const data = (await res.json().catch(() => null)) as
+      | { message?: string; reason?: string; code?: string }
+      | null;
+    if (res.ok) {
+      return { ok: true };
+    }
+    return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
   } catch {
     return { ok: false, message: 'Network error. Try again.' };
   }

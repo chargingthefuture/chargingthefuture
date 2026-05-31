@@ -326,7 +326,10 @@ export async function listAdminProducts(
         p.id, p.problem_id, pr.title AS problem_title,
         p.emoji, p.name, p.kind, p.note, p.purchase_url, p.status,
         (SELECT COUNT(*) FROM whatworks_endorsements e WHERE e.product_id = p.id)::int AS verified_count,
-        p.created_at, p.reviewed_at, p.rejection_reason
+        -- Cast to ISO text so values match the string types on AdminProduct (pg returns Date by default).
+        to_char(p.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MSOF') AS created_at,
+        to_char(p.reviewed_at, 'YYYY-MM-DD"T"HH24:MI:SS.MSOF') AS reviewed_at,
+        p.rejection_reason
        FROM whatworks_products p
        JOIN whatworks_problems pr ON pr.id = p.problem_id
       WHERE ($1::text IS NULL OR p.status = $1)

@@ -37,7 +37,8 @@ auditEvents:
     targetContext: admin
   - eventId: whatworks.admin.problem.delete
     policyDecision: allow
-    dataClassesAccessed: [community_content]
+    # Cascades to whatworks_products and whatworks_endorsements (user-linked rows).
+    dataClassesAccessed: [community_content, user_event]
     targetContext: admin
   - eventId: whatworks.admin.product.list
     policyDecision: allow
@@ -49,5 +50,6 @@ auditEvents:
     targetContext: admin
   - eventId: whatworks.admin.product.delete
     policyDecision: allow
-    dataClassesAccessed: [community_content]
+    # Cascades to whatworks_endorsements (user-linked rows).
+    dataClassesAccessed: [community_content, user_event]
     targetContext: admin

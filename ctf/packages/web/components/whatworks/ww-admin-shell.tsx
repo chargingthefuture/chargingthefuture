@@ -22,25 +22,32 @@ export function WhatWorksAdminShell() {
   const loadProducts = useCallback(async (status: WhatWorksProductStatus | 'all') => {
     const query = status === 'all' ? '' : `?status=${status}`;
     const res = await fetch(`/api/whatworks/admin/products${query}`);
-    if (res.ok) {
-      const data = (await res.json()) as { products: AdminProduct[] };
-      setProducts(data.products ?? []);
+    if (!res.ok) {
+      throw new Error('Could not load suggestions.');
     }
+    const data = (await res.json()) as { products: AdminProduct[] };
+    setProducts(data.products ?? []);
   }, []);
 
   const loadProblems = useCallback(async () => {
     const res = await fetch('/api/whatworks/admin/problems');
-    if (res.ok) {
-      const data = (await res.json()) as { problems: AdminProblem[] };
-      setProblems(data.problems ?? []);
+    if (!res.ok) {
+      throw new Error('Could not load problems.');
     }
+    const data = (await res.json()) as { problems: AdminProblem[] };
+    setProblems(data.problems ?? []);
   }, []);
 
   useEffect(() => {
     // Initial load only (default filter is "pending"); later filter changes go through changeFilter.
     void (async () => {
-      await Promise.all([loadProducts('pending'), loadProblems()]);
-      setLoading(false);
+      try {
+        await Promise.all([loadProducts('pending'), loadProblems()]);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Could not load the admin data.');
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [loadProducts, loadProblems]);
 
@@ -49,6 +56,8 @@ export function WhatWorksAdminShell() {
     setError(null);
     try {
       await action();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Something went wrong. Try again.');
     } finally {
       setBusyId(null);
     }
@@ -56,7 +65,10 @@ export function WhatWorksAdminShell() {
 
   function changeFilter(status: WhatWorksProductStatus | 'all'): void {
     setStatusFilter(status);
-    void loadProducts(status);
+    setError(null);
+    void loadProducts(status).catch((caught) => {
+      setError(caught instanceof Error ? caught.message : 'Could not load suggestions.');
+    });
   }
 
   function reviewProduct(id: string, action: 'approve' | 'reject'): void {
@@ -94,6 +106,9 @@ export function WhatWorksAdminShell() {
       }
       await loadProblems();
       return true;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not create the problem.');
+      return false;
     } finally {
       setCreating(false);
     }

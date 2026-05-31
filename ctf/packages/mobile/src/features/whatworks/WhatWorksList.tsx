@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet, Linking,
+  View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet, Linking, Alert,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchList, toggleEndorsement, type WhatWorksProblem, type WhatWorksProduct, type WhatWorksStats } from './api';
@@ -9,6 +9,21 @@ import { WW } from './theme';
 type NavLike = { navigate: (_screen: string) => void };
 
 const EMPTY_STATS: WhatWorksStats = { problems: 0, verifiedTools: 0, survivorsHelped: 0 };
+
+// purchaseUrl comes from survivor-submitted suggestions; guard against unsupported or malformed
+// schemes so openURL can't produce an unhandled promise rejection.
+async function openLink(url: string): Promise<void> {
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (!supported) {
+      Alert.alert('Could not open this link.');
+      return;
+    }
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert('Could not open this link.');
+  }
+}
 
 function ToolCard({ product, busy, onToggle }: { product: WhatWorksProduct; busy: boolean; onToggle: (_product: WhatWorksProduct) => void }) {
   return (
@@ -31,7 +46,7 @@ function ToolCard({ product, busy, onToggle }: { product: WhatWorksProduct; busy
             <Ionicons name={product.viewerHasEndorsed ? 'thumbs-up' : 'thumbs-up-outline'} size={13} color={product.viewerHasEndorsed ? WW.brand : WW.subtle} />
             <Text style={[styles.helpfulText, { color: product.viewerHasEndorsed ? WW.brand : WW.subtle }]}>{product.viewerHasEndorsed ? 'Helped me' : 'Helpful'}</Text>
           </Pressable>
-          <Pressable onPress={() => Linking.openURL(product.purchaseUrl)} style={styles.viewBtn}>
+          <Pressable onPress={() => { void openLink(product.purchaseUrl); }} style={styles.viewBtn}>
             <Text style={styles.viewText}>View</Text>
             <Ionicons name="open-outline" size={12} color={WW.brand} />
           </Pressable>

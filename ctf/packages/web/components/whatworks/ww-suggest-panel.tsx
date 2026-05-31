@@ -115,7 +115,10 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
             <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fecaca', fontSize: 13 }}>{error}</div>
           ) : null}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <form
+            onSubmit={(event) => { event.preventDefault(); void submit(); }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+          >
             <Field label="Problem it solves" required>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${problemId ? BRAND + '50' : BORDER}`, borderRadius: 12 }}>
                 <Tag size={14} color={SUBTLE} style={{ flexShrink: 0 }} />
@@ -145,11 +148,11 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
               <textarea value={why} onChange={(event) => setWhy(event.target.value)} rows={3} placeholder="A short note from your experience — what it actually solved." style={{ ...inputStyle, padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, borderRadius: 12, boxSizing: 'border-box', width: '100%', resize: 'none', lineHeight: 1.5 }} />
             </Field>
 
-            <button onClick={() => void submit()} disabled={!ready || submitting}
+            <button type="submit" disabled={!ready || submitting}
               style={{ padding: '14px', borderRadius: 12, background: ready && !submitting ? BRAND : 'rgba(255,255,255,0.06)', border: 'none', color: ready && !submitting ? '#0A0E06' : SUBTLE, fontSize: 15, fontWeight: 700, cursor: ready && !submitting ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Send size={16} /> {submitting ? 'Submitting…' : 'Submit for review'}
             </button>
-          </div>
+          </form>
         </div>
 
         <WhatWorksSuggestGuidance />

@@ -144,6 +144,25 @@ export function WhatWorksShell() {
     return <WhatWorksLoading />;
   }
 
+  // A failed load also leaves problems empty; show the failure rather than masking it as
+  // the (legitimate) empty-list suggest state.
+  if (!showSuggest && error && problems.length === 0) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif", alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 420, textAlign: 'center' }}>
+          <div style={{ fontSize: 15, color: '#fecaca', marginBottom: 12 }}>{error}</div>
+          <button
+            type="button"
+            onClick={() => { setLoading(true); void loadList(); }}
+            style={{ padding: '10px 16px', borderRadius: 9, background: `${BRAND}18`, border: `1px solid ${BRAND}40`, color: BRAND, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (showSuggest || problems.length === 0) {
     return (
       <WhatWorksSuggestPanel
@@ -180,6 +199,7 @@ export function WhatWorksShell() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, width: 220 }}>
             <Search size={14} color={SUBTLE} />
             <input
+              aria-label="Search tools or problems"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search tools or problems…"

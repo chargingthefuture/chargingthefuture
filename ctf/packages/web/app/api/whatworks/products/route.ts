@@ -85,7 +85,8 @@ export async function POST(request: Request) {
       suggestedBy: gate.auth.userId,
     });
     return NextResponse.json({ ok: true, productId: product.id, status: product.status }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error('whatworks: failed to save product suggestion', error);
     return whatworksError('We could not save your suggestion. Try again.', 'whatworks_suggest_failed', 500);
   }
 }

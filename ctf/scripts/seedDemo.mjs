@@ -830,6 +830,7 @@ async function main() {
     await seedSkillsTaxonomy(client);
     await seedSocketRelay(client);
     await seedClicklog(client);
+    await seedWhatworks(client);
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
