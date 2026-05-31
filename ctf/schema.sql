@@ -2245,11 +2245,17 @@ ALTER TABLE IF EXISTS foundation_rate_limit_counters ADD COLUMN IF NOT EXISTS up
 CREATE TABLE IF NOT EXISTS foundation_user_extension (
   user_id TEXT PRIMARY KEY,
   profile_visibility TEXT NOT NULL DEFAULT 'workspace',
+  notification_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+  accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb,
+  trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb,
   service_deleted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS profile_visibility TEXT NOT NULL DEFAULT 'workspace';
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS notification_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
