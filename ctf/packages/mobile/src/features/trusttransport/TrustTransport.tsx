@@ -60,7 +60,7 @@ const NAV_ITEMS: { label: string; key: Tab; emoji: string }[] = [
   { label: 'Track', key: 'track', emoji: '📍' },
 ];
 
-function BottomNav({ active, onPress }: { active: Tab; onPress: (t: Tab) => void }) {
+function BottomNav({ active, onPress }: { active: Tab; onPress: (_t: Tab) => void }) {
   return (
     <View style={styles.nav}>
       {NAV_ITEMS.map(({ label, key, emoji }) => (
@@ -235,26 +235,28 @@ function TrackTab({
         <Text style={styles.refreshBtnText}>Refresh</Text>
       </TouchableOpacity>
       {requests.map((req) => (
-        <View key={req.id} style={styles.requestCard}>
-          <View style={styles.requestCardRow}>
-            <Text style={styles.requestMode}>{req.mode.toUpperCase()}</Text>
-            <View style={[styles.statusBadge, { borderColor: statusColor(req.status) + '50' }]}>
-              <Text style={[styles.statusBadgeText, { color: statusColor(req.status) }]}>
-                {req.status.replace(/_/g, ' ')}
-              </Text>
+        <React.Fragment key={req.id}>
+          <View style={styles.requestCard}>
+            <View style={styles.requestCardRow}>
+              <Text style={styles.requestMode}>{req.mode.toUpperCase()}</Text>
+              <View style={[styles.statusBadge, { borderColor: statusColor(req.status) + '50' }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(req.status) }]}>
+                  {req.status.replace(/_/g, ' ')}
+                </Text>
+              </View>
+            </View>
+            {req.pickupCity ? (
+              <Text style={styles.requestLocation}>From: {req.pickupCity}</Text>
+            ) : null}
+            {req.dropoffCity ? (
+              <Text style={styles.requestLocation}>To: {req.dropoffCity}</Text>
+            ) : null}
+            <View style={styles.safetyRow}>
+              <Text style={styles.safetyItem}>🛡️ Background checked</Text>
+              <Text style={styles.safetyItem}>✅ ID verified</Text>
             </View>
           </View>
-          {req.pickupCity ? (
-            <Text style={styles.requestLocation}>From: {req.pickupCity}</Text>
-          ) : null}
-          {req.dropoffCity ? (
-            <Text style={styles.requestLocation}>To: {req.dropoffCity}</Text>
-          ) : null}
-          <View style={styles.safetyRow}>
-            <Text style={styles.safetyItem}>🛡️ Background checked</Text>
-            <Text style={styles.safetyItem}>✅ ID verified</Text>
-          </View>
-        </View>
+        </React.Fragment>
       ))}
     </ScrollView>
   );
@@ -279,10 +281,12 @@ function PublicState({ onSignIn }: { onSignIn: () => void }) {
           { emoji: '📦', label: 'Packages' },
           { emoji: '🍽️', label: 'Food' },
         ].map(({ emoji, label }) => (
-          <View key={label} style={styles.serviceCard}>
-            <Text style={styles.serviceEmoji}>{emoji}</Text>
-            <Text style={styles.serviceLabel}>{label}</Text>
-          </View>
+          <React.Fragment key={label}>
+            <View style={styles.serviceCard}>
+              <Text style={styles.serviceEmoji}>{emoji}</Text>
+              <Text style={styles.serviceLabel}>{label}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
       <TouchableOpacity style={styles.joinBtn} onPress={onSignIn} accessibilityRole="button">
