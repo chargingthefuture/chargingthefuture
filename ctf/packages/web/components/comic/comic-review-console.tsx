@@ -112,11 +112,12 @@ export function ComicReviewConsole() {
     [items, selectedId],
   );
 
-  // When the selection changes, seed the corrected-text buffer with the AI draft so the owner edits
-  // from the draft, and reset edit mode.
+  // When the selection changes, seed the corrected-text buffer. Bot-draft items seed from the draft
+  // so the owner edits it; human-first (safety-flagged) items have no AI draft, so start blank and let
+  // the reviewer author the answer.
   useEffect(() => {
     if (selected) {
-      setCorrectedBody(selected.draftBody);
+      setCorrectedBody(selected.safetyCategory ? '' : selected.draftBody);
       setEditing(false);
     }
   }, [selected]);
@@ -340,12 +341,12 @@ export function ComicReviewConsole() {
               ) : (
                 <div>
                   <div className={styles.detailColHead}>
-                    <span className={styles.detailLabel}>AI Assistant draft</span>
+                    <span className={styles.detailLabel}>{selected.safetyCategory ? 'No AI draft' : 'AI Assistant draft'}</span>
                     <span className={styles.notYetSentTag}>
                       <Sparkles size={9} /> Not yet sent
                     </span>
                   </div>
-                  <div className={styles.draftCard}>{selected.draftBody}</div>
+                  <div className={styles.draftCard}>{selected.safetyCategory ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.' : selected.draftBody}</div>
                 </div>
               )}
 
@@ -354,9 +355,11 @@ export function ComicReviewConsole() {
                 <div className={styles.detailCol}>
                   <div className={styles.detailLabel}>Provenance</div>
                   <div className={styles.provenanceList}>
-                    <div className={styles.provenanceRow}>
-                      <FileText size={13} color="#0EA5E9" /> Drafted by engine: {selected.engine}
-                    </div>
+                    {selected.safetyCategory ? null : (
+                      <div className={styles.provenanceRow}>
+                        <FileText size={13} color="#0EA5E9" /> Drafted by engine: {selected.engine}
+                      </div>
+                    )}
                     <div className={styles.provenanceRow}>
                       <FileText size={13} color="#0EA5E9" /> Intent: {selected.intent ?? 'not classified (Rasa pending)'}
                     </div>
@@ -414,9 +417,11 @@ export function ComicReviewConsole() {
                   </>
                 ) : (
                   <>
-                    <button type="button" className={styles.approveBtn} disabled={resolving} onClick={() => void resolveSelected('approve')}>
-                      <Check size={16} /> Approve &amp; send
-                    </button>
+                    {selected.safetyCategory ? null : (
+                      <button type="button" className={styles.approveBtn} disabled={resolving} onClick={() => void resolveSelected('approve')}>
+                        <Check size={16} /> Approve &amp; send
+                      </button>
+                    )}
                     <button type="button" className={styles.editBtn} disabled={resolving} onClick={() => setEditing(true)}>
                       <Pencil size={15} /> Edit &amp; approve
                     </button>
