@@ -235,6 +235,13 @@ Canonical definition notes for `recruited`:
 
 `ctf/scripts/seedWorkforce.mjs` seeds deterministic recruited-state fixtures and admin export inputs for dev validation.
 
+## 7.5) Web and Android Delivery Status
+
+| Platform | Status | Notes |
+|---|---|---|
+| Web | ✅ Delivered | Pixel pass complete 2026-05-31. Shell rewritten to match `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/Workforce.tsx` canonical design. Bound to real dashboard, sector-report, skill-level-report, and profile API endpoints. Fabricated stats (Employed/In Training/Seeking Work breakdown, pathways, skill counts) omitted per real-data-only policy. Loading state, empty state, 4-card hero stats, skill-level distribution bars, sector gaps table, and profile right-rail all delivered. Chat tab from mockup omitted (no backing API route). |
+| Android | ⬜ Pending | Android parity not yet implemented. |
+
 ## 8) Gaps and Known Technical Debt
 
 1. Retention and legal-basis wording for workforce recruited inference and exports has not been explicitly signed off; the plugin runs under platform defaults.
@@ -262,6 +269,8 @@ Canonical definition notes for `recruited`:
 ## 10) Change Log
 
 - 2026-05-31: Android pixel-pass delivered (`feat/workforce-android-pixel-pass`). Rewrote `WorkforceDashboard.tsx` to bind real API routes (`/dashboard`, `/profile`). Added `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard` sub-components matching `MobileWorkforce*` design mockups. Retired mock data and `setTimeout` stubs. Flipped Android row ⬜ → ✅ in readiness plan. Added "Web and Android Delivery Status" section to this inventory.
+
+- 2026-05-31: Web pixel pass delivered. Shell rewritten to match canonical `Workforce.tsx` design mockup: exact inline hex colors (`#B45309`, `#0F1117`, `#0D0F14`, `#090B0F`), Inter type scale, lucide-react icons, three-column layout (72px icon rail + 240px sidebar + main content + 280px right panel), 4-card hero stats, skill-level distribution chart (bar per bucket), sector gaps table (supply/demand dual progress bars), loading and empty states. Chat tab omitted (no backing API). Fabricated stats (Employed/In Training/Seeking Work distribution, pathways, skill count) omitted per real-data-only policy. Files created/updated: `workforce-shell.tsx`, `workforce-icon-rail.tsx`, `workforce-sidebar.tsx`, `workforce-hero-stats.tsx`, `workforce-sector-gaps.tsx`, `workforce-skill-distribution.tsx`, `workforce-profile-panel.tsx`. TypeCheck, build, ESLint, and EOF gates all pass.
 
 - 2026-05-30: Backend marked complete (🟡 → ✅ in the readiness plan) after audit confirmed no code/schema/contract gaps remain: all 9 `workforce_*` tables exist, all 20 routes are implemented (export job execution intentionally deferred with `501 exportDeferred`), the repository/seed are complete, and the schema-drift gate passes. Reconciled the lagging docs: removed the stale `workforce_report_snapshots` "not yet implemented / decision needed" claims (the table was removed by owner decision on 2026-05-21; the dashboard derives state live) and documented the two sync routes (`/api/workforce/admin/sync`, `/api/workforce/internal/sync`) in the API Surface. Docs-only; no code/schema/route/contract/seed changes. (A `workforce_config` singleton seed is a deferred dev-hygiene nice-to-have — routes already fall back to coded defaults — and would ship in a seed PR paired with the schema-drift seed/schema policy.)
 

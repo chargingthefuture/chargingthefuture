@@ -107,7 +107,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements (Hub data layer) | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| workforce | 🎨 | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| workforce | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | foundation | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
