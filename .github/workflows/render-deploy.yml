@@ -15,7 +15,6 @@ on:
         type: choice
         options:
           - ctf-web
-          - ctf-pm-mcp-server
           - ctf-ollama
           - ctf-formance-ledger
           - all
@@ -29,7 +28,6 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_WEB: ${{ secrets.RENDER_SERVICE_ID_WEB }}
-          RENDER_SERVICE_ID_PM_MCP: ${{ secrets.RENDER_SERVICE_ID_PM_MCP }}
           RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
           RENDER_SERVICE_ID_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
           SERVICE: ${{ inputs.service }}
@@ -51,12 +49,10 @@ jobs:
 
           case "$SERVICE" in
             ctf-web)            deploy "$RENDER_SERVICE_ID_WEB"     "ctf-web" ;;
-            ctf-pm-mcp-server)  deploy "$RENDER_SERVICE_ID_PM_MCP"  "ctf-pm-mcp-server" ;;
             ctf-ollama)         deploy "$RENDER_SERVICE_ID_OLLAMA"   "ctf-ollama" ;;
             ctf-formance-ledger) deploy "$RENDER_SERVICE_ID_FORMANCE" "ctf-formance-ledger" ;;
             all)
               deploy "$RENDER_SERVICE_ID_WEB"     "ctf-web"
-              deploy "$RENDER_SERVICE_ID_PM_MCP"  "ctf-pm-mcp-server"
               deploy "$RENDER_SERVICE_ID_OLLAMA"  "ctf-ollama"
               deploy "$RENDER_SERVICE_ID_FORMANCE" "ctf-formance-ledger"
               ;;

@@ -1,6 +1,11 @@
 # syntax=docker/dockerfile:1
 # pm-mcp-server — TypeScript MCP server for PM feedback workflows (stdio transport)
 # Build context: ctf/packages/pm-mcp-server/
+#
+# NOTE: This image is for local / manual stdio invocation only — it is NOT a
+# Render service. A stdio MCP server exits as soon as stdin closes, which always
+# happens on a PaaS worker (no client connects via stdin), so it must never be
+# deployed as a Render `worker`. See render.yaml and ctf/docs/developer/PM.md.
 
 ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-alpine AS builder
