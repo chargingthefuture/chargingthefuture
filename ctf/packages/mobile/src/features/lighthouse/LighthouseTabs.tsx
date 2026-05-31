@@ -1,50 +1,108 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LighthouseScreen } from './LighthouseScreen';
 import { LighthouseMatches } from './LighthouseMatches';
+import { LighthouseStreamTab } from './LighthouseStreamTab';
 
-const TABS = [
-  { key: 'browse', label: 'Browse' },
-  { key: 'matches', label: 'Matches' },
-  { key: 'chat', label: 'Chat' },
+const COLOR = '#EAB308';
+const DARK = '#090B0F';
+
+type TabKey = 'browse' | 'matches' | 'chat';
+
+interface NavItem {
+  key: TabKey;
+  label: string;
+  icon: string;
+  activeIcon: string;
+}
+
+const NAV: NavItem[] = [
+  { key: 'browse', label: 'Browse', icon: 'search-outline', activeIcon: 'search' },
+  { key: 'matches', label: 'Matches', icon: 'mail-outline', activeIcon: 'mail' },
+  { key: 'chat', label: 'Chat', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
 ];
 
-export const LighthouseTabs = () => {
-  const [tab, setTab] = useState('browse');
+export const LighthouseTabs: React.FC = () => {
+  const [tab, setTab] = useState<TabKey>('browse');
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={styles.tabBar}>
-        {TABS.map(t => (
-          <TouchableOpacity
-            // ...existing code...
-            style={[styles.tab, tab === t.key && styles.tabActive]}
-            onPress={() => setTab(t.key)}
-          >
-            <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={{ flex: 1 }}>
+    <View style={styles.container}>
+      <View style={styles.content}>
         {tab === 'browse' && <LighthouseScreen />}
         {tab === 'matches' && <LighthouseMatches />}
         {tab === 'chat' && <LighthouseStreamTab />}
+      </View>
+      <View style={styles.navBar}>
+        {NAV.map(({ key, label, icon, activeIcon }) => {
+          const active = tab === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={styles.navItem}
+              onPress={() => setTab(key)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.navIconBox, active && styles.navIconBoxActive]}>
+                <Ionicons
+                  name={(active ? activeIcon : icon) as 'search'}
+                  size={20}
+                  color={active ? COLOR : '#6B7280'}
+                />
+              </View>
+              <Text style={[styles.navLabel, active && styles.navLabelActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
 };
 
-import { LighthouseStreamTab } from './LighthouseStreamTab';
-
 const styles = StyleSheet.create({
-  tabBar: { flexDirection: 'row', backgroundColor: '#181A20', borderBottomWidth: 1, borderBottomColor: '#23262F' },
-  tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 3, borderBottomColor: '#EAB308' },
-  tabLabel: { color: '#9CA3AF', fontSize: 15, fontWeight: '600' },
-  tabLabelActive: { color: '#EAB308' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  placeholder: { color: '#9CA3AF', fontSize: 16 },
-  error: { color: '#EF4444', fontSize: 16 },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 8, color: '#EAB308' },
-  subtitle: { fontSize: 15, color: '#9CA3AF' },
+  container: {
+    flex: 1,
+    backgroundColor: '#0F1117',
+  },
+  content: {
+    flex: 1,
+  },
+  navBar: {
+    height: 72,
+    backgroundColor: DARK,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  navIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconBoxActive: {
+    backgroundColor: `${COLOR}20`,
+  },
+  navLabel: {
+    fontSize: 10,
+    color: '#4B5563',
+    fontWeight: '400',
+  },
+  navLabelActive: {
+    color: COLOR,
+    fontWeight: '600',
+  },
 });
