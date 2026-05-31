@@ -23,7 +23,7 @@ ctf/
 │   ├── mobile/                 # React Native app (Expo, EAS)
 │   ├── shared/                 # Shared TypeScript library
 │   ├── agent-mcp-server/       # Agentic MCP server (stdio transport)
-│   ├── pm-mcp-server/          # PM feedback MCP worker
+│   ├── pm-mcp-server/          # PM feedback MCP server (stdio transport)
 │   ├── economic-models/        # Economic modeling utilities
 │   ├── education/              # Educational content & materials
 │   ├── eol/                    # End-of-life/deprecation tooling

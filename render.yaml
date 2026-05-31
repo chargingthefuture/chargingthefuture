@@ -68,21 +68,17 @@ services:
       #   INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET
       #   FORMANCE_POSTGRES_URI         — Neon Postgres URI for Formance ledger
 
-  # ── PM MCP Server ────────────────────────────────────────────────
-  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
-  # Background worker — HTTP MCP transport for PM feedback workflows.
-  # Part of 100% agentic infrastructure orchestration.
-  # Secrets injected by Infisical → Render Sync.
-  - type: worker
-    name: ctf-pm-mcp-server
-    runtime: image
-    image:
-      url: ghcr.io/chargingthefuture/ctf-pm-mcp-server:latest
-    region: ohio
-    plan: starter
-    envVars:
-      - key: NODE_ENV
-        value: production
+  # ── PM MCP Server — intentionally NOT a Render service ───────────
+  # ctf/packages/pm-mcp-server is a stdio MCP server (StdioServerTransport).
+  # A stdio server exits as soon as stdin closes, which always happens on a
+  # Render PaaS worker (no MCP client connects via stdin), so deploying it here
+  # produces a permanent crash-loop and Render eventually suspends it. This is
+  # the same reason ctf-agent-mcp-server was removed (commit ced4c54).
+  # It is consumed locally: built, then registered as a stdio server in an AI
+  # client (see ctf/docs/developer/PM.md) and spawned as a subprocess on demand
+  # by the feedback-matcher / implementation agents. Do not re-add it as a
+  # worker. If a hosted, network-reachable PM MCP endpoint is ever needed, it
+  # must first be rewritten to a long-running HTTP transport.
 
   # ── Ollama ────────────────────────────────────────────────────────
   # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-ollama:latest

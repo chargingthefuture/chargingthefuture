@@ -9,7 +9,7 @@
 
 No local dev. The v3 app runs as a **single production environment on Render**:
 the `ctf-web` service plus supporting services (`ctf-formance-ledger`,
-`ctf-ollama`, `ctf-pm-mcp-server`). There is no separate staging *deployment* —
+`ctf-ollama`). There is no separate staging *deployment* —
 splitting was constrained by Clerk's domain binding (one Clerk instance per
 domain), and v3 ships to the single production domain.
 
