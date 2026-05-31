@@ -114,7 +114,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |

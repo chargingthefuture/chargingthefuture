@@ -74,13 +74,19 @@ Excluded route groups:
 3. Logs/diagnostics enforce data minimization and avoid unnecessary request metadata.
 4. Anonymous persistence contract is maintained by storing mood values under `clientId` instead of `user_id`.
 
-## 6) Web and Android Parity Plan
+## 6) Web and Android Delivery Status
 
-1. Mood check route/entry, eligibility behavior, and submission outcomes must match between web and Android.
-2. Cooldown and validation semantics must match between web and Android.
+**Web:** âœ… delivered (design `c5d83c0`, 2026-05-29)
+**Android:** âœ… delivered (design `MobileMood.tsx`, 2026-05-31)
+
+Parity points met:
+1. Mood check route/entry, eligibility behavior, and submission outcomes match between web and Android.
+2. Cooldown and validation semantics match between web and Android (7-day window, 1â€“5 scale).
 3. No Mood admin parity obligations in web/mobile for this rewrite scope.
 
-Web pixel pass (design `c5d83c0`): the `/apps/mood` shell is rebuilt to `design/.../survivor-hub/Mood.tsx` and its Empty/Loading states. The anonymous check-in flow is wired to the real API â€” `GET /api/mood/eligibility?clientId=` gates the form (per-device `clientId` persisted in localStorage), and `POST /api/mood/submissions` sends `{ clientId, moodValue, note }` with the `x-ctf-csrf` header. This fixes the prior shell, which called eligibility with no `clientId` and POSTed the wrong field names (both 400'd at runtime). The Community Pulse tab renders the design's honest empty state â€” there is no aggregate-stats backend yet, so the previous shell's fabricated 7-day averages and distribution percentages were removed rather than re-displayed. Decomposed into modular sub-components within the rule-116 limits; banned "Phase 2" wording removed. Android pixel pass to `MobileMood.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+Web pixel pass (design `c5d83c0`): the `/apps/mood` shell is rebuilt to `design/.../survivor-hub/Mood.tsx` and its Empty/Loading states. The anonymous check-in flow is wired to the real API â€” `GET /api/mood/eligibility?clientId=` gates the form (per-device `clientId` persisted in localStorage), and `POST /api/mood/submissions` sends `{ clientId, moodValue, note }` with the `x-ctf-csrf` header. This fixes the prior shell, which called eligibility with no `clientId` and POSTed the wrong field names (both 400'd at runtime). The Community Pulse tab renders the design's honest empty state â€” there is no aggregate-stats backend yet, so the previous shell's fabricated 7-day averages and distribution percentages were removed rather than re-displayed. Decomposed into modular sub-components within the rule-116 limits; banned "Phase 2" wording removed.
+
+Android pixel pass (design `MobileMood.tsx`, 2026-05-31): built `ctf/packages/mobile/src/features/mood/Mood.tsx` + `api.ts`; retired `MockMood.tsx`. The screen faithfully translates the `MobileMood.tsx` mockup into React Native primitives â€” dark-mode only (`#0F1117` background), pink `#EC4899` accent, five-mood emoji picker, optional anonymous note, eligibility gate from `GET /api/mood/eligibility?clientId=`, submission via `POST /api/mood/submissions` with `{ clientId, moodValue, note }` + `x-ctf-csrf: 1` header, cooldown display. Omissions from mockup (no aggregate-stats API): Trends tab replaced with honest empty state; community avg card in check-in tab omitted. Home and Private tabs are pure UI and retained. TypeScript, EOF, and parity gates all pass.
 
 ## 7) Seed Coverage Status
 
@@ -93,6 +99,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-05-31: Android pixel pass. Built `Mood.tsx` + `api.ts` in `ctf/packages/mobile/src/features/mood/`; retired `MockMood.tsx`. Real bindings to `GET /api/mood/eligibility` and `POST /api/mood/submissions`. Omitted Trends tab chart and community-avg card (no aggregate-stats API). TypeScript, EOF, and parity gates pass. Android delivery status: âœ….
 - 2026-05-29: Web UI circle-back (design `c5d83c0`). Rebuilt the mood shell to the `Mood.tsx` mockup + Empty/Loading; fixed the eligibility (`?clientId=`) and submission (`{ clientId, moodValue, note }` + CSRF header) API contracts that previously 400'd; replaced fabricated trend/distribution data with the design's honest Community Pulse empty state; decomposed into modular sub-components within the rule-116 limits; removed banned "Phase 2" wording. No schema/API change.
 - 2026-05-18: Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
 - 2026-02-25: Created initial Mood CTF rewrite inventory.
@@ -118,7 +125,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Mood user flows are standalone and not embedded in GentlePulse features.
 
-### €” Contracts and Scope Lock
+### ï¿½ï¿½ Contracts and Scope Lock
 
 - [ ] Lock authenticated API posture for Mood routes.
   - Acceptance criteria:
@@ -131,7 +138,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
     - Submission access is authenticated-user-only.
     - Mood values are persisted by anonymous `clientId` (not `user_id`).
 
-### €” Data and Migration Readiness
+### ï¿½ï¿½ Data and Migration Readiness
 
 - [ ] Define mood-check schema and uniqueness constraints.
   - Acceptance criteria:
@@ -141,7 +148,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Product decision for multiple `clientId`s per authenticated user is documented.
 
-### €” API and Behavior Implementation Readiness
+### ï¿½ï¿½ API and Behavior Implementation Readiness
 
 - [ ] Finalize API route map for in-scope features.
   - Acceptance criteria:
@@ -153,7 +160,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Validation gate or lint/contract checks fail if announcements/admin/safety-trigger surface is introduced.
 
-### €” Security and Compliance Gates
+### ï¿½ï¿½ Security and Compliance Gates
 
 - [ ] Verify authz coverage for all Mood writes/reads.
   - Acceptance criteria:
@@ -165,7 +172,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Product/policy wording is consistent with authenticated access plus anonymous `clientId` storage.
 
-### €” Web and Android Parity Gates
+### ï¿½ï¿½ Web and Android Parity Gates
 
 - [ ] Validate web/mobile parity for core Mood journey.
   - Acceptance criteria:
@@ -177,7 +184,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - No Mood admin or announcements parity tasks are required because these are out of scope.
 
-### €” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API/integration design documentation for retained feature scope.
   - Acceptance criteria:
