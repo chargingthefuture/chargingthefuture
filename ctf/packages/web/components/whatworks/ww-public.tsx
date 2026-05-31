@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   BG, BRAND, BORDER, SURFACE, SUBTLE, TEXT,
-  purchaseLinkLabel, type WhatWorksProblem, type WhatWorksStats,
+  type WhatWorksProblem, type WhatWorksStats,
 } from './ww-shared';
 import { WhatWorksLoading } from './ww-loading';
 
@@ -123,7 +123,7 @@ export function WhatWorksPublic() {
                               <ShieldCheck size={12} /> {product.verifiedCount} verified
                             </span>
                             <a href={product.purchaseUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: BRAND, fontWeight: 700, textDecoration: 'none' }}>
-                              {purchaseLinkLabel(product.purchaseUrl)} <ExternalLink size={11} />
+                              View <ExternalLink size={11} />
                             </a>
                           </div>
                         </div>

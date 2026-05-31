@@ -65,16 +65,3 @@ export const EMPTY_SUGGEST_DRAFT: SuggestDraft = {
   purchaseUrl: '',
   note: '',
 };
-
-// Honest retailer label: the mockup says "View on Amazon", but purchase links are arbitrary,
-// so only say Amazon when the link actually is. Everything else reads "View product".
-export function purchaseLinkLabel(url: string): string {
-  try {
-    if (new URL(url).hostname.toLowerCase().includes('amazon')) {
-      return 'View on Amazon';
-    }
-  } catch {
-    return 'View product';
-  }
-  return 'View product';
-}

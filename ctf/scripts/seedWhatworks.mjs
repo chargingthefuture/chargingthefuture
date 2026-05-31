@@ -20,8 +20,8 @@ function det(label) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
-function amazon(name) {
-  return `https://www.amazon.com/s?k=${encodeURIComponent(name)}`;
+function searchUrl(name) {
+  return `https://duckduckgo.com/?q=${encodeURIComponent(name)}`;
 }
 
 const PROBLEMS = [
@@ -79,7 +79,7 @@ async function seed() {
              (id, problem_id, emoji, name, kind, note, purchase_url, status, suggested_by, reviewed_by, reviewed_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, $9, NOW())
            ON CONFLICT (id) DO NOTHING`,
-          [productId, problemId, product.emoji, product.name, product.kind, product.note, amazon(product.name), SEED_USER_POOL[0], SEED_ADMIN],
+          [productId, problemId, product.emoji, product.name, product.kind, product.note, searchUrl(product.name), SEED_USER_POOL[0], SEED_ADMIN],
         );
 
         for (let index = 0; index < product.verified; index += 1) {

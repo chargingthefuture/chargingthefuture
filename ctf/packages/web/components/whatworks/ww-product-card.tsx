@@ -3,7 +3,7 @@
 // A single survivor-verified tool card from design/.../survivor-hub/WhatWorks.tsx.
 // "Helpful" is the live endorsement toggle; its tally renders as "N survivors verified".
 import { ShieldCheck, ThumbsUp, ExternalLink } from 'lucide-react';
-import { BRAND, BORDER, SURFACE, SUBTLE, TEXT, purchaseLinkLabel, type WhatWorksProduct } from './ww-shared';
+import { BRAND, BORDER, SURFACE, SUBTLE, TEXT, type WhatWorksProduct } from './ww-shared';
 
 type Props = {
   product: WhatWorksProduct;
@@ -41,7 +41,7 @@ export function WhatWorksProductCard({ product, busy, onToggleHelpful }: Props) 
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
         <a href={product.purchaseUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 9, background: `${BRAND}18`, border: `1px solid ${BRAND}40`, color: BRAND, fontSize: 12.5, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-          {purchaseLinkLabel(product.purchaseUrl)} <ExternalLink size={12} />
+          View product <ExternalLink size={12} />
         </a>
       </div>
     </div>

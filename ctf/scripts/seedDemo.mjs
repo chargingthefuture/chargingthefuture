@@ -777,7 +777,7 @@ async function seedWhatworks(c) {
            (id, problem_id, emoji, name, kind, note, purchase_url, status, suggested_by, reviewed_by, reviewed_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, $9, NOW())
          ON CONFLICT (id) DO NOTHING`,
-        [productId, problemId, product.emoji, product.name, product.kind, product.note, `https://www.amazon.com/s?k=${encodeURIComponent(product.name)}`, endorsers[0], OWNER],
+        [productId, problemId, product.emoji, product.name, product.kind, product.note, `https://duckduckgo.com/?q=${encodeURIComponent(product.name)}`, endorsers[0], OWNER],
       );
       for (let index = 0; index < product.verified; index += 1) {
         await c.query(
