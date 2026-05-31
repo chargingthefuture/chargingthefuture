@@ -116,7 +116,8 @@ Admin page:
 1. Backend-first delivery with web admin moderation shell.
 2. Android parity for submission/status surfaces follows shared contracts.
 3. Access-tier semantics remain consistent across web and Android.
-4. Web pixel pass (design `c5d83c0`): the user-facing `/plugin/unlock` page is rebuilt to `design/.../survivor-hub/Unlock.tsx` and its Empty/Loading states. `UnlockShell` reads `GET /api/unlock/status` and renders the loading state, the submission form (no submission), or the status view (pending/approved/rejected, with a re-submit form on rejection). Submission and re-submission POST to `/api/unlock/submission` (replacing the previous stub form, which never called the API). Status label, the timeline, the "what you unlock" checklist, and the approved/rejected variants are driven by the real `UnlockStatus`; the mockup's dummy URL, rejection text, and timestamps (absent from the status endpoint) are not fabricated. ClickLog-style dark layout decomposed into modular sub-components within rule-116 limits. Android pixel pass to `MobileUnlock.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+4. Web pixel pass (design `c5d83c0`): the user-facing `/plugin/unlock` page is rebuilt to `design/.../survivor-hub/Unlock.tsx` and its Empty/Loading states. `UnlockShell` reads `GET /api/unlock/status` and renders the loading state, the submission form (no submission), or the status view (pending/approved/rejected, with a re-submit form on rejection). Submission and re-submission POST to `/api/unlock/submission` (replacing the previous stub form, which never called the API). Status label, the timeline, the "what you unlock" checklist, and the approved/rejected variants are driven by the real `UnlockStatus`; the mockup's dummy URL, rejection text, and timestamps (absent from the status endpoint) are not fabricated. ClickLog-style dark layout decomposed into modular sub-components within rule-116 limits.
+5. Android pixel pass (2026-05-31): `ctf/packages/mobile/src/features/unlock/Unlock.tsx` rewritten to `MobileUnlock.tsx` / `MobileUnlockEmpty.tsx` / `MobileUnlockLoading.tsx` / `MobileUnlockPublic.tsx` mockup. Created `api.ts` binding `GET /api/unlock/status` and `POST /api/unlock/submission`. Four states: loading (tagline splash), public (unauthenticated â€” 401/403 path), submission form (no prior submission), status view (pending/approved/rejected with re-submit on rejection). MockUnlock.tsx was already empty and is not exported. Real-data bindings: `UnlockStatus.reviewStatus`, `.accessTier`, `.hasSubmission`. Omitted per real-data-only rule: `quoraProfileUrl` (absent from status endpoint), timeline dates (`submittedAt`/`reviewedAt` absent), `reviewNote` (absent from status endpoint). No CSRF header needed (mirrors web unlock shell which does not set `x-ctf-csrf`).
 
 ## 7) Seed Coverage Status
 
@@ -131,6 +132,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-05-31: Android pixel pass. Rewrote `ctf/packages/mobile/src/features/unlock/Unlock.tsx` to the `MobileUnlock.tsx` + Empty/Loading/Public mockup; created `api.ts` (GET status, POST submission). Four RN states (loading, public, submission form, status view). MockUnlock.tsx was already empty. No schema/API change.
 - 2026-05-29: Web UI circle-back (first design pass; unblocked by the `c5d83c0` design re-pin). Rebuilt the `/plugin/unlock` page to the `Unlock.tsx` mockup + Empty/Loading states, wired to `/api/unlock/status` and `/api/unlock/submission` (the prior `UnlockSubmission` stub never posted; removed). Decomposed into modular sub-components (`unlock-shared`, `unlock-loading`, `unlock-icon-rail`, `unlock-submission-view`, `unlock-sidebar`, `unlock-status-card`, `unlock-right-rail`, `unlock-status-view`, `unlock-shell`). Status/timeline driven by real data; no fabricated URL/reason/timestamps. No schema/API change.
 - 2026-03-25: Created initial Unlock CTF rewrite inventory with staged access, admin moderation queue, and one-time approval incentive scope.
 - 2026-03-25: Updated for platform-wide enforcement, runtime-config incentive, and status endpoint implementation.
@@ -151,7 +153,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Hidden in end-user plugin listing and available in admin contexts.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [ ] Define Unlock plugin command contracts for v1.
   - Acceptance criteria:
@@ -166,7 +168,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Command set matches across all three contract files.
 
-### €” Schema and Persistence
+### ï¿½ï¿½ Schema and Persistence
 
 - [ ] Implement Unlock schema and migration(s) in `ctf/migrations/`.
   - Acceptance criteria:
@@ -178,7 +180,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Incentive grant is tracked and cannot be double-marked.
 
-### €” User Submission Flow
+### ï¿½ï¿½ User Submission Flow
 
 - [ ] Implement Quora URL submission endpoint.
   - Acceptance criteria:
@@ -187,7 +189,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Invalid URL and accepted submission outcomes are auditable.
 
-### €” Admin Moderation Flow
+### ï¿½ï¿½ Admin Moderation Flow
 
 - [ ] Implement admin queue listing endpoint.
   - Acceptance criteria:
@@ -199,7 +201,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Queue snapshot and pending submissions render for admins only.
 
-### €” Incentive Integration
+### ï¿½ï¿½ Incentive Integration
 
 - [x] Implement one-time service-credits grant on approval (runtime-configurable).
   - Acceptance criteria:
@@ -208,7 +210,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Unlock submission stores grant timestamp and service-credits event is auditable.
 
-### €” Access-Tier Enforcement
+### ï¿½ï¿½ Access-Tier Enforcement
 
 - [x] Implement platform-wide, centralized access-tier policy integration.
   - Acceptance criteria:
@@ -217,7 +219,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   - Acceptance criteria:
     - Pending submissions past window can transition to support-only without manual edits.
 
-### €” Validation and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Command schema design documentation.
   - Acceptance criteria:
