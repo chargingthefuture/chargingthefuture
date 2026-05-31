@@ -248,20 +248,11 @@ COMMIT;
 
 -- === peer-programming placeholder ===
 -- === levelup_enrollments ===
-CREATE TABLE IF NOT EXISTS levelup_enrollments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  level_id TEXT NOT NULL,
-  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  status TEXT NOT NULL DEFAULT 'active',
-  UNIQUE (user_id, level_id)
-);
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS level_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-CREATE UNIQUE INDEX IF NOT EXISTS uq_levelup_enrollments_user_level ON levelup_enrollments(user_id, level_id);
+-- The canonical definition lives further below (the cohort-based table).
+-- An earlier level_id-based table used to be defined here; it was legacy
+-- cruft that left a level_id NOT NULL column with no default and blocked
+-- cohort-based inserts. It has been removed, and any database that still
+-- carries the legacy column has it dropped next to the canonical block.
 CREATE TABLE IF NOT EXISTS peer_programming_weekly_topics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start_date DATE NOT NULL,
@@ -938,6 +929,12 @@ DO $$ BEGIN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS levelup_enrollments_cohort_id_user_id_key ON levelup_enrollments(cohort_id, user_id)';
   END IF;
 END $$;
+-- Shed the legacy level_id column if an older database still carries it.
+-- It was NOT NULL with no default, so cohort-based inserts (which never set
+-- it) failed. Dropping the column also removes its dependent
+-- uq_levelup_enrollments_user_level index. Safe no-op on databases that
+-- never had the legacy column.
+ALTER TABLE IF EXISTS levelup_enrollments DROP COLUMN IF EXISTS level_id;
 CREATE TABLE IF NOT EXISTS trusttransport_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_user_id TEXT NOT NULL,
