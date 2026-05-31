@@ -112,7 +112,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | foundation | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trusttransport | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
