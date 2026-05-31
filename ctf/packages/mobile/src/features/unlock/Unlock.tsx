@@ -11,7 +11,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { fetchUnlockStatus, submitUnlockUrl } from './api';
@@ -71,13 +70,15 @@ function PublicView() {
         { n: '3', title: 'Admin reviews in 48h', desc: 'A human checks your profile.' },
         { n: '4', title: 'Full access unlocked', desc: 'Access all apps and the economy.' },
       ].map(({ n, title, desc }) => (
-        <View key={n} style={s.stepCard}>
-          <View style={s.stepBadge}><Text style={s.stepBadgeText}>{n}</Text></View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.stepTitle}>{title}</Text>
-            <Text style={s.stepDesc}>{desc}</Text>
+        <React.Fragment key={n}>
+          <View style={s.stepCard}>
+            <View style={s.stepBadge}><Text style={s.stepBadgeText}>{n}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.stepTitle}>{title}</Text>
+              <Text style={s.stepDesc}>{desc}</Text>
+            </View>
           </View>
-        </View>
+        </React.Fragment>
       ))}
     </ScrollView>
   );
@@ -145,19 +146,23 @@ function SubmissionView({ onSubmitted }: { onSubmitted: () => void }) {
           { icon: '🛡', t: 'Reduces infiltration', d: 'Makes it harder for traffickers to create fake accounts.' },
           { icon: '✅', t: 'Admin-reviewed', d: 'A human reviews every submission — no automated rejection.' },
         ].map(({ icon, t, d }) => (
-          <View key={t} style={s.whyRow}>
-            <Text style={{ fontSize: 16, flexShrink: 0 }}>{icon}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={s.whyTitle}>{t}</Text>
-              <Text style={s.whyDesc}>{d}</Text>
+          <React.Fragment key={t}>
+            <View style={s.whyRow}>
+              <Text style={{ fontSize: 16, flexShrink: 0 }}>{icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.whyTitle}>{t}</Text>
+                <Text style={s.whyDesc}>{d}</Text>
+              </View>
             </View>
-          </View>
+          </React.Fragment>
         ))}
       </View>
       <View style={s.benefitsCard}>
         <Text style={s.benefitsHeading}>What gets unlocked</Text>
         {BENEFITS.map(f => (
-          <Text key={f} style={s.benefitItem}>· {f}</Text>
+          <React.Fragment key={f}>
+            <Text style={s.benefitItem}>· {f}</Text>
+          </React.Fragment>
         ))}
       </View>
     </ScrollView>
@@ -246,9 +251,11 @@ function StatusView({ status, onResubmitted }: { status: UnlockStatus; onResubmi
       <View style={s.benefitsCard}>
         <Text style={s.benefitsHeading}>What gets unlocked</Text>
         {BENEFITS.map(f => (
-          <Text key={f} style={[s.benefitItem, { color: display === 'approved' ? TEXT_COLOR : SUBTLE }]}>
-            {display === 'approved' ? '✓ ' : '· '}{f}
-          </Text>
+          <React.Fragment key={f}>
+            <Text style={[s.benefitItem, { color: display === 'approved' ? TEXT_COLOR : SUBTLE }]}>
+              {display === 'approved' ? '✓ ' : '· '}{f}
+            </Text>
+          </React.Fragment>
         ))}
       </View>
     </ScrollView>
