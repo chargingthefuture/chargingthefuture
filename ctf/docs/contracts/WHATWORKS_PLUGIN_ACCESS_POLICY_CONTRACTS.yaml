@@ -1,58 +1,84 @@
 policies:
-  - command: whatworks.list.read
+  - pluginId: whatworks
+    command: whatworks.list.read
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.public.read
+  - pluginId: whatworks
+    command: whatworks.public.read
+    version: 1.0.0
     # Public surface: no authenticated role required. Returns a redacted, identity-free teaser.
     requiredRoles: []
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.problems.list
+  - pluginId: whatworks
+    command: whatworks.problems.list
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.product.suggest
+  - pluginId: whatworks
+    command: whatworks.product.suggest
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.product.endorse
+  - pluginId: whatworks
+    command: whatworks.product.endorse
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
     consentRequirements: []
-  - command: whatworks.product.unendorse
+  - pluginId: whatworks
+    command: whatworks.product.unendorse
+    version: 1.0.0
     requiredRoles: [user, admin]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
     consentRequirements: []
-  - command: whatworks.admin.problem.list
+  - pluginId: whatworks
+    command: whatworks.admin.problem.list
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.admin.problem.create
+  - pluginId: whatworks
+    command: whatworks.admin.problem.create
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.admin.problem.update
+  - pluginId: whatworks
+    command: whatworks.admin.problem.update
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.admin.problem.delete
+  - pluginId: whatworks
+    command: whatworks.admin.problem.delete
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.admin.product.list
+  - pluginId: whatworks
+    command: whatworks.admin.product.list
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.admin.product.review
+  - pluginId: whatworks
+    command: whatworks.admin.product.review
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []
-  - command: whatworks.admin.product.delete
+  - pluginId: whatworks
+    command: whatworks.admin.product.delete
+    version: 1.0.0
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: []

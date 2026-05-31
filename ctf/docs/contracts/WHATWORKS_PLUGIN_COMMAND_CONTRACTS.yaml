@@ -1,5 +1,7 @@
 commands:
-  - id: whatworks.list.read
+  - pluginId: whatworks
+    command: whatworks.list.read
+    version: 1.0.0
     inputSchema:
       type: object
       properties: {}
@@ -23,7 +25,9 @@ commands:
       - whatworks_endorsements (select)
     purpose: Read the shared survivor-verified list (approved tools grouped by active problem) with per-viewer endorsement state
     retentionClass: community_content
-  - id: whatworks.public.read
+  - pluginId: whatworks
+    command: whatworks.public.read
+    version: 1.0.0
     inputSchema:
       type: object
       properties: {}
@@ -42,7 +46,9 @@ commands:
       - whatworks_endorsements (select)
     purpose: Public, sign-in-free teaser of the list; submitter identity is never returned
     retentionClass: community_content
-  - id: whatworks.problems.list
+  - pluginId: whatworks
+    command: whatworks.problems.list
+    version: 1.0.0
     inputSchema:
       type: object
       properties: {}
@@ -57,7 +63,9 @@ commands:
       - whatworks_problems (select)
     purpose: List active problems for the suggest form
     retentionClass: community_content
-  - id: whatworks.product.suggest
+  - pluginId: whatworks
+    command: whatworks.product.suggest
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -87,7 +95,9 @@ commands:
       - whatworks_endorsements (insert)
     purpose: Suggest a tool (status pending for admin review); the suggester is auto-recorded as the first verifier
     retentionClass: community_content
-  - id: whatworks.product.endorse
+  - pluginId: whatworks
+    command: whatworks.product.endorse
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -101,7 +111,9 @@ commands:
       - whatworks_endorsements (insert)
     purpose: Mark an approved tool as "this helped me" (increments its verified count)
     retentionClass: user_event
-  - id: whatworks.product.unendorse
+  - pluginId: whatworks
+    command: whatworks.product.unendorse
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -115,7 +127,9 @@ commands:
       - whatworks_endorsements (delete)
     purpose: Remove the viewer's own endorsement from a tool
     retentionClass: user_event
-  - id: whatworks.admin.problem.list
+  - pluginId: whatworks
+    command: whatworks.admin.problem.list
+    version: 1.0.0
     inputSchema:
       type: object
       properties: {}
@@ -131,7 +145,9 @@ commands:
       - whatworks_products (select)
     purpose: List all problems with product counts for curation
     retentionClass: community_content
-  - id: whatworks.admin.problem.create
+  - pluginId: whatworks
+    command: whatworks.admin.problem.create
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -153,7 +169,9 @@ commands:
       - whatworks_problems (insert)
     purpose: Create an admin-curated problem category
     retentionClass: community_content
-  - id: whatworks.admin.problem.update
+  - pluginId: whatworks
+    command: whatworks.admin.problem.update
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -180,7 +198,9 @@ commands:
       - whatworks_problems (update)
     purpose: Edit, reorder, or deactivate a problem
     retentionClass: community_content
-  - id: whatworks.admin.problem.delete
+  - pluginId: whatworks
+    command: whatworks.admin.problem.delete
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -199,7 +219,9 @@ commands:
       - whatworks_endorsements (delete)
     purpose: Delete a problem and (by cascade) its tools and endorsements
     retentionClass: community_content
-  - id: whatworks.admin.product.list
+  - pluginId: whatworks
+    command: whatworks.admin.product.list
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -219,7 +241,9 @@ commands:
       - whatworks_endorsements (select)
     purpose: Moderation queue; submitter identity is intentionally never returned
     retentionClass: community_content
-  - id: whatworks.admin.product.review
+  - pluginId: whatworks
+    command: whatworks.admin.product.review
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
@@ -243,7 +267,9 @@ commands:
       - whatworks_products (update)
     purpose: Approve or reject a suggested tool
     retentionClass: community_content
-  - id: whatworks.admin.product.delete
+  - pluginId: whatworks
+    command: whatworks.admin.product.delete
+    version: 1.0.0
     inputSchema:
       type: object
       properties:
