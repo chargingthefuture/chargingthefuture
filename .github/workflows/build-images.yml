@@ -22,6 +22,7 @@ name: Build and push Docker images
 #   RENDER_SERVICE_ID_WEB             — Render service ID for ctf-web
 #   RENDER_SERVICE_ID_PM_MCP          — Render service ID for ctf-pm-mcp-server
 #   RENDER_SERVICE_ID_OLLAMA          — Render service ID for ctf-ollama
+#   RENDER_SERVICE_ID_RASA            — Render service ID for ctf-rasa
 #   RENDER_SERVICE_ID_FORMANCE        — Render service ID for ctf-formance-ledger
 
 on:
@@ -45,6 +46,7 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
       pm-mcp-server: ${{ steps.filter.outputs.pm-mcp-server }}
       ollama: ${{ steps.filter.outputs.ollama }}
+      rasa: ${{ steps.filter.outputs.rasa }}
       formance: ${{ steps.filter.outputs.formance }}
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +65,8 @@ jobs:
               - 'ctf/packages/pm-mcp-server/**'
             ollama:
               - 'ctf/ops/ollama/**'
+            rasa:
+              - 'ctf/ops/rasa/**'
             formance:
               - 'ctf/ops/formance/Dockerfile.ledger'
 
@@ -216,6 +220,57 @@ jobs:
               -H "Content-Type: application/json" \
               -d '{}' \
               "https://api.render.com/v1/services/$RENDER_SERVICE_ID_OLLAMA/deploys"
+          fi
+
+  # ── ctf-rasa ────────────────────────────────────────────────────
+  # Only rebuilds when ctf/ops/rasa/** changes — the NLU model is trained at build
+  # time (rasa train nlu) and baked into the image, so the build can take a while.
+  build-rasa:
+    name: Build ctf-rasa
+    needs: changes
+    if: needs.changes.outputs.rasa == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ctf-rasa
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ctf/ops/rasa
+          file: ctf/ops/rasa/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ctf-rasa
+          cache-to: type=gha,scope=ctf-rasa,mode=max
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID_RASA: ${{ secrets.RENDER_SERVICE_ID_RASA }}
+        run: |
+          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_RASA" ]; then
+            curl -sf -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_RASA/deploys"
           fi
 
   # ── ctf-formance-ledger ─────────────────────────────────────────

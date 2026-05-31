@@ -100,6 +100,30 @@ services:
       - key: OLLAMA_MODEL
         value: llama3.2
 
+  # ── Rasa (AI Assistant NLU) ──────────────────────────────────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-rasa:latest
+  # Private service — reachable by other Render services via internal URL only;
+  # NEVER assign a public domain (no auth, private-network only, like ctf-ollama).
+  # The NLU model is trained + baked into the image at build time (rasa train nlu),
+  # so the container serves the stateless /model/parse endpoint with no runtime
+  # training. Image only rebuilt when ctf/ops/rasa/** changes (path-filtered in
+  # build-images.yml).
+  #
+  # The web service (ctf-web) reaches it at http://ctf-rasa:5005. RASA_BASE_URL is
+  # injected on ctf-web via Infisical → Render Sync (same pattern as OLLAMA_BASE_URL)
+  # — set RASA_BASE_URL=http://ctf-rasa:5005 there. Until that var is set, the comic
+  # backend's isRasaConfigured() stays false and behavior is unchanged (graceful
+  # degradation — no Rasa call). See ctf/docs/developer/RASA.md.
+  - type: pserv
+    name: ctf-rasa
+    runtime: image
+    image:
+      url: ghcr.io/chargingthefuture/ctf-rasa:latest
+    region: ohio
+    # Standard (2GB/1CPU) — DIET-based NLU model load + inference needs more than
+    # the starter tier; mirrors the ctf-ollama sizing.
+    plan: standard
+
   # ── Infisical (secrets management) ───────────────────────────────
   # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
   # Railway Infisical instance configured with Render Sync integration to push

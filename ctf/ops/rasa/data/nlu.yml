@@ -1,0 +1,86 @@
+# Rasa 3.x seed NLU training data for the CTF "AI Assistant" (@comic).
+#
+# Intents = the five comic categories. These are a reasonable STARTER set so `rasa train nlu`
+# produces a usable model on the very first build. As the human-in-the-loop correction flywheel
+# runs, the app accumulates labelled examples and can emit additional training data via the comic
+# training export (GET /api/comic/training/export) and the feed Rasa export
+# (GET /api/feed/admin/questions/export → exportQuestionsForRasa). Append that exported YAML under
+# the matching intents below, then rebuild the image to retrain. Keep examples free of any real
+# survivor identifying details.
+version: "3.1"
+
+nlu:
+  - intent: housing
+    examples: |
+      - how do i find a safe place to stay tonight
+      - i need emergency shelter
+      - are there transitional housing options near me
+      - help me find affordable housing
+      - i lost my home and need somewhere to go
+      - what housing programs can i apply for
+      - i need a shelter that takes pets
+      - where can my family stay this week
+      - i am about to be evicted what are my options
+      - is there long term housing support available
+      - i need help paying rent
+      - how do i get on a housing waitlist
+
+  - intent: services
+    examples: |
+      - how do i get connected to a caseworker
+      - i need help finding a counselor
+      - are there free legal services
+      - where can i get food assistance
+      - i need childcare support
+      - help me find a doctor i can afford
+      - are there job training programs
+      - i need transportation to an appointment
+      - how do i find a support group
+      - can someone help me with paperwork
+      - i need mental health support
+      - where do i go for clothing donations
+
+  - intent: benefits
+    examples: |
+      - how do i apply for snap benefits
+      - am i eligible for medicaid
+      - help me sign up for unemployment
+      - what financial assistance can i get
+      - how do i get a replacement id card
+      - i need help applying for disability
+      - what benefits am i entitled to
+      - how do i enroll in health insurance
+      - can i get help with utility bills
+      - how do i apply for cash assistance
+      - what tax credits can i claim
+      - help me understand my benefits options
+
+  - intent: safety
+    examples: |
+      - i do not feel safe right now
+      - how do i make a safety plan
+      - i need to talk to someone about my situation
+      - how do i keep my location private
+      - what should i do if i feel unsafe at home
+      - i need protective resources
+      - how do i document what is happening to me
+      - i am worried about my safety
+      - what are my options if i need to leave quickly
+      - how do i stay anonymous on this platform
+      - i need help staying safe
+      - who can i reach out to in an emergency
+
+  - intent: general
+    examples: |
+      - hello
+      - hi there
+      - thank you for the help
+      - what can you help me with
+      - how does this platform work
+      - can you tell me more
+      - i have a question
+      - what is charging the future
+      - how do i use the directory
+      - where do i start
+      - good morning
+      - can you explain how this works
