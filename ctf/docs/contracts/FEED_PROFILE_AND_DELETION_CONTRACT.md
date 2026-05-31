@@ -31,56 +31,53 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
 
 ## 3) Plugin Extension Fields
 
-- Storage location (table or json path): `feed_user_extension`
-- Fields:
-  - field name: `user_id`
-    - type: uuid
-    - nullable/default: non-null, unique, FK to canonical profile
-    - purpose: plugin extension ownership key
-  - field name: `content_preferences`
-    - type: jsonb
-    - nullable/default: default `{}`
-    - purpose: feed ranking/safety preferences
-  - field name: `muted_topics`
-    - type: text[]
-    - nullable/default: default `{}`
-    - purpose: user topic filters
-  - field name: `service_deleted_at`
-    - type: timestamptz
-    - nullable/default: nullable
-    - purpose: plugin-scoped deletion marker
+- Storage location (table or json path): none — Feed has no dedicated per-user extension table.
+- Single-profile rule: per-user Feed state is keyed by `user_id` across the read-state, dismissal,
+  rating, and announcement-state tables; there is no duplicate profile and no per-user preference
+  table (render mode is a global singleton in `feed_render_config`, which also carries the
+  `is_public` flag for the publicly-viewable Hub channel).
+- Per-user state tables (all keyed by `user_id`):
+  - `feed_user_read_state` — `(user_id, item_id, read_at)`; which feed items the user has read.
+  - `feed_user_dismissals` — `(user_id, item_id, dismissed_at)`; dismissed non-mandatory items.
+  - `feed_answer_ratings` — `(user_id, answer_id, rating)`; the user's answer ratings.
+  - `announcement_user_state` — `(user_id, announcement_id, read_at, acknowledged_at, dismissed_at)`.
 
 ## 4) Domain Data Owned by Plugin
 
-- Table/entity: `feed_posts`
+- Table/entity: `feed_community_posts`
   - Contains personal data? yes (author linkage + content)
   - Retention period: long-lived under moderation policy
   - Legal/compliance note: abuse evidence may require retention
-- Table/entity: `feed_comments`
-  - Contains personal data? yes
+- Table/entity: `feed_community_replies`
+  - Contains personal data? yes (author linkage + content)
   - Retention period: long-lived under moderation policy
   - Legal/compliance note: user-generated content controls apply
-- Table/entity: `feed_reactions`
+- Table/entity: `feed_questions`
+  - Contains personal data? yes (asker linkage, optional location context)
+  - Retention period: medium-lived; location context minimized
+  - Legal/compliance note: consent-gated LLM Q&A
+- Table/entity: `feed_answers`
+  - Contains personal data? yes for community answers (author linkage)
+  - Retention period: medium-lived
+  - Legal/compliance note: LLM answers are logged in `llm_inference_log`
+- Table/entity: `feed_answer_ratings`
   - Contains personal data? yes (user linkage)
   - Retention period: medium-lived
   - Legal/compliance note: engagement metadata
-- Table/entity: `feed_deletion_events`
-  - Contains personal data? minimal (`user_id`, scope, timestamps)
-  - Retention period: compliance retention window
-  - Legal/compliance note: Rule 114 deletion audit trail
 
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes Feed usage only:
 
 - Delete immediately:
-  - `feed_user_extension` and preference rows
-  - user reactions and removable drafts
+  - per-user state rows in `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`,
+    and `announcement_user_state`
 - Anonymize/pseudonymize:
-  - historical authored content where hard delete is not policy-allowed
+  - historical authored content (`feed_community_posts`, `feed_community_replies`, `feed_questions`)
+    where hard delete is not policy-allowed
 - Retain for compliance/fraud/finance:
   - policy-required moderation records
-  - `feed_deletion_events`
+  - `llm_inference_log` audit rows
 - Never touch (must remain):
   - canonical profile
   - content owned by other users
@@ -92,7 +89,7 @@ When user deletes Feed usage only:
 When user requests full account deletion:
 
 - Additional records removed vs service-scoped deletion:
-  - remaining user-linked feed posts/comments/reactions where policy allows hard delete
+  - remaining user-linked community posts/replies, questions, and answer ratings where policy allows hard delete
 - Cross-service dependencies:
   - full-account orchestrator coordinates deletion sequencing and audit completion
 - Final expected state:
@@ -103,11 +100,11 @@ When user requests full account deletion:
 If user returns after service-scoped deletion:
 
 - Recreated defaults:
-  - new `feed_user_extension` with default preferences
+  - none — per-user Feed state starts empty (no extension row to recreate)
 - Data that is not restored:
-  - removed reactions/preferences and hard-deleted content
+  - removed read/dismissal/rating state and hard-deleted authored content
 - Re-consent required? (yes/no):
-  - yes (personalization preferences)
+  - yes for LLM Q&A (per-question consent); no per-user personalization is stored
 
 ## 8) Audit and Events
 

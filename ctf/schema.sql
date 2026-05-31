@@ -449,6 +449,10 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
   kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
+  -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
+  -- to unauthenticated visitors when TRUE. Public-read enforcement route is tracked
+  -- as a follow-up; this flag is the canonical config the admin/seed sets.
+  is_public BOOLEAN NOT NULL DEFAULT TRUE,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -458,6 +462,7 @@ ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS render_mode TE
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS max_timeline_page_size INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb;
+ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Seed default feed config row (idempotent)

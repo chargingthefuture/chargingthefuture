@@ -52,12 +52,15 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
+    // Consolidated into the Survivor Hub home (the app homepage at `/`): Feed is now
+    // the Hub's data layer + admin surface, not a separately navigable app tile.
+    // Admin lifecycle remains at /admin/feed-announcements; aliases below still resolve.
     slug: 'feed-announcements',
     name: 'Feed + Announcements',
-    summary: 'Timeline and announcement lifecycle in a coupled admin surface.',
+    summary: 'Data layer + admin surface for the Survivor Hub blended channel (announcements, AI Q&A, community).',
     availabilityState: 'implemented_shell',
     navRank: 40,
-    isVisible: true,
+    isVisible: false,
   },
   {
     slug: 'workforce',

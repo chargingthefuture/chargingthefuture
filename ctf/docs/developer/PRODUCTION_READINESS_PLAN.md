@@ -106,7 +106,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| feed-announcements | 🎨 | 🟡 | ⬜ | ⬜ | ⬜ | ⬜ |
+| feed-announcements (Hub data layer) | 🎨 | ✅ | ⬜ | ⬜ | 🟡 | ⬜ |
 | workforce | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | foundation | 🎨 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -549,3 +549,15 @@ Recorded in this progress channel rather than as separate issues (per decision 1
   `feed_user_extension` refs (blocked by #1's schema change per the seed/schema gate); (3) retire
   `feed-announcements` as a standalone app via registry alias (blocked by #1); (4) reconcile contracts
   to the `feed.*` namespace (blocked by #1); (5) mobile parity (blocked by #1).
+- 2026-05-31: Survivor Hub ⟵ Feed consolidation implemented (web + backend). Repointed
+  `GET/POST /api/hub/messages` at the Feed model (`listFeedTimeline` reads the blended `feed_items`
+  timeline; `createFeedCommunityPost` persists peer posts, CSRF-guarded via the home-chat hook).
+  Added `feed_render_config.is_public` (default TRUE) + read into `FeedConfig`; this is the schema
+  change that unblocked removing the phantom `feed_user_extension` seed `INSERT` (resolving the feed
+  🟡 backend drift → ✅). Retired `feed-announcements` as a navigable app tile (`isVisible: false`;
+  aliases still resolve, admin stays at `/admin/feed-announcements`). Reconciled the Feed deletion
+  contract + data model and rewrote the Survivor Hub inventory to the feed-backed, single-channel
+  architecture (dropped `hub_channels`/`hub_messages`/`hub_bot_routes`/`hub_dm_threads`/`hub_bots`;
+  channels/DMs/bots deferred). Remaining (tracked in the Hub inventory Gaps): public unauthenticated
+  read enforcement (gate `Web px`/public state on it) and mobile Hub parity (Parity Ticket). Gates:
+  typecheck green; full build + EOF + parity + schema-drift verified pre-push.

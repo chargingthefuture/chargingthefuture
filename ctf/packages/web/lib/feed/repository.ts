@@ -44,6 +44,7 @@ type FeedConfigRow = {
   kill_switch_enabled: boolean;
   max_timeline_page_size: number;
   enabled_channels: unknown;
+  is_public: boolean;
   updated_by_user_id: string;
   updated_at: Date;
 };
@@ -255,6 +256,7 @@ function mapFeedConfig(row: FeedConfigRow): FeedConfig {
     killSwitchEnabled: row.kill_switch_enabled,
     maxTimelinePageSize: row.max_timeline_page_size,
     enabledChannels: normalizeEnabledChannels(row.enabled_channels),
+    isPublic: row.is_public ?? true,
     updatedByUserId: row.updated_by_user_id,
     updatedAtIso: toIso(row.updated_at),
   };
@@ -556,7 +558,7 @@ export function validateFeedCommunityReplyBody(body: string): boolean {
 export async function getFeedConfig(): Promise<FeedConfig> {
   const result = await queryDb<FeedConfigRow>(
     `
-      SELECT render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at
+      SELECT render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
       FROM feed_render_config
       WHERE singleton_key = TRUE
       LIMIT 1
@@ -583,7 +585,7 @@ export async function updateFeedConfig(actorId: string, input: FeedConfigInput):
         updated_by_user_id = $5,
         updated_at = NOW()
       WHERE singleton_key = TRUE
-      RETURNING render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at
+      RETURNING render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
     `,
     [input.renderMode, input.killSwitchEnabled, input.maxTimelinePageSize, JSON.stringify(enabledChannels), actorId],
   );
@@ -604,7 +606,7 @@ export async function listFeedTimeline(
   return withDbTransaction(async (client) => {
     const config = await client.query<FeedConfigRow>(
       `
-        SELECT render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at
+        SELECT render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
         FROM feed_render_config
         WHERE singleton_key = TRUE
         LIMIT 1
