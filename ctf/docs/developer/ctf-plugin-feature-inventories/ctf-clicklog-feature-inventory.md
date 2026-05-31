@@ -75,6 +75,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-05-31: Seed runtime fix. `seedClicklog.mjs` now opens its own `pg` Pool and defines a local `queryDb` helper instead of importing the TypeScript `packages/web/lib/db/postgres.ts`, which plain Node (e.g. the Node 20 seed/provision workflows) cannot load because of its type-only syntax. Added `pool.end()` teardown. No change to seeded rows, schema, or API.
 - 2026-05-29: Web UI circle-back (first design pass; unblocked by the `c5d83c0` design re-pin). Rebuilt `ClicklogShell` to the `ClickLog.tsx` mockup + Empty/Loading states, decomposed into modular sub-components (`clicklog-shared`, `clicklog-icon-rail`, `clicklog-sidebar`, `clicklog-right-rail`, `clicklog-log-panel`, `clicklog-incident-list`, `clicklog-empty-state`, `clicklog-loading`). All counts derive from real `/api/clicklog` data; the modal note form became the mockup's inline form; cleared the prior `any` lint debt; dropped the unused `userId` prop. No schema/API change.
 - 2026-05-18: Renamed "Risks & Known Technical Debt" to "Gaps and Known Technical Debt" per Rule 120 canonical heading.
 - 2026-04-13: Initial implementation and registration.
