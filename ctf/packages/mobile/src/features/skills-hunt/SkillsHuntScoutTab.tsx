@@ -57,7 +57,7 @@ function TaxonomyAccordion({
 }: {
   selected: string[];
   canAddMore: boolean;
-  onToggle: (skill: string) => void;
+  onToggle: (_skill: string) => void;
 }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
 
@@ -67,48 +67,50 @@ function TaxonomyAccordion({
         const isOpen = openCategory === cat;
         const selectedInCat = catSkills.filter(s => selected.includes(s)).length;
         return (
-          <View key={cat}>
-            <TouchableOpacity
-              style={[styles.accordionHeader, isOpen && { backgroundColor: COLOR + '10' }]}
-              onPress={() => setOpenCategory(isOpen ? null : cat)}
-            >
-              <Text style={[styles.accordionLabel, isOpen && { color: COLOR }]}>{cat}</Text>
-              <View style={styles.accordionRight}>
-                {selectedInCat > 0 && (
-                  <View style={styles.accordionBadge}>
-                    <Text style={styles.accordionBadgeText}>{selectedInCat}</Text>
-                  </View>
-                )}
-                <Text style={{ color: isOpen ? COLOR : '#6B7280', fontSize: 11 }}>
-                  {isOpen ? '▲' : '▼'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            {isOpen && (
-              <View style={styles.accordionBody}>
-                {catSkills.map(skill => {
-                  const isSelected = selected.includes(skill);
-                  const disabled = !canAddMore && !isSelected;
-                  return (
-                    <TouchableOpacity
-                      key={skill}
-                      disabled={disabled}
-                      onPress={() => onToggle(skill)}
-                      style={[
-                        styles.skillBtn,
-                        isSelected && { backgroundColor: COLOR + '25', borderColor: COLOR + '60' },
-                        disabled && { opacity: 0.4 },
-                      ]}
-                    >
-                      <Text style={[styles.skillBtnText, isSelected && { color: COLOR, fontWeight: '700' }]}>
-                        {isSelected ? '✓ ' : ''}{skill}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+          <React.Fragment key={cat}>
+            <View>
+              <TouchableOpacity
+                style={[styles.accordionHeader, isOpen && { backgroundColor: COLOR + '10' }]}
+                onPress={() => setOpenCategory(isOpen ? null : cat)}
+              >
+                <Text style={[styles.accordionLabel, isOpen && { color: COLOR }]}>{cat}</Text>
+                <View style={styles.accordionRight}>
+                  {selectedInCat > 0 && (
+                    <View style={styles.accordionBadge}>
+                      <Text style={styles.accordionBadgeText}>{selectedInCat}</Text>
+                    </View>
+                  )}
+                  <Text style={{ color: isOpen ? COLOR : '#6B7280', fontSize: 11 }}>
+                    {isOpen ? '▲' : '▼'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              {isOpen && (
+                <View style={styles.accordionBody}>
+                  {catSkills.map(skill => {
+                    const isSelected = selected.includes(skill);
+                    const disabled = !canAddMore && !isSelected;
+                    return (
+                      <TouchableOpacity
+                        key={skill}
+                        disabled={disabled}
+                        onPress={() => onToggle(skill)}
+                        style={[
+                          styles.skillBtn,
+                          isSelected && { backgroundColor: COLOR + '25', borderColor: COLOR + '60' },
+                          disabled && { opacity: 0.4 },
+                        ]}
+                      >
+                        <Text style={[styles.skillBtnText, isSelected && { color: COLOR, fontWeight: '700' }]}>
+                          {isSelected ? '✓ ' : ''}{skill}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          </React.Fragment>
         );
       })}
     </View>

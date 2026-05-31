@@ -5,7 +5,6 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
@@ -97,10 +96,12 @@ function EmptyState({ onNominate }: { onNominate: () => void }) {
           { emoji: '🔗', text: 'Their Quora profile = social proof, adds social proof' },
           { emoji: '⚡', text: 'Skills + professions power our self-sustaining economy' },
         ].map(item => (
-          <View key={item.emoji} style={styles.emptyHowRow}>
-            <Text style={styles.emptyHowEmoji}>{item.emoji}</Text>
-            <Text style={styles.emptyHowText}>{item.text}</Text>
-          </View>
+          <React.Fragment key={item.emoji}>
+            <View style={styles.emptyHowRow}>
+              <Text style={styles.emptyHowEmoji}>{item.emoji}</Text>
+              <Text style={styles.emptyHowText}>{item.text}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
 
@@ -340,20 +341,21 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
             {BADGE_ORDER.map(code => {
               const earned = earnedCodes.has(code);
               return (
-                <View
-                  key={code}
-                  style={[
-                    styles.badgeBox,
-                    earned
-                      ? { backgroundColor: COLOR + '20', borderColor: COLOR + '40' }
-                      : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' },
-                    !earned && { opacity: 0.35 },
-                  ]}
-                >
-                  <Text style={styles.badgeEmoji}>
-                    {earned ? BADGE_EMOJI[code] : '🔒'}
-                  </Text>
-                </View>
+                <React.Fragment key={code}>
+                  <View
+                    style={[
+                      styles.badgeBox,
+                      earned
+                        ? { backgroundColor: COLOR + '20', borderColor: COLOR + '40' }
+                        : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' },
+                      !earned && { opacity: 0.35 },
+                    ]}
+                  >
+                    <Text style={styles.badgeEmoji}>
+                      {earned ? BADGE_EMOJI[code] : '🔒'}
+                    </Text>
+                  </View>
+                </React.Fragment>
               );
             })}
           </View>
@@ -387,9 +389,11 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
             {item.skills.length > 0 && (
               <View style={styles.skillChips}>
                 {item.skills.map(s => (
-                  <View key={s} style={styles.skillChip}>
-                    <Text style={styles.skillChipText}>{s}</Text>
-                  </View>
+                  <React.Fragment key={s}>
+                    <View style={styles.skillChip}>
+                      <Text style={styles.skillChipText}>{s}</Text>
+                    </View>
+                  </React.Fragment>
                 ))}
               </View>
             )}
@@ -410,7 +414,7 @@ function NotificationInbox({
   onMarkRead,
 }: {
   notifications: Notification[];
-  onMarkRead: (id: string) => void;
+  onMarkRead: (_id: string) => void;
 }) {
   if (notifications.length === 0) {
     return (
