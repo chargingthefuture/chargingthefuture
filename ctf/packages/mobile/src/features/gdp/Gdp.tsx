@@ -233,8 +233,8 @@ function GdpOverviewTab({
 }: {
   totalRevenue: number | null;
   weeklyActiveUsers: number | null;
-  fmtUsd: (n: number | null) => string;
-  fmtCount: (n: number | null) => string;
+  fmtUsd: (_n: number | null) => string;
+  fmtCount: (_n: number | null) => string;
   publication: GdpReport['publication'];
 }) {
   return (
@@ -299,7 +299,7 @@ function GdpTrendTab({
   fmtUsd,
 }: {
   totalRevenue: number | null;
-  fmtUsd: (n: number | null) => string;
+  fmtUsd: (_n: number | null) => string;
 }) {
   /*
    * Weekly series data (M/T/W/T/F/S/S bar chart) is not returned by
