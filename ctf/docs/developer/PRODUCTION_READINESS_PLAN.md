@@ -109,7 +109,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | feed-announcements (Hub data layer) | 🎨 | ✅ | ⬜ | ⬜ | 🟡 | ⬜ |
 | workforce | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| foundation | 🎨 | ⬜ | ✅ | ⬜ | ⬜ | ⬜ |
+| foundation | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |

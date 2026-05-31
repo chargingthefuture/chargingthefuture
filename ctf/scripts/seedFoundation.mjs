@@ -47,16 +47,16 @@ async function main() {
     await client.query(
       `
         INSERT INTO foundation_connection_threads
-          (survivor_user_id, provider_user_id, provider_directory_profile_id, stream_channel_id, status, created_by_user_id)
+          (thread_key, survivor_user_id, provider_user_id, provider_directory_profile_id, stream_channel_id, status, created_by_user_id)
         VALUES
-          ('seed-survivor-01', 'seed-provider-01', $1::uuid, 'foundation-thread-seed-1', 'active', 'seed-survivor-01')
-        ON CONFLICT (survivor_user_id, provider_user_id)
+          ($1, 'seed-survivor-01', 'seed-provider-01', $2::text, 'foundation-thread-seed-1', 'active', 'seed-survivor-01')
+        ON CONFLICT (thread_key)
         DO UPDATE SET
           provider_directory_profile_id = EXCLUDED.provider_directory_profile_id,
           status = 'active',
           updated_at = NOW()
       `,
-      [providerProfileId],
+      ['seed-provider-01:seed-survivor-01', providerProfileId],
     );
 
     await client.query(
@@ -67,17 +67,6 @@ async function main() {
           ('seed-survivor-01', 'seed.notification', 'Foundation seed applied', 'Foundation deterministic seed fixtures are available.', '{"seed":true}'::jsonb)
         ON CONFLICT DO NOTHING
       `,
-    );
-
-    // Seed a service credits transaction for Foundation
-    await client.query(
-      `
-        INSERT INTO foundation_service_credits_transactions
-          (from_user_id, to_user_id, amount, reason, connection_thread_id, created_at)
-        VALUES
-          ('seed-provider-01', 'seed-survivor-01', 7, 'Seed Foundation service credits', 'foundation-thread-seed-1', NOW())
-        ON CONFLICT DO NOTHING
-      `
     );
 
     await client.query('COMMIT');
