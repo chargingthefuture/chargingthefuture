@@ -69,17 +69,6 @@ async function main() {
       `,
     );
 
-    // Seed a service credits transaction for Foundation
-    await client.query(
-      `
-        INSERT INTO foundation_service_credits_transactions
-          (from_user_id, to_user_id, amount, reason, connection_thread_id, created_at)
-        VALUES
-          ('seed-provider-01', 'seed-survivor-01', 7, 'Seed Foundation service credits', 'foundation-thread-seed-1', NOW())
-        ON CONFLICT DO NOTHING
-      `
-    );
-
     await client.query('COMMIT');
     console.log('Foundation phase-1 seed fixtures applied.');
   } catch (error) {

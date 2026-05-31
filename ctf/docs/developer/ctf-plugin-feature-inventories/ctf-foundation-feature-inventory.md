@@ -53,21 +53,21 @@ Admin routes:
 
 ## Data Model and Storage Contracts
 
-Foundation-owned domain entities:
+Foundation-owned domain entities (canonical in `ctf/schema.sql`):
 
-1. `foundation_user_extension` — User Foundation plugin extension data.
-2. `foundation_connection_threads` — 1:1 survivor-provider threads.
+1. `foundation_user_extension` — per-user Foundation state keyed by `user_id`: `profile_visibility`, `notification_preferences` (JSONB), `accessibility_runtime_prefs` (JSONB), `trauma_informed_defaults` (JSONB), `service_deleted_at`. Notification opt-in/opt-out is stored here as JSONB — there is no separate `foundation_notification_preferences` table.
+2. `foundation_connection_threads` — 1:1 survivor-provider threads; unique per `(survivor_user_id, provider_user_id)` (`uq_foundation_connection_threads_pair`).
 3. `foundation_thread_participants` — Thread participant roster.
 4. `foundation_message_metadata` — Message history with delivery/read state.
 5. `foundation_call_sessions` — Voice/video call session records.
 6. `foundation_quote_requests` — Quote request lifecycle records.
 7. `foundation_quote_status_events` — Quote state transition log.
-8. `foundation_notification_preferences` — User notification opt-in/opt-out settings.
-9. `foundation_notification_events` — Notification delivery history.
-10. `foundation_rate_limit_counters` — Per-command rate limiting state.
-11. `foundation_quota_threshold_states` — Current quota threshold level (green/yellow/orange/red).
-12. `foundation_capacity_policies` — Admin-configured capacity limits and thresholds.
-13. `foundation_admin_audit_trail` — Admin action audit log.
+8. `foundation_notification_events` — Notification delivery history.
+9. `foundation_rate_limit_counters` — Per-command rate limiting state.
+10. `foundation_capacity_policies` — Admin-configured capacity limits and thresholds.
+11. `foundation_admin_audit_trail` — Admin action audit log.
+
+Quota threshold level (green/yellow/orange/red) is derived at evaluation time from the capacity policy and rate-limit counters; it is not a stored table (there is no `foundation_quota_threshold_states`).
 
 Cross-plugin read dependencies (read-only):
 
