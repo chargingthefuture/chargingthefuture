@@ -1,0 +1,58 @@
+policies:
+  - command: whatworks.list.read
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.public.read
+    # Public surface: no authenticated role required. Returns a redacted, identity-free teaser.
+    requiredRoles: []
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.problems.list
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.product.suggest
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.product.endorse
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - command: whatworks.product.unendorse
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - command: whatworks.admin.problem.list
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.admin.problem.create
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.admin.problem.update
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.admin.problem.delete
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.admin.product.list
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.admin.product.review
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - command: whatworks.admin.product.delete
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []

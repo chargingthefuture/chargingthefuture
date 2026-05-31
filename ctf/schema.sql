@@ -13,6 +13,83 @@ CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(
 CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
+-- One shared, community-wide list. Problems are admin-curated categories; products are
+-- survivor-suggested tools reviewed (pending -> approved) before they appear. Endorsements
+-- are the "this helped me" signal whose count renders as "N survivors verified". The
+-- suggester's identity is stored for moderation/abuse control only and is never exposed in
+-- any reader or admin projection (the anonymity promise on the suggest flow).
+CREATE TABLE IF NOT EXISTS whatworks_problems (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL,
+  emoji TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  context TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_problems_slug ON whatworks_problems(slug);
+CREATE INDEX IF NOT EXISTS idx_whatworks_problems_active_sort ON whatworks_problems(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS whatworks_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  problem_id UUID NOT NULL REFERENCES whatworks_problems(id) ON DELETE CASCADE,
+  emoji TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  purchase_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  suggested_by TEXT,
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS problem_id UUID;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS purchase_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS suggested_by TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_whatworks_products_problem ON whatworks_products(problem_id);
+CREATE INDEX IF NOT EXISTS idx_whatworks_products_status ON whatworks_products(status);
+
+CREATE TABLE IF NOT EXISTS whatworks_endorsements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES whatworks_products(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS product_id UUID;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_whatworks_endorsements_product ON whatworks_endorsements(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_endorsements_unique ON whatworks_endorsements(product_id, user_id);
+
 -- === currencies (app-wide reference table; see issue #120) ===
 -- Curated catalog of currencies usable across value-bearing plugins. Defined early so any table
 -- that FK-references currencies(code) (LightHouse rent, Foundation provider rate, TrustTransport,
@@ -1523,7 +1600,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Aggregate transparency and admin publish flows with compliance controls.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'Service Credits',      'Wallet/transfers/escrow/disputes and treasury governance workflows.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE)
+  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE),
+  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,

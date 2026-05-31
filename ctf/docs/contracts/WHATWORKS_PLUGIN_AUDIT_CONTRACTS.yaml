@@ -1,0 +1,53 @@
+auditEvents:
+  - eventId: whatworks.list.read
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: user
+  - eventId: whatworks.public.read
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: public
+  - eventId: whatworks.problems.list
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: user
+  - eventId: whatworks.product.suggest
+    policyDecision: allow
+    dataClassesAccessed: [community_content, user_event]
+    targetContext: user
+  - eventId: whatworks.product.endorse
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - eventId: whatworks.product.unendorse
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - eventId: whatworks.admin.problem.list
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.problem.create
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.problem.update
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.problem.delete
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.product.list
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.product.review
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.product.delete
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
