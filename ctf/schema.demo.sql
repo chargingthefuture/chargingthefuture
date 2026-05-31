@@ -28,6 +28,141 @@ CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(
 CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
+-- One shared, community-wide list. Problems are admin-curated categories; products are
+-- survivor-suggested tools reviewed (pending -> approved) before they appear. Endorsements
+-- are the "this helped me" signal whose count renders as "N survivors verified". The
+-- suggester's identity is stored for moderation/abuse control only and is never exposed in
+-- any reader or admin projection (the anonymity promise on the suggest flow).
+CREATE TABLE IF NOT EXISTS whatworks_problems (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL,
+  emoji TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  context TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_problems_slug ON whatworks_problems(slug);
+CREATE INDEX IF NOT EXISTS idx_whatworks_problems_active_sort ON whatworks_problems(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS whatworks_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  problem_id UUID NOT NULL REFERENCES whatworks_problems(id) ON DELETE CASCADE,
+  emoji TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  purchase_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  suggested_by TEXT,
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS problem_id UUID;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS purchase_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS suggested_by TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_whatworks_products_problem ON whatworks_products(problem_id);
+CREATE INDEX IF NOT EXISTS idx_whatworks_products_status ON whatworks_products(status);
+
+CREATE TABLE IF NOT EXISTS whatworks_endorsements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES whatworks_products(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS product_id UUID;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_whatworks_endorsements_product ON whatworks_endorsements(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_endorsements_unique ON whatworks_endorsements(product_id, user_id);
+
+-- === currencies (app-wide reference table; see issue #120) ===
+-- Curated catalog of currencies usable across value-bearing plugins. Defined early so any table
+-- that FK-references currencies(code) (LightHouse rent, Foundation provider rate, TrustTransport,
+-- SocketRelay, LevelUp, Unlock) can be created/altered after it. ServiceCredits is the platform
+-- utility token: code 'SC' is internal-only — UI always renders the label 'ServiceCredits', and a
+-- ServiceCredits amount is NEVER shown at a fiat equivalent. GDP USD-normalization lives only in the
+-- aggregate GDP layer (issue #121), never per-wallet.
+CREATE TABLE IF NOT EXISTS currencies (
+  code TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('token','fiat','crypto','barter')),
+  is_service_credits BOOLEAN NOT NULL DEFAULT FALSE,
+  symbol TEXT,
+  decimal_places INTEGER NOT NULL DEFAULT 2,
+  requires_amount BOOLEAN NOT NULL DEFAULT TRUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 100,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS code TEXT;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS label TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'fiat';
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_service_credits BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS symbol TEXT;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS decimal_places INTEGER NOT NULL DEFAULT 2;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS requires_amount BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 100;
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_currencies_active_sort ON currencies(is_active, sort_order);
+
+-- Seed the owner-curated launch set (inline + idempotent, like ctf_plugin_registry). Owner updates
+-- this catalog over time. ServiceCredits sorts first (preferred wherever multiple options appear).
+INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_places, requires_amount, sort_order) VALUES
+  ('SC',  'ServiceCredits',        'token',  TRUE,  NULL,  0, TRUE, 0),
+  ('USD', 'United States Dollar',  'fiat',   FALSE, '$',   2, TRUE, 10),
+  ('EUR', 'Euro',                  'fiat',   FALSE, '€',   2, TRUE, 20),
+  ('JPY', 'Japanese Yen',          'fiat',   FALSE, '¥',   0, TRUE, 30),
+  ('GBP', 'British Pound Sterling','fiat',   FALSE, '£',   2, TRUE, 40),
+  ('CHF', 'Swiss Franc',           'fiat',   FALSE, 'CHF', 2, TRUE, 50),
+  ('CAD', 'Canadian Dollar',       'fiat',   FALSE, 'CA$', 2, TRUE, 60),
+  ('AUD', 'Australian Dollar',     'fiat',   FALSE, 'A$',  2, TRUE, 70),
+  ('CNY', 'Chinese Yuan',          'fiat',   FALSE, 'CN¥', 2, TRUE, 80),
+  ('INR', 'Indian Rupee',          'fiat',   FALSE, '₹',   2, TRUE, 90),
+  ('BRL', 'Brazilian Real',        'fiat',   FALSE, 'R$',  2, TRUE, 100),
+  ('BTC', 'Bitcoin',               'crypto', FALSE, '₿',   8, TRUE, 110)
+ON CONFLICT (code) DO UPDATE SET
+  label              = EXCLUDED.label,
+  kind               = EXCLUDED.kind,
+  is_service_credits = EXCLUDED.is_service_credits,
+  symbol             = EXCLUDED.symbol,
+  decimal_places     = EXCLUDED.decimal_places,
+  requires_amount    = EXCLUDED.requires_amount,
+  sort_order         = EXCLUDED.sort_order,
+  updated_at         = NOW();
+
 -- === weekly_performance_weeks ===
 CREATE TABLE IF NOT EXISTS weekly_performance_weeks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -389,6 +524,10 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
   kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
+  -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
+  -- to unauthenticated visitors when TRUE. Public-read enforcement route is tracked
+  -- as a follow-up; this flag is the canonical config the admin/seed sets.
+  is_public BOOLEAN NOT NULL DEFAULT TRUE,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -398,6 +537,7 @@ ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS render_mode TE
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS max_timeline_page_size INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb;
+ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Seed default feed config row (idempotent)
@@ -1173,6 +1313,21 @@ CREATE TABLE IF NOT EXISTS lighthouse_properties (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Multi-currency (issue #120): monthly_rent is the listed amount; rent_currency names its currency.
+-- "Accepts ServiceCredits" (and any other accepted currency) is a SEPARATE field, never derived from
+-- rent_currency. A fiat rent shown beside an "Accepts ServiceCredits" badge is two distinct fields.
+ALTER TABLE IF EXISTS lighthouse_properties ADD COLUMN IF NOT EXISTS rent_currency TEXT REFERENCES currencies(code);
+-- Backfill: everything to date is USD; Canadian rows with no cost yet keep NULL rent (no currency).
+UPDATE lighthouse_properties SET rent_currency = 'USD' WHERE monthly_rent IS NOT NULL AND rent_currency IS NULL;
+
+CREATE TABLE IF NOT EXISTS lighthouse_property_accepted_currencies (
+  property_id UUID NOT NULL REFERENCES lighthouse_properties(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (property_id, currency_code)
+);
+ALTER TABLE IF EXISTS lighthouse_property_accepted_currencies ADD COLUMN IF NOT EXISTS property_id UUID;
+ALTER TABLE IF EXISTS lighthouse_property_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_lighthouse_property_accepted_currencies_property ON lighthouse_property_accepted_currencies(property_id);
 
 CREATE TABLE IF NOT EXISTS lighthouse_matches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1443,7 +1598,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Aggregate transparency and admin publish flows with compliance controls.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'Service Credits',      'Wallet/transfers/escrow/disputes and treasury governance workflows.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE)
+  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE),
+  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -1886,6 +2042,7 @@ ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS sequence
 ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS levelup_curriculum_items_cohort_id_sequence_no_key ON levelup_curriculum_items(cohort_id, sequence_no);
 
 CREATE TABLE IF NOT EXISTS levelup_milestones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1905,6 +2062,7 @@ ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS required_task 
 ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS levelup_milestones_cohort_id_sequence_no_key ON levelup_milestones(cohort_id, sequence_no);
 
 CREATE TABLE IF NOT EXISTS levelup_command_idempotency (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2165,11 +2323,17 @@ ALTER TABLE IF EXISTS foundation_rate_limit_counters ADD COLUMN IF NOT EXISTS up
 CREATE TABLE IF NOT EXISTS foundation_user_extension (
   user_id TEXT PRIMARY KEY,
   profile_visibility TEXT NOT NULL DEFAULT 'workspace',
+  notification_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+  accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb,
+  trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb,
   service_deleted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS profile_visibility TEXT NOT NULL DEFAULT 'workspace';
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS notification_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -3081,6 +3245,262 @@ CREATE TABLE IF NOT EXISTS inventory_analysis_cache (
   last_analyzed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_inventory_analysis_cache_file_path ON inventory_analysis_cache(inventory_file_path);
+
+-- === comic AI Assistant (@comic) — conversation + supervision + training layer ===
+-- The @comic assistant captures every turn, drafts via Ollama, and (while Rasa is not
+-- deployed) routes every draft to human review before the asker ever sees it. These tables
+-- back conversation capture, the owner review/correction queue, and the Rasa training export.
+-- Guarded DDL (CREATE TABLE IF NOT EXISTS + per-column ALTER ... ADD COLUMN IF NOT EXISTS)
+-- per the migration rules so fresh and legacy DBs converge.
+
+CREATE TABLE IF NOT EXISTS comic_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_conversations_user_id ON comic_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_comic_conversations_created_at ON comic_conversations(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comic_turns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES comic_conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'bot', 'human')),
+  body TEXT NOT NULL,
+  intent TEXT NULL,
+  nlu_confidence NUMERIC(5,4) NULL,
+  engine TEXT NOT NULL DEFAULT 'ollama' CHECK (engine IN ('rasa', 'ollama', 'template', 'human')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS conversation_id UUID;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS intent TEXT NULL;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS nlu_confidence NUMERIC(5,4) NULL;
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS engine TEXT NOT NULL DEFAULT 'ollama';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_turns_conversation_id ON comic_turns(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_comic_turns_created_at ON comic_turns(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comic_review_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'corrected', 'rejected')),
+  reviewer_user_id TEXT NULL,
+  corrected_body TEXT NULL,
+  -- The published answer turn the asker actually sees + rates once the review is approved/corrected:
+  -- an approved bot draft, or the reviewer's human turn for a correction / approved human-first turn.
+  -- NULL while pending/rejected (no answer is ever surfaced). SET NULL so deleting that turn does not
+  -- drop the review row.
+  answer_turn_id UUID NULL REFERENCES comic_turns(id) ON DELETE SET NULL,
+  reason TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  decided_at TIMESTAMPTZ NULL
+);
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS turn_id UUID;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reviewer_user_id TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS corrected_body TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS answer_turn_id UUID NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reason TEXT NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_status ON comic_review_queue(status);
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_turn_id ON comic_review_queue(turn_id);
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_answer_turn_id ON comic_review_queue(answer_turn_id);
+CREATE INDEX IF NOT EXISTS idx_comic_review_queue_created_at ON comic_review_queue(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comic_training_examples (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,
+  intent_label TEXT NOT NULL DEFAULT 'general',
+  text TEXT NOT NULL,
+  entities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  story JSONB NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'exported', 'discarded')),
+  exported_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS source_turn_id UUID;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS intent_label TEXT NOT NULL DEFAULT 'general';
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS entities JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS story JSONB NULL;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS exported_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS comic_training_examples ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_training_examples_intent_label ON comic_training_examples(intent_label);
+CREATE INDEX IF NOT EXISTS idx_comic_training_examples_status ON comic_training_examples(status);
+CREATE INDEX IF NOT EXISTS idx_comic_training_examples_source_turn_id ON comic_training_examples(source_turn_id);
+
+-- Quality signal for answered @comic turns (helpful / not_helpful / flagged). Keyed on the
+-- answered turn (the approved bot draft or the owner's corrected human turn) so a rating attaches
+-- to the exact text the asker saw. One rating per (user, turn); re-rating updates in place.
+-- Mirrors the feed_answer_ratings pattern but references comic_turns (feed_answer_ratings is FK'd
+-- into feed_answers and cannot host comic turns). Feeds the CDD training flywheel.
+CREATE TABLE IF NOT EXISTS comic_answer_ratings (
+  user_id TEXT NOT NULL,
+  turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,
+  rating TEXT NOT NULL CHECK (rating IN ('helpful', 'not_helpful', 'flagged')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, turn_id)
+);
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS turn_id UUID;
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS rating TEXT NOT NULL DEFAULT 'helpful';
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_answer_ratings_turn_id ON comic_answer_ratings(turn_id);
+
+-- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
+-- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
+DO $comic_conversations_channel_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_conversations_channel_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_conversations
+        ADD CONSTRAINT comic_conversations_channel_check
+        CHECK (channel IN ('hub', 'feed'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_conversations_channel_check$;
+
+DO $comic_conversations_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_conversations_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_conversations
+        ADD CONSTRAINT comic_conversations_status_check
+        CHECK (status IN ('open', 'closed'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_conversations_status_check$;
+
+DO $comic_turns_role_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_turns_role_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_turns
+        ADD CONSTRAINT comic_turns_role_check
+        CHECK (role IN ('user', 'bot', 'human'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_turns_role_check$;
+
+DO $comic_turns_engine_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_turns_engine_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_turns
+        ADD CONSTRAINT comic_turns_engine_check
+        CHECK (engine IN ('rasa', 'ollama', 'template', 'human'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_turns_engine_check$;
+
+DO $comic_turns_nlu_confidence_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_turns_nlu_confidence_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_turns
+        ADD CONSTRAINT comic_turns_nlu_confidence_check
+        CHECK (nlu_confidence IS NULL OR (nlu_confidence >= 0 AND nlu_confidence <= 1));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_turns_nlu_confidence_check$;
+
+DO $comic_review_queue_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_review_queue_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_review_queue
+        ADD CONSTRAINT comic_review_queue_status_check
+        CHECK (status IN ('pending', 'approved', 'corrected', 'rejected'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_review_queue_status_check$;
+
+DO $comic_training_examples_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_training_examples_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_training_examples
+        ADD CONSTRAINT comic_training_examples_status_check
+        CHECK (status IN ('pending', 'exported', 'discarded'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_training_examples_status_check$;
+
+DO $comic_answer_ratings_rating_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'comic_answer_ratings_rating_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE comic_answer_ratings
+        ADD CONSTRAINT comic_answer_ratings_rating_check
+        CHECK (rating IN ('helpful', 'not_helpful', 'flagged'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$comic_answer_ratings_rating_check$;
 
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
