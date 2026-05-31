@@ -76,13 +76,14 @@ function WpPublic() {
       <View style={styles.blurredContainer}>
         <View style={styles.blurredCards}>
           {BLURRED_LABELS.map(({ label, color }) => (
-            <View
-              key={label}
-              style={[styles.metricCard, { borderColor: `${color}20`, opacity: 0.3 }]}
-            >
-              <Text style={styles.metricCardLabel}>{label}</Text>
-              <Text style={[styles.metricCardValue, { color }]}>—</Text>
-            </View>
+            <React.Fragment key={label}>
+              <View
+                style={[styles.metricCard, { borderColor: `${color}20`, opacity: 0.3 }]}
+              >
+                <Text style={styles.metricCardLabel}>{label}</Text>
+                <Text style={[styles.metricCardValue, { color }]}>—</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
         <View style={styles.lockOverlay}>
@@ -95,9 +96,11 @@ function WpPublic() {
       {/* Bottom nav (locked/dimmed) */}
       <View style={styles.bottomNav}>
         {(['Metrics', 'History', 'Trends'] as const).map((label) => (
-          <View key={label} style={styles.navItemDimmed}>
-            <Text style={styles.navLabelDimmed}>{label}</Text>
-          </View>
+          <React.Fragment key={label}>
+            <View style={styles.navItemDimmed}>
+              <Text style={styles.navLabelDimmed}>{label}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
     </View>
@@ -124,10 +127,12 @@ function WpEmpty({ weekLabel }: { weekLabel: string }) {
         {/* Placeholder metric cards */}
         <View style={styles.metricsGrid}>
           {BLURRED_LABELS.map(({ label, color }) => (
-            <View key={label} style={[styles.metricCard, { borderColor: `${color}15` }]}>
-              <Text style={[styles.metricCardLabel, styles.metricCardLabelUpper]}>{label}</Text>
-              <Text style={[styles.metricCardValue, { color: SUBTLE }]}>—</Text>
-            </View>
+            <React.Fragment key={label}>
+              <View style={[styles.metricCard, { borderColor: `${color}15` }]}>
+                <Text style={[styles.metricCardLabel, styles.metricCardLabelUpper]}>{label}</Text>
+                <Text style={[styles.metricCardValue, { color: SUBTLE }]}>—</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
       </View>
@@ -159,13 +164,15 @@ function WpMetricCards({ metrics }: { metrics: WeekMetric[] }) {
             ? `$${m.metricValue.toLocaleString()}`
             : m.metricValue.toLocaleString();
         return (
-          <View key={m.metricKey} style={[styles.metricCard, { borderColor: `${cfg.color}20` }]}>
-            <Text style={styles.metricCardLabel}>{cfg.label}</Text>
-            <Text style={[styles.metricCardValue, { color: cfg.color }]}>{displayValue}</Text>
-            {m.metricUnit && m.metricUnit !== 'count' && m.metricUnit !== 'USD' && (
-              <Text style={styles.metricCardUnit}>{m.metricUnit}</Text>
-            )}
-          </View>
+          <React.Fragment key={m.metricKey}>
+            <View style={[styles.metricCard, { borderColor: `${cfg.color}20` }]}>
+              <Text style={styles.metricCardLabel}>{cfg.label}</Text>
+              <Text style={[styles.metricCardValue, { color: cfg.color }]}>{displayValue}</Text>
+              {m.metricUnit && m.metricUnit !== 'count' && m.metricUnit !== 'USD' && (
+                <Text style={styles.metricCardUnit}>{m.metricUnit}</Text>
+              )}
+            </View>
+          </React.Fragment>
         );
       })}
     </View>
@@ -184,7 +191,7 @@ function WpHistory({
 }: {
   weeks: WeekRow[];
   selectedWeekStartDate: string | null;
-  onSelectWeek: (w: WeekRow) => void;
+  onSelectWeek: (_w: WeekRow) => void;
   isAdmin: boolean;
 }) {
   return (
@@ -229,7 +236,7 @@ function WpBottomNav({
   onTabPress,
 }: {
   activeTab: Tab;
-  onTabPress: (tab: Tab) => void;
+  onTabPress: (_tab: Tab) => void;
 }) {
   const TABS: { key: Tab; label: string }[] = [
     { key: 'metrics', label: 'Metrics' },
