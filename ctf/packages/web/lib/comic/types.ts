@@ -81,3 +81,32 @@ export type ComicTrainingExample = {
   intentLabel: string;
   text: string;
 };
+
+export type ComicAnswerRatingValue = 'helpful' | 'not_helpful' | 'flagged';
+
+export type ComicRateAnswerResult = {
+  turnId: string;
+  rating: ComicAnswerRatingValue;
+  ratedAtIso: string;
+};
+
+// One Q&A item in the asker's own @comic stream. Only answers a human has approved/corrected are
+// surfaced — a pending item carries no answer text (the asker never sees an unreviewed draft).
+export type ComicAskerStreamStatus = 'pending' | 'answered';
+
+export type ComicAskerStreamItem = {
+  // The asker's question turn id (stable key for the stream item).
+  questionTurnId: string;
+  conversationId: string;
+  status: ComicAskerStreamStatus;
+  question: string;
+  // The approved/corrected answer text + its turn id (for rating). Null while pending.
+  answer: string | null;
+  answerTurnId: string | null;
+  currentUserRating: ComicAnswerRatingValue | null;
+  askedAtIso: string;
+};
+
+export type ComicAskerStreamPage = {
+  items: ComicAskerStreamItem[];
+};

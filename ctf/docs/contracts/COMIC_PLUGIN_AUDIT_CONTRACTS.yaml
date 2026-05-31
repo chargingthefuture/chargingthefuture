@@ -60,6 +60,34 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.answer.rate
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_answer_rating
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+        ratableAnswerCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_turn_metadata
+      - comic_review_queue_metadata
+      - comic_answer_rating_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      turnId: turn_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
   # ─── Owner review / training ───────────────────────────────────────────
   - eventId: uuid
     timestamp: rfc3339

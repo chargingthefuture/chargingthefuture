@@ -96,6 +96,54 @@ contracts:
     idempotency: false
 
   - pluginId: comic
+    command: comic.conversation.read
+    version: 1.0.0
+    description: Read the requesting user's own AI Assistant Q&A history for the unified Hub/Feed stream. Returns answered cards (approved/corrected reviews only) and pending "Reviewing for safety" cards. Never returns an unreviewed draft and is scoped to the caller's own conversations.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+    outputSchema:
+      items:
+        type: array
+    dataAccess:
+      - comic_conversations
+      - comic_turns
+      - comic_review_queue
+      - comic_answer_ratings
+    purpose: assistant_asker_stream
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.answer.rate
+    version: 1.0.0
+    description: Rate an answered AI Assistant turn (helpful, not_helpful, or flagged). Only answers a human has approved/corrected and that belong to the rater's own conversation are ratable; one rating per user per turn, re-rating updates in place. Feeds the conversation-driven training flywheel.
+    inputSchema:
+      turnId:
+        type: string
+        required: true
+      rating:
+        type: string
+        enum: [helpful, not_helpful, flagged]
+        required: true
+    outputSchema:
+      turnId:
+        type: string
+      rating:
+        type: string
+        enum: [helpful, not_helpful, flagged]
+      ratedAt:
+        type: string
+    dataAccess:
+      - comic_turns
+      - comic_review_queue
+      - comic_answer_ratings
+    purpose: assistant_answer_rating
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
     command: comic.training.export
     version: 1.0.0
     description: Export accumulated AI Assistant training examples (asker questions plus owner-assigned intent labels from corrections) as Rasa NLU YAML. Supersedes the feed category-only export by sourcing real turns and corrections.

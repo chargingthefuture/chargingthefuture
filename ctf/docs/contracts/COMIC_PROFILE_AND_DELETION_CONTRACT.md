@@ -10,7 +10,7 @@
 - Plugin Name: AI Assistant (`@comic`)
 - Service Key (lowercase, stable): `comic`
 - Owner Team: Social Platform (proposed)
-- Rollout Stage: Planning (backend foundation; UI design-gated)
+- Rollout Stage: Web UI delivered (asker stream + owner review console, design `9a4a1af`); Android parity deferred
 
 ## 2) Canonical Profile Usage
 
@@ -59,6 +59,10 @@ fields.
   - Contains personal data? yes (derived from asker question text)
   - Retention period: long-lived under training policy
   - Legal/compliance note: curated training data exported to Rasa; redact before export if needed
+- Table/entity: `comic_answer_ratings`
+  - Contains personal data? yes (`user_id` ownership of the rating)
+  - Retention period: medium-lived (quality signal)
+  - Legal/compliance note: helpful/not_helpful/flagged rating per answered turn; CASCADE-deleted with the rated turn
 
 ## 5) Service-Scoped Deletion Contract
 
@@ -66,7 +70,8 @@ When user deletes AI Assistant usage only:
 
 - Delete immediately:
   - `comic_conversations` owned by the user (CASCADE removes `comic_turns`, which CASCADEs to
-    `comic_review_queue` and `comic_training_examples` derived from those turns)
+    `comic_review_queue`, `comic_training_examples`, and `comic_answer_ratings` derived from those
+    turns)
 - Anonymize/pseudonymize:
   - reviewer attribution on retained supervision records where hard delete is not policy-allowed
 - Retain for compliance/fraud/finance:
@@ -141,4 +146,7 @@ If user returns after service-scoped deletion:
 
 ## Change Log
 
+- 2026-05-31: Added `comic_answer_ratings` (helpful/not_helpful/flagged quality signal, CASCADE
+  off `comic_turns`) to owned data + deletion scope alongside the web UI delivery (design
+  `9a4a1af`). Updated rollout stage to web UI delivered.
 - 2026-05-31: Created initial draft alongside the comic backend foundation.

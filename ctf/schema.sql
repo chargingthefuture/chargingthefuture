@@ -3253,6 +3253,26 @@ CREATE INDEX IF NOT EXISTS idx_comic_training_examples_intent_label ON comic_tra
 CREATE INDEX IF NOT EXISTS idx_comic_training_examples_status ON comic_training_examples(status);
 CREATE INDEX IF NOT EXISTS idx_comic_training_examples_source_turn_id ON comic_training_examples(source_turn_id);
 
+-- Quality signal for answered @comic turns (helpful / not_helpful / flagged). Keyed on the
+-- answered turn (the approved bot draft or the owner's corrected human turn) so a rating attaches
+-- to the exact text the asker saw. One rating per (user, turn); re-rating updates in place.
+-- Mirrors the feed_answer_ratings pattern but references comic_turns (feed_answer_ratings is FK'd
+-- into feed_answers and cannot host comic turns). Feeds the CDD training flywheel.
+CREATE TABLE IF NOT EXISTS comic_answer_ratings (
+  user_id TEXT NOT NULL,
+  turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,
+  rating TEXT NOT NULL CHECK (rating IN ('helpful', 'not_helpful', 'flagged')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, turn_id)
+);
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS turn_id UUID;
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS rating TEXT NOT NULL DEFAULT 'helpful';
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_answer_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_comic_answer_ratings_turn_id ON comic_answer_ratings(turn_id);
+
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
 -- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table

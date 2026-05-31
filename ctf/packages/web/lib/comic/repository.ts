@@ -2,6 +2,8 @@ import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { callOllamaChat, isOllamaConfigured, OLLAMA_MODEL, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
 import {
+  COMIC_ANSWER_RATINGS,
+  COMIC_ASKER_STREAM_LIMIT,
   COMIC_DEFAULT_PAGE,
   COMIC_DEFAULT_PAGE_SIZE,
   COMIC_HOLDING_RESPONSE,
@@ -21,9 +23,14 @@ import {
   stripComicMention,
 } from './policy';
 import type {
+  ComicAnswerRatingValue,
+  ComicAskerStreamItem,
+  ComicAskerStreamPage,
+  ComicAskerStreamStatus,
   ComicChannel,
   ComicMessageInput,
   ComicMessageRouteResult,
+  ComicRateAnswerResult,
   ComicReviewItem,
   ComicReviewPage,
   ComicReviewResolution,
@@ -667,4 +674,137 @@ export async function listComicTrainingExamples(): Promise<ComicTrainingExample[
   );
 
   return result.rows.map((row) => ({ intentLabel: row.intent_label || 'general', text: row.text }));
+}
+
+export function isValidComicAnswerRating(value: string): value is ComicAnswerRatingValue {
+  return COMIC_ANSWER_RATINGS.includes(value as ComicAnswerRatingValue);
+}
+
+type AskerStreamRow = {
+  question_turn_id: string;
+  conversation_id: string;
+  question_body: string;
+  asked_at: Date;
+  review_status: ComicReviewStatus;
+  corrected_body: string | null;
+  answer_turn_id: string | null;
+  answer_body: string | null;
+  rating: ComicAnswerRatingValue | null;
+};
+
+function mapAskerStreamRow(row: AskerStreamRow): ComicAskerStreamItem {
+  // Only approved/corrected reviews expose answer text; everything else is still pending and the
+  // asker must never see the unreviewed draft. A corrected answer uses the owner's corrected_body.
+  const isAnswered = row.review_status === 'approved' || row.review_status === 'corrected';
+  const status: ComicAskerStreamStatus = isAnswered ? 'answered' : 'pending';
+  const answer = isAnswered
+    ? (row.review_status === 'corrected' ? row.corrected_body : row.answer_body)
+    : null;
+
+  return {
+    questionTurnId: row.question_turn_id,
+    conversationId: row.conversation_id,
+    status,
+    question: row.question_body,
+    answer: status === 'answered' ? (answer ?? null) : null,
+    answerTurnId: status === 'answered' ? row.answer_turn_id : null,
+    currentUserRating: row.rating,
+    askedAtIso: toIso(row.asked_at),
+  };
+}
+
+// The asker's own @comic Q&A history for the unified stream. Drives both the answered AI cards and
+// the "Reviewing for safety" pending cards from real data. CRITICAL: this NEVER returns an
+// unreviewed draft — answer text is surfaced only for approved/corrected reviews; pending and
+// rejected items carry no answer body. Scoped to the requesting user's conversations only.
+export async function listComicAskerStream(
+  askerUserId: string,
+  limit: number = COMIC_ASKER_STREAM_LIMIT,
+): Promise<ComicAskerStreamPage> {
+  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), COMIC_ASKER_STREAM_LIMIT);
+
+  const result = await queryDb<AskerStreamRow>(
+    `
+      SELECT
+        uq.id AS question_turn_id,
+        uq.conversation_id AS conversation_id,
+        uq.body AS question_body,
+        uq.created_at AS asked_at,
+        q.status AS review_status,
+        q.corrected_body AS corrected_body,
+        CASE WHEN bt.id IS NOT NULL THEN bt.id ELSE NULL END AS answer_turn_id,
+        bt.body AS answer_body,
+        r.rating AS rating
+      FROM comic_review_queue q
+      JOIN comic_turns qt ON qt.id = q.turn_id
+      JOIN comic_conversations c ON c.id = qt.conversation_id
+      -- The asker's question = the most recent user turn at/before the queued turn.
+      JOIN LATERAL (
+        SELECT ut.id, ut.conversation_id, ut.body, ut.created_at
+        FROM comic_turns ut
+        WHERE ut.conversation_id = qt.conversation_id
+          AND ut.role = 'user'
+          AND ut.created_at <= qt.created_at
+        ORDER BY ut.created_at DESC
+        LIMIT 1
+      ) uq ON TRUE
+      -- The bot draft turn (present for review_pending; for human_first the queued turn IS the
+      -- user turn, so there is no bot draft to expose).
+      LEFT JOIN comic_turns bt ON bt.id = q.turn_id AND bt.role = 'bot'
+      LEFT JOIN comic_answer_ratings r ON r.turn_id = q.turn_id AND r.user_id = $1
+      WHERE c.user_id = $1
+      ORDER BY uq.created_at DESC
+      LIMIT $2
+    `,
+    [askerUserId, safeLimit],
+  );
+
+  return { items: result.rows.map(mapAskerStreamRow) };
+}
+
+// Rate an answered @comic turn (helpful / not_helpful / flagged). The turn must be an answer the
+// asker is allowed to rate: it must belong to one of their conversations AND its review must be
+// resolved as approved/corrected (an unreviewed draft is never ratable because it is never shown).
+// One rating per (user, turn); re-rating updates in place. Feeds the CDD training flywheel.
+export async function rateComicAnswer(
+  actorId: string,
+  turnId: string,
+  rating: ComicAnswerRatingValue,
+): Promise<ComicRateAnswerResult> {
+  return withDbTransaction(async (client) => {
+    const ratable = await client.query<{ id: string }>(
+      `
+        SELECT t.id
+        FROM comic_turns t
+        JOIN comic_conversations c ON c.id = t.conversation_id
+        JOIN comic_review_queue q ON q.turn_id = t.id
+        WHERE t.id = $1::uuid
+          AND c.user_id = $2
+          AND q.status IN ('approved', 'corrected')
+        LIMIT 1
+      `,
+      [turnId, actorId],
+    );
+
+    if (ratable.rows.length === 0) {
+      throw new Error('answer_not_found');
+    }
+
+    const result = await client.query<{ updated_at: Date }>(
+      `
+        INSERT INTO comic_answer_ratings (user_id, turn_id, rating)
+        VALUES ($1, $2::uuid, $3)
+        ON CONFLICT (user_id, turn_id)
+        DO UPDATE SET rating = EXCLUDED.rating, updated_at = NOW()
+        RETURNING updated_at
+      `,
+      [actorId, turnId, rating],
+    );
+
+    return {
+      turnId,
+      rating,
+      ratedAtIso: toIso(result.rows[0].updated_at),
+    };
+  });
 }

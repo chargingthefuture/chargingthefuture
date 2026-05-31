@@ -13,6 +13,7 @@ export const COMIC_ERROR_CODE = {
   notMentioned: 'COMIC_MENTION_REQUIRED',
   reviewNotFound: 'COMIC_REVIEW_NOT_FOUND',
   reviewAlreadyResolved: 'COMIC_REVIEW_ALREADY_RESOLVED',
+  answerNotFound: 'COMIC_ANSWER_NOT_FOUND',
 } as const;
 
 // Invocation is the `@comic` mention. A chat message that does not mention `@comic` is a
@@ -38,6 +39,12 @@ export const COMIC_TURN_ENGINES = ['rasa', 'ollama', 'template', 'human'] as con
 export const COMIC_REVIEW_STATUSES = ['pending', 'approved', 'corrected', 'rejected'] as const;
 export const COMIC_REVIEW_RESOLUTIONS = ['approve', 'correct', 'reject'] as const;
 export const COMIC_TRAINING_STATUSES = ['pending', 'exported', 'discarded'] as const;
+
+// Answer-rating values, identical to the feed quality signal so the CDD flywheel stays consistent.
+export const COMIC_ANSWER_RATINGS = ['helpful', 'not_helpful', 'flagged'] as const;
+
+// How many of the asker's own @comic Q&A items the stream surfaces at once.
+export const COMIC_ASKER_STREAM_LIMIT = 30;
 
 // Safety-category keyword buckets. A turn whose body matches any bucket is flagged
 // human-first. Threshold tuning + the layered ML filter are a deliberate later pass; this

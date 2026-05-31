@@ -128,7 +128,8 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 ## Target Admin / Owner Features
 
 1. **Review & correction console** — queue of bot turns awaiting review; approve, edit, or
-   reject; corrections become training examples. **[UI — triggers DESIGN PASS when built.]**
+   reject; corrections become training examples. **[Web UI delivered — design `9a4a1af`; at
+   `/admin/comic`. 4 states: queue / empty / loading / detail-edit.]**
 2. **Threshold & safety controls** — auto-respond confidence threshold, safety-flag rules,
    the preset below-threshold response. (Target; values tuned later.)
 3. **Training/retraining** — push corrected turns to Rasa (extends the existing export);
@@ -163,6 +164,16 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   (edit) / reject a queued draft; a correction persists a `comic_training_examples` row.
 - `GET /api/comic/training/export` (`comic.training.export`) — admin. Rasa NLU YAML (or JSON
   via `?format=json`) from accumulated turns + corrections; single-loop (no double counting).
+- `GET /api/comic/conversation` (`comic.conversation.read`) — member/approved-or-admin. The
+  asker-facing read powering the unified stream: returns the **requesting user's own** @comic Q&A
+  items as answered cards (approved/corrected reviews only) or pending "Reviewing for safety" cards.
+  **Never returns an unreviewed draft** (repository suppresses any non-approved/corrected answer
+  body) and is scoped to the caller's conversations.
+- `POST /api/comic/answers/[turnId]/rate` (`comic.answer.rate`) — member/approved-or-admin + CSRF.
+  Rate an answered turn `helpful | not_helpful | flagged`. The repository enforces the turn is one
+  the caller may rate (own conversation, review resolved approved/corrected); one rating per
+  (user, turn), re-rating updates in place. Mirrors the feed answer-rating pattern; feeds the CDD
+  flywheel.
 
 Interim engine reality: **Ollama is deployed, Rasa is not.** `lib/comic/rasa.ts`
 `isRasaConfigured()` returns false until `RASA_BASE_URL` is set, so `policy.forceHumanReview()`
@@ -197,14 +208,20 @@ all FKs `ON DELETE CASCADE`):**
    `source_turn_id` uuid FK→comic_turns, `intent_label` text, `text` text, `entities` jsonb
    default `[]`, `story` jsonb null, `status` ∈ pending|exported|discarded, `exported_at` null,
    `created_at`). Indexed on `intent_label`, `status`, `source_turn_id`.
+5. `comic_answer_ratings` — quality signal for answered turns (`user_id` text, `turn_id` uuid
+   FK→comic_turns ON DELETE CASCADE, `rating` ∈ helpful|not_helpful|flagged, `created_at`,
+   `updated_at`; composite pk `(user_id, turn_id)`). Indexed on `turn_id`. One rating per user per
+   answered turn; re-rating updates in place. Added 2026-05-31 with the web UI — `feed_answer_ratings`
+   is FK'd into `feed_answers` and cannot host comic turns, so comic gets its own ratings table.
 
 **Rasa tracker store:** Rasa's own SQL event store, provisioned in the same Neon Postgres
 (managed by Rasa, not hand-authored here). Deferred — Rasa is not deployed.
 
-**Reused:** `feed_answer_ratings` (quality signal). Note: `llm_inference_log` has NOT-NULL FKs
-into `feed_questions`/`feed_answers`, so comic generation is **not** forced into that feed-shaped
-table; comic captures request/response on its own `comic_turns` and emits a structured
-`[comic.inference]` console audit for parity (revisit if a comic-native inference log is needed).
+**Reused:** Note: `llm_inference_log` has NOT-NULL FKs into `feed_questions`/`feed_answers`, so
+comic generation is **not** forced into that feed-shaped table; comic captures request/response on
+its own `comic_turns` and emits a structured `[comic.inference]` console audit for parity (revisit
+if a comic-native inference log is needed). The feed `feed_answer_ratings` table is **not** reused
+for comic answers (its FK targets `feed_answers`); comic ratings live in `comic_answer_ratings`.
 
 ## Security, Privacy, and Compliance Controls
 
@@ -236,11 +253,30 @@ Target: `web+android` parity.
   mention routing, conversation/turn capture, Ollama drafting, the human-in-the-loop review
   queue, correction→training, and Rasa NLU export are implemented. Interim policy forces human
   review on every draft (Rasa undeployed).
-- **Web UI: not started — design-gated (rule 127).** No `@comic` chat rendering, no owner
-  review/correction console. `DESIGN PASS REQUIRED` for both surfaces (see this file's "Design
-  Status & Guidance — Missing"). No React/`.tsx` was created in this pass.
-- **Android: not started.** Deferred behind the web UI + a running Rasa; tracked for parity
-  (`plugin-parity-contracts.json` entry to be added when the mobile feature lands).
+- **Web UI: complete** (design `9a4a1af`, locked/owner-approved). Two surfaces delivered:
+  - **Asker surface** in the unified community/home chat (`components/community-shell/`): AI
+    Assistant answer cards (cyan #0EA5E9, Sparkles, "AI Assistant" label, 🤖 AI Q&A badge, Q/A)
+    interleaved with hub messages; the `ai_pending` "Reviewing for safety" card; the unified
+    composer (no post/ask toggle) with the `@comic` mention chip + helper copy "Type @comic to ask
+    the AI Assistant"; the helpful/not-helpful/flag rating row; and the first-use consent modal
+    (`comic-consent-modal.tsx`, gating `llm_consent_granted`). Wired to `POST /api/comic/message`
+    (peer-to-peer when no `@comic`), `GET /api/comic/conversation`, and
+    `POST /api/comic/answers/[turnId]/rate`. The asker-never-sees-an-unreviewed-draft invariant is
+    enforced server-side (message route returns only a 202 holding response; the conversation read
+    suppresses non-approved answer bodies) and reflected in the UI (pending card on submit).
+    All four rule-126 states covered: Unauthenticated (read-only stream + locked composer with the
+    @comic helper), Auth+Loading, Auth+Empty, Auth+Populated.
+  - **Owner Review & Correction Console** (`components/comic/comic-review-console.tsx`) routed at
+    **`/admin/comic`** (admin-gated server-side). All four states: queue (populated), empty (queue
+    clear / "All caught up"), loading, and detail with editable corrected-text and Approve /
+    Edit&approve / Reject actions; each item shows question, AI draft, provenance (engine/intent/
+    safety category — real fields, no fabricated source documents), and confidence (the real
+    `nlu_confidence`, surfaced as "Not yet scored" while Rasa is undeployed). Wired to
+    `GET /api/comic/review` and `POST /api/comic/review/[turnId]/resolve`.
+- **Android: deferred — parity ticket.** The mobile `@comic` surfaces (Mobile*/MobileAIConsent
+  designs) are not built in this pass; tracked for parity (`plugin-parity-contracts.json` entry +
+  the feature dir land together when the mobile feature is built). Blocked behind a running Rasa for
+  the auto-reply branch.
 - **Still deferred:** standing up the Rasa service + tracker store; replacing the home-chat
   `getActionForText` router with Rasa-backed routing; the layered content filter / threshold
   tuning; RAG grounding.
@@ -258,8 +294,11 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 
 ## Gaps and Known Technical Debt
 
-1. Three disconnected precursors + a dropped `hub_bots` design; no running Rasa, no `@comic`
-   routing, no conversation store, no human-in-the-loop (verified 2026-05-31).
+1. Originally three disconnected precursors + a dropped `hub_bots` design. Now unified: `@comic`
+   routing, conversation store, and the human-in-the-loop review queue are implemented, and the
+   **web UI** (asker stream + owner review console) is delivered (2026-05-31, design `9a4a1af`).
+   Still outstanding: a running Rasa (interim policy forces human review on every draft) and the
+   Android parity surfaces.
 2. `exportQuestionsForRasa` has a duplicate nested loop that double-counts examples.
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
    inventory relative to code — reconcile there (coordinate with the feed-plugin agent).
@@ -282,38 +321,61 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 - **Replace `getActionForText`.** Move plugin routing from the hardcoded client keyword map
   to Rasa-backed routing (already on the Hub consolidation roadmap).
 
-## Design Status & Guidance (design submodule @ `a460914`)
+## Design Status & Guidance (design submodule @ `9a4a1af` — LOCKED, implemented)
 
-Pulled 2026-05-31 (`design` `origin/main`, ahead of the pinned pointer). Designs are
-placeholder-data mockups; **this inventory is the authoritative spec.** A design-pointer
-bump is a separate step (rule 128), not part of this docs work.
+The design pointer was bumped to `9a4a1af` (rule 128) and the web UI was built against it
+(2026-05-31). This inventory remains the authoritative spec; the mockups carry placeholder data.
 
-**Covered — adopt as-is:**
+**Covered — adopted:**
 - AI answer card in the unified community stream: cyan treatment, Sparkles avatar, label
   **"AI Assistant"**, **🤖 AI Q&A** badge, "Asked by … · time", Q:/A: layout
   (`Desktop.tsx`, `HubPublic.tsx`), interleaved with announcement + community-post cards.
-- Public (unauthenticated) stream shows AI answers read-only ("sign in to post or ask the
-  assistant").
+- Public (unauthenticated) stream shows AI answers read-only with the locked composer ("Sign in to
+  post — or type @comic to ask the AI Assistant…").
 
-**Modify — design diverges from a locked decision:**
-- **Composer:** design uses a post/ask mode toggle; the owner kept **`@comic`-mention** as
-  the trigger. Use the normal chat input; typing `@comic …` routes to the assistant. Remove
-  the post/ask toggle.
+**Modified — design diverged from a locked decision (resolved):**
+- **Composer:** the design's post/ask mode toggle is superseded — the owner kept **`@comic`-mention**
+  as the trigger. Implemented as the normal chat input; typing `@comic …` routes to the assistant.
+  No toggle rendered.
 
-**Missing — no mockup yet; must be designed before that UI is built (gated):**
-1. **AI answer "pending human review" state** — interim mode holds every AI draft for owner
-   approval before the asker sees it. Show the asker "AI Assistant is preparing an answer — a
-   teammate is reviewing"; never surface a partial/unreviewed answer publicly.
-2. **Owner review/correction console** (admin) — queue of pending drafts; approve/edit/reject;
-   show question, model draft, sources, confidence; corrected-text path; empty + loading.
-3. **LLM-consent affordance** at first `@comic` use (one-time consent to AI processing).
-4. **Rating control** on AI cards (helpful / not_helpful / flagged).
+**Previously "Missing" — now DELIVERED against `9a4a1af`:**
+1. **AI answer "pending human review" state** — the `ai_pending` "Reviewing for safety" card
+   (`comic-stream-cards.tsx` → `ComicPendingCard`). Interim mode holds every AI draft; the asker
+   sees only this card until a human approves an answer.
+2. **Owner review/correction console** (admin) — `comic-review-console.tsx` at `/admin/comic`;
+   queue / empty / loading / detail-edit; approve/edit/reject; shows question, AI draft, provenance,
+   confidence; editable corrected-text. (Mockups `AIReviewConsole*.tsx`.)
+3. **LLM-consent affordance** at first `@comic` use — `comic-consent-modal.tsx` (mockup
+   `AIConsent.tsx`); Confirm persists consent (`llm_consent_granted`), "Not now" does not route.
+4. **Rating control** on AI cards — helpful / not_helpful / flagged row, wired to
+   `POST /api/comic/answers/[turnId]/rate`.
 
-Required states per rule 126 for the AI surfaces: Unauthenticated, Auth+Loading (generating /
-review pending), Auth+Empty (no Q&A yet), Auth+Populated (answered).
+Required states per rule 126, all covered for the AI surfaces: Unauthenticated, Auth+Loading,
+Auth+Empty, Auth+Populated. Mobile (`Mobile*`/`MobileAIConsent`) is the Android pass — not built
+here (web only).
 
 ## Change Log
 
+- 2026-05-31: Built the **web UI** on `feat/comic-ai-assistant` against the LOCKED design `9a4a1af`
+  (pointer bumped per rule 128). **Asker surface** in the community/home chat
+  (`components/community-shell/`: `shell-chat-panel.tsx`, `use-home-chat.ts`, `comic-stream-cards.tsx`,
+  `comic-consent-modal.tsx`, `community-shell.module.css`, `shell-types.ts`): AI Assistant answer
+  cards + the `ai_pending` "Reviewing for safety" card interleaved with hub messages; the unified
+  composer (no toggle) routes `@comic` mentions to `POST /api/comic/message` and everything else to
+  the existing peer-to-peer hub path; `@comic` mention chip + helper copy; helpful/not_helpful/flag
+  rating row; first-use consent modal gating `llm_consent_granted`. **Owner Review & Correction
+  Console** (`components/comic/comic-review-console.tsx` + `.module.css`) at `/admin/comic`
+  (admin-gated), 4 states (queue / empty / loading / detail-edit), wired to `GET /api/comic/review`
+  + `POST /api/comic/review/[turnId]/resolve` with editable corrected-text and Approve/Edit&approve/
+  Reject. **New backend (unblocked):** `GET /api/comic/conversation` (`comic.conversation.read`,
+  asker-scoped read that never surfaces an unreviewed draft) and
+  `POST /api/comic/answers/[turnId]/rate` (`comic.answer.rate`) + `rateComicAnswer`/
+  `listComicAskerStream`/`isValidComicAnswerRating` in `lib/comic/repository.ts` + the
+  `comic_answer_ratings` table (guarded DDL, CASCADE off `comic_turns`) + command/access-policy/audit
+  contract entries + deletion-contract update. Asker invariant enforced server-side (message route
+  returns only a 202 holding response; conversation read suppresses non-approved answer bodies) and
+  reflected in the UI (pending card on submit). Web build + typecheck pass. Android parity deferred
+  (parity ticket; Mobile* designs not built — web only).
 - 2026-05-31: Built the production backend foundation (non-UI) on `feat/comic-ai-assistant`.
   Added the `comic_*` schema (conversations, turns, review queue, training examples) with
   guarded DDL + CASCADE FKs; `lib/comic/{types,constants,audit,rasa,policy,repository}.ts`
@@ -356,9 +418,14 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
   - Done 2026-05-31: every turn captured; safety-flagged → human-first (no draft);
     non-flagged → Ollama draft enqueued to review (never auto-published). Confidence-gated
     auto-reply waits on Rasa (interim force-human-review).
-- [ ] Owner review/correction console. **UI — DESIGN PASS REQUIRED before building.**
+- [x] Owner review/correction console (web). Done 2026-05-31 against design `9a4a1af`.
   - Backend done 2026-05-31 (`GET /api/comic/review`, `POST /api/comic/review/[turnId]/resolve`;
-    approve/edit/reject; corrections persist as `comic_training_examples`). UI design-gated.
+    approve/edit/reject; corrections persist as `comic_training_examples`). Web UI delivered:
+    `components/comic/comic-review-console.tsx` at `/admin/comic`, all 4 states.
+- [x] Asker @comic chat surface (web): answer cards, `ai_pending` card, unified composer with the
+      `@comic` mention chip + helper, rating row, first-use consent modal. Done 2026-05-31 against
+      design `9a4a1af`. Added asker read (`GET /api/comic/conversation`) and answer rating
+      (`POST /api/comic/answers/[turnId]/rate` + `comic_answer_ratings`).
 - [ ] Stand up self-hosted Rasa; tracker store on Neon; custom action → Ollama; consume the
       (fixed) NLU export.
   - Blocked by: schema. Parallel to routing/console. Acceptance: Rasa returns intent + real
