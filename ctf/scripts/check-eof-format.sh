@@ -33,6 +33,7 @@ done < <(find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -nam
   -not -path "./coverage/*" \
   -not -path "./.turbo/*" \
   -not -path "./.pnpm-store/*" \
+  -not -path "./design/*" \
   -not -path "*/node_modules/*" \
   -not -path "*/.next/*" \
   -not -path "*/dist/*" \
