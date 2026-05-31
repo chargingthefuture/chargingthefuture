@@ -69,6 +69,10 @@ Rule 114 baseline: TrustTransport uses a single canonical profile and plugin ext
   - Retention period: compliance retention window
   - Legal/compliance note: Rule 114 deletion audit trail
 
+### Transaction-scoped messaging retention
+
+Per platform rule 100 ("Messaging Scope and Lifecycle"), the per-trip 1:1 chat is bound to a single trip/order between exactly the two parties (rider and driver) and has no existence outside it. When the trip reaches a terminal state (completed, cancelled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and chat records are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, chat bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
+
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes TrustTransport usage only:
@@ -152,3 +156,4 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-05-31: Added transaction-scoped messaging retention (per rule 100): per-trip 1:1 chat closes on terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.

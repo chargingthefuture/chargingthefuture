@@ -67,6 +67,10 @@ Rule 114 baseline: SocketRelay uses canonical identity and plugin extension rows
   - Retention period: compliance retention window
   - Legal/compliance note: Rule 114 deletion audit trail
 
+### Transaction-scoped messaging retention
+
+Per platform rule 100 ("Messaging Scope and Lifecycle"), the fulfillment chat (`socketrelay_messages`) is bound to a single fulfillment between exactly the two participants (request owner and fulfiller) and has no existence outside it. When the fulfillment reaches a terminal state (completed, cancelled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and messages are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, message bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
+
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes SocketRelay usage only:
@@ -150,3 +154,4 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-05-31: Added transaction-scoped messaging retention (per rule 100): per-fulfillment 1:1 chat (`socketrelay_messages`) closes on terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.
