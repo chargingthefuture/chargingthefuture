@@ -45,12 +45,14 @@ export function SocketRelayEmpty({ onPostNeed, onOfferHelp }: Props) {
         </Text>
 
         {STEPS.map(({ step, label }) => (
-          <View key={step} style={styles.stepRow}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNumber}>{step}</Text>
+          <React.Fragment key={step}>
+            <View style={styles.stepRow}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepNumber}>{step}</Text>
+              </View>
+              <Text style={styles.stepLabel}>{label}</Text>
             </View>
-            <Text style={styles.stepLabel}>{label}</Text>
-          </View>
+          </React.Fragment>
         ))}
 
         <TouchableOpacity style={styles.primaryBtn} onPress={onPostNeed}>

@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {
-  API_BASE_URL,
   createRequest,
   listRequests,
   fulfillRequest,
@@ -123,63 +122,65 @@ export function SocketRelay() {
       <ScrollView style={styles.feedScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.feedPad}>
           {requests.map((r) => (
-            <View key={r.id} style={styles.card}>
-              {/* Category badge */}
-              <View style={styles.cardBadgeRow}>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>{r.category}</Text>
-                </View>
-                {r.status !== 'open' && (
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>{r.status}</Text>
+            <React.Fragment key={r.id}>
+              <View style={styles.card}>
+                {/* Category badge */}
+                <View style={styles.cardBadgeRow}>
+                  <View style={styles.categoryBadge}>
+                    <Text style={styles.categoryBadgeText}>{r.category}</Text>
                   </View>
-                )}
-              </View>
+                  {r.status !== 'open' && (
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusBadgeText}>{r.status}</Text>
+                    </View>
+                  )}
+                </View>
 
-              <Text style={styles.cardTitle}>{r.title}</Text>
+                <Text style={styles.cardTitle}>{r.title}</Text>
 
-              {/* details — omit if blank */}
-              {r.details ? (
-                <Text style={styles.cardDetails} numberOfLines={2}>
-                  {r.details}
-                </Text>
-              ) : null}
-
-              <Text style={styles.cardMeta}>
-                {r.city ? `📍 ${r.city} · ` : ''}
-                {new Date(r.createdAtIso).toLocaleDateString()}
-              </Text>
-
-              <TouchableOpacity
-                style={[
-                  styles.helpBtn,
-                  helped.includes(r.id) && styles.helpBtnDone,
-                ]}
-                onPress={() => handleFulfill(r.id)}
-                disabled={
-                  helped.includes(r.id) ||
-                  fulfilling === r.id ||
-                  r.status !== 'open'
-                }
-              >
-                {fulfilling === r.id ? (
-                  <ActivityIndicator size="small" color={COLOR} />
-                ) : (
-                  <Text
-                    style={[
-                      styles.helpBtnText,
-                      helped.includes(r.id) && styles.helpBtnTextDone,
-                    ]}
-                  >
-                    {helped.includes(r.id)
-                      ? '✓ Fulfilled'
-                      : r.status === 'open'
-                        ? 'I Can Help'
-                        : 'Closed'}
+                {/* details — omit if blank */}
+                {r.details ? (
+                  <Text style={styles.cardDetails} numberOfLines={2}>
+                    {r.details}
                   </Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                ) : null}
+
+                <Text style={styles.cardMeta}>
+                  {r.city ? `📍 ${r.city} · ` : ''}
+                  {new Date(r.createdAtIso).toLocaleDateString()}
+                </Text>
+
+                <TouchableOpacity
+                  style={[
+                    styles.helpBtn,
+                    helped.includes(r.id) && styles.helpBtnDone,
+                  ]}
+                  onPress={() => handleFulfill(r.id)}
+                  disabled={
+                    helped.includes(r.id) ||
+                    fulfilling === r.id ||
+                    r.status !== 'open'
+                  }
+                >
+                  {fulfilling === r.id ? (
+                    <ActivityIndicator size="small" color={COLOR} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.helpBtnText,
+                        helped.includes(r.id) && styles.helpBtnTextDone,
+                      ]}
+                    >
+                      {helped.includes(r.id)
+                        ? '✓ Fulfilled'
+                        : r.status === 'open'
+                          ? 'I Can Help'
+                          : 'Closed'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </React.Fragment>
           ))}
         </View>
       </ScrollView>
