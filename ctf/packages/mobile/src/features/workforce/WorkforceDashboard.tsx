@@ -49,7 +49,9 @@ function StatGrid({ dashboard }: StatGridProps) {
   return (
     <View style={styles.statGrid}>
       {stats.map((s) => (
-        <WorkforceStatCard key={s.label} label={s.label} value={s.value} color={s.color} />
+        <React.Fragment key={s.label}>
+          <WorkforceStatCard label={s.label} value={s.value} color={s.color} />
+        </React.Fragment>
       ))}
     </View>
   );
