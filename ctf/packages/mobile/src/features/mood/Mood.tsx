@@ -51,7 +51,7 @@ function MoodPicker({
   onSelect,
 }: {
   selected: number | null;
-  onSelect: (v: number) => void;
+  onSelect: (_v: number) => void;
 }) {
   return (
     <View style={s.moodRow}>
@@ -161,7 +161,7 @@ function TrendsView() {
   );
 }
 
-function HomeView({ onNavigate }: { onNavigate: (key: NavKey) => void }) {
+function HomeView({ onNavigate }: { onNavigate: (_key: NavKey) => void }) {
   return (
     <View style={s.emptyWrap}>
       <Text style={s.emptyEmoji}>😁</Text>
