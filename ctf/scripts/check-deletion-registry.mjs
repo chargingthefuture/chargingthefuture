@@ -57,13 +57,29 @@ function parseSchemaColumns(sql) {
 }
 
 // --- Extract registry entries from the TypeScript source --------------------------------------
-// We read the object literals rather than importing the TS module (plain Node can't load .ts
-// reliably across versions). Each owned-table literal looks like one of:
+// We read the source text rather than importing the TS module (plain Node can't load .ts
+// reliably across versions). The registry must use the single-quoted builder helpers, each of
+// which this parser understands:
 //   del('table', 'user_col', '...')
 //   soft('table', 'user_col', 'soft_col', '...')
 //   retain('table', '...')
-//   { table: 'x', userColumn: 'y', action: 'delete'|'soft-delete'|'retain', softDeleteColumn: 'z' }
+//
+// This parser is deliberately strict and FAILS CLOSED: if the registry ever switches to a shape
+// this parser does not understand — a raw `{ table: ... }` object literal, or double-quoted
+// builder arguments — it throws instead of silently skipping that entry (which would let an
+// unvalidated table slip past CI). Extend this parser if the registry's shape changes on purpose.
 function parseRegistry(src) {
+  if (/\{\s*table\s*:/.test(src)) {
+    throw new Error(
+      'OwnedTable object literals are not supported by this validator; use del()/soft()/retain() or extend parseRegistry().',
+    );
+  }
+  if (/\b(?:del|soft|retain)\(\s*"/.test(src)) {
+    throw new Error(
+      'Double-quoted registry literals are not supported by this validator; use single-quoted literals or extend parseRegistry().',
+    );
+  }
+
   const refs = [];
 
   const reDel = /\bdel\(\s*'([^']+)'\s*,\s*'([^']+)'/g;
