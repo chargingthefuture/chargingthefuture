@@ -118,7 +118,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Mood user flows are standalone and not embedded in GentlePulse features.
 
-### €” Contracts and Scope Lock
+### ï¿½ï¿½ Contracts and Scope Lock
 
 - [ ] Lock authenticated API posture for Mood routes.
   - Acceptance criteria:
@@ -131,7 +131,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
     - Submission access is authenticated-user-only.
     - Mood values are persisted by anonymous `clientId` (not `user_id`).
 
-### €” Data and Migration Readiness
+### ï¿½ï¿½ Data and Migration Readiness
 
 - [ ] Define mood-check schema and uniqueness constraints.
   - Acceptance criteria:
@@ -141,7 +141,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Product decision for multiple `clientId`s per authenticated user is documented.
 
-### €” API and Behavior Implementation Readiness
+### ï¿½ï¿½ API and Behavior Implementation Readiness
 
 - [ ] Finalize API route map for in-scope features.
   - Acceptance criteria:
@@ -153,7 +153,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Validation gate or lint/contract checks fail if announcements/admin/safety-trigger surface is introduced.
 
-### €” Security and Compliance Gates
+### ï¿½ï¿½ Security and Compliance Gates
 
 - [ ] Verify authz coverage for all Mood writes/reads.
   - Acceptance criteria:
@@ -165,7 +165,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Product/policy wording is consistent with authenticated access plus anonymous `clientId` storage.
 
-### €” Web and Android Parity Gates
+### ï¿½ï¿½ Web and Android Parity Gates
 
 - [ ] Validate web/mobile parity for core Mood journey.
   - Acceptance criteria:
@@ -177,7 +177,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - No Mood admin or announcements parity tasks are required because these are out of scope.
 
-### €” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API/integration design documentation for retained feature scope.
   - Acceptance criteria:
@@ -191,4 +191,5 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ### Change Log
 
+- 2026-05-31: Seed runtime fix. `seedMood.mjs` now opens its own `pg` Pool and defines a local `withDbTransaction` helper instead of importing the TypeScript `packages/web/lib/db/postgres.ts`, which plain Node (e.g. the Node 20 seed/provision workflows) cannot load. Added `pool.end()` teardown. No change to seeded rows, schema, or API.
 - 2026-02-25: Created initial Mood CTF rewrite checklist with locked scope exclusions (no severe-value safety trigger, no announcements, no in-app admin) and standalone-plugin boundary plus authenticated-route baseline using anonymous `clientId` persistence.

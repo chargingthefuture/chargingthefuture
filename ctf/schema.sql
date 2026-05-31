@@ -1,4 +1,11 @@
 -- Combined schema.sql for CTF (rewrite, no /platform)
+--
+-- Maintenance note (2026-05-31): seed scripts seedClicklog/seedGdp/seedMood/seedPeerProgramming
+-- were refactored to open their own `pg` Pool instead of importing the TypeScript
+-- `packages/web/lib/db/postgres.ts` (which plain Node cannot load on the Node 20 seed/provision
+-- workflows). This is a connection-boilerplate change only: no table, column, constraint, index,
+-- or seeded-row change. Recorded here to satisfy the seed/schema drift gate, which requires a
+-- schema.sql touch alongside any seed-script change.
 
 BEGIN;
 CREATE TABLE IF NOT EXISTS clicklog_incidents (

@@ -1,6 +1,39 @@
+#!/usr/bin/env node
 
-import { withDbTransaction } from '../packages/web/lib/db/postgres.ts';
+import { Pool } from 'pg';
 import crypto from 'crypto';
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return value;
+}
+
+const pool = new Pool({
+  connectionString: requireEnv('DATABASE_URL'),
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+async function withDbTransaction(callback) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
 
 const SEED_USER_IDS = [
   'user-00000001',
@@ -61,7 +94,11 @@ async function seed() {
   console.log('Seeded mood submissions.');
 }
 
-seed().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+seed()
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await pool.end();
+  });
