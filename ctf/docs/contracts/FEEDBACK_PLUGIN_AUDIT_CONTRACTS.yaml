@@ -2,8 +2,8 @@ auditEvents:
   # ─── Feedback Submission Audit ──────────────────────────────────────
   - pluginId: feedback
     command: feedback.submit
-    version: 1.0.0
-    auditableEvent: feedback_submitted
+    commandVersion: 1.0.0
+    eventId: feedback_submitted
     description: Log when a user submits feedback with full details.
     auditedFields:
       - feedback_id
@@ -21,8 +21,8 @@ auditEvents:
   # ─── Feedback Voting Audit ─────────────────────────────────────────
   - pluginId: feedback
     command: feedback.vote
-    version: 1.0.0
-    auditableEvent: feedback_voted
+    commandVersion: 1.0.0
+    eventId: feedback_voted
     description: Log when a user votes on feedback.
     auditedFields:
       - feedback_id
@@ -36,8 +36,8 @@ auditEvents:
   # ─── Feedback Triage Audit ────────────────────────────────────────
   - pluginId: feedback
     command: feedback.triage
-    version: 1.0.0
-    auditableEvent: feedback_triaged
+    commandVersion: 1.0.0
+    eventId: feedback_triaged
     description: Log admin triage actions with changes to priority, category, and status.
     auditedFields:
       - feedback_id
@@ -58,8 +58,8 @@ auditEvents:
   # ─── Feedback Link Audit ───────────────────────────────────────────
   - pluginId: feedback
     command: feedback.linkToTask
-    version: 1.0.0
-    auditableEvent: feedback_linked_to_task
+    commandVersion: 1.0.0
+    eventId: feedback_linked_to_task
     description: Log when feedback is linked to a PM task.
     auditedFields:
       - feedback_id
@@ -74,8 +74,8 @@ auditEvents:
   # ─── Feedback Resolution Audit ─────────────────────────────────────
   - pluginId: feedback
     command: feedback.resolve
-    version: 1.0.0
-    auditableEvent: feedback_resolved
+    commandVersion: 1.0.0
+    eventId: feedback_resolved
     description: Log when feedback is marked as resolved with resolution note.
     auditedFields:
       - feedback_id
@@ -90,8 +90,8 @@ auditEvents:
   # ─── Feedback Listing Audit ────────────────────────────────────────
   - pluginId: feedback
     command: feedback.list
-    version: 1.0.0
-    auditableEvent: feedback_list_accessed
+    commandVersion: 1.0.0
+    eventId: feedback_list_accessed
     description: Log admin access to feedback listing (non-sensitive query details only).
     auditedFields:
       - actor_id
@@ -105,8 +105,8 @@ auditEvents:
   # ─── Data Deletion Audit (User Deletion) ──────────────────────────
   - pluginId: feedback
     command: feedback.deleteUserData
-    version: 1.0.0
-    auditableEvent: feedback_user_data_deleted
+    commandVersion: 1.0.0
+    eventId: feedback_user_data_deleted
     description: Log when user feedback and votes are permanently deleted during account deletion.
     auditedFields:
       - user_id
