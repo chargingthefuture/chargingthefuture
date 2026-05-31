@@ -94,7 +94,14 @@ function main() {
   }
 
   const schemaTables = parseSchemaColumns(fs.readFileSync(schemaPath, 'utf8'));
-  const refs = parseRegistry(fs.readFileSync(registryPath, 'utf8'));
+
+  let refs;
+  try {
+    refs = parseRegistry(fs.readFileSync(registryPath, 'utf8'));
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+    return;
+  }
 
   if (refs.length === 0) {
     fail('no table references parsed from the registry — parser or registry is broken.');

@@ -52,7 +52,7 @@ is plain Node (no TypeScript import), so it runs on any Node version, including 
 
 To run locally:
 
-```
+```sh
 node ctf/scripts/check-deletion-registry.mjs
 ```
 
