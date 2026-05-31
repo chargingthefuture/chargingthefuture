@@ -793,6 +793,24 @@ async function seedWhatworks(c) {
   console.log('  ✓ whatworks');
 }
 
+// Make sure the unique keys the seed upserts against actually exist before we
+// start. The demo schema is provisioned separately, so it can lag behind
+// schema.sql — if a constraint the seed relies on was added recently, the live
+// demo schema may not have it yet and the matching `ON CONFLICT` would fail.
+// These statements are idempotent (`IF NOT EXISTS`) and run on the same
+// connection, so unqualified names resolve to the `demo` schema, exactly where
+// the seed writes. This keeps the seed self-sufficient even when the schema
+// hasn't been re-applied first.
+async function ensureSeedPrerequisites(c) {
+  const indexes = [
+    'CREATE UNIQUE INDEX IF NOT EXISTS levelup_curriculum_items_cohort_id_sequence_no_key ON levelup_curriculum_items(cohort_id, sequence_no)',
+    'CREATE UNIQUE INDEX IF NOT EXISTS levelup_milestones_cohort_id_sequence_no_key ON levelup_milestones(cohort_id, sequence_no)',
+  ];
+  for (const sql of indexes) {
+    await c.query(sql);
+  }
+}
+
 async function main() {
   const connStr =
     process.env.DATABASE_URL_DIRECT ||
@@ -809,6 +827,8 @@ async function main() {
   console.log(`Seeding demo schema for owner: ${OWNER}`);
 
   try {
+    await ensureSeedPrerequisites(client);
+
     await client.query('BEGIN');
 
     await seedServiceCredits(client);
