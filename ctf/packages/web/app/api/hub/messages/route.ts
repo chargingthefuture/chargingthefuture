@@ -1,20 +1,63 @@
 import { NextResponse } from 'next/server';
 import type { HubMessagesResponse, HubMessage } from 'lib/hub/types';
+import type { FeedTimelineItem } from 'lib/feed/types';
+import { FEED_ERROR_CODE } from 'lib/feed/constants';
+import {
+  createFeedCommunityPost,
+  listFeedTimeline,
+  parsePaginationParams,
+  validateFeedCommunityPostInput,
+} from 'lib/feed/repository';
 import { requireHubAccess } from '../_lib';
+import { ensureMutationCsrf } from '../../feed/_lib';
 
-export async function GET() {
+// Survivor Hub consolidation: the Hub home channel is backed by the Feed model
+// (feed_items) as the single source of truth. The channel is one blended stream
+// interleaving admin announcements, AI Q&A, and peer-to-peer community posts.
+
+function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
+  const isCommunity = item.itemType === 'community';
+  const authorUserId = isCommunity ? item.community?.authorUserId ?? 'hub-system' : 'hub-system';
+  const displayName = isCommunity ? 'Community member' : 'Survivor Hub';
+
+  // Announcements lead with their title; questions/community posts are body-only.
+  const text = item.itemType === 'announcement' && item.title
+    ? `${item.title}\n\n${item.body}`
+    : item.body;
+
+  return {
+    id: item.id,
+    userId: authorUserId,
+    username: null,
+    displayName,
+    avatarUrl: null,
+    text,
+    sentAtIso: item.publishedAtIso,
+  };
+}
+
+export async function GET(request: Request) {
   const gate = await requireHubAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
-    // TODO: Fetch messages from hub_messages table for the active Hub channel.
-    // For now, return empty message list to satisfy type contract.
-    const messages: HubMessage[] = [];
+    const pagination = parsePaginationParams(request.url);
+    const timeline = await listFeedTimeline(
+      gate.auth.userId,
+      gate.auth.role,
+      pagination,
+      { channel: 'all' },
+    );
+
+    // Feed timeline is newest-first; present oldest-first for the chat stream.
+    const messages: HubMessage[] = [...timeline.items]
+      .reverse()
+      .map(mapTimelineItemToHubMessage);
 
     const response: HubMessagesResponse = {
-      channelId: 'general', // TODO: Get from active channel
+      channelId: 'community',
       messages,
     };
 
@@ -40,6 +83,11 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   let body: MessageRequestBody;
   try {
     body = (await request.json()) as MessageRequestBody;
@@ -53,32 +101,50 @@ export async function POST(request: Request) {
     );
   }
 
-  const text = typeof body.text === 'string' ? body.text : '';
-  if (!text || text.trim().length === 0 || text.length > 1000) {
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const input = { body: text };
+  if (!text || !validateFeedCommunityPostInput(input)) {
     return NextResponse.json(
       {
         ok: false,
-        message: 'Message text must be 1 to 1000 characters after trimming.',
+        message: 'Message text must be a valid community post.',
       },
       { status: 400 },
     );
   }
 
   try {
-    // TODO: Save message to hub_messages table.
-    // For now, return a synthetic message to satisfy type contract.
+    // A message posted from the Hub input is a peer-to-peer community post.
+    const result = await createFeedCommunityPost(gate.auth.userId, input);
+
+    // Normalize to the same public author shape as mapTimelineItemToHubMessage so the
+    // optimistic send and the next polled copy share a dedup key (from, senderLabel, text, time).
     const message: HubMessage = {
-      id: 'temp-' + Date.now(),
+      id: result.postId,
       userId: gate.identity.userId,
-      username: gate.identity.username,
-      displayName: gate.identity.displayName,
-      avatarUrl: gate.identity.avatarUrl,
-      text: text.trim(),
-      sentAtIso: new Date().toISOString(),
+      username: null,
+      displayName: 'Community member',
+      avatarUrl: null,
+      text,
+      sentAtIso: result.createdAtIso,
     };
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
-  } catch {
+  } catch (error) {
+    const code = error instanceof Error ? error.message : 'unknown_error';
+    if (code === 'rate_limit_exceeded') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.rateLimitExceeded, message: 'Posting rate limit exceeded.' },
+        { status: 429 },
+      );
+    }
+    if (code === 'content_policy_violation') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Post blocked by content moderation.' },
+        { status: 422 },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: false,

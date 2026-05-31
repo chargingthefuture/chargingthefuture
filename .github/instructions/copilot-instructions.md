@@ -3,6 +3,12 @@
 - The primary development environment is GitHub Codespaces.
 - All environment-type updates, additions, and tooling changes must be reflected in the devcontainer setup (e.g., .devcontainer/setup.sh, devcontainer.json) to ensure reproducibility and zero manual steps on container start.
 
+## Branch Naming (Critical — all agents)
+
+- Always create a descriptive, task-named branch and develop on it. Use a Conventional-Commit-style prefix plus a short kebab-case summary of the task: e.g. `feat/survivor-hub-feed-consolidation`, `fix/feed-csrf-dedup`, `chore/agent-branch-naming-rule`, `docs/brand-voice-lexicon`.
+- Never develop on, commit to, or open a PR from the auto-generated session branch that the Claude Code harness assigns (e.g. `claude/<random-slug>` such as `claude/loving-mendel-wwWF4`). That name is opaque and meaningless. Treat it as a throwaway base: immediately branch off it (or off `main`) to a descriptive name and push/open the PR from the descriptive branch.
+- Branch names must describe the task at hand — never an opaque/random string. This applies even when a session is initialized on a `claude/<slug>` branch: the first action for any code work is to create the descriptive branch.
+
 ## Search Tooling Policy
 
 - Prefer `rg`/ripgrep for recursive text and file discovery.

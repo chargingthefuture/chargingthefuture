@@ -23,7 +23,7 @@
       "slug": "feed-announcements",
       "mobileFeatureDirs": ["feed", "announcements", "questions", "community"],
       "requiresMobileSurface": true,
-      "requiresExplicitWebShell": true
+      "requiresExplicitWebShell": false
     },
     {
       "slug": "workforce",

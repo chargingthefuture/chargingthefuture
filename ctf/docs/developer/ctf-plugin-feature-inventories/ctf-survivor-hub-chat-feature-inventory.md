@@ -48,14 +48,18 @@
 ## Scope and Boundary
 
 - Rewrite target only: `ctf/`. Legacy `platform/` is reference-only.
-- Plugin slug: `hub`.
-- Hub owns the unified Survivor Hub home/landing experience: app shell, channels, DMs, bots, routing assistant, hero stats, and plugin grid.
-- Hub is a standalone plugin with no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
-- Hub owns its own GetStream scope (channels, user IDs, tokens) per [107-integration-stack-rules.mdc](../../../../.github/instructions/107-integration-stack-rules.mdc).
+- Plugin slug: `hub` (the homepage at `/`; not a separately navigable app tile).
+- Hub owns the unified Survivor Hub home/landing experience: app shell, the single blended
+  `community` channel, live hero stats, and the plugin grid.
+- Data layer: the Hub channel is backed by the Feed model (`feed_items` + `lib/feed/inference.ts`)
+  as the single source of truth — see the Consolidation Decision above. The Hub does not own a
+  separate message store, channel table, bot table, or dedicated GetStream scope.
+- Cross-plugin runtime dependency is limited to read-only consumption of the platform GDP snapshot
+  (hero stats) and the plugin registry (Apps grid). See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
 
 ## Intent and Outcome
 
-The Survivor Hub is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, the channels and DMs sidebar, the system bots (including `@comic`), the routing assistant chat, the live hero stats, and the plugin grid. Hub is the canonical "home" route; opening a plugin moves the user out of the Hub chat surface and into that plugin's own scope.
+The Survivor Hub is the primary entry point of CTF for both unauthenticated visitors and authenticated survivors. It provides the home shell, one blended publicly-viewable `community` channel (interleaving admin-only announcements, AI Q&A, and peer-to-peer community posts), the live hero stats, and the plugin grid. Hub is the canonical "home" route at `/`; opening a plugin moves the user into that plugin's own scope. This is deliberately not social media: peer-to-peer posting is the only user-authored surface, kept economy-scoped. Separate channels, direct messages, and system bots are deferred (see Gaps) — the MVP is one channel.
 
 ## Target User Features
 
@@ -69,39 +73,29 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
 
-### Hub Chat (Chat Section)
+### Hub Chat (the blended `community` channel)
 
 1. Hero banner with live stats from the platform-owned GDP snapshot table: member count, GDP value (USD), opportunity value (target GDP minus current GDP).
 2. Hero banner copy adapts: "Welcome to Survivor Hub" for unsigned visitors; "Good morning, {displayName} — your network is active." for signed-in users.
-3. Live message feed for signed-in users on Hub-owned GetStream channels; history loaded via `GET /api/hub/messages`, polled while shell is mounted.
-4. Optimistic send via `POST /api/hub/messages`; dedup on display by `(from, sender, text, time)` tuple.
-5. Routing assistant maps user utterances to plugin action buttons via the data-driven `hub_bot_routes` table.
+3. One blended stream interleaving admin-only announcements, AI Q&A answers, and peer-to-peer community posts. History loaded via `GET /api/hub/messages` (backed by `listFeedTimeline` over `feed_items`), polled while the shell is mounted.
+4. Sending from the input creates a peer-to-peer community post via `POST /api/hub/messages` (backed by `createFeedCommunityPost`, CSRF-guarded); dedup on display by `(from, sender, text, time)` tuple.
+5. AI Q&A uses the Feed inference pipeline (`lib/feed/inference.ts`, consent-gated); the hardcoded `getActionForText()` routing is superseded and removed over time.
 6. Suggestion chips pre-fill the input with canonical example utterances.
-7. Hub avatar ("SH") rendered for hub-team responses; bot responses use the bot's avatar.
-8. Connection state visible as footer status (connecting, live, fallback); live state requires a successful `POST /api/hub/join`.
-9. Unsigned visitors see a sign-in gate in place of the input.
+7. Announcements render as official Survivor Hub items; community posts render with their author.
+8. Connection state visible as footer status (connecting, live, fallback).
+9. Unsigned visitors see a sign-in gate in place of the input; the channel itself is publicly readable when `feed_render_config.is_public` is TRUE (public read enforcement is a tracked follow-up).
 
-### Sidebar — Channels
+### Sidebar — Channels (deferred)
 
-1. Channel list renders in chat mode for all users.
-2. Unauthenticated users see exactly one channel: `#general`.
-3. Authenticated users see additional channels (e.g., `#housing-help`, `#skills-trade`, `#mutual-aid`) provisioned per role/context via `hub_channels.visibility_scope`.
-4. Each channel routes to its associated Hub-owned GetStream channel.
-5. Channels reflect presence/unread state from Hub's GetStream scope.
+- The MVP is a single blended `community` channel; there is no `hub_channels` table and no multi-channel sidebar. Splitting into multiple Hub channels is a possible future option pending feedback (see Gaps). Stubbed `GET /api/hub/channels` returns a single `community` channel.
 
-### Sidebar — Direct Messages
+### Sidebar — Direct Messages (deferred)
 
-1. DM list renders below the channel list in chat mode for signed-in users.
-2. DMs include peer-to-peer survivor conversations and system bot conversations.
-3. Each DM row shows the counterpart's display name, online indicator, and unread badge.
-4. Selecting a DM opens the DM thread in the main content panel; message persistence runs on Hub's GetStream scope.
+- Direct messages are out of scope for the consolidated MVP — peer-to-peer interaction happens only in the public blended channel (intentional, for soft moderation and marketing visibility). `GET /api/hub/dms` is a stub returning an empty list; there is no `hub_dm_threads` table.
 
-### Sidebar — Bots
+### Sidebar — Bots (deferred)
 
-1. The hub manages system bots that appear in the DM list and respond on Hub channels and Hub DMs.
-2. `@comic` bot: hub-owned bot. Persona: lightweight assistive bot that introduces survivor stories and onboarding nudges, and routes users to plugins. Appears in DMs and is addressable from channels. Its conversational Q&A behavior (Rasa + Ollama, human-in-the-loop supervision) is specified in `ctf-comic-feature-inventory.md`, the source of truth for the AI assistant.
-3. Bots are first-class Hub entities with a canonical profile (slug, display name, avatar, persona copy), routing rules in `hub_bot_routes`, and deterministic seed coverage.
-4. Bot messages render with the bot's avatar and are visually distinguishable from human Hub-team responses.
+- There is no `hub_bots` / `hub_bot_routes` system-bot entity in the MVP. The assistant capability is the Feed AI Q&A — now built as the `comic` subsystem (`@comic` mention; user-facing label "AI Assistant"), specified in `ctf-comic-feature-inventory.md` (the source of truth for the AI assistant). `GET /api/hub/bots` is a stub returning an empty list.
 
 ### Hub Apps (Apps Section)
 
@@ -116,69 +110,77 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 
 ## Target Admin Features
 
-1. Bot management (registering bots, updating persona, toggling visibility) is a Hub-owned admin contract surface operated via Retool against `hub_bots` and `hub_bot_routes`.
-2. Channel visibility per role/context is a Hub-owned admin policy surface configured via seed/config against `hub_channels.visibility_scope`.
+1. Announcement authoring (admin-only) and channel config (kill switch, enabled channels, `is_public`) are operated through the Feed admin surface at `/admin/feed-announcements` and the `feed.*` command namespace — the Hub has no separate admin contract surface.
+2. There is no bot or channel-visibility admin surface in the MVP (deferred with channels/DMs/bots).
 
 ## API Surface and Route Map
 
-All Hub APIs are namespaced under `/api/hub/*`. The `/api/survivor-hub-chat/stream` route is an alias for the mobile credentials handoff and delegates to `POST /api/hub/join`.
+The Hub home channel is backed by the Feed model. Hub routes under `/api/hub/*`:
 
-- `GET /api/hub/channels` — channel set visible to the caller, filtered by `visibility_scope`.
-- `GET /api/hub/dms` — DM list for the caller, including bot DMs.
-- `GET /api/hub/bots` — active bot registry (slug, display name, avatar, persona blurb).
-- `GET /api/hub/messages` — message history for the active Hub channel or DM thread.
-- `POST /api/hub/messages` — send into a Hub channel or DM thread.
-- `POST /api/hub/join` — GetStream membership/token issuance for Hub's scope. Returns `streamApiKey`, `streamUserId`, `streamToken`, `streamChannelId`.
-- `POST /api/survivor-hub-chat/stream` — mobile credentials alias; delegates to `POST /api/hub/join`.
+- `GET /api/hub/messages` — blended channel history, backed by `listFeedTimeline` over `feed_items` (announcements + AI Q&A + community), mapped to the `HubMessage` contract. Returns `channelId: 'community'`.
+- `POST /api/hub/messages` — create a peer-to-peer community post, backed by `createFeedCommunityPost` (CSRF-guarded; rate-limit + moderation honored).
+- `GET /api/hub/channels` — stub returning the single `community` channel (multi-channel deferred).
+- `GET /api/hub/dms` — stub returning an empty list (DMs deferred).
+- `GET /api/hub/bots` — stub returning an empty list (bots deferred).
+- `POST /api/hub/join` — presence/credentials handoff for the home shell.
 
-Web entry route:
+Feed routes that own the data layer remain under `/api/feed/*` (timeline, announcements lifecycle, questions/answers, community posts/replies) and `/admin/feed-announcements`.
 
-- `GET /apps` — Hub home page (Next.js `app/apps/page.tsx`).
+Web entry routes:
+
+- `GET /` — Survivor Hub home page (Next.js `app/page.tsx`, `CommunityShell` chat section).
+- `GET /apps` — Hub home, Apps section (`app/apps/page.tsx`).
 
 ## Data Model and Storage Contracts
 
-Hub-owned tables (canonical schema in `ctf/schema.sql`):
+The Hub owns no message/channel/bot tables. Its channel is backed by the Feed schema (canonical in `ctf/schema.sql`):
 
-1. `hub_channels` — `(slug PK, display_name, visibility_scope, stream_channel_id, ordering)`. `visibility_scope`: `public | authenticated | role:<role>`.
-2. `hub_bots` — `(slug PK, display_name, avatar_url, persona_blurb, is_active)`. Seed includes `@comic` deterministically.
-3. `hub_bot_routes` — `(id PK, bot_slug FK, intent_pattern, response_template, plugin_handoff_slug nullable)`.
-4. `hub_dm_threads` — `(id PK, user_id, counterpart_id_or_bot_slug, stream_channel_id, last_message_at, unread_count)`.
-5. `hub_messages` — `(id PK, stream_channel_id, sender_user_id, body, sent_at)`.
+- `feed_items` — the blended timeline projection (`item_type` ∈ announcement | question | community).
+- `feed_community_posts` / `feed_community_replies` — peer-to-peer posts.
+- `feed_questions` / `feed_answers` / `feed_answer_ratings` — AI Q&A and ratings.
+- `announcements` (+ revisions/state) — admin-only announcements.
+- `feed_render_config` — global singleton; `is_public BOOLEAN NOT NULL DEFAULT TRUE` marks the blended channel publicly viewable; `kill_switch_enabled`, `enabled_channels` gate rendering.
 
-Platform-neutral tables consumed read-only by Hub:
+Platform-neutral tables consumed read-only by the Hub shell:
 
 - `gdp_metric_snapshots` (platform-owned) — hero stats source.
 - Plugin registry table behind `GET /api/plugins` (platform-owned) — Apps grid source.
 
-Hub-owned tables follow `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`.
+The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_dm_threads` / `hub_messages` tables are dropped and not created.
 
 ## Security, Privacy, and Compliance Controls
 
-1. Unauthenticated visitors see only the public Hub shell: `#general` channel, sign-in-gated chat input, no DMs or bots exposed.
-2. Authenticated routes (`/api/hub/*`, `/api/survivor-hub-chat/stream`) require a valid auth-provider session; reject with `401` otherwise.
-3. Approved-user / admin gate enforced on Hub chat send and bot DM interactions.
-4. Bot routing rules are server-side only; the client never sees a raw bot policy table.
-5. Identity handles for `@mention` semantics use the canonical auth-provider username/handle per `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`.
-6. Routing assistant is a pure server-side lookup against `hub_bot_routes`; user utterances are not forwarded to third-party LLMs.
-7. GetStream interactions are scoped to Hub's channels/users/tokens via shared wrappers in `ctf/packages/shared`. Hub tokens are not reused for any other plugin's channels.
-8. Right rail renders `displayName` derived from auth provider, never hardcoded names; falls back to `Survivor` when no display name is available.
-9. Hero stats come from `gdp_metric_snapshots`; render zero/absent when data is missing.
+1. The blended `community` channel is publicly readable (read-only) to unauthenticated visitors when `feed_render_config.is_public` is TRUE; posting/asking requires a valid auth-provider session. Public-read enforcement on the read path is a tracked follow-up (see Gaps).
+2. Mutating Hub routes (`POST /api/hub/messages`) require a valid session and pass the Feed CSRF check (`x-ctf-csrf` + same-origin); reject with `401`/`403` otherwise.
+3. Approved-user / admin gate (`requireHubAccess`) enforced on the channel send path; community posting honors Feed moderation and rate limits.
+4. Announcements are admin-only (authored via the Feed admin surface); no other user can author announcements.
+5. Identity handles for any `@mention` semantics use the canonical auth-provider username/handle per `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`.
+6. AI Q&A runs through the Feed inference pipeline (`lib/feed/inference.ts`), which is consent-gated and audited in `llm_inference_log`.
+7. Right rail renders `displayName` derived from auth provider, never hardcoded names; falls back to `Survivor` when no display name is available.
+8. Hero stats come from `gdp_metric_snapshots`; render zero/absent when data is missing.
 
 ## Web and Android Delivery Status
 
-Parity status: **web+android complete**.
+- Web: the home shell renders at `/` (`CommunityShell`) with the channel backed by the Feed model. Web delivery for the consolidated channel is in place.
+- Android: mobile Hub parity for the feed-backed channel is deferred and tracked (see Gaps / Parity Ticket).
+
+Parity Ticket: see Gaps — "Mobile Hub parity".
 
 ## Seed Coverage Status
 
-Deterministic Hub seed script: `ctf/scripts/seedHub.mjs`. Seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`, and any required `hub_dm_threads` fixtures.
+There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed seed `ctf/scripts/seedFeedAnnouncements.mjs` (announcements, feed items, render config including `is_public`, community/question fixtures). The dropped `hub_*` tables are not seeded.
 
 ## Gaps and Known Technical Debt
 
-(None recorded.)
+1. Public unauthenticated read of the blended channel: `feed_render_config.is_public` is set and read into config, but `GET /api/hub/messages` / `listFeedTimeline` still require an authenticated session. A public read path (and the policy for which item types are exposed publicly) is the tracked follow-up.
+2. Mobile Hub parity: wire the mobile home to the same feed-backed channel and add a `hub` entry to `ctf/config/plugin-parity-contracts.json`. Deferred (Parity Ticket).
+3. Separate channels, direct messages, and system bots were dropped from the MVP (single blended channel). Revisit splitting into multiple Hub channels after feedback.
+4. `GET /api/hub/channels|dms|bots` are stubs (single-channel / empty); they can be removed or formalized when/if multi-channel returns.
 
 ## Change Log
 
-- 2026-05-12: Inventory rewritten as a clean snapshot per the updated rule 120. Removed phased-rollout language, the "Risks and Known Technical Debt" TODO list, the "Production Readiness Snapshot" audit framing, and cross-plugin language about Chyme. Hub now described as a standalone plugin with its own `/api/hub/*` surface, its own `hub_*` schema, and its own GetStream scope.
+- 2026-05-31: Survivor Hub ⟵ Feed consolidation implemented. `GET/POST /api/hub/messages` repointed at the Feed model (`listFeedTimeline` / `createFeedCommunityPost`, CSRF-guarded); added `feed_render_config.is_public` (default TRUE) and read it into `FeedConfig`; retired `feed-announcements` as a navigable app tile (`isVisible: false`); removed the phantom `feed_user_extension` from the seed; dropped the `hub_channels`/`hub_messages`/`hub_bot_routes`/`hub_dm_threads`/`hub_bots` plan and reconciled this inventory + the Feed deletion contract to real tables. Channels/DMs/bots deferred to a single blended channel.
+- 2026-05-12: Inventory rewritten as a clean snapshot per the updated rule 120. (Superseded by the 2026-05-31 consolidation: the Hub no longer owns `hub_*` schema or a dedicated GetStream scope.)
 - 2026-03-23: Initial inventory created under prior phase-based template.
 
 
@@ -193,110 +195,56 @@ Deterministic Hub seed script: `ctf/scripts/seedHub.mjs`. Seeds `hub_channels`, 
 - Hub has no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
 - 100% web↔Android parity is the baseline. See [105-web-android-feature-parity-rules.mdc](../../../../.github/instructions/105-web-android-feature-parity-rules.mdc). No phased rollouts.
 
-This checklist tracks the work needed to bring code into alignment with the inventory. The inventory is the spec; this file is the punch list.
+This checklist tracks the work needed to bring code into alignment with the inventory. The inventory is the spec; this section lists the remaining work.
 
 ---
 
-### Punch List
+### Remaining Work
 
-#### Remove Cross-Plugin Dependency on Chyme (top priority)
+The Survivor Hub ⟵ Feed consolidation (2026-05-31) superseded the prior `hub_*` task list
+(Hub-owned schema, GetStream scope, `@comic` bot, multi-channel sidebar, DMs, `seedHub.mjs`, and
+`HUB_*` contracts are all dropped — the Hub reuses the Feed backend). Remaining work:
 
-- [ ] Replace `lib/chyme/types` imports in `ctf/packages/web/components/community-shell/use-home-chat.ts` with Hub-owned types under `ctf/packages/web/lib/hub/types.ts`.
-- [ ] Replace `GET /api/chyme/messages` / `POST /api/chyme/messages` / `POST /api/chyme/join` calls with `/api/hub/messages` and `/api/hub/join`.
-- [ ] Replace the `#general` channel's `href` (currently `/apps/chyme`) with the canonical Hub channel route once channel data is loaded from `/api/hub/channels`.
-- [ ] Audit the rest of `community-shell/` and `app/apps/` for any remaining Chyme imports, types, fetches, or styling assumptions.
+#### Done in the consolidation
 
-#### Hub-Owned Schema
+- [x] Repoint `GET /api/hub/messages` at `listFeedTimeline` (blended `feed_items` read).
+- [x] Repoint `POST /api/hub/messages` at `createFeedCommunityPost` (CSRF-guarded peer post).
+- [x] Add `feed_render_config.is_public` (default TRUE) and read it into `FeedConfig`.
+- [x] Retire `feed-announcements` as a navigable app tile (`isVisible: false`); aliases still resolve.
+- [x] Remove the phantom `feed_user_extension` seed `INSERT`; reconcile the Feed deletion contract + data model to real tables.
+- [x] Reconcile this inventory to the feed-backed, single-channel architecture.
 
-- [ ] Add `hub_channels` to `ctf/schema.sql`.
-- [ ] Add `hub_bots` to `ctf/schema.sql`.
-- [ ] Add `hub_bot_routes` to `ctf/schema.sql`.
-- [ ] Add `hub_dm_threads` to `ctf/schema.sql`.
-- [ ] Add `hub_messages` to `ctf/schema.sql`.
-- [ ] Each new table follows `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`.
+#### Public read (follow-up)
 
-#### Hub-Owned GetStream Scope
+- [ ] Add a public (unauthenticated) read path for the blended channel honoring `feed_render_config.is_public`, with an explicit policy for which item types are exposed publicly (security-sensitive; community posts + announcements only, no location-context question detail).
 
-- [ ] Add Hub-owned GetStream adapter under `ctf/packages/shared` (separate user-id prefix and channel-id namespace from any other plugin).
-- [ ] Wire `POST /api/hub/join` and `POST /api/survivor-hub-chat/stream` to issue tokens against Hub's GetStream scope only.
+#### Mobile Hub parity (follow-up — Parity Ticket)
 
-#### Hub-Owned API Routes
-
-- [ ] `GET /api/hub/channels`.
-- [ ] `GET /api/hub/dms`.
-- [ ] `GET /api/hub/bots`.
-- [ ] `GET /api/hub/messages`.
-- [ ] `POST /api/hub/messages`.
-- [ ] `POST /api/hub/join`.
-- [ ] `POST /api/survivor-hub-chat/stream` (alias delegating to `POST /api/hub/join`).
-
-#### `@comic` Bot
-
-- [ ] Author canonical `@comic` bot profile and add to `hub_bots` seed.
-- [ ] Author routing rules in `hub_bot_routes`.
-- [ ] Wire `@comic` into the DM list via `/api/hub/dms`.
-- [ ] Render `@comic` avatar in the chat panel for bot-routed messages.
-
-#### Sidebar — Channels
-
-- [ ] Replace `STATIC_CHANNELS` in `shell-sidebar.tsx` with data fetched from `GET /api/hub/channels`.
-- [ ] Respect `visibility_scope` so unauthenticated callers receive only `#general`.
-
-#### Sidebar — DMs
-
-- [ ] Replace `STATIC_DMS` in `shell-sidebar.tsx` with data fetched from `GET /api/hub/dms`.
-- [ ] Build the DM thread view inside the main content panel.
-- [ ] Remove the disabled-state markup and tooltip strings once DMs are live.
-
-#### Routing Matrix (data-driven)
-
-- [ ] Replace the hardcoded `getActionForText` matrix in `use-home-chat.ts` with a server-side lookup against `hub_bot_routes`.
-
-#### Mobile Hub (parity)
-
-- [ ] Wire `SurvivorHubChat` into the mobile navigation surface.
-- [ ] Align `fetchSurvivorHubChatStreamCredentials` with `POST /api/survivor-hub-chat/stream`.
-- [ ] Delete `MockSurvivorHubChat.tsx` or repurpose it as a Storybook fixture.
-- [ ] Reach feature parity with the web Hub: chat panel with routing assistant, channels list, DMs/bots, plugin grid.
+- [ ] Wire the mobile home to the same feed-backed channel (read via the Feed mobile client).
 - [ ] Add a `hub` entry to `ctf/config/plugin-parity-contracts.json`.
+- [ ] Remove/repurpose any mock survivor-hub mobile fixtures.
 
-#### Plugin Catalog / Registry
+#### Cleanup (follow-up)
 
-- [ ] Add `hub` to `ctf/packages/web/lib/plugins/plugin-catalog.ts`.
-- [ ] Add `hub` to the plugin registry seed and `lib/plugins/repository.ts` fallback list.
-
-#### Contracts
-
-- [ ] Author `ctf/docs/contracts/HUB_PLUGIN_COMMAND_CONTRACTS.yaml`.
-- [ ] Author `ctf/docs/contracts/HUB_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`.
-- [ ] Author `ctf/docs/contracts/HUB_PLUGIN_AUDIT_CONTRACTS.yaml`.
-- [ ] Author `ctf/docs/contracts/HUB_PROFILE_AND_DELETION_CONTRACT.md`.
-
-#### Seed Coverage
-
-- [ ] Add `ctf/scripts/seedHub.mjs` that deterministically seeds `hub_channels`, `hub_bots` (including `@comic`), `hub_bot_routes`.
+- [ ] Remove the hardcoded `getActionForText` routing in `use-home-chat.ts` (superseded by Feed AI Q&A).
+- [ ] Remove or formalize the `GET /api/hub/channels|dms|bots` stubs once multi-channel direction is decided.
 
 ---
 
 ### Pre-Merge Gates
 
-- [ ] No imports from `lib/chyme/*` or any other plugin's `lib/*` in `ctf/packages/web/components/community-shell/`, `ctf/packages/web/app/apps/`, or `ctf/packages/mobile/src/features/survivor-hub-chat/`.
-- [ ] No `fetch('/api/chyme/...')` (or any other plugin's API) from Hub surfaces.
-- [ ] Visual QA against the canonical Survivor Hub desktop mockup in `design/`.
-- [ ] Mobile responsive layout checked at 900px and 1200px breakpoints.
+- [ ] `GET /api/hub/messages` returns the blended Feed timeline; `POST` creates a community post (CSRF-guarded).
+- [ ] Visual QA against the canonical Survivor Hub mockups in `design/` once the wireframes are reconciled to the single blended channel.
 - [ ] GDP stats display zero/absent (not hardcoded) when no published GDP data exists.
 - [ ] Right rail shows provider-backed first name or username, never hardcoded text, for signed-in users.
-- [ ] Auth-provider account control renders in icon rail for signed-in users.
-- [ ] No TypeScript errors in `community-shell` component tree.
+- [ ] No TypeScript errors in the `community-shell` component tree.
 - [ ] ESLint passes with zero warnings (`pnpm lint`).
 - [ ] Plugin card "Open plugin →" links navigate to correct `/apps/[slug]` routes.
-- [ ] Channel links navigate to Hub's own channel routes (no cross-plugin links).
-- [ ] Unauthenticated users see exactly one channel (`#general`) and no DMs / bots / authenticated-only CTAs.
 - [ ] Inventory updated to reflect the merged code state (Change Log entry added).
 
 ---
 
 ### Change Log
 
-- 2026-05-12: Checklist re-scoped as a punch list against the canonical inventory; rules 105, 107, 112, 120 referenced; pre-merge gates assert no cross-plugin imports/fetches; phased-rollout sections removed.
+- 2026-05-12: Checklist re-scoped as a task list against the canonical inventory; rules 105, 107, 112, 120 referenced; pre-merge gates assert no cross-plugin imports/fetches; phased-rollout sections removed.
 - 2026-03-23: Initial checklist created under prior phase-based template.

@@ -93,6 +93,10 @@ Directory interaction rule:
 
 - Foundation reads Directory-projected provider data in read-only mode and MUST NOT mutate Directory behavior, records, workflows, or schema.
 
+### Transaction-scoped messaging retention
+
+Per platform rule 100 ("Messaging Scope and Lifecycle"), the 1:1 text/voice/video channel (`foundation_connection_threads`, `foundation_message_metadata`, `foundation_call_sessions`) is bound to an active connection/quote between exactly the two parties and has no existence outside it. When the connection/quote reaches a terminal state (closed, declined, or ended) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and message/call records are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, message bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
+
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes Foundation plugin usage only:
@@ -184,3 +188,4 @@ If user returns to Foundation after service-scoped deletion:
 ## Change Log
 
 - 2026-02-24: Created initial Foundation profile/deletion contract with explicit Directory read-only boundary, plugin-vs-account deletion behavior, and re-consent requirements.
+- 2026-05-31: Added transaction-scoped messaging retention (per rule 100): 1:1 text/voice/video channel closes on connection/quote terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.

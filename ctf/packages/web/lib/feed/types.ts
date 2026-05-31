@@ -91,6 +91,7 @@ export type FeedConfig = {
   killSwitchEnabled: boolean;
   maxTimelinePageSize: number;
   enabledChannels: FeedEnabledChannel[];
+  isPublic: boolean;
   updatedByUserId: string;
   updatedAtIso: string;
 };

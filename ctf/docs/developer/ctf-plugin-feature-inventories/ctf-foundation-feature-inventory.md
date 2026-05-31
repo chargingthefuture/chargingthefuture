@@ -16,7 +16,7 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 1. Provider discovery and search by service type, location, language, and trauma-informed criteria.
 2. Survivor-provider 1:1 text messaging with delivery/read/seen semantics and file attachment support.
 3. Voice and video session initiation and join for approved 1:1 participants.
-4. Quote request lifecycle (requested â†’ provider_responded â†’ closed) with immutable timeline view.
+4. Quote request lifecycle (requested â†’ provider_responded â†’ closed) with immutable timeline view. The 1:1 text/voice/video channel is scoped to an active connection/quote between exactly the two parties and opens with it; when the connection/quote reaches a terminal state (closed, declined, or ended) the chat closes â€” no new messages may be sent, both parties keep read-only access for a limited window, and message/session records are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active connection/quote (platform rule 100, "Messaging Scope and Lifecycle").
 5. Connection and quote history lists scoped by actor ownership.
 6. In-app notifications for messages, quote state changes, and missed calls.
 7. Notification preferences and quiet-hour controls.
@@ -127,7 +127,7 @@ Seeded content:
     - Foundation reads Directory data through read-only projections only.
     - No Foundation command can mutate Directory behavior/data.
 
-### €” Contract and Policy Lock
+### ï¿½ï¿½ Contract and Policy Lock
 
 - [ ] Lock Foundation command contracts for full-v1.
   - Acceptance criteria:
@@ -142,7 +142,7 @@ Seeded content:
   - Acceptance criteria:
     - Contracts and inventory align with `.github/instructions/110-stream-maker-tier-rules.mdc` threshold model and fallback rules.
 
-### €” Schema, Migrations, and Retention
+### ï¿½ï¿½ Schema, Migrations, and Retention
 
 - [ ] Define Foundation extension/domain schema and migrations under `ctf/migrations/`.
   - Acceptance criteria:
@@ -157,7 +157,7 @@ Seeded content:
   - Acceptance criteria:
     - Migration replay and rollback steps are captured for PR evidence.
 
-### €” Core Service and Command Execution
+### ï¿½ï¿½ Core Service and Command Execution
 
 - [ ] Implement provider search service using Directory read-only projections.
   - Acceptance criteria:
@@ -175,7 +175,7 @@ Seeded content:
   - Acceptance criteria:
     - Actor ownership checks prevent cross-user history access.
 
-### €” Rate Limiting, Quotas, and Scalability
+### ï¿½ï¿½ Rate Limiting, Quotas, and Scalability
 
 - [ ] Implement command-level rate limiting for high-frequency actions.
   - Acceptance criteria:
@@ -190,7 +190,7 @@ Seeded content:
   - Acceptance criteria:
     - PR includes required note under `ctf/docs/quota-impact/` with fallback and observability sections.
 
-### €” Web Full-v1 Delivery
+### ï¿½ï¿½ Web Full-v1 Delivery
 
 - [ ] Deliver web provider search and profile preview flows.
   - Acceptance criteria:
@@ -205,7 +205,7 @@ Seeded content:
   - Acceptance criteria:
     - Users can review interaction history and control notification channels/quiet hours.
 
-### €” Android Parity Follow-up Tracking
+### ï¿½ï¿½ Android Parity Follow-up Tracking
 
 - [ ] Create parity tracking table for all web-delivered Foundation capabilities.
   - Acceptance criteria:
@@ -223,7 +223,7 @@ Seeded content:
   - Acceptance criteria:
     - Any deferred item includes approved risk note and final completion date.
 
-### €” Trauma-Informed and Accessibility Validation
+### ï¿½ï¿½ Trauma-Informed and Accessibility Validation
 
 - [ ] Validate trauma-informed UX constraints.
   - Acceptance criteria:
@@ -235,7 +235,7 @@ Seeded content:
   - Acceptance criteria:
     - Critical safety pathways are discoverable, clear, and policy-compliant.
 
-### €” Security, Compliance, and Deletion
+### ï¿½ï¿½ Security, Compliance, and Deletion
 
 - [ ] Verify authz, consent, region, and deny-condition enforcement.
   - Acceptance criteria:
@@ -284,3 +284,4 @@ Seeded content:
 ### Change Log
 
 - 2026-02-24: Created initial Foundation rewrite checklist with full-v1 gates for search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting/scalability, trauma-informed accessibility, and web-first to Android parity follow-up tracking.
+- 2026-05-31: Documented the transaction-scoped messaging lifecycle per platform rule 100 ("Messaging Scope and Lifecycle"): the 1:1 text/voice/video channel is bound to an active connection/quote and closes on terminal state (read-only window + records retained for moderation/abuse evidence); no 1:1 messaging outside an active connection/quote. Aligning the deletion contract to mirror this retention is a tracked follow-up.
