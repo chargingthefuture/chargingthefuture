@@ -17,10 +17,10 @@ Enforce direct, efficient communication from agents to this user by eliminating 
 - Combine related information into single messages; avoid multi-step back-and-forth unless necessary.
 
 ## Text Formatting
-- Minimize bold text. Applies to both chat responses and any `.md` (or other) files agents create or edit.
-- Do not bold for emphasis, do not bold every list-item label, and do not bold whole sentences. Bold has no logical value when overused; it adds visual noise without adding information.
-- Acceptable bold use is rare and structural only: e.g. a single table header or a one-word inline label where the surrounding document already uses that convention. When in doubt, do not bold.
-- Prefer plain prose, lists, headings, and tables to carry structure instead of bold.
+- Bold is permitted for titles only — nowhere else. A "title" is a heading or the leading title line of a block (e.g. a section title in a PR/issue body or commit message where a markdown `#` heading is unavailable). Applies to both chat responses and any `.md`/`.mdc` (or other) files agents create or edit.
+- Never bold anything inside body text: no emphasis, no list-item labels, no key terms, no table cells, no whole or partial sentences, no inline phrases. Overused bold has no logical value; it adds visual noise without adding information and erases the signal a title is meant to carry.
+- Prefer markdown headings (`#`/`##`) for titles. Reserve bold for the cases where a heading cannot be used. When in doubt, do not bold.
+- Carry all other structure with plain prose, lists, headings, and tables — never bold.
 
 ## Prohibited
 - Verbose explanations of obvious operations.

@@ -1,5 +1,50 @@
 # Survivor Hub Feature Inventory (CTF Rewrite)
 
+## Consolidation Decision (2026-05-31): Survivor Hub absorbs Feed
+
+> **This section supersedes any conflicting detail below until the line-by-line rewrite
+> lands with the consolidation code PR.** Owner-locked decisions:
+>
+> 1. **Survivor Hub is the single app homepage** and absorbs the `feed-announcements`
+>    plugin. `feed-announcements` is retired as a separately navigable app; its slug
+>    (and the `feed` / `announcements` aliases) will alias into the Hub.
+> 2. **One blended, publicly-viewable channel** (named `community`) interleaves three
+>    content types in a single stream: **admin-only announcements**, **AI Q&A** (the
+>    chat assistant), and **peer-to-peer community posts**. Community posts are the only
+>    user-authored social surface in the product; public visibility is intentional
+>    (soft moderation + marketing signal). Splitting into multiple Hub channels is a
+>    possible future option, not the default.
+> 3. **Data layer = the existing Feed backend** (`feed_items` projection model +
+>    `lib/feed/inference.ts` Ollama Q&A). The previously-specified Hub-owned
+>    `hub_channels` / `hub_messages` / `hub_bot_routes` tables and dedicated GetStream
+>    scope described in this document are **dropped** — the Hub presentation shell reads
+>    and writes the Feed model so there is a single source of truth. Per-user routing
+>    moves from the hardcoded `getActionForText()` to Feed-backed data over time.
+> 4. **Product stance:** deliberately not social media; minimize user-authored free
+>    content; keep content economy-scoped.
+>
+> **Design:** the homepage UI already exists and is design-backed in the `design/`
+> submodule (`mockups/survivor-hub/`: `FeedAnnouncements.tsx`, `HubPublic.tsx`,
+> `Desktop.tsx`, mobile variants). The wireframes need a *modification* (not net-new
+> design) to reflect the single blended public channel; the modification prompt is
+> handed to the Replit design agent out-of-band (one-time use, not committed).
+>
+> **Ordered next steps (no phases; dependencies noted):**
+>
+> 1. Wire the Hub home channel to the Feed backend — replace stubbed `/api/hub/messages`
+>    + hardcoded `getActionForText()` so the single channel reads/writes `feed_items`
+>    (announcements + AI Q&A + community). Carries the `schema.sql` change for public
+>    channel visibility, which also unblocks the seed-drift fix below (seed/schema gate).
+> 2. Remove the phantom `feed_user_extension` references (seed `INSERT`, deletion
+>    contract, Feed data-model) — resolves the long-pending feed 🟡 drift. Blocked by
+>    step 1's `schema.sql` change (seed changes require a schema change per the gate).
+> 3. Retire `feed-announcements` as a standalone app in the registry (alias into Hub).
+>    Blocked by step 1 (don't orphan the route before the Hub serves the channel).
+> 4. Reconcile contracts (point Hub commands at the `feed.*` namespace; mark stubbed
+>    `HUB_*` contracts superseded). Blocked by step 1.
+> 5. Mobile parity — wire the mobile Hub home to the same Feed-backed channel; update
+>    `plugin-parity-contracts.json`. Blocked by step 1.
+
 ## Scope and Boundary
 
 - Rewrite target only: `ctf/`. Legacy `platform/` is reference-only.

@@ -1,5 +1,30 @@
 # Feed Plugin Feature Inventory (CTF Rewrite)
 
+## Consolidation Decision (2026-05-31): Feed becomes the Survivor Hub data layer
+
+> **Owner-locked.** Feed is being consolidated into the **Survivor Hub** home (the app
+> homepage). Feed's backend (`feed_items` projection model + `lib/feed/inference.ts`
+> Ollama Q&A) becomes the **single source of truth** for the Hub's one blended,
+> publicly-viewable `community` channel, which interleaves admin-only **announcements**,
+> **AI Q&A**, and **peer-to-peer community posts**.
+>
+> Consequences tracked in the coding follow-up (ordered list in the Survivor Hub
+> inventory):
+>
+> - `feed-announcements` is retired as a separately navigable app; its slug (and the
+>   `feed` / `announcements` aliases) will alias into the Hub. The `/api/feed/*` routes
+>   and schema tables remain — they are now the Hub's data layer.
+> - The phantom `feed_user_extension` references (seed `INSERT`, deletion contract, and
+>   the data-model entry in §4.1 below) will be removed — no code reads them and there is
+>   no real per-user feed-preference table (render mode is global via
+>   `feed_render_config`). This resolves the long-pending feed 🟡 drift
+>   (`PRODUCTION_READINESS_PLAN` backend-drift decision #4).
+> - A public-channel visibility flag will be added to `ctf/schema.sql` to support the
+>   publicly-viewable Hub channel.
+>
+> See the full decision + ordered next steps in
+> `ctf-survivor-hub-chat-feature-inventory.md`.
+
 ## Scope and Boundary
 
 - Plugin name: `Feed`
