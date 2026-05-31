@@ -21,3 +21,11 @@ reviews:
     # Only auto-review PRs that carry one of these labels.
     labels:
       - coderabbit
+  tools:
+    # Disable CodeRabbit's bundled ESLint. It runs ESLint 10 (flat-config only),
+    # which errors on this repo's classic .eslintrc.cjs ("'root' key not supported
+    # in flat config") and produces a recurring false failure on every PR. Our CI
+    # lints authoritatively with the repo's pinned ESLint 9, so CodeRabbit's copy is
+    # redundant noise. Revisit if/when the repo migrates to ESLint flat config.
+    eslint:
+      enabled: false
