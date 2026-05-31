@@ -202,7 +202,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'foundation') {
-    return <FoundationShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+    return <FoundationShell />;
   }
 
   if (selectedPlugin.slug === 'lighthouse') {
