@@ -95,7 +95,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 
 ### Sidebar — Bots (deferred)
 
-- There is no `hub_bots` / `hub_bot_routes` table and no `@comic` system bot in the MVP. The assistant capability is the Feed AI Q&A. `GET /api/hub/bots` is a stub returning an empty list.
+- There is no `hub_bots` / `hub_bot_routes` system-bot entity in the MVP. The assistant capability is the Feed AI Q&A — now built as the `comic` subsystem (`@comic` mention; user-facing label "AI Assistant"), specified in `ctf-comic-feature-inventory.md` (the source of truth for the AI assistant). `GET /api/hub/bots` is a stub returning an empty list.
 
 ### Hub Apps (Apps Section)
 

@@ -1,0 +1,180 @@
+policies:
+  # ─── @comic message routing ────────────────────────────────────────────
+  - pluginId: comic
+    command: comic.message.route
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      contentModeration: required
+      rateLimiting: required
+      mentionGate: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+        - llm_processing
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - csrf_validation_failed
+      - rate_limit_exceeded
+      - content_policy_violation
+      - llm_consent_missing
+
+  - pluginId: comic
+    command: comic.reply.generate
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      llmGatePolicy: required
+      humanReviewGate: required
+      approvedDataSourcesOnly: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+        - llm_processing
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - llm_service_unavailable
+      - llm_consent_missing
+
+  - pluginId: comic
+    command: comic.conversation.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      ownConversationsOnly: required
+      unreviewedDraftSuppression: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+
+  - pluginId: comic
+    command: comic.answer.rate
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      ownConversationsOnly: required
+      ratableAnswerGuard: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - csrf_validation_failed
+      - answer_not_found
+
+  # ─── Owner review / training ───────────────────────────────────────────
+  - pluginId: comic
+    command: comic.review.list
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+    consentRequirements:
+      scopes:
+        - feed_admin_governance
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_admin
+
+  - pluginId: comic
+    command: comic.review.resolve
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+      reviewStateGuard: required
+    consentRequirements:
+      scopes:
+        - feed_admin_governance
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_admin
+      - csrf_validation_failed
+      - review_not_found
+      - review_already_resolved
+
+  - pluginId: comic
+    command: comic.training.export
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+    consentRequirements:
+      scopes:
+        - feed_admin_governance
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_admin

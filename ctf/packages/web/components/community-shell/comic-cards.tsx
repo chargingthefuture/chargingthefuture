@@ -1,0 +1,132 @@
+'use client';
+
+import { Flag, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
+import type { ComicAnswerRating, ComicStreamItem } from './shell-types';
+import styles from './community-shell.module.css';
+
+type ComicAnswerCardProps = {
+  item: ComicStreamItem;
+  askedByLabel: string;
+  onRate: (turnId: string, rating: ComicAnswerRating) => void;
+};
+
+function formatRelativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return 'just now';
+  const diffMs = Date.now() - then;
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+// Answered AI Assistant card: cyan treatment, Sparkles avatar, "AI Assistant" label, 🤖 AI Q&A
+// badge, Q/A layout, and a helpful/not-helpful/flag rating row. Matches the locked Desktop mockup.
+export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardProps) {
+  const ratable = item.answerTurnId !== null && !item.optimistic;
+
+  return (
+    <article className={styles.comicCard} aria-label="AI Assistant answer">
+      <div className={styles.comicCardHead}>
+        <div className={styles.comicCardAvatar} aria-hidden="true">
+          <Sparkles size={18} color="#38BDF8" />
+        </div>
+        <div>
+          <div className={styles.comicCardTitleRow}>
+            <span className={styles.comicCardName}>AI Assistant</span>
+            <span className={styles.comicCardBadge}>🤖 AI Q&amp;A</span>
+          </div>
+          <div className={styles.comicCardMeta}>Asked by {askedByLabel} · {formatRelativeTime(item.askedAtIso)}</div>
+        </div>
+      </div>
+
+      <div className={styles.comicCardQuestion}>
+        <span className={styles.comicCardQa}>Q: </span>
+        <span className={styles.comicCardQuestionText}>{item.question}</span>
+      </div>
+
+      <p className={styles.comicCardAnswer}>
+        <span className={styles.comicCardQa}>A: </span>
+        {item.answer}
+      </p>
+
+      {ratable && item.answerTurnId ? (
+        <div className={styles.comicRatingRow} role="group" aria-label="Rate this answer">
+          <span className={styles.comicRatingPrompt}>Was this helpful?</span>
+          <button
+            type="button"
+            className={item.currentUserRating === 'helpful' ? `${styles.comicRatingBtn} ${styles.comicRatingBtnUp}` : styles.comicRatingBtn}
+            aria-pressed={item.currentUserRating === 'helpful'}
+            onClick={() => onRate(item.answerTurnId as string, 'helpful')}
+          >
+            <ThumbsUp size={13} /> Helpful
+          </button>
+          <button
+            type="button"
+            className={item.currentUserRating === 'not_helpful' ? `${styles.comicRatingBtn} ${styles.comicRatingBtnDown}` : styles.comicRatingBtn}
+            aria-pressed={item.currentUserRating === 'not_helpful'}
+            onClick={() => onRate(item.answerTurnId as string, 'not_helpful')}
+          >
+            <ThumbsDown size={13} /> Not helpful
+          </button>
+          <button
+            type="button"
+            className={item.currentUserRating === 'flagged' ? `${styles.comicRatingFlag} ${styles.comicRatingFlagActive}` : styles.comicRatingFlag}
+            aria-pressed={item.currentUserRating === 'flagged'}
+            onClick={() => onRate(item.answerTurnId as string, 'flagged')}
+          >
+            <Flag size={12} /> Flag
+          </button>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+type ComicPendingCardProps = {
+  item: ComicStreamItem;
+  askedByLabel: string;
+};
+
+// Pending "Reviewing for safety" card. CRITICAL INVARIANT: the asker only ever sees this card for
+// an in-flight @comic question — never an unreviewed AI draft. The server enforces this (the
+// message route returns only a holding response); this card reflects that holding state.
+export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) {
+  return (
+    <article className={styles.comicPendingCard} aria-label="AI Assistant is reviewing">
+      <div className={styles.comicCardHead}>
+        <div className={styles.comicPendingAvatar} aria-hidden="true">
+          <Sparkles size={18} color="#38BDF8" />
+        </div>
+        <div>
+          <div className={styles.comicCardTitleRow}>
+            <span className={styles.comicCardName}>AI Assistant</span>
+            <span className={styles.comicPendingBadge}>
+              <ShieldCheck size={9} /> Reviewing for safety
+            </span>
+          </div>
+          <div className={styles.comicCardMeta}>Asked by {askedByLabel} · {formatRelativeTime(item.askedAtIso)}</div>
+        </div>
+      </div>
+
+      <div className={styles.comicCardQuestion}>
+        <span className={styles.comicCardQa}>Q: </span>
+        <span className={styles.comicCardQuestionText}>{item.question}</span>
+      </div>
+
+      <div className={styles.comicPendingStatus}>
+        <span className={styles.comicPendingDots} aria-hidden="true">
+          <span className={styles.comicPendingDot} />
+          <span className={styles.comicPendingDot} />
+          <span className={styles.comicPendingDot} />
+        </span>
+        <span className={styles.comicPendingText}>
+          AI Assistant is preparing an answer — a teammate is reviewing it for safety before it&apos;s posted.
+        </span>
+      </div>
+    </article>
+  );
+}

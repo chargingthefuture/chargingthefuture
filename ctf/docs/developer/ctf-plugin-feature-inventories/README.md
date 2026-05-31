@@ -26,6 +26,7 @@ Examples:
 - [TrustTransport](./ctf-trusttransport-feature-inventory.md)
 - [Feed](./ctf-feed-feature-inventory.md)
 - [Announcements](./ctf-announcements-feature-inventory.md)
+- [comic (AI assistant in the Feed/Hub chat)](./ctf-comic-feature-inventory.md)
 - [Directory](./ctf-directory-feature-inventory.md)
 - [Foundation](./ctf-foundation-feature-inventory.md)
 - [Peer Programming](./ctf-peer-programming-feature-inventory.md)

@@ -1,0 +1,199 @@
+auditEvents:
+  # ─── @comic message routing ────────────────────────────────────────────
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.message.route
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_message_routing
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        mentionGateCheck: pass_or_fail
+        rateLimitCheck: pass_or_fail
+        contentModerationCheck: pass_or_fail
+        safetyEvaluationCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_conversation_metadata
+      - comic_turn_metadata
+      - comic_review_queue_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      conversationId: conversation_identifier
+      turnId: turn_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.reply.generate
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_reply_generation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        llmGateCheck: pass_or_fail
+        humanReviewGateCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_turn_metadata
+      - comic_inference_metadata
+      - comic_review_queue_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      conversationId: conversation_identifier
+      draftTurnId: turn_identifier
+      modelId: model_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.conversation.read
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_asker_stream
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        ownConversationsCheck: pass_or_fail
+        unreviewedDraftSuppressionCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_conversation_metadata
+      - comic_turn_metadata
+      - comic_review_queue_metadata
+      - comic_answer_rating_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      askerUserId: principal
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.answer.rate
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_answer_rating
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+        ratableAnswerCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_turn_metadata
+      - comic_review_queue_metadata
+      - comic_answer_rating_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      turnId: turn_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # ─── Owner review / training ───────────────────────────────────────────
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.review.list
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: admin_review_queue
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_review_queue_metadata
+      - comic_turn_metadata
+      - comic_conversation_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      page: page_number
+      pageSize: page_size
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.review.resolve
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_human_review
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+        reviewStateCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_review_queue_metadata
+      - comic_turn_metadata
+      - comic_training_example_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      reviewId: review_identifier
+      turnId: turn_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.training.export
+    version: 1.0.0
+    commandVersion: 1.0.0
+    purpose: assistant_training_export
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_training_example_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      exportFormat: export_format
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

@@ -1,9 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
+import { AtSign } from 'lucide-react';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
-import type { ShellCurrentUser, ShellStats } from './shell-types';
+import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
+import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
+import { ComicConsentModal } from './comic-consent-modal';
 import styles from './community-shell.module.css';
 
 const ECONOMY_TARGET_USD = 300_000_000_000;
@@ -23,6 +27,13 @@ function formatScaledValue(value: number | null, prefix = ''): string {
   if (value >= 1_000) return `${prefix}${(value / 1_000).toFixed(1)}K`;
   return `${prefix}${value.toLocaleString()}`;
 }
+
+// One unified stream entry: either a peer/hub chat message or an AI Assistant (@comic) Q&A item.
+// Each entry carries a numeric `epoch` (ms) so hub messages and comic items interleave in true
+// chronological order — the design shows AI cards woven among community posts, not appended after.
+type StreamEntry =
+  | { kind: 'message'; message: ChatMessage; epoch: number; order: number }
+  | { kind: 'comic'; item: ComicStreamItem; epoch: number; order: number };
 
 type AuthenticatedChatPanelProps = {
   stats: ShellStats;
@@ -92,6 +103,13 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
           Survivor Hub is free and helps you access housing, work, safety resources, and connect with others in the community.
         </p>
       </div>
+
+      {/* Locked composer — read-only stream; sign in (or @comic) to participate. */}
+      <div className={styles.comicLockedComposer}>
+        <span className={styles.comicLockedLock} aria-hidden="true">🔒</span>
+        <span className={styles.comicLockedText}>Sign in to post — or type @comic to ask the AI Assistant…</span>
+        <Link href={signInUrl} className={styles.comicLockedJoinBtn}>Join Free →</Link>
+      </div>
     </div>
   );
 }
@@ -99,8 +117,55 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
 function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
-  const { messages, input, setInput, sendMessage, isSending, isLoading, isLive, error } = useHomeChat(currentUser);
+  const {
+    messages,
+    comicItems,
+    input,
+    setInput,
+    sendMessage,
+    rateComicAnswer,
+    composerMentionsComic,
+    consentModalOpen,
+    confirmConsent,
+    dismissConsent,
+    isSending,
+    isLoading,
+    isLive,
+    error,
+  } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
+
+  // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
+  // epoch, then sort once so AI cards weave chronologically among community posts. `order` (source
+  // index) is a stable tiebreaker for equal/absent timestamps. The asker's own questions show their
+  // display name; this hub only renders the current user's @comic items (server-scoped).
+  const streamEntries = useMemo<StreamEntry[]>(() => {
+    const toEpoch = (iso: string | undefined, fallback: number): number => {
+      if (!iso) return fallback;
+      const epoch = new Date(iso).getTime();
+      return Number.isNaN(epoch) ? fallback : epoch;
+    };
+
+    const entries: StreamEntry[] = [
+      ...messages.map((message, index): StreamEntry => ({
+        kind: 'message',
+        message,
+        epoch: toEpoch(message.sentAtIso, index),
+        order: index,
+      })),
+      ...comicItems.map((item, index): StreamEntry => ({
+        kind: 'comic',
+        item,
+        epoch: toEpoch(item.askedAtIso, index),
+        order: index,
+      })),
+    ];
+
+    entries.sort((a, b) => (a.epoch - b.epoch) || (a.order - b.order));
+    return entries;
+  }, [messages, comicItems]);
+
+  const hasContent = streamEntries.length > 0;
 
   return (
     <div className={styles.chatPanelWrap}>
@@ -139,39 +204,63 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       ) : null}
 
       <div className={styles.chatMessages}>
-        {isLoading && messages.length === 0 ? (
+        {isLoading && !hasContent ? (
           <p className={styles.chatFootnote}>Loading live messages…</p>
         ) : null}
 
-        {!isLoading && messages.length === 0 ? (
+        {!isLoading && !hasContent ? (
           <div className={styles.chatBubbleGroup}>
             <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
-              Survivor Hub is live. Ask for housing, work, safety, or community support to start.
+              Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.
             </div>
           </div>
         ) : null}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}
-          >
-            {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">SH</div> : null}
-            <div className={styles.chatBubbleGroup}>
-              <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
-                {msg.text}
+        {streamEntries.map((entry) => {
+          if (entry.kind === 'comic') {
+            const { item } = entry;
+            if (item.status === 'answered') {
+              return (
+                <ComicAnswerCard
+                  key={`comic-${item.questionTurnId}`}
+                  item={item}
+                  askedByLabel={currentUser.displayName}
+                  onRate={rateComicAnswer}
+                />
+              );
+            }
+            return (
+              <ComicPendingCard
+                key={`comic-${item.questionTurnId}`}
+                item={item}
+                askedByLabel={currentUser.displayName}
+              />
+            );
+          }
+
+          const msg = entry.message;
+          return (
+            <div
+              key={msg.id}
+              className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}
+            >
+              {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">SH</div> : null}
+              <div className={styles.chatBubbleGroup}>
+                <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
+                  {msg.text}
+                </div>
+                {msg.actionLabel && msg.actionSlug ? (
+                  <Link href={`/apps/${msg.actionSlug}`} className={styles.chatActionBtn}>
+                    {msg.actionLabel}
+                  </Link>
+                ) : null}
+                <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
+                  {msg.time}
+                </span>
               </div>
-              {msg.actionLabel && msg.actionSlug ? (
-                <Link href={`/apps/${msg.actionSlug}`} className={styles.chatActionBtn}>
-                  {msg.actionLabel}
-                </Link>
-              ) : null}
-              <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
-                {msg.time}
-              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className={styles.chatSuggestions}>
@@ -182,12 +271,22 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         ))}
       </div>
 
+      {/* @comic mention affordance + helper copy (per the locked design / naming rules). */}
+      <div className={styles.comicComposerHelper}>
+        <span className={composerMentionsComic ? `${styles.comicMentionChip} ${styles.comicMentionChipActive}` : styles.comicMentionChip}>
+          <AtSign size={12} /> comic
+        </span>
+        <span className={styles.comicComposerHelperText}>
+          Type <span className={styles.comicComposerHelperToken}>@comic</span> to ask the AI Assistant
+        </span>
+      </div>
+
       <div className={styles.chatInputWrap}>
-        <label className={styles.visuallyHidden} htmlFor="chat-input">Message Survivor Hub</label>
+        <label className={styles.visuallyHidden} htmlFor="chat-input">Share with the community, or type @comic to ask the AI Assistant</label>
         <input
           id="chat-input"
           className={styles.chatInput}
-          placeholder="Ask Survivor Hub anything, or search resources…"
+          placeholder="Share with the community, or type @comic to ask…"
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
@@ -202,7 +301,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           onClick={() => {
             void sendMessage();
           }}
-          aria-label="Send message"
+          aria-label={composerMentionsComic ? 'Ask the AI Assistant' : 'Send message'}
           disabled={isSending}
         >
           ➤
@@ -212,6 +311,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       <p className={styles.chatFootnote}>
         {isLive ? 'Live support connected through Chyme and GetStream.' : 'Live support keeps syncing as new messages arrive.'}
       </p>
+
+      <ComicConsentModal open={consentModalOpen} onConfirm={() => void confirmConsent()} onDismiss={dismissConsent} />
     </div>
   );
 }
