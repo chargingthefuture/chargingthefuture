@@ -209,7 +209,7 @@ type OllamaDraft = {
   completionTokenCount: number;
 };
 
-// Draft an answer via Ollama, reusing the survivor system prompt. The draft is captured but,
+// Draft an answer via Ollama, reusing the shared survivor guidance. The draft is captured but,
 // under the interim policy, NEVER returned to the asker — it is enqueued for human review.
 async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
   const startedAt = Date.now();
