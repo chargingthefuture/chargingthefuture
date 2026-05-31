@@ -46,8 +46,8 @@ Primary migration: `ctf/migrations/2026-03-24-levelup-core-phase3.sql`
 Core tables:
 
 1. `levelup_cohorts`
-2. `levelup_curriculum_items`
-3. `levelup_milestones`
+2. `levelup_curriculum_items` — unique on `(cohort_id, sequence_no)` so a cohort cannot have two items at the same position; supports idempotent upserts.
+3. `levelup_milestones` — unique on `(cohort_id, sequence_no)` for the same reason.
 4. `levelup_enrollments`
 5. `levelup_enrollment_milestone_escrows`
 6. `levelup_milestone_validations`
