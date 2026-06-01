@@ -3,6 +3,7 @@ import { requireDirectoryReadAccess } from '../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deleteOwnDirectoryProfile, getOwnProfile, upsertOwnProfile, validateProfileInput } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
+import { reportError } from 'lib/observability/report';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 
 type ProfileBody = Partial<DirectoryProfileInput>;
@@ -34,7 +35,8 @@ export async function GET() {
   try {
     const profile = await getOwnProfile(gate.auth.userId);
     return NextResponse.json({ profile }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'get_own_profile', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch profile.' },
       { status: 503 },
@@ -96,6 +98,12 @@ async function handleUpsert(request: Request) {
     const message = error instanceof Error ? error.message : 'unknown';
     const isSelectorIssue = message.includes('directory_') && message.endsWith('_not_found');
 
+    // A selector-not-found is a client validation problem; anything else is an
+    // unexpected server/persistence failure worth reporting.
+    if (!isSelectorIssue) {
+      reportError(error, { area: 'directory', op: 'upsert_own_profile', extra: { userId: gate.auth.userId } });
+    }
+
     logDirectoryAudit({
       actorId: gate.auth.userId,
       command: 'directory.profile.upsert',
@@ -150,7 +158,8 @@ export async function DELETE() {
       { ok: true, scope: 'service', status: 'completed', requestedAtIso: deletion.requestedAtIso },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'delete_own_profile', extra: { userId: gate.auth.userId } });
     logDirectoryAudit({
       actorId: gate.auth.userId,
       command: 'directory.profile.delete.service',

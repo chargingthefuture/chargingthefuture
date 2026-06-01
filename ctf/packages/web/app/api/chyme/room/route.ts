@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { getRoomState } from 'lib/chyme/repository';
+import { reportError } from 'lib/observability/report';
 import { requireChymeAccess } from '../_lib';
 
 export async function GET() {
@@ -27,7 +28,8 @@ export async function GET() {
     });
 
     return NextResponse.json(room, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'room_state_fetch', extra: { userId: gate.auth.userId } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.room.state.fetch',
