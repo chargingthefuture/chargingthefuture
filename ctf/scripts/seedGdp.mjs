@@ -50,7 +50,14 @@ async function seed() {
         `INSERT INTO gdp_metric_snapshots
          (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin, is_estimate)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (id) DO UPDATE SET is_estimate = EXCLUDED.is_estimate`,
+         ON CONFLICT (id) DO UPDATE SET
+           week_start_date = EXCLUDED.week_start_date,
+           metric_key = EXCLUDED.metric_key,
+           metric_value = EXCLUDED.metric_value,
+           dp_suppressed = EXCLUDED.dp_suppressed,
+           lawful_basis = EXCLUDED.lawful_basis,
+           source_plugin = EXCLUDED.source_plugin,
+           is_estimate = EXCLUDED.is_estimate`,
         [
           id,
           WEEK_START,

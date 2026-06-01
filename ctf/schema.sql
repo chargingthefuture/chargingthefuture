@@ -2672,7 +2672,7 @@ ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at 
 CREATE TABLE IF NOT EXISTS currency_usd_rates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   currency_code TEXT NOT NULL REFERENCES currencies(code),
-  usd_rate NUMERIC NOT NULL,
+  usd_rate NUMERIC NOT NULL CHECK (usd_rate > 0),
   as_of DATE NOT NULL,
   source TEXT NOT NULL DEFAULT 'owner',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
