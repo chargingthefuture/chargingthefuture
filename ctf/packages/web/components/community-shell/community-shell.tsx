@@ -116,6 +116,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
   const [channels, setChannels] = useState<HubChannelInfo[]>([]);
+  const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [dms, setDms] = useState<HubDMInfo[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeApp, setActiveApp] = useState<string | null>(null);
@@ -172,7 +173,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         if (channelsRes.ok) {
           const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
           if (!cancelled) {
-            setChannels(channelsPayload.channels ?? []);
+            const loadedChannels = channelsPayload.channels ?? [];
+            setChannels(loadedChannels);
+            // Default the open channel to the first one (general) so the sidebar
+            // shows which channel the chat panel is already displaying.
+            setActiveChannel((current) => current ?? loadedChannels[0]?.slug ?? null);
           }
         }
 
@@ -221,6 +226,15 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
       window.localStorage.setItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
+  };
+
+  // Channels live inside the chat panel of this single-page shell, so selecting
+  // one just keeps the user in the chat section and marks it active — it must not
+  // navigate to a separate route (there is no per-channel page; doing so 404s).
+  const handleChannelSelect = (slug: string) => {
+    setActiveChannel(slug);
+    setSection('chat');
+    setActiveApp(null);
   };
 
   const handleSortModeChange = (mode: PluginSortMode) => {
@@ -285,6 +299,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           channels={channels}
           dms={dms}
           plugins={filteredPlugins}
+          activeChannel={activeChannel}
+          onChannelSelect={handleChannelSelect}
           activeApp={activeApp}
           onAppSelect={handleAppSelect}
           query={query}
