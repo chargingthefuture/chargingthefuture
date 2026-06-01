@@ -950,6 +950,134 @@
   border: 0;
 }
 
+/* ─── Mobile top bar + nav drawer ────────────────────────────────────────── */
+/*
+ * On phones the icon rail and sidebar are replaced by a top bar (brand, section
+ * switch, sign-in/avatar) plus a menu button that slides the sidebar in as a
+ * drawer. These pieces stay hidden on desktop and are switched on inside the
+ * max-width: 900px block below, where the multi-column grid also collapses.
+ */
+.mobileBar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 12px;
+  background: #090B0F;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.mobileBarMenuBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobileBarBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobileBarLogo {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.mobileBarTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #F9FAFB;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileBarSections {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.mobileBarSectionBtn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mobileBarSectionBtnActive {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: #A78BFA;
+}
+
+.mobileBarAuth {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.mobileBarAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  user-select: none;
+}
+
+.mobileBarSignIn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mobileBackdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(8, 9, 13, 0.6);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1280px) {
   .frame {
@@ -968,11 +1096,20 @@
 @media (max-width: 900px) {
   .shell {
     padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobileBar {
+    display: flex;
   }
 
   .frame {
-    grid-template-columns: 1fr;
-    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    height: auto;
   }
 
   .iconRail,
@@ -982,6 +1119,24 @@
 
   .content {
     border-right: none;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Sidebar slides in as a drawer when the menu button is pressed. */
+  .leftNav.leftNavMobileOpen {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 85vw);
+    z-index: 1000;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .mobileBackdrop {
+    display: block;
   }
 
   .heroBanner {
