@@ -6,7 +6,7 @@ import { BORDER, PRIMARY, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
 import { ChymeControls } from './chyme-controls';
-import type { ChymeDeletionResponse, ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
+import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
 
 export type ChymeRoomViewProps = {
   room: ChymeRoomResponse;
@@ -15,7 +15,6 @@ export type ChymeRoomViewProps = {
   onToggleChat: () => void;
   joinInfo: ChymeJoinResponse | null;
   joinReady: boolean;
-  deletionState: ChymeDeletionResponse | null;
   messages: ChymeMessage[];
   draft: string;
   onDraftChange: (value: string) => void;
@@ -62,7 +61,6 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           currentUserId={currentUser.userId}
           joinInfo={props.joinInfo}
           joinReady={props.joinReady}
-          deletionState={props.deletionState}
         />
         {showChat && (
           <ChymeChatPanel

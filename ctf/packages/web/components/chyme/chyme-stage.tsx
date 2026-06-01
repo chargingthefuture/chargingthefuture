@@ -3,20 +3,18 @@
 import { Mic } from 'lucide-react';
 import { StreamVideoPanel } from '../shared/stream-video-panel';
 import { BORDER, CARD_BG, PRIMARY, initials } from './chyme-shared';
-import type { ChymeDeletionResponse, ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
+import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
 
 export function ChymeStage({
   room,
   currentUserId,
   joinInfo,
   joinReady,
-  deletionState,
 }: {
   room: ChymeRoomResponse;
   currentUserId: string;
   joinInfo: ChymeJoinResponse | null;
   joinReady: boolean;
-  deletionState: ChymeDeletionResponse | null;
 }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
@@ -63,12 +61,6 @@ export function ChymeStage({
           </div>
         )}
       </div>
-
-      {deletionState && (
-        <div style={{ padding: '12px 16px', borderRadius: 12, background: CARD_BG, border: `1px solid ${BORDER}`, fontSize: 13, color: '#A7F3D0' }}>
-          Deletion: {deletionState.scope} / {deletionState.status} at {deletionState.requestedAtIso}
-        </div>
-      )}
     </div>
   );
 }

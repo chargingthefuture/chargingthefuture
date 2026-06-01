@@ -41,7 +41,7 @@ Chyme plugin routes:
 - `POST /api/chyme/messages`
 - `POST /api/chyme/join`
 
-Deletion/account routes used by Chyme UI:
+Deletion/account routes (API retained; no longer surfaced in the Chyme UI as of 2026-06-01 — see Delivery Status):
 
 - `DELETE /api/account/chyme-profile`
 - `DELETE /api/account/full-account`
@@ -85,11 +85,12 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 
 ## Web and Android Delivery Status
 
-1. Web implementation is delivered for room/chat/join/deletion workflows.
-2. Android implementation is delivered for room/chat/join/deletion workflows using runtime-configured request identity and the same protected API surface.
-3. Current feature-parity status is web+android complete.
+1. Web implementation is delivered for room/chat/join workflows. The account/data deletion API endpoints remain available, but their buttons were removed from the Chyme room UI (2026-06-01) pending a dedicated, designed account-settings surface; deletion is no longer triggered from inside Chyme.
+2. Android implementation is delivered for room/chat/join workflows using runtime-configured request identity and the same protected API surface. The deletion buttons were likewise removed from `ChymeRoom.tsx`.
+3. Current feature-parity status is web+android complete (both platforms are at the same single-room feature level).
 4. Web pixel pass: `chyme-live-shell` is aligned to `design/.../survivor-hub/Chyme.tsx`, using lucide-react iconography in place of emoji glyphs. Loading and empty states render inline; there is no public state by design (Chyme is auth-only per the #102 visibility decision).
 5. Android pixel pass: `ChymeRoom.tsx` (and sub-components `chyme-loading`, `chyme-empty`, `chyme-room-list`, `chyme-active-room`, `chyme-chat-view`) is aligned to `design/.../survivor-hub/MobileChyme.tsx`, `MobileChymeEmpty.tsx`, `MobileChymeLoading.tsx`. A canonical `api.ts` entry-point was added. All data is bound to real `/api/chyme/*` endpoints. The public state (`MobileChymePublic.tsx`) is not applicable — Chyme is auth-only per the #102 visibility decision. Delivered 2026-05-31.
+6. Scope (MVP): the shipped product is a single shared room (`CHYME_MAIN_KEY` / "Chyme Main Room"). The full-featured `Chyme.tsx` design — multiple rooms, room creation ("Start a Room"), discovery, upcoming/scheduled rooms, search, reactions, and speaker-vs-audience promotion with raise-hand — is the accepted design target and is **not yet built**. The pixel passes above aligned the single-room view's styling and iconography to the mockup; they did not implement the mockup's multi-room feature set. See "Gaps and Known Technical Debt".
 
 ## Seed Coverage Status
 
@@ -105,9 +106,12 @@ Current status:
 1. Full-account delete lifecycle remains request-first; terminal orchestrator completion still depends on the broader account-deletion workflow.
 2. Chyme-specific admin tooling and moderation controls are out of MVP scope.
 3. In-room native call client (beyond Stream chat channels for coordination) remains a future enhancement.
+4. Multi-room platform is unbuilt. The MVP runs one hardcoded shared room; `Chyme.tsx`'s multiple-room directory, room creation, upcoming/scheduled rooms, search, reactions, and speaker/audience promotion (raise-hand-to-speak) are the design target but are not implemented — there are no create-room, list-rooms, scheduling, search, reaction, or promotion routes. The plugin registry reflects this as `implemented_shell`.
+5. Account/data deletion has no in-app entry point after the Chyme buttons were removed (2026-06-01). The `DELETE /api/account/chyme-profile` and `DELETE /api/account/full-account` endpoints still work; a designed account-settings surface to call them is queued with the design agent.
 
 ## Change Log
 
+- 2026-06-01: Removed the "Delete Chyme Data" / "Delete Full Account" buttons from the Chyme room (web `chyme-sidebar` / `chyme-live-shell` and mobile `ChymeRoom.tsx`) because they cluttered every room view; the deletion API endpoints are retained for a future designed account-settings surface (design queued). Also corrected the record: the shipped Chyme is a single-room MVP, and the full-featured `Chyme.tsx` (multi-room, create/discover, upcoming/scheduled, search, reactions, speaker/audience promotion) is the accepted design target, not yet built. The earlier "implementation is complete across web and Android" (2026-05-17) referred to the single-room workflows and their pixel pass, not the mockup's full feature set.
 - 2026-05-31: Android pixel pass. Rewrote `ChymeRoom.tsx` aligned to `MobileChyme.tsx` / `MobileChymeEmpty.tsx` / `MobileChymeLoading.tsx` mockups. Decomposed into modular sub-components (`chyme-loading`, `chyme-empty`, `chyme-room-list`, `chyme-active-room`, `chyme-chat-view`), each within rule-116 200-line / complexity-10 limits. Added canonical `api.ts` entry-point re-exporting from `ChymeApi.ts`. All UI state (loading, empty, room-list, in-room, chat) bound to real `/api/chyme/room`, `/api/chyme/messages`, `/api/chyme/join`, and account deletion endpoints. Public state omitted — Chyme is auth-only. TypeScript: zero errors. EOF: clean. Parity check: passed.
 - 2026-05-29: Modularity refactor. Decomposed the oversized `ChymeLiveShell` (359 lines / complexity 40, a pre-existing rule-116 violation) into modular sub-components (`chyme-header`, `chyme-sidebar`, `chyme-room-view`, `chyme-stage`, `chyme-chat-panel`, `chyme-controls`, `chyme-shared`), each within the 200-line / complexity-10 limits. No behavior, API, or copy change.
 - 2026-05-29: Design-sync reconcile to `c5d83c0`. Removed user-facing "GetStream" wording from `chyme-live-shell`: "Social Audio · GetStream Powered" → "Social Audio · End-to-End Encrypted", the chat "GetStream" badge → "Encrypted", and "Audio via GetStream" → "Audio — encrypted". Copy-only.
