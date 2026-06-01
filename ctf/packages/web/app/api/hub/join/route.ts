@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { HubJoinResponse } from 'lib/hub/types';
+import { reportError } from 'lib/observability/report';
 import { requireHubAccess } from '../_lib';
 
 export async function POST() {
@@ -22,7 +23,8 @@ export async function POST() {
     };
 
     return NextResponse.json(response, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'hub', op: 'join', extra: { userId: gate.identity.userId } });
     return NextResponse.json(
       {
         ok: false,

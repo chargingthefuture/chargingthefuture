@@ -3,6 +3,7 @@ import { requireSkillsHuntAdminAccess } from '../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { listOpenReports } from 'lib/skills-hunt/moderation';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import type { SkillsHuntSubmissionReportStatus } from 'lib/skills-hunt/types';
 
 function parseStatus(value: string | null): SkillsHuntSubmissionReportStatus | null {
@@ -30,7 +31,8 @@ export async function GET(request: Request) {
   try {
     const items = await withDbTransaction((client) => listOpenReports(client, status));
     return NextResponse.json({ items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'list_reports', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load reports.' },
       { status: 503 },

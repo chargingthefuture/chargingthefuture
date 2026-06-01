@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockUserAccess } from 'lib/unlock/_lib';
+import { reportError } from 'lib/observability/report';
 import { getUnlockStatusForUser, insertUnlockAudit } from 'lib/unlock/repository';
 
 export async function GET() {
@@ -25,6 +26,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, status });
   } catch (error) {
+    reportError(error, { area: 'unlock', op: 'get_status', extra: { userId: gate.auth.userId } });
     // Surface the real cause in server logs (a swallowed error here made the 503
     // undiagnosable). The client message stays generic so DB internals never leak.
     console.error('[unlock] status query failed', error);

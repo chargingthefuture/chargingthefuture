@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireComicReadAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { isValidComicAnswerRating, rateComicAnswer } from 'lib/comic/repository';
+import { reportError } from 'lib/observability/report';
 
 type RateBody = {
   rating?: string;
@@ -74,6 +75,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    reportError(error, { area: 'comic', op: 'post_rate_answer', extra: { userId: gate.auth.userId, turnId } });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to rate AI Assistant answer.' },
       { status: 503 },

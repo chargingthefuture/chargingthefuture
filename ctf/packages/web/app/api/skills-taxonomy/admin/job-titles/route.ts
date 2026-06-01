@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { createJobTitle, listJobTitles, validateJobTitleCreateInput } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
+import { reportError } from 'lib/observability/report';
 
 type JobTitleCreateBody = {
   sectorId?: unknown;
@@ -23,7 +24,13 @@ export async function GET(request: Request) {
   try {
     const jobTitles = await listJobTitles(parseIncludeInactive(request.url));
     return NextResponse.json({ items: jobTitles }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'list_job_titles',
+      extra: { userId: gate.auth.userId },
+    });
+
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list job titles.' },
       { status: 503 },
@@ -100,6 +107,12 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'create_job_title',
+      extra: { userId: gate.auth.userId, sectorId: input.sectorId },
+    });
 
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create job title.' },

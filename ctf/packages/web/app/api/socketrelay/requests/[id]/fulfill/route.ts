@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { claimRequest } from 'lib/socketrelay/repository';
 
 type RouteProps = {
@@ -23,6 +24,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     const created = await claimRequest(id, gate.auth.userId);
     return NextResponse.json({ ok: true, ...created }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'request_fulfill_claim', extra: { userId: gate.auth.userId, requestId: id } });
     return socketRelayErrorResponse(error, 'Fulfillment claim unavailable.');
   }
 }

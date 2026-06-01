@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit, listQuoteHistory } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 import type { FoundationQuoteState } from 'lib/foundation/types';
 
 export async function GET(request: NextRequest) {
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ ok: true, ...history }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'quote_request_history_list', extra: { userId: gate.auth.userId } });
     console.error('[Foundation] Quote history list failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Quote history unavailable.' },

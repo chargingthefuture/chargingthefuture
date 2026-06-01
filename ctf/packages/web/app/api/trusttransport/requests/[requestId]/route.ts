@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trusttransport/_lib';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { getRequestById } from 'lib/trusttransport/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ requestId: string }>;
@@ -33,6 +34,7 @@ export async function GET(_: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'request_lookup', extra: { userId: gate.auth.userId, requestId } });
     return trustTransportErrorResponse(error, 'Request lookup unavailable.');
   }
 }

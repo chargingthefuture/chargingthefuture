@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireTrustTransportAdminAccess, trustTransportErr
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { getMarketConfig, insertTrustTransportAudit, updateMarketConfig } from 'lib/trusttransport/repository';
 import type { TrustTransportMarketConfig } from 'lib/trusttransport/types';
+import { reportError } from 'lib/observability/report';
 
 function parseMarketConfig(body: Record<string, unknown>): TrustTransportMarketConfig {
   return {
@@ -22,6 +23,7 @@ export async function GET() {
     const config = await getMarketConfig();
     return NextResponse.json({ ok: true, config }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'admin_market_config_get', extra: { userId: gate.auth.userId } });
     return trustTransportErrorResponse(error, 'Market config unavailable.');
   }
 }
@@ -62,6 +64,7 @@ export async function PUT(request: Request) {
     });
     return NextResponse.json({ ok: true, config }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'admin_market_config_update', extra: { userId: gate.auth.userId } });
     return trustTransportErrorResponse(error, 'Market config update unavailable.');
   }
 }

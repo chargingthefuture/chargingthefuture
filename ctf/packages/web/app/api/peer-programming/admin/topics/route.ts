@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingAdminAccess } from 'lib/peer-programming/_lib';
 import { getPublishedWeeklyTopic, insertPeerProgrammingAudit, upsertWeeklyTopic } from 'lib/peer-programming/repository';
+import { reportError } from 'lib/observability/report';
 
 type TopicBody = {
   weekStartDate?: string;
@@ -20,6 +21,13 @@ export async function GET() {
     const topic = await getPublishedWeeklyTopic();
     return NextResponse.json({ ok: true, topic }, { status: 200 });
   } catch (error) {
+    if ((error instanceof Error ? error.message : '') !== 'assignment_not_found') {
+      reportError(error, {
+        area: 'peer-programming',
+        op: 'get_published_topic',
+        extra: { userId: gate.auth.userId },
+      });
+    }
     return peerProgrammingErrorResponse(error, 'Topic retrieval unavailable.');
   }
 }
@@ -68,6 +76,13 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ ok: true, topic }, { status: 200 });
   } catch (error) {
+    if ((error instanceof Error ? error.message : '') !== 'assignment_not_found') {
+      reportError(error, {
+        area: 'peer-programming',
+        op: 'upsert_topic',
+        extra: { userId: gate.auth.userId },
+      });
+    }
     return peerProgrammingErrorResponse(error, 'Topic upsert unavailable.');
   }
 }

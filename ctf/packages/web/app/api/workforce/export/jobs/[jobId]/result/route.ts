@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
+import { reportError } from 'lib/observability/report';
 import { getExportJobById } from 'lib/workforce/repository';
 
 type RouteParams = {
@@ -35,7 +36,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       },
       { status: 501 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'export_job_result_get', extra: { userId: gate.auth.userId, jobId } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch export result.' },
       { status: 503 },

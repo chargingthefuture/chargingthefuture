@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireFeedAdminAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { exportQuestionsForRasa } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 import type { FeedQuestionCategory } from 'lib/feed/types';
 
 function escapeRasaExample(text: string): string {
@@ -62,7 +63,8 @@ export async function GET(request: Request) {
         'X-Total-Questions': String(totalQuestions),
       },
     });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'export_questions', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to export questions.' },
       { status: 503 },

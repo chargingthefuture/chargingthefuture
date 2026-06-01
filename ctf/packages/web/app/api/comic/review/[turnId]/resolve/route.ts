@@ -4,6 +4,7 @@ import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { resolveComicReview } from 'lib/comic/repository';
 import type { ComicReviewResolveInput } from 'lib/comic/types';
+import { reportError } from 'lib/observability/report';
 
 type ResolveBody = Partial<ComicReviewResolveInput>;
 
@@ -120,6 +121,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
       );
     }
 
+    reportError(error, { area: 'comic', op: 'post_resolve_review', extra: { userId: gate.auth.userId, reviewId } });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to resolve review item.' },
       { status: 503 },

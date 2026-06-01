@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { relabelQuestionCategory, isValidFeedQuestionCategory } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
+import { reportError } from 'lib/observability/report';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   const gate = await requireFeedAdminAccess();
@@ -63,6 +64,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ qu
         { status: 404 },
       );
     }
+    reportError(error, { area: 'feed', op: 'relabel_question_category', extra: { userId: gate.auth.userId, questionId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to relabel question.' },
       { status: 503 },

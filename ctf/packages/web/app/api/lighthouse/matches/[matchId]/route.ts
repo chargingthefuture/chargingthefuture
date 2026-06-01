@@ -3,12 +3,33 @@ import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateMatch, validateMatchUpdateInput } from 'lib/lighthouse/repository';
 import type { LighthouseMatchUpdateInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ matchId: string }>;
 };
 
 type MatchBody = Partial<LighthouseMatchUpdateInput>;
+
+// Error messages the repository throws to signal an expected client error (4xx/409),
+// handled by lighthouseErrorResponse. Anything else falls through to a 503 and is an
+// unexpected server failure worth reporting to Sentry.
+const LIGHTHOUSE_EXPECTED_ERROR_MESSAGES = new Set([
+  'profile_not_found',
+  'property_not_found',
+  'match_not_found',
+  'block_not_found',
+  'not_owner',
+  'policy_denied',
+  'blocked_pair',
+  'self_block',
+  'duplicate_match',
+  'invalid payload',
+]);
+
+function isUnexpectedLighthouseError(error: unknown): boolean {
+  return !(error instanceof Error && LIGHTHOUSE_EXPECTED_ERROR_MESSAGES.has(error.message));
+}
 
 function lighthouseErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
@@ -147,6 +168,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, match }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'match_update', extra: { userId: gate.auth.userId, matchId } });
+    }
     return lighthouseErrorResponse(error, 'Match update unavailable.');
   }
 }

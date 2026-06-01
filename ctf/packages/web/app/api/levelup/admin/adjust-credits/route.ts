@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminAdjustCredits, insertLevelupAudit } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupAdminAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 const adjustSchema = z.object({
   targetUserId: z.string().min(1),
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, adjustment }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'post_admin_adjust_credits', extra: { userId: gate.auth.userId, targetUserId: parsed.data.targetUserId } });
     return levelupErrorResponse(error, 'Admin credit adjustment unavailable.');
   }
 }

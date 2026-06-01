@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { isValidAnswerRating, rateFeedAnswer } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type RateBody = {
   rating?: string;
@@ -70,6 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    reportError(error, { area: 'feed', op: 'rate_answer', extra: { userId: gate.auth.userId, answerId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to rate answer.' },
       { status: 503 },

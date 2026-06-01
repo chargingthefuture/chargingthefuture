@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntReadAccess, requireSkillsHuntSubmi
 import { isReservedUsername } from 'lib/auth/username-policy';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 
@@ -40,7 +41,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
       { userId: gate.auth.userId, isModeratorOrAdmin: false },
     );
     return NextResponse.json({ items: result.items, total: result.total }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'list_round_submissions', extra: { userId: gate.auth.userId, roundId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load submissions.' },
       { status: 503 },
@@ -141,6 +143,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
       status = 400;
       code = SKILLS_HUNT_ERROR_CODE.urlValidationFailed;
       responseMessage = 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.';
+    }
+
+    if (status >= 500) {
+      reportError(error, { area: 'skills-hunt', op: 'create_submission', extra: { userId: gate.auth.userId, roundId } });
     }
 
     logSkillsHuntAudit({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAnnouncementDraft, publishAnnouncement } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
+import { reportError } from 'lib/observability/report';
 
 const CI_ACTOR_ID = 'ci-product-update';
 
@@ -45,8 +46,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ id: announcement.id, status: 'published' }, { status: 201 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
+  } catch (error) {
+    reportError(error, { area: 'internal', op: 'post_product_update_publish', extra: { actorId: CI_ACTOR_ID } });
+    const message = error instanceof Error ? error.message : 'unknown';
     return NextResponse.json({ error: 'Failed to publish', detail: message }, { status: 503 });
   }
 }

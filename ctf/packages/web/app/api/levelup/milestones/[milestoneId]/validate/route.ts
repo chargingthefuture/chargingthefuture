@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertLevelupAudit, isTrainerForCohort, validateMilestone } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ milestoneId: string }>;
@@ -68,6 +69,7 @@ export async function POST(request: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, validation }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'post_milestone_validate', extra: { userId: gate.auth.userId, milestoneId: resolvedParams.milestoneId, enrollmentId: parsed.data.enrollmentId } });
     return levelupErrorResponse(error, 'Milestone validation unavailable.');
   }
 }

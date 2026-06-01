@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../..
 import { withDbTransaction } from 'lib/db/postgres';
 import { archiveMission, getMissionById, updateMission, type MissionUpdateInput } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 // All operations on a mission must scope by both roundId AND missionId so
 // callers from one round cannot read/write missions belonging to another
@@ -33,7 +34,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
       );
     }
     return NextResponse.json({ mission }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'get_mission', extra: { userId: gate.auth.userId, roundId, missionId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load mission.' },
       { status: 503 },
@@ -80,7 +82,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
       );
     }
     return NextResponse.json({ ok: true, mission }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'update_mission', extra: { userId: gate.auth.userId, roundId, missionId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update mission.' },
       { status: 503 },
@@ -118,7 +121,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ r
       );
     }
     return NextResponse.json({ ok: true, mission }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'archive_mission', extra: { userId: gate.auth.userId, roundId, missionId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to archive mission.' },
       { status: 503 },

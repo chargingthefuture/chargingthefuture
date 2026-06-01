@@ -3,6 +3,7 @@ import { ensureLighthouseMatchChannel, createLighthouseParticipantToken } from '
 import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { listMatches } from 'lib/lighthouse/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(_request: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params;
@@ -43,7 +44,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
     return NextResponse.json({ ok: true, channelId, ...credentials });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, message: e.message || 'Error creating chat channel' }, { status: 500 });
+  } catch (e) {
+    reportError(e, { area: 'lighthouse', op: 'match_chat_channel_create', extra: { userId, matchId } });
+    const message = e instanceof Error ? e.message : '';
+    return NextResponse.json({ ok: false, message: message || 'Error creating chat channel' }, { status: 500 });
   }
 }

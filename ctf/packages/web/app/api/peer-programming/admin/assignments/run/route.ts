@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingAdminAccess } from 'lib/peer-programming/_lib';
 import { insertPeerProgrammingAudit, runWeeklyAssignment } from 'lib/peer-programming/repository';
 import { getActiveUserIdsLastDays } from 'lib/engagement/login-activity';
+import { reportError } from 'lib/observability/report';
 
 type AssignmentBody = {
   activeUserIds?: string[];
@@ -46,6 +47,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
+    if ((error instanceof Error ? error.message : '') !== 'assignment_not_found') {
+      reportError(error, {
+        area: 'peer-programming',
+        op: 'run_weekly_assignment',
+        extra: { userId: gate.auth.userId },
+      });
+    }
     return peerProgrammingErrorResponse(error, 'Weekly cohort assignment unavailable.');
   }
 }

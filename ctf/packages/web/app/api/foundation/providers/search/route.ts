@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit, searchProviders } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: NextRequest) {
   const gate = await requireFoundationReadAccess();
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ ok: true, ...providers }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'provider_search', extra: { userId: gate.auth.userId } });
     console.error('[Foundation] Provider search failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Provider search unavailable.' },

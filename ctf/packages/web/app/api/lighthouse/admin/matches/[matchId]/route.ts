@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateMatch, validateMatchUpdateInput } from 'lib/lighthouse/repository';
+import { reportError } from 'lib/observability/report';
 import type { LighthouseMatchUpdateInput } from 'lib/lighthouse/types';
 
 type RouteParams = {
@@ -77,6 +78,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
+    reportError(error, { area: 'lighthouse', op: 'admin_match_update', extra: { userId: gate.auth.userId, matchId } });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin match update unavailable.' },
       { status: 503 },

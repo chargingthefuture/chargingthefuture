@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trusttransport/_lib';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { submitOrderRating } from 'lib/trusttransport/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ orderId: string }>;
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     await submitOrderRating(orderId, gate.auth.userId, gate.auth.isAdmin, { score, feedback });
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'order_rating_submit', extra: { userId: gate.auth.userId, orderId } });
     return trustTransportErrorResponse(error, 'Rating submit unavailable.');
   }
 }

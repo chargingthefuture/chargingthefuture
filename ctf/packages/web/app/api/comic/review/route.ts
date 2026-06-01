@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireComicAdminAccess } from '../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { listPendingComicReviews } from 'lib/comic/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireComicAdminAccess();
@@ -20,7 +21,8 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({ ok: true, items: result.items, pagination: result.pagination }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'comic', op: 'get_review_queue', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to load the review queue.' },
       { status: 503 },

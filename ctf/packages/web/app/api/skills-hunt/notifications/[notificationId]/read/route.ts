@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { markNotificationRead } from 'lib/skills-hunt/repository';
 
 export async function POST(request: Request, { params }: { params: Promise<{ notificationId: string }> }) {
@@ -26,7 +27,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ not
     }
 
     return NextResponse.json({ ok: true, notification }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'mark_notification_read', extra: { userId: gate.auth.userId, notificationId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to acknowledge notification.' },
       { status: 503 },

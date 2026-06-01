@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { createAdminProfile, listAdminProfiles, parsePaginationParams, validateProfileInput } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
+import { reportError } from 'lib/observability/report';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 
 type AdminProfileBody = Partial<DirectoryProfileInput>;
@@ -33,7 +34,8 @@ export async function GET(request: Request) {
   try {
     const payload = await listAdminProfiles(pagination, includeInactive);
     return NextResponse.json(payload, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'list_admin_profiles', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list admin profiles.' },
       { status: 503 },
@@ -88,6 +90,10 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
     const isValidation = message.includes('_not_found');
+
+    if (!isValidation) {
+      reportError(error, { area: 'directory', op: 'create_admin_profile', extra: { userId: gate.auth.userId } });
+    }
 
     logDirectoryAudit({
       actorId: gate.auth.userId,

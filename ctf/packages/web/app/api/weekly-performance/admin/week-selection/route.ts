@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWeeklyPerformanceAdminAccess } from 'lib/weekly-performance/_lib';
+import { reportError } from 'lib/observability/report';
 import { insertWeeklyPerformanceAudit, selectWeek } from 'lib/weekly-performance/repository';
 
 type SelectionBody = {
@@ -46,6 +47,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ ok: false, code: 'weekly_performance_week_not_found', message: 'Week not found.' }, { status: 404 });
     }
 
+    reportError(error, { area: 'weekly-performance', op: 'put_admin_week_select', extra: { userId: gate.auth.userId } });
     return NextResponse.json({ ok: false, code: 'weekly_performance_unavailable', message: 'Week selection unavailable.' }, { status: 503 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireWorkforceReadAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
+import { reportError } from 'lib/observability/report';
 import { getOccupationById } from 'lib/workforce/repository';
 
 type RouteParams = {
@@ -27,7 +28,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ occupation }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'occupation_get', extra: { userId: gate.auth.userId, id } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch occupation.' },
       { status: 503 },

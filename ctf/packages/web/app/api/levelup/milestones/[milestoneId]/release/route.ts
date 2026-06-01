@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertLevelupAudit, isTrainerForCohort, releaseMilestoneCredits } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ milestoneId: string }>;
@@ -69,6 +70,7 @@ export async function POST(request: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, release }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'post_milestone_release', extra: { userId: gate.auth.userId, milestoneId: resolvedParams.milestoneId, enrollmentId: parsed.data.enrollmentId } });
     return levelupErrorResponse(error, 'Milestone release unavailable.');
   }
 }

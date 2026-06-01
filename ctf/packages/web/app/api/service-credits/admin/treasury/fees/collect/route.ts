@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { collectTreasuryFee, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 
 type TreasuryFeeBody = {
   sourceUserId?: string;
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, collection }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'post_treasury_fee_collect', extra: { userId: gate.auth.userId, sourceUserId: body.sourceUserId, treasuryUserId: body.treasuryUserId } });
     return serviceCreditsErrorResponse(error, 'Treasury fee collection unavailable.');
   }
 }

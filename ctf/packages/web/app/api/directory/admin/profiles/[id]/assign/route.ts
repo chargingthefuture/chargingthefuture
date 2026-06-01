@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { assignAdminProfile } from 'lib/directory/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -50,7 +51,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'assign_admin_profile', extra: { userId: gate.auth.userId, id, assigneeUserId: userId } });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to assign profile.' },
       { status: 503 },

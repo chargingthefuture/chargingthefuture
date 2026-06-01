@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { insertServiceCreditsAudit, releaseEscrow } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 
 type EscrowParams = {
   params: Promise<{ escrowId: string }>;
@@ -62,6 +63,7 @@ export async function POST(request: Request, context: EscrowParams) {
 
     return NextResponse.json({ ok: true, release }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'post_escrow_release', extra: { userId: gate.auth.userId, escrowId } });
     return serviceCreditsErrorResponse(error, 'Escrow release unavailable.');
   }
 }

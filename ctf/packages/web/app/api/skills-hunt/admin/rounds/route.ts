@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { createRound, insertSkillsHuntAudit, listRounds, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRoundInput } from 'lib/skills-hunt/types';
 
@@ -26,7 +27,8 @@ export async function GET() {
   try {
     const rounds = await listRounds(null);
     return NextResponse.json({ rounds }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'list_admin_rounds', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to list rounds.' },
       { status: 503 },
@@ -76,7 +78,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, round }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'create_round', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to create round.' },
       { status: 503 },

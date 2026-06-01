@@ -9,12 +9,33 @@ import {
   validatePropertyInput,
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ propertyId: string }>;
 };
 
 type PropertyBody = Partial<LighthousePropertyInput>;
+
+// Error messages the repository throws to signal an expected client error (4xx/409),
+// handled by lighthouseErrorResponse. Anything else falls through to a 503 and is an
+// unexpected server failure worth reporting to Sentry.
+const LIGHTHOUSE_EXPECTED_ERROR_MESSAGES = new Set([
+  'profile_not_found',
+  'property_not_found',
+  'match_not_found',
+  'block_not_found',
+  'not_owner',
+  'policy_denied',
+  'blocked_pair',
+  'self_block',
+  'duplicate_match',
+  'invalid payload',
+]);
+
+function isUnexpectedLighthouseError(error: unknown): boolean {
+  return !(error instanceof Error && LIGHTHOUSE_EXPECTED_ERROR_MESSAGES.has(error.message));
+}
 
 function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
   return {
@@ -135,6 +156,9 @@ export async function GET(_: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, property }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'property_get', extra: { userId: gate.auth.userId, propertyId } });
+    }
     return lighthouseErrorResponse(error, 'Property lookup unavailable.');
   }
 }
@@ -183,6 +207,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, property }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'property_update', extra: { userId: gate.auth.userId, propertyId } });
+    }
     return lighthouseErrorResponse(error, 'Property update unavailable.');
   }
 }
@@ -220,6 +247,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'property_delete', extra: { userId: gate.auth.userId, propertyId } });
+    }
     return lighthouseErrorResponse(error, 'Property delete unavailable.');
   }
 }

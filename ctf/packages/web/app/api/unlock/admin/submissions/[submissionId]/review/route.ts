@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { reportError } from 'lib/observability/report';
 import { getUnlockRuntimeConfig, insertUnlockAudit, markUnlockIncentiveGranted, reviewUnlockSubmission } from 'lib/unlock/repository';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
 import { grantUnleashFlagForUser } from 'lib/feature-flags/unleash-admin';
@@ -104,7 +105,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ ok: true, submission });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'post_admin_submission_review', extra: { userId: gate.auth.userId, submissionId } });
     return unlockErrorResponse('Unlock submission review unavailable.', 503);
   }
 }

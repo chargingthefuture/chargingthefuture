@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
+import { reportError } from 'lib/observability/report';
 import { deleteOccupation, insertWorkforceAdminAudit, updateOccupation, validateOccupationInput } from 'lib/workforce/repository';
 import type { WorkforceOccupationInput } from 'lib/workforce/types';
 
@@ -68,7 +69,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, occupation }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_occupation_update', extra: { userId: gate.auth.userId, id } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to update occupation.' },
       { status: 503 },
@@ -108,7 +110,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, id }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_occupation_delete', extra: { userId: gate.auth.userId, id } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete occupation.' },
       { status: 503 },

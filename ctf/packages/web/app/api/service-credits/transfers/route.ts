@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createTransfer, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 
 type TransferBody = {
   recipientUserId?: string;
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, transfer }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'post_transfer_create', extra: { userId: gate.auth.userId } });
     return serviceCreditsErrorResponse(error, 'Transfer unavailable.');
   }
 }

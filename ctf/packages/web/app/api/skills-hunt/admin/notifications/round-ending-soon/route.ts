@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib'
 import { withDbTransaction } from 'lib/db/postgres';
 import { notifyRoundsEndingSoon } from 'lib/skills-hunt/notifications';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 // Round-ending-24h notification cron entry point.
 // Idempotent: notifyRoundsEndingSoon checks per (user, round) for an existing
@@ -22,7 +23,8 @@ export async function POST(request: Request) {
   try {
     const result = await withDbTransaction((client) => notifyRoundsEndingSoon(client));
     return NextResponse.json({ ok: true, emitted: result.emitted }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'notify_rounds_ending_soon', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to run round-ending-soon notifications.' },
       { status: 503 },

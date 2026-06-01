@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationAdminAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { getCapacityPolicy, insertFoundationAudit, updateCapacityPolicy } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET() {
   const gate = await requireFoundationAdminAccess();
@@ -13,6 +14,7 @@ export async function GET() {
     const policy = await getCapacityPolicy();
     return NextResponse.json({ ok: true, policy }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'admin_capacity_policy_read', extra: { userId: gate.auth.userId } });
     console.error('[Foundation] Capacity policy read failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy unavailable.' },
@@ -99,6 +101,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ ok: true, policy }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'admin_capacity_policy_update', extra: { userId: gate.auth.userId } });
     console.error('[Foundation] Capacity policy update failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy update unavailable.' },

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { HubBotsResponse } from 'lib/hub/types';
+import { reportError } from 'lib/observability/report';
 import { requireHubAccess } from '../_lib';
 
 export async function GET() {
@@ -18,7 +19,8 @@ export async function GET() {
     };
 
     return NextResponse.json(response, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'hub', op: 'list_bots', extra: { userId: gate.identity.userId } });
     return NextResponse.json(
       {
         ok: false,

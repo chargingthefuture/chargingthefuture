@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { executeDeletionReclaim, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 
 type ReclaimBody = {
   treasuryUserId?: string;
@@ -78,6 +79,9 @@ export async function POST(request: Request, context: ReclaimParams) {
 
     return NextResponse.json({ ok: true, reclaim }, { status: 200 });
   } catch (error) {
+    if (!(error instanceof Error && (error.message === 'insufficient_balance' || error.message === 'invalid_payload'))) {
+      reportError(error, { area: 'internal', op: 'post_deletion_reclaim_execute', extra: { accountId, deletionRequestId, requestId: body.requestId, traceId: body.traceId } });
+    }
     return serviceCreditsErrorResponse(error, 'Account deletion reclaim unavailable.');
   }
 }

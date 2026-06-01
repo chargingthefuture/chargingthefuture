@@ -7,6 +7,7 @@ import {
   ServiceScopeNotSupportedError,
   UnknownServiceError,
 } from 'lib/account/deletion-orchestrator';
+import { reportError } from 'lib/observability/report';
 
 // Generic per-plugin "delete my data for this service" endpoint.
 //
@@ -81,6 +82,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ slug
       );
     }
 
+    reportError(error, { area: 'account', op: 'delete_service_scope', extra: { userId: gate.auth.userId, slug } });
     return NextResponse.json(
       {
         ok: false,

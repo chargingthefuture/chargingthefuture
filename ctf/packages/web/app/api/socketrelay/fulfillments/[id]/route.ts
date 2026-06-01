@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { getFulfillmentById } from 'lib/socketrelay/repository';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 
@@ -34,6 +35,7 @@ export async function GET(_: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'fulfillment_get', extra: { userId: gate.auth.userId, fulfillmentId: id } });
     return socketRelayErrorResponse(error, 'Fulfillment lookup unavailable.');
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireComicAdminAccess } from '../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { exportComicTrainingExamples } from 'lib/comic/repository';
+import { reportError } from 'lib/observability/report';
 
 function escapeRasaExample(text: string): string {
   return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&').replace(/\n/g, ' ').trim();
@@ -52,7 +53,8 @@ export async function GET(request: Request) {
         'X-Total-Examples': String(totalExamples),
       },
     });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'comic', op: 'get_export_training', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to export training examples.' },
       { status: 503 },

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { repostRequest } from 'lib/socketrelay/repository';
 
 type RouteProps = {
@@ -23,6 +24,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     const item = await repostRequest(id, gate.auth.userId, gate.auth.isAdmin);
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'request_repost', extra: { userId: gate.auth.userId, requestId: id } });
     return socketRelayErrorResponse(error, 'Request repost unavailable.');
   }
 }

@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { createSkill, listSkills, validateSkillCreateInput } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
+import { reportError } from 'lib/observability/report';
 
 type SkillCreateBody = {
   jobTitleId?: unknown;
@@ -24,7 +25,13 @@ export async function GET(request: Request) {
   try {
     const skills = await listSkills(parseIncludeInactive(request.url));
     return NextResponse.json({ items: skills }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'list_skills',
+      extra: { userId: gate.auth.userId },
+    });
+
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list skills.' },
       { status: 503 },
@@ -102,6 +109,12 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'create_skill',
+      extra: { userId: gate.auth.userId, jobTitleId: input.jobTitleId },
+    });
 
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create skill.' },

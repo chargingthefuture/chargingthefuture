@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
+import { reportError } from 'lib/observability/report';
 import {
   deleteLighthouseAdminAnnouncement,
   insertLighthouseAudit,
@@ -69,7 +70,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcement_update', extra: { userId: gate.auth.userId, announcementId } });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement update unavailable.' },
       { status: 503 },
@@ -102,7 +104,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcement_delete', extra: { userId: gate.auth.userId, announcementId } });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement delete unavailable.' },
       { status: 503 },

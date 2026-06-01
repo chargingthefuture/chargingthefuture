@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { ackNotificationEvent, insertFoundationAudit } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request, context: { params: Promise<{ notificationEventId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -47,6 +48,7 @@ export async function POST(request: Request, context: { params: Promise<{ notifi
 
     return NextResponse.json({ ok: true, notification: updated }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'notification_event_ack', extra: { userId: gate.auth.userId, notificationEventId } });
     console.error('[Foundation] Notification ack failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Notification ack unavailable.' },

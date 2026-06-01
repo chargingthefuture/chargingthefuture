@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
+import { reportError } from 'lib/observability/report';
 import { getObservabilityReporter } from 'lib/observability/provider';
 import { runIncrementalRecruitedSync } from 'lib/workforce/repository';
 
@@ -64,7 +65,8 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json({ ok: true, ...result }, { status: 200 });
-    } catch {
+    } catch (error) {
+      reportError(error, { area: 'workforce', op: 'internal_sync_run' });
       await reporter.captureCronCheckIn({
         monitorSlug: WORKFORCE_INCREMENTAL_SYNC_MONITOR_SLUG,
         status: 'error',
@@ -76,7 +78,8 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'internal_sync_checkin' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to run internal incremental sync.' },
       { status: 503 },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE, FOUNDATION_QUOTE_STATES } from 'lib/foundation/constants';
 import { insertFoundationAudit, updateQuoteRequestState } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 import type { FoundationQuoteState } from 'lib/foundation/types';
 
 export async function POST(request: Request, context: { params: Promise<{ quoteRequestId: string }> }) {
@@ -79,6 +80,7 @@ export async function POST(request: Request, context: { params: Promise<{ quoteR
       );
     }
 
+    reportError(error, { area: 'foundation', op: 'quote_request_state_update', extra: { userId: gate.auth.userId, quoteRequestId } });
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Quote transition unavailable.' },
       { status: 503 },

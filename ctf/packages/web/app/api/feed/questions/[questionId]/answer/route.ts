@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { generateFeedQuestionAnswer } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 
 
@@ -66,6 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ que
       );
     }
 
+    reportError(error, { area: 'feed', op: 'answer_question', extra: { userId: gate.auth.userId, questionId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.llmUnavailable, message: 'Unable to generate an assisted answer right now.' },
       { status: 503 },

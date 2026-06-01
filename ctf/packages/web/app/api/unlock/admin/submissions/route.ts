@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { reportError } from 'lib/observability/report';
 import { insertUnlockAudit, listUnlockSubmissions } from 'lib/unlock/repository';
 import type { UnlockAccessTier, UnlockReviewStatus } from 'lib/unlock/types';
 
@@ -45,7 +46,8 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({ ok: true, submissions });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'get_admin_submissions', extra: { userId: gate.auth.userId } });
     return unlockErrorResponse('Unlock submission queue unavailable.', 503);
   }
 }

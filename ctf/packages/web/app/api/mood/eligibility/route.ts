@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireMoodAccess, moodErrorResponse } from 'lib/mood/_lib';
 import { getMoodEligibility } from 'lib/mood/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: NextRequest) {
   const gate = await requireMoodAccess();
@@ -17,6 +18,9 @@ export async function GET(request: NextRequest) {
     const eligibility = await getMoodEligibility({ clientId });
     return NextResponse.json({ ok: true, ...eligibility }, { status: 200 });
   } catch (error) {
+    if (!(error instanceof Error && error.message === 'eligibility_not_found')) {
+      reportError(error, { area: 'mood', op: 'get_eligibility', extra: { userId: gate.auth.userId, clientId } });
+    }
     return moodErrorResponse(error, 'Mood eligibility unavailable.');
   }
 }

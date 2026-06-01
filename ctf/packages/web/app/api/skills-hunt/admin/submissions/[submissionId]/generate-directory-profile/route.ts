@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { generateDirectoryProfileFromAcceptedSubmission, insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 
 type GenerateBody = {
@@ -70,6 +71,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       status = 404;
       code = SKILLS_HUNT_ERROR_CODE.submissionNotFound;
       responseMessage = 'Accepted submission not found.';
+    }
+
+    if (status >= 500) {
+      reportError(error, { area: 'skills-hunt', op: 'generate_directory_profile', extra: { userId: gate.auth.userId, submissionId } });
     }
 
     return NextResponse.json({ ok: false, code, message: responseMessage }, { status });

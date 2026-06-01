@@ -9,8 +9,29 @@ import {
   validateProfileInput,
 } from 'lib/lighthouse/repository';
 import type { LighthouseProfileInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type ProfileBody = Partial<LighthouseProfileInput>;
+
+// Error messages the repository throws to signal an expected client error (4xx/409),
+// handled by lighthouseErrorResponse. Anything else falls through to a 503 and is an
+// unexpected server failure worth reporting to Sentry.
+const LIGHTHOUSE_EXPECTED_ERROR_MESSAGES = new Set([
+  'profile_not_found',
+  'property_not_found',
+  'match_not_found',
+  'block_not_found',
+  'not_owner',
+  'policy_denied',
+  'blocked_pair',
+  'self_block',
+  'duplicate_match',
+  'invalid payload',
+]);
+
+function isUnexpectedLighthouseError(error: unknown): boolean {
+  return !(error instanceof Error && LIGHTHOUSE_EXPECTED_ERROR_MESSAGES.has(error.message));
+}
 
 function parseProfileInput(body: ProfileBody): LighthouseProfileInput {
   return {
@@ -150,6 +171,9 @@ async function upsertProfileHandler(request: Request) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'profile_upsert', extra: { userId: gate.auth.userId } });
+    }
     return lighthouseErrorResponse(error, 'Profile upsert unavailable.');
   }
 }
@@ -171,6 +195,9 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'profile_get', extra: { userId: gate.auth.userId } });
+    }
     return lighthouseErrorResponse(error, 'Profile lookup unavailable.');
   }
 }
@@ -207,6 +234,9 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'profile_delete', extra: { userId: gate.auth.userId } });
+    }
     return lighthouseErrorResponse(error, 'Profile delete unavailable.');
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
+import { reportError } from 'lib/observability/report';
 import { runIncrementalRecruitedSync } from 'lib/workforce/repository';
 
 type SyncBody = {
@@ -32,7 +33,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_sync_run', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to run incremental sync.' },
       { status: 503 },

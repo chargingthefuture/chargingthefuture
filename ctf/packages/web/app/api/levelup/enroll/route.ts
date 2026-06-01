@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { enrollInCohort, insertLevelupAudit } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 const enrollSchema = z.object({
   cohortId: z.string().uuid(),
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, enrollment }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'post_enroll_cohort', extra: { userId: gate.auth.userId, cohortId: parsed.data.cohortId } });
     return levelupErrorResponse(error, 'Enrollment unavailable.');
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireFoundationAdminAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { listFoundationAuditEvents } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: NextRequest) {
   const gate = await requireFoundationAdminAccess();
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
     const events = await listFoundationAuditEvents(limit);
     return NextResponse.json({ ok: true, items: events }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'admin_audit_events_list', extra: { userId: gate.auth.userId } });
     console.error('[Foundation] Audit events list failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Audit event listing unavailable.' },

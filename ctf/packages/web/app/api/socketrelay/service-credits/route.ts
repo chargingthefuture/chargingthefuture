@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireSocketRelayReadAccess, ensureMutationCsrf } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { createTransfer } from 'lib/service-credits/repository';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'service_credits_send', extra: { userId: gate.auth.userId } });
     return NextResponse.json({ ok: false, code: SOCKETRELAY_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
   }
 }

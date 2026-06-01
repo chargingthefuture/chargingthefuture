@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { deleteProfile, getProfile, insertSocketRelayAudit, upsertProfile, validateProfileInput } from 'lib/socketrelay/repository';
 import type { SocketRelayProfileInput } from 'lib/socketrelay/types';
@@ -57,6 +58,7 @@ async function upsertHandler(request: Request) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'profile_upsert', extra: { userId: gate.auth.userId } });
     return socketRelayErrorResponse(error, 'Profile upsert unavailable.');
   }
 }
@@ -78,6 +80,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'profile_get', extra: { userId: gate.auth.userId } });
     return socketRelayErrorResponse(error, 'Profile lookup unavailable.');
   }
 }
@@ -113,6 +116,7 @@ export async function DELETE(request: Request) {
     });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'profile_delete', extra: { userId: gate.auth.userId } });
     return socketRelayErrorResponse(error, 'Profile delete unavailable.');
   }
 }

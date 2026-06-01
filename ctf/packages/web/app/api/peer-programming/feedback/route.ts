@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { insertPeerProgrammingAudit, submitFeedback } from 'lib/peer-programming/repository';
+import { reportError } from 'lib/observability/report';
 
 type FeedbackBody = {
   cohortId?: string | null;
@@ -53,6 +54,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
+    if ((error instanceof Error ? error.message : '') !== 'assignment_not_found') {
+      reportError(error, {
+        area: 'peer-programming',
+        op: 'submit_feedback',
+        extra: { userId: gate.auth.userId },
+      });
+    }
     return peerProgrammingErrorResponse(error, 'Feedback submission unavailable.');
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureTrustTransportTripChannel, createTrustTransportParticipantToken } from 'lib/trusttransport/stream';
 import { requireTrustTransportReadAccess } from 'lib/trusttransport/_lib';
 import { getTripById } from 'lib/trusttransport/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(_request: Request, { params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
@@ -35,7 +36,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ tr
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
     return NextResponse.json({ ok: true, channelId, ...credentials });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, message: e.message || 'Error creating chat channel' }, { status: 500 });
+  } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'trip_chat_channel', extra: { userId, tripId } });
+    const message = error instanceof Error ? error.message : '';
+    return NextResponse.json({ ok: false, message: message || 'Error creating chat channel' }, { status: 500 });
   }
 }

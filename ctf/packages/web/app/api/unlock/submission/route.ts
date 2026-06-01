@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockUserAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { reportError } from 'lib/observability/report';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
 
 type SubmissionBody = {
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'unlock', op: 'post_submission', extra: { userId: gate.auth.userId } });
     // Surface the real cause in server logs (a swallowed error here made the 503
     // undiagnosable). The client message stays generic so DB internals never leak.
     console.error('[unlock] submission failed', error);

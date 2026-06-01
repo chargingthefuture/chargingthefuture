@@ -3,6 +3,7 @@ import { requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { previewDependencyImpact, validateDependencyPreviewInput } from 'lib/skills-taxonomy/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireTaxonomyAdminAccess();
@@ -67,6 +68,12 @@ export async function GET(request: Request) {
         { status: 404 },
       );
     }
+
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'get_dependency_impact_preview',
+      extra: { userId: gate.auth.userId, targetType, targetId },
+    });
 
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to preview dependency impact.' },

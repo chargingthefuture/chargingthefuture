@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { createFeedCommunityPost, validateFeedCommunityPostInput } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 import type { FeedCommunityPostInput } from 'lib/feed/types';
 
 type CommunityBody = Partial<FeedCommunityPostInput>;
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       );
     }
 
+    reportError(error, { area: 'feed', op: 'community_post_create', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create community post.' },
       { status: 503 },

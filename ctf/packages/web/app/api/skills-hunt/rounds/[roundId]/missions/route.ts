@@ -3,6 +3,7 @@ import { requireSkillsHuntReadAccess } from '../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { listMissionsForRoundWithProgress } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntReadAccess();
@@ -17,7 +18,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
       listMissionsForRoundWithProgress(client, roundId, gate.auth.userId),
     );
     return NextResponse.json({ items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'list_round_missions', extra: { userId: gate.auth.userId, roundId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load missions.' },
       { status: 503 },

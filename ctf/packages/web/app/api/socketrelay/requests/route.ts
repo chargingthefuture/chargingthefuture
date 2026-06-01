@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { SOCKETRELAY_DEFAULT_PAGE, SOCKETRELAY_DEFAULT_PAGE_SIZE, SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { createRequest, listRequests, validateRequestInput } from 'lib/socketrelay/repository';
 import type { SocketRelayRequestInput } from 'lib/socketrelay/types';
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
     const response = await listRequests({ page, pageSize });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'requests_list', extra: { userId: gate.auth.userId } });
     return socketRelayErrorResponse(error, 'Request listing unavailable.');
   }
 }
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
     const item = await createRequest(gate.auth.userId, input, idempotencyKey);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'request_create', extra: { userId: gate.auth.userId } });
     return socketRelayErrorResponse(error, 'Request create unavailable.');
   }
 }

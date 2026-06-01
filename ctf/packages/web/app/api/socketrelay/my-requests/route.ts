@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { SOCKETRELAY_DEFAULT_PAGE, SOCKETRELAY_DEFAULT_PAGE_SIZE } from 'lib/socketrelay/constants';
 import { listRequests } from 'lib/socketrelay/repository';
 
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'my_requests_list', extra: { userId: gate.auth.userId } });
     return socketRelayErrorResponse(error, 'My requests listing unavailable.');
   }
 }

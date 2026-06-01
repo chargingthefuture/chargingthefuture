@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_CALL_MODALITIES, FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createCallSession, insertFoundationAudit } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request, context: { params: Promise<{ threadId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -72,6 +73,7 @@ export async function POST(request: Request, context: { params: Promise<{ thread
       );
     }
 
+    reportError(error, { area: 'foundation', op: 'connection_call_session_create', extra: { userId: gate.auth.userId, threadId } });
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Call session unavailable.' },
       { status: 503 },

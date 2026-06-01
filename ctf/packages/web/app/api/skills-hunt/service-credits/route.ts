@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireSkillsHuntReadAccess, ensureMutationCsrf } from '../_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import type { SkillsHuntServiceCreditsTransactionInput } from 'lib/skills-hunt/types';
 
 export async function POST(request: Request) {
@@ -42,7 +43,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'send_service_credits', extra: { userId: gate.auth.userId } });
     return NextResponse.json({ ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
   }
 }

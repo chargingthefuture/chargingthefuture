@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayAdminAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { adminDeleteRequest, insertSocketRelayAudit } from 'lib/socketrelay/repository';
 
 type RouteProps = {
@@ -31,6 +32,7 @@ export async function DELETE(request: Request, { params }: RouteProps) {
     });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'admin_request_delete', extra: { userId: gate.auth.userId, id } });
     return socketRelayErrorResponse(error, 'Admin delete unavailable.');
   }
 }

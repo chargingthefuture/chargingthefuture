@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createMessage, insertPeerProgrammingAudit } from 'lib/peer-programming/repository';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
+import { reportError } from 'lib/observability/report';
 
 type ReplyBody = {
   cohortId?: string;
@@ -54,6 +55,13 @@ export async function POST(request: Request, context: { params: Promise<{ messag
 
     return NextResponse.json({ ok: true, reply }, { status: 201 });
   } catch (error) {
+    if ((error instanceof Error ? error.message : '') !== 'assignment_not_found') {
+      reportError(error, {
+        area: 'peer-programming',
+        op: 'create_reply',
+        extra: { userId: gate.auth.userId, messageId },
+      });
+    }
     return peerProgrammingErrorResponse(error, 'Reply creation unavailable.');
   }
 }

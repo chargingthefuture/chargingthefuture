@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { archiveAnnouncement } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ announcementId: string }>;
@@ -39,6 +40,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const message = error instanceof Error ? error.message : 'error';
     const status = message === 'announcement_not_found' ? 404 : 503;
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
+
+    if (message !== 'announcement_not_found') {
+      reportError(error, { area: 'feed', op: 'archive_announcement', extra: { userId: gate.auth.userId, announcementId } });
+    }
 
     return NextResponse.json(
       { ok: false, code, message: 'Unable to archive announcement.' },

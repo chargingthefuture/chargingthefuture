@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
+import { reportError } from 'lib/observability/report';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { listFulfillmentMessages, sendFulfillmentMessage, validateMessageInput } from 'lib/socketrelay/repository';
 
@@ -19,6 +20,7 @@ export async function GET(_: Request, { params }: RouteProps) {
     const items = await listFulfillmentMessages(id, gate.auth.userId, gate.auth.isAdmin);
     return NextResponse.json({ ok: true, items }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'fulfillment_messages_list', extra: { userId: gate.auth.userId, fulfillmentId: id } });
     return socketRelayErrorResponse(error, 'Fulfillment messages unavailable.');
   }
 }
@@ -62,6 +64,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     const item = await sendFulfillmentMessage(id, gate.auth.userId, gate.auth.isAdmin, messageText, clientMessageId);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'fulfillment_message_send', extra: { userId: gate.auth.userId, fulfillmentId: id } });
     return socketRelayErrorResponse(error, 'Message send unavailable.');
   }
 }

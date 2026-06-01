@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
+import { reportError } from 'lib/observability/report';
 import {
   createLighthouseAdminAnnouncement,
   insertLighthouseAudit,
@@ -31,7 +32,8 @@ export async function GET() {
   try {
     const items = await listLighthouseAdminAnnouncements();
     return NextResponse.json({ ok: true, items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcement_list', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement listing unavailable.' },
       { status: 503 },
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcement_create', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement create unavailable.' },
       { status: 503 },

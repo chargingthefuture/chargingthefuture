@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSkillsHuntReadAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { listAllTimeLeaderboard, listLeaderboard } from 'lib/skills-hunt/repository';
 import type { SkillsHuntLeaderboardMode } from 'lib/skills-hunt/types';
 
@@ -36,7 +37,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ roun
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'get_leaderboard', extra: { userId: gate.auth.userId, roundId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load leaderboard.' },
       { status: 503 },

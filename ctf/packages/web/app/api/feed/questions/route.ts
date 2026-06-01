@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { createFeedQuestion, validateFeedQuestionInput } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 import type { FeedQuestionInput } from 'lib/feed/types';
 
 type QuestionBody = Partial<FeedQuestionInput>;
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       );
     }
 
+    reportError(error, { area: 'feed', op: 'submit_question', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to submit question.' },
       { status: 503 },

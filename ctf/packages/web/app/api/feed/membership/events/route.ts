@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { emitMembershipEvent } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 import type { MembershipEventType } from 'lib/feed/types';
 
 type MembershipBody = {
@@ -64,7 +65,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, streamEmitted: result.streamEmitted }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'emit_membership_event', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to emit membership event.' },
       { status: 503 },

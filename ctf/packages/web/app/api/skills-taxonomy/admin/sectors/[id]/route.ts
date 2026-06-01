@@ -9,6 +9,7 @@ import {
   validateSectorUpdateInput,
 } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
+import { reportError } from 'lib/observability/report';
 
 type SectorUpdateBody = {
   name?: unknown;
@@ -39,7 +40,13 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     }
 
     return NextResponse.json(sector, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'get_sector',
+      extra: { userId: gate.auth.userId, id },
+    });
+
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to read sector.' },
       { status: 503 },
@@ -106,7 +113,13 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     });
 
     return NextResponse.json({ ok: true, sector }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'update_sector',
+      extra: { userId: gate.auth.userId, id },
+    });
+
     logSkillsTaxonomyAudit({
       pluginId: 'skills-taxonomy',
       command: 'skills-taxonomy.sector.update',
@@ -199,6 +212,12 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
         { status: 409 },
       );
     }
+
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'delete_sector',
+      extra: { userId: gate.auth.userId, id },
+    });
 
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete sector.' },

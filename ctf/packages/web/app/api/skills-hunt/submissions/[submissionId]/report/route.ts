@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { createReport, validateCreateReportInput, type CreateReportInput } from 'lib/skills-hunt/moderation';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const gate = await requireSkillsHuntReadAccess();
@@ -47,7 +48,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       createReport(client, gate.auth.userId, gate.auth.username, input),
     );
     return NextResponse.json({ ok: true, report }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'create_report', extra: { userId: gate.auth.userId, submissionId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to file report.' },
       { status: 503 },

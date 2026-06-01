@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { insertSkillsHuntAudit, reviewSubmission, validateReviewInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 
@@ -76,6 +77,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
     const isNotFound = message === 'skills_hunt_submission_not_found';
+
+    if (!isNotFound) {
+      reportError(error, { area: 'skills-hunt', op: 'review_submission', extra: { userId: gate.auth.userId, submissionId } });
+    }
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,

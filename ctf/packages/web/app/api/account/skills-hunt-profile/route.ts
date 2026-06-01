@@ -7,6 +7,7 @@ import { rebuildLeaderboard } from 'lib/skills-hunt/repository';
 import { recomputeMissionProgressForUser } from 'lib/skills-hunt/missions';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 // GDPR soft-delete entry point for Skills Hunt.
 //
@@ -51,7 +52,8 @@ export async function DELETE(request: Request) {
     });
 
     return NextResponse.json({ ok: true, deleted: result.deleted }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'account', op: 'delete_skills_hunt_profile', extra: { userId: decision.userId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete profile.' },
       { status: 503 },

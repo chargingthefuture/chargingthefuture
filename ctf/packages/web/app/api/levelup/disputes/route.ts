@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertLevelupAudit, openDispute } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 const disputeSchema = z.object({
   enrollmentId: z.string().uuid(),
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, disputeId: dispute.disputeId }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'post_open_dispute', extra: { userId: gate.auth.userId, enrollmentId: parsed.data.enrollmentId } });
     return levelupErrorResponse(error, 'Open dispute unavailable.');
   }
 }

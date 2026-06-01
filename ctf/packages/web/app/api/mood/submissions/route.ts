@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createMoodSubmission } from 'lib/mood/repository';
 import { ensureMutationCsrf, moodErrorResponse, requireMoodAccess } from 'lib/mood/_lib';
+import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = {
   clientId?: string;
@@ -40,6 +41,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
   } catch (error) {
+    if (!(error instanceof Error && error.message === 'eligibility_not_found')) {
+      reportError(error, { area: 'mood', op: 'post_submission', extra: { userId: gate.auth.userId, clientId: body.clientId } });
+    }
     return moodErrorResponse(error, 'Mood submission unavailable.');
   }
 }

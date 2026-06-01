@@ -3,6 +3,7 @@ import { requireTaxonomyReadAccess } from '../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { getFlattened } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
+import { reportError } from 'lib/observability/report';
 
 function parseBooleanParam(url: string, name: string): boolean {
   return new URL(url).searchParams.get(name) === 'true';
@@ -41,7 +42,13 @@ export async function GET(request: Request) {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, {
+      area: 'skills-taxonomy',
+      op: 'get_flattened',
+      extra: { userId: gate.auth.userId },
+    });
+
     logSkillsTaxonomyAudit({
       pluginId: 'skills-taxonomy',
       command: 'skills-taxonomy.flattened.get',

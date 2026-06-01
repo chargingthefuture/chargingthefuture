@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedAdminAccess } from '../../_lib';
 import { FEED_ALLOWED_CHANNELS, FEED_ERROR_CODE } from 'lib/feed/constants';
 import { getFeedConfig, updateFeedConfig, validateFeedConfigInput } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
+import { reportError } from 'lib/observability/report';
 import type { FeedConfigInput } from 'lib/feed/types';
 
 type ConfigBody = Partial<FeedConfigInput>;
@@ -29,7 +30,8 @@ export async function GET() {
   try {
     const config = await getFeedConfig();
     return NextResponse.json({ config }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'get_admin_feed_config', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch feed config.' },
       { status: 503 },
@@ -84,7 +86,8 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({ ok: true, config }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'update_feed_config', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to update feed config.' },
       { status: 503 },

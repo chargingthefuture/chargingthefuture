@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateProperty, validatePropertyInput } from 'lib/lighthouse/repository';
+import { reportError } from 'lib/observability/report';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
 
 type RouteParams = {
@@ -85,6 +86,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
+    reportError(error, { area: 'lighthouse', op: 'admin_property_update', extra: { userId: gate.auth.userId, propertyId } });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin property update unavailable.' },
       { status: 503 },

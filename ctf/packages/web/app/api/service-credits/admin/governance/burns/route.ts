@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 import { burnCredits, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 
 type BurnBody = {
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, burn }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'post_governance_burn', extra: { userId: gate.auth.userId, targetUserId: body.targetUserId } });
     return serviceCreditsErrorResponse(error, 'Governance burn unavailable.');
   }
 }

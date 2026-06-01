@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { applyDisputeAdjustment, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 
 type DisputeAdjustmentBody = {
   disputeCaseId?: string;
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, adjustment }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'post_dispute_adjustment', extra: { userId: gate.auth.userId, disputeCaseId: body.disputeCaseId } });
     return serviceCreditsErrorResponse(error, 'Dispute adjustment unavailable.');
   }
 }

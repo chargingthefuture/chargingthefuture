@@ -2,11 +2,32 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { createBlock, insertLighthouseAudit, listBlocks } from 'lib/lighthouse/repository';
+import { reportError } from 'lib/observability/report';
 
 type CreateBlockBody = {
   blockedUserId?: string;
   reason?: string;
 };
+
+// Error messages the repository throws to signal an expected client error (4xx/409),
+// handled by lighthouseErrorResponse. Anything else falls through to a 503 and is an
+// unexpected server failure worth reporting to Sentry.
+const LIGHTHOUSE_EXPECTED_ERROR_MESSAGES = new Set([
+  'profile_not_found',
+  'property_not_found',
+  'match_not_found',
+  'block_not_found',
+  'not_owner',
+  'policy_denied',
+  'blocked_pair',
+  'self_block',
+  'duplicate_match',
+  'invalid payload',
+]);
+
+function isUnexpectedLighthouseError(error: unknown): boolean {
+  return !(error instanceof Error && LIGHTHOUSE_EXPECTED_ERROR_MESSAGES.has(error.message));
+}
 
 function lighthouseErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
@@ -97,6 +118,9 @@ export async function GET() {
     const items = await listBlocks(gate.auth.userId);
     return NextResponse.json({ ok: true, items }, { status: 200 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'block_list', extra: { userId: gate.auth.userId } });
+    }
     return lighthouseErrorResponse(error, 'Block listing unavailable.');
   }
 }
@@ -144,6 +168,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, block }, { status: 201 });
   } catch (error) {
+    if (isUnexpectedLighthouseError(error)) {
+      reportError(error, { area: 'lighthouse', op: 'block_create', extra: { userId: gate.auth.userId, blockedUserId } });
+    }
     return lighthouseErrorResponse(error, 'Block create unavailable.');
   }
 }

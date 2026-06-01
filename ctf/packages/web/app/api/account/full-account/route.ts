@@ -3,6 +3,7 @@ import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
+import { reportError } from 'lib/observability/report';
 import { requireAccountAccess, ensureMutationCsrf } from '../_lib';
 
 export async function DELETE(request: Request) {
@@ -56,7 +57,8 @@ export async function DELETE(request: Request) {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'account', op: 'delete_full_account', extra: { userId } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',

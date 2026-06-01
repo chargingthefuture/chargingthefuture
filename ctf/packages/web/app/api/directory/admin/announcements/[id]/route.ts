@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deactivateAnnouncement, updateAnnouncement, validateAnnouncementInput } from 'lib/directory/repository';
+import { reportError } from 'lib/observability/report';
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -59,7 +60,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'update_announcement', extra: { userId: gate.auth.userId, announcementId: id } });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to update announcement.' },
       { status: 503 },
@@ -90,7 +92,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'deactivate_announcement', extra: { userId: gate.auth.userId, announcementId: id } });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to deactivate announcement.' },
       { status: 503 },

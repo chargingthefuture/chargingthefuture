@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 import { insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRoundInput } from 'lib/skills-hunt/types';
 
@@ -67,7 +68,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
     });
 
     return NextResponse.json({ ok: true, round }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'update_round', extra: { userId: gate.auth.userId, roundId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update round.' },
       { status: 503 },

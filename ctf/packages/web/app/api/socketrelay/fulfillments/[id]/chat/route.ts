@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reportError } from 'lib/observability/report';
 import { ensureSocketRelayFulfillmentChannel, createSocketRelayParticipantToken } from 'lib/socketrelay/stream';
 import { requireSocketRelayReadAccess } from 'lib/socketrelay/_lib';
 import { getFulfillmentById } from 'lib/socketrelay/repository';
@@ -42,6 +43,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
     return NextResponse.json({ ok: true, channelId, ...credentials });
   } catch (error: unknown) {
+    reportError(error, { area: 'socketrelay', op: 'fulfillment_chat_channel_create', extra: { userId, fulfillmentId: fulfillment.id } });
     const message = error instanceof Error ? error.message : 'Error creating chat channel';
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }

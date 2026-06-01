@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib'
 import { withDbTransaction } from 'lib/db/postgres';
 import { resolveReport, type ResolveReportInput } from 'lib/skills-hunt/moderation';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ reportId: string }> }) {
   const gate = await requireSkillsHuntAdminAccess();
@@ -61,7 +62,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
       );
     }
     return NextResponse.json({ ok: true, report }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'resolve_report', extra: { userId: gate.auth.userId, reportId } });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to resolve report.' },
       { status: 503 },

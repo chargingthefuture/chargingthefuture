@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireTrustTransportReadAccess, ensureMutationCsrf } from 'lib/trusttransport/_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
+import { reportError } from 'lib/observability/report';
 
 type TrustTransportServiceCreditsSendInput = {
   toUserId: string;
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'service_credits_transfer', extra: { userId: gate.auth.userId } });
     return NextResponse.json({ ok: false, code: TRUSTTRANSPORT_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
   }
 }

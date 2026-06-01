@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
+import { reportError } from 'lib/observability/report';
 import { createAnnouncement, insertWorkforceAdminAudit, listAnnouncements, validateAnnouncementInput } from 'lib/workforce/repository';
 import type { WorkforceAnnouncementInput } from 'lib/workforce/types';
 
@@ -24,7 +25,8 @@ export async function GET() {
   try {
     const announcements = await listAnnouncements(false);
     return NextResponse.json({ announcements }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_announcements_list', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch announcements.' },
       { status: 503 },
@@ -74,7 +76,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_announcement_create', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to create announcement.' },
       { status: 503 },
