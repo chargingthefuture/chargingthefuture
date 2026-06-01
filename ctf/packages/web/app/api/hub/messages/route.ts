@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import type { HubMessagesResponse, HubMessage } from 'lib/hub/types';
 import type { FeedTimelineItem } from 'lib/feed/types';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
@@ -62,7 +63,10 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json(response, { status: 200 });
-  } catch {
+  } catch (error) {
+    // Caught errors do not reach Sentry on their own (only unhandled ones do via
+    // the Next.js onRequestError hook), so report explicitly.
+    Sentry.captureException(error, { tags: { area: 'hub', op: 'read_messages' } });
     return NextResponse.json(
       {
         ok: false,
@@ -145,6 +149,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // Unexpected failure (e.g. a database error): report the real cause to Sentry so it
+    // is diagnosable in prod (caught errors do not reach Sentry on their own). The user
+    // still gets a generic message — the underlying error is not safe to leak to the client.
+    Sentry.captureException(error, { tags: { area: 'hub', op: 'send_message' } });
     return NextResponse.json(
       {
         ok: false,
