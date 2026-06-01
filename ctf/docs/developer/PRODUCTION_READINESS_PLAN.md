@@ -115,7 +115,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | trusttransport | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| gentlepulse | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
