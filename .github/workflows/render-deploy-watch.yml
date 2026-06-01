@@ -5,9 +5,13 @@ name: Render Deploy Watch
 # to a final result, so the deploy's success or failure shows up as a job you
 # can open from the GitHub Actions tab on a phone — without logging into Render.
 #
-# To watch another service: add a matrix entry below with its name and the name
-# of the repo secret holding its service id (pattern: RENDER_SERVICE_ID_<NAME>),
-# then add that secret under Settings -> Secrets and variables -> Actions.
+# To watch another service:
+#   1. add a matrix entry with its name (e.g. - name: ctf-worker);
+#   2. add a static env line below: RENDER_SERVICE_ID_CTF_WORKER: ${{ secrets.RENDER_SERVICE_ID_CTF_WORKER }};
+#   3. add a case branch mapping that name to that env var;
+#   4. add the RENDER_SERVICE_ID_CTF_WORKER repo secret.
+# Secrets are referenced statically on purpose — dynamic secrets[...] indexing
+# would expose the whole secrets context to the runner.
 
 on:
   push:
@@ -28,7 +32,6 @@ jobs:
       matrix:
         service:
           - name: ctf-web
-            secret: RENDER_SERVICE_ID_CTF_WEB
     # Only follow the most recent deploy per service; a newer commit drops the older watcher.
     concurrency:
       group: render-deploy-watch-${{ matrix.service.name }}
@@ -37,19 +40,25 @@ jobs:
       - name: Follow the Render deploy for this commit
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets[matrix.service.secret] }}
+          # One static line per watched service (pattern: RENDER_SERVICE_ID_<NAME>).
+          RENDER_SERVICE_ID_CTF_WEB: ${{ secrets.RENDER_SERVICE_ID_CTF_WEB }}
           SERVICE_NAME: ${{ matrix.service.name }}
-          SERVICE_SECRET: ${{ matrix.service.secret }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+
+          # Map this matrix service to its statically-provided id env var.
+          case "$SERVICE_NAME" in
+            ctf-web) RENDER_SERVICE_ID="${RENDER_SERVICE_ID_CTF_WEB:-}" ;;
+            *) echo "::error::Unknown service '${SERVICE_NAME}' — add its secret env mapping in the workflow."; exit 1 ;;
+          esac
 
           if [ -z "${RENDER_API_KEY:-}" ]; then
             echo "::error::Missing repo secret RENDER_API_KEY. Add it under Settings -> Secrets and variables -> Actions."
             exit 1
           fi
           if [ -z "${RENDER_SERVICE_ID:-}" ]; then
-            echo "::error::Missing repo secret ${SERVICE_SECRET} for service '${SERVICE_NAME}'. Add it under Settings -> Secrets and variables -> Actions."
+            echo "::error::Missing repo secret RENDER_SERVICE_ID_${SERVICE_NAME^^} (use the RENDER_SERVICE_ID_<NAME> pattern) for service '${SERVICE_NAME}'."
             exit 1
           fi
 
