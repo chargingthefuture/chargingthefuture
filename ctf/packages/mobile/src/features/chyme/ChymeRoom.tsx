@@ -18,8 +18,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  deleteChymeProfile,
-  deleteFullAccount,
   getChymeMobileIdentity,
   getChymeMessages,
   getChymeRoom,
@@ -113,28 +111,6 @@ export const ChymeRoom: React.FC = () => {
     }
   }, [chatInput, identity, sending]);
 
-  const handleDeleteProfile = useCallback(async () => {
-    if (!identity) return;
-    try {
-      await deleteChymeProfile(identity);
-      setRoom(null);
-      setMessages([]);
-      setViewState('empty');
-    } catch (err) {
-      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete profile.');
-    }
-  }, [identity]);
-
-  const handleDeleteAccount = useCallback(async () => {
-    if (!identity) return;
-    try {
-      const res = await deleteFullAccount(identity);
-      Alert.alert('Requested', `Account deletion ${res.status}`);
-    } catch (err) {
-      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete account.');
-    }
-  }, [identity]);
-
   if (viewState === 'loading') {
     return <ChymeLoading />;
   }
@@ -205,39 +181,6 @@ export const ChymeRoom: React.FC = () => {
         onJoinRoom={() => setViewState('inRoom')}
         onStartRoom={handleJoinRoom}
       />
-      {/* Deletion actions: rendered below the room list; not in main mockup but required by contract */}
-      <View style={styles.dangerZone}>
-        <TouchableOpacity
-          style={styles.dangerBtn}
-          onPress={() =>
-            Alert.alert(
-              'Delete Chyme Profile',
-              'This will remove your Chyme messages and participant record.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: handleDeleteProfile },
-              ],
-            )
-          }
-        >
-          <Text style={styles.dangerBtnText}>Delete Chyme Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.dangerBtn}
-          onPress={() =>
-            Alert.alert(
-              'Delete Full Account',
-              'This will request full account deletion.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Request', style: 'destructive', onPress: handleDeleteAccount },
-              ],
-            )
-          }
-        >
-          <Text style={styles.dangerBtnText}>Delete Full Account</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -271,20 +214,4 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   roomListContainer: { flex: 1, backgroundColor: '#021006' },
-  dangerZone: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#052e16',
-  },
-  dangerBtn: {
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.2)',
-    alignItems: 'center',
-  },
-  dangerBtnText: { color: '#F87171', fontSize: 13, fontWeight: '600' },
 });

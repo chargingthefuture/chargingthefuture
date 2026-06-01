@@ -11,15 +11,11 @@ export function ChymeSidebar({
   room,
   joinState,
   onJoin,
-  onServiceDelete,
-  onFullDelete,
 }: {
   loading: boolean;
   room: ChymeRoomResponse | null;
   joinState: JoinState;
   onJoin: () => void;
-  onServiceDelete: () => void;
-  onFullDelete: () => void;
 }) {
   const joinLabel = joinState === 'joining' ? 'Joining…' : joinState === 'ready' ? '✓ Joined' : 'Join Room';
 
@@ -59,21 +55,6 @@ export function ChymeSidebar({
       ) : (
         <div style={{ padding: '12px 16px', color: '#4B5563', fontSize: 13 }}>No active room</div>
       )}
-
-      <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <button
-          onClick={onServiceDelete}
-          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#fecaca', fontSize: 12, cursor: 'pointer' }}
-        >
-          Delete Chyme Data
-        </button>
-        <button
-          onClick={onFullDelete}
-          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(239,68,68,0.15)', color: '#fca5a5', fontSize: 12, cursor: 'pointer' }}
-        >
-          Delete Full Account
-        </button>
-      </div>
     </aside>
   );
 }

@@ -7,7 +7,6 @@ import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
 import type {
-  ChymeDeletionResponse,
   ChymeJoinResponse,
   ChymeMessage,
   ChymeRoomResponse,
@@ -21,7 +20,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   const [sending, setSending] = useState(false);
   const [joinState, setJoinState] = useState<'idle' | 'joining' | 'ready'>('idle');
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
-  const [deletionState, setDeletionState] = useState<ChymeDeletionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
@@ -97,32 +95,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
     }
   }
 
-  async function handleServiceDelete(): Promise<void> {
-    setError(null);
-    try {
-      const payload = await requestJson<ChymeDeletionResponse>('/api/account/chyme-profile', { method: 'DELETE' });
-      setDeletionState(payload);
-      setRoom((current) =>
-        current
-          ? { ...current, participants: current.participants.filter((p) => p.userId !== currentUser.userId) }
-          : current
-      );
-      setMessages((current) => current.filter((m) => m.userId !== currentUser.userId));
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete Chyme data.');
-    }
-  }
-
-  async function handleFullDelete(): Promise<void> {
-    setError(null);
-    try {
-      const payload = await requestJson<ChymeDeletionResponse>('/api/account/full-account', { method: 'DELETE' });
-      setDeletionState(payload);
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to request full account deletion.');
-    }
-  }
-
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: DARK_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: 'column' }}>
       <ChymeHeader
@@ -137,8 +109,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
           room={room}
           joinState={joinState}
           onJoin={() => void handleJoin()}
-          onServiceDelete={() => void handleServiceDelete()}
-          onFullDelete={() => void handleFullDelete()}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -168,7 +138,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
               onToggleChat={() => setShowChat((s) => !s)}
               joinInfo={joinInfo}
               joinReady={joinState === 'ready'}
-              deletionState={deletionState}
               messages={messages}
               draft={draft}
               onDraftChange={setDraft}
