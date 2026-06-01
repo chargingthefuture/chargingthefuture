@@ -67,8 +67,11 @@ validate_contract_file() {
     contract_schema_failed=true
   fi
 
-  if ! grep -Eq '^[[:space:]]*-?[[:space:]]*(contractVersion|version)[[:space:]]*:' "$file"; then
-    echo "Schema drift gate failed: missing 'version' in contract file: $file" >&2
+  # Accept the canonical per-file version key: command and access-policy
+  # contracts use `version` (templates 201/202); audit contracts use
+  # `commandVersion` (template 203). `contractVersion` is also tolerated.
+  if ! grep -Eq '^[[:space:]]*-?[[:space:]]*(contractVersion|commandVersion|version)[[:space:]]*:' "$file"; then
+    echo "Schema drift gate failed: missing 'version' (or 'commandVersion' for audit contracts) in contract file: $file" >&2
     contract_schema_failed=true
   fi
 
