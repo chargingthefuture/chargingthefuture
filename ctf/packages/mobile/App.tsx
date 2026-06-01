@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
+import { ComicReviewConsole } from './src/features/comic';
 import { HubHome } from './src/features/hub';
 import { DirectoryList } from './src/features/directory';
 import { Feed } from './src/features/feed';
@@ -42,7 +43,8 @@ type FeatureKey =
   | 'gdp'
   | 'service-credits'
   | 'levelup'
-  | 'unlock';
+  | 'unlock'
+  | 'comic-review';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -64,6 +66,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'service-credits', label: 'Service Credits' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
+  { key: 'comic-review', label: 'AI Review' },
 ];
 
 export default function App() {
@@ -114,6 +117,8 @@ export default function App() {
         return <Levelup />;
       case 'unlock':
         return <Unlock />;
+      case 'comic-review':
+        return <ComicReviewConsole />;
       default:
         return <ChymeRoom />;
     }

@@ -310,10 +310,29 @@ Target: `web+android` parity.
     `nlu_confidence`, now Rasa-populated on the user turn when `RASA_BASE_URL` is set, otherwise
     surfaced as "Not yet scored"). Wired to `GET /api/comic/review` and
     `POST /api/comic/review/[turnId]/resolve`.
-- **Android: deferred — parity ticket.** The mobile `@comic` surfaces (Mobile*/MobileAIConsent
-  designs) are not built in this pass; tracked for parity (`plugin-parity-contracts.json` entry +
-  the feature dir land together when the mobile feature is built). Blocked behind a running Rasa for
-  the auto-reply branch.
+- **Android: complete** (design `9a4a1af`). The mobile `@comic` surfaces are delivered in
+  `ctf/packages/mobile/src/features/comic/` and wired into the mobile feed stream
+  (`ctf/packages/mobile/src/features/feed/FeedStream.tsx`):
+  - AI Assistant answer cards (cyan, Sparkles, "AI Assistant" label, 🤖 AI Q&A badge, Q/A layout)
+    and the `ai_pending` "Reviewing for safety" card, interleaved with the feed timeline. Wired to
+    `GET /api/comic/conversation` (asker-scoped; never surfaces an unreviewed draft).
+  - The single-field `@comic` mention composer (no toggle) with the `@comic` chip + helper
+    "Type @comic to ask the AI Assistant" (`ComicComposer.tsx`). Wired to `POST /api/comic/message`;
+    the asker only ever sees a safe holding state (HTTP 202), never the draft.
+  - First-use consent bottom sheet (`ComicConsentSheet.tsx`, matches `MobileAIConsent`) gating the
+    `consentGranted` flag before any send.
+  - The helpful / not_helpful / flag rating row, wired to `POST /api/comic/answers/[turnId]/rate`.
+  - The Owner Review & Correction Console (`ComicReviewConsole.tsx`, matches `MobileAIReviewConsole`
+    / `MobileAIReviewConsoleEmpty`) at the "AI Review" tile in the mobile app shell; admin-gated
+    server-side (a non-admin sees an access notice). Queue chips + detail (question, AI draft,
+    provenance, real confidence) + Approve / Edit&approve / Reject, wired to `GET /api/comic/review`
+    and `POST /api/comic/review/[turnId]/resolve`. The mockup's fabricated "Sources" list and
+    hardcoded confidence buckets are intentionally not reproduced — only real provenance is shown,
+    matching the web console.
+  - All requests send the `x-ctf-csrf: 1` header (mirrors the web CSRF handling) and target
+    `/api/comic/*`. No third-party LLM egress.
+  - Interim safety policy honored end-to-end: every answer routes through human review before it
+    reaches the asker; there is no auto-publish path on mobile.
 - **Still deferred:** a real `rasa train nlu`/deploy validation + setting `RASA_BASE_URL` in prod;
   the Rasa custom action that calls Ollama for generation; the SQL tracker store; raising the
   auto-respond threshold / any confidence-based auto-publish; replacing the home-chat
@@ -336,10 +355,11 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 ## Gaps and Known Technical Debt
 
 1. Originally three disconnected precursors + a dropped `hub_bots` design. Now unified: `@comic`
-   routing, conversation store, and the human-in-the-loop review queue are implemented, and the
-   **web UI** (asker stream + owner review console) is delivered (2026-05-31, design `9a4a1af`).
-   Still outstanding: a running Rasa (interim policy forces human review on every draft) and the
-   Android parity surfaces.
+   routing, conversation store, and the human-in-the-loop review queue are implemented; the
+   **web UI** (asker stream + owner review console) is delivered (2026-05-31, design `9a4a1af`); and
+   the **Android UI** (asker cards + pending card + `@comic` composer + consent sheet + rating row +
+   owner review console) is delivered (2026-06-01, design `9a4a1af`). Still outstanding: a running
+   Rasa (interim policy forces human review on every draft).
 2. `exportQuestionsForRasa` has a duplicate nested loop that double-counts examples.
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
    inventory relative to code — reconcile there (coordinate with the feed-plugin agent).
@@ -392,11 +412,34 @@ The design pointer was bumped to `9a4a1af` (rule 128) and the web UI was built a
    `POST /api/comic/answers/[turnId]/rate`.
 
 Required states per rule 126, all covered for the AI surfaces: Unauthenticated, Auth+Loading,
-Auth+Empty, Auth+Populated. Mobile (`Mobile*`/`MobileAIConsent`) is the Android pass — not built
-here (web only).
+Auth+Empty, Auth+Populated. Mobile (`Mobile*`/`MobileAIConsent` + `MobileAIReviewConsole*`) is now
+delivered (2026-06-01) in `ctf/packages/mobile/src/features/comic/`. Divergence carried over from
+the web build: the review console mockup's fabricated "Sources" list and hardcoded confidence
+buckets are not reproduced — only real provenance (engine / intent / safety category / the real
+`nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
 
+- 2026-06-01: Delivered the **Android UI** for `@comic` on `feat/comic-mobile-android-parity`
+  against the LOCKED design `9a4a1af` (`Mobile*`/`MobileAIConsent`/`MobileAIReviewConsole*`). Added
+  `ctf/packages/mobile/src/features/comic/`: `api.ts` (client for `/api/comic/conversation`,
+  `/message`, `/answers/[turnId]/rate`, `/review`, `/review/[turnId]/resolve`, all with the
+  `x-ctf-csrf: 1` header; `mentionsComic` mirrors `COMIC_MENTION_REGEX`); `comic-cards.tsx`
+  (`ComicAnswerCard` cyan answer card with the helpful/not_helpful/flag rating row + `ComicPendingCard`
+  "Reviewing for safety"); `ComicComposer.tsx` (single-field `@comic` composer, no toggle, with the
+  `@comic` chip + helper and first-use consent gating); `ComicConsentSheet.tsx` (consent bottom
+  sheet); and `ComicReviewConsole.tsx` (owner review console — queue chips + detail with question /
+  AI draft / real provenance + Approve / Edit&approve / Reject; "All caught up" empty state;
+  admin-gated server-side with an access notice for non-admins). Interleaved the AI cards + composer
+  into the mobile feed stream (`features/feed/FeedStream.tsx`) and added the "AI Review" console tile
+  to the app shell (`App.tsx`). Reconciled the parity contract by adding `comic` to the existing
+  `feed-announcements` `mobileFeatureDirs` (the parity gate requires each contract slug to exist in
+  the plugin registry, and `@comic` surfaces inside the Hub/feed, not as its own navigable tile).
+  **Interim safety policy honored end-to-end on mobile: every answer routes through human review
+  before it reaches the asker; no auto-publish path.** Followed the web build's divergence: the
+  review-console mockup's fabricated "Sources" list and hardcoded confidence buckets are not
+  reproduced — only real provenance is shown. Mobile typecheck adds no new errors; mobile lint clean;
+  web/Android parity check passes. Parity: web+android complete.
 - 2026-05-31: Normalized the audit contract to the canonical audit shape (template 203): removed the
   redundant `version: 1.0.0` line that duplicated `commandVersion: 1.0.0` on each of the seven audit
   events. That duplicate had only been added to satisfy the schema-drift gate, which previously did
@@ -521,8 +564,15 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
     `comic.reply.generate`, `comic.review.resolve`, `comic.training.export`).
 - [x] Deterministic `seedComicPhase0.mjs`.
   - Done 2026-05-31: seeds a conversation, turns, a populated review queue, and training set.
-- [ ] Android parity for `@comic`.
-  - Blocked by: routing + turn capture. Acceptance: mention, reply, preset, rating work on
-    Android; `plugin-parity-contracts.json` updated.
+- [x] Android parity for `@comic`. Done 2026-06-01 against design `9a4a1af`.
+  - Added `ctf/packages/mobile/src/features/comic/` (api client + `comic-cards.tsx` answer/pending
+    cards + `ComicComposer.tsx` single-field `@comic` composer + `ComicConsentSheet.tsx` first-use
+    consent + `ComicReviewConsole.tsx` owner console) and interleaved the AI cards + composer into
+    the mobile feed stream (`features/feed/FeedStream.tsx`). Wired to `/api/comic/*`
+    (conversation/message/rate/review/resolve) with `x-ctf-csrf: 1`. Reconciled the parity contract:
+    added `comic` to the existing `feed-announcements` `mobileFeatureDirs` (the parity gate requires
+    each contract slug to exist in the registry, and `@comic` surfaces inside the Hub/feed rather
+    than as its own navigable app tile). Mention, holding/pending state, consent, and rating all work
+    on Android; every answer still routes through human review (no auto-publish).
 - [ ] Reconcile feed-inventory overstatements + Hub `@comic` persona section.
   - No hard dependency; coordinate with the feed-plugin agent to avoid a merge conflict.
