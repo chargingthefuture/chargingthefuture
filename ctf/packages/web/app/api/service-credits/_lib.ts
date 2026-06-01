@@ -83,6 +83,7 @@ export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: str
   }
 
   if (error instanceof Error && error.message === 'external_ledger_not_configured') {
+    reportError(error, { area: 'service-credits', op: 'unknown' });
     return NextResponse.json(
       { ok: false, code: 'service_credits_external_ledger_not_configured', message: 'Formance ledger is not configured for Service Credits.' },
       { status: 503 },
@@ -90,11 +91,13 @@ export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: str
   }
 
   if (error instanceof Error && error.message === 'external_ledger_unavailable') {
+    reportError(error, { area: 'service-credits', op: 'unknown' });
     return NextResponse.json(
       { ok: false, code: 'service_credits_external_ledger_unavailable', message: 'Formance ledger rejected or failed the command.' },
       { status: 503 },
     );
   }
 
+  reportError(error, { area: 'service-credits', op: 'unknown' });
   return NextResponse.json({ ok: false, code: 'service_credits_unavailable', message: fallbackMessage }, { status: 503 });
 }

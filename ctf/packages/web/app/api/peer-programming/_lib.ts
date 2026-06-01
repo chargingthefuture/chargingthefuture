@@ -3,6 +3,7 @@ import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz'
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { PEER_PROGRAMMING_ERROR_CODE } from 'lib/peer-programming/constants';
 import { ensurePeerProgrammingAdmin } from 'lib/peer-programming/policy';
+import { reportError } from 'lib/observability/report';
 
 export type PeerProgrammingApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -90,6 +91,7 @@ export function peerProgrammingErrorResponse(error: unknown, fallbackMessage: st
     );
   }
 
+  reportError(error, { area: 'peer-programming', op: 'unknown' });
   return NextResponse.json(
     { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.persistenceUnavailable, message: fallbackMessage },
     { status: 503 },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { MOOD_ERROR_CODE } from 'lib/mood/constants';
+import { reportError } from 'lib/observability/report';
 
 export async function requireMoodAccess() {
   const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
@@ -58,5 +59,6 @@ export function moodErrorResponse(error: unknown, fallbackMessage: string): Next
     return NextResponse.json({ ok: false, code: MOOD_ERROR_CODE.cooldownActive, message: 'Mood submission cooldown is active.' }, { status: 409 });
   }
 
+  reportError(error, { area: 'mood', op: 'unknown' });
   return NextResponse.json({ ok: false, code: MOOD_ERROR_CODE.persistenceUnavailable, message: fallbackMessage }, { status: 503 });
 }
