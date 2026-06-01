@@ -27,7 +27,7 @@ type Tab = 'browse' | 'quotes';
  * Foundation main screen — mirrors MobileFoundation.tsx mockup.
  * Binds real backend data: providers from /api/foundation/providers/search,
  * quote history from /api/foundation/quotes/history.
- * MockFoundation is retired; this is the sole exported screen.
+ * This is the sole exported screen (the earlier placeholder mock was removed).
  *
  * Omitted (no backing field): trade filter chips, star ratings, price/rate,
  * job count, availability dot, credits badge, platform stats. All are
