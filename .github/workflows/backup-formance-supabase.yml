@@ -34,6 +34,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install PostgreSQL client 17
+        # The runner's bundled pg_dump may be missing or older than the
+        # Formance/Neon server (Postgres 16/17). pg_dump refuses to dump a
+        # server newer than itself, which fails the job in seconds. Install the
+        # client matching the newest server from the official PostgreSQL apt
+        # repository and put it first on PATH. A newer client dumps older
+        # servers fine.
+        run: |
+          set -e
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
       - name: Run Formance backup script
         id: backup
         run: |
