@@ -73,7 +73,10 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
-  } catch {
+  } catch (error) {
+    // Surface the real cause in server logs (a swallowed error here made the 503
+    // undiagnosable). The client message stays generic so DB internals never leak.
+    console.error('[unlock] submission failed', error);
     return unlockErrorResponse('Unlock submission unavailable.', 503);
   }
 }
