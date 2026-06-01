@@ -171,6 +171,27 @@ Use when Android parity is deferred; link to the tracking issue.
 
 All `.ts`, `.tsx`, `.js`, `.json`, `.yml`, `.yaml`, `.css` files must end with exactly one newline and no trailing blank lines. Validated by `ctf/scripts/check-eof-format.sh` on every PR.
 
+### Known: a freshly-opened PR fails "Semantic PR Title" and "PR Parity Status" — just fix it, don't re-diagnose
+
+PRs in this repo are usually opened from the Claude Code web UI, which auto-generates the title and
+description. That generated text does **not** follow the two conventions above, so the **Semantic PR
+Title** (`pr-title-semantic.yml`) and **PR Parity Status** (`pr-parity-status` in `ci.yml`) checks go
+red within seconds of the PR opening. **This is expected and well understood — do not spend tokens
+investigating why these two checks fail on a brand-new PR.** Fix the metadata directly:
+
+1. **Title** — edit it to a Conventional Commit (`feat:` / `fix:` / `chore:` / `refactor:` / `docs:` /
+   `ci:` / `perf:` / `test:` / `build:` / `style:` / `revert:`). Editing the title re-runs the
+   Semantic PR Title check automatically.
+2. **Description** — add a line that is *exactly* `Parity Status: web+android complete` (backend/infra,
+   or both web and Android shipped in this PR) **or** `Parity Ticket: #<issue>` (Android deferred).
+3. **Re-trigger parity** — the PR Parity Status check does **not** re-run on a description edit. Push
+   one empty commit to the PR branch to re-evaluate it:
+   `git commit --allow-empty -m "chore: re-trigger CI" && git push`.
+
+After that both go green. The whole fix costs about one title edit, one description edit, and one
+empty commit. If you can set the PR body at creation time, put the Conventional-Commit title and the
+`Parity Status:` line in up front so both pass on the first run and no empty commit is needed.
+
 ### CodeRabbit Review Labeling (self-triage)
 
 CodeRabbit auto-review is gated on the `coderabbit` label (see `.coderabbit.yaml`), and the
