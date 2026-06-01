@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Share2 } from "lucide-react";
+import { ChevronLeft, Share2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
   BG,
+  CATEGORIES,
   COLOR,
   SUBTLE,
   TEXT,
@@ -69,6 +72,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   const [chatCredentials, setChatCredentials] = useState<SrChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -176,6 +180,78 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
     return true;
   });
 
+  const content = (
+    <>
+      {tab === "feed" && (
+        <SocketRelayFeed
+          requests={visible}
+          currentUserId={userId}
+          submitting={submitting}
+          onClaim={(id) => void handleClaim(id)}
+          onPost={() => setTab("post")}
+        />
+      )}
+      {tab === "post" && (
+        <SocketRelayPost
+          draft={draft}
+          onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          submitting={submitting}
+          error={postError}
+          success={postSuccess}
+          onSubmit={() => void handlePost()}
+        />
+      )}
+      {tab === "chat" && (
+        <SocketRelayChat
+          fulfillments={fulfillments}
+          selected={selectedFulfillment}
+          onSelect={(f) => void openFulfillmentChat(f)}
+          chatLoading={chatLoading}
+          chatError={chatError}
+          chatCredentials={chatCredentials}
+        />
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    const tabs: { key: Tab; label: string }[] = [
+      { key: "feed", label: "Feed" },
+      { key: "post", label: "Post" },
+      { key: "chat", label: "Chat" },
+    ];
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <Share2 size={18} style={{ color: COLOR, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT, flex: 1 }}>SocketRelay</span>
+            <Badge style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{openCount} open</Badge>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+            {tabs.map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+          {tab === "feed" && (
+            <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search requests…" style={{ width: "100%", padding: "8px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 13, color: "#9CA3AF", outline: "none", boxSizing: "border-box" }} />
+              <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+                {CATEGORIES.map((c) => (
+                  <button key={c} onClick={() => setCategory(c)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: category === c ? `${COLOR}14` : "transparent", border: `1px solid ${category === c ? COLOR + "50" : "rgba(255,255,255,0.1)"}`, color: category === c ? COLOR : "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{c}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: "flex" }}>
       <SocketRelayIconRail tab={tab} onTab={setTab} />
@@ -201,35 +277,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
           </Badge>
         </header>
 
-        {tab === "feed" && (
-          <SocketRelayFeed
-            requests={visible}
-            currentUserId={userId}
-            submitting={submitting}
-            onClaim={(id) => void handleClaim(id)}
-            onPost={() => setTab("post")}
-          />
-        )}
-        {tab === "post" && (
-          <SocketRelayPost
-            draft={draft}
-            onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-            submitting={submitting}
-            error={postError}
-            success={postSuccess}
-            onSubmit={() => void handlePost()}
-          />
-        )}
-        {tab === "chat" && (
-          <SocketRelayChat
-            fulfillments={fulfillments}
-            selected={selectedFulfillment}
-            onSelect={(f) => void openFulfillmentChat(f)}
-            chatLoading={chatLoading}
-            chatError={chatError}
-            chatCredentials={chatCredentials}
-          />
-        )}
+        {content}
       </div>
 
       <SocketRelayRightPanel
