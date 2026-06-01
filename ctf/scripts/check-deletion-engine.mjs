@@ -9,11 +9,13 @@
 //                      WHERE <userColumn> = $1 AND <softDeleteColumn> IS NULL
 //   - retain       → (no statement)
 //
-// This script reads the registry source (the same single-quoted del()/soft()/retain() builder
-// calls that `check-deletion-registry.mjs` parses), reconstructs what the engine must produce for
-// each entry, and asserts a set of invariants. It is plain Node (no TypeScript import) so it runs on
-// any Node version, including the Node 20 CI runners. It fails closed: an unrecognized registry
-// shape stops the check rather than passing silently.
+// To actually test the engine (not a re-implementation of it), this script extracts the two SQL
+// template literals straight from `deletion-engine.ts` source and renders them for every registry
+// entry. So if someone changes the engine's SQL — drops the `$1` binding, removes the soft-delete
+// `IS NULL` idempotency guard, inlines a value — the rendered output changes here and the invariant
+// assertions below fail. It is plain Node (no TypeScript import, which is unreliable across Node
+// versions) so it runs on the Node 20 CI runners, and it fails closed: an unrecognized registry or
+// engine shape stops the check rather than passing silently.
 
 import fs from 'fs';
 import path from 'path';
@@ -22,6 +24,7 @@ import { fileURLToPath } from 'url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const registryPath = path.join(root, 'packages', 'web', 'lib', 'account', 'deletion-registry.ts');
+const enginePath = path.join(root, 'packages', 'web', 'lib', 'account', 'deletion-engine.ts');
 
 let failures = 0;
 function fail(message) {
@@ -43,7 +46,6 @@ function parseOwnedTables(src) {
     );
   }
 
-  // Walk every builder call in order so ordering invariants can be checked.
   const callRe = /\b(del|soft|retain)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?(?:\s*,\s*'([^']+)')?/g;
   const owned = [];
   let m;
@@ -60,28 +62,52 @@ function parseOwnedTables(src) {
   return owned;
 }
 
-// Reconstruct the SQL the engine must generate for one owned table (null for retain).
-function expectedSql(owned) {
-  if (owned.action === 'retain') return null;
-  if (owned.action === 'delete') {
-    return `DELETE FROM ${owned.table} WHERE ${owned.userColumn} = $1`;
+// Pull the two SQL template literals out of the engine source so this check renders the engine's
+// real SQL, not a copy. We look for the exact template-literal forms the engine uses and convert
+// the `${owned.X}` interpolations into a tiny render function. If the engine's SQL shape changes in
+// a way these patterns no longer match, the check fails closed (the engine must be re-read).
+function extractEngineTemplates(engineSrc) {
+  // delete: `DELETE FROM ${owned.table} WHERE ${owned.userColumn} = $1`
+  const deleteRe = /`(DELETE FROM \$\{owned\.table\} WHERE \$\{owned\.userColumn\} = \$1)`/;
+  // soft-delete is built by concatenating two template chunks; capture both and join them.
+  const softRe =
+    /`(UPDATE \$\{owned\.table\} SET \$\{owned\.softDeleteColumn\} = NOW\(\) )` \+\s*`(WHERE \$\{owned\.userColumn\} = \$1 AND \$\{owned\.softDeleteColumn\} IS NULL)`/;
+
+  const del = engineSrc.match(deleteRe);
+  const soft = engineSrc.match(softRe);
+  if (!del) {
+    throw new Error('could not find the engine DELETE template; the engine SQL shape changed — re-read deletion-engine.ts.');
   }
-  return (
-    `UPDATE ${owned.table} SET ${owned.softDeleteColumn} = NOW() ` +
-    `WHERE ${owned.userColumn} = $1 AND ${owned.softDeleteColumn} IS NULL`
-  );
+  if (!soft) {
+    throw new Error('could not find the engine soft-delete UPDATE template; the engine SQL shape changed — re-read deletion-engine.ts.');
+  }
+
+  const render = (tpl, owned) =>
+    tpl
+      .replaceAll('${owned.table}', owned.table)
+      .replaceAll('${owned.userColumn}', owned.userColumn ?? '')
+      .replaceAll('${owned.softDeleteColumn}', owned.softDeleteColumn ?? '');
+
+  return {
+    deleteSql: (owned) => render(del[1], owned),
+    softSql: (owned) => render(soft[1] + soft[2], owned),
+  };
 }
 
 function main() {
-  if (!fs.existsSync(registryPath)) {
-    fail(`registry not found at ${registryPath}`);
-    process.exitCode = 1;
-    return;
+  for (const [label, p] of [['registry', registryPath], ['engine', enginePath]]) {
+    if (!fs.existsSync(p)) {
+      fail(`${label} not found at ${p}`);
+      process.exitCode = 1;
+      return;
+    }
   }
 
   let owned;
+  let templates;
   try {
     owned = parseOwnedTables(fs.readFileSync(registryPath, 'utf8'));
+    templates = extractEngineTemplates(fs.readFileSync(enginePath, 'utf8'));
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -96,13 +122,11 @@ function main() {
 
   let statements = 0;
   for (const entry of owned) {
-    const sql = expectedSql(entry);
-
     if (entry.action === 'retain') {
-      if (sql !== null) fail(`retain table "${entry.table}" should produce no SQL.`);
       continue;
     }
 
+    const sql = entry.action === 'delete' ? templates.deleteSql(entry) : templates.softSql(entry);
     statements += 1;
 
     // Every non-retain statement must bind exactly the user id as $1 and no other parameter.
@@ -137,7 +161,7 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  console.log(`Deletion engine check passed: ${statements} generated statement(s) validated.`);
+  console.log(`Deletion engine check passed: ${statements} engine-rendered statement(s) validated.`);
 }
 
 main();

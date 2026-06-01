@@ -5,6 +5,7 @@ import { getDeletionEntry } from 'lib/account/deletion-registry';
 import {
   deleteServiceScopeData,
   ServiceScopeNotSupportedError,
+  UnknownServiceError,
 } from 'lib/account/deletion-orchestrator';
 
 // Generic per-plugin "delete my data for this service" endpoint.
@@ -55,12 +56,20 @@ export async function DELETE(request: Request, context: { params: Promise<{ slug
         service: result.serviceName,
         status: 'completed',
         requestedAtIso: result.requestedAtIso,
+        completedAtIso: result.completedAtIso,
         tablesAffected: result.tables.length,
       },
       { status: 200 },
     );
   } catch (error) {
-    // The orchestrator already rejects unsupported plugins, but guard here too for safety.
+    // The route pre-checks already reject unknown/unsupported slugs, but the orchestrator throws
+    // these too, so map them defensively to the same statuses.
+    if (error instanceof UnknownServiceError) {
+      return NextResponse.json(
+        { ok: false, code: ACCOUNT_ERROR_CODE.unknownService, message: `Unknown service "${slug}".` },
+        { status: 404 },
+      );
+    }
     if (error instanceof ServiceScopeNotSupportedError) {
       return NextResponse.json(
         {
