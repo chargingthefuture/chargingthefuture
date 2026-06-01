@@ -52,9 +52,29 @@ The auth layer is provider-neutral (`lib/auth/provider-env.ts`); keys are not
 Clerk-name-specific:
 - `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
 - `AUTH_SECRET_KEY`
-- `NEXT_PUBLIC_AUTH_SIGN_IN_URL`
+- `NEXT_PUBLIC_AUTH_SIGN_IN_URL` — **Clerk's hosted Account Portal sign-in URL**
+  (e.g. `https://accounts.<domain>/sign-in`), NOT `/sign-in` on the app's own
+  domain. See "Hosted sign-in" below.
 - `NEXT_PUBLIC_AUTH_PROVIDER` (the single provider-name variable; defaults to `clerk` if unset)
 - `CLERK_ENCRYPTION_KEY`
+
+### Hosted sign-in (Clerk Account Portal)
+
+Sign-in and sign-up run on **Clerk's own domains** (the hosted Account Portal —
+`https://accounts.<domain>` in production, `https://<slug>.accounts.dev` for a
+dev instance), not on a page rendered on the app's domain. The app redirects to
+the portal and Clerk redirects back when the flow completes.
+
+- `NEXT_PUBLIC_AUTH_SIGN_IN_URL` must therefore be the Account Portal URL. The
+  in-app `/sign-in` route is only a catch-all that forwards to that URL, so
+  pointing it back at the app's own host (`/sign-in` or
+  `https://<app-domain>/sign-in`) makes it redirect to itself forever
+  (`ERR_TOO_MANY_REDIRECTS`).
+- If the value is missing, relative, or same-host, the app self-corrects by
+  deriving the Account Portal from `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
+  (`deriveAccountPortalOrigin` in `lib/auth/provider-env.ts`), and
+  `scripts/check-auth-env.mjs` prints a warning. Set the variable explicitly so
+  configuration matches behavior.
 
 ### Clerk Configuration Constraints
 - Do not share a Clerk instance across domains.

@@ -41,13 +41,39 @@ requireAny('AUTH_SECRET_KEY or CLERK_SECRET_KEY', ['AUTH_SECRET_KEY', 'CLERK_SEC
 
 const signInUrl = getEnvValue('NEXT_PUBLIC_AUTH_SIGN_IN_URL', 'NEXT_PUBLIC_CLERK_SIGN_IN_URL');
 if (signInUrl) {
+  // A relative `/sign-in` value, or an absolute URL on the app's own host, is
+  // loop-prone: the in-app `/sign-in` page only forwards to the sign-in URL, so
+  // pointing it back at itself produces ERR_TOO_MANY_REDIRECTS. Sign-in must be
+  // hosted on Clerk's Account Portal (a different host, e.g.
+  // https://accounts.<domain>/sign-in). The app self-corrects by deriving the
+  // Account Portal from the publishable key, so this is a warning rather than a
+  // hard failure — but the value should be fixed so config matches behavior.
   const parsedApp = parseUrl(appUrl, 'NEXT_PUBLIC_APP_URL');
-  const parsedSignIn = parseUrl(signInUrl, 'NEXT_PUBLIC_AUTH_SIGN_IN_URL or NEXT_PUBLIC_CLERK_SIGN_IN_URL');
-  if (parsedApp && parsedSignIn && parsedSignIn.protocol !== parsedApp.protocol) {
-    console.error(
-      `Sign-in URL protocol mismatch. signIn=${parsedSignIn.protocol} app=${parsedApp.protocol}.`,
+
+  if (signInUrl.startsWith('/')) {
+    console.warn(
+      `Warning: NEXT_PUBLIC_AUTH_SIGN_IN_URL is a relative path ("${signInUrl}"). ` +
+        "Set it to Clerk's hosted Account Portal URL, e.g. https://accounts.<your-domain>/sign-in. " +
+        "The app will fall back to the Account Portal derived from the publishable key.",
     );
-    failed = true;
+  } else {
+    const parsedSignIn = parseUrl(
+      signInUrl,
+      'NEXT_PUBLIC_AUTH_SIGN_IN_URL or NEXT_PUBLIC_CLERK_SIGN_IN_URL',
+    );
+    if (parsedApp && parsedSignIn && parsedSignIn.protocol !== parsedApp.protocol) {
+      console.error(
+        `Sign-in URL protocol mismatch. signIn=${parsedSignIn.protocol} app=${parsedApp.protocol}.`,
+      );
+      failed = true;
+    }
+    if (parsedApp && parsedSignIn && parsedSignIn.hostname === parsedApp.hostname) {
+      console.warn(
+        `Warning: NEXT_PUBLIC_AUTH_SIGN_IN_URL ("${signInUrl}") is on the same host as ` +
+          `NEXT_PUBLIC_APP_URL ("${appUrl}"). Sign-in should be hosted on Clerk's Account Portal ` +
+          '(e.g. https://accounts.<your-domain>/sign-in) to avoid a redirect loop.',
+      );
+    }
   }
 }
 

@@ -8,7 +8,7 @@ import {
   useEffect,
 } from 'react';
 import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
-import { getClerkSignInUrl } from './clerk-env';
+import { getHostedSignInUrl } from './clerk-env';
 
 /**
  * Provider-agnostic authentication context and types.
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [clerkUser, isClerkLoaded]);
 
   const handleSignIn = async () => {
-    const signInUrl = getClerkSignInUrl();
+    const signInUrl = getHostedSignInUrl();
     if (signInUrl) {
       window.location.href = signInUrl;
     }

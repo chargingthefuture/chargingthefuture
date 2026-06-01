@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
-import { getClerkSignInUrl } from 'lib/auth/clerk-env';
+import { getHostedSignInUrl } from 'lib/auth/clerk-env';
 
-// Sign-in is handled by the hosted account flow outside this app surface.
-// This page remains as a catch-all for legacy links or misconfigured redirects.
+// Sign-in is handled by Clerk's hosted Account Portal (accounts.<domain>), not
+// by a sign-in page rendered on this app's own domain. This catch-all only
+// exists to forward any legacy or in-app `/sign-in` link over to that hosted
+// portal. `getHostedSignInUrl()` only ever returns an Account Portal URL (a
+// different host) or `undefined`, so this can never redirect back to `/sign-in`
+// on this host — which is what previously caused an endless redirect loop
+// (ERR_TOO_MANY_REDIRECTS).
 export default function SignInPage() {
-  const signInUrl = getClerkSignInUrl();
-  if (signInUrl) {
-    redirect(signInUrl);
-  }
-
-  redirect('/');
+  redirect(getHostedSignInUrl() ?? '/');
 }
