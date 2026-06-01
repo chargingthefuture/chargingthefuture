@@ -535,12 +535,19 @@ async function seedFoundation(c) {
     [ADMIN],
   );
 
-  // Connection thread between owner and peer
+  // Connection thread between owner and peer.
+  // The id is a fixed demo UUID, but thread_key is derived from the owner. When
+  // the seed is re-run with a different DEMO_OWNER_ID, the thread_key changes
+  // while the id stays the same — so we key the upsert on the primary key (id)
+  // and refresh thread_key, otherwise the fixed id collides on re-seed.
   const threadKey = [OWNER, PEER_1].sort().join(':');
   await c.query(
     `INSERT INTO foundation_connection_threads (id, thread_key, created_by_user_id)
      VALUES ($1::uuid, $2, $3)
-     ON CONFLICT (thread_key) DO NOTHING`,
+     ON CONFLICT (id) DO UPDATE SET
+       thread_key = EXCLUDED.thread_key,
+       created_by_user_id = EXCLUDED.created_by_user_id,
+       updated_at = NOW()`,
     [ID.thread, threadKey, OWNER],
   );
 
