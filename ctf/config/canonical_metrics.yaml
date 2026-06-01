@@ -96,7 +96,7 @@ canonical_metrics:
 
   - id: gdp_total_revenue
     name: GDP Total Revenue
-    description: Total annual GDP revenue (services plus goods/local economy).
+    description: Total GDP revenue (services plus goods/local economy), USD-normalized from multi-currency transaction volume via the currency_usd_rates factors in the GDP estimation layer. A morale/transparency estimate, not an accounting figure (issue #121).
     owner: economics-team@chargingthefuture.org
     data_type: currency
     unit: USD

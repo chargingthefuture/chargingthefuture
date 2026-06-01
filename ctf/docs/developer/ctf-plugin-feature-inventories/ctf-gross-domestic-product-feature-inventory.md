@@ -160,13 +160,14 @@ Extension entity:
 
 Domain tables:
 
-1. `gdp_metric_snapshots`
+1. `gdp_metric_snapshots` — per-metric weekly snapshot. Carries `is_estimate` (issue #121): TRUE for USD-normalized aggregates such as `gdp_total_revenue`, so the UI can label them estimates.
 2. `gdp_category_breakdowns`
 3. `gdp_provider_tier_snapshots`
 4. `gdp_rollout_targets`
 5. `gdp_rollout_actuals`
 6. `gdp_metric_definition_events`
 7. `gdp_publish_events`
+8. `currency_usd_rates` — notional USD conversion factor per currency (`currency_code` FK → `currencies.code`, plus `usd_rate`, `as_of`, `source`). Used ONLY by the GDP estimation layer to roll multi-currency transaction volume into the single USD-denominated GDP estimate; the most recent `as_of` per currency is the active rate. LEGAL GUARDRAIL: never surfaced as a per-wallet or per-price "ServiceCredits = fiat" equivalence.
 
 ### 4.3 Lifecycle and Storage Constraints
 
@@ -189,6 +190,7 @@ Domain tables:
 1. Account-deletion treasury returns are reserve reallocations and MUST NOT be recognized as GDP.
 2. GDP recognition occurs on eligible spend events only, per canonical metric definitions.
 3. Reclaim/finalization events from deletion workflows are excluded from GDP numerator calculations and tracked as accounting-state movements.
+4. Multi-currency normalization (issue #121): the platform transacts in ServiceCredits, fiat, barter, and crypto. GDP rolls all eligible volume into one USD-denominated ESTIMATE using the `currency_usd_rates` factors, applied only in the GDP estimation layer (`ctf/packages/web/lib/gdp/recognition.ts`). The figure is labeled an estimate (`gdp_metric_snapshots.is_estimate`); small drift is acceptable because GDP is a morale/transparency metric, not an accounting ledger. The ServiceCredits→USD factor is confined to this aggregate and is never shown as a per-wallet or per-price fiat equivalence (the no-fiat-parity line from issue #120). Account-deletion reclaim stays a reserve reallocation per point 1 above — it is not recognized as GDP.
 
 ---
 
@@ -287,6 +289,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-06-01: Multi-currency recognition foundation (issue #121): added the `currency_usd_rates` table (notional USD factor per currency, FK → `currencies.code`, with `as_of`) + `seedCurrencyUsdRates.mjs`; an `is_estimate` flag on `gdp_metric_snapshots`; and the GDP estimation-layer helper `ctf/packages/web/lib/gdp/recognition.ts` that rolls multi-currency volume into one USD estimate (the FX factor lives only here, never a per-wallet/per-price parity). Seeded `gdp_total_revenue` as an estimate. Documented the model and the no-fiat-parity guardrail; reconciled with the account-deletion-reclaim non-recognition rule (§4.4). The live automated rollup across plugin transaction tables, the admin rate-management UI, and the in-product estimate label remain next steps (the last two are design-gated).
 - 2026-05-31: Android pixel pass — rewrote `Gdp.tsx` to match `MobileGDP.tsx` / `MobileGDPEmpty.tsx` / `MobileGDPLoading.tsx` / `MobileGDPPublic.tsx` design mockups using React Native primitives (exact colors, spacing, type, layout). Created real `api.ts` bound to `GET /api/gdp/report/current`. Real metric bindings: `gdp_total_revenue` (hero), `weekly_active_users` (chip). Omissions per real-data-only rule: sector breakdown, country breakdown, per-user contribution, weekly trend series, $300B target progress. Loading/empty/public/error states all covered. MockGdp.tsx retained as dead file (no import). No schema/route/contract changes.
 - 2026-05-31: Seed runtime fix. `seedGdp.mjs` now opens its own `pg` Pool and defines a local `queryDb` helper instead of importing the TypeScript `packages/web/lib/db/postgres.ts`, which plain Node (e.g. the Node 20 seed/provision workflows) cannot load. Added `pool.end()` teardown. No change to seeded rows, schema, or API.
 - 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/GDP.tsx` and decomposed the 210-line / complexity-29 monolith into modular sub-components (`gdp-shared.ts`, `gdp-loading.tsx`, `gdp-icon-rail`, `gdp-sidebar`, `gdp-dashboard` with Hero/Sectors/Countries, `gdp-map`, thin shell) within rule-116 limits. Added a real loading splash and aria-labels on the icon-only rail buttons; removed the sidebar's "By Phase" filter (a banned term absent from the design mockup). Per real-data-only, all figures derive from `/api/gdp/report/current`; the design's mock contribution/live-feed/trend/chat content stays omitted. Dropped the unused `isAdmin` prop at the call site. No schema/route/contract changes.

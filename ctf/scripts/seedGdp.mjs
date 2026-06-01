@@ -26,11 +26,15 @@ async function queryDb(text, values = []) {
 const WEEK_START = '2026-05-19';
 
 const METRICS = [
-  { key: 'users.active', value: 1250, source: 'directory' },
-  { key: 'posts.created', value: 342, source: 'feed' },
-  { key: 'connections.initiated', value: 89, source: 'foundation' },
-  { key: 'skills.matched', value: 156, source: 'skills-hunt' },
-  { key: 'workforce.placements', value: 23, source: 'workforce' },
+  { key: 'users.active', value: 1250, source: 'directory', isEstimate: false },
+  { key: 'posts.created', value: 342, source: 'feed', isEstimate: false },
+  { key: 'connections.initiated', value: 89, source: 'foundation', isEstimate: false },
+  { key: 'skills.matched', value: 156, source: 'skills-hunt', isEstimate: false },
+  { key: 'workforce.placements', value: 23, source: 'workforce', isEstimate: false },
+  // The USD-normalized GDP total (issue #121): one estimate rolled from multi-currency transaction
+  // volume via currency_usd_rates in the GDP estimation layer. isEstimate = true so the UI can label
+  // it an estimate. The value here is a deterministic placeholder the owner/recognition layer revises.
+  { key: 'gdp_total_revenue', value: 12500, source: 'gdp', isEstimate: true },
 ];
 
 function deterministicId(weekDate, metricKey, sourcePlugin) {
@@ -44,9 +48,9 @@ async function seed() {
       const id = deterministicId(WEEK_START, metric.key, metric.source);
       await queryDb(
         `INSERT INTO gdp_metric_snapshots
-         (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (id) DO NOTHING`,
+         (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin, is_estimate)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO UPDATE SET is_estimate = EXCLUDED.is_estimate`,
         [
           id,
           WEEK_START,
@@ -55,6 +59,7 @@ async function seed() {
           false,
           'service-delivery',
           metric.source,
+          metric.isEstimate,
         ]
       );
     }

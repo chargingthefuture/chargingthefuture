@@ -2634,6 +2634,13 @@ ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS dp_suppresse
 ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS lawful_basis TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS source_plugin TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency GDP recognition (issue #121): mark metrics that are USD-normalized ESTIMATES (e.g.
+-- gdp_total_revenue, which rolls multi-currency volume into USD via currency_usd_rates). The in-product
+-- "estimate" label reads this flag; small drift is acceptable and disclosed, since GDP is a morale/
+-- transparency figure, not an accounting ledger.
+ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS is_estimate BOOLEAN NOT NULL DEFAULT FALSE;
+-- Mark the USD-normalized aggregate(s) as estimates for any rows that predate the column.
+UPDATE gdp_metric_snapshots SET is_estimate = TRUE WHERE metric_key = 'gdp_total_revenue' AND is_estimate = FALSE;
 
 CREATE TABLE IF NOT EXISTS gdp_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2655,6 +2662,29 @@ ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type
 ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Multi-currency GDP recognition (issue #121). The notional USD conversion factor per currency, used
+-- ONLY by the GDP estimation layer to roll multi-currency transaction volume into the single,
+-- estimate-labeled GDP figure. LEGAL GUARDRAIL: this rate is NEVER surfaced as a per-wallet or
+-- per-price "ServiceCredits = fiat" equivalence; a user never sees "your N ServiceCredits = $X". The
+-- only place a USD-normalized ServiceCredits value appears is inside the aggregate GDP estimate. The
+-- owner curates rates over time; the most recent as_of per currency_code is the active rate.
+CREATE TABLE IF NOT EXISTS currency_usd_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  usd_rate NUMERIC NOT NULL,
+  as_of DATE NOT NULL,
+  source TEXT NOT NULL DEFAULT 'owner',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (currency_code, as_of)
+);
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS currency_code TEXT;
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS usd_rate NUMERIC;
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS as_of DATE;
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'owner';
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_currency_usd_rates_code_asof ON currency_usd_rates(currency_code, as_of DESC);
 
 -- === MOOD MODULE ===
 CREATE TABLE IF NOT EXISTS mood_submissions (
