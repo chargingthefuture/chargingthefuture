@@ -39,6 +39,7 @@ type AuthenticatedChatPanelProps = {
   stats: ShellStats;
   plugins: PluginRegistryItem[];
   currentUser: ShellCurrentUser;
+  showSuggestions: boolean;
 };
 
 type ShellChatPanelProps = {
@@ -47,11 +48,15 @@ type ShellChatPanelProps = {
   currentUser: ShellCurrentUser;
   isAuthenticated?: boolean;
   signInUrl?: string;
+  // The pre-selected suggestion chips are hidden in production and shown only in
+  // demo mode while their behavior is finished — see GitHub issue tracked in the
+  // hub chat inventory. Defaults to hidden.
+  showSuggestions?: boolean;
 };
 
-export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, signInUrl = '/sign-in' }: ShellChatPanelProps) {
+export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, signInUrl = '/sign-in', showSuggestions = false }: ShellChatPanelProps) {
   if (isAuthenticated) {
-    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} />;
+    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} showSuggestions={showSuggestions} />;
   }
 
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
@@ -114,7 +119,7 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
   );
 }
 
-function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
+function AuthenticatedChatPanel({ stats, plugins, currentUser, showSuggestions }: AuthenticatedChatPanelProps) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
   const {
@@ -263,13 +268,15 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         })}
       </div>
 
-      <div className={styles.chatSuggestions}>
-        {SUGGESTIONS.map((suggestion) => (
-          <button key={suggestion} type="button" className={styles.chatChip} onClick={() => setInput(suggestion)}>
-            {suggestion}
-          </button>
-        ))}
-      </div>
+      {showSuggestions ? (
+        <div className={styles.chatSuggestions}>
+          {SUGGESTIONS.map((suggestion) => (
+            <button key={suggestion} type="button" className={styles.chatChip} onClick={() => setInput(suggestion)}>
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {/* @comic mention affordance + helper copy (per the locked design / naming rules). */}
       <div className={styles.comicComposerHelper}>

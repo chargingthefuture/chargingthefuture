@@ -7,6 +7,7 @@ import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry } from '../lib/plugins/repository';
 import { getTrustUserExtension } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
+import { isDemoMode } from '../lib/feature-flags/system';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -35,11 +36,15 @@ export default async function HomePage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
   const authDecisionPromise = evaluatePluginAccess({ requireUsername: false }).catch(() => null);
+  // The chat suggestion chips are unfinished; show them only to demo-mode users
+  // ("stage") and hide them in production. Defaults to hidden on any failure.
+  const demoModePromise = isDemoMode().catch(() => false);
 
-  const [plugins, shellStats, authDecision] = await Promise.all([
+  const [plugins, shellStats, authDecision, demoMode] = await Promise.all([
     pluginsPromise,
     shellStatsPromise,
     authDecisionPromise,
+    demoModePromise,
   ]);
 
   // `evaluatePluginAccess` denies an anonymous visitor with 401 (AUTH_UNAUTHORIZED)
@@ -74,6 +79,7 @@ export default async function HomePage() {
       trust={trust}
       isAuthenticated={isAuthenticated}
       signInUrl={signInUrl}
+      showChatSuggestions={demoMode}
     />
   );
 }
