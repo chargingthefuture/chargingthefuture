@@ -157,8 +157,8 @@ if [[ "$db_impacting_changed" == true && "$schema_sql_changed" != true ]]; then
   failed=1
 fi
 
-if [[ "$seed_changed" == true && "$schema_sql_changed" != true ]]; then
-  echo "Schema drift gate failed: seed-related changes require an accompanying change to ctf/schema.sql (seed/schema blocker policy)." >&2
+if [[ "$seed_changed" == true && "$schema_sql_changed" != true && "$versioning_note_changed" != true ]]; then
+  echo "Schema drift gate failed: seed-related changes require an accompanying change to ctf/schema.sql, or versioning evidence (ctf/docs/developer/**, .github/instructions/122-schema-drift-predeployment-rules.mdc) when the seed change carries no schema impact (seed/schema blocker policy)." >&2
   failed=1
 fi
 
