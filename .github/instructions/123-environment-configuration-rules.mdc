@@ -53,7 +53,7 @@ Clerk-name-specific:
 - `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
 - `AUTH_SECRET_KEY`
 - `NEXT_PUBLIC_AUTH_SIGN_IN_URL`
-- `CTF_AUTH_PROVIDER` (defaults to `clerk`)
+- `NEXT_PUBLIC_AUTH_PROVIDER` (the single provider-name variable; defaults to `clerk` if unset)
 - `CLERK_ENCRYPTION_KEY`
 
 ### Clerk Configuration Constraints

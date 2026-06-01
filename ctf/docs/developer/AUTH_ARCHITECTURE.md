@@ -126,7 +126,8 @@ if (!decision.allowed) redirect("/sign-in");
 
 ## Runtime Env Contract
 
-- Generic env names are preferred for new provider work: `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`, `AUTH_SECRET_KEY`, `AUTH_SIGN_IN_URL`, `AUTH_AFTER_SIGN_OUT_URL`, and `CTF_AUTH_PROVIDER`.
+- Generic env names are preferred for new provider work: `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`, `AUTH_SECRET_KEY`, `AUTH_SIGN_IN_URL`, `AUTH_AFTER_SIGN_OUT_URL`, and `NEXT_PUBLIC_AUTH_PROVIDER`.
+- The provider name is read from a single variable, `NEXT_PUBLIC_AUTH_PROVIDER` (kept consistent with the other `NEXT_PUBLIC_AUTH_*` names). The older `CTF_AUTH_PROVIDER` alias is no longer read — set `NEXT_PUBLIC_AUTH_PROVIDER` instead.
 - Legacy Clerk names remain supported as compatibility fallbacks while no concrete provider is wired yet.
 - `pnpm --filter @ctf/web run check:auth-env` passes when no auth provider is configured and validates a coherent runtime contract once auth env values are present.
 
