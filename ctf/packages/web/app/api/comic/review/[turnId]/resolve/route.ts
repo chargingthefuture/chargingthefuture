@@ -4,6 +4,7 @@ import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { resolveComicReview } from 'lib/comic/repository';
 import type { ComicReviewResolveInput } from 'lib/comic/types';
+import { reportError } from 'lib/observability/report';
 
 type ResolveBody = Partial<ComicReviewResolveInput>;
 
@@ -91,6 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
       { status: 200 },
     );
   } catch (error) {
+    reportError(error, { area: 'comic', op: 'review_turnid_resolve' });
     const code = error instanceof Error ? error.message : 'unknown_error';
 
     if (code === 'review_not_found') {

@@ -16,6 +16,7 @@ import {
   requireWhatWorksAccess,
   whatworksError,
 } from '../_lib';
+import { reportError } from 'lib/observability/report';
 
 // A survivor suggests a tool. It lands as `pending` for admin review before it joins
 // the shared list, and the suggester is auto-recorded as its first verifier.
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, productId: product.id, status: product.status }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'whatworks', op: 'products' });
     console.error('whatworks: failed to save product suggestion', error);
     return whatworksError('We could not save your suggestion. Try again.', 'whatworks_suggest_failed', 500);
   }

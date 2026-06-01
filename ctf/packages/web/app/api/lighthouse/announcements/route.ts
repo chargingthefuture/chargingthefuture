@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { listAnnouncementsForLighthouseUser } from 'lib/lighthouse/repository';
+import { reportError } from 'lib/observability/report';
 
 function parsePositiveInt(value: string | null, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'announcements' });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Announcement listing unavailable.' },
       { status: 503 },

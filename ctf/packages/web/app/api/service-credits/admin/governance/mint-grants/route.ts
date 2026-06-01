@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
+import { reportError } from 'lib/observability/report';
 
 type MintBody = {
   targetUserId?: string;
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, grant }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'admin_governance_mint_grants' });
     return serviceCreditsErrorResponse(error, 'Governance mint grant unavailable.');
   }
 }

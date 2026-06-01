@@ -3,6 +3,7 @@ import { requireSkillsHuntReadAccess, ensureMutationCsrf } from '../_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import type { SkillsHuntServiceCreditsTransactionInput } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request) {
   const gate = await requireSkillsHuntReadAccess();
@@ -42,7 +43,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'service_credits' });
     return NextResponse.json({ ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
   }
 }

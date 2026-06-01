@@ -3,6 +3,7 @@ import { ensureSocketRelayFulfillmentChannel, createSocketRelayParticipantToken 
 import { requireSocketRelayReadAccess } from 'lib/socketrelay/_lib';
 import { getFulfillmentById } from 'lib/socketrelay/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,6 +43,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
     return NextResponse.json({ ok: true, channelId, ...credentials });
   } catch (error: unknown) {
+    reportError(error, { area: 'socketrelay', op: 'fulfillments_id_chat' });
     const message = error instanceof Error ? error.message : 'Error creating chat channel';
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }

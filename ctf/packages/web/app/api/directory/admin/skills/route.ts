@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { listTaxonomyJobTitles, listTaxonomySectors, listTaxonomySkills } from 'lib/directory/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET() {
   const gate = await requireDirectoryAdminAccess();
@@ -29,7 +30,8 @@ export async function GET() {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'admin_skills' });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch skills compatibility.' },
       { status: 503 },

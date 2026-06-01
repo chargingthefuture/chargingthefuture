@@ -4,6 +4,7 @@ import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deleteAdminProfile, updateAdminProfile, validateProfileInput } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -65,6 +66,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'directory', op: 'admin_profiles_id' });
     const message = error instanceof Error ? error.message : 'unknown';
     const isValidation = message.includes('_not_found');
 
@@ -135,7 +137,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'admin_profiles_id' });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete profile.' },
       { status: 503 },

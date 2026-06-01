@@ -3,6 +3,7 @@ import { requireSkillsHuntReadAccess } from '../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { listRounds } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRoundStatus } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 function parseStatus(value: string | null): SkillsHuntRoundStatus | null {
   if (!value) {
@@ -27,7 +28,8 @@ export async function GET(request: Request) {
   try {
     const rounds = await listRounds(status);
     return NextResponse.json({ rounds }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'rounds' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load rounds.' },
       { status: 503 },

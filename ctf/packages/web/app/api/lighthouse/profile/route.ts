@@ -9,6 +9,7 @@ import {
   validateProfileInput,
 } from 'lib/lighthouse/repository';
 import type { LighthouseProfileInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type ProfileBody = Partial<LighthouseProfileInput>;
 
@@ -150,6 +151,7 @@ async function upsertProfileHandler(request: Request) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'profile' });
     return lighthouseErrorResponse(error, 'Profile upsert unavailable.');
   }
 }
@@ -171,6 +173,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'profile' });
     return lighthouseErrorResponse(error, 'Profile lookup unavailable.');
   }
 }
@@ -207,6 +210,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'profile' });
     return lighthouseErrorResponse(error, 'Profile delete unavailable.');
   }
 }

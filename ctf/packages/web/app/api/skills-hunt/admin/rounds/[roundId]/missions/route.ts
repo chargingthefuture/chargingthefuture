@@ -8,6 +8,7 @@ import {
   type MissionCreateInput,
 } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntAdminAccess();
@@ -20,7 +21,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
   try {
     const items = await withDbTransaction((client) => listMissionsForAdmin(client, roundId));
     return NextResponse.json({ items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load missions.' },
       { status: 503 },
@@ -113,7 +115,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   try {
     const mission = await withDbTransaction((client) => createMission(client, gate.auth.userId, input));
     return NextResponse.json({ ok: true, mission }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to create mission.' },
       { status: 503 },

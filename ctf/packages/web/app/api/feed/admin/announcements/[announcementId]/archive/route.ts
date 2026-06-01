@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { archiveAnnouncement } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ announcementId: string }>;
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'feed', op: 'admin_announcements_announcementid_archive' });
     const message = error instanceof Error ? error.message : 'error';
     const status = message === 'announcement_not_found' ? 404 : 503;
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;

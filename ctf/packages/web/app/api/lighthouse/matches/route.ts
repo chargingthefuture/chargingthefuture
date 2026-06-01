@@ -8,6 +8,7 @@ import {
   validateMatchCreateInput,
 } from 'lib/lighthouse/repository';
 import type { LighthouseMatchCreateInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type MatchBody = Partial<LighthouseMatchCreateInput> & { idempotencyKey?: string };
 
@@ -100,6 +101,7 @@ export async function GET() {
     const items = await listMatches(gate.auth.userId);
     return NextResponse.json({ ok: true, items }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'matches' });
     return lighthouseErrorResponse(error, 'Match listing unavailable.');
   }
 }
@@ -162,6 +164,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, ...created }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'matches' });
     return lighthouseErrorResponse(error, 'Match create unavailable.');
   }
 }

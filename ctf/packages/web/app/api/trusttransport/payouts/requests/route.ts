@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportProviderAccess, trustTransportErrorResponse } from 'lib/trusttransport/_lib';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { requestPayout } from 'lib/trusttransport/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     const payout = await requestPayout(gate.auth.userId, amount, idempotencyKey);
     return NextResponse.json({ ok: true, payout }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'payouts_requests' });
     return trustTransportErrorResponse(error, 'Payout request unavailable.');
   }
 }

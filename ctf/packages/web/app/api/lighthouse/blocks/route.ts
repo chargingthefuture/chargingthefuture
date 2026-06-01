@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { createBlock, insertLighthouseAudit, listBlocks } from 'lib/lighthouse/repository';
+import { reportError } from 'lib/observability/report';
 
 type CreateBlockBody = {
   blockedUserId?: string;
@@ -97,6 +98,7 @@ export async function GET() {
     const items = await listBlocks(gate.auth.userId);
     return NextResponse.json({ ok: true, items }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'blocks' });
     return lighthouseErrorResponse(error, 'Block listing unavailable.');
   }
 }
@@ -144,6 +146,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, block }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'blocks' });
     return lighthouseErrorResponse(error, 'Block create unavailable.');
   }
 }

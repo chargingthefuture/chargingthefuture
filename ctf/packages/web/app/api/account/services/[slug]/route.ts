@@ -7,6 +7,7 @@ import {
   ServiceScopeNotSupportedError,
   UnknownServiceError,
 } from 'lib/account/deletion-orchestrator';
+import { reportError } from 'lib/observability/report';
 
 // Generic per-plugin "delete my data for this service" endpoint.
 //
@@ -62,6 +63,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ slug
       { status: 200 },
     );
   } catch (error) {
+    reportError(error, { area: 'account', op: 'services_slug' });
     // The route pre-checks already reject unknown/unsupported slugs, but the orchestrator throws
     // these too, so map them defensively to the same statuses.
     if (error instanceof UnknownServiceError) {

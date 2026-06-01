@@ -5,6 +5,7 @@ import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/reposi
 import { grantUnleashFlagForUser } from 'lib/feature-flags/unleash-admin';
 import { UNLOCK_FLAGS } from '@ctf/shared';
 import type { ReviewUnlockSubmissionInput } from 'lib/unlock/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{
@@ -104,7 +105,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ ok: true, submission });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'admin_submissions_submissionid_review' });
     return unlockErrorResponse('Unlock submission review unavailable.', 503);
   }
 }

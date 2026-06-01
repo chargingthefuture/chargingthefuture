@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit, upsertNotificationPreferences } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function PUT(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -52,6 +53,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ ok: true, ...preferences }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'notifications_preferences' });
     console.error('[Foundation] Notification preferences update failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Notification preferences unavailable.' },

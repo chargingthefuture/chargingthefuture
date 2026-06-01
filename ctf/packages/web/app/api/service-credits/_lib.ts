@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureServiceCreditsAdmin } from 'lib/service-credits/policy';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getAppUrl } from 'lib/auth/runtime-env';
+import { reportError } from 'lib/observability/report';
 
 export async function requireServiceCreditsReadAccess() {
   const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });

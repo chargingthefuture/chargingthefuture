@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { dismissAnnouncement } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{
@@ -49,7 +50,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, announcementId }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'announcements', op: 'announcementid_dismiss' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to dismiss announcement.' },
       { status: 503 },

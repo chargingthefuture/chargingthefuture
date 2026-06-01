@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorRespo
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { deleteProfile, getProfile, insertSocketRelayAudit, upsertProfile, validateProfileInput } from 'lib/socketrelay/repository';
 import type { SocketRelayProfileInput } from 'lib/socketrelay/types';
+import { reportError } from 'lib/observability/report';
 
 function parseProfileInput(body: Record<string, unknown>): SocketRelayProfileInput {
   return {
@@ -57,6 +58,7 @@ async function upsertHandler(request: Request) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'profile' });
     return socketRelayErrorResponse(error, 'Profile upsert unavailable.');
   }
 }
@@ -78,6 +80,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'profile' });
     return socketRelayErrorResponse(error, 'Profile lookup unavailable.');
   }
 }
@@ -113,6 +116,7 @@ export async function DELETE(request: Request) {
     });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'profile' });
     return socketRelayErrorResponse(error, 'Profile delete unavailable.');
   }
 }

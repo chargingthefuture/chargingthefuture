@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { insertPeerProgrammingAudit, submitFeedback } from 'lib/peer-programming/repository';
+import { reportError } from 'lib/observability/report';
 
 type FeedbackBody = {
   cohortId?: string | null;
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'peer-programming', op: 'feedback' });
     return peerProgrammingErrorResponse(error, 'Feedback submission unavailable.');
   }
 }

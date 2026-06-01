@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { updateAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ announcementId: string }>;
@@ -69,6 +70,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'feed', op: 'admin_announcements_announcementid' });
     const message = error instanceof Error ? error.message : 'error';
     const status = message === 'announcement_not_found' ? 404 : 503;
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportAdminAccess, trustTransportErrorResponse } from 'lib/trusttransport/_lib';
 import { insertTrustTransportAudit, resolveIncident } from 'lib/trusttransport/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ incidentId: string }>;
@@ -40,6 +41,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'admin_incidents_incidentid_resolve' });
     return trustTransportErrorResponse(error, 'Incident resolve unavailable.');
   }
 }

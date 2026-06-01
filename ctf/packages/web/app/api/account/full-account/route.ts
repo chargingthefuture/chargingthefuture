@@ -4,6 +4,7 @@ import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
 import { requireAccountAccess, ensureMutationCsrf } from '../_lib';
+import { reportError } from 'lib/observability/report';
 
 export async function DELETE(request: Request) {
   // Share the centralized account auth contract with the per-service delete route so the two
@@ -56,7 +57,8 @@ export async function DELETE(request: Request) {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'account', op: 'full_account' });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',

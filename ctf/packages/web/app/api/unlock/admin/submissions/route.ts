@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
 import { insertUnlockAudit, listUnlockSubmissions } from 'lib/unlock/repository';
 import type { UnlockAccessTier, UnlockReviewStatus } from 'lib/unlock/types';
+import { reportError } from 'lib/observability/report';
 
 const ALLOWED_REVIEW_STATUSES = new Set<UnlockReviewStatus>(['pending', 'approved', 'rejected', 'spam']);
 const ALLOWED_ACCESS_TIERS = new Set<UnlockAccessTier>(['pending_readonly', 'locked_support_only', 'approved_full']);
@@ -45,7 +46,8 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({ ok: true, submissions });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'admin_submissions' });
     return unlockErrorResponse('Unlock submission queue unavailable.', 503);
   }
 }

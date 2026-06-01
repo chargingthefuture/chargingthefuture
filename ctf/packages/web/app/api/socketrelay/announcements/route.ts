@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
 import { SOCKETRELAY_DEFAULT_PAGE, SOCKETRELAY_DEFAULT_PAGE_SIZE } from 'lib/socketrelay/constants';
 import { listAnnouncementsForSocketRelayUser } from 'lib/socketrelay/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireSocketRelayReadAccess();
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'announcements' });
     return socketRelayErrorResponse(error, 'Announcements unavailable.');
   }
 }

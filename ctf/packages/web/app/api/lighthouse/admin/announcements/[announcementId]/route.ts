@@ -8,6 +8,7 @@ import {
   validateAnnouncementInput,
 } from 'lib/lighthouse/repository';
 import type { LighthouseAnnouncementInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ announcementId: string }>;
@@ -69,7 +70,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcements_announcementid' });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement update unavailable.' },
       { status: 503 },
@@ -102,7 +104,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcements_announcementid' });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement delete unavailable.' },
       { status: 503 },

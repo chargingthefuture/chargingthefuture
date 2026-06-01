@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { generateFeedQuestionAnswer } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 
 
@@ -50,6 +51,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ que
       { status: 201 },
     );
   } catch (error) {
+    reportError(error, { area: 'feed', op: 'questions_questionid_answer' });
     const code = error instanceof Error ? error.message : 'unknown_error';
 
     if (code === 'question_not_found') {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getReaderList } from 'lib/whatworks/repository';
 import { requireWhatWorksAccess, whatworksError } from './_lib';
+import { reportError } from 'lib/observability/report';
 
 // Full shared list for an authenticated survivor, with per-row endorsement state.
 export async function GET() {
@@ -11,7 +12,8 @@ export async function GET() {
   try {
     const list = await getReaderList(gate.auth.userId);
     return NextResponse.json({ ok: true, ...list, viewer: { isAdmin: gate.auth.isAdmin } });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'whatworks', op: 'index' });
     return whatworksError('What Works is unavailable right now.', 'whatworks_unavailable', 500);
   }
 }

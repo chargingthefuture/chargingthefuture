@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErro
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { updateTripStatus } from 'lib/trusttransport/repository';
 import type { TrustTransportTripStatus } from 'lib/trusttransport/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ tripId: string }>;
@@ -55,6 +56,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     const result = await updateTripStatus(tripId, gate.auth.userId, gate.auth.isAdmin, nextStatus as TrustTransportTripStatus, note);
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'trips_tripid_status' });
     return trustTransportErrorResponse(error, 'Trip status update unavailable.');
   }
 }

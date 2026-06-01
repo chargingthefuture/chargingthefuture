@@ -5,6 +5,7 @@ import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
 
@@ -40,7 +41,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
       { userId: gate.auth.userId, isModeratorOrAdmin: false },
     );
     return NextResponse.json({ items: result.items, total: result.total }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'rounds_roundid_submissions' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load submissions.' },
       { status: 503 },
@@ -103,6 +105,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'rounds_roundid_submissions' });
     const message = error instanceof Error ? error.message : 'unknown';
 
     let status = 503;

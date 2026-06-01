@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { relabelQuestionCategory, isValidFeedQuestionCategory } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
+import { reportError } from 'lib/observability/report';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   const gate = await requireFeedAdminAccess();
@@ -57,6 +58,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ qu
     });
     return NextResponse.json({ ok: true, question }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'feed', op: 'admin_questions_questionid' });
     if (error instanceof Error && error.message === 'question_not_found') {
       return NextResponse.json(
         { ok: false, code: FEED_ERROR_CODE.notFound, message: 'Question not found.' },

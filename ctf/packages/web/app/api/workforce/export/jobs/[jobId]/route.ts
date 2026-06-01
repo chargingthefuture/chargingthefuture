@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { getExportJobById } from 'lib/workforce/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{
@@ -27,7 +28,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({ job }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'export_jobs_jobid' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch export job.' },
       { status: 503 },

@@ -4,6 +4,7 @@ import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { insertSkillsHuntAudit, reviewSubmission, validateReviewInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 type ReviewBody = Partial<SkillsHuntSubmissionReviewInput>;
 
@@ -74,6 +75,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
 
     return NextResponse.json({ ok: true, submission }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_review' });
     const message = error instanceof Error ? error.message : 'unknown';
     const isNotFound = message === 'skills_hunt_submission_not_found';
 

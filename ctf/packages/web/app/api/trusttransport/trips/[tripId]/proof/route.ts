@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trusttransport/_lib';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { captureTripProof } from 'lib/trusttransport/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ tripId: string }>;
@@ -44,6 +45,7 @@ export async function POST(request: Request, { params }: RouteProps) {
     await captureTripProof(tripId, gate.auth.userId, gate.auth.isAdmin, artifactType as 'photo' | 'code' | 'note', artifactRedacted);
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'trips_tripid_proof' });
     return trustTransportErrorResponse(error, 'Trip proof capture unavailable.');
   }
 }

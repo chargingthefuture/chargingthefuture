@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorRespo
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { getRequestById, updateRequest, validateRequestInput } from 'lib/socketrelay/repository';
 import type { SocketRelayRequestInput } from 'lib/socketrelay/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ id: string }>;
@@ -45,6 +46,7 @@ export async function GET(_: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'requests_id' });
     return socketRelayErrorResponse(error, 'Request lookup unavailable.');
   }
 }
@@ -84,6 +86,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
     const item = await updateRequest(id, gate.auth.userId, gate.auth.isAdmin, input);
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'requests_id' });
     return socketRelayErrorResponse(error, 'Request update unavailable.');
   }
 }

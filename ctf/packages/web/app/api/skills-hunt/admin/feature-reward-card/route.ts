@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { insertSkillsHuntAudit, updateFeatureRewardCard, validateFeatureRewardCardInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntFeatureRewardCardInput } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 type FeatureRewardCardBody = Partial<SkillsHuntFeatureRewardCardInput>;
 
@@ -58,7 +59,8 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({ ok: true, card }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_feature_reward_card' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update feature reward card.' },
       { status: 503 },

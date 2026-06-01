@@ -3,6 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { markServiceDeletion } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
+import { reportError } from 'lib/observability/report';
 
 export async function DELETE() {
   const decision = await evaluatePluginAccess({
@@ -31,7 +32,8 @@ export async function DELETE() {
     });
 
     return NextResponse.json(deletion, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'account', op: 'chyme_profile' });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.profile.delete.service',

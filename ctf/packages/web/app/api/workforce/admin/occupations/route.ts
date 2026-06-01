@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { createOccupation, insertWorkforceAdminAudit, listOccupations, parsePaginationParams, validateOccupationInput } from 'lib/workforce/repository';
 import type { WorkforceOccupationInput } from 'lib/workforce/types';
+import { reportError } from 'lib/observability/report';
 
 type OccupationBody = Partial<WorkforceOccupationInput>;
 
@@ -24,7 +25,8 @@ export async function GET(request: Request) {
     const pagination = parsePaginationParams(request.url);
     const result = await listOccupations(pagination, true);
     return NextResponse.json(result, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_occupations' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch occupations.' },
       { status: 503 },
@@ -74,7 +76,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, occupation }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_occupations' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to create occupation.' },
       { status: 503 },

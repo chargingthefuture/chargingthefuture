@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireLighthouseReadAccess, ensureMutationCsrf } from 'lib/lighthouse/_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
+import { reportError } from 'lib/observability/report';
 
 type LighthouseServiceCreditsSendInput = {
   toUserId: string;
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'service_credits' });
     return NextResponse.json({ ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireFeedReadAccess } from '../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { isValidFeedChannel, listFeedTimeline, parsePaginationParams } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireFeedReadAccess();
@@ -30,7 +31,8 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json(payload, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'items' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch feed timeline.' },
       { status: 503 },

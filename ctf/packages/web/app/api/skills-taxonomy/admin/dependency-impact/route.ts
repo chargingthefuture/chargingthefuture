@@ -3,6 +3,7 @@ import { requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { previewDependencyImpact, validateDependencyPreviewInput } from 'lib/skills-taxonomy/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireTaxonomyAdminAccess();
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(impact, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'skills-taxonomy', op: 'admin_dependency_impact' });
     const errorMessage = error instanceof Error ? error.message : 'unknown_error';
     const notFound = errorMessage.endsWith('_not_found');
 

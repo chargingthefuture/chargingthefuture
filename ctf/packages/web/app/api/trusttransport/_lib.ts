@@ -3,6 +3,7 @@ import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz'
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { ensureTrustTransportAdmin, ensureTrustTransportProviderRole } from 'lib/trusttransport/policy';
+import { reportError } from 'lib/observability/report';
 
 export type TrustTransportApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -142,6 +143,7 @@ export function trustTransportErrorResponse(error: unknown, fallbackMessage: str
     return NextResponse.json({ ok: false, code: TRUSTTRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid payload.' }, { status: 400 });
   }
 
+  reportError(error, { area: 'trusttransport', op: 'unknown' });
   return NextResponse.json(
     { ok: false, code: TRUSTTRANSPORT_ERROR_CODE.persistenceUnavailable, message: fallbackMessage },
     { status: 503 },

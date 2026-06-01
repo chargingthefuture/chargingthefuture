@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { createAnnouncementDraft, listAnnouncements, validateAnnouncementDraftInput } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
+import { reportError } from 'lib/observability/report';
 
 type AnnouncementBody = Partial<AnnouncementDraftInput>;
 
@@ -28,7 +29,8 @@ export async function GET() {
   try {
     const announcements = await listAnnouncements(true);
     return NextResponse.json({ items: announcements }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'admin_announcements' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to list announcements.' },
       { status: 503 },
@@ -79,7 +81,8 @@ export async function POST(request: Request) {
       errorCategory: null,
     });
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'admin_announcements' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create announcement draft.' },
       { status: 503 },

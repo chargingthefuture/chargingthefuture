@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib'
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRoundInput } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 type RoundBody = Partial<SkillsHuntRoundInput>;
 
@@ -67,7 +68,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
     });
 
     return NextResponse.json({ ok: true, round }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update round.' },
       { status: 503 },

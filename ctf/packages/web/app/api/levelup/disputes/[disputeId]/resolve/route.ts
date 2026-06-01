@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertLevelupAudit, resolveDispute } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ disputeId: string }>;
@@ -75,6 +76,7 @@ export async function POST(request: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, resolution }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'disputes_disputeid_resolve' });
     return levelupErrorResponse(error, 'Resolve dispute unavailable.');
   }
 }

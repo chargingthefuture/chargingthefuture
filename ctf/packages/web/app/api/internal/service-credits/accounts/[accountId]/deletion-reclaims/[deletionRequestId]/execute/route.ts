@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { executeDeletionReclaim, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 
 type ReclaimBody = {
   treasuryUserId?: string;
@@ -78,6 +79,7 @@ export async function POST(request: Request, context: ReclaimParams) {
 
     return NextResponse.json({ ok: true, reclaim }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'internal', op: 'service_credits_accounts_accountid_deletion_reclaims_deletionrequestid_execute' });
     return serviceCreditsErrorResponse(error, 'Account deletion reclaim unavailable.');
   }
 }

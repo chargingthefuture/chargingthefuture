@@ -4,6 +4,7 @@ import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { routeComicMessage, validateComicMessageInput } from 'lib/comic/repository';
 import type { ComicMessageInput } from 'lib/comic/types';
+import { reportError } from 'lib/observability/report';
 
 type MessageBody = Partial<ComicMessageInput>;
 
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
       );
     }
 
+    reportError(error, { area: 'comic', op: 'message' });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to route message to the AI Assistant.' },
       { status: 503 },
