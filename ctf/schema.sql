@@ -513,6 +513,68 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
 COMMIT;
 
+-- === account deletion events (cross-plugin orchestration log) ===
+-- One row per user-initiated deletion the orchestrator runs: a per-plugin "delete my data"
+-- (scope = 'service') or a whole-account deletion (scope = 'account'). This is the canonical,
+-- retained accountability record of what the orchestrator did — it is never itself deleted by a
+-- deletion. `summary` holds the per-table row counts the engine reported, for audit.
+CREATE TABLE IF NOT EXISTS account_deletion_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('service', 'account')),
+  -- For service scope this is the plugin slug; for account scope it is 'all-services'.
+  service_name TEXT NOT NULL,
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  status TEXT NOT NULL CHECK (status IN ('requested', 'processing', 'completed', 'failed')),
+  summary JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS scope TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS service_name TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS status TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS summary JSONB NOT NULL DEFAULT '{}'::jsonb;
+-- Restore the CREATE TABLE guarantees on any drifted/legacy DB where the columns were added bare.
+-- Backfill nullable rows first so SET NOT NULL cannot fail, then re-assert defaults, NOT NULL, and
+-- the scope/status CHECK constraints (idempotently).
+UPDATE account_deletion_events SET summary = '{}'::jsonb WHERE summary IS NULL;
+UPDATE account_deletion_events SET requested_at = NOW() WHERE requested_at IS NULL;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN user_id SET NOT NULL;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN scope SET NOT NULL;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN service_name SET NOT NULL;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN requested_at SET DEFAULT NOW();
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN requested_at SET NOT NULL;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN status SET NOT NULL;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN summary SET DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS account_deletion_events ALTER COLUMN summary SET NOT NULL;
+DO $account_deletion_events_scope_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'account_deletion_events_scope_check'
+  ) THEN
+    ALTER TABLE account_deletion_events
+      ADD CONSTRAINT account_deletion_events_scope_check CHECK (scope IN ('service', 'account'));
+  END IF;
+END
+$account_deletion_events_scope_check$;
+DO $account_deletion_events_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'account_deletion_events_status_check'
+  ) THEN
+    ALTER TABLE account_deletion_events
+      ADD CONSTRAINT account_deletion_events_status_check
+      CHECK (status IN ('requested', 'processing', 'completed', 'failed'));
+  END IF;
+END
+$account_deletion_events_status_check$;
+CREATE INDEX IF NOT EXISTS idx_account_deletion_events_user_scope
+  ON account_deletion_events(user_id, scope, requested_at DESC);
+
 -- === skills-hunt-service-credits ===
 CREATE TABLE IF NOT EXISTS skills_hunt_service_credits_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
