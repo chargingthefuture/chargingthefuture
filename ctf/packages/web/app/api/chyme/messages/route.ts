@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { CHYME_DEFAULT_MESSAGES_LIMIT, CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { listRoomMessages, sendRoomMessage, validateMessageInput } from 'lib/chyme/repository';
+import { reportError } from 'lib/observability/report';
 import { requireChymeAccess } from '../_lib';
 
 function parseLimit(url: string): number {
@@ -47,7 +48,8 @@ export async function GET(request: Request) {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'messages_list', extra: { userId: gate.auth.userId } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.messages.list',
@@ -138,7 +140,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'message_send', extra: { userId: gate.auth.userId } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.message.send',

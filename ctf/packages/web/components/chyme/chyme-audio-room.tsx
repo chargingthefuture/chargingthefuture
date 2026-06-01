@@ -15,6 +15,7 @@ import {
 import { Mic } from 'lucide-react';
 import { BORDER, PRIMARY, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
+import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
 // Chyme is open social audio (early-Clubhouse style): everyone who joins can
@@ -72,6 +73,17 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
         setStatus('joined');
       } catch (error) {
         if (cancelled) return;
+        // Surface the real Stream error verbatim in the UI and report it to Sentry
+        // with the call coordinates so a failed join is diagnosable without a repro.
+        reportError(error, {
+          area: 'chyme',
+          op: 'audio_join',
+          extra: {
+            callType: CALL_TYPE,
+            callId: toCallId(joinInfo.streamChannelId),
+            streamUserId: joinInfo.streamUserId,
+          },
+        });
         setErrorMessage(error instanceof Error ? error.message : 'Could not connect to the audio room.');
         setStatus('error');
       }

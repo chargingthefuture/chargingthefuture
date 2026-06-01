@@ -3,6 +3,7 @@ import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { createStreamJoinCredentials } from 'lib/chyme/stream';
 import { getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
+import { reportError } from 'lib/observability/report';
 import { requireChymeAccess } from '../_lib';
 
 export async function POST() {
@@ -66,7 +67,8 @@ export async function POST() {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'call_join', extra: { userId: gate.auth.userId } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.call.join',
