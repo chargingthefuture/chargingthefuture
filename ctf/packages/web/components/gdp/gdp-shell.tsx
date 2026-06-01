@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Globe } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, COLOR, type GdpMetrics, type GdpReport, type GdpTab } from "./gdp-shared";
 import { GdpLoading } from "./gdp-loading";
 import { GdpIconRail } from "./gdp-icon-rail";
@@ -63,6 +65,7 @@ export default function GdpShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<GdpReport | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -90,6 +93,33 @@ export default function GdpShell() {
   const sectors = report?.sectors ?? [];
   const countries = report?.countries ?? [];
   const metrics = report?.metrics ?? {};
+
+  if (isMobile) {
+    const tabs: { key: GdpTab; label: string }[] = [
+      { key: "dashboard", label: "Dashboard" },
+      { key: "map", label: "Map" },
+    ];
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: "#E8EAF0", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <Globe size={18} style={{ color: COLOR, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>GDP</span>
+            <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>↑ Live</Badge>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+            {tabs.map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <GdpContent error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
