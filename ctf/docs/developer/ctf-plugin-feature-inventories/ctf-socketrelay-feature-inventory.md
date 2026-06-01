@@ -111,6 +111,13 @@ Tables owned by this plugin:
 5. `socketrelay_fulfillment_participants` — Participant access records for fulfillment chats.
 6. `socketrelay_messages` — Participant-only chat messages on a fulfillment. The chat is transaction-scoped: after the fulfillment reaches a terminal state no new rows may be added; existing rows become read-only for the two participants for a limited window and are retained server-side for moderation/abuse evidence per the deletion contract (platform rule 100).
 7. `socketrelay_admin_audit_trail` — Audit log for admin mutations.
+8. `socketrelay_request_accepted_currencies` — join (`request_id`, `currency_code` FK → `currencies.code`) for any currencies an offered reward accepts.
+
+Multi-currency (issue #120): SocketRelay is mutual aid and posts are free, so `socketrelay_requests`
+gains OPTIONAL `price_amount` + `price_currency` (FK → `currencies.code`) for the rare case a reward is
+offered. "Free" renders from the ABSENCE of a price (NULL `price_amount`), never as `$0`. "Accepts
+ServiceCredits" is true only when a `socketrelay_request_accepted_currencies` row with `currency_code='SC'`
+exists — never derived from `price_currency`. No ServiceCredits amount is shown at a fiat equivalent.
 
 Storage and projection rules:
 
@@ -290,6 +297,8 @@ Android pixel pass (design `MobileSocketRelay.tsx`): `packages/mobile/src/featur
     - Removed scope is date-stamped and not silently deleted.
 
 ### Change Log
+
+- 2026-06-01: Multi-currency (issue #120): added OPTIONAL `price_amount` + `price_currency` (FK → `currencies.code`) to `socketrelay_requests` and a `socketrelay_request_accepted_currencies` join. "Free" renders from the absence of a price, never `$0`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 
 - 2026-02-25: Created initial SocketRelay CTF rewrite checklist with web-first release gating, tracked Android deferrals, lifecycle requirements, and explicit mitigation gates for legacy-known risks.
 - 2026-05-31: Documented the transaction-scoped messaging lifecycle per platform rule 100 ("Messaging Scope and Lifecycle"): the per-fulfillment 1:1 chat closes on terminal fulfillment state (read-only window + `socketrelay_messages` retained for moderation/abuse evidence); no messaging outside an active fulfillment. Aligning the deletion contract to mirror this retention is a tracked follow-up.

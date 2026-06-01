@@ -95,6 +95,10 @@ Admin page:
 2. `unlock_verification_submissions`
 3. `unlock_audit_log`
 
+Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
+naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
+incentive is an internal token grant. No surface renders a ServiceCredits amount at a fiat equivalent.
+
 ### 4.2 Stored State
 
 1. review status: `pending | approved | rejected | spam`
@@ -238,5 +242,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 - [ ] Dynamic incentive amount source of truth (runtime config vs policy constant).
 
 ### Change Log
+
+- 2026-06-01: Multi-currency (issue #120): added `incentive_currency` (FK → `currencies.code`, default ServiceCredits) to `unlock_runtime_config`, naming the currency of `incentive_amount`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 
 - 2026-03-25: Created initial Unlock rewrite checklist with contracts, schema, submission/moderation, incentive, and access-tier enforcement phases.

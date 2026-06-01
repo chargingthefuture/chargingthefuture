@@ -66,6 +66,13 @@ Foundation-owned domain entities (canonical in `ctf/schema.sql`):
 9. `foundation_rate_limit_counters` — Per-command rate limiting state.
 10. `foundation_capacity_policies` — Admin-configured capacity limits and thresholds.
 11. `foundation_admin_audit_trail` — Admin action audit log.
+12. `foundation_provider_accepted_currencies` — join (`user_id`, `currency_code` FK → `currencies.code`) for the currencies a provider accepts.
+
+Multi-currency (issue #120): a provider can list a service rate on their profile — `foundation_user_extension`
+gains `rate_amount` + `rate_currency` (FK → `currencies.code`). The quote process stays free-text/manual this
+version (no structured quote amount, so no price fields on `foundation_quote_requests`). "Accepts ServiceCredits"
+is true only when a `foundation_provider_accepted_currencies` row with `currency_code='SC'` exists — never
+derived from `rate_currency`. No ServiceCredits amount is shown at a fiat equivalent.
 
 Quota threshold level (green/yellow/orange/red) is derived at evaluation time from the capacity policy and rate-limit counters; it is not a stored table (there is no `foundation_quota_threshold_states`).
 
@@ -118,6 +125,7 @@ Seeded content (deterministic):
 
 ## Change Log
 
+- 2026-06-01: Multi-currency (issue #120): added `rate_amount` + `rate_currency` (FK → `currencies.code`) to `foundation_user_extension` (provider rate on the profile) and a `foundation_provider_accepted_currencies` join. The quote process stays free-text/manual (no price fields on quotes). Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 - 2026-06-01: Fixed the demo seed (`ctf/scripts/seedDemo.mjs`) so it can be re-run for a different demo participant. The Foundation connection thread row uses a fixed demo id but a `thread_key` derived from the owner; the insert previously only handled a `thread_key` conflict, so re-seeding with a new owner hit an unhandled primary-key collision and aborted the whole seed. The insert now upserts on the primary key and refreshes `thread_key`. No schema change — same table, same columns.
 - 2026-05-31: Web pixel pass. Rebuilt `FoundationShell` to match the canonical `survivor-hub/Foundation` design mockup and bind to real API contracts only. Fixed three pre-existing data bugs: provider search now reads `{ items }` (was treating the response as a raw array), quote history now calls `GET /api/foundation/quotes/history` (was calling the GET-less `/api/foundation/quotes`), and "Request Quote" now performs the real two-step flow (POST `/connections/threads` then POST `/quotes` with `x-ctf-csrf: 1`) instead of posting an unsupported `{ providerId, description }` body. Decomposed the shell into five Rule-116-compliant files. Dropped mockup fields with no backing API (rating, jobs, price, availability, hard-coded platform stats). Web px flipped to ✅ in the readiness table.
 - 2026-05-31: Android pixel pass complete. Mobile feature rewritten to `MobileFoundation*.tsx` mockup spec. Real API bindings for provider search, quote history, and two-step quote creation (thread + quote POST, both with CSRF header). `MockFoundation.tsx` retired. Omitted mockup-only fields (rating, price, availability, credits, job count, platform stats) — no backing API field. Gates passed: tsc (pre-existing expo/tsconfig.base constraint noted), EOF clean, parity check green.
