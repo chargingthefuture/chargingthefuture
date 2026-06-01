@@ -104,24 +104,24 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
 | chyme | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| skills-taxonomy | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | feed-announcements (Hub data layer) | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | workforce | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| skills-hunt | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | foundation | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| socketrelay | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| peer-programming | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| gentlepulse | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| gdp | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| levelup | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| clicklog | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | unlock | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.

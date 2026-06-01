@@ -91,10 +91,14 @@ Seed content:
 
 ## Web and Android Delivery Status
 
-Parity status: **web+android complete** (functional). Web pixel pass complete: the web shell
+Parity status: **web+android complete** (pixel pass delivered). Web pixel pass complete: the web shell
 (`components/levelup/levelup-shell.tsx` + `lu-*` sub-components) is aligned to the design mockup and
-decomposed within rule-116 limits. Android pixel parity (`MobileLevelUp.tsx`) is tracked for the
-dedicated Android sweep.
+decomposed within rule-116 limits. Android pixel pass complete (2026-05-31): `Levelup.tsx` rewritten to
+the design mockup (`MobileLevelUp.tsx` / `MobileLevelUpEmpty.tsx` / `MobileLevelUpLoading.tsx` /
+`MobileLevelUpPublic.tsx`), covering loading / empty / main states. Real-data-only: binds
+`GET /api/levelup/cohorts` and `GET /api/service-credits/wallet`; `MockLevelup.tsx` retired.
+Unbacked mockup elements omitted: `trainerName`, `tags`, `milestoneCount` (not returned by cohorts
+list endpoint); active-enrollment banner (no user-enrollment GET endpoint yet).
 
 ## Gaps and Known Technical Debt
 
@@ -102,6 +106,7 @@ dedicated Android sweep.
 
 ## Change Log
 
+- 2026-05-31: Android pixel pass — rewrote `ctf/packages/mobile/src/features/levelup/Levelup.tsx` to the design mockup (loading/empty/main states). Created real `api.ts` bound to `GET /api/levelup/cohorts` and `GET /api/service-credits/wallet`. Retired `MockLevelup.tsx`. Omitted unbacked fields: trainerName, tags, milestoneCount (not in cohorts list endpoint), active-enrollment banner (no user enrollment GET route). EOF, parity, and tsc gates all green.
 - 2026-05-30: Web pixel pass — rebuilt the web shell to the design mockup and decomposed the 520-line `levelup-shell.tsx` monolith into modular sub-components (`lu-shared.ts`, `lu-loading.tsx`, `lu-sidebar.tsx`, `lu-cohort-card.tsx`, `lu-browse.tsx`, `lu-progress.tsx`, `lu-right-panel.tsx`, thin shell) within rule-116 limits. Removed 6 dead unreferenced components (AdminPanel, CohortDetail, CohortList, EnrollModal, TrainerDashboard, UserDashboard). Shell binds real routes (cohorts, service-credits wallet, enroll, milestone validate); unbacked mockup figures omitted. No schema/route/contract changes.
 - 2026-05-17: Updated inventory to enforce Rule 105 parity baseline and Rule 120 living-snapshot model. Removed Android parity deferral language; confirmed web+android complete delivery status. Clarified technical debt (attachment storage) as genuine limitation, not unimplemented feature.
 - 2026-03-24: Initial LevelUp phase-3 implementation inventory created (schema, repository, API routes, shell components, seed script, contracts).
@@ -154,11 +159,7 @@ dedicated Android sweep.
 ### Seed and Release Readiness
 
 - [x] Add deterministic seed script for sample users/cohort/milestones.
-- [ ] Android parity implementation (follow-up required before GA).
-  - Ticket: `PARITY-LEVELUP-ANDROID-001` (placeholder)
-  - Owner: Mobile plugin parity owner (TBD)
-  - Deadline: Before LevelUp GA release
-  - Risk note: Web-only critical training flow until parity closes
+- [x] Android parity pixel pass delivered (2026-05-31). `Levelup.tsx` aligned to design mockup; real API bindings only; `MockLevelup.tsx` retired.
 - [x] Observability KPI finalization for non-placeholder admin metrics.
 
 ### MVP Testing Note

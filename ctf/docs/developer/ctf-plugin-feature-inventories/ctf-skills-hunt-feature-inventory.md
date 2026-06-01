@@ -182,7 +182,9 @@ Admin/moderator routes:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`). Web pixel pass complete for the user shell: `skills-hunt-shell.tsx` + `sh-*` sub-components are aligned to `design/.../survivor-hub/SkillsHunt.tsx` (brand color #D946EF, aria-labeled lucide icon rail, taxonomy skills picker, scout/leaderboard/missions/my-finds tabs) and decomposed within rule-116 limits; all tabs bind real round/leaderboard/missions/submissions/achievements/notifications routes (no fabricated figures). The admin moderation shell (`/admin/skills-hunt`) is a tracked rule-116 follow-up. Android pixel parity (`MobileSkillsHunt.tsx`) is tracked for the dedicated Android sweep.
+`web+android complete`. Round, submission, leaderboard, review, and scoring outcomes are consistent across web (`/apps/skills-hunt`) and Android (`packages/mobile/src/features/skills-hunt`). Web pixel pass complete for the user shell: `skills-hunt-shell.tsx` + `sh-*` sub-components are aligned to `design/.../survivor-hub/SkillsHunt.tsx` (brand color #D946EF, aria-labeled lucide icon rail, taxonomy skills picker, scout/leaderboard/missions/my-finds tabs) and decomposed within rule-116 limits; all tabs bind real round/leaderboard/missions/submissions/achievements/notifications routes (no fabricated figures). The admin moderation shell (`/admin/skills-hunt`) is a tracked rule-116 follow-up.
+
+Android pixel pass delivered (2026-05-31): `SkillsHunt.tsx` rewritten to the `MobileSkillsHunt.tsx` / `MobileSkillsHuntEmpty.tsx` / `MobileSkillsHuntLoading.tsx` / `MobileSkillsHuntPublic.tsx` mockup. Decomposed into `SkillsHunt.tsx` (root + loading/empty/leaderboard/missions/my-finds sub-components) + `SkillsHuntScoutTab.tsx` (nomination form + taxonomy accordion), both within rule-116 limits. All 4 nav tabs (Scout, Leaders, Missions, My Finds) bind real API routes via the existing `SkillsHuntApi.ts` client. Brand color `#D946EF`, dark palette `#0F1117`, per-mockup spacing and typography faithfully translated to React Native primitives. `MockSkillsHunt.tsx` retired. No fabricated data — any mockup element without a real API backing field is omitted with a code comment (stats in the public/empty view: found/week, skills-mapped, scouts count have no backend endpoint, omitted).
 
 ## 7) Seed Coverage Status
 
@@ -196,6 +198,7 @@ Admin/moderator routes:
 
 ## 9) Change Log
 
+- 2026-05-31: Android pixel pass. Rewrote `SkillsHunt.tsx` to `MobileSkillsHunt` mockup spec; retired `MockSkillsHunt.tsx`; extracted `SkillsHuntScoutTab.tsx`. All 4 tabs (Scout/Leaders/Missions/My Finds) bind real API routes. Loading/empty/main states implemented. Rule-116 compliant.
 - 2026-05-30: Admin moderation shell rule-116 follow-up (the deferred item from the user-shell pass). Decomposed the 253-line `skills-hunt-admin-shell.tsx` (213-line render + a complexity-11 action arrow) into `sha-shared.ts` (constants, reject-reason prompt), `sha-filters.tsx` (round/status chips + bulk toolbar), `sha-table.tsx` (table + extracted `SubmissionRow`/`RowActions`), and a thin shell. Behavior preserved exactly (review/bulk-review POST `{ action, notes }` with `x-ctf-csrf`, pending-only selection, sequential bulk apply); added aria-labels on the row checkboxes. No design mockup exists for this internal surface and none is required — pure behavior-preserving decomposition, no new rendered surface. No schema/route/contract changes.
 - 2026-05-30: Web pixel pass for the user shell. Aligned to the design mockup (brand color #A855F7 -> #D946EF; aria-labeled lucide icon rail with unread badge) and decomposed the 845-line monolith into modular sub-components within rule-116 limits: sh-shared.ts, sh-use-nomination-form.ts, sh-icon-rail, sh-notifications, sh-sidebar, sh-skills-picker, sh-scout-tab, sh-leaderboard-tab, sh-missions-tab, sh-my-finds-tab, sh-right-panel, thin shell. All data stays bound to the real routes; no mocks. Admin shell (/admin/skills-hunt) left as a tracked rule-116 follow-up. No schema/route/contract changes.
 
@@ -381,12 +384,23 @@ Admin/moderator routes:
   - [x] New `SkillsHuntApi.ts` client wrapping `/api/skills-hunt/*` (rounds, leaderboard, achievements, my finds, missions, submit). Same envelope as the web shell so the route layer is reusable.
   - [x] API-driven Rounds, Leaderboard, Submit screens — single round auto-selected from the active list.
   - [x] Notification center mirroring the web `/api/skills-hunt/notifications` polling. `SkillsHuntApi.listNotifications` + `markNotificationRead`; inbox bar above the tabbar with the red unread badge.
+- [x] **Android pixel pass** (`packages/mobile/src/features/skills-hunt/`) — 2026-05-31.
+  - [x] Rewrote `SkillsHunt.tsx` to match `MobileSkillsHunt.tsx` / `MobileSkillsHuntEmpty.tsx` / `MobileSkillsHuntLoading.tsx` mockup. Exact brand color `#D946EF`, dark `#0F1117` bg, per-mockup spacing/typography in RN primitives.
+  - [x] Loading state: `EXIT THEIR ECONOMY / EXIT THE PSYOP` centered text per mockup.
+  - [x] Empty state: dashed circle icon, "The hunt starts with you" copy, how-it-works rows, Nominate CTA, mission hint.
+  - [x] Main state: header with icon + title + pts·rank widget (from real `currentUserEntry`) + notification bell. Bottom nav bar with 4 tabs.
+  - [x] Scout tab: `SkillsHuntScoutTab.tsx` — nomination form with taxonomy accordion (sector→skills chips), free-text proposed fallback, submission confirmation with pending-pts message. All fields bound to real `submitNomination` API.
+  - [x] Leaderboard tab: ranked list with medals/rank, avatar initials, score, pendingPoints. Me-row highlighted. Backed by `listLeaderboard`.
+  - [x] Missions tab: progress bars + Scout Now CTA. Backed by `listMissions` with `colorHex` support.
+  - [x] My Finds tab: badge row backed by `listAchievements` (5 named codes), submission cards with status labels and relative dates. Backed by `listMyFinds`.
+  - [x] Retired `MockSkillsHunt.tsx`; extracted `SkillsHuntScoutTab.tsx`. All components within rule-116 (<200 lines per render).
+  - [x] Omitted (no API backing): public-view stats (found/week, skills-mapped count, scouts count) — no backend endpoint exposes these aggregates.
 
 ### Open Decisions Tracker
 
 - [ ] Final tier/prize structure (1st vs 2nd vs 3rd). Owner to confirm before Wave 2 ships.
 - [x] Final policy for admin-preapproved submitter pathways — re-enabled as part of reputation system in Wave 2.
-- [ ] Android parity target date and owners — to be set during Wave 2 mobile rebuild.
+- [x] Android pixel parity delivered 2026-05-31 (see Android pixel pass checklist above).
 - [x] Leaderboard real-time: polling vs WebSocket. **Locked 2026-05-12: 30s polling.** GetStream is out of scope (continuity §2.11). Revisit only if engagement metrics show users want sub-30s leaderboard ticking.
 - [ ] Moderation report UI: only on community-generated, or all Directory profiles. Default: all profiles.
 - [ ] Dispute escalation: second-admin sign-off vs flagged queue. Default: flagged queue.
