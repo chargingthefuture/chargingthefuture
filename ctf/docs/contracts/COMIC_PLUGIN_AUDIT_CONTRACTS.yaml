@@ -5,7 +5,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.message.route
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: assistant_message_routing
     policyDecision:
@@ -36,7 +35,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.reply.generate
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: assistant_reply_generation
     policyDecision:
@@ -65,7 +63,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.conversation.read
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: assistant_asker_stream
     policyDecision:
@@ -94,7 +91,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.answer.rate
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: assistant_answer_rating
     policyDecision:
@@ -123,7 +119,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.review.list
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: admin_review_queue
     policyDecision:
@@ -150,7 +145,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.review.resolve
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: assistant_human_review
     policyDecision:
@@ -179,7 +173,6 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.training.export
-    version: 1.0.0
     commandVersion: 1.0.0
     purpose: assistant_training_export
     policyDecision:

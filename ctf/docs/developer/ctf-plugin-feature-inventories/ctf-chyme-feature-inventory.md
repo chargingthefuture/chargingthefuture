@@ -88,7 +88,8 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 1. Web implementation is delivered for room/chat/join/deletion workflows.
 2. Android implementation is delivered for room/chat/join/deletion workflows using runtime-configured request identity and the same protected API surface.
 3. Current feature-parity status is web+android complete.
-4. Web pixel pass: `chyme-live-shell` is aligned to `design/.../survivor-hub/Chyme.tsx`, using lucide-react iconography in place of emoji glyphs. Loading and empty states render inline; there is no public state by design (Chyme is auth-only per the #102 visibility decision). The Android pixel pass to `MobileChyme.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+4. Web pixel pass: `chyme-live-shell` is aligned to `design/.../survivor-hub/Chyme.tsx`, using lucide-react iconography in place of emoji glyphs. Loading and empty states render inline; there is no public state by design (Chyme is auth-only per the #102 visibility decision).
+5. Android pixel pass: `ChymeRoom.tsx` (and sub-components `chyme-loading`, `chyme-empty`, `chyme-room-list`, `chyme-active-room`, `chyme-chat-view`) is aligned to `design/.../survivor-hub/MobileChyme.tsx`, `MobileChymeEmpty.tsx`, `MobileChymeLoading.tsx`. A canonical `api.ts` entry-point was added. All data is bound to real `/api/chyme/*` endpoints. The public state (`MobileChymePublic.tsx`) is not applicable â€” Chyme is auth-only per the #102 visibility decision. Delivered 2026-05-31.
 
 ## Seed Coverage Status
 
@@ -107,6 +108,7 @@ Current status:
 
 ## Change Log
 
+- 2026-05-31: Android pixel pass. Rewrote `ChymeRoom.tsx` aligned to `MobileChyme.tsx` / `MobileChymeEmpty.tsx` / `MobileChymeLoading.tsx` mockups. Decomposed into modular sub-components (`chyme-loading`, `chyme-empty`, `chyme-room-list`, `chyme-active-room`, `chyme-chat-view`), each within rule-116 200-line / complexity-10 limits. Added canonical `api.ts` entry-point re-exporting from `ChymeApi.ts`. All UI state (loading, empty, room-list, in-room, chat) bound to real `/api/chyme/room`, `/api/chyme/messages`, `/api/chyme/join`, and account deletion endpoints. Public state omitted â€” Chyme is auth-only. TypeScript: zero errors. EOF: clean. Parity check: passed.
 - 2026-05-29: Modularity refactor. Decomposed the oversized `ChymeLiveShell` (359 lines / complexity 40, a pre-existing rule-116 violation) into modular sub-components (`chyme-header`, `chyme-sidebar`, `chyme-room-view`, `chyme-stage`, `chyme-chat-panel`, `chyme-controls`, `chyme-shared`), each within the 200-line / complexity-10 limits. No behavior, API, or copy change.
 - 2026-05-29: Design-sync reconcile to `c5d83c0`. Removed user-facing "GetStream" wording from `chyme-live-shell`: "Social Audio Â· GetStream Powered" â†’ "Social Audio Â· End-to-End Encrypted", the chat "GetStream" badge â†’ "Encrypted", and "Audio via GetStream" â†’ "Audio â€” encrypted". Copy-only.
 - 2026-05-29: Web UI circle-back. Aligned `chyme-live-shell` to the `Chyme.tsx` mockup by replacing emoji glyphs with the mockup's lucide-react icons (Radio, Mic/MicOff, Hand, Phone, MessageSquare, Hash, Send, Volume2, Users, Lock, RefreshCw); structure and palette already matched. API wiring unchanged.
@@ -140,7 +142,7 @@ Current status:
     - Vercel staging integration completed.
     - Expo baseline completed.
 
-### €” Core Implementation and Contract Alignment
+### ï¿½ï¿½ Core Implementation and Contract Alignment
 
 - [x] Implement Chyme room bootstrap route behavior.
   - Acceptance criteria:
@@ -162,7 +164,7 @@ Current status:
     - Chyme access/deny policy contract follows Rule 202 template conventions.
     - Chyme audit contract follows Rule 203 template conventions.
 
-### €” Deletion and Compliance
+### ï¿½ï¿½ Deletion and Compliance
 
 - [x] Implement service-scoped deletion flow.
   - Acceptance criteria:
@@ -174,7 +176,7 @@ Current status:
   - Acceptance criteria:
     - Status model (`requested`/`processing`/`completed`/`failed`) is represented consistently in account deletion workflow.
 
-### €” Seed and Deterministic Dev Validation
+### ï¿½ï¿½ Seed and Deterministic Dev Validation
 
 - [x] Add deterministic Chyme seed script.
   - Acceptance criteria:
@@ -183,7 +185,7 @@ Current status:
   - Acceptance criteria:
     - Seed data can be regenerated for local/dev manual validation.
 
-### €” Web/Android Parity
+### ï¿½ï¿½ Web/Android Parity
 
 - [x] Confirm web Chyme baseline is implemented.
   - Acceptance criteria:
@@ -195,7 +197,7 @@ Current status:
   - Acceptance criteria:
     - Parity no longer depends on a deferred follow-up owner/date.
 
-### €” Release Gates and Lifecycle Maintenance
+### ï¿½ï¿½ Release Gates and Lifecycle Maintenance
 
 - [x] Keep Chyme inventory/checklist synchronized with accepted changes. [EVIDENCE CAPTURE DEFERRED FOR MVP â€” see Rule 118.]
   - Acceptance criteria:

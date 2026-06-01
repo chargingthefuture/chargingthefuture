@@ -103,26 +103,26 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 
 | Plugin | 🎨 Design | Backend | Web px | Android | Gates | Deployed |
 |---|---|---|---|---|---|---|
-| chyme | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| chyme | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | skills-taxonomy | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | directory | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| feed-announcements (Hub data layer) | 🎨 | ✅ | ⬜ | ⬜ | 🟡 | ⬜ |
-| workforce | 🎨 | ✅ | ⬜ | ⬜ | ⬜ | ⬜ |
+| feed-announcements (Hub data layer) | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| workforce | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | skills-hunt | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | foundation | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| lighthouse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| lighthouse | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trusttransport | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trusttransport | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| mood | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | gentlepulse | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| weekly-performance | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | gdp | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| service-credits | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| trust | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| trust | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| unlock | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| unlock | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
 
