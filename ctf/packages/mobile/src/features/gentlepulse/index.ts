@@ -1,1 +1,1 @@
-export { MockGentlepulse as GentlePulse } from './MockGentlepulse';
+export { GentlePulse } from './GentlePulse';

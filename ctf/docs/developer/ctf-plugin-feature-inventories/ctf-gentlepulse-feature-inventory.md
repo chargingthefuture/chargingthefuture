@@ -116,7 +116,9 @@ Excluded route groups:
 
 `web+android complete`. Core library/filter/sort/favorite/rating/play behaviors are consistent across web (`/apps/gentlepulse`) and Android (`packages/mobile/src/features/gentlepulse`). App-level settings parity is tracked in the non-plugin inventory.
 
-Web pixel pass (design `c5d83c0`): the `/apps/gentlepulse` shell matches `design/.../survivor-hub/GentlePulse.tsx` (sessions grid, player, supportive chat, sidebar categories, right panel) with the mockup's ðŸ’š header glyphs; Loading/Empty states added. Library browse, play tracking, and favorite toggles bind to the real `/api/gentlepulse/library*` routes; sessions, categories, and counts derive from that data (no dummy session list). The previously oversized shell was decomposed into modular sub-components (`gp-shared`, `gp-loading`, `gp-icon-rail`, `gp-sidebar`, `gp-sessions`, `gp-player`, `gp-chat`, `gp-right-panel`) within the rule-116 limits, and a dead duplicate `components/gentle-pulse/` directory was removed. Android pixel pass to `MobileGentlePulse.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+Web pixel pass (design `c5d83c0`): the `/apps/gentlepulse` shell matches `design/.../survivor-hub/GentlePulse.tsx` (sessions grid, player, supportive chat, sidebar categories, right panel) with the mockup's ðŸ’š header glyphs; Loading/Empty states added. Library browse, play tracking, and favorite toggles bind to the real `/api/gentlepulse/library*` routes; sessions, categories, and counts derive from that data (no dummy session list). The previously oversized shell was decomposed into modular sub-components (`gp-shared`, `gp-loading`, `gp-icon-rail`, `gp-sidebar`, `gp-sessions`, `gp-player`, `gp-chat`, `gp-right-panel`) within the rule-116 limits, and a dead duplicate `components/gentle-pulse/` directory was removed.
+
+Android pixel pass (2026-05-31): `ctf/packages/mobile/src/features/gentlepulse/` rebuilt against `design/.../survivor-hub/MobileGentlePulse.tsx` (+ Empty/Loading/Public variants). Real screen `GentlePulse.tsx` replaces retired `MockGentlepulse.tsx`. `index.ts` now exports `{ GentlePulse }` from the real screen. `api.ts` updated to export typed `GentlePulseSession` interface and active `recordPlay`, `addFavorite`, `removeFavorite` functions with `x-ctf-csrf: 1` headers. Bound fields: `id`, `title`, `description` from `GET /api/gentlepulse/library`. Omitted (no backing DB column): `emoji`, `duration`, `category`, play-count, streak. Loading/Empty/Public/Main states all implemented with design-faithful colors, spacing, and RN primitives.
 
 ## 7) Seed Coverage Status
 
@@ -129,6 +131,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-05-31: Android pixel pass. Rebuilt `GentlePulse.tsx` real screen from `MobileGentlePulse.tsx` design + Empty/Loading/Public variants. Retired `MockGentlepulse.tsx`. Updated `api.ts` with typed interface and active mutation helpers (`recordPlay`, `addFavorite`, `removeFavorite`) with CSRF headers. Bound to real fields: `id`, `title`, `description`. Omitted non-backed fields: `emoji`, `duration`, `category`, play-count, streak.
 - 2026-05-29: Web UI circle-back (design `c5d83c0`). Aligned the gentlepulse shell to the `GentlePulse.tsx` mockup + Loading/Empty states; restored the ðŸ’š header glyphs; decomposed the oversized shell into modular sub-components within rule-116 limits; removed the dead duplicate `components/gentle-pulse/` directory. Real `/api/gentlepulse/library*` wiring unchanged.
 - 2026-05-18: Renamed "Web and Android Parity Plan" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
 - 2026-02-25: Created initial GentlePulse CTF rewrite inventory.
@@ -161,7 +164,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - No `/api/gentlepulse/progress*` contract or implementation tasks are in scope.
 
-### €” Contracts and Scope Lock
+### ï¿½ï¿½ Contracts and Scope Lock
 
 - [ ] Lock authenticated API posture for GentlePulse routes.
   - Acceptance criteria:
@@ -173,7 +176,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Exclusions include plugin settings/accessibility, plugin announcements, in-app admin surfaces, and progress endpoints.
 
-### €” Data and Migration Readiness
+### ï¿½ï¿½ Data and Migration Readiness
 
 - [ ] Define migration approach from anonymous `clientId` to authenticated user model.
   - Acceptance criteria:
@@ -186,7 +189,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Required fields and sorting/filtering indexes are documented.
 
-### €” API and Behavior Implementation Readiness
+### ï¿½ï¿½ API and Behavior Implementation Readiness
 
 - [ ] Finalize API route map for in-scope features.
   - Acceptance criteria:
@@ -195,7 +198,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Validation gate or lint/contract checks fail if excluded route groups are introduced.
 
-### €” Security and Compliance Gates
+### ï¿½ï¿½ Security and Compliance Gates
 
 - [ ] Verify authz coverage for all GentlePulse writes.
   - Acceptance criteria:
@@ -207,7 +210,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - Exposed GentlePulse contracts align with approved shared deny/error taxonomy.
 
-### €” Web and Android Parity Gates
+### ï¿½ï¿½ Web and Android Parity Gates
 
 - [ ] Web/mobile parity design scope for core user journeys.
   - Acceptance criteria:
@@ -216,7 +219,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
   - Acceptance criteria:
     - GentlePulse clients consume app-level settings contracts.
 
-### €” Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Evidence [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] API/integration design documentation for retained feature scope.
   - Acceptance criteria:
