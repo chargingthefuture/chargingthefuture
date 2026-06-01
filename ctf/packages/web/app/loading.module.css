@@ -1,0 +1,28 @@
+/* App-wide loading state. Canonical design: design/ submodule HubLoading.tsx
+   (every per-surface *Loading mockup shares this exact treatment). */
+.screen {
+  display: flex;
+  height: 100vh;
+  background: #0F1117;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.inner {
+  text-align: center;
+  padding: 0 32px;
+}
+
+.line {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.22);
+  text-transform: uppercase;
+  font-weight: 500;
+  line-height: 2;
+}
+
+.lineLead {
+  margin-bottom: 16px;
+}
