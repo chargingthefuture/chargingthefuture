@@ -1,0 +1,42 @@
+'use client';
+
+// A problem heading plus its survivor-verified tools, from design/.../survivor-hub/WhatWorks.tsx.
+import { BRAND, SUBTLE, TEXT, type WhatWorksProblem, type WhatWorksProduct } from './ww-shared';
+import { WhatWorksProductCard } from './ww-product-card';
+
+type Props = {
+  problem: WhatWorksProblem;
+  busyProductId: string | null;
+  onToggleHelpful: (product: WhatWorksProduct) => void;
+  sectionRef?: (node: HTMLElement | null) => void;
+};
+
+export function WhatWorksProblemSection({ problem, busyProductId, onToggleHelpful, sectionRef }: Props) {
+  return (
+    <section ref={sectionRef}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: `${BRAND}12`, border: `1px solid ${BRAND}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{problem.emoji || '🧰'}</div>
+        <div style={{ flex: 1, paddingTop: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: TEXT }}>{problem.title}</h2>
+            <span style={{ fontSize: 11.5, color: SUBTLE, fontWeight: 600 }}>{problem.products.length} tools</span>
+          </div>
+          {problem.context ? (
+            <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.5, marginTop: 3 }}>{problem.context}</div>
+          ) : null}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {problem.products.map((product) => (
+          <WhatWorksProductCard
+            key={product.id}
+            product={product}
+            busy={busyProductId === product.id}
+            onToggleHelpful={onToggleHelpful}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}

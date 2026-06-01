@@ -83,7 +83,9 @@ Admin routes:
 
 `web+android complete`. Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are consistent across web (`/apps/weekly-performance`) and Android (`packages/mobile/src/features/weekly-performance`).
 
-Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states â€” icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only â€” the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits. Android pixel pass to `MobileWeeklyPerformance.tsx` remains tracked in `PRODUCTION_READINESS_PLAN.md`.
+Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states â€” icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only â€” the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits.
+
+Android pixel pass (design `MobileWeeklyPerformance.tsx`, 2026-05-31): the mobile screen (`packages/mobile/src/features/weekly-performance/WeeklyPerformance.tsx`) is fully rewritten to align with the canonical mockup. A new `api.ts` is introduced, binding to the same three read routes used by web (`GET /api/weekly-performance/weeks`, `/current-week`, `/metrics`). Four states are implemented: Loading (brand phrases centered), Public/unauthenticated (blurred metric preview with lock overlay and sign-in CTA), Empty (week in progress with placeholder cards), and Populated (metrics grid + history tab). Metric cards are driven by known `metricKey` values (`member_count`, `signups`, `engagements`, `gdp_delta`); the mockup's "Daily Engagements" bar chart has no backing API field (metrics are weekly aggregates only) and is omitted per real-data-only policy. The admin Export action is not surfaced on mobile (admin-only server gate exists on web; mobile surfaces the admin badge and export hint in the history tab). All mock data retired. Export `WeeklyPerformance` preserved.
 
 ## 6) Seed Coverage Status
 
@@ -97,6 +99,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
 
 ## 8) Change Log
 
+- 2026-05-31: Android pixel pass (design `MobileWeeklyPerformance.tsx`). Rewrote `packages/mobile/src/features/weekly-performance/WeeklyPerformance.tsx` to align with canonical mockup; introduced `api.ts` binding to real routes (`/weeks`, `/current-week`, `/metrics`). Four states: Loading, Public, Empty, Populated. Metric cards keyed on real `metricKey` fields. Daily chart omitted (no backing API field). Mock data retired. No schema/API/contract change.
 - 2026-05-29: Web UI circle-back (design `c5d83c0`; unblocked by the design re-pin). Rebuilt the user-facing weekly-performance shell from the baseline server summary to the full client dashboard in `WeeklyPerformance.tsx` (+ Empty/Loading), wired to the documented read routes and the admin export. Decomposed into modular sub-components (`wp-shared`, `wp-loading`, `wp-icon-rail`, `wp-sidebar`, `wp-metric-cards`, `wp-comparison-chart`, `wp-empty-main`, `wp-dashboard-main`, `wp-right-rail`, plus the shell). Real data only; the dummy daily chart became a real this-week-vs-last-week per-metric comparison and the unbacked "Top Apps" widget was omitted. No schema/API change.
 - 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-milestone entry per Rule 105.
 - 2026-02-25: Created initial Weekly Performance plugin inventory.
@@ -115,7 +118,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Stable plugin slug is `weekly-performance` across inventory, contracts, and routes.
 
-### €” Contract Lock
+### ï¿½ï¿½ Contract Lock
 
 - [ ] Define v1 plugin command contracts.
   - Acceptance criteria:
@@ -130,7 +133,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Week start policy and non-financial metric formulas are documented and approved.
 
-### €” Schema and Migrations
+### ï¿½ï¿½ Schema and Migrations
 
 - [ ] Define weekly performance plugin tables/materializations in `ctf/migrations/`.
   - Acceptance criteria:
@@ -139,7 +142,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Retention class, recompute policy, and rollback/replay notes are documented.
 
-### €” API and Policy Implementation
+### ï¿½ï¿½ API and Policy Implementation
 
 - [ ] Implement admin week list/get and metrics/comparison endpoints.
   - Acceptance criteria:
@@ -155,7 +158,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Unauthorized role/scope access is denied with stable reason categories.
 
-### €” Web and Mobile Parity
+### ï¿½ï¿½ Web and Mobile Parity
 
 - [ ] Deliver web admin weekly review surface.
   - Acceptance criteria:
@@ -169,7 +172,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Error/deny semantics and metric formatting are equivalent across platforms.
 
-### €” Security and Compliance
+### ï¿½ï¿½ Security and Compliance
 
 - [ ] Verify authz/authn controls for all plugin routes.
   - Acceptance criteria:
@@ -181,7 +184,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
   - Acceptance criteria:
     - Allow/deny outcomes and report exports are captured with actor/action/outcome/timestamp correlation fields.
 
-### €” Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
+### ï¿½ï¿½ Validation, Seeds, and Release Gates [MVP: VALIDATION DEFERRED â€” see Rule 118.]
 
 - [ ] Command/access/audit parity design documentation.
   - Acceptance criteria:
