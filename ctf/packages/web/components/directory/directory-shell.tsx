@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Search, MessageSquare, Users, Bell, Settings } from "lucide-react";
+import { BookOpen, ChevronLeft, Search, MessageSquare, Users, Bell, Settings } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, COLOR, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryProfileDetail } from "./directory-profile-detail";
 import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
@@ -36,6 +38,7 @@ export function DirectoryShell() {
   const [chatInput, setChatInput] = useState("");
   const [rewardCard, setRewardCard] = useState<SkillsHuntRewardCard | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     async function fetchMeta() {
@@ -133,6 +136,59 @@ export function DirectoryShell() {
     return <DirectoryProfileDetail member={selected} onBack={() => setSelected(null)} />;
   }
 
+  const content = tab === "browse" ? (
+    <DirectoryBrowse
+      rewardCard={rewardCard}
+      loadingMembers={loadingMembers}
+      members={members}
+      categories={sectors.map((s) => s.name)}
+      filtered={isFiltered}
+      onSelect={setSelected}
+      onClearFilters={clearFilters}
+    />
+  ) : (
+    <DirectoryChatTab
+      chatInput={chatInput}
+      onChatInputChange={setChatInput}
+      onBrowse={() => setTab("browse")}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <BookOpen size={18} style={{ color: COLOR, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>Directory</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+            {TABS.map(({ key }) => (
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{key}</button>
+            ))}
+          </div>
+          {tab === "browse" && (
+            <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ position: "relative" }}>
+                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4B5563" }} />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 13, color: "#9CA3AF", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+                {sectorFilters.map((f) => (
+                  <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${COLOR}14` : "transparent", border: `1px solid ${activeFilter === f ? COLOR + "50" : "rgba(255,255,255,0.1)"}`, color: activeFilter === f ? COLOR : "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
       {/* Icon rail */}
@@ -207,23 +263,7 @@ export function DirectoryShell() {
           </Badge>
         </header>
 
-        {tab === "browse" ? (
-          <DirectoryBrowse
-            rewardCard={rewardCard}
-            loadingMembers={loadingMembers}
-            members={members}
-            categories={sectors.map((s) => s.name)}
-            filtered={isFiltered}
-            onSelect={setSelected}
-            onClearFilters={clearFilters}
-          />
-        ) : (
-          <DirectoryChatTab
-            chatInput={chatInput}
-            onChatInputChange={setChatInput}
-            onBrowse={() => setTab("browse")}
-          />
-        )}
+        {content}
       </div>
 
       {/* Right panel */}
