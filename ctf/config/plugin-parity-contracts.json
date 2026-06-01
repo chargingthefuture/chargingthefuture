@@ -120,6 +120,12 @@
       "mobileFeatureDirs": ["trust"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": false
+    },
+    {
+      "slug": "whatworks",
+      "mobileFeatureDirs": ["whatworks"],
+      "requiresMobileSurface": true,
+      "requiresExplicitWebShell": true
     }
   ]
 }

@@ -1,6 +1,27 @@
+#!/usr/bin/env node
 
-import { queryDb } from '../packages/web/lib/db/postgres.ts';
+import { Pool } from 'pg';
 import crypto from 'crypto';
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return value;
+}
+
+const pool = new Pool({
+  connectionString: requireEnv('DATABASE_URL'),
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+async function queryDb(text, values = []) {
+  return pool.query(text, values);
+}
 
 const SEED_USER_IDS = [
   'user-00000001',
@@ -60,7 +81,11 @@ async function seed() {
   }
 }
 
-seed().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+seed()
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await pool.end();
+  });
