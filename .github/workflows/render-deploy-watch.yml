@@ -5,6 +5,10 @@ name: Render Deploy Watch
 # to a final result, so the deploy's success or failure shows up as a job you
 # can open from the GitHub Actions tab on a phone — without logging into Render.
 #
+# A commit that doesn't trigger a deploy (docs/CI-only changes) is NOT a failure:
+# the job exits cleanly with a notice. The only red is a deploy that actually
+# ends in a failed state.
+#
 # To watch another service:
 #   1. add a matrix entry with its name (e.g. - name: ctf-worker);
 #   2. add a static env line below: RENDER_SERVICE_ID_CTF_WORKER: ${{ secrets.RENDER_SERVICE_ID_CTF_WORKER }};
@@ -53,23 +57,22 @@ jobs:
             *) echo "::error::Unknown service '${SERVICE_NAME}' — add its secret env mapping in the workflow."; exit 1 ;;
           esac
 
-          if [ -z "${RENDER_API_KEY:-}" ]; then
-            echo "::error::Missing repo secret RENDER_API_KEY. Add it under Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
-          if [ -z "${RENDER_SERVICE_ID:-}" ]; then
-            echo "::error::Missing repo secret RENDER_SERVICE_ID_${SERVICE_NAME^^} (use the RENDER_SERVICE_ID_<NAME> pattern) for service '${SERVICE_NAME}'."
-            exit 1
+          if [ -z "${RENDER_API_KEY:-}" ] || [ -z "${RENDER_SERVICE_ID:-}" ]; then
+            # Secrets not configured yet — treat as nothing to watch rather than a hard failure.
+            echo "::notice::[${SERVICE_NAME}] RENDER_API_KEY and/or RENDER_SERVICE_ID_${SERVICE_NAME^^} not set; skipping deploy watch."
+            exit 0
           fi
 
           api="https://api.render.com/v1"
           auth="Authorization: Bearer ${RENDER_API_KEY}"
           short_sha="${COMMIT_SHA:0:7}"
+          in_progress='select(.status == "created" or .status == "build_in_progress" or .status == "update_in_progress" or .status == "pre_deploy_in_progress")'
 
           echo "[${SERVICE_NAME}] Looking for the Render deploy for commit ${short_sha}..."
 
-          # Render registers the auto-deploy a few seconds after the push, so give
-          # it time to appear (about 5 minutes of polling).
+          # Find a deploy to follow: prefer an exact commit match; otherwise an
+          # in-progress deploy (Render may report the commit id differently).
+          # About 5 minutes of polling for it to appear.
           deploy_id=""
           for attempt in $(seq 1 20); do
             if resp=$(curl -fsS -H "$auth" "$api/services/$RENDER_SERVICE_ID/deploys?limit=20"); then
@@ -78,7 +81,12 @@ jobs:
                 echo "[${SERVICE_NAME}] Found deploy ${deploy_id} for commit ${short_sha}."
                 break
               fi
-              echo "[${SERVICE_NAME}] No deploy for this commit yet (attempt ${attempt}/20); waiting..."
+              deploy_id=$(echo "$resp" | jq -r "[.[] | .deploy | ${in_progress}] | .[0].id // empty")
+              if [ -n "$deploy_id" ]; then
+                echo "[${SERVICE_NAME}] Following in-progress deploy ${deploy_id}."
+                break
+              fi
+              echo "[${SERVICE_NAME}] No deploy for commit ${short_sha} yet (attempt ${attempt}/20); waiting..."
             else
               echo "[${SERVICE_NAME}] Render API list call failed (attempt ${attempt}/20); retrying..."
             fi
@@ -86,11 +94,11 @@ jobs:
           done
 
           if [ -z "$deploy_id" ]; then
-            echo "::warning::[${SERVICE_NAME}] No Render deploy found for commit ${short_sha}. Auto-deploy may be off, or this commit did not trigger a deploy."
-            exit 1
+            echo "::notice::[${SERVICE_NAME}] No Render deploy found for commit ${short_sha} — nothing to watch (this commit may not have triggered a deploy). Skipping."
+            exit 0
           fi
 
-          # Follow the deploy until it reaches a final state.
+          # Follow the deploy until it reaches a final state. Only a failed deploy is a job failure.
           while true; do
             if deploy=$(curl -fsS -H "$auth" "$api/services/$RENDER_SERVICE_ID/deploys/$deploy_id"); then
               status=$(echo "$deploy" | jq -r '.status')
