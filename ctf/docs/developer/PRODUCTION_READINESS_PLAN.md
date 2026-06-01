@@ -121,7 +121,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | levelup | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | trust | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| clicklog | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| clicklog | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | unlock | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 
 For ⏳ rows: build backend now; UI (web + android) is gated on the parallel design pass — circle back when it lands.
