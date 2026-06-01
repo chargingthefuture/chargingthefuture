@@ -43,7 +43,7 @@ export function getConfiguredAuthProvider(): AuthProviderRuntimeConfig | null {
     return null;
   }
 
-  const providerName = getEnvValue('CTF_AUTH_PROVIDER', 'NEXT_PUBLIC_AUTH_PROVIDER') ?? 'clerk';
+  const providerName = getEnvValue('NEXT_PUBLIC_AUTH_PROVIDER') ?? 'clerk';
 
   return {
     providerName,
