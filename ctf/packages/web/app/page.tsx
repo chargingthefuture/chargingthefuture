@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { CommunityShell } from '../components/community-shell/community-shell';
 import type { ShellCurrentUser } from '../components/community-shell/shell-types';
 import type { TrustUserExtension } from '../lib/trust/types';
@@ -40,6 +41,15 @@ export default async function HomePage() {
     shellStatsPromise,
     authDecisionPromise,
   ]);
+
+  // `evaluatePluginAccess` denies an anonymous visitor with 401 (AUTH_UNAUTHORIZED)
+  // and a signed-in-but-not-yet-unlocked user with 403. Forward the signed-in
+  // case to the hosted unlock/verification flow so a logged-in member is never
+  // shown the anonymous "please sign in" shell — which previously made signing in
+  // look like it did nothing.
+  if (authDecision && !authDecision.allowed && authDecision.code !== 'AUTH_UNAUTHORIZED') {
+    redirect('/plugin/unlock');
+  }
 
   const allowDecision = authDecision?.allowed ? authDecision : null;
   const isAuthenticated = Boolean(allowDecision);
