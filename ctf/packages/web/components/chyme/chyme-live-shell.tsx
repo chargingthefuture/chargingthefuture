@@ -22,8 +22,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   const [joinState, setJoinState] = useState<'idle' | 'joining' | 'ready'>('idle');
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
-  const [handRaised, setHandRaised] = useState(false);
   const [showChat, setShowChat] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -146,10 +144,6 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
               onSend={() => void handleSend()}
               sending={sending}
               messagesEndRef={messagesEndRef}
-              muted={muted}
-              onToggleMute={() => setMuted((m) => !m)}
-              handRaised={handRaised}
-              onToggleHand={() => setHandRaised((h) => !h)}
               onLeave={() => { setJoinState('idle'); setJoinInfo(null); }}
             />
           )}

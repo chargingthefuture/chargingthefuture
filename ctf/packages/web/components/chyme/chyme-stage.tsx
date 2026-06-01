@@ -1,35 +1,20 @@
 'use client';
 
 import { Mic } from 'lucide-react';
-import { StreamVideoPanel } from '../shared/stream-video-panel';
-import { BORDER, CARD_BG, PRIMARY, initials } from './chyme-shared';
-import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
+import { PRIMARY, initials } from './chyme-shared';
+import type { ChymeRoomResponse } from 'lib/chyme/types';
 
+// Pre-join preview of who is in the room. Once the viewer joins, the live
+// Stream-backed stage in chyme-audio-room.tsx takes over.
 export function ChymeStage({
   room,
   currentUserId,
-  joinInfo,
-  joinReady,
 }: {
   room: ChymeRoomResponse;
   currentUserId: string;
-  joinInfo: ChymeJoinResponse | null;
-  joinReady: boolean;
 }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-      {joinInfo && joinReady && (
-        <div style={{ marginBottom: 24, padding: 16, borderRadius: 14, background: CARD_BG, border: `1px solid ${BORDER}` }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#F0FDF4', marginBottom: 12 }}>Audio Room</div>
-          <StreamVideoPanel
-            streamApiKey={joinInfo.streamApiKey}
-            streamToken={joinInfo.streamToken}
-            streamUserId={joinInfo.streamUserId}
-            streamChannelId={joinInfo.streamChannelId}
-          />
-        </div>
-      )}
-
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#4B5563', textTransform: 'uppercase', marginBottom: 16 }}>
           On Stage · {room.participants.length} Participants

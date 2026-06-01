@@ -1,13 +1,19 @@
 'use client';
 
 import type { RefObject } from 'react';
+import dynamic from 'next/dynamic';
 import { Lock, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { BORDER, PRIMARY, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
-import { ChymeControls } from './chyme-controls';
 import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
+
+// The live audio room pulls in the Stream Video SDK, which is browser-only, so
+// it is loaded on the client and never server-rendered.
+const ChymeAudioRoom = dynamic(() => import('./chyme-audio-room').then((m) => m.ChymeAudioRoom), {
+  ssr: false,
+});
 
 export type ChymeRoomViewProps = {
   room: ChymeRoomResponse;
@@ -22,16 +28,27 @@ export type ChymeRoomViewProps = {
   onSend: () => void;
   sending: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
-  muted: boolean;
-  onToggleMute: () => void;
-  handRaised: boolean;
-  onToggleHand: () => void;
   onLeave: () => void;
 };
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
-  const { room, currentUser, showChat, onToggleChat } = props;
+  const { room, currentUser, showChat, onToggleChat, joinInfo, joinReady } = props;
   const isMobile = useIsMobile();
+
+  const chatPanel = (
+    <ChymeChatPanel
+      messages={props.messages}
+      currentUserId={currentUser.userId}
+      draft={props.draft}
+      onDraftChange={props.onDraftChange}
+      onSend={props.onSend}
+      sending={props.sending}
+      messagesEndRef={props.messagesEndRef}
+    />
+  );
+
+  const inCall = joinReady && joinInfo !== null;
+
   return (
     <>
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
@@ -57,34 +74,21 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
-        <ChymeStage
-          room={room}
-          currentUserId={currentUser.userId}
-          joinInfo={props.joinInfo}
-          joinReady={props.joinReady}
+      {inCall && joinInfo ? (
+        <ChymeAudioRoom
+          joinInfo={joinInfo}
+          currentUser={currentUser}
+          showChat={showChat}
+          chatPanel={chatPanel}
+          isMobile={isMobile}
+          onLeave={props.onLeave}
         />
-        {showChat && (
-          <ChymeChatPanel
-            messages={props.messages}
-            currentUserId={currentUser.userId}
-            draft={props.draft}
-            onDraftChange={props.onDraftChange}
-            onSend={props.onSend}
-            sending={props.sending}
-            messagesEndRef={props.messagesEndRef}
-          />
-        )}
-      </div>
-
-      <ChymeControls
-        muted={props.muted}
-        onToggleMute={props.onToggleMute}
-        handRaised={props.handRaised}
-        onToggleHand={props.onToggleHand}
-        joinReady={props.joinReady}
-        onLeave={props.onLeave}
-      />
+      ) : (
+        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
+          <ChymeStage room={room} currentUserId={currentUser.userId} />
+          {showChat && chatPanel}
+        </div>
+      )}
     </>
   );
 }
