@@ -56,14 +56,39 @@ To run locally:
 node ctf/scripts/check-deletion-registry.mjs
 ```
 
+## The engine and orchestrator
+
+The registry is data; two small modules turn it into action:
+
+- **`deletion-engine.ts`** — a pure translator. `planTable` / `planDeletion` turn a registry entry
+  into the exact SQL to run (`DELETE FROM <table> WHERE <userColumn> = $1`, or an idempotent
+  `UPDATE ... SET <softDeleteColumn> = NOW() WHERE <userColumn> = $1 AND <softDeleteColumn> IS NULL`,
+  or nothing for `retain`). Because it is pure, its output is checked without a database by
+  `ctf/scripts/check-deletion-engine.mjs` (run in CI). `executeEntry` runs the plan against an open
+  transaction.
+- **`deletion-orchestrator.ts`** — `deleteServiceScopeData(slug, userId)` deletes one plugin's data;
+  `deleteAllAccountData(userId)` deletes every plugin's data. Both run inside a single
+  `withDbTransaction` (so a failure rolls back rather than half-deleting a user), record one
+  `account_deletion_events` row, and log an `[account.audit]` line. Identifiers come only from the
+  registry; the user id is always the bound parameter `$1`, never inlined.
+
+Money is out of scope for the engine. ServiceCredits wallets/ledgers are `retain` in the registry
+and are settled by the existing reclaim flow (`markFullAccountDeletionRequested` →
+`enqueueServiceCreditsDeletionReclaim` → the service-credits adapter outbox). The full-account route
+calls that reclaim flow first, then runs the orchestrator; the engine never moves credits.
+
+## API routes
+
+- `DELETE /api/account/services/:slug` — delete just one plugin's data. The `:slug` is validated
+  against the registry; plugins that are not service-scoped (money/aggregate-only) return a clear
+  409 instead of a silent no-op.
+- `DELETE /api/account/full-account` — record the request, queue the ServiceCredits reclaim, then
+  delete the user's data across every plugin.
+
+Both require an authenticated caller (self-service only — a deletion only ever touches the caller's
+own rows) and the same-origin `x-ctf-csrf: 1` guard used elsewhere.
+
 ## What is intentionally NOT here yet
 
-- The **orchestrator** that performs a full-account deletion across all plugins and walks a
-  `requested → processing → completed` status.
-- The **per-plugin "delete my data" API routes** for plugins that have a registry entry but no route
-  yet.
 - The **Account & Data UI** (web + mobile) — design-gated; no mockup exists in the `design/`
-  submodule yet (Rule 127).
-
-These are deliberately separate, individually-reviewable steps because they perform irreversible
-deletes and touch the money ledger.
+  submodule yet (Rule 127). The backend above is what that UI will call once its design lands.

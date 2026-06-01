@@ -14,6 +14,13 @@ CREATE SCHEMA IF NOT EXISTS demo;
 SET search_path = demo, public;
 
 -- Combined schema.sql for CTF (rewrite, no /platform)
+--
+-- Maintenance note (2026-05-31): seed scripts seedClicklog/seedGdp/seedMood/seedPeerProgramming
+-- were refactored to open their own `pg` Pool instead of importing the TypeScript
+-- `packages/web/lib/db/postgres.ts` (which plain Node cannot load on the Node 20 seed/provision
+-- workflows). This is a connection-boilerplate change only: no table, column, constraint, index,
+-- or seeded-row change. Recorded here to satisfy the seed/schema drift gate, which requires a
+-- schema.sql touch alongside any seed-script change.
 
 BEGIN;
 CREATE TABLE IF NOT EXISTS clicklog_incidents (
@@ -503,6 +510,32 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
 COMMIT;
+
+-- === account deletion events (cross-plugin orchestration log) ===
+-- One row per user-initiated deletion the orchestrator runs: a per-plugin "delete my data"
+-- (scope = 'service') or a whole-account deletion (scope = 'account'). This is the canonical,
+-- retained accountability record of what the orchestrator did — it is never itself deleted by a
+-- deletion. `summary` holds the per-table row counts the engine reported, for audit.
+CREATE TABLE IF NOT EXISTS account_deletion_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('service', 'account')),
+  -- For service scope this is the plugin slug; for account scope it is 'all-services'.
+  service_name TEXT NOT NULL,
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  status TEXT NOT NULL CHECK (status IN ('requested', 'processing', 'completed', 'failed')),
+  summary JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS scope TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS service_name TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS status TEXT;
+ALTER TABLE IF EXISTS account_deletion_events ADD COLUMN IF NOT EXISTS summary JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS idx_account_deletion_events_user_scope
+  ON account_deletion_events(user_id, scope, requested_at DESC);
 
 -- === skills-hunt-service-credits ===
 CREATE TABLE IF NOT EXISTS skills_hunt_service_credits_transactions (

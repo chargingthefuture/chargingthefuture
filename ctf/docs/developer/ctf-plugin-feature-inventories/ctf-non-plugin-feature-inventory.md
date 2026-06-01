@@ -25,6 +25,25 @@
 3. Onboarding and account-approval gating state handling.
 4. Terms-acceptance requirement and persisted acceptance contract.
 
+**Account and per-service data deletion (cross-plugin, backend):**
+
+- Driven by the account deletion registry (`ctf/packages/web/lib/account/deletion-registry.ts`,
+  validated against `schema.sql` in CI). See `ctf/docs/developer/ACCOUNT_DELETION_REGISTRY.md`.
+- `ctf/packages/web/lib/account/deletion-engine.ts` — pure planner that turns each registry entry
+  into delete / idempotent soft-delete SQL (or nothing for retained money/audit tables); checked by
+  `ctf/scripts/check-deletion-engine.mjs`.
+- `ctf/packages/web/lib/account/deletion-orchestrator.ts` — runs a service-scope or whole-account
+  deletion in a single transaction, records one `account_deletion_events` row, logs an
+  `[account.audit]` line. Money is settled only by the existing ServiceCredits reclaim flow, never
+  hard-deleted here.
+- API: `DELETE /api/account/services/:slug` (one plugin) and `DELETE /api/account/full-account`
+  (every plugin + ServiceCredits reclaim). Both are self-service (caller's own rows only) and
+  same-origin CSRF-guarded.
+- Data model: `account_deletion_events` (id, user_id, scope, service_name, requested_at,
+  completed_at, status, summary).
+- The user-facing Account & Data UI that calls these routes is design-gated (Rule 127) and not yet
+  built.
+
 ### 1.3 Pricing Tier and Payment Admin (API/Control Contract Only)
 
 1. Pricing tier and payment administration remains a non-plugin backend contract area.
@@ -115,6 +134,7 @@
 
 ## 5) Change Log
 
+- 2026-06-01: Added the cross-plugin account/per-service data deletion backend (registry-driven engine + orchestrator, `account_deletion_events` table, `DELETE /api/account/services/:slug` and a real-delete `DELETE /api/account/full-account`). Documented in section 1.2 and `ACCOUNT_DELETION_REGISTRY.md`. No UI (design-gated).
 - 2026-04-01: Completed external-link safety primitive parity implementation across web and Android with full feature feature parity (origin-based detection, safe-open dialogs, copy/open actions).
 - 2026-02-25: Expanded CTF non-plugin parity inventory to full retained/excluded scope; marked weekly performance and skills taxonomy as plugin-owned; removed generic chat/admin activity feed carryover requirements; documented compliance position for audit-evidence-first admin activity feed removal.
 - 2026-02-25: Removed weekly-performance legacy-evidence pointer so weekly rewrite parity remains sourced from plugin-inventory documents.
