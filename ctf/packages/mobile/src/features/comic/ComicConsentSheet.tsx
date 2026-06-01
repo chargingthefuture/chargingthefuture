@@ -70,15 +70,17 @@ export function ComicConsentSheet({ open, onConfirm, onDismiss }: ComicConsentSh
 
             <View style={styles.points}>
               {POINTS.map((point) => (
-                <View key={point.title} style={styles.point}>
-                  <View style={styles.pointIcon}>
-                    <Ionicons name={point.icon} size={15} color={BRAND_LIGHT} />
+                <React.Fragment key={point.title}>
+                  <View style={styles.point}>
+                    <View style={styles.pointIcon}>
+                      <Ionicons name={point.icon} size={15} color={BRAND_LIGHT} />
+                    </View>
+                    <View style={styles.pointTextWrap}>
+                      <Text style={styles.pointTitle}>{point.title}</Text>
+                      <Text style={styles.pointDesc}>{point.desc}</Text>
+                    </View>
                   </View>
-                  <View style={styles.pointTextWrap}>
-                    <Text style={styles.pointTitle}>{point.title}</Text>
-                    <Text style={styles.pointDesc}>{point.desc}</Text>
-                  </View>
-                </View>
+                </React.Fragment>
               ))}
             </View>
 
