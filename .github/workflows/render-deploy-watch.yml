@@ -1,0 +1,115 @@
+name: Render Deploy Watch
+
+# When a commit lands on main, Render auto-deploys it. For each service in the
+# matrix, this finds that commit's deploy through the Render API and follows it
+# to a final result, so the deploy's success or failure shows up as a job you
+# can open from the GitHub Actions tab on a phone — without logging into Render.
+#
+# To watch another service:
+#   1. add a matrix entry with its name (e.g. - name: ctf-worker);
+#   2. add a static env line below: RENDER_SERVICE_ID_CTF_WORKER: ${{ secrets.RENDER_SERVICE_ID_CTF_WORKER }};
+#   3. add a case branch mapping that name to that env var;
+#   4. add the RENDER_SERVICE_ID_CTF_WORKER repo secret.
+# Secrets are referenced statically on purpose — dynamic secrets[...] indexing
+# would expose the whole secrets context to the runner.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# This job talks only to the Render API (with RENDER_API_KEY); it never uses the
+# GITHUB_TOKEN, so it needs no repository permissions.
+permissions: {}
+
+jobs:
+  watch-render-deploy:
+    name: Watch Render deploy (${{ matrix.service.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: ctf-web
+    # Only follow the most recent deploy per service; a newer commit drops the older watcher.
+    concurrency:
+      group: render-deploy-watch-${{ matrix.service.name }}
+      cancel-in-progress: true
+    steps:
+      - name: Follow the Render deploy for this commit
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          # One static line per watched service (pattern: RENDER_SERVICE_ID_<NAME>).
+          RENDER_SERVICE_ID_CTF_WEB: ${{ secrets.RENDER_SERVICE_ID_CTF_WEB }}
+          SERVICE_NAME: ${{ matrix.service.name }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # Map this matrix service to its statically-provided id env var.
+          case "$SERVICE_NAME" in
+            ctf-web) RENDER_SERVICE_ID="${RENDER_SERVICE_ID_CTF_WEB:-}" ;;
+            *) echo "::error::Unknown service '${SERVICE_NAME}' — add its secret env mapping in the workflow."; exit 1 ;;
+          esac
+
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "::error::Missing repo secret RENDER_API_KEY. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          if [ -z "${RENDER_SERVICE_ID:-}" ]; then
+            echo "::error::Missing repo secret RENDER_SERVICE_ID_${SERVICE_NAME^^} (use the RENDER_SERVICE_ID_<NAME> pattern) for service '${SERVICE_NAME}'."
+            exit 1
+          fi
+
+          api="https://api.render.com/v1"
+          auth="Authorization: Bearer ${RENDER_API_KEY}"
+          short_sha="${COMMIT_SHA:0:7}"
+
+          echo "[${SERVICE_NAME}] Looking for the Render deploy for commit ${short_sha}..."
+
+          # Render registers the auto-deploy a few seconds after the push, so give
+          # it time to appear (about 5 minutes of polling).
+          deploy_id=""
+          for attempt in $(seq 1 20); do
+            if resp=$(curl -fsS -H "$auth" "$api/services/$RENDER_SERVICE_ID/deploys?limit=20"); then
+              deploy_id=$(echo "$resp" | jq -r --arg sha "$COMMIT_SHA" '[.[] | .deploy | select(.commit.id == $sha)] | .[0].id // empty')
+              if [ -n "$deploy_id" ]; then
+                echo "[${SERVICE_NAME}] Found deploy ${deploy_id} for commit ${short_sha}."
+                break
+              fi
+              echo "[${SERVICE_NAME}] No deploy for this commit yet (attempt ${attempt}/20); waiting..."
+            else
+              echo "[${SERVICE_NAME}] Render API list call failed (attempt ${attempt}/20); retrying..."
+            fi
+            sleep 15
+          done
+
+          if [ -z "$deploy_id" ]; then
+            echo "::warning::[${SERVICE_NAME}] No Render deploy found for commit ${short_sha}. Auto-deploy may be off, or this commit did not trigger a deploy."
+            exit 1
+          fi
+
+          # Follow the deploy until it reaches a final state.
+          while true; do
+            if deploy=$(curl -fsS -H "$auth" "$api/services/$RENDER_SERVICE_ID/deploys/$deploy_id"); then
+              status=$(echo "$deploy" | jq -r '.status')
+              echo "[${SERVICE_NAME}] Deploy ${deploy_id} status: ${status}"
+              case "$status" in
+                live)
+                  echo "::notice::[${SERVICE_NAME}] Render deploy is LIVE for commit ${short_sha}."
+                  exit 0
+                  ;;
+                build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                  echo "::error::[${SERVICE_NAME}] Render deploy ended with status: ${status}"
+                  exit 1
+                  ;;
+                *)
+                  sleep 20
+                  ;;
+              esac
+            else
+              echo "[${SERVICE_NAME}] Render API status call failed; retrying..."
+              sleep 15
+            fi
+          done
