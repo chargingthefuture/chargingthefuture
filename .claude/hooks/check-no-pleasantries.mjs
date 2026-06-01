@@ -1,0 +1,82 @@
+#!/usr/bin/env node
+// Stop hook: enforce the plain-voice rule (see CLAUDE.md "Voice — no pleasantries, no feelings").
+// If the assistant's last reply contains a pleasantry, sign-off, or first-person feeling word, block
+// the stop and ask for a plain restatement. Defensive by design: any error -> allow (never break a
+// session or hard-fail). Loop-safe: if we are already in a stop-hook continuation, do not re-block.
+import { readFileSync } from 'node:fs';
+
+// Tight list — clear pleasantries / sign-offs / feeling words. "appreciate" is matched only in the
+// "I/we appreciate" form so it does not trip on finance text like "the rate appreciates".
+const BANNED = [
+  /\bthanks\b/i,
+  /\bthank you\b/i,
+  /\byou(?:'|’| a)?re welcome\b/i,
+  /\bno problem\b/i,
+  /\bmy pleasure\b/i,
+  /\bglad\b/i,
+  /\bhappy to\b/i,
+  /\bexcited\b/i,
+  /\bdelighted\b/i,
+  /\bsorry\b/i,
+  /\bapolog(?:y|ies|ize|ise|izing|ising)\b/i,
+  /\bcheers\b/i,
+  /\bcongrat(?:s|ulations)\b/i,
+  /\b(?:i|we) (?:really |truly )?appreciate\b/i,
+  /\bhope (?:this|that|you|it)\b/i,
+  /\bfeel free\b/i,
+  /\b(?:warm|best|kind)(?:est)? regards\b/i,
+  /\blooking forward\b/i,
+];
+
+function readStdin() {
+  try {
+    return readFileSync(0, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function lastAssistantText(transcriptPath) {
+  const raw = readFileSync(transcriptPath, 'utf8');
+  const lines = raw.split('\n').filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    let entry;
+    try {
+      entry = JSON.parse(lines[i]);
+    } catch {
+      continue;
+    }
+    if (entry.type !== 'assistant') continue;
+    const content = entry.message && entry.message.content;
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+      return content
+        .filter((part) => part && part.type === 'text' && typeof part.text === 'string')
+        .map((part) => part.text)
+        .join('\n');
+    }
+    return '';
+  }
+  return '';
+}
+
+try {
+  const input = JSON.parse(readStdin() || '{}');
+  if (input.stop_hook_active) process.exit(0); // already retrying; do not loop
+  const text = input.transcript_path ? lastAssistantText(input.transcript_path) : '';
+  const match = BANNED.map((re) => text.match(re)).find(Boolean);
+  if (match) {
+    process.stdout.write(
+      JSON.stringify({
+        decision: 'block',
+        reason:
+          `The reply contains a banned pleasantry/feeling/sign-off ("${match[0]}"). ` +
+          'Restate the result in plain, factual language — no thanks, apologies, well-wishes, ' +
+          'sign-offs, jargon, or first-person feeling words — then stop.',
+      }),
+    );
+  }
+} catch {
+  // Never block on error.
+}
+process.exit(0);
