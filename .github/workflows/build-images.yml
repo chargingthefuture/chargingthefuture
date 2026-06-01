@@ -123,13 +123,27 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_WEB: ${{ secrets.RENDER_SERVICE_ID_WEB }}
         run: |
-          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_WEB" ]; then
-            curl -sf -X POST \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{}' \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_WEB/deploys"
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID_WEB" ]; then
+            echo "RENDER_API_KEY or RENDER_SERVICE_ID_WEB not set — skipping auto-deploy (image is pushed to GHCR; deploy ctf-web manually in Render)."
+            exit 0
           fi
+          # Do NOT use curl -f here: it exits 22 and hides the HTTP error. Capture
+          # the status code + body so a failed trigger is readable, and never fail
+          # the build on it — the image is already pushed and can be deployed
+          # manually in Render (Manual Deploy → Deploy latest reference).
+          http_status=$(curl -s -o /tmp/render-deploy.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_WEB/deploys" || true)
+          echo "Render deploy API responded with HTTP ${http_status:-<none>} for ctf-web"
+          case "$http_status" in
+            2*) echo "Render deploy triggered for ctf-web." ;;
+            *)
+              echo "::warning title=Render auto-deploy not triggered::HTTP ${http_status:-none} from Render for ctf-web. The image is already pushed to GHCR — deploy manually (Manual Deploy → Deploy latest reference) and verify RENDER_API_KEY (rnd_…, raw) and RENDER_SERVICE_ID_WEB. Response:"
+              cat /tmp/render-deploy.json 2>/dev/null || true
+              ;;
+          esac
 
   # ── ctf-ollama ──────────────────────────────────────────────────
   # Only rebuilds when the Dockerfile changes — model bake takes ~1 hour.
@@ -173,13 +187,24 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
         run: |
-          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_OLLAMA" ]; then
-            curl -sf -X POST \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{}' \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_OLLAMA/deploys"
+          # See ctf-web for why curl -f is avoided; print status, never fail the build.
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID_OLLAMA" ]; then
+            echo "RENDER_API_KEY or RENDER_SERVICE_ID_OLLAMA not set — skipping auto-deploy (image is pushed to GHCR; deploy ctf-ollama manually in Render)."
+            exit 0
           fi
+          http_status=$(curl -s -o /tmp/render-deploy.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_OLLAMA/deploys" || true)
+          echo "Render deploy API responded with HTTP ${http_status:-<none>} for ctf-ollama"
+          case "$http_status" in
+            2*) echo "Render deploy triggered for ctf-ollama." ;;
+            *)
+              echo "::warning title=Render auto-deploy not triggered::HTTP ${http_status:-none} from Render for ctf-ollama. The image is already pushed to GHCR — deploy manually and verify RENDER_API_KEY (rnd_…, raw) and RENDER_SERVICE_ID_OLLAMA. Response:"
+              cat /tmp/render-deploy.json 2>/dev/null || true
+              ;;
+          esac
 
   # ── ctf-rasa ────────────────────────────────────────────────────
   # Only rebuilds when ctf/ops/rasa/** changes — the NLU model is trained at build
@@ -224,13 +249,24 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_RASA: ${{ secrets.RENDER_SERVICE_ID_RASA }}
         run: |
-          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_RASA" ]; then
-            curl -sf -X POST \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{}' \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_RASA/deploys"
+          # See ctf-web for why curl -f is avoided; print status, never fail the build.
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID_RASA" ]; then
+            echo "RENDER_API_KEY or RENDER_SERVICE_ID_RASA not set — skipping auto-deploy (image is pushed to GHCR; deploy ctf-rasa manually in Render)."
+            exit 0
           fi
+          http_status=$(curl -s -o /tmp/render-deploy.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_RASA/deploys" || true)
+          echo "Render deploy API responded with HTTP ${http_status:-<none>} for ctf-rasa"
+          case "$http_status" in
+            2*) echo "Render deploy triggered for ctf-rasa." ;;
+            *)
+              echo "::warning title=Render auto-deploy not triggered::HTTP ${http_status:-none} from Render for ctf-rasa. The image is already pushed to GHCR — deploy manually and verify RENDER_API_KEY (rnd_…, raw) and RENDER_SERVICE_ID_RASA. Response:"
+              cat /tmp/render-deploy.json 2>/dev/null || true
+              ;;
+          esac
 
   # ── ctf-formance-ledger ─────────────────────────────────────────
   build-formance-ledger:
@@ -272,10 +308,21 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
         run: |
-          if [ -n "$RENDER_API_KEY" ] && [ -n "$RENDER_SERVICE_ID_FORMANCE" ]; then
-            curl -sf -X POST \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{}' \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID_FORMANCE/deploys"
+          # See ctf-web for why curl -f is avoided; print status, never fail the build.
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID_FORMANCE" ]; then
+            echo "RENDER_API_KEY or RENDER_SERVICE_ID_FORMANCE not set — skipping auto-deploy (image is pushed to GHCR; deploy ctf-formance-ledger manually in Render)."
+            exit 0
           fi
+          http_status=$(curl -s -o /tmp/render-deploy.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_FORMANCE/deploys" || true)
+          echo "Render deploy API responded with HTTP ${http_status:-<none>} for ctf-formance-ledger"
+          case "$http_status" in
+            2*) echo "Render deploy triggered for ctf-formance-ledger." ;;
+            *)
+              echo "::warning title=Render auto-deploy not triggered::HTTP ${http_status:-none} from Render for ctf-formance-ledger. The image is already pushed to GHCR — deploy manually and verify RENDER_API_KEY (rnd_…, raw) and RENDER_SERVICE_ID_FORMANCE. Response:"
+              cat /tmp/render-deploy.json 2>/dev/null || true
+              ;;
+          esac
