@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
+import { HubHome } from './src/features/hub';
 import { DirectoryList } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
@@ -23,6 +24,7 @@ import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AuthProvider } from './src/features/trusttransport/auth-context';
 
 type FeatureKey =
+  | 'home'
   | 'chyme'
   | 'skills-taxonomy'
   | 'directory'
@@ -43,6 +45,7 @@ type FeatureKey =
   | 'unlock';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
+  { key: 'home', label: 'Home' },
   { key: 'chyme', label: 'Chyme' },
   { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
   { key: 'directory', label: 'Directory' },
@@ -64,10 +67,12 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
 ];
 
 export default function App() {
-  const [selected, setSelected] = useState<FeatureKey>('chyme');
+  const [selected, setSelected] = useState<FeatureKey>('home');
 
   const featureView = useMemo(() => {
     switch (selected) {
+      case 'home':
+        return <HubHome />;
       case 'chyme':
         return <ChymeRoom />;
       case 'skills-taxonomy':

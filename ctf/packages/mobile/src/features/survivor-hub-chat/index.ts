@@ -1,1 +1,0 @@
-export { SurvivorHubChat } from './SurvivorHubChat';

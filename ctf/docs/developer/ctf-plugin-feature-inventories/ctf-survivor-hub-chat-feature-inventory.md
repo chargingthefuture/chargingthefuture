@@ -162,9 +162,20 @@ The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_d
 ## Web and Android Delivery Status
 
 - Web: the home shell renders at `/` (`CommunityShell`) with the channel backed by the Feed model. Web delivery for the consolidated channel is in place.
-- Android: mobile Hub parity for the feed-backed channel is deferred and tracked (see Gaps / Parity Ticket).
+- Android: delivered. The mobile home (`ctf/packages/mobile/src/features/hub/`) reads the blended
+  channel from `GET /api/hub/messages` (the same feed-backed timeline the web Hub uses, flattened to
+  the `HubMessage` shape) and sends a peer-to-peer community post via `POST /api/hub/messages` with
+  the `x-ctf-csrf: 1` header, mirroring the web CSRF handling. `HubHome` is the default surface in
+  the mobile app shell. Announcements render with the official Survivor Hub treatment; community
+  posts render with their author. The dead GetStream-based survivor-hub-chat mobile fixtures were
+  removed. The single AI Assistant (`@comic`) surfaces — answer cards, the "Reviewing for safety"
+  pending card, the `@comic` composer, consent, and ratings — are delivered separately in the comic
+  Android parity work (see `ctf-comic-feature-inventory.md`).
+- Public unauthenticated read of the blended channel is **not** part of this Android pass: like web,
+  `GET /api/hub/messages` still requires an approved-user-or-admin session. The public read path is a
+  separate, security-sensitive follow-up (see Gaps #1).
 
-Parity Ticket: see Gaps — "Mobile Hub parity".
+Parity Status: web+android complete.
 
 ## Seed Coverage Status
 
@@ -173,12 +184,13 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 ## Gaps and Known Technical Debt
 
 1. Public unauthenticated read of the blended channel: `feed_render_config.is_public` is set and read into config, but `GET /api/hub/messages` / `listFeedTimeline` still require an authenticated session. A public read path (and the policy for which item types are exposed publicly) is the tracked follow-up.
-2. Mobile Hub parity: wire the mobile home to the same feed-backed channel and add a `hub` entry to `ctf/config/plugin-parity-contracts.json`. Deferred (Parity Ticket).
+2. Mobile Hub parity: delivered. The mobile home reads/writes the feed-backed channel via `GET/POST /api/hub/messages` (`ctf/packages/mobile/src/features/hub/`). The parity contract reconciliation was done on the existing `feed-announcements` entry (its `mobileFeatureDirs` now includes `hub`) rather than a standalone `hub` contract entry, because the web/Android parity gate requires every contract slug to exist in the plugin registry and the Hub is the home route (`/`), not a navigable app tile with its own registry slug.
 3. Separate channels, direct messages, and system bots were dropped from the MVP (single blended channel). Revisit splitting into multiple Hub channels after feedback.
 4. `GET /api/hub/channels|dms|bots` are stubs (single-channel / empty); they can be removed or formalized when/if multi-channel returns.
 
 ## Change Log
 
+- 2026-06-01: Android parity delivered for the feed-backed Survivor Hub home channel. Added `ctf/packages/mobile/src/features/hub/` (`api.ts` reads `GET /api/hub/messages` and posts to `POST /api/hub/messages` with `x-ctf-csrf: 1`; `HubHome.tsx` renders the blended stream — official announcements/AI Q&A vs community posts — and a composer that creates a peer-to-peer community post). Wired `HubHome` as the default surface in the mobile app shell (`App.tsx`). Reconciled the `feed-announcements` parity contract `mobileFeatureDirs` to include `hub`. Removed the dead GetStream-based survivor-hub-chat mobile fixtures (`MockSurvivorHubChat.tsx`, `SurvivorHubChat.tsx`, `fetchSurvivorHubChatStreamCredentials.ts`, `index.ts`) — GetStream was removed from the platform. Public unauthenticated read left as a separate follow-up (Gaps #1). Parity: web+android complete.
 - 2026-05-31: Survivor Hub ⟵ Feed consolidation implemented. `GET/POST /api/hub/messages` repointed at the Feed model (`listFeedTimeline` / `createFeedCommunityPost`, CSRF-guarded); added `feed_render_config.is_public` (default TRUE) and read it into `FeedConfig`; retired `feed-announcements` as a navigable app tile (`isVisible: false`); removed the phantom `feed_user_extension` from the seed; dropped the `hub_channels`/`hub_messages`/`hub_bot_routes`/`hub_dm_threads`/`hub_bots` plan and reconciled this inventory + the Feed deletion contract to real tables. Channels/DMs/bots deferred to a single blended channel.
 - 2026-05-12: Inventory rewritten as a clean snapshot per the updated rule 120. (Superseded by the 2026-05-31 consolidation: the Hub no longer owns `hub_*` schema or a dedicated GetStream scope.)
 - 2026-03-23: Initial inventory created under prior phase-based template.
@@ -218,11 +230,17 @@ The Survivor Hub ⟵ Feed consolidation (2026-05-31) superseded the prior `hub_*
 
 - [ ] Add a public (unauthenticated) read path for the blended channel honoring `feed_render_config.is_public`, with an explicit policy for which item types are exposed publicly (security-sensitive; community posts + announcements only, no location-context question detail).
 
-#### Mobile Hub parity (follow-up — Parity Ticket)
+#### Mobile Hub parity (delivered 2026-06-01)
 
-- [ ] Wire the mobile home to the same feed-backed channel (read via the Feed mobile client).
-- [ ] Add a `hub` entry to `ctf/config/plugin-parity-contracts.json`.
-- [ ] Remove/repurpose any mock survivor-hub mobile fixtures.
+- [x] Wire the mobile home to the same feed-backed channel (reads `GET /api/hub/messages`; sends a
+      community post via `POST /api/hub/messages` with `x-ctf-csrf: 1`). See
+      `ctf/packages/mobile/src/features/hub/`.
+- [x] Reconcile the parity contract. Added `hub` to the existing `feed-announcements` entry's
+      `mobileFeatureDirs` rather than a standalone `hub` contract entry — the parity gate requires
+      each contract slug to exist in the plugin registry, and the Hub is the home route (`/`), not a
+      navigable app tile with its own registry slug.
+- [x] Remove the dead GetStream-based survivor-hub mobile fixtures (GetStream was removed from the
+      platform).
 
 #### Cleanup (follow-up)
 
