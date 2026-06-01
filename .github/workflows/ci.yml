@@ -303,6 +303,9 @@ jobs:
             bash ctf/scripts/check-schema-drift.sh
           fi
 
+      - name: Validate account deletion registry against schema
+        run: node ctf/scripts/check-deletion-registry.mjs
+
   pr-parity-status:
     name: PR Parity Status
     runs-on: ubuntu-latest

@@ -190,6 +190,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 190,
     isVisible: false,
   },
+  {
+    slug: 'whatworks',
+    name: 'WhatWorks',
+    summary: 'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.',
+    availabilityState: 'implemented_shell',
+    navRank: 200,
+    isVisible: true,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {
