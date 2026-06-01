@@ -3,6 +3,7 @@ import { requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { getHierarchy } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
+import { reportError } from 'lib/observability/report';
 
 function parseIncludeInactive(url: string): boolean {
   return new URL(url).searchParams.get('includeInactive') !== 'false';
@@ -34,7 +35,8 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({ items, generatedAt: new Date().toISOString() }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-taxonomy', op: 'admin_hierarchy' });
     logSkillsTaxonomyAudit({
       pluginId: 'skills-taxonomy',
       command: 'skills-taxonomy.hierarchy.get',

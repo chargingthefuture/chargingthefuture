@@ -3,6 +3,7 @@ import { ensureMutationCsrf, parsePositiveInteger, requireTrustTransportReadAcce
 import { TRUSTTRANSPORT_DEFAULT_PAGE, TRUSTTRANSPORT_DEFAULT_PAGE_SIZE, TRUSTTRANSPORT_ERROR_CODE, TRUSTTRANSPORT_MODES } from 'lib/trusttransport/constants';
 import { createRequest, listRequests, validateRequestInput } from 'lib/trusttransport/repository';
 import type { TrustTransportMode, TrustTransportRequestInput } from 'lib/trusttransport/types';
+import { reportError } from 'lib/observability/report';
 
 function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
   const modeValue = typeof body.mode === 'string' ? body.mode : 'ride';
@@ -34,6 +35,7 @@ export async function GET(request: Request) {
     const response = await listRequests({ page, pageSize, requesterUserId: gate.auth.userId });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'requests' });
     return trustTransportErrorResponse(error, 'Request listing unavailable.');
   }
 }
@@ -75,6 +77,7 @@ export async function POST(request: Request) {
     const item = await createRequest(gate.auth.userId, input, idempotencyKey);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'trusttransport', op: 'requests' });
     return trustTransportErrorResponse(error, 'Request create unavailable.');
   }
 }

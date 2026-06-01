@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { socketRelayErrorResponse } from 'lib/socketrelay/_lib';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { getPublicRequestById } from 'lib/socketrelay/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ id: string }>;
@@ -21,6 +22,7 @@ export async function GET(_: Request, { params }: RouteProps) {
 
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'public_id' });
     return socketRelayErrorResponse(error, 'Public request lookup unavailable.');
   }
 }

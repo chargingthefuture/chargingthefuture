@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSocketRelayAdminAccess, socketRelayErrorResp
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { createSocketRelayAdminAnnouncement, listSocketRelayAdminAnnouncements, validateAnnouncementInput } from 'lib/socketrelay/repository';
 import type { SocketRelayAnnouncementInput } from 'lib/socketrelay/types';
+import { reportError } from 'lib/observability/report';
 
 function parseAnnouncementInput(body: Record<string, unknown>): SocketRelayAnnouncementInput {
   return {
@@ -25,6 +26,7 @@ export async function GET() {
     const items = await listSocketRelayAdminAnnouncements();
     return NextResponse.json({ ok: true, items }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'admin_announcements' });
     return socketRelayErrorResponse(error, 'Admin announcements unavailable.');
   }
 }
@@ -62,6 +64,7 @@ export async function POST(request: Request) {
     const announcement = await createSocketRelayAdminAnnouncement(gate.auth.userId, input);
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'admin_announcements' });
     return socketRelayErrorResponse(error, 'Admin announcement create unavailable.');
   }
 }

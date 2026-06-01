@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { createAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
+import { reportError } from 'lib/observability/report';
 
 type DraftBody = Partial<AnnouncementDraftInput>;
 
@@ -50,7 +51,8 @@ export async function POST(request: Request) {
   try {
     const announcement = await createAnnouncementDraft(gate.auth.userId, input);
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'announcements', op: 'admin_drafts' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create draft.' },
       { status: 503 },

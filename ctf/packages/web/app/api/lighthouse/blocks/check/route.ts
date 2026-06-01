@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { isBlockedPair } from 'lib/lighthouse/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: NextRequest) {
   const gate = await requireLighthouseReadAccess();
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest) {
   try {
     const blocked = await isBlockedPair(gate.auth.userId, blockedUserId);
     return NextResponse.json({ ok: true, blocked }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'blocks_check' });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Block check unavailable.' },
       { status: 503 },

@@ -3,6 +3,7 @@ import { requireFeedReadAccess, ensureMutationCsrf } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { markFeedItemRead } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{
@@ -38,7 +39,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, itemId }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'items_itemid_read' });
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',

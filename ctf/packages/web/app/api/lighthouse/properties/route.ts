@@ -8,6 +8,7 @@ import {
   validatePropertyInput,
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type PropertyBody = Partial<LighthousePropertyInput>;
 
@@ -141,6 +142,7 @@ export async function GET(request: NextRequest) {
     const result = await listProperties({ page, pageSize, country, city, onlyActive });
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'properties' });
     return lighthouseErrorResponse(error, 'Property listing unavailable.');
   }
 }
@@ -187,6 +189,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, property }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'properties' });
     return lighthouseErrorResponse(error, 'Property create unavailable.');
   }
 }

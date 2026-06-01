@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { isValidAnswerRating, rateFeedAnswer } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type RateBody = {
   rating?: string;
@@ -63,6 +64,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, answerId: result.answerId, ratedAt: result.ratedAtIso }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'feed', op: 'answers_answerid_rate' });
     if (error instanceof Error && error.message === 'answer_not_found') {
       return NextResponse.json(
         { ok: false, code: FEED_ERROR_CODE.answerNotFound, message: 'Answer not found.' },

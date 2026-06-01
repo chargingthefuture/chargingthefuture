@@ -9,6 +9,7 @@ import {
   validatePropertyInput,
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ propertyId: string }>;
@@ -135,6 +136,7 @@ export async function GET(_: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, property }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'properties_propertyid' });
     return lighthouseErrorResponse(error, 'Property lookup unavailable.');
   }
 }
@@ -183,6 +185,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, property }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'properties_propertyid' });
     return lighthouseErrorResponse(error, 'Property update unavailable.');
   }
 }
@@ -220,6 +223,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'properties_propertyid' });
     return lighthouseErrorResponse(error, 'Property delete unavailable.');
   }
 }

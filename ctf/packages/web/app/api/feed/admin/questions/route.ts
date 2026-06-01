@@ -3,6 +3,7 @@ import { requireFeedAdminAccess } from '../../_lib';
 import { FEED_ERROR_CODE, FEED_DEFAULT_PAGE, FEED_DEFAULT_PAGE_SIZE, FEED_MAX_PAGE_SIZE, FEED_QUESTION_CATEGORIES } from 'lib/feed/constants';
 import { listAdminQuestions, isValidFeedQuestionCategory } from 'lib/feed/repository';
 import type { FeedQuestionCategory } from 'lib/feed/types';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireFeedAdminAccess();
@@ -39,7 +40,8 @@ export async function GET(request: Request) {
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'admin_questions' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to list questions.' },
       { status: 503 },

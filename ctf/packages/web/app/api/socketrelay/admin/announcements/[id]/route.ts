@@ -4,6 +4,7 @@ import { ensureMutationCsrf, requireSocketRelayAdminAccess, socketRelayErrorResp
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { deleteSocketRelayAdminAnnouncement, updateSocketRelayAdminAnnouncement, validateAnnouncementInput } from 'lib/socketrelay/repository';
 import type { SocketRelayAnnouncementInput } from 'lib/socketrelay/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
   params: Promise<{ id: string }>;
@@ -62,6 +63,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
     const announcement = await updateSocketRelayAdminAnnouncement(gate.auth.userId, id, input);
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'admin_announcements_id' });
     return socketRelayErrorResponse(error, 'Admin announcement update unavailable.');
   }
 }
@@ -82,6 +84,7 @@ export async function DELETE(request: Request, { params }: RouteProps) {
     const announcement = await deleteSocketRelayAdminAnnouncement(gate.auth.userId, id);
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'admin_announcements_id' });
     return socketRelayErrorResponse(error, 'Admin announcement delete unavailable.');
   }
 }

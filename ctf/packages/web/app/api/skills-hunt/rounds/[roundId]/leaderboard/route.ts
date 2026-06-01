@@ -3,6 +3,7 @@ import { requireSkillsHuntReadAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { listAllTimeLeaderboard, listLeaderboard } from 'lib/skills-hunt/repository';
 import type { SkillsHuntLeaderboardMode } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 function parseMode(value: string | null): SkillsHuntLeaderboardMode {
   return value === 'team' ? 'team' : 'individual';
@@ -36,7 +37,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ roun
       },
       { status: 200 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'rounds_roundid_leaderboard' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load leaderboard.' },
       { status: 503 },

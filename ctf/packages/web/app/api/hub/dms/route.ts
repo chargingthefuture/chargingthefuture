@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { HubDMsResponse } from 'lib/hub/types';
 import { requireHubAccess } from '../_lib';
+import { reportError } from 'lib/observability/report';
 
 export async function GET() {
   const gate = await requireHubAccess();
@@ -18,7 +19,8 @@ export async function GET() {
     };
 
     return NextResponse.json(response, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'hub', op: 'dms' });
     return NextResponse.json(
       {
         ok: false,

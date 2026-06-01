@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationAdminAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { evaluateRateLimitCommand, insertFoundationAudit } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, ...evaluation }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'admin_rate_limits_evaluate' });
     console.error('[Foundation] Rate-limit evaluation failed:', error);
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Rate-limit evaluation unavailable.' },

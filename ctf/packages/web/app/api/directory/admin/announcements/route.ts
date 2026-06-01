@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { createAnnouncement, listDirectoryAnnouncements, validateAnnouncementInput } from 'lib/directory/repository';
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
+import { reportError } from 'lib/observability/report';
 
 type AnnouncementBody = Partial<DirectoryAnnouncementInput>;
 
@@ -25,7 +26,8 @@ export async function GET() {
   try {
     const items = await listDirectoryAnnouncements(false);
     return NextResponse.json({ items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'admin_announcements' });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list announcements.' },
       { status: 503 },
@@ -65,7 +67,8 @@ export async function POST(request: Request) {
   try {
     const announcement = await createAnnouncement(gate.auth.userId, input);
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'directory', op: 'admin_announcements' });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create announcement.' },
       { status: 503 },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { generateDirectoryProfileFromAcceptedSubmission, insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
+import { reportError } from 'lib/observability/report';
 
 type GenerateBody = {
   invitedByUsername?: string;
@@ -56,6 +57,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
 
     return NextResponse.json({ ok: true, generated }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_generate_directory_profile' });
     const message = error instanceof Error ? error.message : 'unknown';
 
     let status = 503;

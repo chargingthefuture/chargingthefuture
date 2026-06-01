@@ -4,6 +4,7 @@ import { logWorkforceAudit } from 'lib/workforce/audit';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { deleteOwnWorkforceProfile, getOwnProfile, upsertOwnProfile, validateProfileInput } from 'lib/workforce/repository';
 import type { WorkforceProfileInput } from 'lib/workforce/types';
+import { reportError } from 'lib/observability/report';
 
 type ProfileBody = Partial<WorkforceProfileInput>;
 
@@ -26,7 +27,8 @@ export async function GET() {
   try {
     const profile = await getOwnProfile(gate.auth.userId);
     return NextResponse.json({ profile }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'profile' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch profile.' },
       { status: 503 },
@@ -79,6 +81,7 @@ async function handleUpsert(request: Request) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'workforce', op: 'profile' });
     const message = error instanceof Error ? error.message : 'unknown';
     const isOccupationNotFound = message === 'workforce_occupation_not_found';
 
@@ -138,7 +141,8 @@ export async function DELETE(request: Request) {
     });
 
     return NextResponse.json({ ok: true, scope: 'service', status: 'completed', requestedAtIso: deletion.requestedAtIso }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'profile' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete workforce profile.' },
       { status: 503 },

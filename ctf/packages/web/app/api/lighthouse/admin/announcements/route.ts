@@ -8,6 +8,7 @@ import {
   validateAnnouncementInput,
 } from 'lib/lighthouse/repository';
 import type { LighthouseAnnouncementInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type AnnouncementBody = Partial<LighthouseAnnouncementInput>;
 
@@ -31,7 +32,8 @@ export async function GET() {
   try {
     const items = await listLighthouseAdminAnnouncements();
     return NextResponse.json({ ok: true, items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcements' });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement listing unavailable.' },
       { status: 503 },
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_announcements' });
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Admin announcement create unavailable.' },
       { status: 503 },

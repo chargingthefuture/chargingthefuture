@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { parsePositiveInteger, requireSocketRelayAdminAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
 import { SOCKETRELAY_DEFAULT_PAGE, SOCKETRELAY_DEFAULT_PAGE_SIZE } from 'lib/socketrelay/constants';
 import { listAdminRequests } from 'lib/socketrelay/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireSocketRelayAdminAccess();
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     const response = await listAdminRequests({ page, pageSize });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'admin_requests' });
     return socketRelayErrorResponse(error, 'Admin requests unavailable.');
   }
 }

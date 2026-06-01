@@ -4,6 +4,7 @@ import { withDbTransaction } from 'lib/db/postgres';
 import { listOpenReports } from 'lib/skills-hunt/moderation';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import type { SkillsHuntSubmissionReportStatus } from 'lib/skills-hunt/types';
+import { reportError } from 'lib/observability/report';
 
 function parseStatus(value: string | null): SkillsHuntSubmissionReportStatus | null {
   if (value === 'open' || value === 'dismissed' || value === 'archived' || value === 'removed') return value;
@@ -30,7 +31,8 @@ export async function GET(request: Request) {
   try {
     const items = await withDbTransaction((client) => listOpenReports(client, status));
     return NextResponse.json({ items }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_reports' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load reports.' },
       { status: 503 },

@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { deleteOccupation, insertWorkforceAdminAudit, updateOccupation, validateOccupationInput } from 'lib/workforce/repository';
 import type { WorkforceOccupationInput } from 'lib/workforce/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -68,7 +69,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, occupation }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_occupations_id' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to update occupation.' },
       { status: 503 },
@@ -108,7 +110,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ ok: true, id }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_occupations_id' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete occupation.' },
       { status: 503 },

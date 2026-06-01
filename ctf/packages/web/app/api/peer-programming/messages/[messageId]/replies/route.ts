@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createMessage, insertPeerProgrammingAudit } from 'lib/peer-programming/repository';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
+import { reportError } from 'lib/observability/report';
 
 type ReplyBody = {
   cohortId?: string;
@@ -54,6 +55,7 @@ export async function POST(request: Request, context: { params: Promise<{ messag
 
     return NextResponse.json({ ok: true, reply }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'peer-programming', op: 'messages_messageid_replies' });
     return peerProgrammingErrorResponse(error, 'Reply creation unavailable.');
   }
 }

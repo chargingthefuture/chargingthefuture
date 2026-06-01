@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWeeklyPerformanceAdminAccess } from 'lib/weekly-performance/_lib';
 import { insertWeeklyPerformanceAudit, selectWeek } from 'lib/weekly-performance/repository';
+import { reportError } from 'lib/observability/report';
 
 type SelectionBody = {
   weekStartDate?: string;
@@ -42,6 +43,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ ok: true, selectedWeek }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'weekly-performance', op: 'admin_week_selection' });
     if (error instanceof Error && error.message === 'not_found') {
       return NextResponse.json({ ok: false, code: 'weekly_performance_week_not_found', message: 'Week not found.' }, { status: 404 });
     }

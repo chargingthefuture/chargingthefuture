@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertLevelupAudit, transferCreditsForLevelup } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 const transferSchema = z.object({
   recipientUserId: z.string().min(1),
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, transfer }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'transfers' });
     return levelupErrorResponse(error, 'Transfer unavailable.');
   }
 }

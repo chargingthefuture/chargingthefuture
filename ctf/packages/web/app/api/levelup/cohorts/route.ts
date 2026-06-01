@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createCohort, insertLevelupAudit, listCohorts } from 'lib/levelup/repository';
 import { ensureMutationCsrf, levelupErrorResponse, requireLevelupAdminAccess, requireLevelupReadAccess } from 'lib/levelup/_lib';
+import { reportError } from 'lib/observability/report';
 
 const querySchema = z.object({
   track: z.string().optional(),
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, cohortId: created.cohortId }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'levelup', op: 'cohorts' });
     return levelupErrorResponse(error, 'Create cohort unavailable.');
   }
 }

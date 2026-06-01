@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { replyToFeedCommunityPost, validateFeedCommunityReplyBody } from 'lib/feed/repository';
+import { reportError } from 'lib/observability/report';
 
 type ReplyBody = {
   body?: string;
@@ -86,6 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    reportError(error, { area: 'feed', op: 'community_posts_postid_reply' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create community reply.' },
       { status: 503 },

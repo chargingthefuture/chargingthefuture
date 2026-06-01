@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { createDeferredExportJob, insertWorkforceAdminAudit } from 'lib/workforce/repository';
+import { reportError } from 'lib/observability/report';
 
 type ExportBody = {
   exportType?: unknown;
@@ -52,7 +53,8 @@ export async function POST(request: Request) {
       },
       { status: 501 },
     );
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'export_jobs' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to create export job.' },
       { status: 503 },

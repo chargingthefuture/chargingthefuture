@@ -3,6 +3,7 @@ import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayReadAccess,
 import { SOCKETRELAY_DEFAULT_PAGE, SOCKETRELAY_DEFAULT_PAGE_SIZE, SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
 import { createRequest, listRequests, validateRequestInput } from 'lib/socketrelay/repository';
 import type { SocketRelayRequestInput } from 'lib/socketrelay/types';
+import { reportError } from 'lib/observability/report';
 
 function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
   return {
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
     const response = await listRequests({ page, pageSize });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'requests' });
     return socketRelayErrorResponse(error, 'Request listing unavailable.');
   }
 }
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
     const item = await createRequest(gate.auth.userId, input, idempotencyKey);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'socketrelay', op: 'requests' });
     return socketRelayErrorResponse(error, 'Request create unavailable.');
   }
 }

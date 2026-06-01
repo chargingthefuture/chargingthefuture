@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateProperty, validatePropertyInput } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ propertyId: string }>;
@@ -76,6 +77,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, property }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_properties_propertyid' });
     const code = error instanceof Error ? error.message : '';
 
     if (code === 'property_not_found') {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireFoundationReadAccess, ensureMutationCsrf } from '../_lib';
 import { createTransfer } from 'lib/service-credits/repository';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
+import { reportError } from 'lib/observability/report';
 
 type FoundationServiceCreditsSendInput = {
   toUserId: string;
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'foundation', op: 'service_credits' });
     console.error('[Foundation] Service credits transfer failed:', error);
     return NextResponse.json({ ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
   }

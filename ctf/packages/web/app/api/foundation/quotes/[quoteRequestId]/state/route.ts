@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE, FOUNDATION_QUOTE_STATES } from 'lib/foundation/constants';
 import { insertFoundationAudit, updateQuoteRequestState } from 'lib/foundation/repository';
 import type { FoundationQuoteState } from 'lib/foundation/types';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request, context: { params: Promise<{ quoteRequestId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -79,6 +80,7 @@ export async function POST(request: Request, context: { params: Promise<{ quoteR
       );
     }
 
+    reportError(error, { area: 'foundation', op: 'quotes_quoterequestid_state' });
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Quote transition unavailable.' },
       { status: 503 },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { ensureLevelupAdmin } from 'lib/levelup/policy';
+import { reportError } from 'lib/observability/report';
 
 export async function requireLevelupReadAccess() {
   const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
@@ -74,12 +75,15 @@ export function levelupErrorResponse(error: unknown, fallbackMessage: string): N
   }
 
   if (error instanceof Error && error.message === 'external_ledger_not_configured') {
+    reportError(error, { area: 'levelup', op: 'unknown' });
     return NextResponse.json({ ok: false, code: 'levelup_external_ledger_not_configured', message: 'External ledger is not configured.' }, { status: 503 });
   }
 
   if (error instanceof Error && error.message === 'external_ledger_unavailable') {
+    reportError(error, { area: 'levelup', op: 'unknown' });
     return NextResponse.json({ ok: false, code: 'levelup_external_ledger_unavailable', message: 'External ledger rejected or failed the command.' }, { status: 503 });
   }
 
+  reportError(error, { area: 'levelup', op: 'unknown' });
   return NextResponse.json({ ok: false, code: 'levelup_unavailable', message: fallbackMessage }, { status: 503 });
 }

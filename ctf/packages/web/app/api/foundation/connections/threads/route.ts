@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createConnectionThread, insertFoundationAudit } from 'lib/foundation/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
       );
     }
 
+    reportError(error, { area: 'foundation', op: 'connections_threads' });
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Thread create unavailable.' },
       { status: 503 },

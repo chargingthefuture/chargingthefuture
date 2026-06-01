@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireComicReadAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
 import { isValidComicAnswerRating, rateComicAnswer } from 'lib/comic/repository';
+import { reportError } from 'lib/observability/report';
 
 type RateBody = {
   rating?: string;
@@ -67,6 +68,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, turnId: result.turnId, rating: result.rating, ratedAt: result.ratedAtIso }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'comic', op: 'answers_turnid_rate' });
     if (error instanceof Error && error.message === 'answer_not_found') {
       return NextResponse.json(
         { ok: false, code: COMIC_ERROR_CODE.answerNotFound, message: 'AI Assistant answer not found.' },

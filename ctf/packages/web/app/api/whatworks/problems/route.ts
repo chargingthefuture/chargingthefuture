@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listActiveProblems } from 'lib/whatworks/repository';
 import { requireWhatWorksAccess, whatworksError } from '../_lib';
+import { reportError } from 'lib/observability/report';
 
 // Active problems for the suggest form. Members may only attach a tool to an existing
 // problem; new problems are admin-curated to avoid duplicate categories.
@@ -21,7 +22,8 @@ export async function GET() {
         context: problem.context,
       })),
     });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'whatworks', op: 'problems' });
     return whatworksError('Problems are unavailable right now.', 'whatworks_problems_unavailable', 500);
   }
 }

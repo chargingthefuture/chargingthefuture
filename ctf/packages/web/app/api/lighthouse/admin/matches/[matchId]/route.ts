@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateMatch, validateMatchUpdateInput } from 'lib/lighthouse/repository';
 import type { LighthouseMatchUpdateInput } from 'lib/lighthouse/types';
+import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
   params: Promise<{ matchId: string }>;
@@ -68,6 +69,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, match }, { status: 200 });
   } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_matches_matchid' });
     const code = error instanceof Error ? error.message : '';
 
     if (code === 'match_not_found') {

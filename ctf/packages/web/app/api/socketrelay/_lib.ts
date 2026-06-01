@@ -3,6 +3,7 @@ import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz'
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { ensureSocketRelayAdmin } from 'lib/socketrelay/policy';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
+import { reportError } from 'lib/observability/report';
 
 export type SocketRelayApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -150,6 +151,7 @@ export function socketRelayErrorResponse(error: unknown, fallbackMessage: string
     );
   }
 
+  reportError(error, { area: 'socketrelay', op: 'unknown' });
   return NextResponse.json(
     { ok: false, code: SOCKETRELAY_ERROR_CODE.persistenceUnavailable, message: fallbackMessage },
     { status: 503 },

@@ -4,6 +4,7 @@ import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { insertWorkforceAdminAudit, getWorkforceConfig, updateWorkforceConfig, validateConfigInput } from 'lib/workforce/repository';
 import { logWorkforceAudit } from 'lib/workforce/audit';
 import type { WorkforceConfigInput } from 'lib/workforce/types';
+import { reportError } from 'lib/observability/report';
 
 type ConfigBody = Partial<WorkforceConfigInput>;
 
@@ -25,7 +26,8 @@ export async function GET() {
   try {
     const config = await getWorkforceConfig();
     return NextResponse.json({ config }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_config' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch workforce config.' },
       { status: 503 },
@@ -87,7 +89,8 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json({ ok: true, config }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'admin_config' });
     return NextResponse.json(
       { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to update config.' },
       { status: 503 },

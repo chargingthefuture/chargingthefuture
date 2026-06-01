@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
 import { createSector, listSectors, validateSectorCreateInput } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
+import { reportError } from 'lib/observability/report';
 
 type SectorCreateBody = {
   name?: unknown;
@@ -23,7 +24,8 @@ export async function GET(request: Request) {
   try {
     const sectors = await listSectors(parseIncludeInactive(request.url));
     return NextResponse.json({ items: sectors }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-taxonomy', op: 'admin_sectors' });
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list sectors.' },
       { status: 503 },
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, sector }, { status: 201 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-taxonomy', op: 'admin_sectors' });
     logSkillsTaxonomyAudit({
       pluginId: 'skills-taxonomy',
       command: 'skills-taxonomy.sector.create',

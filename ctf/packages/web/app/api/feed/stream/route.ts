@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getFeedStreamCredentials } from 'lib/feed/stream';
 import { requireFeedReadAccess } from '../_lib';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
+import { reportError } from 'lib/observability/report';
 
 export async function POST() {
   const gate = await requireFeedReadAccess();
@@ -18,7 +19,8 @@ export async function POST() {
       return NextResponse.json({ ok: false, message: 'Stream service is not configured.' }, { status: 503 });
     }
     return NextResponse.json({ ok: true, ...credentials }, { status: 200 });
-  } catch (e) {
+  } catch (error) {
+    reportError(error, { area: 'feed', op: 'stream' });
     return NextResponse.json({ ok: false, message: 'Unable to fetch Stream credentials.' }, { status: 500 });
   }
 }

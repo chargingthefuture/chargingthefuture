@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireSkillsHuntAdminAccess } from '../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { listSkillsHuntAuditEvents } from 'lib/skills-hunt/repository';
+import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
   const gate = await requireSkillsHuntAdminAccess();
@@ -15,7 +16,8 @@ export async function GET(request: Request) {
   try {
     const events = await listSkillsHuntAuditEvents(limit);
     return NextResponse.json({ events }, { status: 200 });
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_audit_events' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch audit events.' },
       { status: 503 },

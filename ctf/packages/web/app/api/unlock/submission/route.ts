@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockUserAccess, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
+import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = {
   quoraProfileUrl?: string;
@@ -21,7 +22,8 @@ function normalizeQuoraProfileUrl(rawUrl: string): string | null {
     parsed.hash = '';
     parsed.search = '';
     return parsed.toString();
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'submission' });
     return null;
   }
 }
@@ -74,6 +76,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
   } catch (error) {
+    reportError(error, { area: 'unlock', op: 'submission' });
     // Surface the real cause in server logs (a swallowed error here made the 503
     // undiagnosable). The client message stays generic so DB internals never leak.
     console.error('[unlock] submission failed', error);

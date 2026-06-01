@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
 import { createFeedCommunityPost, validateFeedCommunityPostInput } from 'lib/feed/repository';
 import type { FeedCommunityPostInput } from 'lib/feed/types';
+import { reportError } from 'lib/observability/report';
 
 type CommunityBody = Partial<FeedCommunityPostInput>;
 
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       );
     }
 
+    reportError(error, { area: 'feed', op: 'community_posts' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to create community post.' },
       { status: 503 },
