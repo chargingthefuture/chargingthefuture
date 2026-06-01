@@ -1,4 +1,11 @@
 -- Combined schema.sql for CTF (rewrite, no /platform)
+--
+-- Maintenance note (2026-05-31): seed scripts seedClicklog/seedGdp/seedMood/seedPeerProgramming
+-- were refactored to open their own `pg` Pool instead of importing the TypeScript
+-- `packages/web/lib/db/postgres.ts` (which plain Node cannot load on the Node 20 seed/provision
+-- workflows). This is a connection-boilerplate change only: no table, column, constraint, index,
+-- or seeded-row change. Recorded here to satisfy the seed/schema drift gate, which requires a
+-- schema.sql touch alongside any seed-script change.
 
 BEGIN;
 CREATE TABLE IF NOT EXISTS clicklog_incidents (
@@ -12,6 +19,83 @@ CREATE TABLE IF NOT EXISTS clicklog_incidents (
 CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
+-- One shared, community-wide list. Problems are admin-curated categories; products are
+-- survivor-suggested tools reviewed (pending -> approved) before they appear. Endorsements
+-- are the "this helped me" signal whose count renders as "N survivors verified". The
+-- suggester's identity is stored for moderation/abuse control only and is never exposed in
+-- any reader or admin projection (the anonymity promise on the suggest flow).
+CREATE TABLE IF NOT EXISTS whatworks_problems (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL,
+  emoji TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  context TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_problems_slug ON whatworks_problems(slug);
+CREATE INDEX IF NOT EXISTS idx_whatworks_problems_active_sort ON whatworks_problems(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS whatworks_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  problem_id UUID NOT NULL REFERENCES whatworks_problems(id) ON DELETE CASCADE,
+  emoji TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  purchase_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  suggested_by TEXT,
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS problem_id UUID;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS purchase_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS suggested_by TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_whatworks_products_problem ON whatworks_products(problem_id);
+CREATE INDEX IF NOT EXISTS idx_whatworks_products_status ON whatworks_products(status);
+
+CREATE TABLE IF NOT EXISTS whatworks_endorsements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES whatworks_products(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS product_id UUID;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_whatworks_endorsements_product ON whatworks_endorsements(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_endorsements_unique ON whatworks_endorsements(product_id, user_id);
 
 -- === currencies (app-wide reference table; see issue #120) ===
 -- Curated catalog of currencies usable across value-bearing plugins. Defined early so any table
@@ -138,6 +222,15 @@ CREATE TABLE IF NOT EXISTS chyme_messages (
   text TEXT NOT NULL CHECK (char_length(text) BETWEEN 1 AND 1000),
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Column reconciliation so older databases converge on the current shape
+-- (added nullable / with safe defaults so they never fail on populated tables).
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS room_id UUID;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS text TEXT;
+ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_chyme_messages_room_sent_at ON chyme_messages(room_id, sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chyme_messages_user_id ON chyme_messages(user_id);
 CREATE TABLE IF NOT EXISTS chyme_deletion_events (
@@ -156,20 +249,11 @@ COMMIT;
 
 -- === peer-programming placeholder ===
 -- === levelup_enrollments ===
-CREATE TABLE IF NOT EXISTS levelup_enrollments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  level_id TEXT NOT NULL,
-  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  status TEXT NOT NULL DEFAULT 'active',
-  UNIQUE (user_id, level_id)
-);
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS level_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-CREATE UNIQUE INDEX IF NOT EXISTS uq_levelup_enrollments_user_level ON levelup_enrollments(user_id, level_id);
+-- The canonical definition lives further below (the cohort-based table).
+-- An earlier level_id-based table used to be defined here; it was legacy
+-- cruft that left a level_id NOT NULL column with no default and blocked
+-- cohort-based inserts. It has been removed, and any database that still
+-- carries the legacy column has it dropped next to the canonical block.
 CREATE TABLE IF NOT EXISTS peer_programming_weekly_topics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start_date DATE NOT NULL,
@@ -813,22 +897,11 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS incentive_granted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE TABLE IF NOT EXISTS unlock_audit_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  action TEXT NOT NULL,
-  details JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS unlock_runtime_config (
-  singleton_id INTEGER PRIMARY KEY DEFAULT 1,
-  submission_window_hours INTEGER NOT NULL DEFAULT 168,
-  reminder_schedule_hours INTEGER[] NOT NULL DEFAULT ARRAY[0,24,72,168],
-  incentive_amount TEXT NOT NULL DEFAULT '100',
-  support_only_after_expiry BOOLEAN NOT NULL DEFAULT TRUE
-);
+-- Duplicate CREATE TABLE blocks for unlock_audit_log and unlock_runtime_config
+-- were removed here; the canonical definitions are above (unlock_audit_log
+-- keeps its richer column set). The ALTER ... ADD COLUMN reconciliation for
+-- unlock_runtime_config (for databases created before some columns existed)
+-- follows.
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS singleton_id INTEGER DEFAULT 1;
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS submission_window_hours INTEGER NOT NULL DEFAULT 168;
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS reminder_schedule_hours INTEGER[] NOT NULL DEFAULT ARRAY[0,24,72,168];
@@ -863,6 +936,12 @@ DO $$ BEGIN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS levelup_enrollments_cohort_id_user_id_key ON levelup_enrollments(cohort_id, user_id)';
   END IF;
 END $$;
+-- Shed the legacy level_id column if an older database still carries it.
+-- It was NOT NULL with no default, so cohort-based inserts (which never set
+-- it) failed. Dropping the column also removes its dependent
+-- uq_levelup_enrollments_user_level index. Safe no-op on databases that
+-- never had the legacy column.
+ALTER TABLE IF EXISTS levelup_enrollments DROP COLUMN IF EXISTS level_id;
 CREATE TABLE IF NOT EXISTS trusttransport_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_user_id TEXT NOT NULL,
@@ -1469,14 +1548,10 @@ ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS created_
 ALTER TABLE IF EXISTS feed_timeline_projection ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === CHYME ROOMS ===
-CREATE TABLE IF NOT EXISTS chyme_rooms (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_key TEXT NOT NULL UNIQUE,
-  room_name TEXT NOT NULL,
-  call_active BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- The canonical chyme_rooms definition is earlier in this file (placed before
+-- its dependent indexes). The duplicate CREATE TABLE that used to be here was
+-- removed; the ALTER ... ADD COLUMN reconciliation below still brings older
+-- databases up to date.
 ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS room_key TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS room_name TEXT NOT NULL DEFAULT '';
@@ -1523,7 +1598,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Aggregate transparency and admin publish flows with compliance controls.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'Service Credits',      'Wallet/transfers/escrow/disputes and treasury governance workflows.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE)
+  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE),
+  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,

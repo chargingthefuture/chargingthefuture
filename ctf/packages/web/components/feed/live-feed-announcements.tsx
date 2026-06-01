@@ -1,14 +1,24 @@
 'use client';
 
 import Link from 'next/link';
+import { Megaphone, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StreamChatPanel } from '../shared/stream-chat-panel';
+import { FeedAnnouncementsIconRail } from './feed-announcements-icon-rail';
+import { FeedAnnouncementsSidebar } from './feed-announcements-sidebar';
+import { FeedAnnouncementsHeader } from './feed-announcements-header';
+import { FeedAnnouncementsRightPanel } from './feed-announcements-right-panel';
+import { FeedItemCard } from './feed-item-card';
+import { FeedQuestionForm, FeedCommunityForm } from './feed-compose-forms';
+import { FEED_COLOR, FEED_BG } from './feed-announcements-constants';
+
 type FeedStreamCredentials = {
   streamApiKey: string;
   streamToken: string;
   streamUserId: string;
   streamChannelId: string;
 };
+
 import type {
   FeedAnswerRatingValue,
   FeedChannel,
@@ -37,38 +47,8 @@ type LiveFeedAnnouncementsProps = {
   isAdmin: boolean;
 };
 
-const COLOR = '#8B5CF6';
-
 function isAlertItem(item: FeedTimelineItem): boolean {
   return item.mandatory || item.priority >= 80;
-}
-
-function formatFeedTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Just now';
-  const diffMinutes = Math.max(1, Math.round((Date.now() - date.getTime()) / 60000));
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return date.toLocaleDateString();
-}
-
-function itemTypeColor(item: FeedTimelineItem): string {
-  if (item.itemType === 'question') return '#38BDF8';
-  if (item.itemType === 'community') return '#22C55E';
-  return '#A78BFA';
-}
-
-function itemTypeLabel(item: FeedTimelineItem): string {
-  if (item.itemType === 'question') return '❓ Question';
-  if (item.itemType === 'community') return '🤝 Community';
-  return '📣 Announcement';
-}
-
-function itemInitials(item: FeedTimelineItem): string {
-  if (item.itemType === 'question') return 'Q';
-  if (item.itemType === 'community') return 'CM';
-  return 'ANN';
 }
 
 async function loadFeedSnapshot(): Promise<{ items: FeedTimelineItem[]; config: FeedConfig | null }> {
@@ -292,335 +272,74 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
     }
   }, [refreshFeed, replyDrafts]);
 
+  const openNewPost = useCallback(() => {
+    setShowPostForm(enabledChannels.includes('community') ? 'community' : 'question');
+  }, [enabledChannels]);
+
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100vh', background: '#0F1117', fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex' }}>
-      {/* Icon rail */}
-      <aside style={{ width: 72, background: '#090B0F', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}30`, border: `1px solid ${COLOR}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, fontSize: 20 }}>
-          📣
-        </div>
-        {[
-          { icon: '🌐', key: 'feed' },
-          { icon: '💬', key: 'chat' },
-          { icon: '⚙️', key: 'admin' },
-        ].map(({ icon, key }) => (
-          <button
-            key={key}
-            onClick={() => setUiTab(key as 'feed' | 'chat' | 'admin')}
-            style={{ width: 44, height: 44, borderRadius: 12, background: uiTab === key ? `${COLOR}20` : 'transparent', border: uiTab === key ? `1px solid ${COLOR}40` : '1px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 20, color: uiTab === key ? COLOR : '#6B7280' }}
-          >
-            {icon}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280', fontSize: 18, position: 'relative' }}>
-          🔔
-          {unreadCount > 0 && (
-            <span style={{ position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: '50%', background: '#EF4444', fontSize: 9, color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </button>
-        <div style={{ width: 36, height: 36, borderRadius: 12, background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>S</div>
-      </aside>
+    <div style={{ width: '100%', height: '100%', minHeight: '100vh', background: FEED_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex' }}>
+      <FeedAnnouncementsIconRail uiTab={uiTab} onTabChange={setUiTab} unreadCount={unreadCount} />
 
-      {/* Left sidebar */}
-      <aside style={{ width: 240, background: '#0D0F14', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '20px 16px 12px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#6B7280', textTransform: 'uppercase', marginBottom: 12 }}>📣 Feed</div>
-          <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4B5563', fontSize: 14 }}>🔍</span>
-            <input
-              placeholder="Search posts…"
-              style={{ width: '100%', padding: '7px 10px 7px 30px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, fontSize: 13, color: '#9CA3AF', outline: 'none', boxSizing: 'border-box' }}
-            />
-          </div>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 16px' }}>
-          {([
-            ['all', 'All'],
-            ['announcements', 'Announcements'],
-            ['questions', 'Questions'],
-            ['community', 'Community'],
-            ['unread', `Unread (${unreadCount})`],
-          ] as Array<[FeedFilter, string]>)
-            .filter(([value]) => value === 'all' || value === 'unread' || enabledChannels.includes(value))
-            .map(([value, label], i) => (
-              <div
-                key={value}
-                onClick={() => setFilter(value)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: filter === value ? `${COLOR}18` : 'transparent', borderLeft: filter === value ? `2px solid ${COLOR}` : '2px solid transparent', marginLeft: 2, marginBottom: 2 }}
-              >
-                <span style={{ fontSize: 13, color: filter === value ? '#E8EAF0' : '#9CA3AF', flex: 1 }}>{label}</span>
-                {value === 'unread' && unreadCount > 0 && (
-                  <span style={{ background: COLOR, borderRadius: 10, fontSize: 11, fontWeight: 700, color: '#fff', padding: '1px 6px' }}>{unreadCount}</span>
-                )}
-              </div>
-            ))}
-          <div style={{ margin: '16px 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#4B5563', textTransform: 'uppercase', padding: '0 10px' }}>Trending</div>
-          {['#ServiceCredits', '#LightHouseHousing', '#SurvivorStories', '#Phase2Launch'].map((tag) => (
-            <div key={tag} style={{ padding: '7px 10px', fontSize: 13, color: '#6B7280', cursor: 'pointer' }}>
-              <span style={{ color: COLOR }}>{tag}</span>
-            </div>
-          ))}
-        </div>
-      </aside>
+      <FeedAnnouncementsSidebar
+        filter={filter}
+        onFilterChange={setFilter}
+        unreadCount={unreadCount}
+        enabledChannels={enabledChannels}
+      />
 
-      {/* Main content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, background: '#0D0F14', flexShrink: 0 }}>
-          <span style={{ fontSize: 18, color: COLOR }}>📣</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#E8EAF0' }}>📣 Feed + Announcements</div>
-            <div style={{ fontSize: 12, color: '#6B7280' }}>Community pulse · Real-time via GetStream</div>
-          </div>
-          <button
-            onClick={() => setShowPostForm(showPostForm === 'community' ? null : 'community')}
-            style={{ padding: '7px 16px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            + New Post
-          </button>
-          <span style={{ background: 'rgba(14,165,233,0.12)', color: '#38BDF8', border: '1px solid rgba(14,165,233,0.2)', fontSize: 11, padding: '3px 10px', borderRadius: 20 }}>GetStream ⚡</span>
-        </header>
+        <FeedAnnouncementsHeader onNewPost={openNewPost} />
 
-        {/* Feed tab */}
         {uiTab === 'feed' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-            {error && (
-              <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5', fontSize: 13 }}>
-                {error}
-              </div>
-            )}
-
-            {/* Post compose forms */}
-            {showPostForm === 'question' && enabledChannels.includes('questions') && (
-              <div style={{ marginBottom: 16, padding: 20, borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid #38BDF840` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#F9FAFB' }}>Ask for Guided Help</div>
-                  <span style={{ background: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.25)', fontSize: 11, padding: '2px 10px', borderRadius: 12 }}>LLM-assisted</span>
-                </div>
-                <textarea
-                  value={questionBody}
-                  onChange={(e) => setQuestionBody(e.target.value)}
-                  placeholder="Ask a survivor-safe question, e.g. housing near 90210 or support services nearby."
-                  rows={3}
-                  style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#E8EAF0', fontSize: 14, resize: 'vertical', outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 10 }}>
-                  <select value={questionCategory} onChange={(e) => setQuestionCategory(e.target.value as FeedQuestionCategory)} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 13 }}>
-                    <option value="general">General</option>
-                    <option value="housing">Housing</option>
-                    <option value="services">Services</option>
-                    <option value="safety">Safety</option>
-                    <option value="benefits">Benefits</option>
-                  </select>
-                  <input value={questionZipCode} onChange={(e) => setQuestionZipCode(e.target.value)} placeholder="ZIP code" style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 13 }} />
-                  <input value={questionRadius} onChange={(e) => setQuestionRadius(e.target.value)} placeholder="Radius miles" style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 13 }} />
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#9CA3AF', marginBottom: 12 }}>
-                  <input type="checkbox" checked={llmConsentGranted} onChange={(e) => setLlmConsentGranted(e.target.checked)} style={{ width: 16, height: 16 }} />
-                  I consent to LLM processing for this question.
-                </label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => void handleQuestionSubmit()} disabled={busyQuestionId === 'new-question' || !questionBody.trim()} style={{ padding: '9px 20px', borderRadius: 8, background: '#38BDF8', border: 'none', color: '#0F172A', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: busyQuestionId === 'new-question' || !questionBody.trim() ? 0.6 : 1 }}>
-                    {busyQuestionId === 'new-question' ? 'Submitting…' : 'Submit Question'}
-                  </button>
-                  <button onClick={() => setShowPostForm(null)} style={{ padding: '9px 16px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                </div>
-              </div>
-            )}
-
-            {showPostForm === 'community' && enabledChannels.includes('community') && (
-              <div style={{ marginBottom: 16, padding: 20, borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid #22C55E40` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#F9FAFB' }}>Share a Support Update</div>
-                  <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.25)', fontSize: 11, padding: '2px 10px', borderRadius: 12 }}>Peer support</span>
-                </div>
-                <textarea
-                  value={communityBody}
-                  onChange={(e) => setCommunityBody(e.target.value)}
-                  placeholder="Share a request, resource, event, or peer-support note for the community."
-                  rows={3}
-                  style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#E8EAF0', fontSize: 14, resize: 'vertical', outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
-                />
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-                  <select value={communityCategory} onChange={(e) => setCommunityCategory(e.target.value as FeedCommunityCategory)} style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 13 }}>
-                    <option value="general">General</option>
-                    <option value="peer_support">Peer support</option>
-                    <option value="resource_share">Resource share</option>
-                    <option value="event">Event</option>
-                  </select>
-                  {enabledChannels.includes('questions') && (
-                    <button onClick={() => setShowPostForm('question')} style={{ padding: '8px 14px', borderRadius: 8, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', color: '#38BDF8', fontSize: 13, cursor: 'pointer' }}>
-                      Switch to Question
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => void handleCommunitySubmit()} disabled={busyPostId === 'new-post' || !communityBody.trim()} style={{ padding: '9px 20px', borderRadius: 8, background: '#22C55E', border: 'none', color: '#0F172A', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: busyPostId === 'new-post' || !communityBody.trim() ? 0.6 : 1 }}>
-                    {busyPostId === 'new-post' ? 'Publishing…' : 'Publish Post'}
-                  </button>
-                  <button onClick={() => setShowPostForm(null)} style={{ padding: '9px 16px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                </div>
-              </div>
-            )}
-
-            {/* Refresh control */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-              <div style={{ fontSize: 13, color: '#6B7280' }}>{items.length} items</div>
-              <button onClick={() => void refreshFeed(true)} style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9CA3AF', fontSize: 12, cursor: 'pointer' }}>
-                {isRefreshing ? 'Refreshing…' : '🔄 Refresh'}
-              </button>
-            </div>
-
-            {/* Feed items */}
-            {visibleItems.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px 0' }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
-                <div style={{ fontSize: 15 }}>No feed items match this filter.</div>
-              </div>
-            ) : (
-              visibleItems.map((item) => {
-                const accentColor = itemTypeColor(item);
-                return (
-                  <div
-                    key={item.id}
-                    style={{ marginBottom: 16, padding: 20, borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${item.mandatory || item.priority >= 90 ? accentColor + '40' : 'rgba(255,255,255,0.06)'}`, position: 'relative' }}
-                  >
-                    {/* Pinned / urgent badges */}
-                    {item.priority >= 90 && (
-                      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 11, color: accentColor, fontWeight: 600 }}>📌 Pinned</span>
-                      </div>
-                    )}
-                    {item.mandatory && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', width: 'fit-content' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>⚠️ MANDATORY</span>
-                      </div>
-                    )}
-
-                    {/* Author row */}
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${accentColor}25`, color: accentColor, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {itemInitials(item)}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB' }}>{itemTypeLabel(item)}</div>
-                        <div style={{ fontSize: 12, color: '#4B5563' }}>{formatFeedTime(item.publishedAtIso)} · Priority {item.priority}</div>
-                      </div>
-                      {!item.isRead && (
-                        <span style={{ marginLeft: 'auto', background: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.2)', fontSize: 10, padding: '2px 8px', borderRadius: 12, alignSelf: 'flex-start' }}>Unread</span>
-                      )}
-                    </div>
-
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB', marginBottom: 8, lineHeight: 1.4 }}>{item.title}</div>
-                    <div style={{ fontSize: 14, color: '#9CA3AF', lineHeight: 1.7, marginBottom: 16 }}>{item.body}</div>
-
-                    {/* Question detail */}
-                    {item.question && (
-                      <div style={{ marginTop: 8, padding: 16, borderRadius: 12, background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.2)' }}>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                          <span style={{ background: 'rgba(56,189,248,0.1)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.2)', fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>{item.question.category}</span>
-                          {item.question.location?.zipCode && (
-                            <span style={{ background: 'rgba(56,189,248,0.1)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.15)', fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>
-                              {item.question.location.zipCode}{item.question.location.radiusMiles ? ` · ${item.question.location.radiusMiles}mi` : ''}
-                            </span>
-                          )}
-                        </div>
-                        {item.question.answers.length === 0 ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <span style={{ fontSize: 13, color: '#9CA3AF' }}>No assisted answer generated yet.</span>
-                            <button onClick={() => void handleAnswerGenerate(item.question!.id)} disabled={busyQuestionId === item.question!.id} style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', color: '#38BDF8', fontSize: 12, cursor: 'pointer', opacity: busyQuestionId === item.question!.id ? 0.6 : 1 }}>
-                              {busyQuestionId === item.question!.id ? 'Generating…' : 'Generate Answer'}
-                            </button>
-                          </div>
-                        ) : (
-                          item.question.answers.map((answer) => (
-                            <div key={answer.id} style={{ marginBottom: 8, padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                              <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6 }}>
-                                {answer.answerType === 'llm' ? 'Assisted answer' : 'Community answer'}
-                                {answer.confidence !== null ? ` · ${Math.round(answer.confidence * 100)}% confidence` : ''}
-                                {answer.modelId ? ` · ${answer.modelId}` : ''}
-                              </div>
-                              <div style={{ fontSize: 13, color: '#E8EAF0', lineHeight: 1.6, marginBottom: 10, whiteSpace: 'pre-line' }}>{answer.body}</div>
-                              {answer.sources.length > 0 && (
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                                  {answer.sources.map((source) => (
-                                    <span key={source.id} style={{ background: 'rgba(255,255,255,0.04)', color: '#9CA3AF', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11, padding: '2px 8px', borderRadius: 20 }}>{source.label}</span>
-                                  ))}
-                                </div>
-                              )}
-                              <div style={{ display: 'flex', gap: 8 }}>
-                                {(['helpful', 'not_helpful', 'flagged'] as FeedAnswerRatingValue[]).map((rating) => (
-                                  <button key={rating} onClick={() => void handleAnswerRating(answer.id, rating)} disabled={busyAnswerId === answer.id} style={{ padding: '4px 12px', borderRadius: 20, background: answer.currentUserRating === rating ? 'rgba(56,189,248,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${answer.currentUserRating === rating ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.08)'}`, color: answer.currentUserRating === rating ? '#38BDF8' : '#9CA3AF', fontSize: 11, cursor: 'pointer', opacity: busyAnswerId === answer.id ? 0.6 : 1 }}>
-                                    {busyAnswerId === answer.id ? 'Saving…' : `${rating.replace('_', ' ')} · ${answer.ratingSummary[rating]}`}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    {/* Community detail */}
-                    {item.community && (
-                      <div style={{ marginTop: 8, padding: 16, borderRadius: 12, background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.2)' }}>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                          <span style={{ background: 'rgba(34,197,94,0.1)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.2)', fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>{item.community.category.replace('_', ' ')}</span>
-                          <span style={{ fontSize: 12, color: '#6B7280' }}>{item.community.replyCount} replies</span>
-                        </div>
-                        {item.community.replies.map((reply) => (
-                          <div key={reply.id} style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 6 }}>
-                            <div style={{ fontSize: 13, color: '#E8EAF0' }}>{reply.body}</div>
-                            <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>{formatFeedTime(reply.createdAtIso)}</div>
-                          </div>
-                        ))}
-                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                          <input
-                            value={replyDrafts[item.community.id] ?? ''}
-                            onChange={(e) => setReplyDrafts((previous) => ({ ...previous, [item.community!.id]: e.target.value }))}
-                            placeholder="Reply to this support post"
-                            style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#E8EAF0', fontSize: 13, outline: 'none' }}
-                          />
-                          <button onClick={() => void handleCommunityReply(item.community!.id)} disabled={busyPostId === item.community!.id || !(replyDrafts[item.community!.id] ?? '').trim()} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#22C55E', fontSize: 12, cursor: 'pointer', opacity: busyPostId === item.community!.id ? 0.6 : 1 }}>
-                            {busyPostId === item.community!.id ? 'Posting…' : 'Reply'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                      {!item.isRead && (
-                        <button onClick={() => void handleItemMutation(item.id, 'read')} disabled={busyItemId === item.id} style={{ padding: '5px 14px', borderRadius: 20, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', color: '#38BDF8', fontSize: 12, cursor: 'pointer', opacity: busyItemId === item.id ? 0.6 : 1 }}>
-                          {busyItemId === item.id ? 'Saving…' : '✓ Mark read'}
-                        </button>
-                      )}
-                      {!item.mandatory && (
-                        <button onClick={() => void handleItemMutation(item.id, 'dismiss')} disabled={busyItemId === item.id} style={{ padding: '5px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9CA3AF', fontSize: 12, cursor: 'pointer', opacity: busyItemId === item.id ? 0.6 : 1 }}>
-                          Dismiss
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <FeedTab
+            error={error}
+            showPostForm={showPostForm}
+            setShowPostForm={setShowPostForm}
+            enabledChannels={enabledChannels}
+            questionBody={questionBody}
+            questionCategory={questionCategory}
+            questionZipCode={questionZipCode}
+            questionRadius={questionRadius}
+            llmConsentGranted={llmConsentGranted}
+            communityBody={communityBody}
+            communityCategory={communityCategory}
+            busyQuestionId={busyQuestionId}
+            busyPostId={busyPostId}
+            busyItemId={busyItemId}
+            busyAnswerId={busyAnswerId}
+            replyDrafts={replyDrafts}
+            isRefreshing={isRefreshing}
+            items={items}
+            visibleItems={visibleItems}
+            onRefresh={() => void refreshFeed(true)}
+            onQuestionBodyChange={setQuestionBody}
+            onQuestionCategoryChange={setQuestionCategory}
+            onQuestionZipChange={setQuestionZipCode}
+            onQuestionRadiusChange={setQuestionRadius}
+            onConsentChange={setLlmConsentGranted}
+            onQuestionSubmit={() => void handleQuestionSubmit()}
+            onCommunityBodyChange={setCommunityBody}
+            onCommunityCategoryChange={setCommunityCategory}
+            onCommunitySubmit={() => void handleCommunitySubmit()}
+            onReplyChange={(postId, val) => setReplyDrafts((prev) => ({ ...prev, [postId]: val }))}
+            onReply={handleCommunityReply}
+            onRead={(id) => void handleItemMutation(id, 'read')}
+            onDismiss={(id) => void handleItemMutation(id, 'dismiss')}
+            onAnswerGenerate={handleAnswerGenerate}
+            onAnswerRating={handleAnswerRating}
+          />
         )}
 
-        {/* Chat tab */}
         {uiTab === 'chat' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24 }}>
-            <div style={{ marginBottom: 20, padding: '18px 24px', borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
+            <div style={{ marginBottom: 20, padding: '18px 24px', borderRadius: 16, background: `linear-gradient(135deg,${FEED_COLOR}15 0%,rgba(132,204,22,0.05) 100%)`, border: `1px solid ${FEED_COLOR}25` }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#F9FAFB', marginBottom: 4 }}>Community Chat</div>
-              <div style={{ fontSize: 14, color: '#9CA3AF' }}>Real-time community discussion powered by GetStream</div>
+              <div style={{ fontSize: 14, color: '#9CA3AF' }}>Real-time community discussion</div>
             </div>
             {chatLoading && <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading chat…</div>}
             {chatError && <div style={{ color: '#EF4444', fontSize: 14 }}>{chatError}</div>}
             {chatCredentials && (
-              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${COLOR}20` }}>
+              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${FEED_COLOR}20` }}>
                 <StreamChatPanel
                   streamApiKey={chatCredentials.streamApiKey}
                   streamToken={chatCredentials.streamToken}
@@ -632,81 +351,221 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
           </div>
         )}
 
-        {/* Admin tab */}
         {uiTab === 'admin' && (
-          <div style={{ flex: 1, padding: '32px 40px' }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#F9FAFB', marginBottom: 20 }}>Admin: Announcements</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-              {[
-                { l: 'Total Items', v: String(items.length), c: COLOR },
-                { l: 'Urgent Alerts', v: String(alertCount), c: '#EF4444' },
-                { l: 'Unread', v: String(unreadCount), c: '#F59E0B' },
-              ].map(({ l, v, c }) => (
-                <div key={l} style={{ padding: 20, borderRadius: 14, background: `${c}08`, border: `1px solid ${c}20` }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: c, marginBottom: 4 }}>{v}</div>
-                  <div style={{ fontSize: 13, color: '#6B7280' }}>{l}</div>
-                </div>
-              ))}
-            </div>
-            {isAdmin && (
-              <Link
-                href="/admin/feed-announcements"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
-              >
-                Open Admin Panel →
-              </Link>
-            )}
-          </div>
+          <AdminTab
+            items={items}
+            alertCount={alertCount}
+            unreadCount={unreadCount}
+            isAdmin={isAdmin}
+          />
         )}
       </div>
 
-      {/* Right panel */}
-      <aside style={{ width: 280, borderLeft: '1px solid rgba(255,255,255,0.06)', background: '#0D0F14', padding: '20px 16px', flexShrink: 0, overflowY: 'auto' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#4B5563', textTransform: 'uppercase', marginBottom: 12 }}>Live Activity</div>
-        <div style={{ padding: '14px 16px', borderRadius: 12, background: `${COLOR}08`, border: `1px solid ${COLOR}20`, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: COLOR }}>📈</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: COLOR }}>Feed Stats</span>
-          </div>
-          {[
-            { l: 'Total items', v: String(items.length) },
-            { l: 'Questions', v: String(questionCount) },
-            { l: 'Community', v: String(communityCount) },
-            { l: 'Unread', v: String(unreadCount) },
-          ].map(({ l, v }) => (
-            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', color: '#6B7280' }}>
-              <span>{l}</span>
-              <span style={{ color: COLOR, fontWeight: 600 }}>{v}</span>
-            </div>
-          ))}
+      <FeedAnnouncementsRightPanel
+        items={items}
+        alertCount={alertCount}
+        questionCount={questionCount}
+        communityCount={communityCount}
+        unreadCount={unreadCount}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Feed tab sub-view
+// ---------------------------------------------------------------------------
+
+type FeedTabProps = {
+  error: string | null;
+  showPostForm: 'question' | 'community' | null;
+  setShowPostForm: (v: 'question' | 'community' | null) => void;
+  enabledChannels: string[];
+  questionBody: string;
+  questionCategory: FeedQuestionCategory;
+  questionZipCode: string;
+  questionRadius: string;
+  llmConsentGranted: boolean;
+  communityBody: string;
+  communityCategory: FeedCommunityCategory;
+  busyQuestionId: string | null;
+  busyPostId: string | null;
+  busyItemId: string | null;
+  busyAnswerId: string | null;
+  replyDrafts: Record<string, string>;
+  isRefreshing: boolean;
+  items: FeedTimelineItem[];
+  visibleItems: FeedTimelineItem[];
+  onRefresh: () => void;
+  onQuestionBodyChange: (val: string) => void;
+  onQuestionCategoryChange: (val: FeedQuestionCategory) => void;
+  onQuestionZipChange: (val: string) => void;
+  onQuestionRadiusChange: (val: string) => void;
+  onConsentChange: (val: boolean) => void;
+  onQuestionSubmit: () => void;
+  onCommunityBodyChange: (val: string) => void;
+  onCommunityCategoryChange: (val: FeedCommunityCategory) => void;
+  onCommunitySubmit: () => void;
+  onReplyChange: (postId: string, val: string) => void;
+  onReply: (postId: string) => Promise<void>;
+  onRead: (id: string) => void;
+  onDismiss: (id: string) => void;
+  onAnswerGenerate: (questionId: string) => Promise<void>;
+  onAnswerRating: (answerId: string, rating: FeedAnswerRatingValue) => Promise<void>;
+};
+
+function FeedTab({
+  error, showPostForm, setShowPostForm, enabledChannels,
+  questionBody, questionCategory, questionZipCode, questionRadius, llmConsentGranted,
+  communityBody, communityCategory,
+  busyQuestionId, busyPostId, busyItemId, busyAnswerId,
+  replyDrafts, isRefreshing, items, visibleItems,
+  onRefresh, onQuestionBodyChange, onQuestionCategoryChange, onQuestionZipChange,
+  onQuestionRadiusChange, onConsentChange, onQuestionSubmit,
+  onCommunityBodyChange, onCommunityCategoryChange, onCommunitySubmit,
+  onReplyChange, onReply, onRead, onDismiss, onAnswerGenerate, onAnswerRating,
+}: FeedTabProps) {
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+      {error && (
+        <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5', fontSize: 13 }}>
+          {error}
         </div>
+      )}
 
-        {alertCount > 0 && (
-          <div style={{ padding: '14px 16px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <span style={{ fontSize: 14 }}>⚠️</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#EF4444' }}>Active Alerts ({alertCount})</span>
-            </div>
-            {items.filter(isAlertItem).slice(0, 3).map((item) => (
-              <div key={item.id} style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 6, lineHeight: 1.4 }}>• {item.title}</div>
-            ))}
-          </div>
-        )}
+      {showPostForm === 'question' && (
+        <FeedQuestionForm
+          questionBody={questionBody}
+          questionCategory={questionCategory}
+          questionZipCode={questionZipCode}
+          questionRadius={questionRadius}
+          llmConsentGranted={llmConsentGranted}
+          busyQuestionId={busyQuestionId}
+          enabledChannels={enabledChannels}
+          onBodyChange={onQuestionBodyChange}
+          onCategoryChange={onQuestionCategoryChange}
+          onZipCodeChange={onQuestionZipChange}
+          onRadiusChange={onQuestionRadiusChange}
+          onConsentChange={onConsentChange}
+          onSubmit={onQuestionSubmit}
+          onCancel={() => setShowPostForm(null)}
+          onSwitchToCommunity={() => setShowPostForm('community')}
+        />
+      )}
 
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#4B5563', textTransform: 'uppercase', marginBottom: 10 }}>Trending Tags</div>
-        {['#ServiceCredits', '#LightHouseHousing', '#SurvivorStories', '#Phase2Launch'].map((tag) => (
-          <div key={tag} style={{ padding: '7px 0', fontSize: 13, cursor: 'pointer' }}>
-            <span style={{ color: COLOR }}>{tag}</span>
+      {showPostForm === 'community' && (
+        <FeedCommunityForm
+          communityBody={communityBody}
+          communityCategory={communityCategory}
+          busyPostId={busyPostId}
+          enabledChannels={enabledChannels}
+          onBodyChange={onCommunityBodyChange}
+          onCategoryChange={onCommunityCategoryChange}
+          onSubmit={onCommunitySubmit}
+          onCancel={() => setShowPostForm(null)}
+          onSwitchToQuestion={() => setShowPostForm('question')}
+        />
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        <div style={{ fontSize: 13, color: '#6B7280' }}>{items.length} items</div>
+        <button
+          onClick={onRefresh}
+          style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9CA3AF', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <RefreshCw size={12} style={{ opacity: isRefreshing ? 0.5 : 1 }} />
+          {isRefreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
+
+      {visibleItems.length === 0 ? (
+        <FeedEmptyState />
+      ) : (
+        visibleItems.map((item) => (
+          <FeedItemCard
+            key={item.id}
+            item={item}
+            busyItemId={busyItemId}
+            busyAnswerId={busyAnswerId}
+            busyQuestionId={busyQuestionId}
+            busyPostId={busyPostId}
+            replyDrafts={replyDrafts}
+            onRead={onRead}
+            onDismiss={onDismiss}
+            onAnswerGenerate={(qId) => void onAnswerGenerate(qId)}
+            onAnswerRating={(aId, r) => void onAnswerRating(aId, r)}
+            onReplyChange={onReplyChange}
+            onReply={(pId) => void onReply(pId)}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Empty state — mirrors FeedAnnouncementsEmpty mockup
+// ---------------------------------------------------------------------------
+
+function FeedEmptyState() {
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: 16 }}>
+      <div style={{ width: 72, height: 72, borderRadius: 20, background: 'rgba(132,204,22,0.1)', border: '1px solid rgba(132,204,22,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Megaphone size={32} style={{ color: FEED_COLOR, opacity: 0.5 }} />
+      </div>
+      <div style={{ textAlign: 'center', maxWidth: 380 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#F9FAFB', marginBottom: 8 }}>No posts yet</div>
+        <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.7 }}>
+          The community feed is quiet right now. Posts, announcements, and urgent alerts will stream here in real-time as the community grows.
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 520 }}>
+        {['Announcements from the Hub team', 'Community stories from survivors', 'Urgent housing and safety alerts', 'Milestones and celebrations'].map((item) => (
+          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(132,204,22,0.3)', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#6B7280' }}>{item}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
 
-        {config && (
-          <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: 11, color: '#4B5563', marginBottom: 4 }}>Config</div>
-            <div style={{ fontSize: 12, color: '#9CA3AF' }}>{config.renderMode === 'card_toast' ? 'Card + toast mode' : 'Card-only mode'}</div>
+// ---------------------------------------------------------------------------
+// Admin tab sub-view
+// ---------------------------------------------------------------------------
+
+type AdminTabProps = {
+  items: FeedTimelineItem[];
+  alertCount: number;
+  unreadCount: number;
+  isAdmin: boolean;
+};
+
+function AdminTab({ items, alertCount, unreadCount, isAdmin }: AdminTabProps) {
+  return (
+    <div style={{ flex: 1, padding: '32px 40px' }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: '#F9FAFB', marginBottom: 20 }}>Admin: Announcements</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { l: 'Total Items', v: String(items.length), c: FEED_COLOR },
+          { l: 'Urgent Alerts', v: String(alertCount), c: '#EF4444' },
+          { l: 'Unread', v: String(unreadCount), c: '#F59E0B' },
+        ].map(({ l, v, c }) => (
+          <div key={l} style={{ padding: 20, borderRadius: 14, background: `${c}08`, border: `1px solid ${c}20` }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: c, marginBottom: 4 }}>{v}</div>
+            <div style={{ fontSize: 13, color: '#6B7280' }}>{l}</div>
           </div>
-        )}
-      </aside>
+        ))}
+      </div>
+      {isAdmin && (
+        <Link
+          href="/admin/feed-announcements"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: `${FEED_COLOR}15`, border: `1px solid ${FEED_COLOR}30`, color: FEED_COLOR, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+        >
+          Open Admin Panel →
+        </Link>
+      )}
     </div>
   );
 }
