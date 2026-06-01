@@ -111,7 +111,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | skills-hunt | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | foundation | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | lighthouse | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
-| socketrelay | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| socketrelay | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | trusttransport | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | peer-programming | 🎨 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ⬜ |
