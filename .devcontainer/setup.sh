@@ -82,7 +82,7 @@ pnpm --filter "@ctf/agent-mcp-server" build || {
 if [ "$FAST_MODE" != "1" ] && [ -n "$DATABASE_URL" ]; then
   echo "Applying ctf/schema.sql to Neon DB at DATABASE_URL..."
   if command -v psql &> /dev/null; then
-    PGPASSWORD="$(echo $DATABASE_URL | sed -n 's/.*:.*:\/\/(.*):(.*)@.*/\2/p')" \
+    PGPASSWORD="$(echo "$DATABASE_URL" | sed -En 's/.*:\/\/[^:]+:([^@]+)@.*/\1/p')" \
     psql "$DATABASE_URL" -f /workspaces/chargingthefuture/ctf/schema.sql || {
       echo "Failed to apply schema.sql to Neon DB. Check your DATABASE_URL and schema file.";
       exit 1;
