@@ -1,6 +1,7 @@
 'use client';
 
 import { Mic, Users } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { BORDER, PRIMARY } from './chyme-shared';
 import type { ChymeRoomResponse } from 'lib/chyme/types';
 
@@ -17,10 +18,11 @@ export function ChymeSidebar({
   joinState: JoinState;
   onJoin: () => void;
 }) {
+  const isMobile = useIsMobile();
   const joinLabel = joinState === 'joining' ? 'Joining…' : joinState === 'ready' ? '✓ Joined' : 'Join Room';
 
   return (
-    <aside style={{ width: 300, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0, background: '#030d05' }}>
+    <aside style={{ width: isMobile ? '100%' : 300, borderRight: isMobile ? 'none' : `1px solid ${BORDER}`, borderBottom: isMobile ? `1px solid ${BORDER}` : undefined, display: 'flex', flexDirection: 'column', flexShrink: 0, background: '#030d05' }}>
       <div style={{ padding: '16px 16px 12px' }}>
         <button
           onClick={onJoin}

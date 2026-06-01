@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Megaphone, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Megaphone, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { StreamChatPanel } from '../shared/stream-chat-panel';
 import { FeedAnnouncementsIconRail } from './feed-announcements-icon-rail';
 import { FeedAnnouncementsSidebar } from './feed-announcements-sidebar';
@@ -276,19 +277,70 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
     setShowPostForm(enabledChannels.includes('community') ? 'community' : 'question');
   }, [enabledChannels]);
 
-  return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100vh', background: FEED_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex' }}>
-      <FeedAnnouncementsIconRail uiTab={uiTab} onTabChange={setUiTab} unreadCount={unreadCount} />
+  const isMobile = useIsMobile();
+  const mobileTabs: { key: 'feed' | 'chat' | 'admin'; label: string }[] = [
+    { key: 'feed', label: 'Feed' },
+    { key: 'chat', label: 'Chat' },
+    ...(isAdmin ? [{ key: 'admin' as const, label: 'Admin' }] : []),
+  ];
+  const mobileFilters: { key: FeedFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    ...enabledChannels.map((channel) => ({ key: channel as FeedFilter, label: channel.charAt(0).toUpperCase() + channel.slice(1) })),
+    { key: 'unread', label: unreadCount > 0 ? `Unread (${unreadCount})` : 'Unread' },
+  ];
 
-      <FeedAnnouncementsSidebar
-        filter={filter}
-        onFilterChange={setFilter}
-        unreadCount={unreadCount}
-        enabledChannels={enabledChannels}
-      />
+  return (
+    <div style={{ width: '100%', height: '100%', minHeight: '100vh', background: FEED_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+      {!isMobile && <FeedAnnouncementsIconRail uiTab={uiTab} onTabChange={setUiTab} unreadCount={unreadCount} />}
+
+      {!isMobile && (
+        <FeedAnnouncementsSidebar
+          filter={filter}
+          onFilterChange={setFilter}
+          unreadCount={unreadCount}
+          enabledChannels={enabledChannels}
+        />
+      )}
+
+      {isMobile && (
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: FEED_BG, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${FEED_COLOR}14`, border: `1px solid ${FEED_COLOR}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: FEED_COLOR, textDecoration: 'none', flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <Megaphone size={18} style={{ color: FEED_COLOR, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#F9FAFB', flex: 1 }}>Feed</span>
+            <button onClick={openNewPost} style={{ padding: '8px 14px', borderRadius: 9, background: `${FEED_COLOR}1A`, border: `1px solid ${FEED_COLOR}40`, color: FEED_COLOR, fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>New post</button>
+          </div>
+          <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px' }}>
+            {mobileTabs.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setUiTab(key)}
+                style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: uiTab === key ? `${FEED_COLOR}1A` : 'transparent', border: `1px solid ${uiTab === key ? FEED_COLOR + '40' : 'rgba(255,255,255,0.08)'}`, color: uiTab === key ? FEED_COLOR : '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {uiTab === 'feed' && (
+            <div style={{ display: 'flex', gap: 6, padding: '0 12px 10px', overflowX: 'auto' }}>
+              {mobileFilters.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  style={{ whiteSpace: 'nowrap', padding: '5px 12px', borderRadius: 14, background: filter === key ? `${FEED_COLOR}14` : 'transparent', border: `1px solid ${filter === key ? FEED_COLOR + '50' : 'rgba(255,255,255,0.1)'}`, color: filter === key ? FEED_COLOR : '#9CA3AF', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <FeedAnnouncementsHeader onNewPost={openNewPost} />
+        {!isMobile && <FeedAnnouncementsHeader onNewPost={openNewPost} />}
 
         {uiTab === 'feed' && (
           <FeedTab
@@ -339,7 +391,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
             {chatLoading && <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading chat…</div>}
             {chatError && <div style={{ color: '#EF4444', fontSize: 14 }}>{chatError}</div>}
             {chatCredentials && (
-              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${FEED_COLOR}20` }}>
+              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${FEED_COLOR}20`, minHeight: isMobile ? '65vh' : undefined }}>
                 <StreamChatPanel
                   streamApiKey={chatCredentials.streamApiKey}
                   streamToken={chatCredentials.streamToken}
@@ -361,13 +413,15 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
         )}
       </div>
 
-      <FeedAnnouncementsRightPanel
-        items={items}
-        alertCount={alertCount}
-        questionCount={questionCount}
-        communityCount={communityCount}
-        unreadCount={unreadCount}
-      />
+      {!isMobile && (
+        <FeedAnnouncementsRightPanel
+          items={items}
+          alertCount={alertCount}
+          questionCount={questionCount}
+          communityCount={communityCount}
+          unreadCount={unreadCount}
+        />
+      )}
     </div>
   );
 }

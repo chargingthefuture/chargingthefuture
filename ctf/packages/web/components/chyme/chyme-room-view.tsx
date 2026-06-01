@@ -2,6 +2,7 @@
 
 import type { RefObject } from 'react';
 import { Lock, MessageSquare } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { BORDER, PRIMARY, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
@@ -30,6 +31,7 @@ export type ChymeRoomViewProps = {
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
   const { room, currentUser, showChat, onToggleChat } = props;
+  const isMobile = useIsMobile();
   return (
     <>
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
@@ -55,7 +57,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
         <ChymeStage
           room={room}
           currentUserId={currentUser.userId}
