@@ -1,187 +1,588 @@
-import React, { useState } from 'react';
-import { TrustTransportStreamTab } from './TrustTransportStreamTab';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useAuth } from './auth-context';
+import { TrustTransportLoadingState } from './TrustTransportLoadingState';
+import {
+  createRequest,
+  listRequests,
+  type ListRequestsResponse,
+} from './api';
+import type { TrustTransportMode, TrustTransportRequest } from './types';
 
 const COLOR = '#F97316';
-const DRIVERS = [
-  { id: 1, name: 'Jose Martinez', rating: 4.9, trips: 847, eta: '3 min', avatar: 'JM', vehicle: 'Toyota Camry', credits: true },
-  { id: 2, name: 'Aisha Thompson', rating: 5.0, trips: 612, eta: '6 min', avatar: 'AT', vehicle: 'Honda Civic', credits: true },
-  { id: 3, name: 'David Kim', rating: 4.8, trips: 1203, eta: '9 min', avatar: 'DK', vehicle: 'Ford Explorer', credits: false },
+const BG = '#0F1117';
+const SURFACE = '#090B0F';
+const BORDER = 'rgba(255,255,255,0.06)';
+const TEXT = '#F9FAFB';
+const MUTED = '#6B7280';
+const SUBTLE = '#9CA3AF';
+
+type Tab = 'ride' | 'package' | 'track';
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+function Header({ isLive }: { isLive: boolean }) {
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerLeft}>
+        <View style={styles.headerIcon}>
+          <Text style={styles.headerIconText}>🚗</Text>
+        </View>
+        <View>
+          <Text style={styles.headerTitle}>TrustTransport</Text>
+          {/* Driver count not backed by API — omitted per real-data-only rule */}
+        </View>
+      </View>
+      {isLive && (
+        <View style={styles.liveBadge}>
+          <Text style={styles.liveBadgeText}>● Live</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bottom nav
+// ---------------------------------------------------------------------------
+const NAV_ITEMS: { label: string; key: Tab; emoji: string }[] = [
+  { label: 'Ride', key: 'ride', emoji: '🚗' },
+  { label: 'Package', key: 'package', emoji: '📦' },
+  { label: 'Track', key: 'track', emoji: '📍' },
 ];
 
-export const TrustTransport = () => {
-  const [tab, setTab] = useState('ride');
+function BottomNav({ active, onPress }: { active: Tab; onPress: (_t: Tab) => void }) {
+  return (
+    <View style={styles.nav}>
+      {NAV_ITEMS.map(({ label, key, emoji }) => (
+        <TouchableOpacity
+          key={key}
+          style={styles.navBtn}
+          onPress={() => onPress(key)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: active === key }}
+        >
+          <View style={[styles.navIconWrap, active === key && styles.navIconWrapActive]}>
+            <Text style={styles.navEmoji}>{emoji}</Text>
+          </View>
+          <Text style={[styles.navLabel, active === key && styles.navLabelActive]}>{label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Book tab — ride or package mode
+// ---------------------------------------------------------------------------
+interface BookTabProps {
+  mode: TrustTransportMode;
+  onSubmitted: () => void;
+}
+
+function BookTab({ mode, onSubmitted }: BookTabProps) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [booked, setBooked] = useState(false);
-  const { user, isAuthenticated, signIn, isLoading } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
-  if (isLoading) {
-    return <View style={styles.root}><Text style={{ color: '#fff', textAlign: 'center', marginTop: 40 }}>Loading...</Text></View>;
+  const modeName = mode === 'ride' ? 'Ride' : mode === 'package' ? 'Package' : 'Food';
+
+  async function handleSubmit() {
+    if (!from.trim() || !to.trim()) {
+      setError('Please enter pickup and destination.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await createRequest(
+        {
+          mode,
+          title: `${modeName} request`,
+          details: '',
+          pickupCity: from.trim(),
+          dropoffCity: to.trim(),
+          pickupGeoRedacted: null,
+          dropoffGeoRedacted: null,
+        },
+        `${Date.now()}-${Math.random()}`,
+      );
+      setDone(true);
+      onSubmitted();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to submit request.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  if (!isAuthenticated) {
+  if (done) {
     return (
-      <View style={styles.root}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>TrustTransport</Text>
-        </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 16, marginBottom: 16 }}>Sign in to use TrustTransport</Text>
-          <TouchableOpacity style={styles.bookBtn} onPress={signIn}>
-            <Text style={styles.bookBtnText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.bookedBox}>
+        <Text style={styles.bookedTitle}>Request submitted!</Text>
+        <Text style={styles.bookedDesc}>
+          Your request is being matched with nearby drivers. All comms encrypted.
+        </Text>
+        <TouchableOpacity
+          style={styles.secondaryBtn}
+          onPress={() => { setDone(false); setFrom(''); setTo(''); }}
+        >
+          <Text style={styles.secondaryBtnText}>Book Another</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>TrustTransport</Text>
-        <Text style={styles.headerLive}>● Live</Text>
+    <View style={styles.bookSection}>
+      <View style={styles.sectionBox}>
+        <Text style={styles.sectionTitle}>Book a Safe {modeName}</Text>
+        <Text style={styles.sectionDesc}>
+          Background-checked drivers · Trauma-informed · ServiceCredits OK
+        </Text>
       </View>
-      <View style={styles.nav}>
-        {['ride', 'package', 'track', 'chat'].map((key) => (
-          <TouchableOpacity style={[styles.navBtn, tab === key && styles.navBtnActive]} onPress={() => setTab(key)}>
-            <Text style={[styles.navBtnText, tab === key && styles.navBtnTextActive]}>{key.charAt(0).toUpperCase() + key.slice(1)}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.inputGroup}>
+        <View style={styles.inputWrap}>
+          <View style={styles.dotGreen} />
+          <TextInput
+            value={from}
+            onChangeText={setFrom}
+            placeholder="Pickup location (private)"
+            placeholderTextColor={MUTED}
+            style={styles.input}
+            accessibilityLabel="Pickup location"
+          />
+        </View>
+        <View style={styles.inputWrap}>
+          <View style={styles.dotOrange} />
+          <TextInput
+            value={to}
+            onChangeText={setTo}
+            placeholder="Where to?"
+            placeholderTextColor={MUTED}
+            style={styles.input}
+            accessibilityLabel="Destination"
+          />
+        </View>
       </View>
-      <ScrollView style={styles.scroll}>
-        {tab === 'ride' && (
-          <View>
-            <View style={styles.sectionBox}>
-              <Text style={styles.sectionTitle}>Book a Safe Ride</Text>
-              <Text style={styles.sectionDesc}>Background-checked drivers · Trauma-informed · Credits OK</Text>
-            </View>
-            <View style={styles.inputBox}>
-              <TextInput value={from} onChangeText={setFrom} placeholder="Pickup location (private)" placeholderTextColor="#6B7280" style={styles.input} />
-              <TextInput value={to} onChangeText={setTo} placeholder="Where to?" placeholderTextColor="#6B7280" style={styles.input} />
-            </View>
-            {(from || to) ? (
-              <View>
-                <Text style={styles.nearbyTitle}>Nearby Drivers</Text>
-                {DRIVERS.map((d) => (
-                  <View style={styles.driverCard}>
-                    <View style={styles.avatar}><Text style={styles.avatarText}>{d.avatar}</Text></View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.driverName}>{d.name}</Text>
-                      <Text style={styles.driverMeta}>{d.vehicle} · ⭐ {d.rating}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.eta}>ETA {d.eta}</Text>
-                      <TouchableOpacity style={styles.bookBtn} onPress={() => setBooked(true)}><Text style={styles.bookBtnText}>Book</Text></TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <TouchableOpacity
+        style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
+        onPress={() => { void handleSubmit(); }}
+        disabled={submitting}
+        accessibilityRole="button"
+      >
+        {submitting
+          ? <ActivityIndicator size="small" color="#fff" />
+          : <Text style={styles.primaryBtnText}>Book {modeName}</Text>
+        }
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Track tab — real requests from API
+// ---------------------------------------------------------------------------
+function statusColor(status: string): string {
+  if (status === 'completed') return '#22C55E';
+  if (status === 'in_progress' || status === 'accepted') return COLOR;
+  if (status === 'cancelled' || status === 'disputed' || status === 'emergency_frozen') return '#EF4444';
+  return SUBTLE;
+}
+
+function TrackTab({
+  requests,
+  loading,
+  onRefresh,
+}: {
+  requests: TrustTransportRequest[];
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={COLOR} />
+      </View>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.emptyEmoji}>📍</Text>
+        <Text style={styles.emptyTitle}>No active requests</Text>
+        <Text style={styles.emptyDesc}>Book a ride, package, or food delivery to see it here.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.trackList}>
+      <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} accessibilityRole="button">
+        <Text style={styles.refreshBtnText}>Refresh</Text>
+      </TouchableOpacity>
+      {requests.map((req) => (
+        <React.Fragment key={req.id}>
+          <View style={styles.requestCard}>
+            <View style={styles.requestCardRow}>
+              <Text style={styles.requestMode}>{req.mode.toUpperCase()}</Text>
+              <View style={[styles.statusBadge, { borderColor: statusColor(req.status) + '50' }]}>
+                <Text style={[styles.statusBadgeText, { color: statusColor(req.status) }]}>
+                  {req.status.replace(/_/g, ' ')}
+                </Text>
               </View>
-            ) : (
-              <View style={styles.emptyState}><Text style={styles.emptyIcon}>📦</Text><Text style={styles.emptyText}>Enter pickup and destination to see drivers</Text></View>
-            )}
-            {booked && (
-              <View style={styles.bookedBox}>
-                <Text style={styles.bookedText}>Booked! Driver en route.</Text>
-                <Text style={styles.bookedMeta}>Jose Martinez · ETA 8 min · All comms via GetStream</Text>
-              </View>
-            )}
-          </View>
-        )}
-        {/* TRACK TAB */}
-        {tab === 'track' && (
-          <View style={styles.trackBox}>
-            <View style={styles.trackHeader}>
-              <Text style={styles.trackDriver}>Jose Martinez · En Route</Text>
-              <Text style={styles.trackLive}>🔴 Live</Text>
             </View>
-            <Text style={styles.trackMeta}>ETA 8 min · Toyota Camry · 12 credits</Text>
-            <View style={styles.trackMap}><Text style={styles.trackMapText}>[Live Map — GetStream location feed]</Text></View>
-            <View style={styles.trackActions}>
-              <TouchableOpacity style={styles.trackCall}><Text style={styles.trackCallText}>📞 Call</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.trackSOS}><Text style={styles.trackSOSText}>🚨 SOS</Text></TouchableOpacity>
-            </View>
-            <View style={styles.safetyBox}>
-              <Text style={styles.safetyTitle}>Safety Features Active</Text>
+            {req.pickupCity ? (
+              <Text style={styles.requestLocation}>From: {req.pickupCity}</Text>
+            ) : null}
+            {req.dropoffCity ? (
+              <Text style={styles.requestLocation}>To: {req.dropoffCity}</Text>
+            ) : null}
+            <View style={styles.safetyRow}>
               <Text style={styles.safetyItem}>🛡️ Background checked</Text>
-              <Text style={styles.safetyItem}>📞 Emergency SOS</Text>
               <Text style={styles.safetyItem}>✅ ID verified</Text>
             </View>
           </View>
-        )}
-        {/* PACKAGE & CHAT TABS */}
-        {tab === 'package' && (
-          <View style={styles.centeredBox}>
-            <Text style={styles.centeredIcon}>📦</Text>
-            <Text style={styles.centeredTitle}>Package Delivery</Text>
-            <Text style={styles.centeredDesc}>GetStream-powered · Safety-first</Text>
-          </View>
-        )}
-        {tab === 'chat' && (
-          user && user.activeTripId ? (
-            <TrustTransportStreamTab tripId={user.activeTripId} />
-          ) : (
-            <View style={styles.centeredBox}>
-              <Text style={styles.centeredIcon}>💬</Text>
-              <Text style={styles.centeredTitle}>Transport Chat</Text>
-              <Text style={styles.centeredDesc}>GetStream-powered · Safety-first</Text>
+        </React.Fragment>
+      ))}
+    </ScrollView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Empty / unauthenticated / loading states
+// ---------------------------------------------------------------------------
+function PublicState({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <ScrollView contentContainerStyle={styles.publicContent}>
+      <View style={styles.publicHeadRow}>
+        <Text style={styles.publicTitle}>TrustTransport</Text>
+      </View>
+      <Text style={styles.publicDesc}>
+        Rides, package delivery, and food — all with trauma-informed,
+        background-checked providers. Pay with Service Credits.
+      </Text>
+      <View style={styles.serviceRow}>
+        {[
+          { emoji: '🚗', label: 'Rides' },
+          { emoji: '📦', label: 'Packages' },
+          { emoji: '🍽️', label: 'Food' },
+        ].map(({ emoji, label }) => (
+          <React.Fragment key={label}>
+            <View style={styles.serviceCard}>
+              <Text style={styles.serviceEmoji}>{emoji}</Text>
+              <Text style={styles.serviceLabel}>{label}</Text>
             </View>
-          )
+          </React.Fragment>
+        ))}
+      </View>
+      <TouchableOpacity style={styles.joinBtn} onPress={onSignIn} accessibilityRole="button">
+        <Text style={styles.joinBtnText}>Join the Hub — Free</Text>
+      </TouchableOpacity>
+      {/* Blurred driver list placeholder — no real driver data available unauthenticated */}
+      <View style={styles.blurredPlaceholder}>
+        <View style={styles.lockCircle}>
+          <Text style={styles.lockEmoji}>🔒</Text>
+        </View>
+        <Text style={styles.lockTitle}>Sign in to book transport</Text>
+        <TouchableOpacity style={styles.signInBtn} onPress={onSignIn} accessibilityRole="button">
+          <Text style={styles.signInBtnText}>Sign in</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+export const TrustTransport = () => {
+  const { isAuthenticated, isLoading, signIn } = useAuth();
+  const [tab, setTab] = useState<Tab>('ride');
+  const [requests, setRequests] = useState<TrustTransportRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+
+  const loadRequests = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setRequestsLoading(true);
+    try {
+      const res: ListRequestsResponse = await listRequests(1);
+      setRequests(res.items);
+    } catch {
+      // non-fatal; show empty list
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void loadRequests();
+  }, [isAuthenticated, loadRequests]);
+
+  if (isLoading) return <TrustTransportLoadingState />;
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.root}>
+        <PublicState onSignIn={() => { void signIn(); }} />
+      </View>
+    );
+  }
+
+  const bookMode: TrustTransportMode = tab === 'package' ? 'package' : 'ride';
+
+  return (
+    <View style={styles.root}>
+      <Header isLive />
+      <ScrollView style={styles.scroll}>
+        {tab === 'track' ? (
+          <TrackTab requests={requests} loading={requestsLoading} onRefresh={() => { void loadRequests(); }} />
+        ) : (
+          <BookTab mode={bookMode} onSubmitted={() => { void loadRequests(); }} />
         )}
       </ScrollView>
+      <BottomNav active={tab} onPress={setTab} />
     </View>
   );
 };
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0F1117' },
-  header: { height: 56, backgroundColor: '#090B0F', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB' },
-  headerLive: { fontSize: 12, color: '#22C55E', fontWeight: '700' },
-  nav: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#090B0F', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  navBtn: { flex: 1, paddingVertical: 12 },
-  navBtnActive: { borderBottomWidth: 2, borderBottomColor: COLOR },
-  navBtnText: { color: '#6B7280', fontSize: 14, textAlign: 'center' },
-  navBtnTextActive: { color: COLOR, fontWeight: '700' },
+  root: { flex: 1, backgroundColor: BG },
+  header: {
+    height: 60,
+    backgroundColor: SURFACE,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: `${COLOR}30`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIconText: { fontSize: 18 },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: TEXT },
+  liveBadge: {
+    backgroundColor: '#22C55E20',
+    borderWidth: 1,
+    borderColor: '#22C55E35',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  liveBadgeText: { fontSize: 11, color: '#22C55E', fontWeight: '700' },
   scroll: { flex: 1 },
-  sectionBox: { padding: 16, borderRadius: 14, backgroundColor: '#F9731608', borderWidth: 1, borderColor: '#F9731618', margin: 16, marginBottom: 0 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB', marginBottom: 4 },
-  sectionDesc: { fontSize: 12, color: '#6B7280' },
-  inputBox: { flexDirection: 'column', gap: 10, margin: 16 },
-  input: { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderRadius: 12, fontSize: 14, color: '#E8EAF0', padding: 14, marginBottom: 10 },
-  nearbyTitle: { fontSize: 14, fontWeight: '700', color: '#9CA3AF', margin: 16, marginBottom: 10 },
-  driverCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderColor: '#F9731620', borderWidth: 1, borderRadius: 14, padding: 14, marginHorizontal: 16, marginBottom: 10 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F9731620', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  avatarText: { color: COLOR, fontWeight: '800', fontSize: 15 },
-  driverName: { fontSize: 14, fontWeight: '700', color: '#F9FAFB' },
-  driverMeta: { fontSize: 12, color: '#6B7280' },
-  eta: { fontSize: 13, color: '#22C55E', fontWeight: '700', marginBottom: 6 },
-  bookBtn: { backgroundColor: COLOR, borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14 },
-  bookBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  emptyState: { alignItems: 'center', paddingVertical: 24 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: '#6B7280' },
-  bookedBox: { padding: 16, borderRadius: 14, backgroundColor: '#22C55E10', borderWidth: 1, borderColor: '#22C55E30', margin: 16, marginTop: 10 },
-  bookedText: { fontSize: 14, fontWeight: '700', color: '#22C55E' },
-  bookedMeta: { fontSize: 12, color: '#9CA3AF', marginTop: 6 },
-  trackBox: { padding: 16, borderRadius: 14, backgroundColor: '#F9731608', borderWidth: 1, borderColor: '#F9731625', margin: 16, marginBottom: 0 },
-  trackHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  trackDriver: { fontSize: 15, fontWeight: '700', color: '#F9FAFB' },
-  trackLive: { backgroundColor: '#22C55E20', color: '#22C55E', borderWidth: 1, borderColor: '#22C55E40', fontSize: 11, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, fontWeight: '700' },
-  trackMeta: { fontSize: 13, color: '#9CA3AF', marginBottom: 12 },
-  trackMap: { paddingVertical: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', alignItems: 'center', marginBottom: 12 },
-  trackMapText: { color: '#4B5563', fontSize: 13 },
-  trackActions: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  trackCall: { flex: 1, padding: 10, borderRadius: 10, backgroundColor: '#F9731615', borderWidth: 1, borderColor: '#F9731630', alignItems: 'center' },
-  trackCallText: { color: COLOR, fontSize: 12, fontWeight: '600' },
-  trackSOS: { flex: 1, padding: 10, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', alignItems: 'center' },
-  trackSOSText: { color: '#EF4444', fontSize: 12, fontWeight: '600' },
-  safetyBox: { padding: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginTop: 8 },
-  safetyTitle: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', marginBottom: 8 },
-  safetyItem: { fontSize: 12, color: '#9CA3AF', paddingVertical: 2 },
-  centeredBox: { alignItems: 'center', paddingVertical: 40 },
-  centeredIcon: { fontSize: 48, marginBottom: 12 },
-  centeredTitle: { fontSize: 16, fontWeight: '700', color: '#F9FAFB', marginBottom: 4 },
-  centeredDesc: { fontSize: 13, color: '#6B7280' },
+  nav: {
+    height: 72,
+    backgroundColor: SURFACE,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+  },
+  navBtn: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 8 },
+  navIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconWrapActive: { backgroundColor: `${COLOR}20` },
+  navEmoji: { fontSize: 18 },
+  navLabel: { fontSize: 10, color: '#4B5563', fontWeight: '400' },
+  navLabelActive: { color: COLOR, fontWeight: '600' },
+  bookSection: { padding: 16 },
+  sectionBox: {
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: `${COLOR}08`,
+    borderWidth: 1,
+    borderColor: `${COLOR}18`,
+    marginBottom: 16,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: TEXT, marginBottom: 4 },
+  sectionDesc: { fontSize: 12, color: MUTED },
+  inputGroup: { marginBottom: 16, gap: 10 },
+  inputWrap: { position: 'relative', flexDirection: 'row', alignItems: 'center' },
+  dotGreen: {
+    position: 'absolute',
+    left: 14,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
+    zIndex: 1,
+  },
+  dotOrange: {
+    position: 'absolute',
+    left: 14,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLOR,
+    zIndex: 1,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    fontSize: 14,
+    color: '#E8EAF0',
+    paddingVertical: 14,
+    paddingLeft: 32,
+    paddingRight: 14,
+    marginBottom: 0,
+  },
+  errorText: { fontSize: 13, color: '#EF4444', marginBottom: 12 },
+  primaryBtn: {
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnDisabled: { backgroundColor: `${COLOR}40` },
+  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  secondaryBtn: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    alignItems: 'center',
+  },
+  secondaryBtnText: { color: SUBTLE, fontSize: 13 },
+  bookedBox: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 14,
+    backgroundColor: '#22C55E10',
+    borderWidth: 1,
+    borderColor: '#22C55E30',
+  },
+  bookedTitle: { fontSize: 16, fontWeight: '700', color: '#22C55E', marginBottom: 6 },
+  bookedDesc: { fontSize: 13, color: SUBTLE },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, minHeight: 300 },
+  emptyEmoji: { fontSize: 40, marginBottom: 12 },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 6 },
+  emptyDesc: { fontSize: 13, color: MUTED, textAlign: 'center' },
+  trackList: { padding: 16, gap: 12 },
+  refreshBtn: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: `${COLOR}15`,
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+    marginBottom: 12,
+  },
+  refreshBtnText: { fontSize: 12, color: COLOR, fontWeight: '600' },
+  requestCard: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: `${COLOR}20`,
+    marginBottom: 10,
+  },
+  requestCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  requestMode: { fontSize: 11, fontWeight: '700', color: COLOR, letterSpacing: 1 },
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  statusBadgeText: { fontSize: 11, fontWeight: '600' },
+  requestLocation: { fontSize: 13, color: SUBTLE, marginBottom: 2 },
+  safetyRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  safetyItem: { fontSize: 11, color: MUTED },
+  publicContent: { padding: 20 },
+  publicHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  publicTitle: { fontSize: 20, fontWeight: '800', color: TEXT },
+  publicDesc: { fontSize: 14, color: SUBTLE, lineHeight: 21, marginBottom: 16 },
+  serviceRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  serviceCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+    padding: 14,
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${COLOR}08`,
+  },
+  serviceEmoji: { fontSize: 20 },
+  serviceLabel: { fontSize: 12, fontWeight: '600', color: TEXT },
+  joinBtn: {
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: COLOR,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  joinBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  blurredPlaceholder: {
+    padding: 32,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center',
+    gap: 12,
+  },
+  lockCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: `${COLOR}50`,
+    backgroundColor: `${COLOR}10`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockEmoji: { fontSize: 20 },
+  lockTitle: { fontSize: 15, fontWeight: '700', color: TEXT, textAlign: 'center' },
+  signInBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 9,
+    backgroundColor: COLOR,
+  },
+  signInBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });

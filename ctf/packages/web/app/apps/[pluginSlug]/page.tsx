@@ -18,6 +18,7 @@ import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonom
 import { TrustTransportShell } from '@/components/trusttransport/trusttransport-shell';
 import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
 import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
+import { WhatWorksShell } from '@/components/whatworks/whatworks-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -161,6 +162,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
 
   if (selectedPlugin.slug === 'clicklog') {
     return <ClicklogShell />;
+  }
+
+  if (selectedPlugin.slug === 'whatworks') {
+    return <WhatWorksShell />;
   }
 
   if (selectedPlugin.slug === 'chyme') {
