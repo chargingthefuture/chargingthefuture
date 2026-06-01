@@ -1,46 +1,34 @@
-import { clerkMiddleware, auth } from '@clerk/nextjs/server';
-import { NextFetchEvent, NextRequest, NextResponse } from 'next/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 import { getClerkRuntimeOptions } from './lib/auth/clerk-env';
 
-const clerkHandler = clerkMiddleware(getClerkRuntimeOptions());
+// Identity headers that the app reads in `lib/auth/request-identity.ts`. The
+// middleware is the only thing allowed to set them, so we always clear whatever
+// the client sent and then write the values we can actually verify from Clerk.
+// This both makes the signed-in user visible to the rest of the app and stops a
+// caller from spoofing these headers to look authenticated.
+const MANAGED_IDENTITY_HEADERS = [
+  'x-ctf-authenticated',
+  'x-ctf-auth-provider',
+  'x-ctf-user-id',
+];
 
-async function addRequestIdentityHeaders(request: NextRequest): Promise<Headers> {
-  const authState = await auth();
-  const headers = new Headers(request.headers);
-  headers.set('x-ctf-authenticated', authState.userId ? 'true' : 'false');
-  headers.set('x-ctf-auth-provider', 'clerk');
+export default clerkMiddleware(async (auth, request) => {
+  const { userId } = await auth();
 
-  if (authState.userId) {
-    headers.set('x-ctf-user-id', authState.userId);
+  const requestHeaders = new Headers(request.headers);
+  for (const header of MANAGED_IDENTITY_HEADERS) {
+    requestHeaders.delete(header);
   }
 
-  return headers;
-}
-
-export default async function middleware(request: NextRequest, event: NextFetchEvent) {
-  const response = await clerkHandler(request, event);
-
-  if (response.headers.get('location')) {
-    return response;
+  requestHeaders.set('x-ctf-authenticated', userId ? 'true' : 'false');
+  requestHeaders.set('x-ctf-auth-provider', 'clerk');
+  if (userId) {
+    requestHeaders.set('x-ctf-user-id', userId);
   }
 
-  const requestHeaders = await addRequestIdentityHeaders(request);
-  const nextResponse = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
-  response.headers.forEach((value, key) => {
-    if (key.toLowerCase() === 'set-cookie') {
-      nextResponse.headers.append(key, value);
-    } else {
-      nextResponse.headers.set(key, value);
-    }
-  });
-
-  return nextResponse;
-}
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}, getClerkRuntimeOptions());
 
 export const config = {
   matcher: [
