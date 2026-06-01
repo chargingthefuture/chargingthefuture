@@ -43,7 +43,13 @@ export function DirectoryShell() {
       setMetaError(null);
       try {
         const res = await fetch("/api/directory/sectors");
-        if (res.ok) setSectors(await res.json() as Sector[]);
+        // The endpoint returns { items: Sector[] }; reading the body as a bare
+        // array left `sectors` holding an object, so `sectors.map(...)` during
+        // render threw and the whole Directory page failed to load.
+        if (res.ok) {
+          const data = await res.json() as { items?: Sector[] };
+          setSectors(data.items ?? []);
+        }
       } catch {
         setMetaError("Failed to load directory.");
       } finally {
