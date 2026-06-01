@@ -13,6 +13,7 @@
     "test": "pnpm -r --if-present run test",
     "seed:currencies": "node ./scripts/seedCurrenciesPhase0.mjs",
     "seed:currency-usd-rates": "node ./scripts/seedCurrencyUsdRates.mjs",
+    "gdp:recognize": "node ./scripts/recognizeGdp.mjs",
     "seed:skills-taxonomy": "node ./scripts/seedSkillsTaxonomy.mjs",
     "seed:directory": "node ./scripts/seedDirectory.mjs",
     "seed:feed-announcements": "node ./scripts/seedFeedAnnouncements.mjs",

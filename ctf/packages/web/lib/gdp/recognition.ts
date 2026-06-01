@@ -67,3 +67,70 @@ export async function recognizeUsdEstimate(volumes: CurrencyVolume[]): Promise<U
   const rates = await getActiveUsdRates();
   return normalizeVolumesToUsd(volumes, rates);
 }
+
+/**
+ * A named source of recognizable economic volume — one per contributing plugin. GDP recognition spans
+ * all applicable plugins; sources register below and the aggregator rolls them up. TrustTransport is
+ * the first source; add others (e.g. LightHouse paid rent, LevelUp disbursements) here as the owner
+ * approves them. A source must contribute ONLY eligible settled spend — never transfers or
+ * deletion/reclaim reallocations, which the GDP non-recognition rules exclude.
+ */
+export interface RecognitionSource {
+  pluginSlug: string;
+  label: string;
+  /** Load this source's eligible settled spend, one entry per currency (server-side). */
+  loadVolumes(): Promise<CurrencyVolume[]>;
+}
+
+/**
+ * TrustTransport: the value of completed marketplace tasks credited to providers. Recognizes the
+ * positive earning entries (`credit` + `release`); excludes `debit`/`hold` (internal/pending) and any
+ * reclaim/reallocation. Groups by the referenced `price_currency`, falling back to the legacy
+ * free-text `currency`; unknown codes are surfaced (not silently dropped) by the normalizer.
+ */
+export const trustTransportSource: RecognitionSource = {
+  pluginSlug: 'trusttransport',
+  label: 'TrustTransport completed-task earnings',
+  async loadVolumes() {
+    const result = await queryDb<{ currency_code: string | null; total: string }>(
+      `SELECT COALESCE(price_currency, currency) AS currency_code, SUM(amount)::text AS total
+         FROM trusttransport_earnings_ledger
+         WHERE entry_type IN ('credit', 'release')
+         GROUP BY COALESCE(price_currency, currency)`,
+    );
+    return result.rows
+      .filter((row): row is { currency_code: string; total: string } => Boolean(row.currency_code))
+      .map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
+  },
+};
+
+/**
+ * Registered GDP recognition sources. Start with TrustTransport; append other plugins' eligible-spend
+ * sources here (and document them in the GDP inventory) as the owner approves each one.
+ */
+export const RECOGNITION_SOURCES: RecognitionSource[] = [trustTransportSource];
+
+/** A USD estimate plus the per-source breakdown that composes it. */
+export interface RecognitionBreakdown extends UsdEstimate {
+  perSource: Array<{ pluginSlug: string; usdEstimate: number }>;
+}
+
+/**
+ * Roll recognized volume across every registered source into one USD estimate, applying the active
+ * `currency_usd_rates` factors once. This multi-plugin aggregate AUGMENTS the projection-based GDP
+ * target (it does not replace it) and is always labeled an estimate.
+ */
+export async function recognizeGdpVolumeUsd(): Promise<RecognitionBreakdown> {
+  const rates = await getActiveUsdRates();
+  let usdEstimate = 0;
+  const unrated = new Set<string>();
+  const perSource: Array<{ pluginSlug: string; usdEstimate: number }> = [];
+  for (const source of RECOGNITION_SOURCES) {
+    const volumes = await source.loadVolumes();
+    const result = normalizeVolumesToUsd(volumes, rates);
+    usdEstimate += result.usdEstimate;
+    result.unratedCurrencies.forEach((code) => unrated.add(code));
+    perSource.push({ pluginSlug: source.pluginSlug, usdEstimate: result.usdEstimate });
+  }
+  return { usdEstimate, unratedCurrencies: [...unrated], perSource };
+}

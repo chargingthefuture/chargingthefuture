@@ -121,6 +121,36 @@ canonical_metrics:
       alert_rules:
         - "alert_if_annual_value < 250000000000"
 
+  - id: gdp_recognized_volume_usd
+    name: GDP Recognized Volume (USD estimate)
+    description: Actual recognized economic volume across applicable plugins (starting with TrustTransport completed-task earnings), each currency normalized to USD via the currency_usd_rates factors. A morale/transparency ESTIMATE that augments — does not replace — the projection target (issue #121). Only eligible settled spend is recognized; transfers and deletion/reclaim reallocations are excluded.
+    owner: economics-team@chargingthefuture.org
+    data_type: currency
+    unit: USD
+    calculation: |
+      -- Aggregated server-side by ctf/packages/web/lib/gdp/recognition.ts (and scripts/recognizeGdp.mjs):
+      -- for each registered source, SUM(eligible settled spend) grouped by currency, converted to USD
+      -- via the latest currency_usd_rates factor per currency, then summed across all sources.
+      SELECT SUM(amount * usd_rate) AS gdp_recognized_volume_usd
+      FROM eligible_settled_spend
+      JOIN latest_currency_usd_rates USING (currency_code);
+    inputs:
+      - name: trusttransport_earnings_ledger.amount
+        type: currency
+      - name: trusttransport_earnings_ledger.entry_type
+        type: string
+      - name: currency_usd_rates.usd_rate
+        type: currency
+      - name: currency_usd_rates.as_of
+        type: datetime
+    example_values:
+      - 12500
+    last_updated: "2026-06-01T00:00:00Z"
+    update_cadence: weekly
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
+
   - id: gdp_service_revenue_target
     name: GDP Service Revenue Target
     description: Annual service-sector GDP target value.
