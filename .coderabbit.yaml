@@ -14,6 +14,8 @@ reviews:
   # PR thread. Real reviews (walkthrough + inline comments) still post when a review
   # actually runs; the skipped state remains visible as the CodeRabbit commit status.
   review_status: false
+  # Skip the whimsical poem at the end of the walkthrough comment.
+  poem: false
   auto_review:
     enabled: true
     # Never spend review credits on draft PRs.
