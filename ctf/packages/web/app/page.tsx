@@ -5,7 +5,7 @@ import { evaluatePluginAccess } from '../lib/auth/server-authz';
 import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry } from '../lib/plugins/repository';
 import { getTrustUserExtension } from '../lib/trust/repository';
-import { getConfiguredAuthProvider } from '../lib/auth/provider-env';
+import { getHostedSignInUrl } from '../lib/auth/provider-env';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -51,8 +51,10 @@ export default async function HomePage() {
     ? await getTrustUserExtension(allowDecision.userId).catch(() => buildFallbackTrust(allowDecision.userId))
     : buildFallbackTrust(currentUser.userId);
 
-  const authProvider = getConfiguredAuthProvider();
-  const signInUrl = authProvider?.signInUrl || '/sign-in';
+  // Send "Sign In" straight to Clerk's hosted Account Portal. Falls back to the
+  // in-app `/sign-in` catch-all (which itself forwards to the portal) only when
+  // no hosted URL can be resolved.
+  const signInUrl = getHostedSignInUrl() ?? '/sign-in';
 
   return (
     <CommunityShell

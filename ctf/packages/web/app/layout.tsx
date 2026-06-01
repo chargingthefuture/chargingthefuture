@@ -1,7 +1,13 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
-import { getClerkRuntimeOptions } from '@/lib/auth/clerk-env';
+import {
+  getClerkRuntimeOptions,
+  getHostedSignInUrl,
+  getHostedSignUpUrl,
+  getHostedAfterSignOutUrl,
+  getAppUrl,
+} from '@/lib/auth/clerk-env';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -15,10 +21,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const clerkOptions = getClerkRuntimeOptions();
+
+  // Point Clerk at its hosted Account Portal (accounts.<domain>) for sign-in and
+  // sign-up rather than a page rendered on this app's own domain. After a
+  // completed flow, Clerk returns the user to the app (signInFallbackRedirectUrl).
+  const signInUrl = getHostedSignInUrl();
+  const signUpUrl = getHostedSignUpUrl();
+  const afterSignOutUrl = getHostedAfterSignOutUrl();
+  const appHomeUrl = getAppUrl();
+
   return (
     <html lang="en">
       <body>
-        <ClerkProvider {...clerkOptions}>
+        <ClerkProvider
+          {...clerkOptions}
+          {...(signInUrl ? { signInUrl } : {})}
+          {...(signUpUrl ? { signUpUrl } : {})}
+          {...(appHomeUrl
+            ? { signInFallbackRedirectUrl: appHomeUrl, signUpFallbackRedirectUrl: appHomeUrl }
+            : {})}
+          {...(afterSignOutUrl ? { afterSignOutUrl } : {})}
+        >
           <AuthProvider>{children}</AuthProvider>
         </ClerkProvider>
       </body>

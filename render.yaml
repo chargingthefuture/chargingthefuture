@@ -74,7 +74,11 @@ services:
       # they come from the GitHub Actions secrets passed as --build-arg in
       # build-images.yml (NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY,
       # NEXT_PUBLIC_AUTH_SIGN_IN_URL, NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL,
-      # NEXT_PUBLIC_AUTH_PROVIDER, NEXT_PUBLIC_APP_URL). Changing the publishable
+      # NEXT_PUBLIC_AUTH_PROVIDER, NEXT_PUBLIC_APP_URL). NEXT_PUBLIC_AUTH_SIGN_IN_URL
+      # must be Clerk's hosted Account Portal URL (e.g.
+      # https://accounts.<domain>/sign-in), NOT /sign-in on the app's own domain —
+      # a same-host value sends the in-app /sign-in page into an endless redirect
+      # loop. Changing the publishable
       # key in Infisical/Render has NO effect on the browser — you must update the
       # GitHub Actions secret and rebuild the image (build-images.yml) so the new
       # value is re-baked. Syncing a `NEXT_PUBLIC_*` value into Render at runtime

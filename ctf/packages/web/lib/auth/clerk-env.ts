@@ -4,7 +4,13 @@ import {
   isConfiguredAuthSignInExternal,
 } from './provider-env';
 
-export { getAppUrl } from './provider-env';
+export {
+  getAppUrl,
+  getHostedSignInUrl,
+  getHostedSignUpUrl,
+  getHostedAfterSignOutUrl,
+  getAccountPortalOrigin,
+} from './provider-env';
 
 export function getClerkPublishableKey(): string | undefined {
   return getConfiguredAuthProvider()?.publishableKey;

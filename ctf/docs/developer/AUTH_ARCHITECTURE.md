@@ -13,9 +13,38 @@ can be plugged in without touching consuming components.
 
 ## Current State
 
-Auth is a **no-op stub** until a real provider is wired in. The client context reports
-`isAuthenticated = false`, and the server auth layer treats requests with no resolved identity as
-anonymous and denies protected routes with `401 AUTH_UNAUTHORIZED`.
+**Clerk is the wired provider.** `app/layout.tsx` mounts `<ClerkProvider>`, `middleware.ts` runs
+`clerkMiddleware` (and translates the Clerk session into the generic `x-ctf-*` identity headers),
+and `lib/auth/client-context.tsx` derives the client session from Clerk's `useUser()` / `useAuth()`.
+When no Clerk env is configured the provider-neutral layer still resolves to the anonymous state, so
+the abstraction below remains intact.
+
+---
+
+## Hosted Sign-In (Clerk Account Portal)
+
+Sign-in and sign-up are served by **Clerk's hosted Account Portal on Clerk's own domains**
+(`https://accounts.<domain>` in production, `https://<slug>.accounts.dev` for a development
+instance) — not by a sign-in form rendered on the app's own domain. The app never mounts Clerk's
+`<SignIn />` / `<SignUp />` components; it redirects to the Account Portal and Clerk redirects back
+after a completed flow.
+
+- `lib/auth/provider-env.ts` resolves the hosted URLs:
+  - `getHostedSignInUrl()` — an explicitly external configured sign-in URL wins; otherwise the
+    Account Portal origin is **derived from the publishable key** (`deriveAccountPortalOrigin`) and
+    `/sign-in` is appended.
+  - `getHostedSignUpUrl()` / `getHostedAfterSignOutUrl()` — sign-up on the same portal; after
+    sign-out, the configured URL unless it would loop, else the app home page.
+- `app/layout.tsx` passes `signInUrl` / `signUpUrl` / `signInFallbackRedirectUrl` /
+  `signUpFallbackRedirectUrl` / `afterSignOutUrl` to `<ClerkProvider>`.
+- `app/sign-in/[[...sign-in]]/page.tsx` is a thin catch-all that forwards stray in-app `/sign-in`
+  links to the hosted portal (or home), and can never redirect to a `/sign-in` path on this host.
+
+**Redirect-loop pitfall (do not reintroduce):** `NEXT_PUBLIC_AUTH_SIGN_IN_URL` must be the Account
+Portal URL (e.g. `https://accounts.<domain>/sign-in`). Setting it to `/sign-in` — or any URL on the
+app's own host — makes the in-app `/sign-in` page redirect to itself forever
+(`ERR_TOO_MANY_REDIRECTS`). A same-host/relative value is ignored at runtime (the app falls back to
+the key-derived portal) and is flagged by `scripts/check-auth-env.mjs`.
 
 ---
 

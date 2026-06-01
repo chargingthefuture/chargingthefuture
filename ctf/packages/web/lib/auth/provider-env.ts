@@ -164,3 +164,166 @@ export function isConfiguredAuthSignInExternal(): boolean {
     return false;
   }
 }
+
+/**
+ * Reports whether a candidate redirect URL would bounce the browser back to a
+ * `/sign-in` path on the app's own host.
+ *
+ * Sending someone to a `/sign-in` page that itself only redirects to a sign-in
+ * URL produces an endless loop (`ERR_TOO_MANY_REDIRECTS`). Any URL flagged here
+ * must be replaced with Clerk's hosted Account Portal (a different host) or the
+ * home page before it is used as a redirect target.
+ *
+ * @param value - The candidate path or absolute URL.
+ * @returns `true` when the target is a same-host `/sign-in` path.
+ */
+export function isLoopProneSignInTarget(value: string | undefined): boolean {
+  if (!value) return false;
+  const isSignInPath = (path: string): boolean =>
+    path === '/sign-in' || path.startsWith('/sign-in/') || path.startsWith('/sign-in?');
+
+  if (value.startsWith('/')) return isSignInPath(value);
+
+  try {
+    const parsed = new URL(value);
+    const appUrl = getAppUrl();
+    const sameHost = appUrl ? parsed.hostname === new URL(appUrl).hostname : false;
+    return sameHost && isSignInPath(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Decodes the Clerk Frontend API host that is base64-encoded inside a Clerk
+ * publishable key.
+ *
+ * Clerk keys look like `pk_test_<base64>` / `pk_live_<base64>`, where the
+ * payload decodes to the Frontend API host followed by a `$` sentinel — e.g.
+ * `clerk.app.chargingthefuture.com$` or `sure-oarfish-90.clerk.accounts.dev$`.
+ *
+ * `atob` is used for decoding because it is available in browsers, the Next.js
+ * edge (middleware) runtime, and Node 18+ — the three runtimes this module is
+ * bundled into. The function is intentionally total: any malformed key returns
+ * `undefined` rather than throwing.
+ *
+ * @param publishableKey - The Clerk publishable key, if configured.
+ * @returns The decoded Frontend API host, or `undefined` when it can't be read.
+ */
+function decodeClerkFrontendApiHost(publishableKey: string | undefined): string | undefined {
+  if (!publishableKey) return undefined;
+  const match = /^pk_(?:test|live)_(.+)$/.exec(publishableKey.trim());
+  if (!match) return undefined;
+
+  let payload = match[1].replace(/-/g, '+').replace(/_/g, '/');
+  const remainder = payload.length % 4;
+  if (remainder === 1) return undefined;
+  if (remainder === 2) payload += '==';
+  else if (remainder === 3) payload += '=';
+
+  if (typeof atob !== 'function') return undefined;
+  let decoded: string;
+  try {
+    decoded = atob(payload);
+  } catch {
+    return undefined;
+  }
+
+  const host = decoded.replace(/\$+$/, '').trim();
+  return host.length > 0 ? host : undefined;
+}
+
+/**
+ * Derives the origin of Clerk's hosted Account Portal from a publishable key.
+ *
+ * This is how Clerk hosts sign-in/sign-up on its own domains instead of on the
+ * app's domain:
+ * - Production custom domain: Frontend API `clerk.<domain>` →
+ *   Account Portal `https://accounts.<domain>`.
+ * - Development instance: Frontend API `<slug>.clerk.accounts.dev` →
+ *   Account Portal `https://<slug>.accounts.dev`.
+ *
+ * @param publishableKey - The Clerk publishable key, if configured.
+ * @returns The Account Portal origin (no trailing slash), or `undefined`.
+ */
+export function deriveAccountPortalOrigin(publishableKey: string | undefined): string | undefined {
+  const frontendApiHost = decodeClerkFrontendApiHost(publishableKey);
+  if (!frontendApiHost) return undefined;
+
+  const devMatch = /^(.+)\.clerk\.(accounts(?:stage)?\.dev)$/i.exec(frontendApiHost);
+  if (devMatch) return `https://${devMatch[1]}.${devMatch[2]}`;
+
+  const prodMatch = /^clerk\.(.+)$/i.exec(frontendApiHost);
+  if (prodMatch) return `https://accounts.${prodMatch[1]}`;
+
+  return undefined;
+}
+
+/**
+ * Returns the Account Portal origin for the currently configured provider.
+ *
+ * @returns The hosted Account Portal origin, or `undefined` when no usable
+ *   publishable key is configured.
+ */
+export function getAccountPortalOrigin(): string | undefined {
+  return deriveAccountPortalOrigin(getConfiguredAuthProvider()?.publishableKey);
+}
+
+/**
+ * Resolves the sign-in URL the app should send people to.
+ *
+ * Order of precedence:
+ * 1. An explicitly external configured sign-in URL (absolute and on a different
+ *    host than the app) — an operator override, used as-is.
+ * 2. Clerk's hosted Account Portal derived from the publishable key
+ *    (`https://accounts.<domain>/sign-in`).
+ *
+ * A same-host or relative `/sign-in` value is deliberately ignored: it is the
+ * misconfiguration that causes the redirect loop, so we fall through to the
+ * hosted portal instead. Returns `undefined` only when neither source yields a
+ * usable URL, in which case callers fall back to the home page (never to
+ * `/sign-in`).
+ *
+ * @returns The hosted sign-in URL, or `undefined`.
+ */
+export function getHostedSignInUrl(): string | undefined {
+  if (isConfiguredAuthSignInExternal()) {
+    return getConfiguredAuthProvider()?.signInUrl;
+  }
+  const portalOrigin = getAccountPortalOrigin();
+  return portalOrigin ? `${portalOrigin}/sign-in` : undefined;
+}
+
+/**
+ * Resolves the sign-up URL on the same hosted Account Portal as
+ * {@link getHostedSignInUrl}.
+ *
+ * @returns The hosted sign-up URL, or `undefined` when sign-in is not hosted on
+ *   an absolute (different-host) URL.
+ */
+export function getHostedSignUpUrl(): string | undefined {
+  const signInUrl = getHostedSignInUrl();
+  if (!signInUrl) return undefined;
+  try {
+    return `${new URL(signInUrl).origin}/sign-up`;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolves where to send a user after they sign out.
+ *
+ * Honors a configured after-sign-out URL unless it would loop back into a
+ * same-host `/sign-in` page; in that case it falls back to the app home page so
+ * a freshly signed-out user is never trapped in a redirect loop.
+ *
+ * @returns The after-sign-out URL.
+ */
+export function getHostedAfterSignOutUrl(): string | undefined {
+  const configured = getConfiguredAuthProvider()?.afterSignOutUrl;
+  if (configured && !isLoopProneSignInTarget(configured)) {
+    return configured;
+  }
+  return getAppUrl() ?? '/';
+}
