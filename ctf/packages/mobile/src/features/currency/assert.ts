@@ -10,7 +10,7 @@
 // allowed (two distinct fields) and is not a parity claim — each field passes this guard on its own.
 
 function mentionsServiceCredits(lower: string): boolean {
-  return /servicecredits|\bsc\b|\bcredits?\b/.test(lower);
+  return /servicecredits|service[-\s]?credits|\bsc\b/.test(lower);
 }
 
 const EQUIVALENCE_CUE = /≈|~|=|\bequals?\b|\bworth\b/;
