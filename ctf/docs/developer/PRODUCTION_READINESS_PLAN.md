@@ -585,3 +585,12 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   the feed/workforce reconciliations already done. **One known-open item:** sign-in via Clerk (auth),
   which the owner is fixing on a separate track — it does not block retirement of this build plan. The
   demo-tenant DB-scoping layer and the auth/public screens are carried into that auth/demo track.
+- 2026-06-01: Cross-cutting observability addendum (does not reopen the retired plan). Extended the
+  app-wide Sentry error reporting started in #267 to every remaining `ctf/packages/web/app/api/**/route.ts`:
+  each catch block handling an unexpected failure (5xx/persistence/swallowed) now calls the shared
+  `reportError(...)` reporter, tagged with the plugin slug (`area`) and a snake_case `op`, carrying only
+  non-sensitive context (userId and route ids — no tokens, secrets, amounts, bodies, or message text).
+  Expected client errors (400/401/403/404/429) stay unreported; branching catches report only on the 5xx
+  path. No API surface, schema, contract, or response behavior changed — this is reporting-only, so plugin
+  inventories' route maps and data models are unaffected. Gates: web `tsc --noEmit`, `eslint` on all changed
+  files, and EOF all pass.
