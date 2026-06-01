@@ -1,0 +1,94 @@
+auditEvents:
+  - eventId: whatworks.list.read
+    pluginId: whatworks
+    command: whatworks.list.read
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: user
+  - eventId: whatworks.public.read
+    pluginId: whatworks
+    command: whatworks.public.read
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: public
+  - eventId: whatworks.problems.list
+    pluginId: whatworks
+    command: whatworks.problems.list
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: user
+  - eventId: whatworks.product.suggest
+    pluginId: whatworks
+    command: whatworks.product.suggest
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content, user_event]
+    targetContext: user
+  - eventId: whatworks.product.endorse
+    pluginId: whatworks
+    command: whatworks.product.endorse
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - eventId: whatworks.product.unendorse
+    pluginId: whatworks
+    command: whatworks.product.unendorse
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - eventId: whatworks.admin.problem.list
+    pluginId: whatworks
+    command: whatworks.admin.problem.list
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.problem.create
+    pluginId: whatworks
+    command: whatworks.admin.problem.create
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.problem.update
+    pluginId: whatworks
+    command: whatworks.admin.problem.update
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.problem.delete
+    pluginId: whatworks
+    command: whatworks.admin.problem.delete
+    version: 1.0.0
+    policyDecision: allow
+    # Cascades to whatworks_products and whatworks_endorsements (user-linked rows).
+    dataClassesAccessed: [community_content, user_event]
+    targetContext: admin
+  - eventId: whatworks.admin.product.list
+    pluginId: whatworks
+    command: whatworks.admin.product.list
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.product.review
+    pluginId: whatworks
+    command: whatworks.admin.product.review
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content]
+    targetContext: admin
+  - eventId: whatworks.admin.product.delete
+    pluginId: whatworks
+    command: whatworks.admin.product.delete
+    version: 1.0.0
+    policyDecision: allow
+    # Cascades to whatworks_endorsements (user-linked rows).
+    dataClassesAccessed: [community_content, user_event]
+    targetContext: admin
