@@ -48,6 +48,41 @@ the key-derived portal) and is flagged by `scripts/check-auth-env.mjs`.
 
 ---
 
+## Identity Propagation (username + role)
+
+`middleware.ts` is the only place that writes the `x-ctf-*` identity headers, and
+`lib/auth/request-identity.ts` reads them. The middleware always sets `x-ctf-user-id` from the
+verified Clerk `userId`, and additionally sets:
+
+- `x-ctf-username` — the Clerk username, when present.
+- `x-ctf-user-role` — the user's role (e.g. `admin`), when present.
+
+These come from the **Clerk session token claims** (`sessionClaims`), which is fast (no extra
+Clerk API call per request — the values ride along in the session JWT).
+
+**Required Clerk dashboard configuration** (without it, `username`/`role` stay null and the app
+falls back to the anonymous display name with no role — no regression, but Chyme shows
+`user-<id>` instead of `@username`, and `requireUsername` routes like Foundation deny with
+`missing_username`):
+
+1. **Customize the session token** — Clerk dashboard → Configure → Sessions → "Customize session
+   token", add:
+
+   ```json
+   { "username": "{{user.username}}", "metadata": "{{user.public_metadata}}" }
+   ```
+
+2. **Store roles in public metadata** — for an admin, set the user's Public metadata to
+   `{ "role": "admin" }` (Clerk dashboard → Users → [user] → Metadata → Public).
+
+The middleware accepts either a flat claim (`username` / `role`) or one nested under `metadata`, so
+both common claim mappings work. Session tokens refresh about every minute, so after changing the
+config a signed-in user picks up the new claims on the next refresh (or after signing out and back
+in). Approval (`isApproved`) is **not** sourced from Clerk — it comes from the database unlock tier
+(`isUserUnlocked`), so it is intentionally left out of the session claims.
+
+---
+
 ## Files
 
 | File                           | Purpose                                                                                                                                     |
