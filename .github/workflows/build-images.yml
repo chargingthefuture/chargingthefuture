@@ -10,9 +10,16 @@ name: Build and push Docker images
 #   Package settings → Change visibility → Public.
 #   This lets Render pull images without registry credentials.
 #
-# REQUIRED GITHUB SECRETS:
+# REQUIRED GITHUB SECRETS (baked into the client bundle at build time):
+#   These NEXT_PUBLIC_* values are read ONLY here, at image build time. Next.js
+#   inlines every `NEXT_PUBLIC_*` value into the client JavaScript when the image
+#   is built, so this workflow's GitHub Actions secrets — NOT Render/Infisical —
+#   are the source of truth for what the browser loads. Updating the same key in
+#   Infisical/Render at runtime does NOTHING for the client; to change any of
+#   these you must update the GitHub Actions secret here and re-run this workflow
+#   so the value is re-baked into a fresh image.
 #   NEXT_PUBLIC_APP_URL               — production URL, e.g. https://app.chargingthefuture.com
-#   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  — Clerk publishable key (pk_live_…)
+#   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  — Clerk publishable key (pk_live_…); must match the domain the app is served on (Clerk production keys are domain-locked)
 #   NEXT_PUBLIC_AUTH_SIGN_IN_URL      — e.g. /sign-in
 #   NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL — e.g. /
 #   NEXT_PUBLIC_AUTH_PROVIDER         — clerk
@@ -100,6 +107,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=ctf-web
           cache-to: type=gha,scope=ctf-web,mode=max
+          # These NEXT_PUBLIC_* build-args are inlined into the client bundle now,
+          # at build time. They are the ONLY source of the browser's Clerk config —
+          # Render/Infisical runtime env does not change them. Re-run this workflow
+          # after updating a secret so the new value is re-baked.
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY }}
