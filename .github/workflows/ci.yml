@@ -306,6 +306,9 @@ jobs:
       - name: Validate account deletion registry against schema
         run: node ctf/scripts/check-deletion-registry.mjs
 
+      - name: Validate account deletion engine SQL generation
+        run: node ctf/scripts/check-deletion-engine.mjs
+
   pr-parity-status:
     name: PR Parity Status
     runs-on: ubuntu-latest
