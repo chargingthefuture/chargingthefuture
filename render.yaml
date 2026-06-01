@@ -57,16 +57,28 @@ services:
       # Observability — enables Sentry cron check-ins for workforce-incremental-sync
       - key: OBSERVABILITY_PROVIDER
         value: sentry
-      # All remaining secrets are synced automatically by Infisical → Render Sync:
+      # Server-side (runtime) secrets are synced automatically by Infisical →
+      # Render Sync. These are read by the running container at request time:
       #   AUTH_SECRET_KEY               — Clerk secret key (sk_test_… / sk_live_…)
       #   CLERK_ENCRYPTION_KEY          — random 32-char string (openssl rand -hex 16); required when secretKey is passed dynamically
-      #   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY — Clerk publishable key (pk_…)
       #   DATABASE_URL                  — Neon Postgres connection string
       #   STREAM_API_KEY / STREAM_API_SECRET — Stream Chat
       #   SENTRY_DSN / SENTRY_AUTH_TOKEN
       #   CRON_SECRET
       #   INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET
       #   FORMANCE_POSTGRES_URI         — Neon Postgres URI for Formance ledger
+      #
+      # IMPORTANT — the browser-side Clerk values are NOT in this list and are
+      # NOT read from Render/Infisical at runtime. Next.js inlines every
+      # `NEXT_PUBLIC_*` value into the client JavaScript bundle at BUILD time, so
+      # they come from the GitHub Actions secrets passed as --build-arg in
+      # build-images.yml (NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY,
+      # NEXT_PUBLIC_AUTH_SIGN_IN_URL, NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL,
+      # NEXT_PUBLIC_AUTH_PROVIDER, NEXT_PUBLIC_APP_URL). Changing the publishable
+      # key in Infisical/Render has NO effect on the browser — you must update the
+      # GitHub Actions secret and rebuild the image (build-images.yml) so the new
+      # value is re-baked. Syncing a `NEXT_PUBLIC_*` value into Render at runtime
+      # is a no-op for the client; do not rely on it.
 
   # ── PM MCP Server — intentionally NOT a Render service ───────────
   # ctf/packages/pm-mcp-server is a stdio MCP server (StdioServerTransport).
