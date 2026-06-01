@@ -11,7 +11,7 @@ export const MockCommunity = () => (
     <Text style={styles.subtitle}>Mobile parity shell for peer posts, replies, and moderation-ready actions.</Text>
 
     {/* Trust Panel (Android parity) */}
-    <Trust compact />
+    <Trust />
 
     {posts.map((item) => (
       <React.Fragment>

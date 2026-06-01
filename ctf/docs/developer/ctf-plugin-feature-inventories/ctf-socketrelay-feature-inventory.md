@@ -298,6 +298,7 @@ Android pixel pass (design `MobileSocketRelay.tsx`): `packages/mobile/src/featur
 
 ### Change Log
 
+- 2026-06-01: Enforced the SocketRelay price invariant at the DB level — added a guarded `socketrelay_requests_price_consistency_check` CHECK so a request either has no price (both NULL) or a positive amount in a named currency (the "Free = no price, never `$0`" rule). Follow-up to the #120 review.
 - 2026-06-01: Multi-currency (issue #120): added OPTIONAL `price_amount` + `price_currency` (FK → `currencies.code`) to `socketrelay_requests` and a `socketrelay_request_accepted_currencies` join. "Free" renders from the absence of a price, never `$0`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 
 - 2026-02-25: Created initial SocketRelay CTF rewrite checklist with web-first release gating, tracked Android deferrals, lifecycle requirements, and explicit mitigation gates for legacy-known risks.

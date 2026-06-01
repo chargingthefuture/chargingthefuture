@@ -14,7 +14,7 @@ export const DirectoryProfile = ({ profile }: { profile?: Profile }) => {
       <Text style={styles.desc}>{p.description}</Text>
 
       {/* Trust Panel (Android parity) */}
-      <Trust compact />
+      <Trust />
     </View>
   );
 };

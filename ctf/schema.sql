@@ -2524,6 +2524,23 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at T
 -- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+-- Enforce the "Free = no price, never $0" rule at the DB level (issue #120 follow-up): a request either
+-- has no price (both NULL) or a positive amount in a named currency. Guarded so it is added only once.
+DO $socketrelay_requests_price_consistency$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'socketrelay_requests_price_consistency_check'
+  ) THEN
+    ALTER TABLE socketrelay_requests
+      ADD CONSTRAINT socketrelay_requests_price_consistency_check
+      CHECK (
+        (price_amount IS NULL AND price_currency IS NULL) OR
+        (price_amount IS NOT NULL AND price_amount > 0 AND price_currency IS NOT NULL)
+      );
+  END IF;
+END
+$socketrelay_requests_price_consistency$;
 CREATE TABLE IF NOT EXISTS socketrelay_request_accepted_currencies (
   request_id UUID NOT NULL REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
