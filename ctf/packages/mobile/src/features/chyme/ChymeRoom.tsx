@@ -1,16 +1,22 @@
-import React, { Fragment, useEffect, useMemo, useState } from 'react';
-import { StreamVideoPanel } from './StreamVideoPanel';
-import { StreamChatPanel } from './StreamChatPanel';
-import {
-  ActivityIndicator,
-  Alert,
-  Button,
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+/**
+ * ChymeRoom — pixel-aligned Android screen for the Chyme social-audio plugin.
+ *
+ * Design source: design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/
+ *   MobileChyme.tsx, MobileChymeLoading.tsx, MobileChymeEmpty.tsx
+ *
+ * States rendered:
+ *   loading  → ChymeLoading (minimal branded splash per mockup)
+ *   error    → inline error with retry (no mockup state; safe fallback)
+ *   empty    → ChymeEmpty (no rooms live yet; backed by callActive === false + 0 participants)
+ *   roomList → ChymeRoomList (room directory; one real room from GET /api/chyme/room)
+ *   inRoom   → ChymeActiveRoom (stage/controls; backed by room.participants)
+ *   chat     → ChymeChatView (companion text chat; GET+POST /api/chyme/messages)
+ *
+ * All data is real — bound to /api/chyme/* endpoints via api.ts.
+ * No mock or fabricated data is rendered.
+ */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   deleteChymeProfile,
   deleteFullAccount,
@@ -19,281 +25,266 @@ import {
   getChymeRoom,
   postChymeJoin,
   postChymeMessage,
-} from './ChymeApi';
+} from './api';
+import { ChymeLoading } from './chyme-loading';
+import { ChymeEmpty } from './chyme-empty';
+import { ChymeRoomList } from './chyme-room-list';
+import { ChymeActiveRoom } from './chyme-active-room';
+import { ChymeChatView } from './chyme-chat-view';
+import type { ChatMessage } from './chyme-chat-view';
 
-type RoomState = Awaited<ReturnType<typeof getChymeRoom>>;
-type MessageState = Awaited<ReturnType<typeof getChymeMessages>>['messages'][number];
+type ViewState = 'loading' | 'error' | 'empty' | 'roomList' | 'inRoom' | 'chat';
 
+type RoomPayload = Awaited<ReturnType<typeof getChymeRoom>>;
+type MessagePayload = Awaited<ReturnType<typeof getChymeMessages>>['messages'][number];
 
-export const ChymeRoom = () => {
-  const [room, setRoom] = useState<RoomState | null>(null);
-  const [messages, setMessages] = useState<MessageState[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [text, setText] = useState('');
-  const [joined, setJoined] = useState(false);
-  const [joinChannelId, setJoinChannelId] = useState<string | null>(null);
-  const [runtimeError, setRuntimeError] = useState<string | null>(null);
-  const [streamCredentials, setStreamCredentials] = useState<null | {
-    streamApiKey: string;
-    streamToken: string;
-    streamUserId: string;
-    streamChannelId: string;
-  }>(null);
+const PRIMARY = '#22C55E';
+
+export const ChymeRoom: React.FC = () => {
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [room, setRoom] = useState<RoomPayload | null>(null);
+  const [messages, setMessages] = useState<MessagePayload[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [muted, setMuted] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [tab, setTab] = useState<'live' | 'upcoming'>('live');
 
   const identity = useMemo(() => {
     try {
-      setRuntimeError(null);
       return getChymeMobileIdentity();
-    } catch (error) {
-      setRuntimeError(error instanceof Error ? error.message : 'Unable to resolve Chyme mobile identity.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Chyme identity not configured.');
+      setViewState('error');
       return null;
     }
   }, []);
 
-  const loadRoom = React.useCallback(async () => {
-    if (!identity) {
-      Alert.alert('Configuration required', runtimeError ?? 'Chyme mobile identity is not configured.');
-      return;
-    }
-
+  const loadRoom = useCallback(async () => {
+    if (!identity) return;
+    setViewState('loading');
     try {
-      setLoading(true);
-      const [roomPayload, messagesPayload] = await Promise.all([
+      const [roomPayload, msgPayload] = await Promise.all([
         getChymeRoom(identity),
         getChymeMessages(identity),
       ]);
       setRoom(roomPayload);
-      setMessages(messagesPayload?.messages ?? []);
+      setMessages(msgPayload.messages ?? []);
+      const hasParticipants = (roomPayload.participants?.length ?? 0) > 0;
+      setViewState(hasParticipants ? 'roomList' : 'empty');
     } catch (err) {
-      Alert.alert('Load failed', String(err));
-    } finally {
-      setLoading(false);
+      setErrorMsg(err instanceof Error ? err.message : 'Unable to load Chyme room.');
+      setViewState('error');
     }
-  }, [identity, runtimeError]);
+  }, [identity]);
 
   useEffect(() => {
-    if (!identity) {
-      return;
+    if (identity) {
+      void loadRoom();
     }
-
-    void loadRoom();
   }, [identity, loadRoom]);
 
-  const handleSend = async () => {
-    if (!text.trim() || !identity) return;
-    try {
-      const sent = await postChymeMessage(identity, text.trim());
-      setMessages((prev) => [...prev, sent.message]);
-      setText('');
-    } catch (err) {
-      Alert.alert('Send failed', String(err));
-    }
-  };
-
-  const handleJoin = async () => {
-    if (!identity) {
-      Alert.alert('Configuration required', runtimeError ?? 'Chyme mobile identity is not configured.');
-      return;
-    }
-
+  const handleJoinRoom = useCallback(async () => {
+    if (!identity) return;
     try {
       const res = await postChymeJoin(identity);
-      if (res?.ok) {
-        setJoined(true);
-        setJoinChannelId(res.streamChannelId);
-        if (res?.ok) {
-          setJoined(true);
-          setJoinChannelId(res.streamChannelId);
-          if (res.streamApiKey && res.streamToken && res.streamUserId && res.streamChannelId) {
-            setStreamCredentials({
-              streamApiKey: res.streamApiKey,
-              streamToken: res.streamToken,
-              streamUserId: res.streamUserId,
-              streamChannelId: res.streamChannelId,
-            });
-          }
-          Alert.alert('Joined', `Stream channel ready: ${res.streamChannelId}`);
-        }
-        Alert.alert('Joined', `Stream channel ready: ${res.streamChannelId}`);
+      if (res.ok) {
+        setViewState('inRoom');
         await loadRoom();
       }
     } catch (err) {
-      Alert.alert('Join failed', String(err));
+      Alert.alert('Join failed', err instanceof Error ? err.message : 'Unable to join room.');
     }
-  };
+  }, [identity, loadRoom]);
 
-  const handleDeleteProfile = async () => {
-    if (!identity) {
-      Alert.alert('Configuration required', runtimeError ?? 'Chyme mobile identity is not configured.');
-      return;
-    }
-
+  const handleSendMessage = useCallback(async () => {
+    const trimmed = chatInput.trim();
+    if (!trimmed || !identity || sending) return;
+    setSending(true);
     try {
-      const payload = await deleteChymeProfile(identity);
+      const res = await postChymeMessage(identity, trimmed);
+      setMessages((prev) => [...prev, res.message]);
+      setChatInput('');
+    } catch (err) {
+      Alert.alert('Send failed', err instanceof Error ? err.message : 'Unable to send message.');
+    } finally {
+      setSending(false);
+    }
+  }, [chatInput, identity, sending]);
+
+  const handleDeleteProfile = useCallback(async () => {
+    if (!identity) return;
+    try {
+      await deleteChymeProfile(identity);
+      setRoom(null);
       setMessages([]);
-      setRoom((current) =>
-        current
-          ? {
-              ...current,
-              participants: current.participants.filter(
-                (participant) => participant.userId !== identity.userId
-              ),
-            }
-          : current
-      );
-      Alert.alert('Deleted', `Chyme data ${payload.status}`);
+      setViewState('empty');
     } catch (err) {
-      Alert.alert('Delete failed', String(err));
+      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete profile.');
     }
-  };
+  }, [identity]);
 
-  const handleDeleteAccount = async () => {
-    if (!identity) {
-      Alert.alert('Configuration required', runtimeError ?? 'Chyme mobile identity is not configured.');
-      return;
-    }
-
+  const handleDeleteAccount = useCallback(async () => {
+    if (!identity) return;
     try {
-      const payload = await deleteFullAccount(identity);
-      Alert.alert('Requested', `Full account deletion ${payload.status}`);
+      const res = await deleteFullAccount(identity);
+      Alert.alert('Requested', `Account deletion ${res.status}`);
     } catch (err) {
-      Alert.alert('Delete failed', String(err));
+      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete account.');
     }
-  };
+  }, [identity]);
 
+  if (viewState === 'loading') {
+    return <ChymeLoading />;
+  }
+
+  if (viewState === 'error') {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Unable to load Chyme</Text>
+        <Text style={styles.errorMsg}>{errorMsg ?? 'An unexpected error occurred.'}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={loadRoom}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (viewState === 'empty' || !room) {
+    return <ChymeEmpty onStartRoom={handleJoinRoom} />;
+  }
+
+  if (viewState === 'chat') {
+    const chatMessages: ChatMessage[] = messages.map((m) => ({
+      id: m.id,
+      displayName: m.displayName,
+      text: m.text,
+      sentAtIso: m.sentAtIso,
+    }));
+    return (
+      <ChymeChatView
+        messages={chatMessages}
+        input={chatInput}
+        sending={sending}
+        onChangeInput={setChatInput}
+        onSend={handleSendMessage}
+        onBack={() => setViewState('inRoom')}
+      />
+    );
+  }
+
+  if (viewState === 'inRoom') {
+    return (
+      <ChymeActiveRoom
+        roomName={room.roomName}
+        participants={room.participants}
+        muted={muted}
+        handRaised={handRaised}
+        onToggleMute={() => setMuted((v) => !v)}
+        onToggleHand={() => setHandRaised((v) => !v)}
+        onOpenChat={() => setViewState('chat')}
+        onLeave={() => setViewState('roomList')}
+      />
+    );
+  }
+
+  // viewState === 'roomList'
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chyme</Text>
-      <Text style={styles.subtitle}>Social audio room with runtime-configured provider-neutral identity</Text>
-
-      <View style={styles.identityCard}>
-        <Text style={styles.identityLabel}>Runtime identity</Text>
-        {identity ? (
-          <>
-            <Text style={styles.summaryText}>User: {identity.userId}</Text>
-            <Text style={styles.summaryText}>Username: @{identity.username}</Text>
-            <Text style={styles.summaryText}>Role: {identity.role}</Text>
-            <Text style={styles.summaryText}>Approved: {identity.isApproved ? 'yes' : 'no'}</Text>
-            <View style={styles.identityRow}>
-              <Button title="Reload Room" onPress={loadRoom} disabled={loading} />
-            </View>
-          </>
-        ) : (
-          <Text style={styles.errorText}>{runtimeError ?? 'Chyme mobile identity is not configured.'}</Text>
-        )}
-      </View>
-
-      {room ? (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{room.roomName}</Text>
-          <Text style={styles.summaryText}>Room key: {room.roomKey}</Text>
-          <Text style={styles.summaryText}>Participants: {room.participants.length}</Text>
-          <Text style={styles.summaryText}>Call active: {room.callActive ? 'yes' : 'no'}</Text>
-          {joinChannelId ? <Text style={styles.summaryText}>Stream channel: {joinChannelId}</Text> : null}
-          {streamCredentials && (
-            <>
-              <StreamVideoPanel
-                streamApiKey={streamCredentials.streamApiKey}
-                streamToken={streamCredentials.streamToken}
-                streamUserId={streamCredentials.streamUserId}
-                streamChannelId={streamCredentials.streamChannelId}
-              />
-              <StreamChatPanel
-                streamApiKey={streamCredentials.streamApiKey}
-                streamToken={streamCredentials.streamToken}
-                streamUserId={streamCredentials.streamUserId}
-                streamChannelId={streamCredentials.streamChannelId}
-              />
-            </>
-          )}
-        </View>
-      ) : null}
-
-      {room?.participants?.length ? (
-        <View style={styles.participantCard}>
-          <Text style={styles.sectionTitle}>Participants</Text>
-          {room.participants.map((participant) => (
-            <Fragment>
-              <View style={styles.participantRow}>
-                <View>
-                  <Text style={styles.participantName}>{participant.displayName}</Text>
-                  <Text style={styles.participantMeta}>{participant.userId}</Text>
-                </View>
-                <Text style={styles.participantMeta}>{participant.role}</Text>
-              </View>
-            </Fragment>
-          ))}
-        </View>
-      ) : null}
-
-      {loading ? (
-        <ActivityIndicator size="large" />
-      ) : messages.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateTitle}>No messages yet</Text>
-          <Text style={styles.emptyStateText}>
-            Start the conversation by sharing your thoughts. This is a safe space for survivors.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          inverted
-          style={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.messageRow}>
-              <Text style={styles.messageAuthor}>{item.displayName ?? 'You'}</Text>
-              <Text style={styles.messageText}>{item.text}</Text>
-            </View>
-          )}
-        />
-      )}
-
-      <View style={styles.controls}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder="Share your thoughts"
-          style={styles.input}
-          placeholderTextColor="#9CA3AF"
-        />
-        <Button title="Send" onPress={handleSend} disabled={!identity || !text.trim()} />
-      </View>
-
-      <View style={styles.rowButtons}>
-        <Button title={joined ? 'Joined' : 'Join Room'} onPress={handleJoin} disabled={!identity || joined} />
-        <Button title="Delete Chyme Profile" onPress={handleDeleteProfile} disabled={!identity} />
-        <Button title="Delete Full Account" onPress={handleDeleteAccount} disabled={!identity} />
+    <View style={styles.roomListContainer}>
+      <ChymeRoomList
+        room={{
+          roomId: room.roomId,
+          roomName: room.roomName,
+          roomKey: room.roomKey,
+          callActive: room.callActive,
+          participantCount: room.participants.length,
+        }}
+        tab={tab}
+        onTabChange={setTab}
+        onJoinRoom={() => setViewState('inRoom')}
+        onStartRoom={handleJoinRoom}
+      />
+      {/* Deletion actions: rendered below the room list; not in main mockup but required by contract */}
+      <View style={styles.dangerZone}>
+        <TouchableOpacity
+          style={styles.dangerBtn}
+          onPress={() =>
+            Alert.alert(
+              'Delete Chyme Profile',
+              'This will remove your Chyme messages and participant record.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: handleDeleteProfile },
+              ],
+            )
+          }
+        >
+          <Text style={styles.dangerBtnText}>Delete Chyme Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.dangerBtn}
+          onPress={() =>
+            Alert.alert(
+              'Delete Full Account',
+              'This will request full account deletion.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Request', style: 'destructive', onPress: handleDeleteAccount },
+              ],
+            )
+          }
+        >
+          <Text style={styles.dangerBtnText}>Delete Full Account</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', width: '100%', paddingTop: 16, backgroundColor: '#021006' },
-  title: { fontWeight: 'bold', fontSize: 20, marginBottom: 4, color: '#F0FDF4' },
-  subtitle: { fontSize: 14, color: '#16A34A', marginBottom: 16 },
-  identityCard: { width: '95%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#14532d', backgroundColor: '#041a0b', marginBottom: 12 },
-  identityLabel: { color: '#bbf7d0', fontSize: 12, fontWeight: '700', marginBottom: 6, marginTop: 6 },
-  identityRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 10 },
-  errorText: { color: '#fecaca', fontSize: 13 },
-  summaryCard: { width: '95%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#14532d', backgroundColor: '#041a0b', marginBottom: 12 },
-  summaryTitle: { color: '#F0FDF4', fontWeight: '700', fontSize: 16, marginBottom: 6 },
-  summaryText: { color: '#bbf7d0', fontSize: 13, marginBottom: 2 },
-  participantCard: { width: '95%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#14532d', backgroundColor: '#041a0b', marginBottom: 12 },
-  sectionTitle: { color: '#F0FDF4', fontWeight: '700', fontSize: 15, marginBottom: 10 },
-  participantRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#052e16' },
-  participantName: { color: '#F0FDF4', fontWeight: '600' },
-  participantMeta: { color: '#86efac', fontSize: 12 },
-  list: { width: '95%', maxHeight: 300, marginBottom: 8 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
-  emptyStateTitle: { fontSize: 18, fontWeight: '700', color: '#F0FDF4', marginBottom: 12, textAlign: 'center' },
-  emptyStateText: { fontSize: 15, color: '#4B5563', textAlign: 'center', lineHeight: 1.6 },
-  messageRow: { padding: 8, borderBottomWidth: 1, borderColor: '#052e16' },
-  messageAuthor: { fontWeight: '600', color: '#22C55E' },
-  messageText: { marginTop: 4, color: '#E8EAF0' },
-  controls: { flexDirection: 'row', width: '95%', alignItems: 'center', marginBottom: 8, paddingHorizontal: 12 },
-  input: { flex: 1, borderColor: '#052e16', borderWidth: 1, padding: 8, marginRight: 8, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.04)', color: '#E8EAF0' },
-  rowButtons: { flexDirection: 'row', justifyContent: 'space-around', width: '95%', paddingHorizontal: 12 },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#021006',
+    paddingHorizontal: 24,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F0FDF4',
+    marginBottom: 8,
+  },
+  errorMsg: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  retryBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+  },
+  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  roomListContainer: { flex: 1, backgroundColor: '#021006' },
+  dangerZone: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#052e16',
+  },
+  dangerBtn: {
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
+    alignItems: 'center',
+  },
+  dangerBtnText: { color: '#F87171', fontSize: 13, fontWeight: '600' },
 });
