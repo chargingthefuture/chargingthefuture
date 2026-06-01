@@ -65,9 +65,7 @@ export async function GET(request: Request) {
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     // Caught errors do not reach Sentry on their own (only unhandled ones do via
-    // the Next.js onRequestError hook), and console output is not visible in prod
-    // on mobile — so report explicitly.
-    console.error('[Hub] Failed to read messages:', error);
+    // the Next.js onRequestError hook), so report explicitly.
     Sentry.captureException(error, { tags: { area: 'hub', op: 'read_messages' } });
     return NextResponse.json(
       {
@@ -151,11 +149,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Unexpected failure (e.g. a database error): report the real cause to Sentry and
-    // the server log so it is diagnosable in prod (console is not visible on mobile,
-    // and caught errors do not reach Sentry on their own). The user still gets a
-    // generic message — the underlying error is not safe to leak to the client.
-    console.error('[Hub] Failed to create community post:', error);
+    // Unexpected failure (e.g. a database error): report the real cause to Sentry so it
+    // is diagnosable in prod (caught errors do not reach Sentry on their own). The user
+    // still gets a generic message — the underlying error is not safe to leak to the client.
     Sentry.captureException(error, { tags: { area: 'hub', op: 'send_message' } });
     return NextResponse.json(
       {
