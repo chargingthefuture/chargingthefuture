@@ -663,9 +663,23 @@ CREATE TABLE IF NOT EXISTS feed_item_targets (
   item_id UUID NOT NULL REFERENCES feed_items(id) ON DELETE CASCADE,
   target_role TEXT,
   target_plugin TEXT,
-  target_region TEXT,
-  PRIMARY KEY (item_id, target_role, target_plugin, target_region)
+  target_region TEXT
 );
+-- A NULL target_plugin/target_region means "any plugin / any region" — the read path
+-- treats NULL as a wildcard (see listFeedTimeline: "t.target_plugin IS NULL"). NULL
+-- cannot live in a PRIMARY KEY (PK columns are implicitly NOT NULL), so the old
+-- PRIMARY KEY (item_id, target_role, target_plugin, target_region) made every
+-- default-targeted feed item fail to insert — which broke posting community messages
+-- and @comic questions. Replace it with a unique index that treats NULLs as equal
+-- (NULLS NOT DISTINCT, Postgres 15+) so default targeting works and duplicate
+-- (item, role, plugin, region) rows are still de-duplicated. Guarded DDL repairs
+-- legacy databases that still carry the old primary key.
+ALTER TABLE IF EXISTS feed_item_targets DROP CONSTRAINT IF EXISTS feed_item_targets_pkey;
+ALTER TABLE IF EXISTS feed_item_targets ALTER COLUMN target_role DROP NOT NULL;
+ALTER TABLE IF EXISTS feed_item_targets ALTER COLUMN target_plugin DROP NOT NULL;
+ALTER TABLE IF EXISTS feed_item_targets ALTER COLUMN target_region DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_item_targets_unique
+  ON feed_item_targets (item_id, target_role, target_plugin, target_region) NULLS NOT DISTINCT;
 CREATE TABLE IF NOT EXISTS feed_user_read_state (
   user_id TEXT NOT NULL,
   item_id UUID NOT NULL REFERENCES feed_items(id) ON DELETE CASCADE,

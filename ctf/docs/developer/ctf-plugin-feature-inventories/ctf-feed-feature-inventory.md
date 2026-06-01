@@ -189,7 +189,7 @@ Domain tables:
 **Existing (implemented):**
 
 1. `feed_items`
-2. `feed_item_targets`
+2. `feed_item_targets` — `target_role`/`target_plugin`/`target_region` are nullable, where `NULL` means "any" (read path treats `NULL` as a wildcard). Uniqueness is a `NULLS NOT DISTINCT` unique index on `(item_id, target_role, target_plugin, target_region)` rather than a primary key, because primary-key columns are implicitly `NOT NULL` and cannot hold the `NULL` wildcard used by default targeting.
 3. `feed_user_read_state`
 4. `feed_user_dismissals`
 5. `feed_render_config` — global singleton; columns include `is_public BOOLEAN NOT NULL DEFAULT TRUE` (publicly-viewable Hub channel flag).
@@ -270,6 +270,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-06-01: Fixed a posting failure that broke both community messages and @comic questions. `feed_item_targets` used a primary key over `(item_id, target_role, target_plugin, target_region)`, but default targeting writes `NULL` for plugin/region to mean "any" — and primary-key columns are implicitly `NOT NULL`, so every default-targeted insert threw a not-null violation, rolling back the whole post transaction and returning a generic 503. Replaced the primary key with a `NULLS NOT DISTINCT` unique index and made the three target columns nullable (guarded DDL repairs legacy databases). No application code change needed; verified against Postgres 16.
 - 2026-05-31: Feed-Announcements web pixel pass — aligned `live-feed-announcements.tsx` to canonical design mockup: accent color `#84CC16`, lucide icons throughout, removed "GetStream ⚡" badge, empty state matches mockup. Decomposed 712-line monolith into 7 sub-files per rule-116. Omitted mockup-only mock data (trending hashtags by count, top-engaged-today users) per real-data-only rule. Updated Web px ✅ and Gates ✅ in production readiness table. Typecheck, build, ESLint, EOF all pass.
 - 2026-05-18: Replaced "Web and Android Delivery Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-parity-pending framing. Removed stale Gaps entries that listed Questions/Community/Android as pending — these surfaces are shipped (`/api/feed/questions/*`, `/api/feed/community/*`, mobile FeedStream). Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt". Updated seed coverage to reference shipping script.
 - 2026-02-25: Added Rule 120 gaps section.
