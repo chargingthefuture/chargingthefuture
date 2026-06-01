@@ -24,7 +24,10 @@ export async function GET() {
     });
 
     return NextResponse.json({ ok: true, status });
-  } catch {
+  } catch (error) {
+    // Surface the real cause in server logs (a swallowed error here made the 503
+    // undiagnosable). The client message stays generic so DB internals never leak.
+    console.error('[unlock] status query failed', error);
     return NextResponse.json({ ok: false, message: 'Unlock status unavailable.' }, { status: 503 });
   }
 }
