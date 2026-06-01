@@ -62,7 +62,8 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json(response, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error('[Hub] Failed to read messages:', error);
     return NextResponse.json(
       {
         ok: false,
@@ -145,6 +146,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // Unexpected failure (e.g. a database error): log the real cause server-side so it
+    // is diagnosable. The user still gets a generic message — the underlying error is
+    // not safe to leak to the client.
+    console.error('[Hub] Failed to create community post:', error);
     return NextResponse.json(
       {
         ok: false,
