@@ -88,7 +88,7 @@ Cross-plugin read dependencies (read-only):
 ## Web and Android Delivery Status
 
 - **Web:** delivered. `FoundationShell` (`ctf/packages/web/components/foundation/`) renders the survivor-facing experience against the live Foundation API — provider search/browse (`displayName`, `headline`, `bio`), provider profile, real two-step quote request (open connection thread → create quote on it), and quote history with lifecycle status. Decomposed under Rule 116 into `foundation-ui`, `foundation-rails`, `foundation-panels`, `foundation-profile`, and the orchestrating `foundation-shell`. Aligned to the canonical `survivor-hub/Foundation` design mockup; mockup-only fields with no backing API (star rating, job counts, hourly price, availability, inflated platform stats) are intentionally omitted rather than mocked, per the real-data-only rule.
-- **Android:** pending UI circle-back; tracked in the readiness table (Android ⬜).
+- **Android:** delivered (pixel pass, 2026-05-31). The mobile feature binds the real Foundation API — see below.
 
 Android pixel pass delivered 2026-05-31. Mobile feature (`ctf/packages/mobile/src/features/foundation/`) rewritten to match the `MobileFoundation*.tsx` mockup. Real backend bindings mirror the merged web shell (PR #182):
 
@@ -98,7 +98,7 @@ Android pixel pass delivered 2026-05-31. Mobile feature (`ctf/packages/mobile/sr
 
 Omitted (no backing field): trade filter chips, star ratings, price/rate, job count, availability dot, credits badge, platform stats. These are mockup fixtures only; no real API field exists for them.
 
-`MockFoundation.tsx` is retired (no longer imported or used).
+`MockFoundation.tsx` has been removed (it was an unused placeholder; the real screens are `Foundation` / `FoundationLoading` / `FoundationEmpty` / `FoundationPublic`).
 
 ## Seed Coverage Status
 
