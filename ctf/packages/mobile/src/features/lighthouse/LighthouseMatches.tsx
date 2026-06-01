@@ -1,46 +1,177 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import { API_BASE_URL } from './api';
+import { Ionicons } from '@expo/vector-icons';
+import { fetchMatches } from './api';
+import type { LighthouseMatch } from './types';
 
-interface Match {
-  id: string;
-  propertyId: string;
-  status: string;
-  message?: string;
-  proposedMoveInDateIso?: string;
+const COLOR = '#EAB308';
+const BG = '#0F1117';
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: '#F59E0B',
+  accepted: '#22C55E',
+  rejected: '#EF4444',
+  cancelled: '#6B7280',
+  completed: '#3B82F6',
+};
+
+function statusLabel(status: LighthouseMatch['status']): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-export const LighthouseMatches = () => {
+const MatchCard: React.FC<{ match: LighthouseMatch }> = ({ match }) => {
+  const color = STATUS_COLORS[match.status] ?? '#6B7280';
+  const moveIn = match.proposedMoveInDateIso
+    ? new Date(match.proposedMoveInDateIso).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
+
+  return (
+    <View style={cardStyles.card}>
+      <View style={cardStyles.header}>
+        <Text style={cardStyles.title}>Match Request</Text>
+        <View style={[cardStyles.badge, { borderColor: `${color}50`, backgroundColor: `${color}15` }]}>
+          <Text style={[cardStyles.badgeText, { color }]}>{statusLabel(match.status)}</Text>
+        </View>
+      </View>
+      {moveIn ? (
+        <View style={cardStyles.row}>
+          <Ionicons name="calendar-outline" size={13} color="#6B7280" />
+          <Text style={cardStyles.meta}>Requested move-in: {moveIn}</Text>
+        </View>
+      ) : null}
+      {match.message ? (
+        <Text style={cardStyles.message} numberOfLines={2}>{match.message}</Text>
+      ) : null}
+      {match.hostResponse ? (
+        <View style={cardStyles.responseBox}>
+          <Text style={cardStyles.responseLabel}>Host response:</Text>
+          <Text style={cardStyles.responseText} numberOfLines={2}>{match.hostResponse}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+};
+
+const cardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${COLOR}20`,
+    padding: 16,
+    marginBottom: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F9FAFB',
+  },
+  badge: {
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  meta: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginLeft: 3,
+  },
+  message: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  responseBox: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  responseLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLOR,
+    marginBottom: 2,
+  },
+  responseText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    lineHeight: 17,
+  },
+});
+
+export const LighthouseMatches: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<LighthouseMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchMatches() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${API_BASE_URL}/matches`);
-        if (!res.ok) throw new Error('Failed to fetch');
-        const data = await res.json();
-        setMatches(data.items ?? []);
-      } catch {
-        setError('Failed to load matches.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchMatches();
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    fetchMatches()
+      .then((res) => {
+        if (mounted) setMatches(res.items);
+      })
+      .catch(() => {
+        if (mounted) setError('Failed to load matches.');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#EAB308" /></View>;
-  if (error) return <View style={styles.center}><Text style={styles.error}>{error}</Text></View>;
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={COLOR} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   if (matches.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>No matches yet.</Text>
-        <Text style={styles.subtitle}>You have no active matches.</Text>
+        <Ionicons name="mail-open-outline" size={40} color={`${COLOR}40`} />
+        <Text style={styles.emptyTitle}>No matches yet</Text>
+        <Text style={styles.emptyBody}>
+          Browse listings and request a match to get started.
+        </Text>
       </View>
     );
   }
@@ -48,27 +179,47 @@ export const LighthouseMatches = () => {
   return (
     <FlatList
       data={matches}
-      keyExtractor={item => item.id}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => <MatchCard match={item} />}
       contentContainerStyle={styles.list}
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Match: {item.status.charAt(0).toUpperCase() + item.status.slice(1)}</Text>
-          <Text style={styles.cardMeta}>Property: {item.propertyId}</Text>
-          <Text style={styles.cardMeta}>Requested: {item.proposedMoveInDateIso ? new Date(item.proposedMoveInDateIso).toLocaleDateString() : '—'}</Text>
-          <Text style={styles.cardMeta}>Message: {item.message || '—'}</Text>
-        </View>
-      )}
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
     />
   );
 };
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 8, color: '#EAB308' },
-  subtitle: { fontSize: 15, color: '#9CA3AF' },
-  error: { color: '#EF4444', fontSize: 16 },
-  list: { padding: 16 },
-  card: { backgroundColor: '#181A20', borderRadius: 14, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#F9FAFB', marginBottom: 4 },
-  cardMeta: { fontSize: 13, color: '#9CA3AF', marginBottom: 2 },
+  container: {
+    flex: 1,
+    backgroundColor: BG,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: BG,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F9FAFB',
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  emptyBody: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  list: {
+    padding: 16,
+    paddingBottom: 32,
+  },
 });

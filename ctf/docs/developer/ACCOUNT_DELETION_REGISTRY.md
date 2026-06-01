@@ -1,0 +1,69 @@
+# Account Deletion Registry
+
+This note explains `ctf/packages/web/lib/account/deletion-registry.ts` — the single source of truth
+that maps each plugin to the database tables holding a user's data, and how each table is handled
+when a user deletes either just that plugin's data ("service" scope) or their whole CTF account
+("account" scope).
+
+This is the foundation the future account-deletion orchestrator, the per-plugin "delete my data"
+routes, and the (design-gated) Account & Data UI all build on. It deletes nothing by itself — it is
+data plus helper functions.
+
+## Why a registry built from the schema, not the contracts
+
+Each plugin has a deletion *contract* under `ctf/docs/contracts/*_PROFILE_AND_DELETION_CONTRACT.md`.
+Those contracts describe intended/draft schemas that have **drifted** from the tables actually
+shipped in `ctf/schema.sql`. If we targeted the contract names we would silently fail to delete real
+data (or error on tables that do not exist). So the registry is keyed to reality and verified by a CI
+check. Examples of drift the registry corrects:
+
+- `gdp_user_extension` does not exist — GDP stores no per-user data, so it has nothing to delete.
+- Feed tables key authorship by `author_user_id` / `asked_by_user_id`, not `user_id`.
+- `socketrelay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
+  `provider_user_id`; Foundation threads use `created_by_user_id` / `sender_user_id`.
+
+## How each table is handled
+
+| Action | Meaning |
+|---|---|
+| `delete` | Hard-delete the user's rows (`DELETE FROM <table> WHERE <userColumn> = $1`). |
+| `soft-delete` | Stamp the configured `softDeleteColumn` instead of removing the row. |
+| `retain` | Keep the rows. Used for money/ledger tables (financial integrity), deletion-event and audit-trail tables (the accountability record of the deletion), and shared platform content. |
+
+Conservative-by-default, because deletion is irreversible:
+
+- **Money / ledger** tables are retained. ServiceCredits is reclaimed and tombstoned only through the
+  existing account-deletion reclaim flow (`service_credits_account_deletion_reclaims` +
+  `service_credits_wallet_tombstones`), never hard-deleted here. TrustTransport and LevelUp money
+  tables are likewise retained.
+- **Deletion-event / audit-trail** tables are retained — they exist to be the record of the deletion.
+- **Shared platform content** authored by a user but consumed by others (admin announcements,
+  property listings, cohorts, missions) is retained and flagged with a `reviewNote` for an explicit
+  product decision rather than silently cascaded.
+- **Global catalog/aggregate** tables (currencies, taxonomy, GDP metrics, weekly-performance
+  aggregates) are not listed — they are not any individual user's data.
+
+## The CI guard
+
+`ctf/scripts/check-deletion-registry.mjs` parses `ctf/schema.sql` and checks every `table`,
+`userColumn`, and `softDeleteColumn` named in the registry actually exists. It runs in the Schema
+Drift Gate job in `.github/workflows/ci.yml`, so the registry cannot drift from the schema again. It
+is plain Node (no TypeScript import), so it runs on any Node version, including the Node 20 runners.
+
+To run locally:
+
+```sh
+node ctf/scripts/check-deletion-registry.mjs
+```
+
+## What is intentionally NOT here yet
+
+- The **orchestrator** that performs a full-account deletion across all plugins and walks a
+  `requested → processing → completed` status.
+- The **per-plugin "delete my data" API routes** for plugins that have a registry entry but no route
+  yet.
+- The **Account & Data UI** (web + mobile) — design-gated; no mockup exists in the `design/`
+  submodule yet (Rule 127).
+
+These are deliberately separate, individually-reviewable steps because they perform irreversible
+deletes and touch the money ledger.
