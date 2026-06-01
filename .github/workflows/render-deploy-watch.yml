@@ -10,6 +10,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# This job talks only to the Render API (with RENDER_API_KEY); it never uses the
+# GITHUB_TOKEN, so it needs no repository permissions.
+permissions: {}
+
 # Only follow the most recent deploy; if a newer commit lands, drop the older watcher.
 concurrency:
   group: render-deploy-watch
