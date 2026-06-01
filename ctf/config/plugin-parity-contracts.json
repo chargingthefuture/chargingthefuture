@@ -21,7 +21,7 @@
     },
     {
       "slug": "feed-announcements",
-      "mobileFeatureDirs": ["feed", "announcements", "questions", "community"],
+      "mobileFeatureDirs": ["hub", "feed", "announcements", "questions", "community"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": false
     },
