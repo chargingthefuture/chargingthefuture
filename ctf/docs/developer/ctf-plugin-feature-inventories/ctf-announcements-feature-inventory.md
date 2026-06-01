@@ -119,25 +119,30 @@ Must follow single-profile rule:
 2. Keep plugin extension fields linked by `user_id`.
 3. No duplicate full profile table.
 
-Extension entity:
+Per-user state entity:
 
-- `announcements_user_extension`
+- `announcement_user_state` (the real table; there is no separate
+  `announcements_user_extension` â€” that name was a planning-draft phantom)
   - `user_id`
-  - acknowledgement preferences,
-  - delivery preference flags,
-  - mute/dismiss policy preferences where permitted.
+  - `announcement_id`
+  - `read_at`, `acknowledged_at`, `dismissed_at` (per-user read/ack/dismiss state)
+  - `updated_at`
 
 ### 4.2 Domain Entities
 
-Domain tables:
+Domain tables (as they exist in `ctf/schema.sql`):
 
 1. `announcements`
 2. `announcement_revisions`
-3. `announcement_targets`
-4. `announcement_delivery_events`
-5. `announcement_user_state`
-6. `announcement_membership_events`
-7. `announcement_admin_audit_trail`
+3. `announcement_delivery_events`
+4. `announcement_user_state`
+5. `announcement_membership_events`
+
+Targeting reuses the shared `feed_item_targets` table (feed and announcements
+are coupled), not a separate `announcement_targets` table. The previously
+listed `announcement_targets` and `announcement_admin_audit_trail` were
+planning-draft phantoms â€” they were never created in `schema.sql` and no code
+references them, so they are removed here to match the real data model.
 
 ### 4.3 Source-of-Truth and Fan-Out
 
@@ -217,7 +222,7 @@ Domain tables:
   - Acceptance criteria:
     - Android follow-up ticket exists with owner and due date.
 
-### €” Contracts and Naming Lock
+### ï¿½ï¿½ Contracts and Naming Lock
 
 - [x] Define Announcements command contracts.
   - Acceptance criteria:
@@ -232,7 +237,7 @@ Domain tables:
   - Acceptance criteria:
     - New docs/contracts use **Announcements** spelling; legacy typo alias note is documented for compatibility.
 
-### €” Schema and Migration Readiness
+### ï¿½ï¿½ Schema and Migration Readiness
 
 - [x] Implement Announcements domain schema.
   - Acceptance criteria:
@@ -247,7 +252,7 @@ Domain tables:
   - Acceptance criteria:
     - Drift status across migration SQL, app schema, and API contracts is attached to PR.
 
-### €” API and Projection Pipeline
+### ï¿½ï¿½ API and Projection Pipeline
 
 - [x] Implement draft/create/update/publish/archive API and command flows.
   - Acceptance criteria:
@@ -262,7 +267,7 @@ Domain tables:
   - Acceptance criteria:
     - User-state transitions are policy-compliant and auditable.
 
-### €” Web Delivery
+### ï¿½ï¿½ Web Delivery
 
 - [x] Implement authoring and publish UX on `/admin/feed-announcements`.
   - Acceptance criteria:
@@ -274,13 +279,13 @@ Domain tables:
   - Acceptance criteria:
     - Toast mode is optional and managed via Feed configuration.
 
-### €” Android Follow-Up (Required â€” see Feed Checklist Phase 6)
+### ï¿½ï¿½ Android Follow-Up (Required â€” see Feed Checklist Phase 6)
 
 - [ ] All Android parity items are now tracked in `ctf-feed-feature-inventory.md` Phase 6.
   - Acceptance criteria:
     - See unified feed checklist for acceptance criteria.
 
-### €” Security, Compliance, and Hardening
+### ï¿½ï¿½ Security, Compliance, and Hardening
 
 - [x] Document policy and CSRF handling.
   - Acceptance criteria:

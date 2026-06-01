@@ -31,24 +31,26 @@ Rule 114 baseline: Announcements uses the single canonical profile and does not 
 
 ## 3) Plugin Extension Fields
 
-- Storage location (table or json path): `announcements_user_extension`
+- Storage location (table or json path): `announcement_user_state` (the real
+  per-user state table; the planning-draft name `announcements_user_extension`
+  was never created and is reconciled to `announcement_user_state` here)
 - Fields:
   - field name: `user_id`
     - type: uuid
-    - nullable/default: non-null, unique, FK to canonical profile
-    - purpose: plugin extension ownership key
-  - field name: `notification_preferences`
-    - type: jsonb
-    - nullable/default: default `{}`
-    - purpose: per-user announcement channel preferences
-  - field name: `muted_until`
+    - nullable/default: non-null, FK to canonical profile
+    - purpose: per-user state ownership key
+  - field name: `announcement_id`
+    - type: uuid
+    - nullable/default: non-null, FK to `announcements`
+    - purpose: which announcement this state row is for
+  - field name: `read_at` / `acknowledged_at` / `dismissed_at`
     - type: timestamptz
     - nullable/default: nullable
-    - purpose: temporary mute window
-  - field name: `service_deleted_at`
+    - purpose: per-user read, acknowledge, and dismiss state
+  - field name: `updated_at`
     - type: timestamptz
-    - nullable/default: nullable
-    - purpose: plugin-scoped deletion marker
+    - nullable/default: maintained on write
+    - purpose: last-touched marker
 
 ## 4) Domain Data Owned by Plugin
 
@@ -74,7 +76,7 @@ Rule 114 baseline: Announcements uses the single canonical profile and does not 
 When user deletes Announcements usage only:
 
 - Delete immediately:
-  - `announcements_user_extension` row for requester
+  - `announcement_user_state` rows for requester
   - requester read-state and preference records
 - Anonymize/pseudonymize:
   - historical reaction ownership where retention is required
@@ -103,7 +105,7 @@ When user requests full account deletion:
 If user returns after service-scoped deletion:
 
 - Recreated defaults:
-  - new `announcements_user_extension` with default preferences
+  - new `announcement_user_state` rows created lazily on next read/ack
 - Data that is not restored:
   - deleted read/reaction state
 - Re-consent required? (yes/no):
@@ -152,3 +154,7 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-06-01: Reconciled the planning-draft phantom table `announcements_user_extension`
+  to the real per-user state table `announcement_user_state` (read/ack/dismiss state).
+  The phantom never existed in `ctf/schema.sql` and no code referenced it. This completes
+  the announcements half of backend-drift decision #4 (remove phantom table references).
