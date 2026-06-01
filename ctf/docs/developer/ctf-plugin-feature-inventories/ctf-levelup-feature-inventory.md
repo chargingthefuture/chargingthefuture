@@ -60,6 +60,11 @@ Core tables:
 13. `levelup_audit_events`
 14. `levelup_policy_config`
 
+Multi-currency (issue #120): `levelup_cohorts` carries `stipend_currency` and `microgrant_currency`
+(FK → `currencies.code`), naming the currency of `stipend_amount_per_payout` and `microgrant_amount`.
+Both default to ServiceCredits (code `SC`) — these are internal token payouts. No surface renders a
+ServiceCredits amount at a fiat equivalent (the no-fiat-parity rule from issue #120).
+
 External value movement dependencies:
 
 - `service_credits_wallets`
@@ -106,6 +111,7 @@ list endpoint); active-enrollment banner (no user-enrollment GET endpoint yet).
 
 ## Change Log
 
+- 2026-06-01: Multi-currency (issue #120): added `stipend_currency` and `microgrant_currency` (FK → `currencies.code`, default ServiceCredits) to `levelup_cohorts`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 - 2026-05-31: Android pixel pass — rewrote `ctf/packages/mobile/src/features/levelup/Levelup.tsx` to the design mockup (loading/empty/main states). Created real `api.ts` bound to `GET /api/levelup/cohorts` and `GET /api/service-credits/wallet`. Retired `MockLevelup.tsx`. Omitted unbacked fields: trainerName, tags, milestoneCount (not in cohorts list endpoint), active-enrollment banner (no user enrollment GET route). EOF, parity, and tsc gates all green.
 - 2026-05-30: Web pixel pass — rebuilt the web shell to the design mockup and decomposed the 520-line `levelup-shell.tsx` monolith into modular sub-components (`lu-shared.ts`, `lu-loading.tsx`, `lu-sidebar.tsx`, `lu-cohort-card.tsx`, `lu-browse.tsx`, `lu-progress.tsx`, `lu-right-panel.tsx`, thin shell) within rule-116 limits. Removed 6 dead unreferenced components (AdminPanel, CohortDetail, CohortList, EnrollModal, TrainerDashboard, UserDashboard). Shell binds real routes (cohorts, service-credits wallet, enroll, milestone validate); unbacked mockup figures omitted. No schema/route/contract changes.
 - 2026-05-17: Updated inventory to enforce Rule 105 parity baseline and Rule 120 living-snapshot model. Removed Android parity deferral language; confirmed web+android complete delivery status. Clarified technical debt (attachment storage) as genuine limitation, not unimplemented feature.

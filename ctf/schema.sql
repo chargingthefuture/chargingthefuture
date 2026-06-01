@@ -969,6 +969,9 @@ ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS submission_
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS reminder_schedule_hours INTEGER[] NOT NULL DEFAULT ARRAY[0,24,72,168];
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS incentive_amount TEXT NOT NULL DEFAULT '100';
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS support_only_after_expiry BOOLEAN NOT NULL DEFAULT TRUE;
+-- Multi-currency (issue #120): the verification incentive is an internal ServiceCredits payout.
+-- incentive_currency names the currency of incentive_amount; it defaults to ServiceCredits (code 'SC').
+ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS incentive_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
 -- === levelup_enrollments table (guarded DDL, schema drift prevention) ===
 CREATE TABLE IF NOT EXISTS levelup_enrollments (
@@ -1151,6 +1154,17 @@ CREATE TABLE IF NOT EXISTS trusttransport_earnings_ledger (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Multi-currency (issue #120): model the settlement currency as an admin-curated, referenced code.
+-- The legacy free-text `currency` column is superseded by `price_currency` (FK -> currencies.code), which
+-- the GDP estimation layer (issue #121) reads. Existing rows are backfilled from `currency` only where it
+-- already matches a known code; unknown legacy values are left for manual reconciliation so no money data
+-- is overwritten. This never asserts a ServiceCredits<->fiat parity.
+ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trusttransport_earnings_ledger ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+UPDATE trusttransport_payout_requests SET price_currency = currency
+  WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
+UPDATE trusttransport_earnings_ledger SET price_currency = currency
+  WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
 CREATE TABLE IF NOT EXISTS trusttransport_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -2085,6 +2099,11 @@ ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB
 ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): LevelUp stipends and microgrants are internal ServiceCredits payouts.
+-- stipend_currency / microgrant_currency name the currency of stipend_amount_per_payout / microgrant_amount;
+-- both default to ServiceCredits (code 'SC').
+ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
 CREATE TABLE IF NOT EXISTS levelup_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2396,6 +2415,20 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessi
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): a Foundation provider can list a service rate on their profile.
+-- rate_amount is the listed amount; rate_currency names its currency (FK -> currencies.code). The quote
+-- process stays free-text/manual this version (no structured quote amount). "Accepts ServiceCredits" is a
+-- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+CREATE TABLE IF NOT EXISTS foundation_provider_accepted_currencies (
+  user_id TEXT NOT NULL REFERENCES foundation_user_extension(user_id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (user_id, currency_code)
+);
+ALTER TABLE IF EXISTS foundation_provider_accepted_currencies ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS foundation_provider_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_foundation_provider_accepted_currencies_user ON foundation_provider_accepted_currencies(user_id);
 
 CREATE TABLE IF NOT EXISTS foundation_call_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2486,6 +2519,19 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS claimed_fulf
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): SocketRelay is mutual aid and posts are free. These OPTIONAL columns let a
+-- request name an offered reward when one exists; "Free" must render from the ABSENCE of a price (NULL),
+-- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+CREATE TABLE IF NOT EXISTS socketrelay_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (request_id, currency_code)
+);
+ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_socketrelay_request_accepted_currencies_request ON socketrelay_request_accepted_currencies(request_id);
 
 CREATE TABLE IF NOT EXISTS socketrelay_request_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -203,6 +203,13 @@ Tables owned by this plugin:
 11. `trusttransport_market_config` — Region/service-zone/fee/commission/capacity configuration.
 12. `trusttransport_admin_audit_trail` — Admin mutation audit log.
 
+Multi-currency (issue #120): `trusttransport_payout_requests` and `trusttransport_earnings_ledger` gain
+`price_currency` (FK → `currencies.code`), the admin-curated, referenced settlement currency that supersedes
+the legacy free-text `currency` column (the GDP estimation layer in issue #121 reads `price_currency`).
+Existing rows are backfilled from `currency` only where it already matches a known code; unknown legacy values
+are left for manual reconciliation so no money data is overwritten. No surface renders a ServiceCredits amount
+at a fiat equivalent.
+
 ### 4.3 Lifecycle and Storage Constraints
 
 1. Immutable event log for status transitions.
@@ -244,6 +251,8 @@ Tables owned by this plugin:
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-01: Multi-currency (issue #120): added `price_currency` (FK → `currencies.code`) to `trusttransport_payout_requests` and `trusttransport_earnings_ledger`, superseding the legacy free-text `currency` column, with a safe backfill that never overwrites money data. Documented the no-fiat-parity rule. The GDP estimation layer (issue #121) reads `price_currency`.
 
 - 2026-05-31: Android pixel pass — rewrote `TrustTransport.tsx` to align with `design/.../survivor-hub/MobileTrustTransport*.tsx` (main, empty, loading, public states). Binds real `/api/trusttransport/requests` (list + create). Omits unbacked mockup elements (Nearby Drivers list, driver ratings/ETAs/vehicle info, online driver count) per real-data-only rule. Retired `MockTrustTransport.tsx` (cleared). `AuthProvider` + `TrustTransport` exports preserved. No schema/route/contract changes.
 - 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/TrustTransport.tsx` and decomposed the 358-line / complexity-28 monolith into modular sub-components (`tt-shared.ts`, `tt-loading.tsx`, `tt-icon-rail`, `tt-sidebar`, `tt-book-tab`, `tt-tracking-tab`, `tt-chat-tab`, `tt-right-panel`, thin shell) within rule-116 limits. Per real-data-only, stripped remaining unbacked values (hardcoded "Safety Rating 4.9" and "Safety Incidents 0 today") and aligned GetStream-branded copy to the design's "End-to-end encrypted" / "All comms encrypted" wording (Stream chat integration unchanged). Dropped the unused `userId`/`isAdmin` props at the call site. No schema/route/contract changes.
