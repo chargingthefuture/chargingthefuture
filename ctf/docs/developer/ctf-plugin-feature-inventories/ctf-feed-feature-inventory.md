@@ -230,7 +230,11 @@ Domain tables:
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. All three feed channels (announcements, questions, community) are shipped on web (`/apps/feed`) and Android (`packages/mobile/src/features/feed`). Stream credentials, feed item rendering, read/dismiss state, and Q&A interactions behave consistently across platforms.
+Web delivery status: **pixel pass delivered** (2026-05-31). The `live-feed-announcements.tsx` component was aligned to the canonical design mockup (`design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/FeedAnnouncements.tsx`): accent color corrected to `#84CC16`, lucide icons (Megaphone, Globe, MessageCircle, Settings, Bell, Pin, AlertCircle, RefreshCw) replace all emoji icons, the "GetStream ⚡" badge (not in mockup) was removed, empty-state matches `FeedAnnouncementsEmpty` mockup, loading state matches `FeedAnnouncementsLoading` mockup. The file was decomposed per rule-116 into sub-components: `feed-item-card.tsx`, `feed-compose-forms.tsx`, `feed-announcements-icon-rail.tsx`, `feed-announcements-sidebar.tsx`, `feed-announcements-header.tsx`, `feed-announcements-right-panel.tsx`, `feed-announcements-constants.ts`. All data bindings use real `FeedTimelineItem`/`FeedConfig` fields only; mockup elements with no backing API field (trending hashtags by count, top-engaged-today user list) are omitted per real-data-only rule.
+
+Android delivery: `packages/mobile/src/features/feed` was not touched in this pass. Android parity tracked separately.
+
+All three feed channels (announcements, questions, community) are shipped on web and Android.
 
 ---
 
@@ -266,6 +270,7 @@ Domain tables:
 
 ## 11) Change Log
 
+- 2026-05-31: Feed-Announcements web pixel pass — aligned `live-feed-announcements.tsx` to canonical design mockup: accent color `#84CC16`, lucide icons throughout, removed "GetStream ⚡" badge, empty state matches mockup. Decomposed 712-line monolith into 7 sub-files per rule-116. Omitted mockup-only mock data (trending hashtags by count, top-engaged-today users) per real-data-only rule. Updated Web px ✅ and Gates ✅ in production readiness table. Typecheck, build, ESLint, EOF all pass.
 - 2026-05-18: Replaced "Web and Android Delivery Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-parity-pending framing. Removed stale Gaps entries that listed Questions/Community/Android as pending — these surfaces are shipped (`/api/feed/questions/*`, `/api/feed/community/*`, mobile FeedStream). Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt". Updated seed coverage to reference shipping script.
 - 2026-02-25: Added Rule 120 gaps section.
 - 2026-02-24: Created initial CTF rewrite Feed inventory.
