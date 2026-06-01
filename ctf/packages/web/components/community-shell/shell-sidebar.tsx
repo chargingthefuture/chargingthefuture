@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import type { ShellSection } from './shell-types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo, HubDMInfo } from '../../lib/hub/types';
@@ -12,6 +11,8 @@ type ShellSidebarProps = {
   channels: HubChannelInfo[];
   dms: HubDMInfo[];
   plugins: PluginRegistryItem[];
+  activeChannel: string | null;
+  onChannelSelect: (slug: string) => void;
   activeApp: string | null;
   onAppSelect: (slug: string | null) => void;
   query: string;
@@ -27,6 +28,8 @@ export function ShellSidebar({
   channels,
   dms,
   plugins,
+  activeChannel,
+  onChannelSelect,
   activeApp,
   onAppSelect,
   query,
@@ -56,12 +59,24 @@ export function ShellSidebar({
       <div className={styles.sidebarBody}>
         {section === 'chat' ? (
           <>
-            {channels.map((ch) => (
-              <Link key={ch.slug} href={`/apps/hub?channel=${encodeURIComponent(ch.slug)}`} className={styles.sidebarChannel} onClick={() => onNavigate?.()}>
-                <span className={styles.sidebarChannelHash}>#</span>
-                <span className={styles.sidebarChannelName}>{ch.slug}</span>
-              </Link>
-            ))}
+            {channels.map((ch) => {
+              const isActive = activeChannel === ch.slug;
+              return (
+                <button
+                  key={ch.slug}
+                  type="button"
+                  className={isActive ? `${styles.sidebarChannel} ${styles.sidebarChannelActive}` : styles.sidebarChannel}
+                  aria-current={isActive ? 'true' : undefined}
+                  onClick={() => {
+                    onChannelSelect(ch.slug);
+                    onNavigate?.();
+                  }}
+                >
+                  <span className={styles.sidebarChannelHash}>#</span>
+                  <span className={styles.sidebarChannelName}>{ch.slug}</span>
+                </button>
+              );
+            })}
             <p className={styles.sidebarGroupLabel}>Direct Messages</p>
             {dms.map((dm) => (
               <button
