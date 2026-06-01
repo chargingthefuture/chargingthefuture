@@ -81,6 +81,22 @@ the portal and Clerk redirects back when the flow completes.
 - The Clerk instance's redirect URIs must exactly match the production domain.
 - Session/auth failures often indicate a Clerk domain mismatch.
 
+### Clerk session token claims (username + role)
+
+`middleware.ts` reads the signed-in user's username and role from the Clerk
+**session token claims** and forwards them as `x-ctf-username` / `x-ctf-user-role`.
+Clerk does not include these by default, so the session token must be customized
+(Clerk dashboard → Configure → Sessions → "Customize session token"):
+
+```json
+{ "username": "{{user.username}}", "metadata": "{{user.public_metadata}}" }
+```
+
+Roles live in the user's **public metadata** (e.g. `{ "role": "admin" }`). Without
+this configuration the app falls back to an anonymous display name and no role
+(no regression), but username-gated routes deny with `missing_username` and admin
+checks fail. Approval is not in the token — it comes from the database unlock tier.
+
 ## Environment Variable Contract
 
 ### Infisical is the single source of truth
