@@ -10,6 +10,14 @@ import {
 } from 'react-native';
 import { fetchFeedTimeline, markFeedItemRead } from './api';
 import type { FeedChannel, FeedTimelineItem } from './api';
+import {
+  ComicAnswerCard,
+  ComicComposer,
+  ComicPendingCard,
+  fetchComicConversation,
+  rateComicAnswer,
+} from '../comic';
+import type { ComicAnswerRating, ComicStreamItem } from '../comic';
 
 const COLOR = '#84CC16';
 const BG = '#0F1117';
@@ -58,6 +66,11 @@ const CHANNELS: { key: FeedChannel; label: string }[] = [
   { key: 'community', label: 'Community' },
   { key: 'questions', label: 'Q&A' },
 ];
+
+// A feed list row is either a feed timeline item or one of the asker's own @comic Q&A cards.
+type FeedRow =
+  | { kind: 'feed'; key: string; feed: FeedTimelineItem }
+  | { kind: 'comic'; key: string; comic: ComicStreamItem };
 
 // ---------- sub-components ----------
 
@@ -139,22 +152,37 @@ function FeedCard({
 export const FeedStream = () => {
   const [channel, setChannel] = useState<FeedChannel>('all');
   const [items, setItems] = useState<FeedTimelineItem[]>([]);
+  const [comicItems, setComicItems] = useState<ComicStreamItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const load = useCallback(async (ch: FeedChannel) => {
-    setLoading(true);
-    setError(null);
+  const loadComic = useCallback(async () => {
     try {
-      const data = await fetchFeedTimeline(ch);
-      setItems(data.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to load feed.');
-    } finally {
-      setLoading(false);
+      const conversation = await fetchComicConversation();
+      setComicItems(conversation);
+    } catch {
+      // The @comic conversation is supplementary to the feed; a failure here must not blank the
+      // feed. Leave whatever we had.
     }
   }, []);
+
+  const load = useCallback(
+    async (ch: FeedChannel) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchFeedTimeline(ch);
+        setItems(data.items);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Unable to load feed.');
+      } finally {
+        setLoading(false);
+      }
+      await loadComic();
+    },
+    [loadComic],
+  );
 
   useEffect(() => {
     load(channel);
@@ -172,6 +200,35 @@ export const FeedStream = () => {
     },
     [readIds],
   );
+
+  const handleRate = useCallback(
+    async (turnId: string, rating: ComicAnswerRating) => {
+      // Optimistically reflect the rating; the server enforces one rating per (user, turn).
+      setComicItems((prev) =>
+        prev.map((entry) =>
+          entry.answerTurnId === turnId ? { ...entry, currentUserRating: rating } : entry,
+        ),
+      );
+      try {
+        await rateComicAnswer(turnId, rating);
+      } catch {
+        // Re-sync from the server on failure so the row reflects the true state.
+        loadComic();
+      }
+    },
+    [loadComic],
+  );
+
+  // The @comic cards (the asker's own Q&A) lead the stream; the feed timeline follows. The @comic
+  // surfaces are only shown on the unfiltered "All" channel and the "Q&A" channel so the dedicated
+  // alert/community tabs stay focused.
+  const showComic = channel === 'all' || channel === 'questions';
+  const rows: FeedRow[] = [
+    ...(showComic
+      ? comicItems.map<FeedRow>((comic) => ({ kind: 'comic', key: `comic-${comic.questionTurnId}`, comic }))
+      : []),
+    ...items.map<FeedRow>((feed) => ({ kind: 'feed', key: `feed-${feed.id}`, feed })),
+  ];
 
   return (
     <View style={styles.screen}>
@@ -226,22 +283,33 @@ export const FeedStream = () => {
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
-      ) : items.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState />
       ) : (
         <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <FeedCard
-              item={item}
-              onRead={handleRead}
-            />
-          )}
+          data={rows}
+          keyExtractor={(row) => row.key}
+          renderItem={({ item: row }) => {
+            if (row.kind === 'comic') {
+              return row.comic.status === 'answered' ? (
+                <View style={styles.comicSlot}>
+                  <ComicAnswerCard item={row.comic} askedByLabel="You" onRate={handleRate} />
+                </View>
+              ) : (
+                <View style={styles.comicSlot}>
+                  <ComicPendingCard item={row.comic} askedByLabel="You" />
+                </View>
+              );
+            }
+            return <FeedCard item={row.feed} onRead={handleRead} />;
+          }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* @comic composer */}
+      <ComicComposer onAsked={loadComic} />
     </View>
   );
 };
@@ -318,6 +386,9 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     gap: 12,
+  },
+  comicSlot: {
+    marginBottom: 12,
   },
   card: {
     borderRadius: 16,
