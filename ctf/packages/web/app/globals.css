@@ -14,14 +14,69 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100vh;
-  overflow: hidden;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   background: #0b1020;
   color: #e5e7eb;
 }
 
+/*
+ * On desktop the viewport is locked so each shell manages its own internal
+ * scrolling (sidebars, chat panes, and so on). On small screens we let the
+ * whole document scroll instead — otherwise anything taller or wider than the
+ * screen gets clipped by `overflow: hidden` and becomes unreachable on a phone.
+ */
+@media (min-width: 768px) {
+  html,
+  body {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 767px) {
+  html,
+  body {
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/*
+ * Small-screen fallback for routed plugin/app screens.
+ *
+ * Most plugin shells are built as a fixed desktop row — a 72px icon rail, a
+ * fixed-width sidebar, the main column, and a right rail — using inline styles
+ * that media queries can't reach. On a phone that row runs off the side of the
+ * screen and, because the inline widths also set `flex-shrink: 0`, nothing
+ * reflows. Wrapping the routed screen lets us, on small screens only, drop the
+ * top-level row back to a normal vertical block so each section stacks and the
+ * page scrolls. A stylesheet rule marked `!important` overrides a plain inline
+ * style, so this reaches those inline layouts without editing every shell.
+ * Desktop rendering is left exactly as-is.
+ *
+ * A screen that already handles its own small-screen layout (the community
+ * shell) opts out with the `ctf-self-responsive` marker class so we don't
+ * fight its own flex layout.
+ */
+.ctf-app-viewport {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .ctf-app-viewport {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .ctf-app-viewport > *:not(.ctf-self-responsive) {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+  }
 }

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Menu } from 'lucide-react';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo, HubDMInfo } from '../../lib/hub/types';
@@ -120,6 +122,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [sortMode, setSortMode] = useState<PluginSortMode>('recent');
   const [recentPluginSlugs, setRecentPluginSlugs] = useState<string[]>([]);
   const [pluginUsageCounts, setPluginUsageCounts] = useState<Record<string, number>>({});
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -232,7 +235,49 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
     .slice(0, 5);
 
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ctf-self-responsive`}>
+      <header className={styles.mobileBar}>
+        <button
+          type="button"
+          className={styles.mobileBarMenuBtn}
+          onClick={() => setMobileNavOpen((open) => !open)}
+          aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={mobileNavOpen}
+        >
+          <Menu size={18} />
+        </button>
+        <div className={styles.mobileBarBrand}>
+          <span className={styles.mobileBarLogo} aria-hidden="true">SH</span>
+          <span className={styles.mobileBarTitle}>Survivor Hub</span>
+        </div>
+        <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'chat'}
+            className={section === 'chat' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
+            onClick={() => setSection('chat')}
+          >
+            Chat
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'apps'}
+            className={section === 'apps' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
+            onClick={() => setSection('apps')}
+          >
+            Apps
+          </button>
+        </div>
+        <div className={styles.mobileBarAuth}>
+          {isAuthenticated ? (
+            <span className={styles.mobileBarAvatar} aria-hidden="true">{currentUser.initial}</span>
+          ) : (
+            <Link className={styles.mobileBarSignIn} href={signInUrl}>Sign in</Link>
+          )}
+        </div>
+      </header>
       <div className={styles.frame}>
         <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} />
         <ShellSidebar
@@ -244,7 +289,17 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           onAppSelect={handleAppSelect}
           query={query}
           onQueryChange={setQuery}
+          mobileOpen={mobileNavOpen}
+          onNavigate={() => setMobileNavOpen(false)}
         />
+        {mobileNavOpen ? (
+          <button
+            type="button"
+            className={styles.mobileBackdrop}
+            aria-label="Close navigation"
+            onClick={() => setMobileNavOpen(false)}
+          />
+        ) : null}
         <main className={`${styles.panel} ${styles.content}`}>
           {loadError ? (
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
