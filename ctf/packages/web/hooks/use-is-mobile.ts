@@ -1,26 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 const MOBILE_BREAKPOINT = 768;
+
+function subscribe(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const query = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+  query.addEventListener('change', callback);
+  return () => query.removeEventListener('change', callback);
+}
+
+function getSnapshot(): boolean {
+  return window.innerWidth < MOBILE_BREAKPOINT;
+}
+
+// The server has no viewport, so it always renders the desktop layout; the client
+// then takes over with the real size.
+function getServerSnapshot(): boolean {
+  return false;
+}
 
 /**
  * Returns true when the viewport is narrower than the phone breakpoint (768px).
  *
- * Mirrors the design system's `use-mobile` hook so web shells can switch to the
- * single-column phone layout shown in the `Mobile*` mockups. Starts false so the
- * server renders the desktop layout; the client corrects it on mount.
+ * Backed by `useSyncExternalStore` so the client uses the real viewport size from
+ * its very first render after hydration — no post-mount flip from the desktop
+ * layout to the mobile one (which showed up as a visible flash on load).
  */
 export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const update = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    update();
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
-
-  return isMobile;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
