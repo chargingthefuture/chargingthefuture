@@ -99,7 +99,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
         ) : null}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexWrap: isMobile ? 'wrap' : 'nowrap', alignItems: 'flex-start', justifyContent: 'center', padding: isMobile ? '24px 16px' : '44px 64px', gap: isMobile ? 24 : 44 }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: isMobile ? 'flex-start' : 'center', padding: isMobile ? '24px 16px' : '44px 64px', gap: isMobile ? 24 : 44 }}>
         <div style={{ flex: 1, maxWidth: 540 }}>
           <div style={{ marginBottom: 26 }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: `${BRAND}12`, border: `1px solid ${BRAND}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
