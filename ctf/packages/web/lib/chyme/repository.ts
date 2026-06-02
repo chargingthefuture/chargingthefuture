@@ -86,7 +86,7 @@ type TreasuryConfigRow = {
   policy: Record<string, unknown>;
 };
 
-function chymeHandle(username: string | null, userId: string): string {
+export function chymeHandle(username: string | null, userId: string): string {
   if (username) {
     return `@${username}`;
   }

@@ -48,13 +48,13 @@ function initials(name: string): string {
 function AudienceBubble({ participant }: { participant: Participant }) {
   return (
     <View style={speakerStyles.audienceBubble}>
-      <Text style={speakerStyles.audienceInitials}>{initials(chymeHandle(participant.username, participant.userId))}</Text>
+      <Text style={speakerStyles.audienceInitials}>{initials(participant.username ?? participant.userId)}</Text>
     </View>
   );
 }
 
 function SpeakerBubble({ participant }: { participant: Participant }) {
-  const init = initials(chymeHandle(participant.username, participant.userId));
+  const init = initials(participant.username ?? participant.userId);
   return (
     <View style={speakerStyles.wrapper}>
       <View style={speakerStyles.avatar}>
