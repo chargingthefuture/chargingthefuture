@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart2, Target, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { BarChart2, ChevronLeft, Target, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { WorkforceDashboard, WorkforceGroupedReportItem, WorkforceProfile } from '../../lib/workforce/types';
 import { WorkforceIconRail } from './workforce-icon-rail';
 import { WorkforceSidebar } from './workforce-sidebar';
@@ -217,6 +219,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     skillItems: [],
     profile: null,
   });
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -295,6 +298,46 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     );
   }
 
+  const content = (
+    <WorkforceDashboardContent
+      dashboard={dashboard}
+      sectorItems={sectorItems}
+      skillItems={skillItems}
+      activeView={view}
+    />
+  );
+
+  if (isMobile) {
+    const views: { key: SidebarView; label: string }[] = [
+      { key: 'overview', label: 'Overview' },
+      { key: 'sector', label: 'Sectors' },
+      { key: 'skill-level', label: 'Skill Level' },
+    ];
+    // ctf-self-responsive opts out of the global mobile de-flex so this flex
+    // column keeps a real height — the dashboard's ScrollArea needs it to scroll.
+    return (
+      <div className="ctf-self-responsive" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0F1117', fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0' }}>
+        <div style={{ background: '#0D0F14', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}20`, border: `1px solid ${COLOR}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLOR, textDecoration: 'none', flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <BarChart2 size={18} style={{ color: COLOR, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#F9FAFB', flex: 1 }}>Workforce</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', overflowX: 'auto' }}>
+            {views.map(({ key, label }) => (
+              <button key={key} onClick={() => setView(key)} style={{ whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: 8, background: view === key ? `${COLOR}20` : 'transparent', border: `1px solid ${view === key ? COLOR + '40' : 'rgba(255,255,255,0.08)'}`, color: view === key ? COLOR : '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {content}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -342,12 +385,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
           </div>
         </header>
 
-        <WorkforceDashboardContent
-          dashboard={dashboard}
-          sectorItems={sectorItems}
-          skillItems={skillItems}
-          activeView={view}
-        />
+        {content}
       </div>
 
       <WorkforceProfilePanel profile={profile} loading={loading} />
