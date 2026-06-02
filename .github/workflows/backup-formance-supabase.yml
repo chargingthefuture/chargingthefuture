@@ -56,10 +56,14 @@ jobs:
         id: backup
         run: |
           set -e
-          node ctf/scripts/backupFormanceToSupabase.mjs 2> backup-error.log || {
-            echo "Backup script failed. See backup-error.log." >&2
+          # Capture stderr to a file AND print it to the console on failure, so
+          # the real reason shows up directly in the job log (not only in the
+          # uploaded artifact, which needs a separate download to read).
+          if ! node ctf/scripts/backupFormanceToSupabase.mjs 2> backup-error.log; then
+            echo "::error::Formance backup failed. Error output from the backup script:"
+            cat backup-error.log >&2
             exit 1
-          }
+          fi
 
       - name: Upload failure logs (if present)
         if: failure() && steps.backup.outcome == 'failure' && hashFiles('backup-error.log') != ''
