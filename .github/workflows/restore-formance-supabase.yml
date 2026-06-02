@@ -70,10 +70,14 @@ jobs:
         id: restore
         run: |
           set -e
-          node ctf/scripts/restoreFormanceFromSupabase.mjs 2> restore-error.log || {
-            echo "Restore script failed. See restore-error.log." >&2
+          # Capture stderr to a file AND print it to the console on failure, so
+          # the real reason shows up directly in the job log (not only in the
+          # uploaded artifact, which needs a separate download to read).
+          if ! node ctf/scripts/restoreFormanceFromSupabase.mjs 2> restore-error.log; then
+            echo "::error::Formance restore failed. Error output from the restore script:"
+            cat restore-error.log >&2
             exit 1
-          }
+          fi
 
       - name: Upload failure logs (if present)
         if: failure() && steps.restore.outcome == 'failure' && hashFiles('restore-error.log') != ''
