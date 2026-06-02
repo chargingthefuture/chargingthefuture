@@ -1,0 +1,61 @@
+name: Inspect schema drift (read-only)
+
+# Manually triggered, read-only diagnostic. It never writes. Reports, to the Actions log, the
+# tables whose id type still differs from the v3 canonical uuid (the v2 -> v3 drift), with row
+# counts (counts only, no row data), plus any foreign keys whose key types do not match. Used to
+# plan the migrations that bring a clone of the live v2 database up to the v3 spec.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set DATABASE_URL
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || vars.DATABASE_URL }}" >> $GITHUB_ENV
+
+      - name: Validate DATABASE_URL secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Missing DATABASE_URL in GitHub Actions secrets/variables."
+            exit 1
+          fi
+
+      - name: Inspect drift (read-only)
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          \echo '=== tables whose "id" column is not uuid (v2 drift), with row counts (counts only) ==='
+          DO $$
+          DECLARE r record; n bigint;
+          BEGIN
+            FOR r IN
+              SELECT c.table_name, c.data_type
+              FROM information_schema.columns c
+              JOIN information_schema.tables t
+                ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+              WHERE c.table_schema = 'public'
+                AND c.column_name = 'id'
+                AND c.data_type <> 'uuid'
+                AND t.table_type = 'BASE TABLE'
+              ORDER BY c.table_name
+            LOOP
+              EXECUTE format('SELECT count(*) FROM public.%I', r.table_name) INTO n;
+              RAISE NOTICE 'DRIFT table=% id_type=% rows=%', r.table_name, r.data_type, n;
+            END LOOP;
+          END $$;
+
+          \echo '=== existing foreign keys whose key types do not match (child_type vs parent_type) ==='
+          SELECT conrelid::regclass AS child_table,
+                 conname,
+                 a.attname  AS child_col,  tc.typname AS child_type,
+                 af.attname AS parent_col, tp.typname AS parent_type
+          FROM pg_constraint c
+          JOIN pg_attribute  a  ON a.attrelid  = c.conrelid  AND a.attnum  = c.conkey[1]
+          JOIN pg_attribute  af ON af.attrelid = c.confrelid AND af.attnum = c.confkey[1]
+          JOIN pg_type tc ON tc.oid = a.atttypid
+          JOIN pg_type tp ON tp.oid = af.atttypid
+          WHERE c.contype = 'f' AND tc.typname <> tp.typname
+          ORDER BY child_table, conname;
+          SQL
