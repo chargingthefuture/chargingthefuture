@@ -58,4 +58,19 @@ jobs:
           JOIN pg_type tp ON tp.oid = af.atttypid
           WHERE c.contype = 'f' AND tc.typname <> tp.typname
           ORDER BY child_table, conname;
+
+          \echo '=== directory_profiles columns (clone) ==='
+          SELECT column_name, data_type
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'directory_profiles'
+          ORDER BY ordinal_position;
+
+          \echo '=== directory_profiles health counts (counts only, no row data) ==='
+          SELECT
+            count(*)                                                              AS total,
+            count(*) FILTER (WHERE claimed_by_user_id IS NULL)                    AS unclaimed,
+            count(*) FILTER (WHERE unclaimed_handle IS NOT NULL)                  AS with_handle,
+            count(*) FILTER (WHERE display_name IS NOT NULL AND display_name <> '') AS with_display_name,
+            count(*) FILTER (WHERE deleted_at IS NULL)                            AS not_deleted
+          FROM directory_profiles;
           SQL
