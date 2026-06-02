@@ -14,11 +14,11 @@ function toStreamUserId(userId: string): string {
   return `chyme-${userId}`;
 }
 
-async function ensureMember(streamClient: StreamChat, userId: string, displayName: string): Promise<string> {
+async function ensureMember(streamClient: StreamChat, userId: string, name: string): Promise<string> {
   const streamUserId = toStreamUserId(userId);
   await streamClient.upsertUser({
     id: streamUserId,
-    name: displayName,
+    name,
   });
   return streamUserId;
 }
@@ -41,7 +41,7 @@ async function ensureChannel(streamClient: StreamChat, streamUserId: string) {
 
 export async function createStreamJoinCredentials(
   userId: string,
-  displayName: string,
+  name: string,
 ): Promise<StreamJoinCredentials | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
@@ -50,7 +50,7 @@ export async function createStreamJoinCredentials(
 
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
-    const streamUserId = await ensureMember(streamClient, userId, displayName);
+    const streamUserId = await ensureMember(streamClient, userId, name);
     const channel = await ensureChannel(streamClient, streamUserId);
 
     return {
@@ -66,7 +66,7 @@ export async function createStreamJoinCredentials(
 
 export async function sendChymeStreamMessage(input: {
   userId: string;
-  displayName: string;
+  name: string;
   text: string;
 }): Promise<string | null> {
   const streamConfig = await resolveStreamCredentials();
@@ -76,7 +76,7 @@ export async function sendChymeStreamMessage(input: {
 
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
-    const streamUserId = await ensureMember(streamClient, input.userId, input.displayName);
+    const streamUserId = await ensureMember(streamClient, input.userId, input.name);
     const channel = await ensureChannel(streamClient, streamUserId);
 
     try {

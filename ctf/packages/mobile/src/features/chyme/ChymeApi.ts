@@ -7,10 +7,13 @@ type MobileRequestIdentity = {
   isApproved: boolean;
 };
 
+export function chymeHandle(username: string | null, userId: string): string {
+  return username ? '@' + username : 'user-' + userId.slice(0, 8);
+}
+
 type ChymeParticipant = {
   userId: string;
   username: string | null;
-  displayName: string;
   role: 'speaker' | 'listener';
 };
 
@@ -27,7 +30,7 @@ type ChymeMessagesResponse = {
   messages: Array<{
     id: string;
     userId: string;
-    displayName: string;
+    username: string | null;
     text: string;
     sentAtIso: string;
   }>;
@@ -38,7 +41,7 @@ type ChymeSendResponse = {
   message: {
     id: string;
     userId: string;
-    displayName: string;
+    username: string | null;
     text: string;
     sentAtIso: string;
   };

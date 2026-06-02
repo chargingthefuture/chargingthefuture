@@ -134,7 +134,8 @@ export const ChymeRoom: React.FC = () => {
   if (viewState === 'chat') {
     const chatMessages: ChatMessage[] = messages.map((m) => ({
       id: m.id,
-      displayName: m.displayName,
+      userId: m.userId,
+      username: m.username,
       text: m.text,
       sentAtIso: m.sentAtIso,
     }));

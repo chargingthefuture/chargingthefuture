@@ -14,7 +14,10 @@ export async function POST() {
 
   try {
     const room = await getRoomState(gate.identity);
-    const credentials = await createStreamJoinCredentials(gate.auth.userId, gate.identity.displayName);
+    const credentials = await createStreamJoinCredentials(
+      gate.auth.userId,
+      gate.identity.username ? '@' + gate.identity.username : 'user-' + gate.auth.userId.slice(0, 8),
+    );
 
     if (!credentials) {
       logChymeAudit({

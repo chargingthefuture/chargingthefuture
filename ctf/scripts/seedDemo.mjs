@@ -562,18 +562,18 @@ async function seedChyme(c) {
     [ID.room],
   );
 
-  for (const [uid, display] of [[OWNER, 'Demo Participant'], [PEER_1, 'Alex Rivera']]) {
+  for (const [uid, username] of [[OWNER, 'demo_participant'], [PEER_1, 'alex_rivera']]) {
     await c.query(
       `INSERT INTO chyme_room_members
-       (room_id, user_id, display_name, role, joined_at, last_seen_at)
+       (room_id, user_id, username, role, joined_at, last_seen_at)
        VALUES ($1::uuid, $2, $3, 'speaker', NOW() - INTERVAL '5 minutes', NOW())
        ON CONFLICT (room_id, user_id) DO UPDATE SET
-         display_name = EXCLUDED.display_name, last_seen_at = NOW()`,
-      [ID.room, uid, display],
+         username = EXCLUDED.username, last_seen_at = NOW()`,
+      [ID.room, uid, username],
     );
   }
 
-  const memberDisplayNames = { [OWNER]: 'Demo Participant', [PEER_1]: 'Alex Rivera' };
+  const memberUsernames = { [OWNER]: 'demo_participant', [PEER_1]: 'alex_rivera' };
   const messages = [
     [PEER_1, 'Hey — welcome to the demo environment!'],
     [OWNER, 'Thanks! Just exploring the platform. Looks great.'],
@@ -581,9 +581,9 @@ async function seedChyme(c) {
   ];
   for (const [uid, text] of messages) {
     await c.query(
-      `INSERT INTO chyme_messages (room_id, user_id, display_name, text)
+      `INSERT INTO chyme_messages (room_id, user_id, username, text)
        VALUES ($1::uuid, $2, $3, $4)`,
-      [ID.room, uid, memberDisplayNames[uid] ?? 'Demo User', text],
+      [ID.room, uid, memberUsernames[uid] ?? 'demo_user', text],
     );
   }
 

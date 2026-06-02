@@ -4,7 +4,7 @@ import type { RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { Lock, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { BORDER, PRIMARY, type CurrentUser } from './chyme-shared';
+import { BORDER, PRIMARY, chymeHandle, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
 import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
@@ -63,7 +63,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
               <Lock size={12} style={{ color: '#4B5563' }} />
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#F0FDF4', lineHeight: 1.3, marginBottom: 4 }}>{room.roomName}</div>
-            <div style={{ fontSize: 13, color: '#16A34A' }}>{room.participants.length} participants · Signed in as {currentUser.displayName}</div>
+            <div style={{ fontSize: 13, color: '#16A34A' }}>{room.participants.length} participants · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}</div>
           </div>
           <button
             onClick={onToggleChat}

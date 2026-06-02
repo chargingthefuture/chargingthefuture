@@ -9,7 +9,6 @@ export const BORDER = '#052e16';
 export type CurrentUser = {
   userId: string;
   username: string | null;
-  displayName: string;
 };
 
 type RequestError = {
@@ -27,6 +26,10 @@ export async function requestJson<T>(url: string, init?: RequestInit): Promise<T
     throw new Error(message);
   }
   return payload as T;
+}
+
+export function chymeHandle(username: string | null, userId: string): string {
+  return username ? `@${username}` : `user-${userId.slice(0, 8)}`;
 }
 
 export function initials(name: string): string {

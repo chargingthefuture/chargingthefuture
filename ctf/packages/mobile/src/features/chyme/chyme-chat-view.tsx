@@ -1,7 +1,7 @@
 /**
  * ChymeChatView — companion text-chat panel for an active room.
  * Bound to real data from:
- *   - GET /api/chyme/messages — message list (id, displayName, text, sentAtIso).
+ *   - GET /api/chyme/messages — message list (id, username, text, sentAtIso).
  *   - POST /api/chyme/messages — send a message.
  * Omissions from mockup (no backing API field):
  *   - Per-message reaction/heart counts (no backend field).
@@ -15,12 +15,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { chymeHandle } from './api';
 
 const PRIMARY = '#22C55E';
 
 export type ChatMessage = {
   id: string;
-  displayName: string;
+  userId: string;
+  username: string | null;
   text: string;
   sentAtIso: string;
 };
@@ -76,7 +78,7 @@ export const ChymeChatView: React.FC<Props> = ({
       renderItem={({ item }) => (
         <View style={styles.messageItem}>
           <View style={styles.messageMeta}>
-            <Text style={styles.messageAuthor}>{item.displayName}</Text>
+            <Text style={styles.messageAuthor}>{chymeHandle(item.username, item.userId)}</Text>
             <Text style={styles.messageTime}>{formatTime(item.sentAtIso)}</Text>
           </View>
           <Text style={styles.messageText}>{item.text}</Text>
