@@ -141,12 +141,25 @@ services:
       - key: PORT
         value: "5005"
 
-  # ── Infisical (secrets management) ───────────────────────────────
-  # DEFERRED to Railway (cost optimization: $5/mo on Railway vs $7/mo on Render).
-  # Railway Infisical instance configured with Render Sync integration to push
-  # secrets (DATABASE_URL, AUTH_SECRET_KEY, FORMANCE_POSTGRES_URI, etc.) to all Render services.
-  # TODO: migrate Infisical to Render when cost-benefit favors consolidation.
-  # Original pserv config preserved below for future re-migration:
+  # ── Infisical (secrets management) AND Unleash (feature flags) ───
+  # BOTH stay on Railway — re-confirmed June 2026 after re-examining a move to Render.
+  # Reason: Render bills a FLAT per-instance tier 24/7 (Starter 512 MB = $7/mo,
+  # Standard 2 GB = $25/mo), regardless of how idle a service is. Railway meters
+  # actual RAM/CPU, so these two mostly-idle stateful services are cheaper there.
+  #   • Infisical needs the Standard ($25/mo) tier — its own hardware docs say
+  #     4 GB recommended and 512 MB is below spec; the older
+  #     scripts/deploy-infisical-render.sh even force-upgrades it to Standard.
+  #   • Unleash is lighter (Starter $7/mo may hold), but moving it alone buys
+  #     little while splitting the secrets/flags stack across two platforms.
+  # Moving both to Render would cost ~$32–50/mo vs the ~$5–15/mo metered on
+  # Railway — i.e. MORE, not the same. The earlier Render attempt (PR #73) was
+  # pulled for the same cost reason, not a deployment bug. Do NOT re-migrate
+  # unless Render adds usage-based pricing or these services grow enough that a
+  # fixed 2 GB tier is justified anyway.
+  # Railway Infisical instance is configured with the Render Sync integration to
+  # push secrets (DATABASE_URL, AUTH_SECRET_KEY, FORMANCE_POSTGRES_URI, etc.) to
+  # all Render services; the web app reads Unleash via UNLEASH_API_URL /
+  # UNLEASH_API_TOKEN_BACKEND. Original Infisical pserv config preserved below:
   #
   # - type: pserv
   #   name: ctf-infisical
