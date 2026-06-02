@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, Users } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, type Message, type Room, type Tab } from "./pp-shared";
 import { PeerProgrammingLoading } from "./pp-loading";
 import { PeerProgrammingIconRail } from "./pp-icon-rail";
@@ -52,6 +54,7 @@ export function PeerProgrammingShell() {
   const [feedbackInput, setFeedbackInput] = useState("");
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -128,38 +131,71 @@ export function PeerProgrammingShell() {
 
   const participants = room?.participants ?? [];
 
+  const content = (
+    <>
+      {tab === "cohorts" && (
+        <PeerProgrammingCohortsTab
+          room={room}
+          participantCount={participants.length}
+          onJoinSession={() => setTab("session")}
+          feedback={{
+            value: feedbackInput,
+            onChange: setFeedbackInput,
+            onSubmit: (e) => void handleSubmitFeedback(e),
+            submitting,
+            success: feedbackSuccess,
+            error: feedbackError,
+          }}
+        />
+      )}
+      {tab === "session" && <PeerProgrammingSessionTab room={room} participants={participants} />}
+      {tab === "chat" && (
+        <PeerProgrammingChatTab
+          room={room}
+          messages={messages}
+          messageInput={messageInput}
+          onMessageInput={setMessageInput}
+          onSend={() => void handlePostMessage()}
+          submitting={submitting}
+        />
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    const tabs: { key: Tab; label: string }[] = [
+      { key: "cohorts", label: "Cohorts" },
+      { key: "session", label: "Session" },
+      { key: "chat", label: "Chat" },
+    ];
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8B5CF6", textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <Users size={18} style={{ color: "#8B5CF6", flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>Peer Programming</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+            {tabs.map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? "rgba(139,92,246,0.12)" : "transparent", border: `1px solid ${tab === key ? "rgba(139,92,246,0.4)" : "rgba(255,255,255,0.08)"}`, color: tab === key ? "#8B5CF6" : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
       <PeerProgrammingIconRail tab={tab} onTab={setTab} />
       <PeerProgrammingSidebar />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <ShellHeader active={Boolean(room?.cohortId)} />
-        {tab === "cohorts" && (
-          <PeerProgrammingCohortsTab
-            room={room}
-            participantCount={participants.length}
-            onJoinSession={() => setTab("session")}
-            feedback={{
-              value: feedbackInput,
-              onChange: setFeedbackInput,
-              onSubmit: (e) => void handleSubmitFeedback(e),
-              submitting,
-              success: feedbackSuccess,
-              error: feedbackError,
-            }}
-          />
-        )}
-        {tab === "session" && <PeerProgrammingSessionTab room={room} participants={participants} />}
-        {tab === "chat" && (
-          <PeerProgrammingChatTab
-            room={room}
-            messages={messages}
-            messageInput={messageInput}
-            onMessageInput={setMessageInput}
-            onSend={() => void handlePostMessage()}
-            submitting={submitting}
-          />
-        )}
+        {content}
       </div>
       <PeerProgrammingRightPanel room={room} participants={participants} onJoinSession={() => setTab("session")} />
     </div>
