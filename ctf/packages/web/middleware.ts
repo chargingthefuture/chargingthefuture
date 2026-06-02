@@ -12,6 +12,8 @@ const MANAGED_IDENTITY_HEADERS = [
   'x-ctf-auth-provider',
   'x-ctf-user-id',
   'x-ctf-username',
+  'x-ctf-first-name',
+  'x-ctf-last-name',
   'x-ctf-user-role',
 ];
 
@@ -25,19 +27,48 @@ function claimString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-// Clerk does NOT include the username or public metadata in the session token by
-// default, so these reads return `undefined` until the session token is
-// customized. To populate them, in the Clerk dashboard go to
+// Clerk does NOT include the username, first/last name, or public metadata in the
+// session token by default, so these reads return `undefined` until the session
+// token is customized. To populate them, in the Clerk dashboard go to
 // Configure → Sessions → "Customize session token" and add:
-//   { "username": "{{user.username}}", "metadata": "{{user.public_metadata}}" }
+//   {
+//     "username": "{{user.username}}",
+//     "first_name": "{{user.first_name}}",
+//     "last_name": "{{user.last_name}}",
+//     "metadata": "{{user.public_metadata}}"
+//   }
 // and store roles in the user's public metadata (e.g. { "role": "admin" }).
-// Until then the app falls back to the anonymous display name and no role — no
-// regression. Both the flat (`username`/`role`) and nested-in-`metadata`
-// shapes are accepted so either claim mapping works.
+// Until then the app falls back to the username/anonymous identity and no role —
+// no regression. Both the flat (`username`/`first_name`/`last_name`/`role`) and
+// nested-in-`metadata` shapes are accepted so either claim mapping works.
 function extractUsername(claims: unknown): string | undefined {
   const root = asRecord(claims);
   if (!root) return undefined;
   return claimString(root.username) ?? claimString(asRecord(root.metadata)?.username);
+}
+
+function extractFirstName(claims: unknown): string | undefined {
+  const root = asRecord(claims);
+  if (!root) return undefined;
+  const metadata = asRecord(root.metadata);
+  return (
+    claimString(root.first_name) ??
+    claimString(root.firstName) ??
+    claimString(metadata?.first_name) ??
+    claimString(metadata?.firstName)
+  );
+}
+
+function extractLastName(claims: unknown): string | undefined {
+  const root = asRecord(claims);
+  if (!root) return undefined;
+  const metadata = asRecord(root.metadata);
+  return (
+    claimString(root.last_name) ??
+    claimString(root.lastName) ??
+    claimString(metadata?.last_name) ??
+    claimString(metadata?.lastName)
+  );
 }
 
 function extractRole(claims: unknown): string | undefined {
@@ -63,6 +94,16 @@ export default clerkMiddleware(async (auth, request) => {
     const username = extractUsername(sessionClaims);
     if (username) {
       requestHeaders.set('x-ctf-username', username);
+    }
+
+    const firstName = extractFirstName(sessionClaims);
+    if (firstName) {
+      requestHeaders.set('x-ctf-first-name', firstName);
+    }
+
+    const lastName = extractLastName(sessionClaims);
+    if (lastName) {
+      requestHeaders.set('x-ctf-last-name', lastName);
     }
 
     const role = extractRole(sessionClaims);
