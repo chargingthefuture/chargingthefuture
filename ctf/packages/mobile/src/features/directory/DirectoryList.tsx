@@ -38,6 +38,10 @@ function initials(name: string): string {
     .join('');
 }
 
+function fullName(p: { firstName: string; lastName: string | null }): string {
+  return [p.firstName, p.lastName].filter((s) => s && s.trim().length > 0).join(' ').trim();
+}
+
 // ── Loading state ─────────────────────────────────────────────────────────────
 
 function DirectoryLoading() {
@@ -83,7 +87,7 @@ function ProfileDetail({
     profile.moneroAddress ||
     profile.bitcoinAddress
   );
-  const avatarText = initials(profile.displayName);
+  const avatarText = initials(fullName(profile));
   const isCommunity = profile.source === 'community-generated';
   // handle: unclaimed_handle for community profiles; omit otherwise
   const handle = isCommunity && profile.unclaimedHandle ? `@${profile.unclaimedHandle}` : null;
@@ -113,7 +117,7 @@ function ProfileDetail({
           </View>
           {/* Name + badges */}
           <View style={styles.detailNameRow}>
-            <Text style={styles.detailName}>{profile.displayName}</Text>
+            <Text style={styles.detailName}>{fullName(profile)}</Text>
             {isCommunity && (
               <View style={styles.communityBadge}>
                 <Text style={styles.communityBadgeText}>Community generated</Text>
@@ -195,7 +199,7 @@ function ProfileCard({
     profile.moneroAddress ||
     profile.bitcoinAddress
   );
-  const avatarText = initials(profile.displayName);
+  const avatarText = initials(fullName(profile));
   const handle = isCommunity && profile.unclaimedHandle ? `@${profile.unclaimedHandle}` : null;
 
   return (
@@ -207,7 +211,7 @@ function ProfileCard({
       {/* Info */}
       <View style={styles.cardInfo}>
         <View style={styles.cardNameRow}>
-          <Text style={styles.cardName} numberOfLines={1}>{profile.displayName}</Text>
+          <Text style={styles.cardName} numberOfLines={1}>{fullName(profile)}</Text>
           {isCommunity && (
             <View style={styles.cardCommunityBadge}>
               <Text style={styles.cardCommunityBadgeText}>Community</Text>

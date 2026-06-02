@@ -6,7 +6,7 @@ import {
   DIRECTORY_MAX_ANNOUNCEMENT_BODY_LENGTH,
   DIRECTORY_MAX_ANNOUNCEMENT_TITLE_LENGTH,
   DIRECTORY_MAX_BIO_LENGTH,
-  DIRECTORY_MAX_DISPLAY_NAME_LENGTH,
+  DIRECTORY_MAX_NAME_LENGTH,
   DIRECTORY_MAX_HEADLINE_LENGTH,
   DIRECTORY_MAX_PAGE_SIZE,
   DIRECTORY_MAX_URL_LENGTH,
@@ -22,7 +22,8 @@ import type {
 type DirectoryProfileRow = {
   id: string;
   claimed_by_user_id: string | null;
-  display_name: string;
+  first_name: string | null;
+  last_name: string | null;
   headline: string | null;
   bio: string | null;
   profile_url: string | null;
@@ -132,7 +133,8 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
   return {
     id: row.id,
     claimedByUserId: row.claimed_by_user_id,
-    displayName: row.display_name,
+    firstName: row.first_name ?? '',
+    lastName: row.last_name ?? null,
     headline: row.headline,
     bio: row.bio,
     profileUrl: row.profile_url,
@@ -167,13 +169,15 @@ export function parsePaginationParams(url: string): { page: number; pageSize: nu
 }
 
 export function validateProfileInput(input: DirectoryProfileInput): boolean {
-  const displayName = normalizeText(input.displayName ?? '');
+  const firstName = normalizeText(input.firstName ?? '');
+  const lastName = normalizeNullableText(input.lastName);
   const headline = normalizeNullableText(input.headline);
   const bio = normalizeNullableText(input.bio);
   const profileUrl = normalizeNullableText(input.profileUrl);
 
   const checks = [
-    displayName.length > 0 && displayName.length <= DIRECTORY_MAX_DISPLAY_NAME_LENGTH,
+    firstName.length > 0 && firstName.length <= DIRECTORY_MAX_NAME_LENGTH,
+    !lastName || lastName.length <= DIRECTORY_MAX_NAME_LENGTH,
     !headline || headline.length <= DIRECTORY_MAX_HEADLINE_LENGTH,
     !bio || bio.length <= DIRECTORY_MAX_BIO_LENGTH,
     !profileUrl || profileUrl.length <= DIRECTORY_MAX_URL_LENGTH,
@@ -270,7 +274,8 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
       SELECT
         p.id,
         p.claimed_by_user_id,
-        p.display_name,
+        p.first_name,
+        p.last_name,
         p.headline,
         p.bio,
         p.profile_url,
@@ -306,7 +311,8 @@ export async function getOwnProfile(userId: string): Promise<DirectoryProfile | 
 
 export async function upsertOwnProfile(userId: string, input: DirectoryProfileInput): Promise<DirectoryProfile> {
   return withDbTransaction(async (client) => {
-    const displayName = normalizeText(input.displayName);
+    const firstName = normalizeText(input.firstName);
+    const lastName = normalizeNullableText(input.lastName);
     const headline = normalizeNullableText(input.headline);
     const bio = normalizeNullableText(input.bio);
     const profileUrl = normalizeNullableText(input.profileUrl);
@@ -328,28 +334,29 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
         `
           UPDATE directory_profiles
           SET
-            display_name = $2,
-            headline = $3,
-            bio = $4,
-            profile_url = $5,
-            sector_id = $6::uuid,
-            job_title_id = $7::uuid,
+            first_name = $2,
+            last_name = $3,
+            headline = $4,
+            bio = $5,
+            profile_url = $6,
+            sector_id = $7::uuid,
+            job_title_id = $8::uuid,
             is_active = true,
             updated_at = NOW()
           WHERE id = $1
         `,
-        [profileId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
+        [profileId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
       );
     } else {
       const inserted = await client.query<{ id: string }>(
         `
           INSERT INTO directory_profiles
-            (claimed_by_user_id, display_name, headline, bio, profile_url, sector_id, job_title_id, is_active, source)
+            (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, is_active, source)
           VALUES
-            ($1, $2, $3, $4, $5, $6::uuid, $7::uuid, true, 'self')
+            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, true, 'self')
           RETURNING id
         `,
-        [userId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
+        [userId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
       );
 
       profileId = inserted.rows[0].id;
@@ -389,7 +396,8 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
         SELECT
           p.id,
           p.claimed_by_user_id,
-          p.display_name,
+          p.first_name,
+          p.last_name,
           p.headline,
           p.bio,
           p.profile_url,
@@ -479,7 +487,7 @@ export async function listDirectoryForMember(
           )
           AND (
             $4::text IS NULL
-            OR lower(p.display_name) LIKE $4::text
+            OR (lower(COALESCE(p.first_name, '')) LIKE $4::text OR lower(COALESCE(p.last_name, '')) LIKE $4::text)
             OR lower(COALESCE(p.headline, '')) LIKE $4::text
             OR lower(COALESCE(p.bio, '')) LIKE $4::text
           )
@@ -497,7 +505,8 @@ export async function listDirectoryForMember(
         SELECT
           p.id,
           p.claimed_by_user_id,
-          p.display_name,
+          p.first_name,
+          p.last_name,
           p.headline,
           p.bio,
           p.profile_url,
@@ -523,7 +532,7 @@ export async function listDirectoryForMember(
           )
           AND (
             $4::text IS NULL
-            OR lower(p.display_name) LIKE $4::text
+            OR (lower(COALESCE(p.first_name, '')) LIKE $4::text OR lower(COALESCE(p.last_name, '')) LIKE $4::text)
             OR lower(COALESCE(p.headline, '')) LIKE $4::text
             OR lower(COALESCE(p.bio, '')) LIKE $4::text
           )
@@ -596,7 +605,8 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
           UPDATE directory_profiles
           SET
             claimed_by_user_id = NULL,
-            display_name = 'Deleted profile',
+            first_name = 'Deleted profile',
+            last_name = NULL,
             headline = NULL,
             bio = NULL,
             profile_url = NULL,
@@ -695,7 +705,8 @@ export async function listAdminProfiles(
         SELECT
           p.id,
           p.claimed_by_user_id,
-          p.display_name,
+          p.first_name,
+          p.last_name,
           p.headline,
           p.bio,
           p.profile_url,
@@ -735,7 +746,8 @@ export async function listAdminProfiles(
 
 export async function createAdminProfile(actorId: string, input: DirectoryProfileInput): Promise<DirectoryProfile> {
   return withDbTransaction(async (client) => {
-    const displayName = normalizeText(input.displayName);
+    const firstName = normalizeText(input.firstName);
+    const lastName = normalizeNullableText(input.lastName);
     const headline = normalizeNullableText(input.headline);
     const bio = normalizeNullableText(input.bio);
     const profileUrl = normalizeNullableText(input.profileUrl);
@@ -748,12 +760,12 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const inserted = await client.query<{ id: string }>(
       `
         INSERT INTO directory_profiles
-          (claimed_by_user_id, display_name, headline, bio, profile_url, sector_id, job_title_id, is_active)
+          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, is_active)
         VALUES
-          (NULL, $1, $2, $3, $4, $5::uuid, $6::uuid, true)
+          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, true)
         RETURNING id
       `,
-      [displayName, headline, bio, profileUrl, sectorId, jobTitleId],
+      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
     );
 
     const profileId = inserted.rows[0].id;
@@ -774,7 +786,8 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
         SELECT
           p.id,
           p.claimed_by_user_id,
-          p.display_name,
+          p.first_name,
+          p.last_name,
           p.headline,
           p.bio,
           p.profile_url,
@@ -809,7 +822,8 @@ export async function updateAdminProfile(
       return null;
     }
 
-    const displayName = normalizeText(input.displayName);
+    const firstName = normalizeText(input.firstName);
+    const lastName = normalizeNullableText(input.lastName);
     const headline = normalizeNullableText(input.headline);
     const bio = normalizeNullableText(input.bio);
     const profileUrl = normalizeNullableText(input.profileUrl);
@@ -823,17 +837,18 @@ export async function updateAdminProfile(
       `
         UPDATE directory_profiles
         SET
-          display_name = $2,
-          headline = $3,
-          bio = $4,
-          profile_url = $5,
-          sector_id = $6::uuid,
-          job_title_id = $7::uuid,
+          first_name = $2,
+          last_name = $3,
+          headline = $4,
+          bio = $5,
+          profile_url = $6,
+          sector_id = $7::uuid,
+          job_title_id = $8::uuid,
           is_active = true,
           updated_at = NOW()
         WHERE id = $1::uuid
       `,
-      [profileId, displayName, headline, bio, profileUrl, sectorId, jobTitleId],
+      [profileId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
     );
 
     await replaceProfileSkills(client, profileId, skillIds);
@@ -853,7 +868,8 @@ export async function updateAdminProfile(
         SELECT
           p.id,
           p.claimed_by_user_id,
-          p.display_name,
+          p.first_name,
+          p.last_name,
           p.headline,
           p.bio,
           p.profile_url,
@@ -928,7 +944,8 @@ export async function assignAdminProfile(
         SELECT
           p.id,
           p.claimed_by_user_id,
-          p.display_name,
+          p.first_name,
+          p.last_name,
           p.headline,
           p.bio,
           p.profile_url,

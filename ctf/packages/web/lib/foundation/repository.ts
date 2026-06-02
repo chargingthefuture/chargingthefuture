@@ -105,7 +105,7 @@ export async function searchProviders(input: {
           AND dp.claimed_by_user_id IS NOT NULL
           AND (
             $1::text = '%'
-            OR dp.display_name ILIKE $1
+            OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
             OR COALESCE(dp.headline, '') ILIKE $1
             OR COALESCE(dp.bio, '') ILIKE $1
           )
@@ -117,11 +117,11 @@ export async function searchProviders(input: {
         SELECT
           dp.id::text AS profile_id,
           dp.claimed_by_user_id AS provider_user_id,
-          dp.display_name,
+          TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) AS display_name,
           dp.headline,
           dp.bio,
           (
-            CASE WHEN dp.display_name ILIKE $1 THEN 6 ELSE 0 END +
+            CASE WHEN TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1 THEN 6 ELSE 0 END +
             CASE WHEN COALESCE(dp.headline, '') ILIKE $1 THEN 3 ELSE 0 END +
             CASE WHEN COALESCE(dp.bio, '') ILIKE $1 THEN 2 ELSE 0 END
           ) AS score
@@ -130,7 +130,7 @@ export async function searchProviders(input: {
           AND dp.claimed_by_user_id IS NOT NULL
           AND (
             $1::text = '%'
-            OR dp.display_name ILIKE $1
+            OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
             OR COALESCE(dp.headline, '') ILIKE $1
             OR COALESCE(dp.bio, '') ILIKE $1
           )
@@ -268,7 +268,8 @@ type FoundationProviderLookupRow = {
 async function getProviderForConnection(client: PoolClient, providerProfileId: string): Promise<FoundationProviderLookupRow> {
   const provider = await client.query<FoundationProviderLookupRow>(
     `
-      SELECT id::text, claimed_by_user_id, display_name
+      SELECT id::text, claimed_by_user_id,
+             TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS display_name
       FROM directory_profiles
       WHERE id = $1::uuid
         AND is_active = TRUE

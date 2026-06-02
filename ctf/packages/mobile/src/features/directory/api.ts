@@ -21,7 +21,8 @@ export interface DirectorySkill {
 export interface DirectoryListItem {
   id: string;
   claimedByUserId: string | null;
-  displayName: string;
+  firstName: string;
+  lastName: string | null;
   headline: string | null;
   bio: string | null;
   profileUrl: string | null;

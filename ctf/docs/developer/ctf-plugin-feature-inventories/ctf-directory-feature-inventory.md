@@ -65,6 +65,14 @@ Implemented routes:
 4. Profile policy contracts — Claimed/unclaimed state and assignment constraints.
 5. Public projection contracts — Privacy-filtered output shape for unauthenticated callers.
 
+### Name fields on `directory_profiles`
+
+A directory profile stores the person's name in two columns, `first_name TEXT` and `last_name TEXT`
+(both nullable), and renders them as "First Last". `first_name` is required on input;
+`last_name` is optional. This applies to both claimed and unclaimed profiles. There is no
+`display_name` column on `directory_profiles` — it was removed in the v3 cleanup (see the Change Log
+entry dated 2026-06-02 and the `post/0001_directory_display_name_to_first_last.sql` migration).
+
 ### New columns on `directory_profiles` (Skills Hunt + Clerk username co-change, 2026-05-11)
 
 1. `source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated'))` — drives the "Community generated profile" badge in the UI.
@@ -115,6 +123,7 @@ Seeded content:
 
 ## Change Log
 
+- 2026-06-02: Replaced the single `display_name` name field with honest `first_name` + `last_name` columns across the Directory plugin (rendered as "First Last"). `first_name` is required, `last_name` is optional; both claimed and unclaimed profiles store their own name. Updated the schema, repository reads/writes and search filter, the profile API routes, the web shell view-model, and the mobile list. Added `post/0001_directory_display_name_to_first_last.sql`, a guarded, re-runnable migration that, on a v2 clone, carries any name that lived only in `display_name` into `first_name` and then drops the `display_name` column; on a fresh v3 database it is a no-op. The Skills Hunt profile-generation insert now writes the submitter's name into `first_name` (last name left unset). The Foundation provider search and connection lookup read `directory_profiles` directly; their queries now compose the provider's name as `first_name || ' ' || last_name` (aliased back to `display_name` internally) so Foundation keeps working after the column drop. Other plugins' own `display_name` fields are untouched.
 - 2026-05-29: Design-sync reconcile to `c5d83c0`. Removed user-facing "GetStream" wording from the profile detail (dropped the badge; "GetStream Chat" → "Encrypted Chat") and right panel ("All interactions are end-to-end encrypted"); renamed the detail "Reviews" section to "Endorsements" per the revised mockup. Copy-only.
 - 2026-05-29: Web UI circle-back. Aligned `DirectoryShell` to the `Directory.tsx` mockup and its Loading/Empty states; corrected the app surface background to `#0F1117`, added the skeleton loading state and the mockup's empty-state category grid (real sector data), and restored the `📇` heading glyphs. Decomposed the previously oversized shell into modular sub-components to satisfy rule-116 limits and removed the unused `userId`/`isAdmin` props (cleared a lint error). API wiring unchanged.
 - 2026-05-31: Android pixel pass. Rebuilt `DirectoryList.tsx` to match `MobileDirectory.tsx` mockup; created `api.ts` bound to real web routes (`/api/directory/list`, `/api/directory/sectors`). Omitted fields: online status, verified checkmark, location, booking/messaging CTAs, endorsements (no backing API). Community badge, `@handle`, and Credits ✓ driven by real `source`/`unclaimedHandle`/payment fields. TSC clean, EOF clean, parity check passes.
