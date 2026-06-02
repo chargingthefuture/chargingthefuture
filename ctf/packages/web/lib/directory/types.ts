@@ -3,7 +3,8 @@ export type DirectoryProfileSource = 'admin' | 'self' | 'community-generated';
 export type DirectoryProfile = {
   id: string;
   claimedByUserId: string | null;
-  displayName: string;
+  firstName: string;
+  lastName: string | null;
   headline: string | null;
   bio: string | null;
   profileUrl: string | null;
@@ -49,7 +50,8 @@ export type DirectoryPagination = {
 };
 
 export type DirectoryProfileInput = {
-  displayName: string;
+  firstName: string;
+  lastName?: string | null;
   headline?: string | null;
   bio?: string | null;
   profileUrl?: string | null;

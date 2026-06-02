@@ -1826,7 +1826,8 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS cre
 CREATE TABLE IF NOT EXISTS directory_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claimed_by_user_id TEXT,
-  display_name TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
   headline TEXT,
   bio TEXT,
   profile_url TEXT,
@@ -1850,7 +1851,8 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
 );
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS claimed_by_user_id TEXT;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS first_name TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS last_name TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TEXT;

@@ -12,7 +12,8 @@ type AdminProfileBody = Partial<DirectoryProfileInput>;
 
 function parseBody(body: AdminProfileBody): DirectoryProfileInput {
   return {
-    displayName: typeof body.displayName === 'string' ? body.displayName : '',
+    firstName: typeof body.firstName === 'string' ? body.firstName : '',
+    lastName: typeof body.lastName === 'string' ? body.lastName : null,
     headline: typeof body.headline === 'string' ? body.headline : null,
     bio: typeof body.bio === 'string' ? body.bio : null,
     profileUrl: typeof body.profileUrl === 'string' ? body.profileUrl : null,

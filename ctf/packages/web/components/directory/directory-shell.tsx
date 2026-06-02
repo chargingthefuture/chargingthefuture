@@ -24,6 +24,18 @@ const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
 
 type Tab = "browse" | "chat";
 
+// Shape of each entry in the GET /api/directory/list `items` array that the
+// browse view-model needs. The full profile carries more fields; only the
+// ones mapped into `Member` are listed here.
+type DirectoryListItem = {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+  sectorName: string | null;
+  jobTitleName: string | null;
+  skills: Array<{ id: string; name: string; displayOrder: number }>;
+};
+
 export function DirectoryShell() {
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -100,8 +112,15 @@ export function DirectoryShell() {
         if (debouncedQuery) params.append("query", debouncedQuery);
         const res = await fetch(`/api/directory/list?${params.toString()}`, { signal: controller.signal });
         if (res.ok && !controller.signal.aborted) {
-          const data = await res.json() as { members?: Member[] };
-          setMembers(data.members ?? []);
+          const data = await res.json() as { items?: DirectoryListItem[] };
+          const mapped = (data.items ?? []).map((item) => ({
+            id: item.id,
+            name: [item.firstName, item.lastName].filter(Boolean).join(" ").trim(),
+            sector: item.sectorName ?? "",
+            jobTitle: item.jobTitleName ?? "",
+            skills: item.skills.map((s) => s.name),
+          }));
+          setMembers(mapped);
         }
       } catch {
         // AbortError is expected on unmount/re-fetch
