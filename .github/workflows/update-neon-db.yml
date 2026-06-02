@@ -1,4 +1,14 @@
-name: Update Neon DB with schema.sql
+name: Update Neon DB (migrations + schema.sql)
+
+# Brings the database referenced by DATABASE_URL up to the v3 spec, in order:
+#   1. ctf/db/migrations/pre/*.sql   (structural fixes that must precede the canonical schema)
+#   2. ctf/schema.sql                (the canonical v3 desired state)
+#   3. ctf/db/migrations/post/*.sql  (data backfills / cleanups that need the tables to exist)
+# Every migration is idempotent and guarded, so this is safe to run repeatedly.
+#
+# Runs automatically when the schema, a migration, or this workflow changes. It can also be run
+# manually ("Run workflow"): to upgrade a fresh clone of the live v2 database to v3, point the
+# DATABASE_URL secret at the clone and run it once. See ctf/db/migrations/README.md.
 
 on:
   workflow_dispatch:
@@ -6,6 +16,7 @@ on:
     branches: [main]
     paths:
       - "ctf/schema.sql"
+      - "ctf/db/migrations/**"
       - ".github/workflows/update-neon-db.yml"
 
 jobs:
@@ -15,23 +26,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Set DATABASE_URL
-        id: set_db_url
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || vars.DATABASE_URL }}" >> $GITHUB_ENV
-
-      - name: Install dependencies
-        run: |
-          cd ctf
-          pnpm install
 
       - name: Validate DATABASE_URL secret
         run: |
@@ -40,7 +37,22 @@ jobs:
             exit 1
           fi
 
-      - name: Apply schema.sql to Neon
+      - name: Apply migrations and schema to Neon
         run: |
           cd ctf
+          shopt -s nullglob
+
+          echo "== pre-schema migrations =="
+          for f in db/migrations/pre/*.sql; do
+            echo ">> applying $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+          echo "== canonical schema (schema.sql) =="
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f schema.sql
+
+          echo "== post-schema migrations =="
+          for f in db/migrations/post/*.sql; do
+            echo ">> applying $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
