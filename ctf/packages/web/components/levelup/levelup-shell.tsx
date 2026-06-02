@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, Plus } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, SUBTLE, TEXT, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, idempotencyKey } from "./lu-shared";
 import { LevelUpSidebar } from "./lu-sidebar";
 import { LevelUpBrowse } from "./lu-browse";
@@ -105,6 +107,7 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async (signal: AbortSignal) => {
     setLoading(true);
@@ -164,35 +167,69 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
 
   if (loading && cohorts.length === 0 && !error) return <LevelUpLoading />;
 
+  const content = (
+    <>
+      <ShellHeader nav={nav} isAdmin={isAdmin} />
+      <ShellContent
+        nav={nav}
+        loading={loading}
+        error={error}
+        browse={(
+          <LevelUpBrowse
+            cohorts={filtered}
+            openCount={openCount}
+            enrolledCount={enrollments.length}
+            balance={balance}
+            escrow={escrow}
+            track={track}
+            onTrack={setTrack}
+            search={search}
+            onSearch={setSearch}
+            enrollError={enrollError}
+            enrolledIds={enrolledIds}
+            enrollingId={enrollingId}
+            onEnroll={(cohort) => void handleEnroll(cohort)}
+          />
+        )}
+        progress={<LevelUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} />}
+      />
+    </>
+  );
+
+  if (isMobile) {
+    const navItems: { key: NavKey; label: string }[] = [
+      { key: "browse", label: "Browse" },
+      { key: "progress", label: "Progress" },
+      { key: "trainers", label: "Trainers" },
+      { key: "achievements", label: "Achievements" },
+      { key: "wallet", label: "Wallet" },
+    ];
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#22C55E", textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>LevelUp</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
+            {navItems.map(({ key, label }) => (
+              <button key={key} onClick={() => setNav(key)} style={{ whiteSpace: "nowrap", padding: "6px 12px", borderRadius: 8, background: nav === key ? "rgba(34,197,94,0.12)" : "transparent", border: `1px solid ${nav === key ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.08)"}`, color: nav === key ? "#22C55E" : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ padding: 16 }}>{content}</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
       <LevelUpSidebar nav={nav} onNav={setNav} isAdmin={isAdmin} balance={balance} escrow={escrow} />
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
-          <ShellHeader nav={nav} isAdmin={isAdmin} />
-          <ShellContent
-            nav={nav}
-            loading={loading}
-            error={error}
-            browse={(
-              <LevelUpBrowse
-                cohorts={filtered}
-                openCount={openCount}
-                enrolledCount={enrollments.length}
-                balance={balance}
-                escrow={escrow}
-                track={track}
-                onTrack={setTrack}
-                search={search}
-                onSearch={setSearch}
-                enrollError={enrollError}
-                enrolledIds={enrolledIds}
-                enrollingId={enrollingId}
-                onEnroll={(cohort) => void handleEnroll(cohort)}
-              />
-            )}
-            progress={<LevelUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} />}
-          />
+          {content}
         </div>
         <LevelUpRightPanel
           enrollments={enrollments}
