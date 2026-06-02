@@ -1,0 +1,62 @@
+name: Inspect lighthouse schema (read-only)
+
+# One-off, manually triggered diagnostic. Reads (never writes) the production
+# database to report the lighthouse_* table column types, the foreign keys
+# between those tables, and per-table row counts (counts only — no row data is
+# selected or printed, so nothing sensitive is exposed). Used to plan the
+# TEXT -> UUID reconciliation that is currently blocking the schema apply.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set DATABASE_URL
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || vars.DATABASE_URL }}" >> $GITHUB_ENV
+
+      - name: Validate DATABASE_URL secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Missing DATABASE_URL in GitHub Actions secrets/variables."
+            exit 1
+          fi
+
+      - name: Inspect lighthouse schema (read-only)
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          \echo '=== lighthouse_* column types ==='
+          SELECT table_name, column_name, data_type
+          FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name LIKE 'lighthouse\_%'
+          ORDER BY table_name, ordinal_position;
+
+          \echo '=== foreign keys involving lighthouse_* tables ==='
+          SELECT conrelid::regclass AS child_table, conname, pg_get_constraintdef(oid) AS definition
+          FROM pg_constraint
+          WHERE contype = 'f'
+            AND (conrelid::regclass::text LIKE 'lighthouse\_%'
+                 OR confrelid::regclass::text LIKE 'lighthouse\_%')
+          ORDER BY child_table, conname;
+
+          \echo '=== row counts per lighthouse_* table (counts only, no row data) ==='
+          DO $$
+          DECLARE r record; n bigint;
+          BEGIN
+            FOR r IN
+              SELECT tablename FROM pg_tables
+              WHERE schemaname = 'public' AND tablename LIKE 'lighthouse\_%'
+              ORDER BY tablename
+            LOOP
+              EXECUTE format('SELECT count(*) FROM public.%I', r.tablename) INTO n;
+              RAISE NOTICE 'ROWCOUNT % = %', r.tablename, n;
+            END LOOP;
+          END $$;
+
+          \echo '=== comic_* tables present in production? (expected: none yet) ==='
+          SELECT tablename FROM pg_tables
+          WHERE schemaname = 'public' AND tablename LIKE 'comic\_%'
+          ORDER BY tablename;
+          SQL
