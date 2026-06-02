@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
   BG,
   TEXT,
@@ -59,6 +62,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [comparison, setComparison] = useState<WpComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     let active = true;
@@ -108,6 +112,44 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
     }
   }
 
+  const content = error ? (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14, padding: 24 }}>{error}</div>
+  ) : (
+    <WeeklyPerformanceDashboardMain
+      week={selectedWeek}
+      metrics={metrics}
+      comparison={comparison}
+      isAdmin={isAdmin}
+      onExport={exportSelected}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: TEXT, textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>Weekly Performance</span>
+          </div>
+          <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>
+            <select value={selectedWeekStart ?? ""} onChange={(e) => setSelectedWeekStart(e.target.value)} style={{ flex: 1, padding: "8px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#E8EAF0", fontSize: 13 }}>
+              {weeks.map((w) => (
+                <option key={w.weekStartDate} value={w.weekStartDate}>Week of {w.weekStartDate}</option>
+              ))}
+            </select>
+            {isAdmin && (
+              <button onClick={exportSelected} style={{ padding: "8px 14px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>Export</button>
+            )}
+          </div>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
       <WeeklyPerformanceIconRail />
@@ -118,17 +160,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
         isAdmin={isAdmin}
         onExport={exportSelected}
       />
-      {error ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14 }}>{error}</div>
-      ) : (
-        <WeeklyPerformanceDashboardMain
-          week={selectedWeek}
-          metrics={metrics}
-          comparison={comparison}
-          isAdmin={isAdmin}
-          onExport={exportSelected}
-        />
-      )}
+      {content}
       <WeeklyPerformanceRightRail
         week={selectedWeek}
         metricCount={metrics.length}
