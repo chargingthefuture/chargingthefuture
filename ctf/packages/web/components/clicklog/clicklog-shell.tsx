@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ClicklogIncident } from "../../lib/clicklog/types";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, BORDER, BRAND, SUBTLE, TEXT, deriveClicklogStats } from "./clicklog-shared";
 import { ClicklogIconRail } from "./clicklog-icon-rail";
 import { ClicklogSidebar } from "./clicklog-sidebar";
@@ -10,7 +12,7 @@ import { ClicklogLogPanel } from "./clicklog-log-panel";
 import { ClicklogIncidentList } from "./clicklog-incident-list";
 import { ClicklogEmptyState } from "./clicklog-empty-state";
 import { ClicklogLoading } from "./clicklog-loading";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronLeft } from "lucide-react";
 
 type Geo = { latitude?: number; longitude?: number };
 
@@ -23,6 +25,7 @@ export function ClicklogShell() {
   const [note, setNote] = useState("");
   const [geo, setGeo] = useState<Geo>({});
   const [logged, setLogged] = useState(false);
+  const isMobile = useIsMobile();
 
   async function fetchIncidents(initial = false): Promise<void> {
     if (initial) setLoading(true);
@@ -101,6 +104,53 @@ export function ClicklogShell() {
 
   const stats = deriveClicklogStats(incidents);
 
+  const content = (
+    <>
+      {error && (
+        <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fecaca", fontSize: 13 }}>
+          {error}
+        </div>
+      )}
+
+      <ClicklogLogPanel
+        logged={logged}
+        showForm={showForm}
+        note={note}
+        submitting={busy}
+        locationAdded={typeof geo.latitude === "number"}
+        onToggleForm={() => setShowForm((s) => !s)}
+        onNoteChange={setNote}
+        onAddLocation={addLocation}
+        onSubmit={() => void postIncident({ ...geo, notes: note })}
+        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); }}
+      />
+
+      {incidents.length > 0 && (
+        <ClicklogIncidentList incidents={incidents} onDelete={(id) => void handleDelete(id)} />
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}20`, border: `1px solid ${BRAND}40`, display: "flex", alignItems: "center", justifyContent: "center", color: BRAND, textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <AlertTriangle size={18} color={BRAND} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Incident Log</div>
+              <div style={{ fontSize: 11, color: SUBTLE }}>{stats.total} incidents total</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: 16 }}>{content}</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
       <ClicklogIconRail />
@@ -116,28 +166,7 @@ export function ClicklogShell() {
         </header>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "32px 48px" }}>
-          {error && (
-            <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fecaca", fontSize: 13 }}>
-              {error}
-            </div>
-          )}
-
-          <ClicklogLogPanel
-            logged={logged}
-            showForm={showForm}
-            note={note}
-            submitting={busy}
-            locationAdded={typeof geo.latitude === "number"}
-            onToggleForm={() => setShowForm((s) => !s)}
-            onNoteChange={setNote}
-            onAddLocation={addLocation}
-            onSubmit={() => void postIncident({ ...geo, notes: note })}
-            onCancel={() => { setShowForm(false); setNote(""); setGeo({}); }}
-          />
-
-          {incidents.length > 0 && (
-            <ClicklogIncidentList incidents={incidents} onDelete={(id) => void handleDelete(id)} />
-          )}
+          {content}
         </div>
       </div>
 

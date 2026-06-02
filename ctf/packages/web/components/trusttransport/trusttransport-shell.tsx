@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Car } from "lucide-react";
+import Link from "next/link";
+import { Car, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, deriveRideTypes, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
 import { TrustTransportLoading } from "./tt-loading";
 import { TrustTransportIconRail } from "./tt-icon-rail";
@@ -46,6 +48,7 @@ export function TrustTransportShell() {
   // Tracks the most recently requested chat trip so a slower earlier response
   // can't overwrite the credentials for a trip the user has since switched to.
   const activeChatReqRef = useRef<string | null>(null);
+  const isMobile = useIsMobile();
 
   async function fetchRequests() {
     const res = await fetch("/api/trusttransport/requests");
@@ -125,42 +128,75 @@ export function TrustTransportShell() {
 
   const rideTypes = deriveRideTypes(modes);
 
+  const content = (
+    <>
+      {tab === "book" && (
+        <TrustTransportBookTab
+          rideTypes={rideTypes}
+          rideType={rideType}
+          onRideType={setRideType}
+          from={from}
+          to={to}
+          onFrom={setFrom}
+          onTo={setTo}
+          bookingError={bookingError}
+          booked={booked}
+          submitting={submitting}
+          onBook={() => void handleBook()}
+          onReset={() => { setBooked(false); setFrom(""); setTo(""); }}
+        />
+      )}
+      {tab === "tracking" && (
+        <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} />
+      )}
+      {tab === "chat" && (
+        <TrustTransportChatTab
+          requests={requests}
+          selectedRequest={selectedRequest}
+          chatCredentials={chatCredentials}
+          chatLoading={chatLoading}
+          chatError={chatError}
+          onSelect={(r) => void fetchChatForRequest(r)}
+          onBook={() => setTab("book")}
+        />
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    const tabs: { key: Tab; label: string }[] = [
+      { key: "book", label: "Book" },
+      { key: "tracking", label: "Tracking" },
+      { key: "chat", label: "Chat" },
+    ];
+    return (
+      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#F97316", textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <Car size={18} style={{ color: "#F97316", flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>TrustTransport</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+            {tabs.map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? "rgba(249,115,22,0.12)" : "transparent", border: `1px solid ${tab === key ? "rgba(249,115,22,0.4)" : "rgba(255,255,255,0.08)"}`, color: tab === key ? "#F97316" : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
       <TrustTransportIconRail tab={tab} onTab={setTab} />
       <TrustTransportSidebar rideTypes={rideTypes} rideType={rideType} onRideType={setRideType} requests={requests} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <ShellHeader />
-        {tab === "book" && (
-          <TrustTransportBookTab
-            rideTypes={rideTypes}
-            rideType={rideType}
-            onRideType={setRideType}
-            from={from}
-            to={to}
-            onFrom={setFrom}
-            onTo={setTo}
-            bookingError={bookingError}
-            booked={booked}
-            submitting={submitting}
-            onBook={() => void handleBook()}
-            onReset={() => { setBooked(false); setFrom(""); setTo(""); }}
-          />
-        )}
-        {tab === "tracking" && (
-          <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} />
-        )}
-        {tab === "chat" && (
-          <TrustTransportChatTab
-            requests={requests}
-            selectedRequest={selectedRequest}
-            chatCredentials={chatCredentials}
-            chatLoading={chatLoading}
-            chatError={chatError}
-            onSelect={(r) => void fetchChatForRequest(r)}
-            onBook={() => setTab("book")}
-          />
-        )}
+        {content}
       </div>
       <TrustTransportRightPanel requestCount={requests.length} modeCount={modes.length || rideTypes.length} onBook={() => setTab("book")} />
     </div>
