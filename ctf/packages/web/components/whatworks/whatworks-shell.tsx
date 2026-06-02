@@ -5,7 +5,8 @@
 // Layout + tokens are matched to design/.../survivor-hub/WhatWorks.tsx.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ListChecks, Search, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ListChecks, Search, ShieldCheck } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import {
   BG, BRAND, BORDER, SUBTLE, TEXT,
   type SuggestDraft, type WhatWorksListResponse, type WhatWorksProblem,
@@ -55,6 +56,7 @@ export function WhatWorksShell() {
   const [showSuggest, setShowSuggest] = useState(false);
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const isMobile = useIsMobile();
 
   async function loadList(): Promise<void> {
     setError(null);
@@ -174,6 +176,66 @@ export function WhatWorksShell() {
     );
   }
 
+  const content = (
+    <>
+      <WhatWorksHero stats={stats} />
+      {error ? (
+        <div style={{ marginBottom: 20, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fecaca', fontSize: 13 }}>{error}</div>
+      ) : null}
+      {visibleProblems.length === 0 ? (
+        <div style={{ fontSize: 14, color: SUBTLE, padding: '24px 0' }}>No tools or problems match “{query}”.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          {visibleProblems.map((problem) => (
+            <WhatWorksProblemSection
+              key={problem.id}
+              problem={problem}
+              busyProductId={busyProductId}
+              onToggleHelpful={(product) => void toggleHelpful(product)}
+              sectionRef={(node) => { sectionRefs.current[problem.id] = node; }}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#0D0F14', borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND, textDecoration: 'none', flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <ListChecks size={18} color={BRAND} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT, flex: 1 }}>What Works</span>
+            {isAdmin ? (
+              <Link href="/admin/whatworks" aria-label="Admin" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 10px', borderRadius: 9, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, color: BRAND, fontSize: 12, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
+                <ShieldCheck size={13} /> Admin
+              </Link>
+            ) : null}
+          </div>
+          <div style={{ padding: '0 12px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}` }}>
+              <Search size={14} color={SUBTLE} />
+              <input
+                aria-label="Search tools or problems"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search tools or problems…"
+                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: TEXT, fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px' }}>
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>{content}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', maxHeight: '100%', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: 'hidden' }}>
       <WhatWorksIconRail />
@@ -210,25 +272,7 @@ export function WhatWorksShell() {
 
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '28px 40px 48px' }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
-            <WhatWorksHero stats={stats} />
-            {error ? (
-              <div style={{ marginBottom: 20, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fecaca', fontSize: 13 }}>{error}</div>
-            ) : null}
-            {visibleProblems.length === 0 ? (
-              <div style={{ fontSize: 14, color: SUBTLE, padding: '24px 0' }}>No tools or problems match “{query}”.</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-                {visibleProblems.map((problem) => (
-                  <WhatWorksProblemSection
-                    key={problem.id}
-                    problem={problem}
-                    busyProductId={busyProductId}
-                    onToggleHelpful={(product) => void toggleHelpful(product)}
-                    sectionRef={(node) => { sectionRefs.current[problem.id] = node; }}
-                  />
-                ))}
-              </div>
-            )}
+            {content}
           </div>
         </div>
       </div>
