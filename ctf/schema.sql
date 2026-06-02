@@ -1924,6 +1924,12 @@ END
 $directory_profiles_unclaimed_handle_unique$;
 CREATE INDEX IF NOT EXISTS idx_directory_profiles_source ON directory_profiles (source) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed ON directory_profiles (claimed_by_user_id, deleted_at) WHERE claimed_by_user_id IS NULL AND deleted_at IS NULL;
+-- v2 -> v3 carry-over: the live v2 Directory stored a profile's data under
+-- different column names than the columns ADDed above, so on a v2 clone those
+-- v3 columns land empty. The post-schema migration
+-- db/migrations/post/0001_directory_v2_to_v3_backfill.sql (runs after this file)
+-- copies the v2 values across (name from first_name, plus bio and profile link).
+-- See ctf/db/migrations/README.md.
 -- One-shot backfill: assign reserved community-<hex> handles to existing
 -- unclaimed Directory profiles so the @handle URL story is consistent on
 -- day one. Idempotent: only fires for rows without a handle and retries on
