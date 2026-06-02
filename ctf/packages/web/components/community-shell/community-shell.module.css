@@ -1612,3 +1612,24 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ─── AI consent modal — small-screen action layout ──────────────────────── */
+/*
+ * On phones the two action buttons sat side by side, which left the long
+ * "I understand — turn it on" label cramped against the confirm button's edges.
+ * Stack them full-width instead so each button has even padding and room.
+ */
+@media (max-width: 767px) {
+  .comicConsentActions {
+    flex-direction: column;
+  }
+
+  .comicConsentConfirm {
+    flex: none;
+    width: 100%;
+  }
+
+  .comicConsentDismiss {
+    width: 100%;
+  }
+}
