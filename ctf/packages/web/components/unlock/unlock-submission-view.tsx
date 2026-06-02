@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle, ExternalLink, Send, Shield, Unlock as UnlockIcon } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BG, BORDER, BRAND, SUBTLE, SURFACE, TEXT } from "./unlock-shared";
 
 const WHY = [
@@ -25,6 +26,7 @@ export function UnlockSubmissionView({
   error: string | null;
 }) {
   const canSubmit = url.trim().length > 0 && !submitting;
+  const isMobile = useIsMobile();
   return (
     <div style={{ width: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter',system-ui", color: TEXT, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 28px", gap: 12, background: "#0D0F14", flexShrink: 0 }}>
@@ -35,8 +37,8 @@ export function UnlockSubmissionView({
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "48px 64px", gap: 40, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, maxWidth: 520, minWidth: 320 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: isMobile ? "24px 16px" : "48px 64px", gap: isMobile ? 24 : 40, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, maxWidth: 520, minWidth: isMobile ? 0 : 320 }}>
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Submit your Quora profile URL</div>
             <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
@@ -75,7 +77,7 @@ export function UnlockSubmissionView({
           </div>
         </div>
 
-        <div style={{ width: 300, flexShrink: 0 }}>
+        <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0 }}>
           <div style={{ padding: "20px", borderRadius: 16, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: BRAND, marginBottom: 14 }}>Why we verify via Quora</div>
             {WHY.map(({ icon, t, d }) => (
