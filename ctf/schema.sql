@@ -1414,6 +1414,35 @@ ALTER TABLE IF EXISTS lighthouse_properties ADD COLUMN IF NOT EXISTS rent_curren
 -- Backfill: everything to date is USD; Canadian rows with no cost yet keep NULL rent (no currency).
 UPDATE lighthouse_properties SET rent_currency = 'USD' WHERE monthly_rent IS NOT NULL AND rent_currency IS NULL;
 
+-- Reconcile pre-existing drift: some databases created lighthouse_properties.id as TEXT before the
+-- canonical type became UUID. The UUID foreign keys below (lighthouse_property_accepted_currencies,
+-- lighthouse_matches, lighthouse_blocks, …) cannot reference a TEXT key, which made the whole
+-- schema apply abort here and left every table defined later in this file — including the comic_*
+-- tables — uncreated in production. Convert in place only when the live type is not already uuid.
+-- No lighthouse child table is created before this point, so no foreign key references these ids
+-- yet; any row whose id is not a valid UUID string is reissued a fresh UUID so the cast can never
+-- fail. On a fresh database id is already uuid, so this entire block is a no-op.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'lighthouse_properties'
+      AND column_name = 'id'
+      AND data_type <> 'uuid'
+  ) THEN
+    ALTER TABLE lighthouse_properties ALTER COLUMN id DROP DEFAULT;
+    ALTER TABLE lighthouse_properties
+      ALTER COLUMN id TYPE UUID
+      USING (CASE
+        WHEN id ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        THEN id::uuid
+        ELSE gen_random_uuid()
+      END);
+    ALTER TABLE lighthouse_properties ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS lighthouse_property_accepted_currencies (
   property_id UUID NOT NULL REFERENCES lighthouse_properties(id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
