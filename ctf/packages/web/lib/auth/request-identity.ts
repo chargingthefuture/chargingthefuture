@@ -8,6 +8,8 @@ export type RequestIdentity = {
   authProvider: string | null;
   userId: string | null;
   username: string | null;
+  firstName: string | null;
+  lastName: string | null;
   role: string | null;
   isAdmin: boolean;
   isApproved: boolean;
@@ -72,6 +74,8 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   );
   const isAuthenticated = explicitAuthenticationState ?? authResult.isAuthenticated;
   const username = readIdentityValue('x-ctf-username', 'ctf_username', headerStore, cookieStore);
+  const firstName = readIdentityValue('x-ctf-first-name', 'ctf_first_name', headerStore, cookieStore);
+  const lastName = readIdentityValue('x-ctf-last-name', 'ctf_last_name', headerStore, cookieStore);
   const role = normalizeRole(
     readIdentityValue('x-ctf-user-role', 'ctf_user_role', headerStore, cookieStore),
   );
@@ -84,6 +88,8 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
     authProvider: provider,
     userId: isAuthenticated ? authResult.userId || userId : null,
     username: isAuthenticated ? username : null,
+    firstName: isAuthenticated ? firstName : null,
+    lastName: isAuthenticated ? lastName : null,
     role: isAuthenticated ? role : null,
     isAdmin: isAuthenticated ? role === 'admin' : false,
     isApproved: isAuthenticated ? isApproved : false,
@@ -115,4 +121,25 @@ export function buildIdentityDisplayName(username: string | null, userId: string
   }
 
   return `user-${userId.slice(0, 8)}`;
+}
+
+// Render a person's name for surfaces that lead with the real name (e.g. the
+// Directory): "First Last", or just whichever of the two is present. Falls back
+// to `@username` and finally to the anonymous identity, so the value is never
+// empty. Pure — safe to import on the client.
+export function buildPersonName(
+  firstName: string | null,
+  lastName: string | null,
+  username: string | null,
+  userId: string | null = null,
+): string {
+  const parts = [firstName, lastName]
+    .map((part) => (typeof part === 'string' ? part.trim() : ''))
+    .filter((part) => part.length > 0);
+
+  if (parts.length > 0) {
+    return parts.join(' ');
+  }
+
+  return buildIdentityDisplayName(username, userId);
 }
