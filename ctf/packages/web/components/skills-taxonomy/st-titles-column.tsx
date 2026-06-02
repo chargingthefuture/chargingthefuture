@@ -1,6 +1,7 @@
 "use client";
 
 import { Briefcase, Plus } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BORDER, BRAND, SUBTLE, TEXT, countLabel, type StJobTitle, type StSector } from "./st-shared";
 
 export function SkillsTaxonomyTitlesColumn({
@@ -15,8 +16,9 @@ export function SkillsTaxonomyTitlesColumn({
   isAdmin: boolean;
 }) {
   const jobTitles: StJobTitle[] = sector?.jobTitles ?? [];
+  const isMobile = useIsMobile();
   return (
-    <aside style={{ width: 260, background: "#0D0F14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <aside style={{ width: isMobile ? "100%" : 260, background: "#0D0F14", borderRight: isMobile ? "none" : `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Job Titles</div>

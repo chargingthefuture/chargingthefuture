@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { BORDER, FAINT, SUBTLE, TEXT, countLabel, sectorColor, type StSector } from "./st-shared";
 
 export function SkillsTaxonomySectorsColumn({
@@ -14,8 +15,9 @@ export function SkillsTaxonomySectorsColumn({
   onSelect: (sectorId: string) => void;
   isAdmin: boolean;
 }) {
+  const isMobile = useIsMobile();
   return (
-    <aside style={{ width: 240, background: "#0D0F14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <aside style={{ width: isMobile ? "100%" : 240, background: "#0D0F14", borderRight: isMobile ? "none" : `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: SUBTLE, textTransform: "uppercase", marginBottom: 4 }}>📚 Skills Taxonomy</div>
         <div style={{ fontSize: 12, color: FAINT, lineHeight: 1.5 }}>3-level hierarchy browser</div>
