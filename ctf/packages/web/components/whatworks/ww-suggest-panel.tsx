@@ -5,6 +5,7 @@
 // review-honest (the mockup's "added" framing assumes immediate publish).
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { ListChecks, Plus, ExternalLink, Send, CheckCircle, Tag, ChevronDown, ChevronLeft } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { BG, BRAND, BORDER, SUBTLE, TEXT, type SuggestDraft, type WhatWorksProblemOption } from './ww-shared';
 import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
 
@@ -38,6 +39,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
   const [submitting, setSubmitting] = useState(false);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const ready = problemId.trim() && name.trim() && link.trim();
 
@@ -97,7 +99,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
         ) : null}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '44px 64px', gap: 44 }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexWrap: isMobile ? 'wrap' : 'nowrap', alignItems: 'flex-start', justifyContent: 'center', padding: isMobile ? '24px 16px' : '44px 64px', gap: isMobile ? 24 : 44 }}>
         <div style={{ flex: 1, maxWidth: 540 }}>
           <div style={{ marginBottom: 26 }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: `${BRAND}12`, border: `1px solid ${BRAND}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
