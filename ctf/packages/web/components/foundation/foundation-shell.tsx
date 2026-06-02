@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Hammer } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, Hammer, Search } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { COLOR, FONT, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
 import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
 import { BrowsePanel, QuotesPanel, ChatPanel } from "./foundation-panels";
@@ -30,6 +32,7 @@ export function FoundationShell() {
   const [submitting, setSubmitting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
+  const isMobile = useIsMobile();
 
   // Trade filter has no client-side field to match on; it scopes the server search query.
   const searchTerm = [trade === "All Trades" ? "" : trade, query].filter(Boolean).join(" ").trim();
@@ -126,6 +129,56 @@ export function FoundationShell() {
     );
   }
 
+  const content = (
+    <>
+      {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} />}
+      {tab === "quotes" && <QuotesPanel quotes={quotes} onBrowse={() => setTab("browse")} />}
+      {tab === "chat" && (
+        <ChatPanel
+          input={chatInput}
+          onInput={setChatInput}
+          onSend={() => setChatInput("")}
+          onBrowse={() => setTab("browse")}
+        />
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    const tabs: { key: FoundationTab; label: string }[] = [
+      { key: "browse", label: "Browse" },
+      { key: "quotes", label: "Quotes" },
+      { key: "chat", label: "Chat" },
+    ];
+    return (
+      <div style={{ minHeight: "100vh", background: "#0F1117", fontFamily: FONT, color: "#E8EAF0" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+              <ChevronLeft size={20} />
+            </Link>
+            <Hammer size={18} style={{ color: COLOR, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>Foundation</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+            {tabs.map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+          {tab === "browse" && (
+            <div style={{ padding: "0 12px 10px" }}>
+              <div style={{ position: "relative" }}>
+                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4B5563" }} />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search trade providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 13, color: "#9CA3AF", outline: "none", boxSizing: "border-box" }} />
+              </div>
+            </div>
+          )}
+        </div>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", fontFamily: FONT, color: "#E8EAF0", display: "flex" }}>
       <IconRail tab={tab} onTab={setTab} />
@@ -138,16 +191,7 @@ export function FoundationShell() {
             <div style={{ fontSize: 12, color: "#6B7280" }}>Vetted providers · Background-checked · Safe</div>
           </div>
         </header>
-        {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} />}
-        {tab === "quotes" && <QuotesPanel quotes={quotes} onBrowse={() => setTab("browse")} />}
-        {tab === "chat" && (
-          <ChatPanel
-            input={chatInput}
-            onInput={setChatInput}
-            onSend={() => setChatInput("")}
-            onBrowse={() => setTab("browse")}
-          />
-        )}
+        {content}
       </div>
       <RightRail providers={providers} quoteCount={quotes.length} onBrowse={() => setTab("browse")} onSelect={setSelected} />
     </div>
