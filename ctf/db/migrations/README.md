@@ -39,3 +39,4 @@ up to the v3 spec: point the `DATABASE_URL` secret at the clone and run the work
 | File | When | Purpose |
 | --- | --- | --- |
 | `pre/0001_lighthouse_v2_to_v3_rebuild.sql` | pre | Drop the drifted v2 LightHouse tables (varchar ids) so `schema.sql` recreates them with uuid ids; drop the v2-only `lighthouse_announcements`. Guarded on the drift being present. |
+| `pre/0002_socketrelay_v2_to_v3_rebuild.sql` | pre | Drop the drifted v2 SocketRelay tables that `schema.sql` rebuilds (`socketrelay_requests`/`fulfillments`/`messages`, varchar ids) so they are recreated with uuid ids; the v2-only `socketrelay_profiles`/`socketrelay_announcements` are left untouched. Guarded on the drift being present. |
