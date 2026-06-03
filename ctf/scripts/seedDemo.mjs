@@ -680,17 +680,17 @@ async function seedSkillsTaxonomy(c) {
 }
 
 async function seedSocketRelay(c) {
-  for (const [uid, display, bio] of [
-    [OWNER, 'Demo Participant', 'Open to helping neighbours with logistics and community tasks.'],
-    [PEER_1, 'Alex Rivera', 'Community connector — ask me anything.'],
+  for (const [uid, bio] of [
+    [OWNER, 'Open to helping neighbours with logistics and community tasks.'],
+    [PEER_1, 'Community connector — ask me anything.'],
   ]) {
     await c.query(
       `INSERT INTO socketrelay_user_extension
-       (user_id, display_name, bio, relay_preferences, presence_opt_in)
-       VALUES ($1, $2, $3, '{"notifications":"all"}'::jsonb, true)
+       (user_id, bio, relay_preferences, presence_opt_in)
+       VALUES ($1, $2, '{"notifications":"all"}'::jsonb, true)
        ON CONFLICT (user_id) DO UPDATE SET
-         display_name = EXCLUDED.display_name, bio = EXCLUDED.bio, updated_at = NOW()`,
-      [uid, display, bio],
+         bio = EXCLUDED.bio, updated_at = NOW()`,
+      [uid, bio],
     );
   }
 

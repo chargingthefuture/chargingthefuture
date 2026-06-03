@@ -7,7 +7,6 @@ import { reportError } from 'lib/observability/report';
 
 function parseProfileInput(body: Record<string, unknown>): SocketRelayProfileInput {
   return {
-    displayName: typeof body.displayName === 'string' ? body.displayName : null,
     bio: typeof body.bio === 'string' ? body.bio : null,
     relayPreferences: body.relayPreferences && typeof body.relayPreferences === 'object' && !Array.isArray(body.relayPreferences)
       ? (body.relayPreferences as Record<string, unknown>)

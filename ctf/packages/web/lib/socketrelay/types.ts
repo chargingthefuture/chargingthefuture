@@ -1,6 +1,5 @@
 export type SocketRelayProfile = {
   userId: string;
-  displayName: string | null;
   bio: string | null;
   relayPreferences: Record<string, unknown>;
   presenceOptIn: boolean;
@@ -9,7 +8,6 @@ export type SocketRelayProfile = {
 };
 
 export type SocketRelayProfileInput = {
-  displayName: string | null;
   bio: string | null;
   relayPreferences: Record<string, unknown>;
   presenceOptIn: boolean;

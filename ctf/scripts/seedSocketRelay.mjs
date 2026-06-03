@@ -28,13 +28,12 @@ async function main() {
     await client.query(
       `
         INSERT INTO socketrelay_user_extension
-          (user_id, display_name, bio, relay_preferences, presence_opt_in, service_deleted_at)
+          (user_id, bio, relay_preferences, presence_opt_in, service_deleted_at)
         VALUES
-          ('seed-socketrelay-owner-01', 'SocketRelay Owner', 'Seed owner profile for SocketRelay validation.', '{"notifications":"all"}'::jsonb, TRUE, NULL),
-          ('seed-socketrelay-fulfiller-01', 'SocketRelay Fulfiller', 'Seed fulfiller profile for SocketRelay validation.', '{"notifications":"mentions"}'::jsonb, TRUE, NULL)
+          ('seed-socketrelay-owner-01', 'Seed owner profile for SocketRelay validation.', '{"notifications":"all"}'::jsonb, TRUE, NULL),
+          ('seed-socketrelay-fulfiller-01', 'Seed fulfiller profile for SocketRelay validation.', '{"notifications":"mentions"}'::jsonb, TRUE, NULL)
         ON CONFLICT (user_id)
         DO UPDATE SET
-          display_name = EXCLUDED.display_name,
           bio = EXCLUDED.bio,
           relay_preferences = EXCLUDED.relay_preferences,
           presence_opt_in = EXCLUDED.presence_opt_in,

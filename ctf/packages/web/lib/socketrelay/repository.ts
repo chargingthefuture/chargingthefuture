@@ -32,7 +32,6 @@ type CountRow = { total: string };
 
 type ProfileRow = {
   user_id: string;
-  display_name: string | null;
   bio: string | null;
   relay_preferences: Record<string, unknown>;
   presence_opt_in: boolean;
@@ -115,7 +114,6 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
 function mapProfileRow(row: ProfileRow): SocketRelayProfile {
   return {
     userId: row.user_id,
-    displayName: row.display_name,
     bio: row.bio,
     relayPreferences: row.relay_preferences ?? {},
     presenceOptIn: row.presence_opt_in,
@@ -177,12 +175,7 @@ function mapMessageRow(row: MessageRow): SocketRelayMessage {
 }
 
 export function validateProfileInput(input: SocketRelayProfileInput): boolean {
-  const displayName = normalizeNullableText(input.displayName);
   const bio = normalizeNullableText(input.bio);
-
-  if (displayName && displayName.length > 120) {
-    return false;
-  }
 
   if (bio && bio.length > 2000) {
     return false;
@@ -247,7 +240,7 @@ function normalizePageSize(value: number | null | undefined): number {
 
 export async function getProfile(userId: string): Promise<SocketRelayProfile | null> {
   const result = await queryDb<ProfileRow>(
-    `SELECT user_id, display_name, bio, relay_preferences, presence_opt_in, service_deleted_at, updated_at
+    `SELECT user_id, bio, relay_preferences, presence_opt_in, service_deleted_at, updated_at
      FROM socketrelay_user_extension
      WHERE user_id = $1
      LIMIT 1`,
@@ -265,7 +258,6 @@ export async function upsertProfile(userId: string, input: SocketRelayProfileInp
   const result = await queryDb<ProfileRow>(
     `INSERT INTO socketrelay_user_extension (
        user_id,
-       display_name,
        bio,
        relay_preferences,
        presence_opt_in,
@@ -274,24 +266,21 @@ export async function upsertProfile(userId: string, input: SocketRelayProfileInp
      ) VALUES (
        $1,
        $2,
-       $3,
-       $4::jsonb,
-       $5,
+       $3::jsonb,
+       $4,
        NULL,
        NOW()
      )
      ON CONFLICT (user_id)
      DO UPDATE SET
-       display_name = EXCLUDED.display_name,
        bio = EXCLUDED.bio,
        relay_preferences = EXCLUDED.relay_preferences,
        presence_opt_in = EXCLUDED.presence_opt_in,
        service_deleted_at = NULL,
        updated_at = NOW()
-     RETURNING user_id, display_name, bio, relay_preferences, presence_opt_in, service_deleted_at, updated_at`,
+     RETURNING user_id, bio, relay_preferences, presence_opt_in, service_deleted_at, updated_at`,
     [
       userId,
-      normalizeNullableText(input.displayName),
       normalizeNullableText(input.bio),
       JSON.stringify(normalizeJsonObject(input.relayPreferences)),
       input.presenceOptIn,
