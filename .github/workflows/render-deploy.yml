@@ -1,10 +1,12 @@
 name: Render deploy
 
-# Redeploys a Render service without rebuilding the Docker image.
-# Use this to pick up new environment variables synced from Infisical,
-# or to restart a service after a config change.
+# Redeploys a Render service without rebuilding the Docker image (it re-pulls
+# the existing …:latest image from GHCR). Use this to ship images that were
+# already built — e.g. when the build ran but the deploy was never triggered —
+# or to pick up new environment variables synced from Infisical.
 #
-# Required secrets: RENDER_API_KEY + the service-specific RENDER_SERVICE_ID_*
+# Required secret: RENDER_API_KEY. The service id is looked up by name from the
+# Render API, so RENDER_SERVICE_ID_* secrets are an optional override only.
 
 on:
   workflow_dispatch:
@@ -24,6 +26,8 @@ jobs:
     name: Redeploy ${{ inputs.service }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Trigger Render deploy(s)
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -33,27 +37,17 @@ jobs:
           SERVICE: ${{ inputs.service }}
         run: |
           deploy() {
-            local id="$1" name="$2"
-            if [ -z "$id" ]; then
-              echo "SKIP $name — service ID secret not set"
-              return
-            fi
-            echo "Deploying $name ($id)..."
-            curl -sf -X POST \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{}' \
-              "https://api.render.com/v1/services/$id/deploys"
-            echo " done"
+            # $1 = service name (used to find the id), $2 = optional explicit id.
+            RENDER_SERVICE_NAME="$1" RENDER_SERVICE_ID="$2" bash .github/scripts/render-deploy.sh
           }
 
           case "$SERVICE" in
-            ctf-web)            deploy "$RENDER_SERVICE_ID_WEB"     "ctf-web" ;;
-            ctf-ollama)         deploy "$RENDER_SERVICE_ID_OLLAMA"   "ctf-ollama" ;;
-            ctf-formance-ledger) deploy "$RENDER_SERVICE_ID_FORMANCE" "ctf-formance-ledger" ;;
+            ctf-web)             deploy ctf-web             "$RENDER_SERVICE_ID_WEB" ;;
+            ctf-ollama)          deploy ctf-ollama          "$RENDER_SERVICE_ID_OLLAMA" ;;
+            ctf-formance-ledger) deploy ctf-formance-ledger "$RENDER_SERVICE_ID_FORMANCE" ;;
             all)
-              deploy "$RENDER_SERVICE_ID_WEB"     "ctf-web"
-              deploy "$RENDER_SERVICE_ID_OLLAMA"  "ctf-ollama"
-              deploy "$RENDER_SERVICE_ID_FORMANCE" "ctf-formance-ledger"
+              deploy ctf-web             "$RENDER_SERVICE_ID_WEB"
+              deploy ctf-ollama          "$RENDER_SERVICE_ID_OLLAMA"
+              deploy ctf-formance-ledger "$RENDER_SERVICE_ID_FORMANCE"
               ;;
           esac
