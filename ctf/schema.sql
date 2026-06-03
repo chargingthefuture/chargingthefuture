@@ -332,7 +332,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
   submitter_user_id TEXT NOT NULL,
   submitter_username TEXT NULL,
-  display_name TEXT NOT NULL,
+  full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
   quora_profile_url_normalized TEXT NOT NULL,

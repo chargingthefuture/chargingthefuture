@@ -106,7 +106,7 @@ contracts:
       roundId:
         type: string
         required: true
-      displayName:
+      fullName:
         type: string
         required: true
       bio:

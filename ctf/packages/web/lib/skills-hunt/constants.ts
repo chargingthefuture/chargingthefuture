@@ -6,9 +6,9 @@ export const SKILLS_HUNT_MAX_ROUND_NAME_LENGTH = 120;
 export const SKILLS_HUNT_MAX_ROUND_DESCRIPTION_LENGTH = 1200;
 // Submission field limits aligned with locked owner spec (2026-05-11). See
 // ctf-skills-hunt-session-continuity.md §3.2 for prior drift history.
-export const SKILLS_HUNT_MIN_DISPLAY_NAME_LENGTH = 2;
-export const SKILLS_HUNT_MAX_DISPLAY_NAME_LENGTH = 100;
-export const SKILLS_HUNT_DISPLAY_NAME_PATTERN = /^[A-Za-z0-9 ]+$/;
+export const SKILLS_HUNT_MIN_FULL_NAME_LENGTH = 2;
+export const SKILLS_HUNT_MAX_FULL_NAME_LENGTH = 100;
+export const SKILLS_HUNT_FULL_NAME_PATTERN = /^[A-Za-z0-9 ]+$/;
 export const SKILLS_HUNT_MAX_BIO_LENGTH = 280;
 export const SKILLS_HUNT_MAX_URL_LENGTH = 512;
 export const SKILLS_HUNT_MAX_REVIEW_NOTES_LENGTH = 1000;

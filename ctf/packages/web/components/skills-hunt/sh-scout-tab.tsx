@@ -5,7 +5,7 @@ import { COLOR, BIO_MAX, type Tab } from "./sh-shared";
 import { SkillsPicker } from "./sh-skills-picker";
 
 export interface ScoutFormModel {
-  displayName: string;
+  fullName: string;
   bio: string;
   quora: string;
   skills: string[];
@@ -16,7 +16,7 @@ export interface ScoutFormModel {
   submitError: string | null;
   allSkillCount: number;
   canAddMore: boolean;
-  onDisplayName: (v: string) => void;
+  onFullName: (v: string) => void;
   onBio: (v: string) => void;
   onQuora: (v: string) => void;
   onToggleSkill: (s: string) => void;
@@ -91,12 +91,12 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
     <>
       <div>
         <label style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", display: "block", marginBottom: 6 }}>
-          Display Name <span style={{ color: COLOR }}>*</span>
+          Full Name <span style={{ color: COLOR }}>*</span>
           <span style={{ fontSize: 11, color: "#4B5563", fontWeight: 400, marginLeft: 6 }}>2–100 chars, letters and spaces only</span>
         </label>
-        <input value={form.displayName} onChange={(e) => form.onDisplayName(e.target.value.replace(/[^a-zA-Z\s]/g, "").slice(0, 100))} aria-label="Display name" placeholder="e.g. Amara Williams"
-          style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: fieldBorder(form.displayName.length >= 2), borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }} />
-        <div style={{ fontSize: 11, color: "#4B5563", textAlign: "right", marginTop: 3 }}>{form.displayName.length}/100</div>
+        <input value={form.fullName} onChange={(e) => form.onFullName(e.target.value.replace(/[^a-zA-Z\s]/g, "").slice(0, 100))} aria-label="Full name" placeholder="e.g. Amara Williams"
+          style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: fieldBorder(form.fullName.length >= 2), borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }} />
+        <div style={{ fontSize: 11, color: "#4B5563", textAlign: "right", marginTop: 3 }}>{form.fullName.length}/100</div>
       </div>
 
       <div>
@@ -124,7 +124,7 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
 }
 
 function NominationForm({ form }: { form: ScoutFormModel }) {
-  const canSubmit = form.displayName.trim().length >= 2 && form.allSkillCount > 0 && !form.submitting;
+  const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && !form.submitting;
   return (
     <div style={{ flex: 1, maxWidth: 580 }}>
       <div style={{ marginBottom: 20 }}>
