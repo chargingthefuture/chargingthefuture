@@ -455,16 +455,13 @@ function normalizeListFilters(filters: ListFilters): {
 }
 
 export async function listDirectoryForMember(
-  userId: string,
   pagination: { page: number; pageSize: number },
   filters: ListFilters,
 ): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination }> {
   return withDbTransaction(async (client) => {
-    const ownProfile = await loadProfileByUser(client, userId);
-    if (!ownProfile) {
-      throw new Error('directory_own_profile_required');
-    }
-
+    // Directory is auth-gated but not "contribute-to-browse": every authenticated
+    // member sees every active profile (including carried-over unclaimed profiles),
+    // so there is no requirement that the viewer first create their own profile.
     const offset = (pagination.page - 1) * pagination.pageSize;
     const normalizedFilters = normalizeListFilters(filters);
 

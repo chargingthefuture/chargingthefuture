@@ -37,16 +37,16 @@ export function DirectoryEmptyState({
           ))}
         </div>
       )}
-      <div style={{ display: "flex", gap: 12 }}>
-        <button onClick={onClearFilters} style={{ padding: "12px 24px", borderRadius: 12, background: COLOR, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-          <Globe size={16} /> Browse All Providers
-        </button>
-        {filtered && (
-          <button onClick={onClearFilters} style={{ padding: "12px 24px", borderRadius: 12, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.3)", color: COLOR, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-            Clear Filters
+      {/* Only offer a "clear the filter" action when a filter/search is actually
+          active. A genuinely empty directory (zero profiles) has nothing to browse,
+          so no button is shown. */}
+      {filtered && (
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={onClearFilters} style={{ padding: "12px 24px", borderRadius: 12, background: COLOR, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+            <Globe size={16} /> Browse All Providers
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
