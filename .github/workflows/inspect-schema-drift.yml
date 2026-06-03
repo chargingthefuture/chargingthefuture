@@ -5,6 +5,10 @@ name: Inspect schema drift (read-only)
 # counts (counts only, no row data), plus any foreign keys whose key types do not match. Used to
 # plan the migrations that bring a clone of the live v2 database up to the v3 spec.
 
+# Read-only against DATABASE_URL; never uses the GITHUB_TOKEN, so drop all of its
+# permissions.
+permissions: {}
+
 on:
   workflow_dispatch:
 
