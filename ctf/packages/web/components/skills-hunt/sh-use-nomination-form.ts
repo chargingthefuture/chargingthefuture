@@ -11,7 +11,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   submitted: boolean;
   resetForm: () => void;
 } {
-  const [displayName, setDisplayName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [quora, setQuora] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
@@ -40,7 +40,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   }
 
   async function handleSubmit() {
-    if (!activeRound || displayName.trim().length < 2 || allSkillCount === 0) return;
+    if (!activeRound || fullName.trim().length < 2 || allSkillCount === 0) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -48,7 +48,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          displayName: displayName.trim(),
+          fullName: fullName.trim(),
           bio: bio.trim(),
           quoraProfileUrl: quora.trim(),
           skills,
@@ -69,15 +69,15 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   }
 
   function resetForm() {
-    setDisplayName(""); setBio(""); setQuora("");
+    setFullName(""); setBio(""); setQuora("");
     setSkills([]); setProposed([]); setFreeText("");
     setSubmitted(false); setSubmitError(null);
   }
 
   const form: ScoutFormModel = {
-    displayName, bio, quora, skills, proposedSkills, freeText, openCategory,
+    fullName, bio, quora, skills, proposedSkills, freeText, openCategory,
     submitting, submitError, allSkillCount, canAddMore,
-    onDisplayName: setDisplayName, onBio: setBio, onQuora: setQuora,
+    onFullName: setFullName, onBio: setBio, onQuora: setQuora,
     onToggleSkill: toggleSkill,
     onRemoveProposed: (s) => setProposed((prev) => prev.filter((x) => x !== s)),
     onOpenCategory: setOpenCategory, onFreeText: setFreeText, onAddProposed: addProposed,

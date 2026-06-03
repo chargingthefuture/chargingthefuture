@@ -48,13 +48,13 @@ function SubmissionRow(props: RowProps) {
   return (
     <tr style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
       <td style={{ padding: "10px 6px" }}>
-        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={s.status !== "pending"} aria-label={`Select ${s.displayName}`} />
+        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={s.status !== "pending"} aria-label={`Select ${s.fullName}`} />
       </td>
       <td style={{ padding: "10px 6px" }}>
         <div style={{ fontWeight: 600, color: "#F9FAFB" }}>{s.submitterUsername ?? s.submitterUserId.slice(0, 8)}</div>
         <div style={{ fontSize: 11, color: "#4B5563" }}>{new Date(s.createdAtIso).toLocaleString()}</div>
       </td>
-      <td style={{ padding: "10px 6px" }}>{s.displayName}</td>
+      <td style={{ padding: "10px 6px" }}>{s.fullName}</td>
       <td style={{ padding: "10px 6px", maxWidth: 280 }}><SkillsCell submission={s} /></td>
       <td style={{ padding: "10px 6px" }}>
         {s.quoraProfileUrl
@@ -98,7 +98,7 @@ export function SkillsHuntAdminTable({
             <input type="checkbox" checked={allPendingSelected} onChange={onToggleAll} aria-label="Select all pending" />
           </th>
           <th style={headCell}>Submitter</th>
-          <th style={headCell}>Display Name</th>
+          <th style={headCell}>Full Name</th>
           <th style={headCell}>Skills</th>
           <th style={headCell}>Quora</th>
           <th style={headCell}>URL check</th>

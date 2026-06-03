@@ -12,7 +12,7 @@ export const STATUS_OPTIONS: Array<{ key: SkillsHuntSubmissionStatus; label: str
 
 export const REJECT_REASONS = [
   "Insufficient social proof / Quora unverifiable",
-  "Display name violates spec (2–100 alphanumeric+spaces)",
+  "Full name violates spec (2–100 alphanumeric+spaces)",
   "Skills don't match taxonomy and no valid proposed skill",
   "Suspected duplicate of an existing accepted submission",
   "Suspected trafficker / bad-faith actor",

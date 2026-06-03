@@ -43,7 +43,7 @@ export type LeaderboardItem = {
 export type Submission = {
   id: string;
   roundId: string;
-  displayName: string;
+  fullName: string;
   bio: string;
   quoraProfileUrl: string;
   skills: string[];
@@ -119,7 +119,7 @@ export const SkillsHuntApi = {
   submitNomination: (
     roundId: string,
     body: {
-      displayName: string;
+      fullName: string;
       bio: string;
       quoraProfileUrl: string;
       skills: string[];

@@ -120,7 +120,7 @@ function TaxonomyAccordion({
 // ─── Scout tab ───────────────────────────────────────────────────────────────
 
 export function SkillsHuntScoutTab({ round }: { round: Round }) {
-  const [displayName, setDisplayName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
   const [quora, setQuora] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
@@ -149,11 +149,11 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   };
 
   const removeProposed = (s: string) => setProposed(prev => prev.filter(x => x !== s));
-  const canSubmit = displayName.trim().length >= 2 && allSkillCount > 0 && !submitting;
+  const canSubmit = fullName.trim().length >= 2 && allSkillCount > 0 && !submitting;
 
   const onReset = () => {
     setSubmitted(false);
-    setDisplayName('');
+    setFullName('');
     setBio('');
     setQuora('');
     setSkills([]);
@@ -168,7 +168,7 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
     setSubmitError(null);
     try {
       await SkillsHuntApi.submitNomination(round.id, {
-        displayName: displayName.trim(),
+        fullName: fullName.trim(),
         bio: bio.trim(),
         quoraProfileUrl: quora.trim(),
         skills: skills.slice(0, 10),
@@ -195,17 +195,17 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
 
       {submitError && <Text style={styles.errorText}>{submitError}</Text>}
 
-      {/* Display Name */}
+      {/* Full Name */}
       <Text style={styles.fieldLabel}>
-        Display Name <Text style={{ color: COLOR }}>*</Text>
+        Full Name <Text style={{ color: COLOR }}>*</Text>
         <Text style={styles.fieldHint}> · letters &amp; spaces, 2–100 chars</Text>
       </Text>
       <TextInput
-        value={displayName}
-        onChangeText={t => setDisplayName(t.replace(/[^a-zA-Z\s]/g, '').slice(0, 100))}
+        value={fullName}
+        onChangeText={t => setFullName(t.replace(/[^a-zA-Z\s]/g, '').slice(0, 100))}
         placeholder="e.g. Amara Williams"
         placeholderTextColor="#6B7280"
-        style={[styles.input, displayName.length >= 2 && { borderColor: COLOR + '50' }]}
+        style={[styles.input, fullName.length >= 2 && { borderColor: COLOR + '50' }]}
       />
 
       {/* Bio */}

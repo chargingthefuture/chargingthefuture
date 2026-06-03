@@ -52,7 +52,7 @@ async function main() {
             round_id,
             submitter_user_id,
             submitter_username,
-            display_name,
+            full_name,
             bio,
             quora_profile_url,
             quora_profile_url_normalized,

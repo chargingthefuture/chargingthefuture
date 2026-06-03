@@ -8,11 +8,11 @@ function FindCard({ find }: { find: SkillsHuntSubmission }) {
   return (
     <div style={{ padding: "16px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${find.status === "accepted" ? "#22C55E20" : "rgba(255,255,255,0.06)"}`, display: "flex", alignItems: "flex-start", gap: 16 }}>
       <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${COLOR}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: COLOR, flexShrink: 0 }}>
-        {initials(find.displayName)}
+        {initials(find.fullName)}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{find.displayName}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{find.fullName}</div>
           <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.border}` }}>{st.label}</span>
           {find.quoraProfileUrl && <span style={{ fontSize: 11, color: "#4B5563" }}>Quora ✓</span>}
         </div>
@@ -47,7 +47,7 @@ export function SkillsHuntMyFindsTab({
   return (
     <>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>My Finds</div>
-      <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 20 }}>People you&apos;ve nominated · display names only for privacy</div>
+      <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 20 }}>People you&apos;ve nominated · full names only for privacy</div>
       {noActiveRound ? (
         <div style={{ fontSize: 14, color: "#6B7280" }}>No active round — no finds to display.</div>
       ) : loading ? (
