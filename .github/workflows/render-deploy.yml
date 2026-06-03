@@ -31,9 +31,9 @@ jobs:
       - name: Trigger Render deploy(s)
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID_WEB: ${{ secrets.RENDER_SERVICE_ID_WEB }}
-          RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
-          RENDER_SERVICE_ID_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
+          RENDER_SERVICE_ID_CT_WEB: ${{ secrets.RENDER_SERVICE_ID_CT_WEB }}
+          RENDER_SERVICE_ID_CT_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_CT_OLLAMA }}
+          RENDER_SERVICE_ID_CT_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_CT_FORMANCE }}
           SERVICE: ${{ inputs.service }}
         run: |
           deploy() {
@@ -42,12 +42,12 @@ jobs:
           }
 
           case "$SERVICE" in
-            ctf-web)             deploy ctf-web             "$RENDER_SERVICE_ID_WEB" ;;
-            ctf-ollama)          deploy ctf-ollama          "$RENDER_SERVICE_ID_OLLAMA" ;;
-            ctf-formance-ledger) deploy ctf-formance-ledger "$RENDER_SERVICE_ID_FORMANCE" ;;
+            ctf-web)             deploy ctf-web             "$RENDER_SERVICE_ID_CT_WEB" ;;
+            ctf-ollama)          deploy ctf-ollama          "$RENDER_SERVICE_ID_CT_OLLAMA" ;;
+            ctf-formance-ledger) deploy ctf-formance-ledger "$RENDER_SERVICE_ID_CT_FORMANCE" ;;
             all)
-              deploy ctf-web             "$RENDER_SERVICE_ID_WEB"
-              deploy ctf-ollama          "$RENDER_SERVICE_ID_OLLAMA"
-              deploy ctf-formance-ledger "$RENDER_SERVICE_ID_FORMANCE"
+              deploy ctf-web             "$RENDER_SERVICE_ID_CT_WEB"
+              deploy ctf-ollama          "$RENDER_SERVICE_ID_CT_OLLAMA"
+              deploy ctf-formance-ledger "$RENDER_SERVICE_ID_CT_FORMANCE"
               ;;
           esac
