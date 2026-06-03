@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Car, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { AppLoading } from "@/components/shared/app-loading";
 import { BG, deriveRideTypes, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
-import { TrustTransportLoading } from "./tt-loading";
 import { TrustTransportIconRail } from "./tt-icon-rail";
 import { TrustTransportSidebar } from "./tt-sidebar";
 import { TrustTransportBookTab } from "./tt-book-tab";
@@ -52,7 +52,13 @@ export function TrustTransportShell() {
 
   async function fetchRequests() {
     const res = await fetch("/api/trusttransport/requests");
-    if (res.ok) setRequests((await res.json()) as TripRequest[]);
+    if (res.ok) {
+      // The API wraps the list as { ok, items, page, ... } — the array is .items,
+      // not the top-level body. Reading the body directly made `requests` an
+      // object, so requests.map(...) in the tracking/chat tabs threw.
+      const data = (await res.json()) as { items?: TripRequest[] };
+      setRequests(Array.isArray(data.items) ? data.items : []);
+    }
   }
 
   useEffect(() => {
@@ -61,7 +67,15 @@ export function TrustTransportShell() {
       setError(null);
       try {
         const [modesRes] = await Promise.all([fetch("/api/trusttransport/modes"), fetchRequests()]);
-        if (modesRes.ok) setModes((await modesRes.json()) as Mode[]);
+        if (modesRes.ok) {
+          // The API returns { ok, modes: string[] } (e.g. ["ride","package","food"]).
+          // Reading the body directly made `modes` the wrapper object, so
+          // deriveRideTypes(modes) called .map on an object and crashed the page.
+          // Pull out .modes and turn the strings into Mode objects.
+          const data = (await modesRes.json()) as { modes?: unknown };
+          const rawModes: unknown[] = Array.isArray(data.modes) ? data.modes : [];
+          setModes(rawModes.map((m) => (typeof m === "string" ? { id: m, name: m } : (m as Mode))));
+        }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to load TrustTransport.");
       } finally {
@@ -117,7 +131,7 @@ export function TrustTransportShell() {
     void fetchChatForRequest(req);
   }
 
-  if (loading) return <TrustTransportLoading />;
+  if (loading) return <AppLoading />;
   if (error) {
     return (
       <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#EF4444" }}>

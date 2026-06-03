@@ -47,10 +47,14 @@ export const STATIC_RIDE_TYPES: RideType[] = [
 // Map server-provided modes onto the design's ride-type cards, falling back to
 // a generic card for modes the design doesn't enumerate.
 export function deriveRideTypes(modes: Mode[]): RideType[] {
-  if (modes.length === 0) return STATIC_RIDE_TYPES;
+  // Defensive: tolerate a non-array or modes missing id/name so a response-shape
+  // change can never throw during render (that crashed the whole page before).
+  if (!Array.isArray(modes) || modes.length === 0) return STATIC_RIDE_TYPES;
   return modes.map((m) => {
-    const match = STATIC_RIDE_TYPES.find((rt) => rt.id === m.id || rt.name.toLowerCase() === m.name.toLowerCase());
-    return match ?? { id: m.id, name: m.name, icon: Car, desc: m.name, color: COLOR };
+    const id = m?.id ?? "";
+    const name = m?.name ?? id;
+    const match = STATIC_RIDE_TYPES.find((rt) => rt.id === id || rt.name.toLowerCase() === name.toLowerCase());
+    return match ?? { id, name, icon: Car, desc: name, color: COLOR };
   });
 }
 
