@@ -2437,7 +2437,6 @@ ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS crea
 -- === SOCKETRELAY MODULE ===
 CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
   user_id TEXT PRIMARY KEY,
-  display_name TEXT,
   bio TEXT,
   relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   presence_opt_in BOOLEAN NOT NULL DEFAULT FALSE,
@@ -2445,7 +2444,6 @@ CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS display_name TEXT;
 ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS presence_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
