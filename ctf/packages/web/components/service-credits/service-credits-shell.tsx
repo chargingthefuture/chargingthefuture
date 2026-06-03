@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Coins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { AppLoading } from "@/components/shared/app-loading";
 import { BG, COLOR, fmtCredits, type Tab, type WalletData } from "./sc-shared";
 import { ServiceCreditsIconRail } from "./sc-icon-rail";
 import { ServiceCreditsSidebar } from "./sc-sidebar";
@@ -62,7 +63,7 @@ export function ServiceCreditsShell() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <CenteredNote color="#6B7280">Loading wallet…</CenteredNote>;
+  if (loading) return <AppLoading />;
   if (error) return <CenteredNote color="#EF4444">{error}</CenteredNote>;
 
   const balance = wallet?.availableBalance ?? 0;

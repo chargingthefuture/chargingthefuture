@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { BarChart2, ChevronLeft, Target, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { AppLoading } from '@/components/shared/app-loading';
 import type { WorkforceDashboard, WorkforceGroupedReportItem, WorkforceProfile } from '../../lib/workforce/types';
 import { WorkforceIconRail } from './workforce-icon-rail';
 import { WorkforceSidebar } from './workforce-sidebar';
@@ -26,33 +27,7 @@ interface WorkforceData {
 }
 
 function WorkforceLoadingState() {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100vh',
-        background: '#0F1117',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: "'Inter', system-ui, sans-serif",
-      }}
-    >
-      <div style={{ textAlign: 'center', padding: '0 32px' }}>
-        <div
-          style={{
-            fontSize: 11,
-            letterSpacing: '0.18em',
-            color: 'rgba(255,255,255,0.22)',
-            textTransform: 'uppercase',
-            fontWeight: 500,
-            lineHeight: 2,
-          }}
-        >
-          Loading workforce data…
-        </div>
-      </div>
-    </div>
-  );
+  return <AppLoading />;
 }
 
 function WorkforceEmptyState() {
