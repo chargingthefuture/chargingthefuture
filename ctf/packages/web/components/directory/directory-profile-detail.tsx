@@ -1,11 +1,45 @@
 "use client";
 
+import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { BG, COLOR, initials, type Member } from "./shared";
 
-export function DirectoryProfileDetail({ member, onBack }: { member: Member; onBack: () => void }) {
+export function DirectoryProfileDetail({
+  member,
+  onBack,
+  isAdmin = false,
+  currentUserId,
+  onAttach,
+}: {
+  member: Member;
+  onBack: () => void;
+  isAdmin?: boolean;
+  currentUserId?: string;
+  onAttach?: (profileId: string, targetUserId: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
   const p = member;
+  const [attachInput, setAttachInput] = useState("");
+  const [attaching, setAttaching] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const [attachSuccess, setAttachSuccess] = useState(false);
+  const showAttach = isAdmin && p.claimedByUserId == null && typeof onAttach === "function";
+
+  async function handleAttach() {
+    const target = attachInput.trim();
+    if (!target || !onAttach) return;
+    setAttaching(true);
+    setAttachError(null);
+    setAttachSuccess(false);
+    const result = await onAttach(p.id, target);
+    if (result.ok) {
+      setAttachSuccess(true);
+    } else {
+      setAttachError(result.error ?? "Could not attach this profile. Please try again.");
+    }
+    setAttaching(false);
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${COLOR}25`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
@@ -58,6 +92,45 @@ export function DirectoryProfileDetail({ member, onBack }: { member: Member; onB
                 <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 8 }}>Encrypted Chat</div>
                 <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>All messages are end-to-end encrypted and trauma-informed by design.</div>
               </div>
+              {showAttach && (
+                <div style={{ marginTop: 16, padding: "20px", borderRadius: 16, background: `${COLOR}0A`, border: `1px solid ${COLOR}30` }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attach to account</div>
+                  <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, marginBottom: 12 }}>This profile is unclaimed. Attach it to a user account by their Clerk user ID.</div>
+                  <input
+                    value={attachInput}
+                    onChange={(e) => { setAttachInput(e.target.value); setAttachError(null); }}
+                    placeholder="Clerk user ID"
+                    disabled={attaching}
+                    style={{ width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.04)", border: `1px solid ${COLOR}30`, borderRadius: 8, fontSize: 13, color: "#E8EAF0", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+                  />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button
+                      type="button"
+                      onClick={handleAttach}
+                      disabled={attaching || attachInput.trim().length === 0}
+                      style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: attaching || attachInput.trim().length === 0 ? "not-allowed" : "pointer", opacity: attaching || attachInput.trim().length === 0 ? 0.5 : 1 }}
+                    >
+                      {attaching ? "Attaching…" : "Attach"}
+                    </button>
+                    {currentUserId && (
+                      <button
+                        type="button"
+                        onClick={() => { setAttachInput(currentUserId); setAttachError(null); }}
+                        disabled={attaching}
+                        style={{ padding: "9px 14px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 12, cursor: attaching ? "not-allowed" : "pointer" }}
+                      >
+                        Use my account
+                      </button>
+                    )}
+                  </div>
+                  {attachSuccess && (
+                    <div style={{ marginTop: 10, fontSize: 12, color: COLOR }}>Attached.</div>
+                  )}
+                  {attachError && (
+                    <div style={{ marginTop: 10, fontSize: 12, color: "#EF4444" }}>{attachError}</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
