@@ -13,7 +13,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Mic } from 'lucide-react';
-import { BORDER, PRIMARY, initials, type CurrentUser } from './chyme-shared';
+import { BORDER, PRIMARY, chymeHandle, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
@@ -55,7 +55,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
 
     const videoClient = new StreamVideoClient({
       apiKey: joinInfo.streamApiKey,
-      user: { id: joinInfo.streamUserId, name: currentUser.displayName },
+      user: { id: joinInfo.streamUserId, name: chymeHandle(currentUser.username, currentUser.userId) },
       token: joinInfo.streamToken,
     });
     const activeCall = videoClient.call(CALL_TYPE, toCallId(joinInfo.streamChannelId));
@@ -96,7 +96,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
       })();
     };
-  }, [joinInfo.streamApiKey, joinInfo.streamToken, joinInfo.streamUserId, joinInfo.streamChannelId, currentUser.displayName]);
+  }, [joinInfo.streamApiKey, joinInfo.streamToken, joinInfo.streamUserId, joinInfo.streamChannelId, currentUser.username, currentUser.userId]);
 
   if (status !== 'joined' || !client || !call) {
     return (

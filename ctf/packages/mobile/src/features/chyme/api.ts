@@ -11,6 +11,7 @@ export {
   postChymeJoin,
   deleteChymeProfile,
   deleteFullAccount,
+  chymeHandle,
 } from './ChymeApi';
 
 export type { MobileRequestIdentity } from './ChymeApi';

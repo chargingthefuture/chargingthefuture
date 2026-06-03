@@ -47,11 +47,11 @@ Chyme handle contract decision:
   - Retention period: persistent while feature is active
   - Legal/compliance note: no direct user PII fields
 - Table/entity: `chyme_room_members`
-  - Contains personal data? yes (`user_id`, `display_name`, optional avatar URL)
+  - Contains personal data? yes (`user_id`, `username`, optional avatar URL)
   - Retention period: until service-scoped delete or policy change
   - Legal/compliance note: considered service participation metadata
 - Table/entity: `chyme_messages`
-  - Contains personal data? yes (`user_id`, message text, display name)
+  - Contains personal data? yes (`user_id`, message text, `username`)
   - Retention period: currently retained until service-scoped delete by sender
   - Legal/compliance note: high-sensitivity user content; avoid logging payloads
 - Table/entity: `chyme_deletion_events`

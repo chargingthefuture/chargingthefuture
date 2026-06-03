@@ -1,7 +1,7 @@
 /**
  * ChymeActiveRoom — renders the in-room stage view.
  * Bound to real data from GET /api/chyme/room:
- *   - roomName, roomKey, callActive, participants[].displayName, participants[].role.
+ *   - roomName, roomKey, callActive, participants[].username, participants[].role.
  * Omissions from mockup (no backing API field):
  *   - Per-speaker "speaking" / audio-activity indicator (no WebRTC event bus in mobile).
  *   - Per-speaker muted state (no backend field).
@@ -16,12 +16,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { chymeHandle } from './api';
 
 const PRIMARY = '#22C55E';
 
 type Participant = {
   userId: string;
-  displayName: string;
+  username: string | null;
   role: 'speaker' | 'listener';
 };
 
@@ -47,20 +48,20 @@ function initials(name: string): string {
 function AudienceBubble({ participant }: { participant: Participant }) {
   return (
     <View style={speakerStyles.audienceBubble}>
-      <Text style={speakerStyles.audienceInitials}>{initials(participant.displayName)}</Text>
+      <Text style={speakerStyles.audienceInitials}>{initials(participant.username ?? participant.userId)}</Text>
     </View>
   );
 }
 
 function SpeakerBubble({ participant }: { participant: Participant }) {
-  const init = initials(participant.displayName);
+  const init = initials(participant.username ?? participant.userId);
   return (
     <View style={speakerStyles.wrapper}>
       <View style={speakerStyles.avatar}>
         <Text style={speakerStyles.initials}>{init}</Text>
       </View>
       <Text style={speakerStyles.name} numberOfLines={1}>
-        {participant.displayName}
+        {chymeHandle(participant.username, participant.userId)}
       </Text>
       <View style={speakerStyles.roleBadge}>
         <Text style={speakerStyles.roleText}>

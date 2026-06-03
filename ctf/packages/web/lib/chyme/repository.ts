@@ -44,12 +44,11 @@ import type {
   ChymeParticipant,
   ChymeRoomResponse,
 } from './types';
-import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { withDbTransaction } from 'lib/db/postgres';
 
 type IdentityInput = {
   userId: string;
   username: string | null;
-  displayName: string;
   avatarUrl: string | null;
 };
 
@@ -63,7 +62,6 @@ type RoomRow = {
 type ParticipantRow = {
   user_id: string;
   username: string | null;
-  display_name: string;
   avatar_url: string | null;
   role: 'speaker' | 'listener';
   joined_at: Date;
@@ -74,7 +72,6 @@ type MessageRow = {
   id: string;
   user_id: string;
   username: string | null;
-  display_name: string;
   avatar_url: string | null;
   text: string;
   sent_at: Date;
@@ -89,7 +86,7 @@ type TreasuryConfigRow = {
   policy: Record<string, unknown>;
 };
 
-function normalizeDisplayName(username: string | null, userId: string): string {
+export function chymeHandle(username: string | null, userId: string): string {
   if (username) {
     return `@${username}`;
   }
@@ -101,7 +98,6 @@ function mapParticipant(row: ParticipantRow): ChymeParticipant {
   return {
     userId: row.user_id,
     username: row.username,
-    displayName: row.display_name,
     avatarUrl: row.avatar_url,
     role: row.role,
     joinedAtIso: row.joined_at.toISOString(),
@@ -114,7 +110,6 @@ function mapMessage(row: MessageRow): ChymeMessage {
     id: row.id,
     userId: row.user_id,
     username: row.username,
-    displayName: row.display_name,
     avatarUrl: row.avatar_url,
     text: row.text,
     sentAtIso: row.sent_at.toISOString(),
@@ -240,29 +235,25 @@ async function ensureServiceProfile(client: PoolClient, identity: IdentityInput)
 }
 
 async function upsertMember(client: PoolClient, roomId: string, identity: IdentityInput): Promise<void> {
-  const displayName = identity.displayName || normalizeDisplayName(identity.username, identity.userId);
-
   await client.query(
     `
       INSERT INTO chyme_room_members (
         room_id,
         user_id,
         username,
-        display_name,
         avatar_url,
         role,
         joined_at,
         last_seen_at
       )
-      VALUES ($1, $2, $3, $4, $5, 'listener', NOW(), NOW())
+      VALUES ($1, $2, $3, $4, 'listener', NOW(), NOW())
       ON CONFLICT (room_id, user_id)
       DO UPDATE SET
         username = EXCLUDED.username,
-        display_name = EXCLUDED.display_name,
         avatar_url = EXCLUDED.avatar_url,
         last_seen_at = NOW()
     `,
-    [roomId, identity.userId, identity.username, displayName, identity.avatarUrl],
+    [roomId, identity.userId, identity.username, identity.avatarUrl],
   );
 }
 
@@ -272,7 +263,6 @@ async function listRoomParticipants(client: PoolClient, roomId: string): Promise
       SELECT
         user_id,
         username,
-        display_name,
         avatar_url,
         role,
         joined_at,
@@ -313,7 +303,7 @@ export async function listRoomMessages(identity: IdentityInput, limit = CHYME_DE
     const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
     const result = await client.query<MessageRow>(
       `
-        SELECT id, user_id, username, display_name, avatar_url, text, sent_at
+        SELECT id, user_id, username, avatar_url, text, sent_at
         FROM chyme_messages
         WHERE room_id = $1
         ORDER BY sent_at DESC
@@ -350,7 +340,7 @@ export async function sendRoomMessage(identity: IdentityInput, text: string): Pr
     await upsertMember(client, room.id, identity);
     await sendChymeStreamMessage({
       userId: identity.userId,
-      displayName: identity.displayName || normalizeDisplayName(identity.username, identity.userId),
+      name: chymeHandle(identity.username, identity.userId),
       text: validation.normalizedText,
     });
 
@@ -360,19 +350,17 @@ export async function sendRoomMessage(identity: IdentityInput, text: string): Pr
           room_id,
           user_id,
           username,
-          display_name,
           avatar_url,
           text,
           sent_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, NOW())
-        RETURNING id, user_id, username, display_name, avatar_url, text, sent_at
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING id, user_id, username, avatar_url, text, sent_at
       `,
       [
         room.id,
         identity.userId,
         identity.username,
-        identity.displayName || normalizeDisplayName(identity.username, identity.userId),
         identity.avatarUrl,
         validation.normalizedText,
       ],

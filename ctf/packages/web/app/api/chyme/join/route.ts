@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { createStreamJoinCredentials } from 'lib/chyme/stream';
-import { getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
+import { chymeHandle, getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
 import { requireChymeAccess } from '../_lib';
@@ -14,7 +14,10 @@ export async function POST() {
 
   try {
     const room = await getRoomState(gate.identity);
-    const credentials = await createStreamJoinCredentials(gate.auth.userId, gate.identity.displayName);
+    const credentials = await createStreamJoinCredentials(
+      gate.auth.userId,
+      chymeHandle(gate.identity.username, gate.identity.userId),
+    );
 
     if (!credentials) {
       logChymeAudit({

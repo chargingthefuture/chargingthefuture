@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 
 export type ChymeApiIdentity = {
   userId: string;
   username: string | null;
-  displayName: string;
   avatarUrl: string | null;
 };
 
@@ -37,7 +35,6 @@ export async function requireChymeAccess(): Promise<ChymeApiGate> {
   const identity: ChymeApiIdentity = {
     userId: authDecision.userId,
     username: authDecision.username,
-    displayName: buildIdentityDisplayName(authDecision.username, authDecision.userId),
     avatarUrl: null,
   };
 

@@ -9,7 +9,6 @@ type ChymeShellProps = {
   currentUser: {
     userId: string;
     username: string | null;
-    displayName: string;
   };
 };
 

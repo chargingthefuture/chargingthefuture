@@ -174,7 +174,6 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
         currentUser={{
           userId: decision.userId,
           username: decision.username,
-          displayName: decision.username ? `@${decision.username}` : `user-${decision.userId.slice(0, 8)}`,
         }}
       />
     );

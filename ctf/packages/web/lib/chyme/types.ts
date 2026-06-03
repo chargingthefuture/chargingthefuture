@@ -13,7 +13,6 @@ export type ChymeRole = 'speaker' | 'listener';
 export type ChymeParticipant = {
   userId: string;
   username: string | null;
-  displayName: string;
   avatarUrl: string | null;
   role: ChymeRole;
   joinedAtIso: string;
@@ -24,7 +23,6 @@ export type ChymeMessage = {
   id: string;
   userId: string;
   username: string | null;
-  displayName: string;
   avatarUrl: string | null;
   text: string;
   sentAtIso: string;
