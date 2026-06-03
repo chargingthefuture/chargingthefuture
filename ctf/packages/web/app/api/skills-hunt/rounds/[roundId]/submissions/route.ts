@@ -12,7 +12,7 @@ type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
 function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSubmissionInput {
   return {
     roundId,
-    displayName: typeof body.displayName === 'string' ? body.displayName : '',
+    fullName: typeof body.fullName === 'string' ? body.fullName : '',
     bio: typeof body.bio === 'string' ? body.bio : '',
     quoraProfileUrl: typeof body.quoraProfileUrl === 'string' ? body.quoraProfileUrl : '',
     skills: Array.isArray(body.skills) ? body.skills.filter((item): item is string => typeof item === 'string') : [],

@@ -334,7 +334,7 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
         <>
           <Text style={styles.sectionTitle}>My Finds</Text>
           <Text style={[styles.muted, { marginBottom: 14 }]}>
-            People you&apos;ve nominated · display names only for privacy
+            People you&apos;ve nominated · full names only for privacy
           </Text>
           {/* Badge row — backed by real achievements API */}
           <View style={styles.badgeRow}>
@@ -367,7 +367,7 @@ function MyFindsTab({ round, achievements }: { round: Round | null; achievements
         return (
           <View style={[styles.findCard, isRare && { borderColor: COLOR + '40' }]}>
             <View style={styles.findHeader}>
-              <Text style={styles.findName}>{item.displayName}</Text>
+              <Text style={styles.findName}>{item.fullName}</Text>
               <View style={[
                 styles.statusPill,
                 item.status === 'accepted'

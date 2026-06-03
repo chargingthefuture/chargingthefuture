@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
 import {
@@ -13,6 +13,13 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'CTF Survivor Hub',
   description: 'Dark theme plugin-first community shell for survivor-centered support.',
+};
+
+// Explicit phone viewport so the page lays out at device width (not a ~980px
+// desktop fallback), which the mobile breakpoint depends on.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

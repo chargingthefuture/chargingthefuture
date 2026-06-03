@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Hammer, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { AppLoading } from "@/components/shared/app-loading";
 import { COLOR, FONT, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
 import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
 import { BrowsePanel, QuotesPanel, ChatPanel } from "./foundation-panels";
@@ -109,7 +110,7 @@ export function FoundationShell() {
   }, [loadQuotes]);
 
   if (loading) {
-    return <Centered color="#6B7280">Loading Foundation…</Centered>;
+    return <AppLoading />;
   }
 
   if (error) {

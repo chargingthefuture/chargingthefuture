@@ -266,7 +266,7 @@ async function seedSkillsHunt(c) {
   const sigHash = sha256id(OWNER, ID.round, 'demo-submission');
   await c.query(
     `INSERT INTO skills_hunt_submissions
-     (id, round_id, submitter_user_id, display_name, bio, quora_profile_url,
+     (id, round_id, submitter_user_id, full_name, bio, quora_profile_url,
       quora_profile_url_normalized, skills, proposed_skills, claimed_professions,
       signature_hash, status, reviewed_by_user_id, points_awarded, participation_points,
       credit_granted, url_validation_result, reviewed_at)
@@ -689,7 +689,11 @@ async function seedSocketRelay(c) {
        (user_id, bio, relay_preferences, presence_opt_in)
        VALUES ($1, $2, '{"notifications":"all"}'::jsonb, true)
        ON CONFLICT (user_id) DO UPDATE SET
-         bio = EXCLUDED.bio, updated_at = NOW()`,
+         bio = EXCLUDED.bio,
+         relay_preferences = EXCLUDED.relay_preferences,
+         presence_opt_in = EXCLUDED.presence_opt_in,
+         service_deleted_at = NULL,
+         updated_at = NOW()`,
       [uid, bio],
     );
   }

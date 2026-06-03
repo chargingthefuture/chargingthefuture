@@ -24,7 +24,7 @@ BEGIN
       AND table_name = 'socketrelay_user_extension'
       AND column_name = 'display_name'
   ) THEN
-    ALTER TABLE socketrelay_user_extension DROP COLUMN display_name;
+    ALTER TABLE public.socketrelay_user_extension DROP COLUMN display_name;
   END IF;
 END
 $socketrelay_user_extension_drop_display_name$;

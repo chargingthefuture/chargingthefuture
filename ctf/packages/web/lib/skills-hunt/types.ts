@@ -62,7 +62,7 @@ export type SkillsHuntSubmission = {
   roundId: string;
   submitterUserId: string;
   submitterUsername: string | null;
-  displayName: string;
+  fullName: string;
   bio: string;
   quoraProfileUrl: string;
   skills: string[];
@@ -89,7 +89,7 @@ export type SkillsHuntSubmission = {
 
 export type SkillsHuntSubmissionInput = {
   roundId: string;
-  displayName: string;
+  fullName: string;
   bio: string;
   quoraProfileUrl: string;
   skills: string[];

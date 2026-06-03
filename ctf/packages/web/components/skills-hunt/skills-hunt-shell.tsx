@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { AppLoading } from "@/components/shared/app-loading";
 import {
   BG, COLOR, TABS, type Tab,
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
@@ -233,7 +234,7 @@ export function SkillsHuntShell({
     } catch { /* swallow — UX falls through to next poll */ }
   }
 
-  if (loadingRounds) return <CenteredNote color="#6B7280">Loading Skills Hunt…</CenteredNote>;
+  if (loadingRounds) return <AppLoading />;
   if (globalError) return <CenteredNote color="#EF4444">{globalError}</CenteredNote>;
 
   const { currentUserEntry, noActiveRound, unreadCount } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds, notifications });
