@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createFeedCommunityPost(gate.auth.userId, input);
+    const result = await createFeedCommunityPost(gate.auth.userId, input, gate.auth.username ?? null);
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',

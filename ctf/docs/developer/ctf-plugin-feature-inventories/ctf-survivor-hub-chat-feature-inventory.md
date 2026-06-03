@@ -264,5 +264,6 @@ The Survivor Hub ⟵ Feed consolidation (2026-05-31) superseded the prior `hub_*
 
 ### Change Log
 
+- 2026-06-02: Hub peer posts now lead with the author's `@username` for signed-in members instead of the pseudonymous "Community member" label (official announcements/AI answers still show "Survivor Hub"). The Hub messages route is gated to signed-in members, so this only changes what authenticated members see; a future public Hub view would still show "Community member". Implemented Chyme-style: the poster's username is captured from their session and stored on `feed_community_posts.author_username` at post time, then surfaced through the Feed timeline. Forward-only — community posts created before this shipped have no stored username and keep showing "Community member".
 - 2026-05-12: Checklist re-scoped as a task list against the canonical inventory; rules 105, 107, 112, 120 referenced; pre-merge gates assert no cross-plugin imports/fetches; phased-rollout sections removed.
 - 2026-03-23: Initial checklist created under prior phase-based template.

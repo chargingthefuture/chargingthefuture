@@ -58,6 +58,7 @@ export type FeedCommunityDetail = {
   body: string;
   category: FeedCommunityCategory;
   authorUserId: string;
+  authorUsername: string | null;
   replyCount: number;
   replies: FeedCommunityReply[];
 };

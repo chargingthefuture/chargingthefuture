@@ -19,7 +19,14 @@ import { ensureMutationCsrf } from '../../feed/_lib';
 function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
   const isCommunity = item.itemType === 'community';
   const authorUserId = isCommunity ? item.community?.authorUserId ?? 'hub-system' : 'hub-system';
-  const displayName = isCommunity ? 'Community member' : 'Survivor Hub';
+  // This route is gated to signed-in members, so a peer post leads with the
+  // author's @username when we captured it at post time. Posts created before
+  // usernames were stored (and official announcements/AI answers) fall back to
+  // the pseudonymous "Community member" / "Survivor Hub" labels.
+  const authorUsername = isCommunity ? item.community?.authorUsername ?? null : null;
+  const displayName = isCommunity
+    ? (authorUsername ? `@${authorUsername}` : 'Community member')
+    : 'Survivor Hub';
 
   // Announcements lead with their title; questions/community posts are body-only.
   const text = item.itemType === 'announcement' && item.title
@@ -29,7 +36,7 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
   return {
     id: item.id,
     userId: authorUserId,
-    username: null,
+    username: authorUsername,
     displayName,
     avatarUrl: null,
     text,
@@ -119,7 +126,7 @@ export async function POST(request: Request) {
 
   try {
     // A message posted from the Hub input is a peer-to-peer community post.
-    const result = await createFeedCommunityPost(gate.auth.userId, input);
+    const result = await createFeedCommunityPost(gate.auth.userId, input, gate.auth.username ?? null);
 
     // Normalize to the same public author shape as mapTimelineItemToHubMessage so the
     // optimistic send and the next polled copy share a dedup key (from, senderLabel, text, time).
