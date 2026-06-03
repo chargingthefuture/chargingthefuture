@@ -1,0 +1,110 @@
+name: Create Neon branch
+
+# Creates a fresh Postgres branch in Neon (e.g. a clean clone of production) via the
+# Neon API, so the v2 -> v3 cutover can be applied to a throwaway copy.
+#
+# This workflow ONLY creates the branch. It deliberately never prints the branch's
+# connection string, because that string contains a password and printing it would
+# leak a secret into the public Actions logs. After the branch exists, copy its
+# pooled connection string from the Neon console yourself.
+#
+# One-time setup (repository secrets — Settings -> Secrets and variables -> Actions):
+#   NEON_API_KEY     a Neon API key (Neon console -> Account settings -> API keys)
+#   NEON_PROJECT_ID  the Neon project id (Neon console -> Project settings -> General)
+#
+# How to use:
+#   1. Run this workflow ("Run workflow"), giving it a branch name and the parent
+#      branch to clone from (usually your production branch).
+#   2. Open the Neon console -> the new branch -> Connection string (pooled), and copy
+#      it into Infisical and the GitHub "DATABASE_URL" secret/variable.
+#   3. Run the "Update Neon DB" workflow once to apply the v3 schema + migrations to
+#      the new branch. See ctf/db/migrations/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: "Name for the new branch (e.g. v3-cutover-2026-06-03)"
+        required: true
+      parent:
+        description: "Parent branch to clone from — a branch name or id (usually production)"
+        required: true
+        default: "production"
+      with_compute:
+        description: "Also create a read-write compute endpoint on the branch?"
+        type: boolean
+        default: true
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Neon secrets
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            echo "Missing NEON_API_KEY and/or NEON_PROJECT_ID in repository secrets."
+            echo "Add them under Settings -> Secrets and variables -> Actions, then re-run."
+            exit 1
+          fi
+
+      - name: Create branch via the Neon API
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          BRANCH_NAME: ${{ inputs.branch_name }}
+          PARENT: ${{ inputs.parent }}
+          WITH_COMPUTE: ${{ inputs.with_compute }}
+        run: |
+          set -euo pipefail
+          api="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}"
+
+          # Neon's create-branch API wants the parent's id. Accept either an id
+          # (looks like "br-...") or a human branch name, resolving a name to its id.
+          if [[ "$PARENT" == br-* ]]; then
+            parent_id="$PARENT"
+          else
+            parent_id="$(curl -fsS -H "Authorization: Bearer ${NEON_API_KEY}" "${api}/branches" \
+              | jq -r --arg n "$PARENT" '.branches[] | select(.name == $n) | .id' | head -n1)"
+          fi
+          if [ -z "${parent_id:-}" ] || [ "$parent_id" = "null" ]; then
+            echo "Could not resolve parent branch '$PARENT' to a Neon branch id."
+            exit 1
+          fi
+
+          if [ "$WITH_COMPUTE" = "true" ]; then
+            payload="$(jq -n --arg name "$BRANCH_NAME" --arg parent "$parent_id" \
+              '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')"
+          else
+            payload="$(jq -n --arg name "$BRANCH_NAME" --arg parent "$parent_id" \
+              '{branch:{name:$name,parent_id:$parent}}')"
+          fi
+
+          # Create the branch. We capture the response only to read back the
+          # non-sensitive identifiers (name, id, endpoint host). We NEVER read or print
+          # `connection_uris` / passwords — those are secrets and must not hit the logs.
+          resp="$(curl -fsS -X POST \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" "${api}/branches")"
+
+          new_name="$(echo "$resp" | jq -r '.branch.name // empty')"
+          new_id="$(echo "$resp" | jq -r '.branch.id // empty')"
+          host="$(echo "$resp" | jq -r '.endpoints[0].host // empty')"
+
+          {
+            echo "### Neon branch created"
+            echo ""
+            echo "- name: \`${new_name}\`"
+            echo "- id: \`${new_id}\`"
+            if [ -n "$host" ]; then echo "- endpoint host: \`${host}\`"; fi
+            echo ""
+            echo "Next steps:"
+            echo "1. Neon console -> branch \`${new_name}\` -> **Connection string** (pooled)."
+            echo "2. Paste it into **Infisical** and the GitHub **\`DATABASE_URL\`** secret/variable."
+            echo "3. Run the **Update Neon DB** workflow once to apply the v3 schema + migrations."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Created Neon branch '${new_name}' (${new_id}). Connection string: copy it from the Neon console."
