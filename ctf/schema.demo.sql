@@ -850,6 +850,7 @@ ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS created_at TIME
 CREATE TABLE IF NOT EXISTS feed_community_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   author_user_id TEXT NOT NULL,
+  author_username TEXT,
   body TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'general',
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
@@ -859,6 +860,7 @@ CREATE TABLE IF NOT EXISTS feed_community_posts (
 );
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS author_username TEXT;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';

@@ -115,6 +115,7 @@ type FeedAnswerRatingRow = {
 type FeedCommunityPostRow = {
   id: string;
   author_user_id: string;
+  author_username: string | null;
   body: string;
   category: FeedCommunityCategory;
   reply_count: number;
@@ -773,7 +774,7 @@ export async function listFeedTimeline(
       const [postRows, replyRows] = await Promise.all([
         client.query<FeedCommunityPostRow>(
           `
-            SELECT id, author_user_id, body, category, reply_count, created_at
+            SELECT id, author_user_id, author_username, body, category, reply_count, created_at
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
           `,
@@ -809,6 +810,7 @@ export async function listFeedTimeline(
           body: row.body,
           category: row.category,
           authorUserId: row.author_user_id,
+          authorUsername: row.author_username,
           replyCount: row.reply_count,
           replies: repliesByPost.get(row.id) ?? [],
         });
@@ -1327,6 +1329,7 @@ export async function rateFeedAnswer(
 export async function createFeedCommunityPost(
   actorId: string,
   input: FeedCommunityPostInput,
+  actorUsername: string | null = null,
 ): Promise<{ postId: string; createdAtIso: string }> {
   return withDbTransaction(async (client) => {
     const body = normalizeText(input.body);
@@ -1348,11 +1351,11 @@ export async function createFeedCommunityPost(
 
     const inserted = await client.query<{ id: string; created_at: Date }>(
       `
-        INSERT INTO feed_community_posts (author_user_id, body, category, moderation_status)
-        VALUES ($1, $2, $3, 'accepted')
+        INSERT INTO feed_community_posts (author_user_id, author_username, body, category, moderation_status)
+        VALUES ($1, $2, $3, $4, 'accepted')
         RETURNING id, created_at
       `,
-      [actorId, body, category],
+      [actorId, actorUsername, body, category],
     );
 
     const postId = inserted.rows[0].id;

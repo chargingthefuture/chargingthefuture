@@ -445,6 +445,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Change Log
 
+- 2026-06-02: Added `feed_community_posts.author_username` (nullable), captured from the poster's session when a community post is created (`createFeedCommunityPost` takes an `actorUsername`), and surfaced on the timeline as `FeedCommunityDetail.authorUsername`. Lets the Survivor Hub lead a peer post with the author's `@username` for signed-in members. Additive and forward-only — existing posts have a null username.
 - 2026-02-24: Created initial Feed rewrite checklist with approved web-first policy, central admin page decision, naming normalization/alias guidance, Postgres+Stream architecture controls, stream quota-impact gate, and schema drift predeployment evidence requirements.
 - 2026-03-02: Completed phase-0 implementation for combined feed+announcements stream, including migration, API routes, policy/audit guards, admin surface, seed fixtures, and quota-impact note.
 - 2026-04-05: Added Phase 4 (Questions + LLM), Phase 5 (Community Support), Phase 6 (Android Parity — required). Renumbered security/compliance to Phase 7. All commands now use unified `feed.*` namespace per FEED_PLUGIN_COMMAND_CONTRACTS.yaml.
