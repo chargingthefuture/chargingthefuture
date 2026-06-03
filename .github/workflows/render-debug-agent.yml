@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       service_id:
-        description: 'Render service ID to debug (e.g. srv-xxx). Leave blank to use RENDER_SERVICE_ID_WEB secret.'
+        description: 'Render service ID to debug (e.g. srv-xxx). Leave blank to use RENDER_SERVICE_ID_CT_WEB secret.'
         required: false
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
         id: debug
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ inputs.service_id || secrets.RENDER_SERVICE_ID_WEB }}
+          RENDER_SERVICE_ID: ${{ inputs.service_id || secrets.RENDER_SERVICE_ID_CT_WEB }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x ctf/scripts/render-debug-agent.sh

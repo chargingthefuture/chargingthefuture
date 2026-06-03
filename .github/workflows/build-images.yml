@@ -35,10 +35,10 @@ name: Build and push Docker images
 #       Render API for the service id by name and triggers the deploy. Without it
 #       the image still reaches GHCR, but production keeps running the OLD image
 #       until someone deploys by hand (Manual Deploy → Deploy latest reference).
-#   RENDER_SERVICE_ID_WEB             — optional: explicit ctf-web id, skips the name lookup
-#   RENDER_SERVICE_ID_OLLAMA          — optional: explicit ctf-ollama id
-#   RENDER_SERVICE_ID_RASA            — optional: explicit ctf-rasa id
-#   RENDER_SERVICE_ID_FORMANCE        — optional: explicit ctf-formance-ledger id
+#   RENDER_SERVICE_ID_CT_WEB             — optional: explicit ctf-web id, skips the name lookup
+#   RENDER_SERVICE_ID_CT_OLLAMA          — optional: explicit ctf-ollama id
+#   RENDER_SERVICE_ID_CT_RASA            — optional: explicit ctf-rasa id
+#   RENDER_SERVICE_ID_CT_FORMANCE        — optional: explicit ctf-formance-ledger id
 
 on:
   push:
@@ -132,7 +132,7 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_NAME: ctf-web
           # Optional explicit id; when unset the script finds it by name.
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_WEB }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_CT_WEB }}
         run: bash .github/scripts/render-deploy.sh
 
   # ── ctf-ollama ──────────────────────────────────────────────────
@@ -177,7 +177,7 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_NAME: ctf-ollama
           # Optional explicit id; when unset the script finds it by name.
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_CT_OLLAMA }}
         run: bash .github/scripts/render-deploy.sh
 
   # ── ctf-rasa ────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_NAME: ctf-rasa
           # Optional explicit id; when unset the script finds it by name.
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_RASA }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_CT_RASA }}
         run: bash .github/scripts/render-deploy.sh
 
   # ── ctf-formance-ledger ─────────────────────────────────────────
@@ -266,5 +266,5 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_NAME: ctf-formance-ledger
           # Optional explicit id; when unset the script finds it by name.
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_FORMANCE }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_CT_FORMANCE }}
         run: bash .github/scripts/render-deploy.sh

@@ -11,9 +11,9 @@ name: Render Deploy Watch
 #
 # To watch another service:
 #   1. add a matrix entry with its name (e.g. - name: ctf-worker);
-#   2. add a static env line below: RENDER_SERVICE_ID_CTF_WORKER: ${{ secrets.RENDER_SERVICE_ID_CTF_WORKER }};
+#   2. add a static env line below: RENDER_SERVICE_ID_CT_WORKER: ${{ secrets.RENDER_SERVICE_ID_CT_WORKER }};
 #   3. add a case branch mapping that name to that env var;
-#   4. add the RENDER_SERVICE_ID_CTF_WORKER repo secret.
+#   4. add the RENDER_SERVICE_ID_CT_WORKER repo secret.
 # Secrets are referenced statically on purpose — dynamic secrets[...] indexing
 # would expose the whole secrets context to the runner.
 
@@ -45,7 +45,7 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           # One static line per watched service (pattern: RENDER_SERVICE_ID_<NAME>).
-          RENDER_SERVICE_ID_CTF_WEB: ${{ secrets.RENDER_SERVICE_ID_CTF_WEB }}
+          RENDER_SERVICE_ID_CT_WEB: ${{ secrets.RENDER_SERVICE_ID_CT_WEB }}
           SERVICE_NAME: ${{ matrix.service.name }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
@@ -53,7 +53,7 @@ jobs:
 
           # Map this matrix service to its statically-provided id env var.
           case "$SERVICE_NAME" in
-            ctf-web) RENDER_SERVICE_ID="${RENDER_SERVICE_ID_CTF_WEB:-}" ;;
+            ctf-web) RENDER_SERVICE_ID="${RENDER_SERVICE_ID_CT_WEB:-}" ;;
             *) echo "::error::Unknown service '${SERVICE_NAME}' — add its secret env mapping in the workflow."; exit 1 ;;
           esac
 
