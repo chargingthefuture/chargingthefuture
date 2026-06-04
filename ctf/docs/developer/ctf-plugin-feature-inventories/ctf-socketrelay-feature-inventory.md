@@ -105,7 +105,7 @@ Admin routes:
 Tables owned by this plugin:
 
 1. `socketrelay_user_extension` — Per-user profile extension fields.
-2. `socketrelay_requests` — Request lifecycle rows (status, ownership, repost lineage).
+2. `socketrelay_requests` — Request lifecycle rows (status, ownership, repost lineage). Includes a nullable `owner_username TEXT` column that captures the poster's chosen `@username` at request-creation time (denormalized from the Clerk session, exactly like `chyme_messages.username` and `feed_community_posts.author_username`), because v3 has no reliable server-side store of other users' usernames. This handle is surfaced in every view, including the not-signed-in / public projection — never "Anonymous" (owner decision, 2026-06-04).
 3. `socketrelay_request_events` — Event log for request state transitions.
 4. `socketrelay_fulfillments` — Fulfillment claims and outcomes per request.
 5. `socketrelay_fulfillment_participants` — Participant access records for fulfillment chats.
@@ -122,7 +122,7 @@ exists — never derived from `price_currency`. No ServiceCredits amount is show
 Storage and projection rules:
 
 1. Request and fulfillment status transitions are explicit and replay-safe via the `request_events` log.
-2. Public projection contracts are separated from authenticated/admin DTOs (privacy-minimized fields only on public routes).
+2. Public projection contracts are separated from authenticated/admin DTOs (privacy-minimized fields only on public routes). The public projection (`SocketRelayPublicRequest`, served by `GET /api/socketrelay/public` and `GET /api/socketrelay/public/:id`) now includes `ownerUsername` so the poster's `@username` is shown to signed-out visitors (owner decision, 2026-06-04). The authenticated `SocketRelayRequest` DTO also carries `ownerUsername`.
 3. Mutation operations enforce deterministic storage outcomes and audit-friendly metadata.
 
 ## 5) Security, Privacy, and Compliance Controls
@@ -298,7 +298,8 @@ Android pixel pass (design `MobileSocketRelay.tsx`): `packages/mobile/src/featur
 
 ### Change Log
 
-- 2026-06-04: Owner decision — SocketRelay is **not anonymous**. A request poster / chat participant is identified by their **`@username`** (the unique handle they chose at sign-up), and that `@username` is what's shown **even in the not-signed-in / public view** (a chosen handle, not a real name, so it is safe to surface publicly). This supersedes the design mockups' "Anonymous" poster treatment (design catch-up tracked as gap D5 in the design-prompt issue #312). Implementation note: the public request projection must surface the poster's `@username`; since usernames are not reliably stored server-side, this needs the username captured/denormalized at request time (same pattern as Chyme/Feed) — tracked as follow-up.
+- 2026-06-04: Owner decision — SocketRelay is **not anonymous**. A request poster / chat participant is identified by their **`@username`** (the unique handle they chose at sign-up), and that `@username` is what's shown **even in the not-signed-in / public view** (a chosen handle, not a real name, so it is safe to surface publicly). This supersedes the design mockups' "Anonymous" poster treatment (design catch-up tracked as gap D5 in the design-prompt issue #312).
+- 2026-06-04: Implemented the public `@username`. Added a nullable `owner_username TEXT` column to `socketrelay_requests` that captures the poster's username at request-creation time (denormalized from the Clerk session, like `chyme_messages.username` and `feed_community_posts.author_username`); the create function writes `gate.auth.username`. Both the authenticated `SocketRelayRequest` DTO and the public `SocketRelayPublicRequest` projection now carry `ownerUsername`. Web (`sr-feed` request cards) and Android (`SocketRelay` feed cards) render `@username` with a neutral `user-<id>` fallback when no username was captured. Schema (`schema.sql` + `schema.demo.sql`, additive `ALTER TABLE … ADD COLUMN IF NOT EXISTS`), repository, types, create route, and both client surfaces updated.
 - 2026-06-02: Removed the unused `display_name` column from `socketrelay_user_extension` (and the `displayName` field from `SocketRelayProfile`/`SocketRelayProfileInput`, the profile route parser, and the repository reads/writes). Nothing rendered it; SocketRelay identifies people by their Clerk `@username` (built in the relay/chat routes), so the stored display name was dead. Dropped via `db/migrations/post/0003_socketrelay_drop_display_name.sql` (guarded, re-runnable). Part of removing the v2 "display name" convention from v3.
 - 2026-06-01: Enforced the SocketRelay price invariant at the DB level — added a guarded `socketrelay_requests_price_consistency_check` CHECK so a request either has no price (both NULL) or a positive amount in a named currency (the "Free = no price, never `$0`" rule). Follow-up to the #120 review.
 - 2026-06-01: Multi-currency (issue #120): added OPTIONAL `price_amount` + `price_currency` (FK → `currencies.code`) to `socketrelay_requests` and a `socketrelay_request_accepted_currencies` join. "Free" renders from the absence of a price, never `$0`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
