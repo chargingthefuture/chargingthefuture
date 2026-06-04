@@ -107,6 +107,16 @@ When the owner asks the agent to resume, the agent must:
 4. **Splitting a single user-facing feature across "foundation now, UI later" without a session-continuity doc.** The doc is what makes the split safe. Without it, the next session has to re-litigate the spec and the owner pays the documentation cost again.
 5. **Asking the owner "should I keep going?" instead of stopping.** The gate is the stop. If the surface is REQUIRED, stop without asking. Resume on explicit owner instruction.
 
+## Owner-reported missing UI on the live app → append a prompt to the design queue (no permission needed)
+
+When the owner, testing the production app, reports a missing or needed UI surface (a screen, control, state, modal) and the fix is **design-gated** (a new surface or material layout/IA change with no design in the submodule), the agent does **not** ask the owner for permission and does **not** stall. Instead it:
+
+1. Builds any non-UI / back-end foundation immediately (schema, API, server logic), per the normal gate.
+2. **Appends a ready-to-send design-agent prompt** to the standing design-prompt tracking issue — GitHub issue **#312** ("Design-agent prompt queue") — de-duped against the prompts already there, respecting the owner-decision guardrails recorded in that issue and in the plugin inventories (e.g. Directory admin is inline — never propose a Directory admin page).
+3. Tells the owner it added the prompt. The owner copies the prompt from the issue into the Replit design agent; the app-side UI build waits until the mockup lands and syncs, then proceeds per `126-`.
+
+This replaces "stop and wait" for owner-driven, design-gated feature gaps: the queue **is** the stop, and the owner controls when each prompt is sent. Owner decisions are recorded only in the inventories (and that issue's guardrails) — do not add separate decision/manifest docs.
+
 ## Cross-References
 
 - `099-agent-scope-guardrails.mdc` — write-scope rules; this rule extends them with a design-scope concept.
