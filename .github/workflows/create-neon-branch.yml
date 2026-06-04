@@ -20,6 +20,10 @@ name: Create Neon branch
 #   3. Run the "Update Neon DB" workflow once to apply the v3 schema + migrations to
 #      the new branch. See ctf/db/migrations/README.md.
 
+# This workflow talks to the Neon API with NEON_API_KEY; it never needs the
+# GITHUB_TOKEN, so drop all of its permissions.
+permissions: {}
+
 on:
   workflow_dispatch:
     inputs:

@@ -24,22 +24,9 @@ export async function GET(request: Request) {
   const pagination = parsePaginationParams(request.url);
 
   try {
-    const payload = await listDirectoryForMember(gate.auth.userId, pagination, getFilters(request.url));
+    const payload = await listDirectoryForMember(pagination, getFilters(request.url));
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown';
-
-    if (message === 'directory_own_profile_required') {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: DIRECTORY_ERROR_CODE.ownProfileRequired,
-          message: 'Create your directory profile before browsing the member list.',
-        },
-        { status: 404 },
-      );
-    }
-
     reportError(error, { area: 'directory', op: 'list_members', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch directory list.' },

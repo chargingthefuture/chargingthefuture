@@ -13,6 +13,7 @@ export interface Member {
   sector: string;
   jobTitle: string;
   skills: string[];
+  claimedByUserId: string | null;
 }
 
 export interface Sector {

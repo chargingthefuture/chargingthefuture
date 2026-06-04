@@ -180,7 +180,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'directory') {
-    return <DirectoryShell />;
+    return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'feed-announcements') {

@@ -33,10 +33,11 @@ type DirectoryListItem = {
   lastName: string | null;
   sectorName: string | null;
   jobTitleName: string | null;
+  claimedByUserId: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
 };
 
-export function DirectoryShell() {
+export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -119,6 +120,7 @@ export function DirectoryShell() {
             sector: item.sectorName ?? "",
             jobTitle: item.jobTitleName ?? "",
             skills: item.skills.map((s) => s.name),
+            claimedByUserId: item.claimedByUserId ?? null,
           }));
           setMembers(mapped);
         }
@@ -145,6 +147,25 @@ export function DirectoryShell() {
     setQuery("");
   }
 
+  async function attachProfile(profileId: string, targetUserId: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch(`/api/directory/admin/profiles/${profileId}/assign`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ userId: targetUserId }),
+      });
+      const body = await res.json().catch(() => ({})) as { ok?: boolean; error?: string; message?: string };
+      if (res.ok && body.ok) {
+        setMembers((prev) => prev.map((m) => (m.id === profileId ? { ...m, claimedByUserId: targetUserId } : m)));
+        setSelected((prev) => (prev && prev.id === profileId ? { ...prev, claimedByUserId: targetUserId } : prev));
+        return { ok: true };
+      }
+      return { ok: false, error: body.error ?? body.message ?? "Could not attach this profile. Please try again." };
+    } catch {
+      return { ok: false, error: "Could not attach this profile. Please try again." };
+    }
+  }
+
   if (loadingMeta) {
     return <DirectoryLoadingSkeleton />;
   }
@@ -158,7 +179,15 @@ export function DirectoryShell() {
   }
 
   if (selected) {
-    return <DirectoryProfileDetail member={selected} onBack={() => setSelected(null)} />;
+    return (
+      <DirectoryProfileDetail
+        member={selected}
+        onBack={() => setSelected(null)}
+        isAdmin={isAdmin}
+        currentUserId={userId}
+        onAttach={attachProfile}
+      />
+    );
   }
 
   const content = tab === "browse" ? (
