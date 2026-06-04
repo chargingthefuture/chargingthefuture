@@ -5,7 +5,13 @@ Ensure every user-facing feature implemented in web is also implemented in Andro
 
 ## Scope
 - Applies to `packages/web` and `packages/mobile`.
-- iOS is explicitly out of scope for delivery and parity requirements.
+- There is **no native iOS app** — native iOS delivery remains out of scope. iOS users are served by the **responsive web app** (see "Responsive web" below). "web↔Android parity" in this rule means feature parity between the Next.js web app and the React Native Android app; it does not imply a native iOS build.
+
+## Responsive web (serving iOS and every mobile browser)
+- The web app (`packages/web`) must be **responsive**: it renders the **Desktop** design at wide viewports and the **Mobile** design at narrow (phone) viewports, in the **same** web components (responsive layout / CSS — not a separate route, app, or component set). This is how iOS Safari and every mobile-browser user accesses the product.
+- The `Mobile*` design mockups are the **single source of truth for both** the Android native app **and** the web's mobile breakpoint. A phone layout is the same whether React Native or a ~390px browser paints it. **Do not commission a separate "web responsive" mockup series — there is nothing new to design.** The design agent authors Desktop + `Mobile*` mockups only.
+- Building the web's mobile-responsive layout from the existing `Mobile*` design is an **app / front-end (non-design-agent) responsibility**. A phone breakpoint is not a new design surface and is **not** design-gated by rule 127.
+- Therefore every user-facing UI change lands all three together: the desktop-web layout (Desktop mockup), the **mobile-web responsive layout in the same web components** (Mobile mockup), and the Android implementation (Mobile mockup). Shipping a web feature that only works at desktop width — leaving iOS/mobile-web users a broken or desktop-only view — is a parity gap, not "done".
 
 ## Mandatory — 100% Parity Baseline
 
