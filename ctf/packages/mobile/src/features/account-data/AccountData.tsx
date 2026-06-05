@@ -197,24 +197,28 @@ export function AccountData() {
                   const isPending = pendingSlug === service.slug;
                   const error = rowError?.slug === service.slug ? rowError.message : null;
                   return (
-                    <View key={service.slug} style={[s.row, error ? s.rowError : null, isPending && s.rowPending]}>
-                      <View style={s.rowGlyph}>
-                        <Text style={s.rowGlyphText}>{glyph(service.slug)}</Text>
+                    // key goes on the Fragment, not the View: @types/react 19.2 rejects `key`
+                    // on class-based host components like View ("does not exist on ViewProps").
+                    <React.Fragment key={service.slug}>
+                      <View style={[s.row, error ? s.rowError : null, isPending && s.rowPending]}>
+                        <View style={s.rowGlyph}>
+                          <Text style={s.rowGlyphText}>{glyph(service.slug)}</Text>
+                        </View>
+                        <View style={s.rowBody}>
+                          <Text style={s.rowName}>{service.name}</Text>
+                          <Text style={[s.rowSummary, error ? s.rowSummaryError : null]}>{error ?? service.summary}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleDeleteService(service)}
+                          disabled={isPending}
+                          style={s.deleteBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete your ${service.name} data`}
+                        >
+                          {isPending ? <ActivityIndicator color={DANGER} size="small" /> : <Text style={s.deleteBtnText}>🗑</Text>}
+                        </TouchableOpacity>
                       </View>
-                      <View style={s.rowBody}>
-                        <Text style={s.rowName}>{service.name}</Text>
-                        <Text style={[s.rowSummary, error ? s.rowSummaryError : null]}>{error ?? service.summary}</Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => handleDeleteService(service)}
-                        disabled={isPending}
-                        style={s.deleteBtn}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Delete your ${service.name} data`}
-                      >
-                        {isPending ? <ActivityIndicator color={DANGER} size="small" /> : <Text style={s.deleteBtnText}>🗑</Text>}
-                      </TouchableOpacity>
-                    </View>
+                    </React.Fragment>
                   );
                 })}
               </View>
@@ -224,18 +228,20 @@ export function AccountData() {
                   <Text style={s.sectionLabel}>Always retained — {retained.length} {retained.length === 1 ? 'service' : 'services'}</Text>
                   <View style={s.list}>
                     {retained.map((service) => (
-                      <View key={service.slug} style={s.retainedRow}>
-                        <View style={s.retainedGlyph}>
-                          <Text style={s.rowGlyphText}>{glyph(service.slug)}</Text>
-                        </View>
-                        <View style={s.rowBody}>
-                          <View style={s.retainedNameRow}>
-                            <Text style={s.retainedName}>{service.name}</Text>
-                            <Text style={s.lockGlyph}>🔒</Text>
+                      <React.Fragment key={service.slug}>
+                        <View style={s.retainedRow}>
+                          <View style={s.retainedGlyph}>
+                            <Text style={s.rowGlyphText}>{glyph(service.slug)}</Text>
                           </View>
-                          <Text style={s.retainedReason}>{service.summary}</Text>
+                          <View style={s.rowBody}>
+                            <View style={s.retainedNameRow}>
+                              <Text style={s.retainedName}>{service.name}</Text>
+                              <Text style={s.lockGlyph}>🔒</Text>
+                            </View>
+                            <Text style={s.retainedReason}>{service.summary}</Text>
+                          </View>
                         </View>
-                      </View>
+                      </React.Fragment>
                     ))}
                   </View>
                 </>
@@ -285,10 +291,12 @@ function DangerZone({ serviceCount, onContinue }: { serviceCount: number; onCont
         Removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are settled — not destroyed. Some audit records are retained by design.
       </Text>
       {points.map((p, i) => (
-        <View key={i} style={s.bulletRow}>
-          <View style={[s.bulletDot, { backgroundColor: p.warn ? DANGER : '#4B5563' }]} />
-          <Text style={[s.bulletText, p.warn ? s.bulletTextWarn : null]}>{p.t}</Text>
-        </View>
+        <React.Fragment key={i}>
+          <View style={s.bulletRow}>
+            <View style={[s.bulletDot, { backgroundColor: p.warn ? DANGER : '#4B5563' }]} />
+            <Text style={[s.bulletText, p.warn ? s.bulletTextWarn : null]}>{p.t}</Text>
+          </View>
+        </React.Fragment>
       ))}
       <TouchableOpacity style={s.dangerBtn} onPress={onContinue} accessibilityRole="button">
         <Text style={s.dangerBtnText}>Continue to confirmation</Text>
@@ -355,10 +363,12 @@ function ConfirmDelete({ serviceCount, onCancel }: { serviceCount: number; onCan
         <View style={s.confirmInfo}>
           <Text style={s.confirmInfoTitle}>Delete your entire account</Text>
           {points.map((p, i) => (
-            <View key={i} style={s.bulletRow}>
-              <Text style={[s.confirmBulletGlyph, { color: p.warn ? DANGER : SUBTLE }]}>{p.warn ? '🗑' : '🔒'}</Text>
-              <Text style={s.confirmBulletText}>{p.t}</Text>
-            </View>
+            <React.Fragment key={i}>
+              <View style={s.bulletRow}>
+                <Text style={[s.confirmBulletGlyph, { color: p.warn ? DANGER : SUBTLE }]}>{p.warn ? '🗑' : '🔒'}</Text>
+                <Text style={s.confirmBulletText}>{p.t}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
 
