@@ -36,13 +36,38 @@
   deletion in a single transaction, records one `account_deletion_events` row, logs an
   `[account.audit]` line. Money is settled only by the existing ServiceCredits reclaim flow, never
   hard-deleted here.
-- API: `DELETE /api/account/services/:slug` (one plugin) and `DELETE /api/account/full-account`
-  (every plugin + ServiceCredits reclaim). Both are self-service (caller's own rows only) and
-  same-origin CSRF-guarded.
+- API:
+  - `GET /api/account/services` — read-only projection of the deletion registry for the Account &
+    Data UI. Returns `{ ok, deletable[], retained[], counts }`, where each entry is
+    `{ slug, name, summary, serviceScopeSupported }` taken straight from the registry (no copy is
+    stored in the route or the UI). `deletable` = `serviceScopeSupported === true`; `retained` =
+    `false` (ServiceCredits wallet/ledger kept for financial integrity, settled at full-account
+    deletion; GDP / Weekly Performance hold only community-wide aggregate totals). Gated by
+    `requireAccountAccess` (any signed-in identity, read-only — no CSRF needed).
+  - `DELETE /api/account/services/:slug` (one plugin) and `DELETE /api/account/full-account`
+    (every plugin + ServiceCredits reclaim). Both are self-service (caller's own rows only) and
+    same-origin CSRF-guarded (`x-ctf-csrf: 1`).
 - Data model: `account_deletion_events` (id, user_id, scope, service_name, requested_at,
-  completed_at, status, summary).
-- The user-facing Account & Data UI that calls these routes is design-gated (Rule 127) and not yet
-  built.
+  completed_at, status, summary). The `GET /api/account/services` projection adds no tables — it
+  reads only the in-code registry.
+- The user-facing Account & Data surface is now built (PR `feat/account-data-privacy-deletion-ui`):
+  - Web: `ctf/packages/web/app/account/data/page.tsx` (auth-gated, same posture as
+    `requireAccountAccess`) renders `ctf/packages/web/components/account-data/account-data-shell.tsx`.
+    One responsive component set switches desktop/mobile on `useIsMobile()` (768px), with loading,
+    empty, populated, and confirm-delete states matching the survivor-hub mockups. Per-service delete
+    uses a two-step confirm; full-account delete requires typing the exact phrase `delete my account`.
+    Reached from the community shell icon rail (the previously-disabled settings slot now links to
+    `/account/data`).
+  - Android: `ctf/packages/mobile/src/features/account-data/` (`AccountData.tsx` + `api.ts`),
+    registered in `ctf/packages/mobile/App.tsx`, binding to the same three endpoints.
+  - Not added to `ctf/config/plugin-parity-contracts.json`: that file is keyed to the **plugin**
+    registry (`lib/plugins/repository.ts`), and `check-web-android-parity.mjs` fails any contract
+    slug with no matching registry entry. Account & Data is a non-plugin account surface, so its
+    Android parity is satisfied by the real feature directory + `App.tsx` registration, not a plugin
+    parity contract row.
+  - Omitted vs. mockups (no backing API; real-data-only rule 126): "Export all data" and "Deactivate
+    account instead" controls, the static encryption badges, and the icon rail's export/notification
+    stubs.
 
 ### 1.3 Pricing Tier and Payment Admin (API/Control Contract Only)
 

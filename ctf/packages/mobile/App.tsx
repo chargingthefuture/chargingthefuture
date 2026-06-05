@@ -22,6 +22,7 @@ import { ServiceCredits } from './src/features/service-credits';
 import { Levelup } from './src/features/levelup';
 import { Unlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
+import { AccountData } from './src/features/account-data';
 import { AuthProvider } from './src/features/trusttransport/auth-context';
 
 type FeatureKey =
@@ -44,6 +45,7 @@ type FeatureKey =
   | 'service-credits'
   | 'levelup'
   | 'unlock'
+  | 'account-data'
   | 'comic-review';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
@@ -66,6 +68,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'service-credits', label: 'Service Credits' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
+  { key: 'account-data', label: 'Account & Data' },
   { key: 'comic-review', label: 'AI Review' },
 ];
 
@@ -117,6 +120,8 @@ export default function App() {
         return <Levelup />;
       case 'unlock':
         return <Unlock />;
+      case 'account-data':
+        return <AccountData />;
       case 'comic-review':
         return <ComicReviewConsole />;
       default:
