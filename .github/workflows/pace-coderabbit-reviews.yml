@@ -1,0 +1,86 @@
+name: Pace CodeRabbit reviews
+
+# Why this exists
+# ---------------
+# CodeRabbit (the automated code reviewer) is on the free tier, which allows roughly
+# one review per hour. To stay inside that budget, agents open the risky PRs that need
+# a review (money/ledger, auth, CSRF, schema/migrations, new API contracts, new
+# plugins) as a DRAFT carrying the `coderabbit` label. A labelled draft is not reviewed
+# (`.coderabbit.yaml` sets `auto_review.drafts: false`); the review only fires when the
+# PR is marked "ready for review" while still carrying the label.
+#
+# This scheduled job promotes the single oldest such draft to "ready for review" once an
+# hour. That drains the queue at the free-tier rate with no manual pacing — the owner no
+# longer has to flip each PR by hand. Low-risk PRs do not use this lane at all: agents
+# open those ready-for-review with auto-merge on, so they complete hands-free.
+#
+# Risky PRs are deliberately NOT auto-merged: once promoted and reviewed, the owner reads
+# CodeRabbit's findings and merges them. This job only changes draft -> ready; it never
+# merges anything.
+
+on:
+  schedule:
+    # Hourly, at :17 past the hour (off the top-of-hour stampede).
+    - cron: "17 * * * *"
+  workflow_dispatch: {}
+
+# Least privilege: this job only needs to read PR check state and flip one PR's draft
+# flag. It never pushes code and never merges.
+permissions:
+  pull-requests: write
+  contents: read
+  checks: read
+
+# If a manual run overlaps the scheduled one, let the latest win rather than double-promote.
+concurrency:
+  group: pace-coderabbit-reviews
+  cancel-in-progress: false
+
+jobs:
+  promote-one:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Promote the oldest CI-clean coderabbit draft to ready for review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Oldest-first list of open DRAFT PRs that carry the `coderabbit` label.
+          mapfile -t prs < <(
+            gh pr list --state open --draft --label coderabbit \
+              --json number,createdAt --jq 'sort_by(.createdAt) | .[].number'
+          )
+
+          if [ "${#prs[@]}" -eq 0 ]; then
+            echo "No coderabbit-labelled drafts are waiting. Nothing to promote."
+            exit 0
+          fi
+
+          echo "Waiting coderabbit drafts (oldest first): ${prs[*]}"
+
+          for n in "${prs[@]}"; do
+            # Don't spend the scarce hourly slot on a PR whose checks are red. A failing
+            # check means the change isn't ready for a human-grade review yet. Pending or
+            # in-progress checks are fine — CodeRabbit reviews in parallel with CI.
+            failing="$(
+              gh pr view "$n" --json statusCheckRollup \
+                --jq '[.statusCheckRollup[]? | (.conclusion // .state // "")]
+                       | map(select(. == "FAILURE" or . == "ERROR" or . == "TIMED_OUT" or . == "CANCELLED" or . == "STARTUP_FAILURE"))
+                       | length'
+            )"
+            failing="${failing:-0}"
+
+            if [ "$failing" -ne 0 ]; then
+              echo "PR #$n has $failing failing check(s); skipping it this hour."
+              continue
+            fi
+
+            echo "Promoting PR #$n to ready for review (triggers CodeRabbit)."
+            gh pr ready "$n"
+            echo "Promoted #$n. One promotion per run — done."
+            exit 0
+          done
+
+          echo "Every waiting coderabbit draft has failing checks. Promoted none this hour."
