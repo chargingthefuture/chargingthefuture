@@ -23,6 +23,17 @@ The app repo never writes back to the design repo. The design agent never reache
 business logic. This one-directional rule is what makes a sync safe: a sync is a *pull of a known
 pointer*, never a "make both sides match" reconciliation that could delete wanted work.
 
+## A mockup is a pre-build artifact, not a living mirror (production-era, 2026-06-05)
+
+A design sync feeds the **first build** of a surface. It is **not** a mandate to keep a shipped
+screen byte-identical to its mockup forever. Once a screen is in production, the **running screen is
+the source of truth** for that screen (see rule `127-` "Production-era policy"), and the owner / app
+agent iterates on it directly in code. The matching mockup is then effectively frozen — it will drift
+from the live screen, and that drift is **expected and fine**; do not "re-sync" a live screen back to
+its old mockup, and do not file design-queue prompts to make a mockup match a screen that already
+shipped. The sync mechanics below apply when adopting a **new** mockup (a net-new surface, or a
+deliberate from-scratch redesign), not for iterating on what already ships.
+
 ## How The App Consumes Designs: Submodule-Pin (NOT file-copy)
 
 This app does not copy mockup `.tsx` files into its own tree. There is no

@@ -6,7 +6,36 @@ Stop AI implementation agents from building UI against an unlocked design. Repli
 
 Companion rule: `126-design-mockup-implementation-rules.mdc` covers what to do *after* a design exists. This rule (`127-`) covers what to do *before* one does.
 
-## The Design Submodule Is The Only Source Of Truth
+## Production-era policy (owner-directed, 2026-06-05): the gate is for new surfaces, not iteration on shipped screens
+
+The app is now in production with real users. That flips the cost/benefit of design-first. The
+mockup is a **pre-build** artifact, not a living mirror of the running app. Once a screen ships, the
+**production screen itself is the source of truth** for that screen, and changes to it are made
+directly in code — no design round-trip, and no keeping a mockup byte-identical to the code. The
+owner works on a phone with no local dev environment, so a forced mockup round-trip for every tweak
+is pure friction with no payoff once the screen exists.
+
+Apply this tiered test:
+
+- **Iterate in code now (NOT design-gated)** — any change to an **already-shipped** screen that does
+  not introduce a fundamentally new layout: removing/hiding an element, copy, color, spacing/density,
+  reordering, adding a missing state (empty/loading/error), small affordances, the
+  **mobile-responsive layout of an existing screen** (a shipped screen at a narrow width is the same
+  screen — front-end work, per rule `105-`), and all bug fixes. Make the change, ship it, update the
+  inventory. Do not stop for a design.
+- **Design first (still gated, per the rest of this rule)** — a **genuinely new surface** that does
+  not exist yet (a new plugin, a new page / modal / flow), **or a deliberate from-scratch redesign**
+  of an existing surface (a real rethink, not a tweak). Here a mockup is still the cheapest way to
+  explore the look before building, so the design agent leads and the checkpoint behavior below
+  applies.
+
+When a surface is in the "iterate in code" tier, treat it exactly like the "What The Gate Does Not
+Apply To" list — proceed end-to-end. The design submodule stays the authority for what does **not yet
+exist**; it is **not** the authority over what already ships. Do not re-mock a live screen to change
+it, and do not block a live-screen change waiting for a mockup. The `#312` design-prompt queue is
+therefore for genuinely new surfaces and redesigns only.
+
+## The Design Submodule Is The Source Of Truth For Not-Yet-Built Surfaces
 
 - Authoritative design location: the `design/` submodule at the root of this repo (`/design`). Submodule URL: `https://github.com/chargingthefuture/design`.
 - The Replit design agent commits designs **directly into that submodule** and pushes to its remote. There is no Figma file, no screenshot folder, no Slack thread, no Notion page that supersedes it. If it isn't in the `design/` submodule, it is not the design.
@@ -15,15 +44,15 @@ Companion rule: `126-design-mockup-implementation-rules.mdc` covers what to do *
 
 ## When Stop-For-Design Is REQUIRED
 
-**No UI surface is design-skippable.** Every rendered surface — user-facing *and* admin/internal — requires a design pass before its UI is built. An agent must halt before writing any UI code if the change introduces or materially restructures:
+**A new or from-scratch-redesigned surface is design-skippable only by owner bypass.** This section applies to surfaces in the "design first" tier above — net-new surfaces and deliberate full redesigns. (Iterative changes to an already-shipped screen are *not* gated; see the production-era policy above and proceed in code.) An agent must halt before writing any UI code if the change introduces or materially restructures:
 
-1. A new user-facing page, route, modal, drawer, or component family.
+1. A new user-facing page, route, modal, drawer, or component family **that does not already exist**.
 2. A new plugin or major plugin rewrite (per the New Plugin Lifecycle Checklist in `CLAUDE.md`).
-3. A pinned, featured, or above-the-fold surface on a high-traffic page (Directory, Feed, Lighthouse, etc.).
-4. A change to existing user-facing UI that materially changes layout, information architecture, or interaction model (not just copy or color).
-5. Anything visible to the 5M-survivor audience that is not a copy-only or color-only tweak.
-6. Cross-plugin UI co-changes (e.g., Skills Hunt placing a reward card on Directory's public page).
-7. **Admin-only or internal tooling that renders a UI** — even surfaces only the owner uses. There is no "internal tooling" exemption from the design gate.
+3. A **brand-new** pinned, featured, or above-the-fold surface on a high-traffic page (Directory, Feed, Lighthouse, etc.) — adding a surface that isn't there yet, not restyling one that is.
+4. A deliberate from-scratch **redesign** of existing user-facing UI — a real rethink of layout, information architecture, or interaction model. (A small layout tweak, a removed element, or a responsive reflow of a shipped screen is *not* this — iterate in code.)
+5. A **new** surface visible to the 5M-survivor audience. (Copy-only, color-only, and small tweaks to existing surfaces are not gated.)
+6. Cross-plugin UI co-changes that add a **new** surface to another plugin (e.g., Skills Hunt placing a brand-new reward card on Directory's public page).
+7. **Admin-only or internal tooling that renders a brand-new UI surface** — even surfaces only the owner uses. There is no "internal tooling" exemption for net-new admin surfaces; but iterating on an already-shipped admin screen follows the "iterate in code" tier like any other shipped screen.
 
 In any of these cases, the agent must follow the **Required Checkpoint Behavior** below.
 
@@ -39,22 +68,31 @@ work. The standing workflow is therefore:
 This does **not** relax the gate: UI is still never written ahead of its design. It only clarifies
 that foundation work need not block on design, and that the UI pass is a deliberate later step.
 
-## What The Gate Does Not Apply To (no UI surface)
+## What The Gate Does Not Apply To
 
-These change types contain no rendered surface, so there is no design to wait on. They are not
-"UI skips" — they simply have no UI. An agent may proceed end-to-end:
+Two groups proceed end-to-end with no design wait.
+
+**No rendered surface at all** — there is simply no UI to design:
 
 1. Schema / database migration only.
 2. Library, utility, helper, or repository code with no UI surface.
 3. API routes whose only consumer is another agent or a server-side process (no rendered surface).
 4. Infra, configuration, CI/CD, or devcontainer changes.
-5. Bug fixes that change behavior but not layout, copy, or interaction model.
-6. Pure refactors with no observable user-visible effect.
-7. Type, lint, or test-only changes.
+5. Pure refactors with no observable user-visible effect.
+6. Type, lint, or test-only changes.
 
-If a change touches *any* rendered surface — including admin/internal pages — it is REQUIRED, not
-exempt. When in doubt, treat the change as REQUIRED. Cost of a false stop is one round-trip. Cost of
-a false start is rework.
+**Iteration on an already-shipped screen** (production-era policy above) — the screen exists, so the
+live screen is the design and the agent changes it directly:
+
+7. Bug fixes, including ones that change layout, copy, or interaction model on a shipped screen.
+8. Removing/hiding an element, copy, color, spacing/density, reordering, adding a missing
+   empty/loading/error state, small affordances.
+9. The mobile-responsive layout of a screen that already ships at desktop width (front-end work,
+   per rule `105-`).
+
+The line that still **requires** a design pass: introducing a **net-new** surface, or a deliberate
+**from-scratch redesign** of an existing one. When the choice is "tweak a shipped screen" vs. "design
+a new one," prefer iterating in code; only stop when the surface genuinely does not exist yet.
 
 ## Bypass Mechanism (User-Initiated)
 

@@ -3,6 +3,9 @@
 ## Intent
 Ensure mockup implementations are grounded in existing features, preventing technical debt and scope creep caused by AI-generated designs that may include features not yet built.
 
+## Scope (production-era, 2026-06-05)
+This rule governs implementing a mockup for the **first build** of a surface — a net-new surface or a deliberate from-scratch redesign (the "design first" tier in rule `127-`). It does **not** govern iterating on an **already-shipped** screen: once a screen is live, the running screen is the source of truth and the agent changes it directly in code, without a mockup (see rule `127-` "Production-era policy" and rule `128-`). Reach for this rule when you are building from a mockup; ignore it when you are tweaking a screen that already ships.
+
 ## Core Rule: Existing Features Only
 - The Replit design submodule (`design/`) is produced by an AI agent. It frequently includes UI for features that **do not yet exist** in the codebase.
 - **Never implement UI, layout, or interactions for features that have no corresponding backend API, database table, or working server-side logic.**
