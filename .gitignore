@@ -24,3 +24,6 @@ ctf/packages/mobile/.env.local
 .refact/
 .ai/
 .claude/settings.local.json
+
+# Claude Code agent worktrees (transient, per-agent isolated checkouts)
+.claude/worktrees/
