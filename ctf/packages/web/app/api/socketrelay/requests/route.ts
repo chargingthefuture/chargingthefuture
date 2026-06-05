@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     : `${gate.auth.userId}:${Date.now()}`;
 
   try {
-    const item = await createRequest(gate.auth.userId, input, idempotencyKey);
+    const item = await createRequest(gate.auth.userId, gate.auth.username ?? null, input, idempotencyKey);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'socketrelay', op: 'requests' });

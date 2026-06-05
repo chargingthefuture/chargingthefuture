@@ -10,6 +10,7 @@ export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'cancelle
 export type SocketRelayRequest = {
   id: string;
   ownerUserId: string;
+  ownerUsername: string | null;
   title: string;
   details: string;
   category: string;
@@ -29,6 +30,15 @@ export type SocketRelayRequestInput = {
   city: string | null;
   isPublic: boolean;
 };
+
+// Poster handle: show the chosen @username (owner decision: shown publicly, never "Anonymous").
+// When no username was captured, fall back to a neutral short id — mirrors Chyme's chymeHandle.
+export function socketRelayHandle(
+  username: string | null,
+  id: string,
+): string {
+  return username ? `@${username}` : `user-${id.slice(0, 8)}`;
+}
 
 export type ListRequestsResponse = {
   ok: boolean;

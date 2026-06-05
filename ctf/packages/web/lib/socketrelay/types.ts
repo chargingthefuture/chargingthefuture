@@ -18,6 +18,7 @@ export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'cancelle
 export type SocketRelayRequest = {
   id: string;
   ownerUserId: string;
+  ownerUsername: string | null;
   title: string;
   details: string;
   category: string;
@@ -62,6 +63,7 @@ export type SocketRelayMessage = {
 
 export type SocketRelayPublicRequest = {
   id: string;
+  ownerUsername: string | null;
   title: string;
   category: string;
   city: string | null;

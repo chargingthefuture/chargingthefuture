@@ -17,6 +17,7 @@ export type SrRequestStatus = "open" | "claimed" | "closed" | "cancelled";
 export type SrRequest = {
   id: string;
   ownerUserId: string;
+  ownerUsername: string | null;
   title: string;
   details: string;
   category: string;
@@ -64,4 +65,10 @@ export function timeAgo(iso: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs} hr ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// Poster handle: show the chosen @username (owner decision: shown publicly, never "Anonymous").
+// When no username was captured, fall back to a neutral short id — mirrors Chyme's chymeHandle.
+export function srHandle(username: string | null, id: string): string {
+  return username ? `@${username}` : `user-${id.slice(0, 8)}`;
 }

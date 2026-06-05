@@ -2455,6 +2455,7 @@ ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS update
 CREATE TABLE IF NOT EXISTS socketrelay_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_user_id TEXT NOT NULL,
+  owner_username TEXT,
   title TEXT NOT NULL,
   details TEXT NOT NULL,
   category TEXT NOT NULL,
@@ -2470,6 +2471,7 @@ CREATE TABLE IF NOT EXISTS socketrelay_requests (
 );
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_username TEXT;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';

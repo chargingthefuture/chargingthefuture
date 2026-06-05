@@ -13,6 +13,7 @@ import {
   createRequest,
   listRequests,
   fulfillRequest,
+  socketRelayHandle,
   type SocketRelayRequest,
 } from './api';
 import { SocketRelayLoading } from './SocketRelayLoading';
@@ -144,6 +145,10 @@ export function SocketRelay() {
                     {r.details}
                   </Text>
                 ) : null}
+
+                <Text style={styles.cardPoster}>
+                  {socketRelayHandle(r.ownerUsername, r.id)}
+                </Text>
 
                 <Text style={styles.cardMeta}>
                   {r.city ? `📍 ${r.city} · ` : ''}
@@ -394,6 +399,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   cardDetails: { fontSize: 12, color: '#9CA3AF', marginBottom: 6, lineHeight: 18 },
+  cardPoster: { fontSize: 12, color: COLOR, fontWeight: '600', marginBottom: 4 },
   cardMeta: { fontSize: 11, color: '#6B7280', marginBottom: 10 },
   helpBtn: {
     paddingVertical: 8,
