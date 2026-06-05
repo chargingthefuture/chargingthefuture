@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { PluginRegistryItem } from '../../lib/plugins/repository';
+import type { PluginAvailabilityState, PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PluginSortMode } from './shell-types';
 import { getPluginVisuals } from './shell-plugin-config';
 import styles from './community-shell.module.css';
@@ -9,6 +9,15 @@ import styles from './community-shell.module.css';
 function getPluginHref(slug: string): string {
   return `/apps/${encodeURIComponent(slug)}`;
 }
+
+// Show a badge only when a plugin is NOT yet fully available, so the badge carries
+// information. A fully-shipped plugin (implemented_shell) gets no badge — labelling
+// every card "Live" is noise when nearly everything is live.
+const PLUGIN_BADGE_LABEL: Partial<Record<PluginAvailabilityState, string>> = {
+  planned: 'Coming soon',
+  alpha: 'Alpha',
+  beta: 'Beta',
+};
 
 type ShellAppsPanelProps = {
   plugins: PluginRegistryItem[];
@@ -70,8 +79,10 @@ export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSo
                   {emoji}
                 </div>
                 <div className={styles.appCardBadges}>
-                  {plugin.availabilityState === 'implemented_shell' && (
-                    <span className={styles.appCardLive} style={{ color }}>Live</span>
+                  {PLUGIN_BADGE_LABEL[plugin.availabilityState] && (
+                    <span className={styles.appCardLive} style={{ color }}>
+                      {PLUGIN_BADGE_LABEL[plugin.availabilityState]}
+                    </span>
                   )}
                 </div>
               </div>
