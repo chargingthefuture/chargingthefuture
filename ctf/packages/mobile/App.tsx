@@ -11,7 +11,7 @@ import { WorkforceDashboard } from './src/features/workforce';
 import { SkillsHunt } from './src/features/skills-hunt';
 import { Foundation } from './src/features/foundation';
 import { Lighthouse } from './src/features/lighthouse';
-import { SocketRelay } from './src/features/socketrelay';
+import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
 import { TrustTransport } from './src/features/trusttransport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
@@ -48,7 +48,8 @@ type FeatureKey =
   | 'unlock'
   | 'account-data'
   | 'comic-review'
-  | 'peer-programming-admin';
+  | 'peer-programming-admin'
+  | 'socketrelay-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -74,6 +75,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'account-data', label: 'Account & Data' },
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'Peer Programming Admin' },
+  { key: 'socketrelay-admin', label: 'SocketRelay Admin' },
 ];
 
 export default function App() {
@@ -132,6 +134,8 @@ export default function App() {
         return <ComicReviewConsole />;
       case 'peer-programming-admin':
         return <AdminPeerProgramming />;
+      case 'socketrelay-admin':
+        return <AdminSocketRelay />;
       default:
         return <ChymeRoom />;
     }
