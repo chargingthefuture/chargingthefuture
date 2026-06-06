@@ -13,7 +13,7 @@ import { Foundation } from './src/features/foundation';
 import { Lighthouse } from './src/features/lighthouse';
 import { SocketRelay } from './src/features/socketrelay';
 import { TrustTransport } from './src/features/trusttransport';
-import { PeerProgramming } from './src/features/peer-programming';
+import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance } from './src/features/weekly-performance';
@@ -46,7 +46,8 @@ type FeatureKey =
   | 'levelup'
   | 'unlock'
   | 'account-data'
-  | 'comic-review';
+  | 'comic-review'
+  | 'peer-programming-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -70,6 +71,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'unlock', label: 'Unlock' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'comic-review', label: 'AI Review' },
+  { key: 'peer-programming-admin', label: 'Peer Programming Admin' },
 ];
 
 export default function App() {
@@ -124,6 +126,8 @@ export default function App() {
         return <AccountData />;
       case 'comic-review':
         return <ComicReviewConsole />;
+      case 'peer-programming-admin':
+        return <AdminPeerProgramming />;
       default:
         return <ChymeRoom />;
     }
