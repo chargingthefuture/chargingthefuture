@@ -239,6 +239,58 @@ contracts:
     idempotency: false
 
   - pluginId: gross-domestic-product
+    command: admin.currency.rate.list
+    version: 1.0.0
+    description: >-
+      List every active currency with its current USD factor (latest as_of row:
+      usd_rate, as_of, source) and its prior factors as history (newest first),
+      for the admin-only currency rate management surface. These factors only
+      estimate aggregate GDP and are never a per-wallet or redemption value.
+    inputSchema: {}
+    outputSchema:
+      currencies:
+        type: array
+    dataAccess:
+      - currency_usd_rates
+      - currencies
+    purpose: gdp_estimate_normalization
+    retentionClass: derived_medium_lived
+    idempotency: true
+
+  - pluginId: gross-domestic-product
+    command: admin.currency.rate.revise
+    version: 1.0.0
+    description: >-
+      Revise the owner-curated USD factor for a currency, used only to roll
+      multi-currency volume into the single USD-denominated GDP estimate.
+      Inserts a new dated currency_usd_rates row; revising the same as_of date
+      updates that row (ON CONFLICT (currency_code, as_of) DO UPDATE) so history
+      is preserved and the latest as_of stays the active factor. Admin-only.
+      This factor is never a per-wallet, per-price, or redemption value.
+    inputSchema:
+      currencyCode:
+        type: string
+        required: true
+      usdRate:
+        type: number
+        required: true
+      asOf:
+        type: string
+        required: false
+      source:
+        type: string
+        required: false
+    outputSchema:
+      rate:
+        type: object
+    dataAccess:
+      - currency_usd_rates
+      - currencies
+    purpose: gdp_estimate_normalization
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: gross-domestic-product
     command: admin.backfill.run
     version: 1.0.0
     description: Run controlled historical GDP backfill to recompute aggregate snapshots.
