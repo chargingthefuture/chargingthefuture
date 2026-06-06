@@ -19,7 +19,7 @@ import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits } from './src/features/service-credits';
-import { Levelup } from './src/features/levelup';
+import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AccountData } from './src/features/account-data';
@@ -55,7 +55,8 @@ type FeatureKey =
   | 'socketrelay-admin'
   | 'skills-hunt-admin'
   | 'lighthouse-admin'
-  | 'workforce-admin';
+  | 'workforce-admin'
+  | 'levelup-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -88,6 +89,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'skills-hunt-admin', label: 'Skills Hunt Admin' },
   { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
   { key: 'workforce-admin', label: 'Workforce Admin' },
+  { key: 'levelup-admin', label: 'LevelUp Admin' },
 ];
 
 export default function App() {
@@ -160,6 +162,8 @@ export default function App() {
         return <AdminLighthouse />;
       case 'workforce-admin':
         return <AdminWorkforce />;
+      case 'levelup-admin':
+        return <AdminLevelup />;
       default:
         return <ChymeRoom />;
     }

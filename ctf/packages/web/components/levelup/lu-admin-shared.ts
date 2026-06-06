@@ -1,0 +1,80 @@
+// Shared types and helpers for the LevelUp admin web shell.
+//
+// Binds only endpoints that exist today:
+//   - GET  /api/levelup/cohorts                  (cohort list, read access)
+//   - POST /api/levelup/admin/adjust-credits     (admin Service Credits adjustment)
+//
+// The cohort list shape mirrors listCohorts() in lib/levelup/repository.ts.
+
+export type AdminCohort = {
+  id: string;
+  title: string;
+  description: string;
+  track: string;
+  seats: number;
+  startDate: string;
+  endDate: string;
+  requiredCredits: number;
+  materialsCost: number;
+  deviceSupport: boolean;
+  status: 'draft' | 'open' | 'active' | 'completed' | 'cancelled';
+  allowNoDeposit: boolean;
+  trainerSplitPercent: number;
+  completionBonusCredits: number;
+  createdByUserId: string;
+  seatsAvailable: number;
+};
+
+export type AdminKpis = {
+  enrollments: number;
+  completions: number;
+  avgDaysToFirstTrainerPayout: number;
+};
+
+// What the operator typed for a Service Credits adjustment. `amount` may be
+// positive (grant to the member) or negative (claw back from the member to the
+// LevelUp treasury) — exactly what POST /adjust-credits accepts.
+export type AdjustCreditsInput = {
+  targetUserId: string;
+  amount: number;
+  reason: string;
+  governanceTicketId: string;
+  idempotencyKey: string;
+};
+
+export type AdminMutationResult<T = unknown> =
+  | { ok: true; data: T }
+  | { ok: false; message: string };
+
+// Random idempotency key so a double-submit cannot apply the same adjustment twice.
+export function idempotencyKey(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+// All LevelUp admin mutations carry the CSRF confirmation header the API requires
+// (`x-ctf-csrf: '1'`), matching lib/levelup/_lib.ts ensureMutationCsrf.
+export async function luAdminMutate<T = unknown>(
+  url: string,
+  body: unknown,
+): Promise<AdminMutationResult<T>> {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify(body),
+    });
+    // Plugin errors carry `message`; auth-gate denials carry `reason`/`code`.
+    const data = (await res.json().catch(() => null)) as
+      | (Partial<T> & { message?: string; reason?: string; code?: string })
+      | null;
+    if (res.ok) {
+      return { ok: true, data: (data ?? {}) as T };
+    }
+    return {
+      ok: false,
+      message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).`,
+    };
+  } catch {
+    return { ok: false, message: 'Network error. Try again.' };
+  }
+}
