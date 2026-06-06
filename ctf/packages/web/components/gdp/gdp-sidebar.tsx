@@ -1,9 +1,10 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { COLOR, SIDEBAR_FILTERS, type GdpMetrics } from "./gdp-shared";
+import { COLOR, GDP_ESTIMATE_CHIP_LABEL, SIDEBAR_FILTERS, type GdpMetrics } from "./gdp-shared";
 
 function LiveTicker({ metrics }: { metrics: GdpMetrics }) {
+  const isEstimate = metrics.isEstimate === true;
   const rows = [
     { l: "Target", v: metrics.target },
     { l: "Progress", v: metrics.progress },
@@ -14,7 +15,12 @@ function LiveTicker({ metrics }: { metrics: GdpMetrics }) {
     <>
       <div style={{ margin: "16px 0 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#4B5563", textTransform: "uppercase", padding: "0 10px" }}>Live Ticker</div>
       <div style={{ padding: "12px", margin: "0 8px 8px", borderRadius: 10, background: `${COLOR}08`, border: `1px solid ${COLOR}15` }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: COLOR }}>{metrics.currentValue}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: COLOR }}>{metrics.currentValue}</div>
+          {isEstimate ? (
+            <span style={{ display: "inline-flex", alignItems: "center", fontSize: 9, fontWeight: 600, color: "#6B7280", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "1px 6px", letterSpacing: "0.04em" }}>{GDP_ESTIMATE_CHIP_LABEL}</span>
+          ) : null}
+        </div>
         <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Current TI Skills Economy</div>
         {metrics.delta ? <div style={{ fontSize: 12, color: "#22C55E" }}>{metrics.delta}</div> : null}
       </div>

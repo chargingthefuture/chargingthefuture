@@ -1,6 +1,7 @@
 'use client';
 
-import { MessageSquare, Zap, Bell, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { MessageSquare, Zap, Bell, Shield } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import styles from './community-shell.module.css';
 
@@ -48,16 +49,14 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S' }: IconR
         <Bell size={18} />
       </button>
 
-      <button
-        type="button"
-        className={`${styles.iconRailBtn} ${styles.iconRailBtnDisabled}`}
-        aria-label="Settings coming soon"
-        aria-disabled="true"
-        disabled
-        title="Settings are coming soon"
+      <Link
+        href="/account/data"
+        className={styles.iconRailBtn}
+        aria-label="Account and data"
+        title="Account & Data — see and delete your data"
       >
-        <Settings size={18} />
-      </button>
+        <Shield size={18} />
+      </Link>
 
       <div className={styles.iconRailAvatar} aria-hidden="true">{initial}</div>
     </aside>
