@@ -158,9 +158,14 @@ Example: `feat: add Ollama chatbot integration to feed question answers`
 Every PR description must include one of:
 
 ```
-Parity Status: web+android complete
+Parity Status: web + mobile-responsive + android complete
 ```
-Use when the change is backend-only, infrastructure, or both web and Android are implemented in this PR.
+Use when the change is backend-only/infrastructure, or when all three are implemented in this PR. The
+three are: **web** (the desktop layout), **mobile-responsive** (the same web app at a phone-width
+breakpoint — this is how iOS and every mobile browser is served, per rule 105), and **android** (the
+React Native app). A user-facing UI change is "complete" only when the phone-width web layout is done
+too, not just desktop. (The older `Parity Status: web+android complete` is still accepted by the gate
+so older PRs don't break, but new PRs should use the three-part line.)
 
 ```
 Parity Ticket: <GitHub issue URL or #issue-number>
@@ -182,8 +187,8 @@ investigating why these two checks fail on a brand-new PR.** Fix the metadata di
 1. **Title** — edit it to a Conventional Commit (`feat:` / `fix:` / `chore:` / `refactor:` / `docs:` /
    `ci:` / `perf:` / `test:` / `build:` / `style:` / `revert:`). Editing the title re-runs the
    Semantic PR Title check automatically.
-2. **Description** — add a line that is *exactly* `Parity Status: web+android complete` (backend/infra,
-   or both web and Android shipped in this PR) **or** `Parity Ticket: #<issue>` (Android deferred).
+2. **Description** — add a line that is *exactly* `Parity Status: web + mobile-responsive + android complete`
+   (backend/infra, or all three shipped in this PR) **or** `Parity Ticket: #<issue>` (Android deferred).
 3. **Re-trigger parity** — the PR Parity Status check does **not** re-run on a description edit. Push
    one empty commit to the PR branch to re-evaluate it:
    `git commit --allow-empty -m "chore: re-trigger CI" && git push`.
