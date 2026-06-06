@@ -91,3 +91,100 @@ export async function fetchDirectorySectors(authToken: string): Promise<Director
   const data = (await res.json()) as { items: DirectorySector[] };
   return data.items;
 }
+
+// ── Admin client ────────────────────────────────────────────────────────────
+// Mirrors the admin routes under ctf/packages/web/app/api/directory/admin/.
+// Every admin route is gated by requireDirectoryAdminAccess on the server, so a
+// non-admin token receives a 401/403 and these calls throw. Mutations send the
+// x-ctf-csrf header the web routes require.
+
+// Editable fields accepted by PUT /api/directory/admin/profiles/[id]. Mirrors
+// DirectoryProfileInput on the web. Verified state and unclaimed handle are not
+// part of this contract, so they are never sent.
+export interface AdminProfileEditInput {
+  firstName: string;
+  lastName: string | null;
+  headline: string | null;
+  bio: string | null;
+  profileUrl: string | null;
+  sectorId: string | null;
+  jobTitleId: string | null;
+  skillIds: string[];
+}
+
+export async function fetchAdminDirectoryProfiles(
+  authToken: string,
+  opts: { page?: number; pageSize?: number; includeInactive?: boolean } = {},
+): Promise<DirectoryListResponse> {
+  const params = new URLSearchParams();
+  if (opts.page) params.set('page', String(opts.page));
+  if (opts.pageSize) params.set('pageSize', String(opts.pageSize));
+  if (opts.includeInactive) params.set('includeInactive', 'true');
+  const qs = params.toString();
+  const res = await fetch(`${API_BASE}/admin/profiles${qs ? `?${qs}` : ''}`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`directory/admin/profiles ${res.status}`);
+  }
+  return res.json() as Promise<DirectoryListResponse>;
+}
+
+export async function updateAdminDirectoryProfile(
+  authToken: string,
+  profileId: string,
+  input: AdminProfileEditInput,
+): Promise<DirectoryListItem> {
+  const res = await fetch(`${API_BASE}/admin/profiles/${profileId}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`directory/admin/profiles update ${res.status}`);
+  }
+  const data = (await res.json()) as { ok: boolean; profile: DirectoryListItem };
+  return data.profile;
+}
+
+export async function assignAdminDirectoryProfile(
+  authToken: string,
+  profileId: string,
+  userId: string,
+): Promise<DirectoryListItem> {
+  const res = await fetch(`${API_BASE}/admin/profiles/${profileId}/assign`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) {
+    throw new Error(`directory/admin/profiles assign ${res.status}`);
+  }
+  const data = (await res.json()) as { ok: boolean; profile: DirectoryListItem };
+  return data.profile;
+}
+
+export async function deleteAdminDirectoryProfile(
+  authToken: string,
+  profileId: string,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/profiles/${profileId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`directory/admin/profiles delete ${res.status}`);
+  }
+}

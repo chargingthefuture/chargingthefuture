@@ -4,7 +4,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import { ChymeRoom } from './src/features/chyme';
 import { ComicReviewConsole } from './src/features/comic';
 import { HubHome } from './src/features/hub';
-import { DirectoryList } from './src/features/directory';
+import { DirectoryList, AdminDirectory } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
 import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
@@ -30,6 +30,7 @@ type FeatureKey =
   | 'chyme'
   | 'skills-taxonomy'
   | 'directory'
+  | 'directory-admin'
   | 'feed-announcements'
   | 'workforce'
   | 'skills-hunt'
@@ -60,6 +61,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'chyme', label: 'Chyme' },
   { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
   { key: 'directory', label: 'Directory' },
+  { key: 'directory-admin', label: 'Directory Admin' },
   { key: 'feed-announcements', label: 'Feed+Announcements' },
   { key: 'workforce', label: 'Workforce' },
   { key: 'skills-hunt', label: 'Skills Hunt' },
@@ -99,6 +101,8 @@ export default function App() {
         return <SkillsTaxonomy />;
       case 'directory':
         return <DirectoryList />;
+      case 'directory-admin':
+        return <AdminDirectory />;
       case 'feed-announcements':
         return (
           <ScrollView contentContainerStyle={styles.feedStack}>
