@@ -54,13 +54,20 @@ Command groups:
 
 ### 2.2 HTTP Projection Routes
 
-Admin routes:
+The route set below is the **shipped** surface (the earlier draft above named a
+different, never-built `/admin/weeks/:weekStart/...` shape; the routes that
+actually exist are listed here).
 
-- `GET /api/weekly-performance/admin/weeks`
-- `GET /api/weekly-performance/admin/weeks/:weekStart`
-- `GET /api/weekly-performance/admin/weeks/:weekStart/metrics`
-- `GET /api/weekly-performance/admin/weeks/:weekStart/comparison`
-- `POST /api/weekly-performance/admin/weeks/:weekStart/export`
+Read routes (admin or approved user):
+
+- `GET /api/weekly-performance/weeks` — tracked weeks (most recent 52).
+- `GET /api/weekly-performance/current-week` — current week plus active-user count (last 7 days).
+- `GET /api/weekly-performance/metrics?weekStartDate=...[&compareWeekStartDate=...]` — week metrics, or a week-over-week comparison when `compareWeekStartDate` is supplied.
+
+Admin-only routes:
+
+- `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
+- `GET /api/weekly-performance/export?weekStartDate=...` — export gate (admin-only, additionally guarded by the `WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag).
 
 ## 3) Data Dependencies and Contracts
 
@@ -85,6 +92,8 @@ Admin routes:
 
 Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states — icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits.
 
+Admin surface (2026-06-06): the admin page `app/admin/weekly-performance/page.tsx` was a thin server stub (it printed only the current week and the tracked-week count). It is now a real, mobile-responsive admin UI. The server page keeps the same admin gate as the other `app/admin/<plugin>/page.tsx` pages (`evaluatePluginAccess({ requireApprovedUserOrAdmin: true })`, then `redirect('/apps/weekly-performance')` when `!decision.isAdmin`) and renders a new client shell `components/weekly-performance/wp-admin-shell.tsx`. The shell uses `useIsMobile()` so the owner can run it on iOS: it lists tracked weeks and the current week, lets the admin pick a week and **set it active** (`PUT /api/weekly-performance/admin/week-selection` with `x-ctf-csrf: '1'`), shows that week's metrics, and offers the export action (`GET /api/weekly-performance/export`). Loading, empty, populated, and success/error feedback states are all handled. A matching Android admin screen (`packages/mobile/src/features/weekly-performance/AdminWeeklyPerformance.tsx`, design `MobileWeeklyPerformanceAdminView.tsx`) was added and registered in `App.tsx`; it is admin-gated client-side (`useAuth().user.isAdmin`), binds to the same routes via a new `selectActiveWeek` helper in `api.ts`, and keeps the Metrics and History tabs. The mockup's fabricated plugin-breakdown and daily bar chart are omitted (no backing API field), per real-data-only policy.
+
 Android pixel pass (design `MobileWeeklyPerformance.tsx`, 2026-05-31): the mobile screen (`packages/mobile/src/features/weekly-performance/WeeklyPerformance.tsx`) is fully rewritten to align with the canonical mockup. A new `api.ts` is introduced, binding to the same three read routes used by web (`GET /api/weekly-performance/weeks`, `/current-week`, `/metrics`). Four states are implemented: Loading (brand phrases centered), Public/unauthenticated (blurred metric preview with lock overlay and sign-in CTA), Empty (week in progress with placeholder cards), and Populated (metrics grid + history tab). Metric cards are driven by known `metricKey` values (`member_count`, `signups`, `engagements`, `gdp_delta`); the mockup's "Daily Engagements" bar chart has no backing API field (metrics are weekly aggregates only) and is omitted per real-data-only policy. The admin Export action is not surfaced on mobile (admin-only server gate exists on web; mobile surfaces the admin badge and export hint in the history tab). All mock data retired. Export `WeeklyPerformance` preserved.
 
 ## 6) Seed Coverage Status
@@ -96,9 +105,11 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
 1. Non-financial metric dictionary and formulas live in code; no canonical governance document captures the dictionary outside the implementation.
 2. Authorized non-admin read-only access is not surfaced; all read paths require admin role.
 3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
+4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, `comparison.get`, and `report.export`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
 
+- 2026-06-06: Turned the Weekly Performance admin page from a thin stub into a real, mobile-responsive admin UI and added an Android admin screen. Web: `app/admin/weekly-performance/page.tsx` now renders the new client shell `components/weekly-performance/wp-admin-shell.tsx` (same admin gate as the other admin pages; `useIsMobile()` responsive); surfaces week selection (`PUT /api/weekly-performance/admin/week-selection`, CSRF header), the selected week's metrics (`GET /api/weekly-performance/metrics`), and export (`GET /api/weekly-performance/export`), with loading/empty/populated and success/error states. Android: added `AdminWeeklyPerformance.tsx` (design `MobileWeeklyPerformanceAdminView.tsx`), admin-gated and registered in `App.tsx`, with a `selectActiveWeek` helper added to `api.ts`. Fabricated plugin breakdown and daily bar chart from the mockup omitted (no backing API field). Noted the week-selection command/contract gap (section 7). No schema change.
 - 2026-05-31: Android pixel pass (design `MobileWeeklyPerformance.tsx`). Rewrote `packages/mobile/src/features/weekly-performance/WeeklyPerformance.tsx` to align with canonical mockup; introduced `api.ts` binding to real routes (`/weeks`, `/current-week`, `/metrics`). Four states: Loading, Public, Empty, Populated. Metric cards keyed on real `metricKey` fields. Daily chart omitted (no backing API field). Mock data retired. No schema/API/contract change.
 - 2026-05-29: Web UI circle-back (design `c5d83c0`; unblocked by the design re-pin). Rebuilt the user-facing weekly-performance shell from the baseline server summary to the full client dashboard in `WeeklyPerformance.tsx` (+ Empty/Loading), wired to the documented read routes and the admin export. Decomposed into modular sub-components (`wp-shared`, `wp-loading`, `wp-icon-rail`, `wp-sidebar`, `wp-metric-cards`, `wp-comparison-chart`, `wp-empty-main`, `wp-dashboard-main`, `wp-right-rail`, plus the shell). Real data only; the dummy daily chart became a real this-week-vs-last-week per-metric comparison and the unbacked "Top Apps" widget was omitted. No schema/API change.
 - 2026-05-18: Replaced "Web and Android Parity Notes" with canonical "Web and Android Delivery Status" (`web+android complete`). Renamed "Open Decisions" to canonical "Gaps and Known Technical Debt" and removed Android-parity-milestone entry per Rule 105.
