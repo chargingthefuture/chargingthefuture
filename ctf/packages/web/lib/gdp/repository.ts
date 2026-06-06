@@ -25,6 +25,7 @@ type MetricRow = {
   dp_suppressed: boolean;
   lawful_basis: string;
   source_plugin: string;
+  is_estimate: boolean;
 };
 
 function mapMetric(row: MetricRow) {
@@ -34,6 +35,7 @@ function mapMetric(row: MetricRow) {
     dpSuppressed: row.dp_suppressed,
     lawfulBasis: row.lawful_basis,
     sourcePlugin: row.source_plugin,
+    isEstimate: row.is_estimate,
   };
 }
 
@@ -52,7 +54,7 @@ export async function getLatestPublication() {
   }
 
   const metricsResult = await queryDb<MetricRow>(
-    `SELECT metric_key, metric_value::text, dp_suppressed, lawful_basis, source_plugin
+    `SELECT metric_key, metric_value::text, dp_suppressed, lawful_basis, source_plugin, is_estimate
      FROM gdp_metric_snapshots
      WHERE week_start_date = $1
      ORDER BY metric_key ASC`,

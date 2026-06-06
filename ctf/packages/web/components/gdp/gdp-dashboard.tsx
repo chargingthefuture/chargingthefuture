@@ -1,16 +1,51 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { COLOR, type GdpCountry, type GdpMetrics, type GdpSector } from "./gdp-shared";
+import {
+  COLOR,
+  GDP_ESTIMATE_CHIP_LABEL,
+  GDP_ESTIMATE_FOOTNOTE,
+  type GdpCountry,
+  type GdpMetrics,
+  type GdpSector,
+} from "./gdp-shared";
+
+// Understated chip shown beside the GDP headline figure only when the figure is a
+// normalized USD estimate. Matches design/.../survivor-hub/GDP.tsx.
+function EstimateChip() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        fontSize: 10,
+        fontWeight: 600,
+        color: "#6B7280",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 4,
+        padding: "2px 7px",
+        marginLeft: 10,
+        letterSpacing: "0.04em",
+      }}
+    >
+      {GDP_ESTIMATE_CHIP_LABEL}
+    </span>
+  );
+}
 
 function GdpHero({ metrics }: { metrics: GdpMetrics }) {
   const stats = metrics.memberStats ?? [];
+  const isEstimate = metrics.isEstimate === true;
   return (
     <div style={{ marginBottom: 24, padding: "28px 32px", borderRadius: 20, background: `linear-gradient(135deg,${COLOR}20 0%,rgba(6,182,212,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
       <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", color: COLOR, textTransform: "uppercase", marginBottom: 8 }}>TI Skills Economy — Live</div>
-          <div style={{ fontSize: 48, fontWeight: 900, color: "#F9FAFB", lineHeight: 1, marginBottom: 8 }}>{metrics.currentValue || "—"}</div>
+          <div style={{ display: "flex", alignItems: "baseline", marginBottom: 8 }}>
+            <div style={{ fontSize: 48, fontWeight: 900, color: "#F9FAFB", lineHeight: 1 }}>{metrics.currentValue || "—"}</div>
+            {isEstimate ? <EstimateChip /> : null}
+          </div>
           <div style={{ fontSize: 16, color: "#9CA3AF" }}>
             {metrics.target ? `of ${metrics.target} opportunity` : ""}
             {metrics.progress ? ` · ${metrics.progress} reached` : ""}
@@ -19,6 +54,9 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
             <div style={{ marginTop: 16, height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
               <div style={{ height: "100%", background: `linear-gradient(to right,${COLOR},#22D3EE)`, borderRadius: 4, width: metrics.progress }} />
             </div>
+          ) : null}
+          {isEstimate ? (
+            <div style={{ fontSize: 11, color: "#4B5563", marginTop: 12, lineHeight: 1.55, fontStyle: "italic" }}>{GDP_ESTIMATE_FOOTNOTE}</div>
           ) : null}
         </div>
         {stats.length > 0 ? (
