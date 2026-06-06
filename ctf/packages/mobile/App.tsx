@@ -7,10 +7,10 @@ import { HubHome } from './src/features/hub';
 import { DirectoryList } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
-import { WorkforceDashboard } from './src/features/workforce';
-import { SkillsHunt } from './src/features/skills-hunt';
+import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
+import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
 import { Foundation } from './src/features/foundation';
-import { Lighthouse } from './src/features/lighthouse';
+import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
 import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
 import { TrustTransport, AdminTrustTransport } from './src/features/trusttransport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
@@ -50,7 +50,10 @@ type FeatureKey =
   | 'account-data'
   | 'comic-review'
   | 'peer-programming-admin'
-  | 'socketrelay-admin';
+  | 'socketrelay-admin'
+  | 'skills-hunt-admin'
+  | 'lighthouse-admin'
+  | 'workforce-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -78,6 +81,9 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'Peer Programming Admin' },
   { key: 'socketrelay-admin', label: 'SocketRelay Admin' },
+  { key: 'skills-hunt-admin', label: 'Skills Hunt Admin' },
+  { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
+  { key: 'workforce-admin', label: 'Workforce Admin' },
 ];
 
 export default function App() {
@@ -140,6 +146,12 @@ export default function App() {
         return <AdminPeerProgramming />;
       case 'socketrelay-admin':
         return <AdminSocketRelay />;
+      case 'skills-hunt-admin':
+        return <AdminSkillsHunt />;
+      case 'lighthouse-admin':
+        return <AdminLighthouse />;
+      case 'workforce-admin':
+        return <AdminWorkforce />;
       default:
         return <ChymeRoom />;
     }

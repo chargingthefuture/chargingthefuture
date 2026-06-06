@@ -240,7 +240,9 @@ Canonical definition notes for `recruited`:
 | Platform | Status | Notes |
 |---|---|---|
 | Web | ✅ Delivered | Pixel pass complete 2026-05-31. Shell rewritten to match `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/Workforce.tsx` canonical design. Bound to real dashboard, sector-report, skill-level-report, and profile API endpoints. Fabricated stats (Employed/In Training/Seeking Work breakdown, pathways, skill counts) omitted per real-data-only policy. Loading state, empty state, 4-card hero stats, skill-level distribution bars, sector gaps table, and profile right-rail all delivered. Chat tab from mockup omitted (no backing API route). |
-| Android | ⬜ Pending | Android parity not yet implemented. |
+| Android | ✅ Delivered | User dashboard pixel-pass 2026-05-31. Admin operations screen added 2026-06-06 (`AdminWorkforce.tsx`), mirroring the web admin page (`/admin/workforce`). |
+
+Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added under `packages/mobile/src/features/workforce`, registered as the `workforce-admin` screen in `App.tsx`. It mirrors the shipped web admin page (`/admin/workforce`): the four dashboard counts (workforce total, recruited total, occupations, active announcements), the current config (exports-enabled toggle, kill-switch toggle, report timezone, week-start day-of-week), and the two operational actions (run incremental sync, recompute recruited totals). It binds only existing endpoints — `GET /api/workforce/dashboard`, `GET /api/workforce/admin/config`, `PUT /api/workforce/admin/config`, `POST /api/workforce/admin/sync`, `POST /api/workforce/admin/recompute`. Admin access is enforced server-side; a 401/403 shows an "admins only" notice. All mutations send `x-ctf-csrf: '1'`; the kill-switch flip, sync, and recompute are each behind an explicit confirm gesture. The web admin page is already mobile-responsive (Tailwind `max-w-4xl` container with stacked text sections), so no web layout change was needed. Endpoint/contract gap: the design mockup shows a "flags" moderation queue (profile/skills-gap flags), but no workforce flags endpoint exists; that tab is omitted per rule 126 and the overview/config/operations surfaces (which do have endpoints) are shown instead. Occupations and announcements admin CRUD endpoints exist but were not surfaced on Android in this pass.
 
 ## 8) Gaps and Known Technical Debt
 
@@ -255,6 +257,7 @@ Canonical definition notes for `recruited`:
 |---|---|---|
 | Web pixel-perfect | ⬜ Not started | Web shell exists; awaiting pixel-pass PR |
 | Android pixel-pass | ✅ Delivered 2026-05-31 | `WorkforceDashboard`, `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard` — all bound to real API routes only |
+| Android admin | ✅ Delivered 2026-06-06 | `AdminWorkforce.tsx` + `admin-api.ts`; mirrors `/admin/workforce` (counts, config toggles, sync, recompute) against existing endpoints only |
 
 ### Android Mobile Parity Summary (2026-05-31)
 
@@ -268,6 +271,7 @@ Canonical definition notes for `recruited`:
 
 ## 10) Change Log
 
+- 2026-06-06: Android admin parity. Added `AdminWorkforce.tsx` + `admin-api.ts` and registered the `workforce-admin` screen in `App.tsx`. Mirrors the web admin page (`/admin/workforce`) against existing endpoints only: `GET /dashboard` (counts), `GET/PUT /admin/config` (exports + kill-switch toggles), `POST /admin/sync`, `POST /admin/recompute`. No backend added. Kill-switch, sync, and recompute are confirm-gated; all mutations send `x-ctf-csrf: '1'`. Web admin page was already mobile-responsive (no layout change). The mockup's "flags" queue has no endpoint and is omitted per rule 126; occupations/announcements admin CRUD remain web-only for now.
 - 2026-05-31: Android pixel-pass delivered (`feat/workforce-android-pixel-pass`). Rewrote `WorkforceDashboard.tsx` to bind real API routes (`/dashboard`, `/profile`). Added `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard` sub-components matching `MobileWorkforce*` design mockups. Retired mock data and `setTimeout` stubs. Flipped Android row ⬜ → ✅ in readiness plan. Added "Web and Android Delivery Status" section to this inventory.
 
 - 2026-05-31: Web pixel pass delivered. Shell rewritten to match canonical `Workforce.tsx` design mockup: exact inline hex colors (`#B45309`, `#0F1117`, `#0D0F14`, `#090B0F`), Inter type scale, lucide-react icons, three-column layout (72px icon rail + 240px sidebar + main content + 280px right panel), 4-card hero stats, skill-level distribution chart (bar per bucket), sector gaps table (supply/demand dual progress bars), loading and empty states. Chat tab omitted (no backing API). Fabricated stats (Employed/In Training/Seeking Work distribution, pathways, skill count) omitted per real-data-only policy. Files created/updated: `workforce-shell.tsx`, `workforce-icon-rail.tsx`, `workforce-sidebar.tsx`, `workforce-hero-stats.tsx`, `workforce-sector-gaps.tsx`, `workforce-skill-distribution.tsx`, `workforce-profile-panel.tsx`. TypeCheck, build, ESLint, and EOF gates all pass.
