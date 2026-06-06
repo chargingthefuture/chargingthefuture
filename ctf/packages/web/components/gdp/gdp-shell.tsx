@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, COLOR, type GdpMetrics, type GdpReport, type GdpTab } from "./gdp-shared";
+import { BG, COLOR, GDP_HEADLINE_METRIC_KEY, type GdpMetricRow, type GdpMetrics, type GdpReport, type GdpTab } from "./gdp-shared";
 import { GdpLoading } from "./gdp-loading";
 import { GdpIconRail } from "./gdp-icon-rail";
 import { GdpSidebar } from "./gdp-sidebar";
@@ -60,11 +60,23 @@ function GdpContent({
   return <GdpMap countries={countries} />;
 }
 
+// Read the published headline GDP metric off the raw report payload and report
+// whether it is flagged a normalized USD estimate. Returns false unless the report
+// actually carries that flag, so the estimate treatment only renders where the data
+// says it is an estimate. Never inspects per-user figures — only the aggregate metric.
+function deriveIsEstimate(rawMetrics: unknown): boolean {
+  if (!Array.isArray(rawMetrics)) return false;
+  return (rawMetrics as GdpMetricRow[]).some(
+    (m) => m && m.metricKey === GDP_HEADLINE_METRIC_KEY && m.isEstimate === true,
+  );
+}
+
 export default function GdpShell() {
   const [tab, setTab] = useState<GdpTab>("dashboard");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<GdpReport | null>(null);
+  const [isEstimate, setIsEstimate] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -75,8 +87,11 @@ export default function GdpShell() {
       try {
         const res = await fetch("/api/gdp/report/current", { signal: controller.signal });
         if (!res.ok) throw new Error("Failed to load GDP report");
-        const data = (await res.json()) as { report?: GdpReport };
-        if (!controller.signal.aborted) setReport(data.report ?? null);
+        const data = (await res.json()) as { report?: (GdpReport & { metrics?: unknown }) | null };
+        if (!controller.signal.aborted) {
+          setReport(data.report ?? null);
+          setIsEstimate(deriveIsEstimate(data.report?.metrics));
+        }
       } catch (e: unknown) {
         if (controller.signal.aborted) return;
         setError(e instanceof Error ? e.message : "Failed to load GDP data.");
@@ -92,7 +107,7 @@ export default function GdpShell() {
 
   const sectors = report?.sectors ?? [];
   const countries = report?.countries ?? [];
-  const metrics = report?.metrics ?? {};
+  const metrics: GdpMetrics = { ...(report?.metrics ?? {}), isEstimate };
 
   if (isMobile) {
     const tabs: { key: GdpTab; label: string }[] = [

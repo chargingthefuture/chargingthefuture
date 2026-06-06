@@ -8,7 +8,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
-import { fetchGdpCurrentReport, pickMetric, GdpReport } from './api';
+import { fetchGdpCurrentReport, pickMetric, pickMetricIsEstimate, GdpReport } from './api';
+
+// Shared estimate copy — mirrors the web GDP shell (gdp-shared.ts) so the legal
+// wording stays identical: a community-wide normalized USD estimate, never a
+// per-user redemption value.
+const GDP_ESTIMATE_CHIP_LABEL = 'Estimate';
+const GDP_ESTIMATE_FOOTNOTE =
+  '* USD estimate normalized across currencies — a transparency metric, not a ledger.';
 
 // ─── Design tokens (from MobileGDP.tsx design-sync) ──────────────────────────
 const COLOR = '#06B6D4';
@@ -130,6 +137,9 @@ function GdpMainView({ report }: { report: GdpReport }) {
   // Real metric bindings — keys observed in web repository.ts getGdpShellStats()
   const totalRevenue = pickMetric(report.metrics, 'gdp_total_revenue');
   const weeklyActiveUsers = pickMetric(report.metrics, 'weekly_active_users');
+  // The headline GDP figure shows the estimate treatment only when the published
+  // data flags it a normalized USD estimate.
+  const totalRevenueIsEstimate = pickMetricIsEstimate(report.metrics, 'gdp_total_revenue');
 
   // Format helpers
   function fmtUsd(n: number | null): string {
@@ -176,6 +186,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
         {activeNav === 'overview' && (
           <GdpOverviewTab
             totalRevenue={totalRevenue}
+            totalRevenueIsEstimate={totalRevenueIsEstimate}
             weeklyActiveUsers={weeklyActiveUsers}
             fmtUsd={fmtUsd}
             fmtCount={fmtCount}
@@ -226,12 +237,14 @@ function navIcon(key: NavKey): string {
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 function GdpOverviewTab({
   totalRevenue,
+  totalRevenueIsEstimate,
   weeklyActiveUsers,
   fmtUsd,
   fmtCount,
   publication,
 }: {
   totalRevenue: number | null;
+  totalRevenueIsEstimate: boolean;
   weeklyActiveUsers: number | null;
   fmtUsd: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
@@ -242,9 +255,19 @@ function GdpOverviewTab({
       {/* Hero card */}
       <View style={styles.heroCard}>
         <Text style={styles.heroLabel}>TI SKILLS ECONOMY</Text>
-        <Text style={styles.heroValue}>{fmtUsd(totalRevenue)}</Text>
+        <View style={styles.heroValueRow}>
+          <Text style={styles.heroValue}>{fmtUsd(totalRevenue)}</Text>
+          {totalRevenueIsEstimate && (
+            <View style={styles.estimateChip}>
+              <Text style={styles.estimateChipText}>{GDP_ESTIMATE_CHIP_LABEL}</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.heroSub}>{publication.title}</Text>
         {/* Progress bar omitted — $300B target figure has no API backing field */}
+        {totalRevenueIsEstimate && (
+          <Text style={styles.estimateFootnote}>{GDP_ESTIMATE_FOOTNOTE}</Text>
+        )}
       </View>
 
       {/* Stat chips */}
@@ -511,12 +534,39 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 6,
   },
+  heroValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 4,
+  },
   heroValue: {
     fontSize: 42,
     fontWeight: '900',
     color: TEXT_PRIMARY,
     lineHeight: 48,
-    marginBottom: 4,
+  },
+  estimateChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  estimateChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: TEXT_DIM,
+    letterSpacing: 0.4,
+  },
+  estimateFootnote: {
+    fontSize: 10.5,
+    color: '#4B5563',
+    marginTop: 10,
+    lineHeight: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   heroSub: {
     fontSize: 13,
