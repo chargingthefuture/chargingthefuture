@@ -319,12 +319,16 @@ jobs:
         with:
           script: |
             const body = context.payload.pull_request.body || '';
-            const hasComplete = /Parity Status:\s*web\+android complete/i.test(body);
+            // Accept the current canonical form "Parity Status: web + mobile-responsive + android complete"
+            // and the older "Parity Status: web+android complete" (so in-flight PRs don't break). The
+            // mobile-responsive part is optional in the regex for backward compatibility; new PRs should
+            // include it because the web app is responsive (it serves iOS and every mobile browser).
+            const hasComplete = /Parity Status:\s*web\s*\+\s*(mobile[-\s]?responsive\s*\+\s*)?android\s+complete/i.test(body);
             const hasTicket = /Parity Ticket:\s*https?:\/\//i.test(body) || /Parity Ticket:\s*#\d+/i.test(body);
 
             if (!hasComplete && !hasTicket) {
               core.setFailed(
-                'PR description must include either "Parity Status: web+android complete" or "Parity Ticket: <link-or-issue>".'
+                'PR description must include either "Parity Status: web + mobile-responsive + android complete" or "Parity Ticket: <link-or-issue>".'
               );
             }
 
