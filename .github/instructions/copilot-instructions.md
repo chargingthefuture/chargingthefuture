@@ -196,38 +196,48 @@ empty commit. If you can set the PR body at creation time, put the Conventional-
 
 CodeRabbit auto-review is gated on the `coderabbit` label (see `.coderabbit.yaml`), and the
 account is on the **free tier**, so reviews are a scarce resource. Agents self-triage and apply the
-label **only when the change is genuinely complex/risky**, and **no more than once per hour**.
+label **only when the change is genuinely complex/risky**. Cadence is no longer paced by hand — a
+scheduled workflow (`.github/workflows/pace-coderabbit-reviews.yml`) promotes one labelled draft to
+ready-for-review per hour, so label every qualifying PR and let the workflow drain the queue.
 
 - **Label `coderabbit`** when the PR touches any of: money / ServiceCredits ledger, auth/authz, CSRF,
   data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
   whole new plugin.
 - **Do NOT label** pure restyles, rule-116 decompositions, icon swaps, or doc-sync PRs with **no
   behavior change** — these are low-risk and waste the quota.
-- **Rate cap:** at most **one labeled PR per hour**. If several qualify in the same hour, label only
-  the riskiest and defer the rest to the next hour.
 - Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
   review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
 
-#### Draft vs. ready: agents leave PRs as draft; the owner marks them ready
+#### Two lanes: low-risk PRs finish themselves; risky PRs wait for CodeRabbit + the owner's merge
 
-CodeRabbit needs **both** the `coderabbit` label **and** ready-for-review state before it reviews.
-A labeled **draft** is not reviewed (`.coderabbit.yaml` sets `auto_review.drafts: false`); the review
-fires only once the PR is **marked ready for review while carrying the label**. (A "Review in
-progress" commit status may briefly appear on a draft, but no walkthrough or findings are posted until
-the PR is ready — treat that status as non-blocking noise.)
+The repo has **auto-merge** and **auto-delete head branches** turned on. That lets most PRs complete
+with no human in the loop. Pick the lane by risk:
 
-Workflow (owner-controlled ready):
+**Low-risk lane (default — the bulk of readiness-pass work).** Restyles, copy/color/spacing, responsive
+layout of shipped screens, rule-116 decompositions, docs, refactors, type/lint/test changes — anything
+that does **not** hit the `coderabbit` trigger list above. For these:
 
-- **Agents always open PRs as draft** and apply the `coderabbit` label when the change qualifies (per
-  the self-triage list above). Then **stop** — do not mark the PR ready for review yourself.
-- **The owner marks the PR ready for review.** This is deliberate: it lets the owner catch
-  "needs-more-work" before a scarce review slot is ever spent, and paces reviews to the free-tier
-  one-review-per-hour budget without agents juggling timers. Marking ready + the label present =
-  CodeRabbit reviews it.
-- **Never treat a pending/absent CodeRabbit review as a blocker.** Keep doing all work as asked and
-  building the backlog regardless of review state; a labeled draft simply waits for the owner.
-- Net effect: **labeled + draft = waiting for the owner to mark ready; labeled + ready (owner) =
-  review fires.** Agents control the label; the owner controls ready.
+- Open the PR **ready for review** (`draft: false`), with the Conventional-Commit title and the
+  `Parity Status:` line set at creation so the title/parity checks pass on the first run.
+- **Turn on auto-merge** right after opening (GitHub MCP `enable_pr_auto_merge`, merge method squash
+  or merge per repo default). CI runs, and when it's green GitHub merges the PR and deletes the branch.
+  Fully hands-off — the owner can step away.
+- Do **not** label these `coderabbit`.
+
+**Review lane (risky).** Anything on the `coderabbit` trigger list (money/ledger, auth, CSRF, schema/
+migrations, new or changed API contracts, new stateful logic, a whole new plugin). For these:
+
+- Open the PR **as a draft** and apply the `coderabbit` label. Then **stop** — do not mark it ready and
+  do **not** enable auto-merge.
+- The hourly pacing workflow promotes the oldest such draft to ready-for-review, which triggers
+  CodeRabbit at the free-tier rate. After the review posts and CI is green, **the owner reads
+  CodeRabbit's findings and merges** (owner decision, 2026-06-05: risky changes are not auto-merged —
+  they get human eyes first). Branch cleanup is still automatic.
+- **Never treat a pending/absent CodeRabbit review as a blocker.** Keep building the backlog; a labelled
+  draft simply waits its turn in the hourly queue and then for the owner's merge.
+
+Net effect: **low-risk = ready + auto-merge (completes itself); risky = draft + label (workflow makes it
+ready hourly, owner merges after reading the review).**
 
 ### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
 
