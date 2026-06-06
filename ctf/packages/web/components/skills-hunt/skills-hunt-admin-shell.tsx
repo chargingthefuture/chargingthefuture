@@ -111,7 +111,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   const allPendingSelected = pendingCount > 0 && selected.size === pendingCount;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: 24 }}>
+    <div style={{ minHeight: "100vh", background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <AdminHeader />
       {rounds.length === 0 ? (
         <div style={{ color: "#6B7280" }}>No rounds yet. Create one before moderating.</div>
@@ -126,17 +126,21 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
           ) : submissions.length === 0 ? (
             <div style={{ color: "#6B7280", fontSize: 13 }}>No submissions matching this filter.</div>
           ) : (
-            <SkillsHuntAdminTable
-              submissions={submissions}
-              selected={selected}
-              acting={acting}
-              allPendingSelected={allPendingSelected}
-              onToggleAll={toggleAllVisible}
-              onToggle={toggleOne}
-              onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
-              onReject={onReject}
-              onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
-            />
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ minWidth: 720 }}>
+                <SkillsHuntAdminTable
+                  submissions={submissions}
+                  selected={selected}
+                  acting={acting}
+                  allPendingSelected={allPendingSelected}
+                  onToggleAll={toggleAllVisible}
+                  onToggle={toggleOne}
+                  onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
+                  onReject={onReject}
+                  onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
+                />
+              </div>
+            </div>
           )}
         </>
       )}
