@@ -12,7 +12,7 @@ import { SkillsHunt } from './src/features/skills-hunt';
 import { Foundation } from './src/features/foundation';
 import { Lighthouse } from './src/features/lighthouse';
 import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
-import { TrustTransport } from './src/features/trusttransport';
+import { TrustTransport, AdminTrustTransport } from './src/features/trusttransport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
@@ -37,6 +37,7 @@ type FeatureKey =
   | 'lighthouse'
   | 'socketrelay'
   | 'trusttransport'
+  | 'trusttransport-admin'
   | 'peer-programming'
   | 'mood'
   | 'gentlepulse'
@@ -63,6 +64,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'lighthouse', label: 'Lighthouse' },
   { key: 'socketrelay', label: 'SocketRelay' },
   { key: 'trusttransport', label: 'TrustTransport' },
+  { key: 'trusttransport-admin', label: 'TrustTransport Admin' },
   { key: 'peer-programming', label: 'Peer Programming' },
   { key: 'mood', label: 'Mood' },
   { key: 'gentlepulse', label: 'GentlePulse' },
@@ -110,6 +112,8 @@ export default function App() {
         return <SocketRelay />;
       case 'trusttransport':
         return <TrustTransport />;
+      case 'trusttransport-admin':
+        return <AdminTrustTransport />;
       case 'peer-programming':
         return <PeerProgramming />;
       case 'mood':
