@@ -8,6 +8,25 @@
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
 
+// Bound every request so a stalled connection can't trap the screen in a loading or
+// submitting state forever. Aborts after the timeout and reports a clear "network_timeout".
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('network_timeout');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type AccountService = {
   slug: string;
   name: string;
@@ -23,7 +42,7 @@ export type AccountServicesResponse = {
 };
 
 export async function fetchAccountServices(): Promise<AccountServicesResponse> {
-  const res = await fetch(`${API_BASE}/api/account/services`, { credentials: 'include' });
+  const res = await fetchWithTimeout(`${API_BASE}/api/account/services`, { credentials: 'include' });
   if (!res.ok) {
     throw new Error(`account_services_fetch_failed:${res.status}`);
   }
@@ -31,7 +50,7 @@ export async function fetchAccountServices(): Promise<AccountServicesResponse> {
 }
 
 export async function deleteServiceData(slug: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/account/services/${encodeURIComponent(slug)}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/account/services/${encodeURIComponent(slug)}`, {
     method: 'DELETE',
     credentials: 'include',
     headers: {
@@ -46,7 +65,7 @@ export async function deleteServiceData(slug: string): Promise<void> {
 }
 
 export async function deleteFullAccount(): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/account/full-account`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/account/full-account`, {
     method: 'DELETE',
     credentials: 'include',
     headers: {

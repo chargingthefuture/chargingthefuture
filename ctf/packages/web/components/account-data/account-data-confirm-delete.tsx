@@ -74,9 +74,11 @@ export function AccountDataConfirmDelete({ serviceCount, isMobile, onCancel, onC
           </div>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => { if (status !== 'submitting') onCancel(); }}
+            disabled={status === 'submitting'}
+            aria-disabled={status === 'submitting'}
             aria-label="Cancel"
-            style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: SUBTLE, flexShrink: 0 }}
+            style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: status === 'submitting' ? 'not-allowed' : 'pointer', color: SUBTLE, flexShrink: 0 }}
           >
             <X size={14} />
           </button>
