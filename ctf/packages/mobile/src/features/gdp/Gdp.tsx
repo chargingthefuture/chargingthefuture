@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  type DimensionValue,
 } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
 import { fetchGdpCurrentReport, pickMetric, pickMetricIsEstimate, GdpReport } from './api';
@@ -200,7 +201,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
           <GdpTrendTab totalRevenue={totalRevenue} fmtUsd={fmtUsd} />
         )}
         {activeNav === 'home' && (
-          <GdpHomeTab />
+          <GdpHomeTab totalRevenue={totalRevenue} weeklyActiveUsers={weeklyActiveUsers} fmtUsd={fmtUsd} fmtCount={fmtCount} />
         )}
       </ScrollView>
 
@@ -347,13 +348,57 @@ function GdpTrendTab({
   );
 }
 
-// ─── Home tab ─────────────────────────────────────────────────────────────────
-function GdpHomeTab() {
+// ─── Home tab (world map) ─────────────────────────────────────────────────────
+// Static, View-based world map (no SVG dependency). The GDP module has no
+// per-country data, so regions render in one neutral cyan state and the real
+// community-wide aggregates are shown above the map. Never invents per-country
+// figures.
+const MAP_REGIONS: { key: string; top: DimensionValue; left: DimensionValue; width: DimensionValue; height: DimensionValue }[] = [
+  { key: 'north-america', top: '12%', left: '8%', width: '24%', height: '34%' },
+  { key: 'south-america', top: '54%', left: '20%', width: '14%', height: '34%' },
+  { key: 'europe', top: '14%', left: '44%', width: '14%', height: '18%' },
+  { key: 'africa', top: '36%', left: '44%', width: '18%', height: '38%' },
+  { key: 'asia', top: '12%', left: '62%', width: '30%', height: '34%' },
+  { key: 'oceania', top: '64%', left: '74%', width: '16%', height: '18%' },
+];
+
+function GdpHomeTab({
+  totalRevenue,
+  weeklyActiveUsers,
+  fmtUsd,
+  fmtCount,
+}: {
+  totalRevenue: number | null;
+  weeklyActiveUsers: number | null;
+  fmtUsd: (_n: number | null) => string;
+  fmtCount: (_n: number | null) => string;
+}) {
+  const hasData = totalRevenue !== null || weeklyActiveUsers !== null;
   return (
-    <View style={styles.homeTab}>
-      <Text style={styles.homeIcon}>🗺️</Text>
-      <Text style={styles.homeTitle}>TI Skills Economy</Text>
-      <Text style={styles.homeDesc}>Building a survivor economy — one skill at a time.</Text>
+    <View>
+      <View style={styles.mapHeaderRow}>
+        <Text style={styles.mapHeadline}>{fmtUsd(totalRevenue)}</Text>
+        <Text style={styles.mapHeadlineLabel}>TI Skills Economy</Text>
+      </View>
+      {weeklyActiveUsers !== null && (
+        <Text style={styles.mapMembers}>{fmtCount(weeklyActiveUsers)} active members</Text>
+      )}
+      <View style={styles.mapCanvas}>
+        {MAP_REGIONS.map((r) => (
+          <View
+            key={r.key}
+            style={[
+              styles.mapRegion,
+              { top: r.top, left: r.left, width: r.width, height: r.height },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={styles.mapCaption}>
+        {hasData
+          ? 'Regions show where the survivor economy is active. The figure above is the community-wide USD estimate — per-country breakdowns are not published yet.'
+          : 'No published GDP report yet. The map activates once an aggregate figure is published.'}
+      </Text>
     </View>
   );
 }
@@ -694,6 +739,53 @@ const styles = StyleSheet.create({
     color: TEXT_DIM,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // World map (home tab)
+  mapHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 2,
+  },
+  mapHeadline: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: COLOR,
+  },
+  mapHeadlineLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: TEXT_DIM,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  mapMembers: {
+    fontSize: 12,
+    color: TEXT_MUTED,
+    marginBottom: 12,
+  },
+  mapCanvas: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 2,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: '#0D0F14',
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  mapRegion: {
+    position: 'absolute',
+    borderRadius: 6,
+    backgroundColor: `${COLOR}1F`,
+    borderWidth: 1,
+    borderColor: `${COLOR}55`,
+  },
+  mapCaption: {
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 18,
   },
   // Bottom nav
   bottomNav: {
