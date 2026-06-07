@@ -34,10 +34,12 @@ Set all of these as GitHub **secrets** (Settings → Secrets and variables → A
 3. `NEXT_PUBLIC_APP_URL`
 4. `NEXT_PUBLIC_AUTH_PROVIDER`
 5. `NEXT_PUBLIC_AUTH_SIGN_IN_URL` (optional)
-6. `EXPO_MOBILE_PROJECT_ID`
-7. `EXPO_MOBILE_UPDATES_URL`
+6. `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` (for native sign-in)
+7. `EXPO_MOBILE_PROJECT_ID`
+8. `EXPO_MOBILE_UPDATES_URL`
 
-These are the same names the web app reads, so most are already set.
+Most are the same names the web app reads, so they are already set. The new one is
+`EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`.
 
 ---
 
@@ -71,10 +73,30 @@ The deployed web/API base URL, https, no trailing slash (e.g. `https://chargingt
 
 ### Clerk keys
 
-- `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY` — Clerk publishable key (the web app's production key).
+- `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY` — Clerk publishable key (the web app's production key). The app
+  derives the Clerk Frontend API sign-in host from this key, so no separate endpoint URL is needed.
 - `NEXT_PUBLIC_AUTH_PROVIDER` — `clerk`.
-- `NEXT_PUBLIC_AUTH_SIGN_IN_URL` — your hosted Clerk sign-in page (optional; enables sign-in from the
-  app).
+- `NEXT_PUBLIC_AUTH_SIGN_IN_URL` — kept for reference; the native app no longer needs it for sign-in.
+
+### `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` (mobile sign-in)
+
+The mobile app signs in with an OAuth 2.0 authorization-code flow with PKCE (a way to do OAuth safely
+from an app that cannot keep a secret) against Clerk acting as an OpenID Connect provider — it does
+**not** bundle `@clerk/clerk-js`. One-time Clerk Dashboard setup:
+
+1. Clerk Dashboard → **OAuth Applications** → create an application. Copy its **client id** into
+   `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`.
+2. Allow the `openid`, `profile`, and `email` scopes on it.
+3. Add these **redirect URIs** to the OAuth application (must match exactly):
+   - `ctf://oauth-callback` (release/standalone build), and
+   - the Expo development proxy URL printed by `expo start` (for Expo Go testing).
+4. Clerk Dashboard → **Sessions → Customize session token**: add the claims the backend reads
+   (`username`, `first_name`, `last_name`, `role` or `metadata.role`, and `is_approved` or
+   `metadata.is_approved`). The backend trusts these claims from the verified token only — never from
+   request headers — so admin/approval gating on mobile depends on them being present.
+
+The full reasoning and verification flow is in
+[`EXPO_CLOUD_WORKFLOW.md`](EXPO_CLOUD_WORKFLOW.md#mobile-sign-in-clerk-oauthopenid-connect-setup).
 
 ---
 

@@ -1,8 +1,34 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
-import { Alert, Linking } from 'react-native';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Alert } from 'react-native';
 import Constants from 'expo-constants';
-import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
+import * as WebBrowser from 'expo-web-browser';
+import {
+  exchangeCodeAsync,
+  makeRedirectUri,
+  refreshAsync,
+  useAuthRequest,
+  type DiscoveryDocument,
+} from 'expo-auth-session';
 import { registerAuthTokenGetter } from './authedFetch';
+import { getClerkOAuthClientId, getClerkOAuthEndpoints } from './clerkOAuth';
+import {
+  clearStoredSession,
+  loadStoredSession,
+  saveStoredSession,
+  type StoredSession,
+} from './sessionStore';
+import { decodeJwtClaims } from './jwt';
+
+// Lets the OAuth browser tab hand control back to the app.
+WebBrowser.maybeCompleteAuthSession();
 
 export interface AuthUser {
   id: string;
@@ -18,7 +44,7 @@ export interface AuthContextType {
   provider: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  /** Fetch the current Clerk session token (JWT), or null when signed out. */
+  /** Returns the current bearer token (Clerk-signed OIDC id_token), or null. */
   getToken: () => Promise<string | null>;
   signIn: () => Promise<void> | void;
   signOut: () => Promise<void> | void;
@@ -36,86 +62,212 @@ function getRuntimeConfig(): RuntimeConfig {
   return (Constants.expoConfig?.extra ?? Constants.manifest2?.extra ?? {}) as RuntimeConfig;
 }
 
+// OpenID Connect scopes: `openid` is required to receive an id_token; `profile`
+// and `email` ask Clerk to include the standard profile/email claims.
+const OAUTH_SCOPES = ['openid', 'profile', 'email'];
+
+function deriveUserFromClaims(claims: Record<string, unknown> | null): AuthUser | null {
+  if (!claims) return null;
+  const sub = typeof claims.sub === 'string' ? claims.sub : null;
+  if (!sub) return null;
+  const metadata =
+    (claims.metadata as Record<string, unknown> | undefined) ??
+    (claims.public_metadata as Record<string, unknown> | undefined) ??
+    {};
+  const rawRole =
+    (typeof claims.role === 'string' ? claims.role : undefined) ??
+    (typeof metadata.role === 'string' ? metadata.role : undefined);
+  const role = rawRole ? rawRole.toLowerCase() : null;
+  const approved = claims.is_approved ?? metadata.is_approved ?? metadata.isApproved;
+  return {
+    id: sub,
+    username:
+      (typeof claims.username === 'string' ? claims.username : null) ??
+      (typeof metadata.username === 'string' ? (metadata.username as string) : null),
+    email: typeof claims.email === 'string' ? claims.email : null,
+    isAdmin: role === 'admin',
+    isApproved:
+      typeof approved === 'boolean'
+        ? approved
+        : ['1', 'true', 'yes', 'approved'].includes(String(approved ?? '').toLowerCase()),
+    provider: getRuntimeConfig().authProvider ?? 'clerk',
+  };
+}
+
 /**
- * AuthProvider — derives the signed-in user from a real Clerk session.
+ * AuthProvider — real mobile sign-in with no `@clerk/clerk-js`.
  *
- * Must be rendered inside Clerk's <ClerkProvider> (see App.tsx). It reads the
- * session via Clerk's `useAuth`/`useUser`, exposes a `getToken()` accessor for
- * API modules, and registers that accessor with the centralized `authedFetch`
- * helper so every backend call carries a verifiable `Authorization: Bearer`
- * token. There is no baked identity.
+ * Sign-in runs an OAuth 2.0 authorization-code flow with PKCE (a way to do OAuth
+ * safely from an app that cannot keep a secret) against Clerk, which acts as an
+ * OpenID Connect provider, using `expo-auth-session` + `expo-web-browser`. The
+ * token endpoint returns a Clerk-signed OpenID Connect `id_token` (a JWT). We
+ * store it in the device keychain via `expo-secure-store` and attach it to every
+ * backend call as `Authorization: Bearer <id_token>`. The backend verifies it
+ * with `@clerk/backend`'s `verifyToken` — the same signing keys as a web session
+ * token — so the verifier needs no change.
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isLoaded, isSignedIn, getToken, signOut: clerkSignOut } = useClerkAuth();
-  const { user: clerkUser } = useUser();
+  const endpoints = getClerkOAuthEndpoints();
+  const clientId = getClerkOAuthClientId();
+  const discovery: DiscoveryDocument | null = useMemo(
+    () =>
+      endpoints
+        ? {
+            authorizationEndpoint: endpoints.authorizationEndpoint,
+            tokenEndpoint: endpoints.tokenEndpoint,
+          }
+        : null,
+    [endpoints],
+  );
 
-  const stableGetToken = useCallback(async () => {
-    try {
-      return await getToken();
-    } catch {
-      return null;
-    }
-  }, [getToken]);
+  // The redirect URI the browser returns to. Uses the app scheme (ctf://) in a
+  // standalone build and an Expo proxy URL in Expo Go; register both on the
+  // Clerk OAuth application.
+  const redirectUri = useMemo(
+    () => makeRedirectUri({ scheme: 'ctf', path: 'oauth-callback' }),
+    [],
+  );
 
-  // Make the live Clerk token available to the plain (non-React) API modules.
+  const [session, setSession] = useState<StoredSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const sessionRef = useRef<StoredSession | null>(null);
+  sessionRef.current = session;
+
+  const [request, , promptAsync] = useAuthRequest(
+    {
+      clientId: clientId ?? 'missing-client-id',
+      scopes: OAUTH_SCOPES,
+      redirectUri,
+      usePKCE: true,
+    },
+    discovery ?? { authorizationEndpoint: '', tokenEndpoint: '' },
+  );
+
+  // Restore any previously stored session on launch.
   useEffect(() => {
-    registerAuthTokenGetter(isSignedIn ? stableGetToken : null);
-    return () => registerAuthTokenGetter(null);
-  }, [isSignedIn, stableGetToken]);
-
-  const user = useMemo<AuthUser | null>(() => {
-    if (!isSignedIn || !clerkUser) return null;
-    const metadata = (clerkUser.publicMetadata ?? {}) as Record<string, unknown>;
-    const role = typeof metadata.role === 'string' ? metadata.role.toLowerCase() : null;
-    const approved = metadata.is_approved ?? metadata.isApproved;
-    return {
-      id: clerkUser.id,
-      username: clerkUser.username ?? null,
-      email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
-      isAdmin: role === 'admin',
-      isApproved:
-        typeof approved === 'boolean'
-          ? approved
-          : ['1', 'true', 'yes', 'approved'].includes(String(approved ?? '').toLowerCase()),
-      provider: getRuntimeConfig().authProvider ?? 'clerk',
-    };
-  }, [isSignedIn, clerkUser]);
-
-  const handleSignIn = useCallback(async () => {
-    // Headless-friendly: send the user to Clerk's hosted sign-in page. Clerk's
-    // hosted Account Portal handles the full sign-in/sign-up flow in the system
-    // browser and returns to the app; no per-screen native UI is required.
-    const signInUrl = getRuntimeConfig().signInUrl;
-    if (signInUrl) {
-      try {
-        await Linking.openURL(signInUrl);
-        return;
-      } catch {
-        // fall through to the alert below
+    let cancelled = false;
+    (async () => {
+      const stored = await loadStoredSession();
+      if (!cancelled) {
+        setSession(stored);
+        setIsLoading(false);
       }
-    }
-    Alert.alert(
-      'Sign in',
-      'Set NEXT_PUBLIC_AUTH_SIGN_IN_URL to your hosted Clerk sign-in page to enable sign-in from the app.',
-    );
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleSignOut = useCallback(async () => {
-    try {
-      await clerkSignOut();
-    } finally {
-      registerAuthTokenGetter(null);
+  const persistSession = useCallback(async (next: StoredSession | null) => {
+    setSession(next);
+    if (next) {
+      await saveStoredSession(next);
+    } else {
+      await clearStoredSession();
     }
-  }, [clerkSignOut]);
+  }, []);
+
+  // `getToken` returns the stored id_token, refreshing it first when it is
+  // expired (or about to expire) and a refresh token is available.
+  const getToken = useCallback(async (): Promise<string | null> => {
+    const current = sessionRef.current;
+    if (!current) return null;
+    const skewMs = 30_000;
+    const stillValid =
+      typeof current.expiresAt !== 'number' || current.expiresAt - skewMs > Date.now();
+    if (stillValid) return current.idToken;
+
+    if (!current.refreshToken || !discovery || !clientId) {
+      // No way to refresh — drop the stale session so the UI shows signed-out.
+      await persistSession(null);
+      return null;
+    }
+    try {
+      const refreshed = await refreshAsync(
+        { clientId, refreshToken: current.refreshToken, scopes: OAUTH_SCOPES },
+        discovery,
+      );
+      const next: StoredSession = {
+        idToken: refreshed.idToken ?? current.idToken,
+        refreshToken: refreshed.refreshToken ?? current.refreshToken,
+        expiresAt:
+          typeof refreshed.expiresIn === 'number'
+            ? Date.now() + refreshed.expiresIn * 1000
+            : current.expiresAt,
+      };
+      await persistSession(next);
+      return next.idToken;
+    } catch {
+      await persistSession(null);
+      return null;
+    }
+  }, [clientId, discovery, persistSession]);
+
+  // Make the live token available to the plain (non-React) API modules.
+  useEffect(() => {
+    registerAuthTokenGetter(session ? getToken : null);
+    return () => registerAuthTokenGetter(null);
+  }, [session, getToken]);
+
+  const user = useMemo<AuthUser | null>(() => {
+    if (!session) return null;
+    return deriveUserFromClaims(decodeJwtClaims(session.idToken));
+  }, [session]);
+
+  const handleSignIn = useCallback(async () => {
+    if (!discovery || !clientId || !request) {
+      Alert.alert(
+        'Sign in not configured',
+        'Set NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY and EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID, and register the Clerk OAuth application, to enable sign-in.',
+      );
+      return;
+    }
+    try {
+      const result = await promptAsync();
+      if (result.type !== 'success' || !result.params.code) {
+        return;
+      }
+      const tokenResponse = await exchangeCodeAsync(
+        {
+          clientId,
+          code: result.params.code,
+          redirectUri,
+          extraParams: request.codeVerifier
+            ? { code_verifier: request.codeVerifier }
+            : undefined,
+        },
+        discovery,
+      );
+      if (!tokenResponse.idToken) {
+        Alert.alert('Sign in failed', 'No id token was returned by the sign-in server.');
+        return;
+      }
+      await persistSession({
+        idToken: tokenResponse.idToken,
+        refreshToken: tokenResponse.refreshToken ?? null,
+        expiresAt:
+          typeof tokenResponse.expiresIn === 'number'
+            ? Date.now() + tokenResponse.expiresIn * 1000
+            : null,
+      });
+    } catch {
+      Alert.alert('Sign in failed', 'Could not complete sign-in. Please try again.');
+    }
+  }, [clientId, discovery, persistSession, promptAsync, redirectUri, request]);
+
+  const handleSignOut = useCallback(async () => {
+    await persistSession(null);
+    registerAuthTokenGetter(null);
+  }, [persistSession]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         provider: user?.provider ?? getRuntimeConfig().authProvider ?? 'clerk',
-        isLoading: !isLoaded,
-        isAuthenticated: Boolean(isSignedIn && user),
-        getToken: stableGetToken,
+        isLoading,
+        isAuthenticated: Boolean(session && user),
+        getToken,
         signIn: handleSignIn,
         signOut: handleSignOut,
       }}

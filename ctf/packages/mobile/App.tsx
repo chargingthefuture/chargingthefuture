@@ -1,9 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Constants from 'expo-constants';
-import { ClerkProvider } from '@clerk/clerk-expo';
-import { tokenCache } from './src/auth/tokenCache';
 import { ChymeRoom } from './src/features/chyme';
 import { ComicReviewConsole } from './src/features/comic';
 import { HubHome } from './src/features/hub';
@@ -99,17 +96,8 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'levelup-admin', label: 'LevelUp Admin' },
 ];
 
-function resolveClerkPublishableKey(): string | undefined {
-  const extra = (Constants.expoConfig?.extra ?? Constants.manifest2?.extra ?? {}) as {
-    authPublishableKey?: string;
-  };
-  const key = extra.authPublishableKey;
-  return typeof key === 'string' && key.trim().length > 0 ? key.trim() : undefined;
-}
-
 export default function App() {
   const [selected, setSelected] = useState<FeatureKey>('home');
-  const publishableKey = resolveClerkPublishableKey();
 
   const featureView = useMemo(() => {
     switch (selected) {
@@ -190,33 +178,31 @@ export default function App() {
   }, [selected]);
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <AuthProvider>
-        <SafeAreaView style={styles.container}>
-          <Text style={styles.title}>ChargingTheFuture Mobile</Text>
-          <Text style={styles.subtitle}>Web/Android plugin parity hub</Text>
+    <AuthProvider>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>ChargingTheFuture Mobile</Text>
+        <Text style={styles.subtitle}>Web/Android plugin parity hub</Text>
 
-          <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-            {featureOrder.map((feature) => (
-              <TouchableOpacity
-                key={feature.key}
-                style={[styles.pill, selected === feature.key ? styles.pillActive : null]}
-                onPress={() => setSelected(feature.key)}
+        <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
+          {featureOrder.map((feature) => (
+            <TouchableOpacity
+              key={feature.key}
+              style={[styles.pill, selected === feature.key ? styles.pillActive : null]}
+              onPress={() => setSelected(feature.key)}
+            >
+              <Text
+                style={[styles.pillText, selected === feature.key ? styles.pillTextActive : null]}
               >
-                <Text
-                  style={[styles.pillText, selected === feature.key ? styles.pillTextActive : null]}
-                >
-                  {feature.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                {feature.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-          <View style={styles.content}>{featureView}</View>
-          <StatusBar style="auto" />
-        </SafeAreaView>
-      </AuthProvider>
-    </ClerkProvider>
+        <View style={styles.content}>{featureView}</View>
+        <StatusBar style="auto" />
+      </SafeAreaView>
+    </AuthProvider>
   );
 }
 
