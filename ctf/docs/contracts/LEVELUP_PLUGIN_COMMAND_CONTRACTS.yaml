@@ -261,3 +261,57 @@ contracts:
     purpose: governance_credit_control
     retentionClass: audit_long_lived
     idempotency: true
+
+  - pluginId: levelup
+    command: trainer.list
+    version: 1.0.0
+    description: List the LevelUp trainer directory (read-only browse), optionally filtered by track.
+    inputSchema:
+      track:
+        type: string
+        required: false
+    outputSchema:
+      trainers:
+        type: array
+    dataAccess:
+      - levelup_trainers
+      - levelup_cohorts
+    purpose: training_marketplace_discovery
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: levelup
+    command: achievement.list
+    version: 1.0.0
+    description: List grant-only achievement badges with the signed-in user's earned status. Never spends or deducts credits.
+    inputSchema: {}
+    outputSchema:
+      achievements:
+        type: array
+    dataAccess:
+      - levelup_achievements
+      - levelup_user_achievements
+    purpose: learner_progress_display
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: levelup
+    command: wallet.view
+    version: 1.0.0
+    description: Read the signed-in user's ServiceCredits balance plus a read-only history of credits earned/granted through LevelUp. Grant-only — exposes no spend or transfer action.
+    inputSchema: {}
+    outputSchema:
+      wallet:
+        type: object
+    dataAccess:
+      - service_credits_wallets
+      - levelup_milestone_validations
+      - levelup_enrollment_milestone_escrows
+      - levelup_disbursements
+      - levelup_user_achievements
+      - levelup_achievements
+      - levelup_enrollments
+      - levelup_cohorts
+    purpose: learner_balance_display
+    retentionClass: derived_short_lived
+    idempotency: true

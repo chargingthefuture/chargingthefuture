@@ -2315,6 +2315,85 @@ ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS amount NUME
 ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- === levelup_trainers ===
+-- Survivor-advocate trainers shown in the LevelUp "Trainers" directory.
+-- Read-only browse surface; one row per trainer user.
+CREATE TABLE IF NOT EXISTS levelup_trainers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  headline TEXT NOT NULL DEFAULT '',
+  bio TEXT NOT NULL DEFAULT '',
+  tracks JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS headline TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS tracks JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- === levelup_achievements ===
+-- Grant-only badge/milestone definitions. Never spend or deduct credits.
+-- credit_reward documents the grant amount tied to earning the badge (display only).
+CREATE TABLE IF NOT EXISTS levelup_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  track TEXT NOT NULL DEFAULT '',
+  icon TEXT NOT NULL DEFAULT 'trophy',
+  credit_reward NUMERIC NOT NULL DEFAULT 0,
+  sequence_no INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'trophy';
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS credit_reward NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- === levelup_user_achievements ===
+-- Per-user earned badge rows. Grant-only: a row means the badge was earned.
+CREATE TABLE IF NOT EXISTS levelup_user_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  achievement_id UUID NOT NULL,
+  earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  granted_credits NUMERIC NOT NULL DEFAULT 0,
+  source_reference TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS achievement_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS granted_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS source_reference TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE tablename = 'levelup_user_achievements' AND indexname = 'levelup_user_achievements_user_id_achievement_id_key'
+  ) THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS levelup_user_achievements_user_id_achievement_id_key ON levelup_user_achievements(user_id, achievement_id)';
+  END IF;
+END $$;
+
 -- === FOUNDATION MODULE ===
 CREATE TABLE IF NOT EXISTS foundation_thread_participants (
   thread_id UUID NOT NULL,
