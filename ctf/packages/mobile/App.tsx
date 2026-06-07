@@ -7,16 +7,16 @@ import { HubHome } from './src/features/hub';
 import { DirectoryList } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
-import { WorkforceDashboard } from './src/features/workforce';
-import { SkillsHunt } from './src/features/skills-hunt';
+import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
+import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
 import { Foundation } from './src/features/foundation';
-import { Lighthouse } from './src/features/lighthouse';
-import { SocketRelay } from './src/features/socketrelay';
-import { TrustTransport } from './src/features/trusttransport';
-import { PeerProgramming } from './src/features/peer-programming';
+import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
+import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
+import { TrustTransport, AdminTrustTransport } from './src/features/trusttransport';
+import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
-import { WeeklyPerformance } from './src/features/weekly-performance';
+import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp } from './src/features/gdp';
 import { ServiceCredits } from './src/features/service-credits';
 import { Levelup } from './src/features/levelup';
@@ -37,16 +37,23 @@ type FeatureKey =
   | 'lighthouse'
   | 'socketrelay'
   | 'trusttransport'
+  | 'trusttransport-admin'
   | 'peer-programming'
   | 'mood'
   | 'gentlepulse'
   | 'weekly-performance'
+  | 'weekly-performance-admin'
   | 'gdp'
   | 'service-credits'
   | 'levelup'
   | 'unlock'
   | 'account-data'
-  | 'comic-review';
+  | 'comic-review'
+  | 'peer-programming-admin'
+  | 'socketrelay-admin'
+  | 'skills-hunt-admin'
+  | 'lighthouse-admin'
+  | 'workforce-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -60,16 +67,23 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'lighthouse', label: 'Lighthouse' },
   { key: 'socketrelay', label: 'SocketRelay' },
   { key: 'trusttransport', label: 'TrustTransport' },
+  { key: 'trusttransport-admin', label: 'TrustTransport Admin' },
   { key: 'peer-programming', label: 'Peer Programming' },
   { key: 'mood', label: 'Mood' },
   { key: 'gentlepulse', label: 'GentlePulse' },
   { key: 'weekly-performance', label: 'Weekly Performance' },
+  { key: 'weekly-performance-admin', label: 'Weekly Performance Admin' },
   { key: 'gdp', label: 'GDP' },
   { key: 'service-credits', label: 'Service Credits' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'comic-review', label: 'AI Review' },
+  { key: 'peer-programming-admin', label: 'Peer Programming Admin' },
+  { key: 'socketrelay-admin', label: 'SocketRelay Admin' },
+  { key: 'skills-hunt-admin', label: 'Skills Hunt Admin' },
+  { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
+  { key: 'workforce-admin', label: 'Workforce Admin' },
 ];
 
 export default function App() {
@@ -104,6 +118,8 @@ export default function App() {
         return <SocketRelay />;
       case 'trusttransport':
         return <TrustTransport />;
+      case 'trusttransport-admin':
+        return <AdminTrustTransport />;
       case 'peer-programming':
         return <PeerProgramming />;
       case 'mood':
@@ -112,6 +128,8 @@ export default function App() {
         return <GentlePulse />;
       case 'weekly-performance':
         return <WeeklyPerformance />;
+      case 'weekly-performance-admin':
+        return <AdminWeeklyPerformance />;
       case 'gdp':
         return <Gdp />;
       case 'service-credits':
@@ -124,6 +142,16 @@ export default function App() {
         return <AccountData />;
       case 'comic-review':
         return <ComicReviewConsole />;
+      case 'peer-programming-admin':
+        return <AdminPeerProgramming />;
+      case 'socketrelay-admin':
+        return <AdminSocketRelay />;
+      case 'skills-hunt-admin':
+        return <AdminSkillsHunt />;
+      case 'lighthouse-admin':
+        return <AdminLighthouse />;
+      case 'workforce-admin':
+        return <AdminWorkforce />;
       default:
         return <ChymeRoom />;
     }

@@ -24,7 +24,7 @@ Ensure every user-facing feature implemented in web is also implemented in Andro
 - Differences in UI layout are allowed when platform conventions require it, but behavior and outcomes must match.
 
 ## Delivery Rules
-- PR descriptions must declare `Parity Status: web+android complete`. The CI parity gate enforces this.
+- PR descriptions must declare `Parity Status: web + mobile-responsive + android complete`. The CI parity gate enforces this. The three parts are the desktop web layout, the same web app at a phone-width (mobile-responsive) breakpoint, and the Android app — a user-facing UI change is only "complete" when the phone-width web layout is done too, not just desktop. (The older `web+android complete` form is still accepted so existing PRs don't break.)
 - The `Parity Ticket: <issue-or-URL>` escape hatch is reserved for explicit, time-boxed exceptions only. It is not a default option and is not appropriate for new feature work.
 - An exception must include: owner, justification, expiry date, and risk acceptance from the platform owner.
 - An exception is invalid for safety, privacy, compliance, or trauma-informed features — those must be delivered at parity, period.

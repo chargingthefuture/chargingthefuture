@@ -1,0 +1,92 @@
+import { Platform } from 'react-native';
+import type { Round, Submission } from './SkillsHuntApi';
+
+// Admin client for the Skills Hunt plugin. Mirrors the web admin routes under
+// ctf/packages/web/app/api/skills-hunt/admin/*. Admin/moderator access is
+// enforced server-side; a 401/403 surfaces as a "forbidden" notice in the screen.
+const ADMIN_API_BASE =
+  Platform.OS === 'android'
+    ? 'http://10.0.2.2:3000/api/skills-hunt/admin'
+    : 'http://localhost:3000/api/skills-hunt/admin';
+
+export type SubmissionStatusFilter = 'pending' | 'accepted' | 'rejected' | 'flagged';
+export type ReviewAction = 'accept' | 'reject' | 'flag';
+
+export type RoundsFetchResult = {
+  ok: boolean;
+  forbidden: boolean;
+  rounds: Round[];
+  message: string | null;
+};
+
+export type SubmissionsFetchResult = {
+  ok: boolean;
+  forbidden: boolean;
+  items: Submission[];
+  message: string | null;
+};
+
+// GET the full round list. Returns forbidden:true for non-admins.
+export async function fetchAdminRounds(authToken: string): Promise<RoundsFetchResult> {
+  const res = await fetch(`${ADMIN_API_BASE}/rounds`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, forbidden: true, rounds: [], message: 'Admin access is required.' };
+  }
+  if (!res.ok) {
+    return { ok: false, forbidden: false, rounds: [], message: `Could not load rounds (${res.status}).` };
+  }
+  const data = (await res.json()) as { rounds?: Round[] };
+  return { ok: true, forbidden: false, rounds: data.rounds ?? [], message: null };
+}
+
+// GET submissions for a round, filtered by status. Moderator/admin gated.
+export async function fetchAdminSubmissions(
+  authToken: string,
+  roundId: string,
+  status: SubmissionStatusFilter,
+): Promise<SubmissionsFetchResult> {
+  const res = await fetch(
+    `${ADMIN_API_BASE}/rounds/${roundId}/submissions?status=${status}&pageSize=100`,
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, forbidden: true, items: [], message: 'Admin access is required.' };
+  }
+  if (!res.ok) {
+    return { ok: false, forbidden: false, items: [], message: `Could not load submissions (${res.status}).` };
+  }
+  const data = (await res.json()) as { items?: Submission[] };
+  return { ok: true, forbidden: false, items: data.items ?? [], message: null };
+}
+
+// POST a moderation decision for one submission. Carries the CSRF confirmation
+// header the API requires. notes is the rejection reason (or null otherwise).
+export async function reviewAdminSubmission(
+  authToken: string,
+  submissionId: string,
+  action: ReviewAction,
+  notes: string | null,
+): Promise<void> {
+  const res = await fetch(`${ADMIN_API_BASE}/submissions/${submissionId}/review`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify({ action, notes }),
+  });
+  if (!res.ok) {
+    throw new Error(`submission_review_failed:${res.status}`);
+  }
+}
