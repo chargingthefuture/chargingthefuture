@@ -18,7 +18,7 @@ import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
-import { ServiceCredits } from './src/features/service-credits';
+import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
 import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
@@ -47,6 +47,7 @@ type FeatureKey =
   | 'gdp'
   | 'gdp-rate-admin'
   | 'service-credits'
+  | 'service-credits-admin'
   | 'levelup'
   | 'unlock'
   | 'account-data'
@@ -80,6 +81,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'gdp', label: 'GDP' },
   { key: 'gdp-rate-admin', label: 'GDP Rate Admin' },
   { key: 'service-credits', label: 'Service Credits' },
+  { key: 'service-credits-admin', label: 'Service Credits Admin' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
   { key: 'account-data', label: 'Account & Data' },
@@ -144,6 +146,8 @@ export default function App() {
         return <GdpRateAdmin />;
       case 'service-credits':
         return <ServiceCredits />;
+      case 'service-credits-admin':
+        return <AdminServiceCredits />;
       case 'levelup':
         return <Levelup />;
       case 'unlock':
