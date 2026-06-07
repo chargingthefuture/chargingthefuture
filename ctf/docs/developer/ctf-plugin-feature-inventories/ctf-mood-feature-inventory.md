@@ -46,13 +46,15 @@ Scope decisions locked for this rewrite:
 
 1. `mood.check.submit`
 2. `mood.check.eligibility.fetch`
+3. `mood.community.pulse.fetch` (aggregate, anonymous)
 
 ### 3.2 HTTP Projection Routes
 
 User routes (authenticated):
 
-- `POST /api/mood/checks`
-- `GET /api/mood/checks/eligible`
+- `POST /api/mood/submissions` — submit an anonymous mood check (`{ clientId, moodValue, note }`, `x-ctf-csrf: 1`).
+- `GET /api/mood/eligibility?clientId=` — per-device cooldown gate.
+- `GET /api/mood/community` — aggregate, anonymous community pulse. Returns only per-day average mood + counts over the trailing 7 days plus a window total and average; never any per-user rows, notes, or identifiers. Withholds data (returns `hasEnoughData: false` with a zeroed series) until at least `MOOD_PULSE_MIN_SAMPLE` (5) check-ins exist in the window.
 
 Excluded route groups:
 
@@ -63,9 +65,15 @@ Excluded route groups:
 
 ### 4.1 Mood Checks
 
-1. Mood checks store `clientId`, `moodValue`, and check timestamp metadata.
+1. Mood checks store `clientId`, `moodValue`, and check timestamp metadata in `mood_submissions` (`id`, `user_id`, `client_id`, `mood_value`, `note`, `submitted_at`).
 2. Mood values are validated as integer range `1..5`.
 3. Eligibility evaluation is derived from last check timestamp per `clientId`.
+
+### 4.2 Community Pulse (aggregate-only, no new storage)
+
+1. The community pulse is computed on read from the existing `mood_submissions` table — no new table or column is added.
+2. The aggregation query reads only `mood_value` and `submitted_at`, grouped by calendar day over the trailing 7 days. It never selects `user_id`, `client_id`, or `note`, so no result can be tied to a person.
+3. A minimum-sample threshold (`MOOD_PULSE_MIN_SAMPLE` = 5 check-ins in the window) gates display; below it the API returns `hasEnoughData: false` and a zeroed day series.
 
 ## 5) Security, Privacy, and Compliance Controls
 
@@ -84,9 +92,9 @@ Parity points met:
 2. Cooldown and validation semantics match between web and Android (7-day window, 1–5 scale).
 3. No Mood admin parity obligations in web/mobile for this rewrite scope.
 
-Web pixel pass (design `c5d83c0`): the `/apps/mood` shell is rebuilt to `design/.../survivor-hub/Mood.tsx` and its Empty/Loading states. The anonymous check-in flow is wired to the real API — `GET /api/mood/eligibility?clientId=` gates the form (per-device `clientId` persisted in localStorage), and `POST /api/mood/submissions` sends `{ clientId, moodValue, note }` with the `x-ctf-csrf` header. This fixes the prior shell, which called eligibility with no `clientId` and POSTed the wrong field names (both 400'd at runtime). The Community Pulse tab renders the design's honest empty state — there is no aggregate-stats backend yet, so the previous shell's fabricated 7-day averages and distribution percentages were removed rather than re-displayed. Decomposed into modular sub-components within the rule-116 limits; banned "Phase 2" wording removed.
+Web pixel pass (design `c5d83c0`): the `/apps/mood` shell is rebuilt to `design/.../survivor-hub/Mood.tsx` and its Empty/Loading states. The anonymous check-in flow is wired to the real API — `GET /api/mood/eligibility?clientId=` gates the form (per-device `clientId` persisted in localStorage), and `POST /api/mood/submissions` sends `{ clientId, moodValue, note }` with the `x-ctf-csrf` header. This fixes the prior shell, which called eligibility with no `clientId` and POSTed the wrong field names (both 400'd at runtime). The Community Pulse tab now renders a real aggregate (2026-06-07): `GET /api/mood/community` returns an anonymous 7-day average-mood chart plus check-in counts computed from the existing `mood_submissions` table, with loading/empty/error states and a minimum-sample gate so small samples are withheld. Decomposed into modular sub-components within the rule-116 limits; banned "Phase 2" wording removed.
 
-Android pixel pass (design `MobileMood.tsx`, 2026-05-31): built `ctf/packages/mobile/src/features/mood/Mood.tsx` + `api.ts`; retired `MockMood.tsx`. The screen faithfully translates the `MobileMood.tsx` mockup into React Native primitives — dark-mode only (`#0F1117` background), pink `#EC4899` accent, five-mood emoji picker, optional anonymous note, eligibility gate from `GET /api/mood/eligibility?clientId=`, submission via `POST /api/mood/submissions` with `{ clientId, moodValue, note }` + `x-ctf-csrf: 1` header, cooldown display. Omissions from mockup (no aggregate-stats API): Trends tab replaced with honest empty state; community avg card in check-in tab omitted. Home and Private tabs are pure UI and retained. TypeScript, EOF, and parity gates all pass.
+Android pixel pass (design `MobileMood.tsx`, 2026-05-31): built `ctf/packages/mobile/src/features/mood/Mood.tsx` + `api.ts`; retired `MockMood.tsx`. The screen faithfully translates the `MobileMood.tsx` mockup into React Native primitives — dark-mode only (`#0F1117` background), pink `#EC4899` accent, five-mood emoji picker, optional anonymous note, eligibility gate from `GET /api/mood/eligibility?clientId=`, submission via `POST /api/mood/submissions` with `{ clientId, moodValue, note }` + `x-ctf-csrf: 1` header, cooldown display. The Trends tab now renders the real aggregate community pulse (2026-06-07) from `GET /api/mood/community` — a 7-day average-mood chart plus counts, with loading/empty/error states. Home and Private tabs are pure UI and retained. TypeScript, EOF, and parity gates all pass.
 
 ## 7) Seed Coverage Status
 
@@ -99,6 +107,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-06-07: Community Pulse delivered for real (web + Android). Added `getMoodCommunityPulse` to `lib/mood/repository.ts` and `GET /api/mood/community`, computing an aggregate, anonymous 7-day average-mood chart + counts from the existing `mood_submissions` table (no schema change). Reads only `mood_value` + `submitted_at`; withholds data until 5 check-ins exist in the window. Web `mood-community.tsx` and mobile `Mood.tsx` Trends tab now render the real chart with loading/empty/error states; the previous "coming soon" stub and the omitted mobile chart are replaced. No schema change.
 - 2026-05-31: Android pixel pass. Built `Mood.tsx` + `api.ts` in `ctf/packages/mobile/src/features/mood/`; retired `MockMood.tsx`. Real bindings to `GET /api/mood/eligibility` and `POST /api/mood/submissions`. Omitted Trends tab chart and community-avg card (no aggregate-stats API). TypeScript, EOF, and parity gates pass. Android delivery status: ✅.
 - 2026-05-29: Web UI circle-back (design `c5d83c0`). Rebuilt the mood shell to the `Mood.tsx` mockup + Empty/Loading; fixed the eligibility (`?clientId=`) and submission (`{ clientId, moodValue, note }` + CSRF header) API contracts that previously 400'd; replaced fabricated trend/distribution data with the design's honest Community Pulse empty state; decomposed into modular sub-components within the rule-116 limits; removed banned "Phase 2" wording. No schema/API change.
 - 2026-05-18: Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
