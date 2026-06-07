@@ -385,13 +385,16 @@ function GdpHomeTab({
       )}
       <View style={styles.mapCanvas}>
         {MAP_REGIONS.map((r) => (
-          <View
-            key={r.key}
-            style={[
-              styles.mapRegion,
-              { top: r.top, left: r.left, width: r.width, height: r.height },
-            ]}
-          />
+          // key lives on the Fragment, not the View: CI's React types reject `key`
+          // on a host component like <View>.
+          <React.Fragment key={r.key}>
+            <View
+              style={[
+                styles.mapRegion,
+                { top: r.top, left: r.left, width: r.width, height: r.height },
+              ]}
+            />
+          </React.Fragment>
         ))}
       </View>
       <Text style={styles.mapCaption}>
