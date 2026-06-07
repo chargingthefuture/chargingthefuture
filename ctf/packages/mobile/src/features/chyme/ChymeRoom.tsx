@@ -15,10 +15,9 @@
  * All data is real — bound to /api/chyme/* endpoints via api.ts.
  * No mock or fabricated data is rendered.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  getChymeMobileIdentity,
   getChymeMessages,
   getChymeRoom,
   postChymeJoin,
@@ -49,24 +48,10 @@ export const ChymeRoom: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [tab, setTab] = useState<'live' | 'upcoming'>('live');
 
-  const identity = useMemo(() => {
-    try {
-      return getChymeMobileIdentity();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Chyme identity not configured.');
-      setViewState('error');
-      return null;
-    }
-  }, []);
-
   const loadRoom = useCallback(async () => {
-    if (!identity) return;
     setViewState('loading');
     try {
-      const [roomPayload, msgPayload] = await Promise.all([
-        getChymeRoom(identity),
-        getChymeMessages(identity),
-      ]);
+      const [roomPayload, msgPayload] = await Promise.all([getChymeRoom(), getChymeMessages()]);
       setRoom(roomPayload);
       setMessages(msgPayload.messages ?? []);
       const hasParticipants = (roomPayload.participants?.length ?? 0) > 0;
@@ -75,18 +60,15 @@ export const ChymeRoom: React.FC = () => {
       setErrorMsg(err instanceof Error ? err.message : 'Unable to load Chyme room.');
       setViewState('error');
     }
-  }, [identity]);
+  }, []);
 
   useEffect(() => {
-    if (identity) {
-      void loadRoom();
-    }
-  }, [identity, loadRoom]);
+    void loadRoom();
+  }, [loadRoom]);
 
   const handleJoinRoom = useCallback(async () => {
-    if (!identity) return;
     try {
-      const res = await postChymeJoin(identity);
+      const res = await postChymeJoin();
       if (res.ok) {
         setViewState('inRoom');
         await loadRoom();
@@ -94,14 +76,14 @@ export const ChymeRoom: React.FC = () => {
     } catch (err) {
       Alert.alert('Join failed', err instanceof Error ? err.message : 'Unable to join room.');
     }
-  }, [identity, loadRoom]);
+  }, [loadRoom]);
 
   const handleSendMessage = useCallback(async () => {
     const trimmed = chatInput.trim();
-    if (!trimmed || !identity || sending) return;
+    if (!trimmed || sending) return;
     setSending(true);
     try {
-      const res = await postChymeMessage(identity, trimmed);
+      const res = await postChymeMessage(trimmed);
       setMessages((prev) => [...prev, res.message]);
       setChatInput('');
     } catch (err) {
@@ -109,7 +91,7 @@ export const ChymeRoom: React.FC = () => {
     } finally {
       setSending(false);
     }
-  }, [chatInput, identity, sending]);
+  }, [chatInput, sending]);
 
   if (viewState === 'loading') {
     return <ChymeLoading />;

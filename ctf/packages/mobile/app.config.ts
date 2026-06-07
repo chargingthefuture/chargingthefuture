@@ -1,8 +1,26 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+/**
+ * Mobile runtime config.
+ *
+ * The mobile app reads the SAME environment names as the web app so there is one
+ * source of truth and one production environment (see
+ * docs/mobile/EXPO_CLOUD_WORKFLOW.md):
+ *   - NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  Clerk publishable key (sign-in)
+ *   - NEXT_PUBLIC_APP_URL               API base URL (the deployed web host)
+ *   - NEXT_PUBLIC_AUTH_PROVIDER         auth provider name (defaults to 'clerk')
+ *   - NEXT_PUBLIC_AUTH_SIGN_IN_URL      optional hosted sign-in URL
+ *   - EXPO_MOBILE_PROJECT_ID            EAS project id
+ *   - EXPO_MOBILE_UPDATES_URL           EAS updates URL
+ *
+ * There is NO baked per-user identity. The signed-in user is resolved at runtime
+ * from a real Clerk session, and every API call carries an
+ * `Authorization: Bearer` token that the backend verifies. See
+ * src/auth/auth-context.tsx and src/auth/authedFetch.ts.
+ */
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const projectId = process.env.MOBILE_PROJECT_ID;
-  const updatesUrl = process.env.MOBILE_UPDATES_URL;
+  const projectId = process.env.EXPO_MOBILE_PROJECT_ID;
+  const updatesUrl = process.env.EXPO_MOBILE_UPDATES_URL;
 
   return {
     ...config,
@@ -40,15 +58,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       ...(config.extra ?? {}),
-      mobileAppUrl: process.env.MOBILE_APP_URL,
-      chymeRequestIdentity: {
-        userId: process.env.MOBILE_CTF_USER_ID,
-        username: process.env.MOBILE_CTF_USERNAME,
-        role: process.env.MOBILE_CTF_USER_ROLE || 'member',
-        isApproved: process.env.MOBILE_CTF_USER_APPROVED || 'approved',
-      },
-      mobileAuthPublishableKeyStaging: process.env.MOBILE_AUTH_PUBLISHABLE_KEY_STAGING,
-      mobileAuthPublishableKeyProduction: process.env.MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION,
+      authProvider: process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk',
+      authPublishableKey: process.env.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL,
+      signInUrl: process.env.NEXT_PUBLIC_AUTH_SIGN_IN_URL,
+      updatesUrl,
       mobileObservabilityProvider: process.env.MOBILE_OBSERVABILITY_PROVIDER || 'noop',
       mobileSentryDsn: process.env.EXPO_SENTRY_DSN,
       eas: {
@@ -56,6 +70,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ...(projectId ? { projectId } : {}),
       },
     },
-    owner: process.env.EXPO_OWNER || undefined,
   };
 };

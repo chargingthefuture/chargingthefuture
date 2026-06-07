@@ -1,4 +1,4 @@
-import { verifyClerkToken } from './clerkAuth';
+import type { ClerkTokenVerifier } from './clerkAuth';
 // Canonical generic plugin authentication logic
 // This module provides a generic, provider-agnostic authentication handler for plugin auth consistency.
 //
@@ -12,7 +12,14 @@ export interface PluginAuthContext {
   provider: AuthProvider;
   token?: string;
   userId?: string;
-  // Add more fields as needed for extensibility
+  /**
+   * A real, cryptographic Clerk token verifier supplied by the caller (the web
+   * server passes one backed by `@clerk/backend`). REQUIRED to authenticate the
+   * `clerk` provider: without it, a Clerk token is NOT trusted. This keeps the
+   * shared package free of any server-only SDK while still refusing to
+   * authenticate on an unverified (forgeable) token.
+   */
+  verifier?: ClerkTokenVerifier;
 }
 
 export interface PluginAuthResult {
@@ -34,12 +41,22 @@ export async function authenticatePluginUser(context: PluginAuthContext): Promis
       if (!context.token) {
         return { isAuthenticated: false, provider: 'clerk', error: 'No token provided' };
       }
-      const userId = verifyClerkToken(context.token);
+      // SECURITY: a Clerk token is only trusted when a real verifier is supplied.
+      // There is no decode-only fallback, because an unsigned/forged token would
+      // otherwise pass. See lib/auth/verify-bearer.ts in the web package for the
+      // server-side verifier.
+      if (!context.verifier) {
+        return {
+          isAuthenticated: false,
+          provider: 'clerk',
+          error: 'No verifier supplied; refusing to trust an unverified token',
+        };
+      }
+      const userId = await context.verifier(context.token);
       if (userId) {
         return { isAuthenticated: true, provider: 'clerk', userId };
-      } else {
-        return { isAuthenticated: false, provider: 'clerk', error: 'Invalid token' };
       }
+      return { isAuthenticated: false, provider: 'clerk', error: 'Invalid token' };
     }
     case 'supabase':
       // TODO: Implement Supabase auth logic here

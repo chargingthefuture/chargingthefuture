@@ -11,13 +11,6 @@
         "buildType": "apk"
       }
     },
-    "staging": {
-      "channel": "staging",
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      }
-    },
     "production": {
       "channel": "production",
       "android": {
