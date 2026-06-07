@@ -64,6 +64,49 @@ export interface WalletResponse {
   wallet: Wallet;
 }
 
+// Trainers directory (read-only browse).
+export interface Trainer {
+  id: string;
+  userId: string;
+  displayName: string;
+  headline: string;
+  bio: string;
+  tracks: string[];
+  status: string;
+  activeCohortCount: number;
+}
+
+// Grant-only achievement badge.
+export interface Achievement {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  track: string;
+  icon: string;
+  creditReward: number;
+  sequenceNo: number;
+  earned: boolean;
+  earnedAtIso: string | null;
+  grantedCredits: number;
+}
+
+// LevelUp grant-only wallet view: balance + credits earned/granted.
+export interface WalletHistoryEntry {
+  kind: string;
+  amount: number;
+  label: string;
+  earnedAtIso: string;
+}
+
+export interface WalletView {
+  availableBalance: number;
+  walletEscrowBalance: number;
+  levelupEscrowedBalance: number;
+  totalEarned: number;
+  history: WalletHistoryEntry[];
+}
+
 // ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
@@ -86,5 +129,29 @@ export async function fetchWallet(): Promise<Wallet> {
   const res = await fetch(`${SC_BASE}/wallet`);
   if (!res.ok) throw new Error('Failed to fetch wallet');
   const data = (await res.json()) as WalletResponse;
+  return data.wallet;
+}
+
+export async function fetchTrainers(params?: { track?: string }): Promise<Trainer[]> {
+  const qs = new URLSearchParams();
+  if (params?.track) qs.set('track', params.track);
+  const endpoint = `${LEVELUP_BASE}/trainers${qs.toString() ? `?${qs.toString()}` : ''}`;
+  const res = await fetch(endpoint);
+  if (!res.ok) throw new Error('Failed to fetch trainers');
+  const data = (await res.json()) as { ok: boolean; trainers?: Trainer[] };
+  return data.trainers ?? [];
+}
+
+export async function fetchAchievements(): Promise<Achievement[]> {
+  const res = await fetch(`${LEVELUP_BASE}/achievements`);
+  if (!res.ok) throw new Error('Failed to fetch achievements');
+  const data = (await res.json()) as { ok: boolean; achievements?: Achievement[] };
+  return data.achievements ?? [];
+}
+
+export async function fetchWalletView(): Promise<WalletView> {
+  const res = await fetch(`${LEVELUP_BASE}/wallet`);
+  if (!res.ok) throw new Error('Failed to fetch wallet view');
+  const data = (await res.json()) as { ok: boolean; wallet: WalletView };
   return data.wallet;
 }
