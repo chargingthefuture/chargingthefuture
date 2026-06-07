@@ -249,6 +249,10 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
 
   async function handleDelete(p: AdminDirectoryProfile) {
     if (p.claimedByUserId != null) return;
+    const name = fullName(p) || "this profile";
+    if (!window.confirm(`Delete ${name}? This permanently removes the unclaimed profile and cannot be undone.`)) {
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/directory/admin/profiles/${p.id}`, {

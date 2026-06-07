@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -22,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { usePluginAuth } from './usePluginAuth';
 import type { DirectoryListItem } from './api';
 import {
   assignAdminDirectoryProfile,
@@ -37,10 +39,6 @@ const SURFACE = '#161B27';
 const BORDER = 'rgba(255,255,255,0.08)';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
-
-// Placeholder auth token — in production this comes from the shared auth context.
-// TODO: wire to real Clerk token once mobile auth is plumbed.
-const AUTH_TOKEN = '';
 
 type TabKey = 'unclaimed' | 'all';
 
@@ -87,6 +85,11 @@ const EDIT_FIELDS: { label: string; key: keyof EditForm; placeholder: string }[]
 ];
 
 export const AdminDirectory = () => {
+  const { auth, loading: authLoading } = usePluginAuth('clerk');
+  // The mobile admin routes expect the Clerk user id as the bearer value, the
+  // same value every other mobile admin screen sends (see AdminPeerProgramming).
+  const authToken = auth?.userId ?? '';
+
   const [profiles, setProfiles] = useState<DirectoryListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,21 +102,28 @@ export const AdminDirectory = () => {
   const [drawerNotice, setDrawerNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!auth?.isAuthenticated || !auth.userId) {
+      setError('Admin access required, or profiles could not be loaded.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAdminDirectoryProfiles(AUTH_TOKEN, { pageSize: 100, includeInactive: true });
+      const data = await fetchAdminDirectoryProfiles(auth.userId, { pageSize: 100, includeInactive: true });
       setProfiles(data.items);
     } catch {
       setError('Admin access required, or profiles could not be loaded.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [auth]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!authLoading) {
+      void load();
+    }
+  }, [authLoading, load]);
 
   const unclaimed = profiles.filter((p) => p.claimedByUserId == null);
   const visible = tab === 'unclaimed' ? unclaimed : profiles;
@@ -139,7 +149,7 @@ export const AdminDirectory = () => {
     setDrawerError(null);
     setDrawerNotice(null);
     try {
-      const updated = await updateAdminDirectoryProfile(AUTH_TOKEN, editing.id, {
+      const updated = await updateAdminDirectoryProfile(authToken, editing.id, {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim() || null,
         headline: form.headline.trim() || null,
@@ -167,7 +177,7 @@ export const AdminDirectory = () => {
     setDrawerError(null);
     setDrawerNotice(null);
     try {
-      const updated = await assignAdminDirectoryProfile(AUTH_TOKEN, editing.id, target);
+      const updated = await assignAdminDirectoryProfile(authToken, editing.id, target);
       setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       setEditing(updated);
       setDrawerNotice('Profile attached to that account.');
@@ -179,11 +189,10 @@ export const AdminDirectory = () => {
     }
   }
 
-  async function handleDelete(p: DirectoryListItem) {
-    if (p.claimedByUserId != null) return;
+  async function performDelete(p: DirectoryListItem) {
     setSaving(true);
     try {
-      await deleteAdminDirectoryProfile(AUTH_TOKEN, p.id);
+      await deleteAdminDirectoryProfile(authToken, p.id);
       setProfiles((prev) => prev.filter((x) => x.id !== p.id));
       if (editing?.id === p.id) closeDrawer();
     } catch {
@@ -191,6 +200,19 @@ export const AdminDirectory = () => {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleDelete(p: DirectoryListItem) {
+    if (p.claimedByUserId != null) return;
+    const name = fullName(p) || 'this profile';
+    Alert.alert(
+      'Delete profile',
+      `Delete ${name}? This permanently removes the unclaimed profile and cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void performDelete(p) },
+      ],
+    );
   }
 
   // ── Edit screen ─────────────────────────────────────────────────────────

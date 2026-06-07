@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function DirectoryAdminPage() {
   const access = await evaluatePluginAccess({ requireUsername: false });
-  if (!access.allowed || !access.isAdmin) {
+  if (!access.allowed || !access.isAdmin || !access.userId) {
     redirect('/apps/directory');
   }
 
