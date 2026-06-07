@@ -229,31 +229,6 @@ importers:
         specifier: ^250829098.0.2
         version: 250829098.0.2
 
-  ctf/packages/pm-mcp-server:
-    dependencies:
-      '@modelcontextprotocol/sdk':
-        specifier: ^0.5.0
-        version: 0.5.0
-      dotenv:
-        specifier: ^16.3.1
-        version: 16.6.1
-      pg:
-        specifier: ^8.11.0
-        version: 8.20.0
-    devDependencies:
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.41
-      '@types/pg':
-        specifier: ^8.10.0
-        version: 8.20.0
-      tsx:
-        specifier: ^4.0.0
-        version: 4.21.0
-      typescript:
-        specifier: ^5.0.0
-        version: 5.9.3
-
   ctf/packages/shared:
     dependencies:
       jwt-decode:
@@ -1933,9 +1908,6 @@ packages:
 
   '@mediapipe/tasks-vision@0.10.35':
     resolution: {integrity: sha512-HOvadwVRE6JC+45nyYhmnywnr5h/J8KZvOeUNVOG9q/0875pZgItznFB9bRTvLc264YSJqiZ1NsIpCStJw/egg==}
-
-  '@modelcontextprotocol/sdk@0.5.0':
-    resolution: {integrity: sha512-RXgulUX6ewvxjAG0kOpLMEdXXWkzWgaoCGaA2CwNW7cQCIphjpJhjpHSiaPdVCnisjRF/0Cm9KWHUuIoeiAblQ==}
 
   '@modelcontextprotocol/sdk@1.29.0':
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
@@ -9968,12 +9940,6 @@ snapshots:
   '@kurkle/color@0.3.4': {}
 
   '@mediapipe/tasks-vision@0.10.35': {}
-
-  '@modelcontextprotocol/sdk@0.5.0':
-    dependencies:
-      content-type: 1.0.5
-      raw-body: 3.0.2
-      zod: 3.25.76
 
   '@modelcontextprotocol/sdk@1.29.0(zod@4.3.6)':
     dependencies:

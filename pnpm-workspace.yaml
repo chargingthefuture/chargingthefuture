@@ -4,7 +4,6 @@ packages:
   - "ctf/packages/eol"
   - "ctf/packages/mobile"
   - "ctf/packages/education"
-  - "ctf/packages/pm-mcp-server"
   - "ctf/packages/shared"
   - "ctf/packages/web"
   - "landing-page"

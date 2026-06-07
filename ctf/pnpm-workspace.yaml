@@ -3,6 +3,5 @@ packages:
   - "packages/eol"
   - "packages/mobile"
   - "packages/education"
-  - "packages/pm-mcp-server"
   - "packages/shared"
   - "packages/web"
