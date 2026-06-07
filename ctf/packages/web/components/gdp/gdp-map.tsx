@@ -1,21 +1,29 @@
 "use client";
 
-import { Globe } from "lucide-react";
-import { COLOR, type GdpCountry } from "./gdp-shared";
+// GDP "Map" tab. Replaces the previous "coming soon" stub with a real inline-SVG
+// world map driven by the published aggregate metrics. No per-country GDP data
+// exists in the backend, so the map renders regions in a single neutral state and
+// overlays the real community-wide USD estimate and active-member count.
 
-export function GdpMap({ countries }: { countries: GdpCountry[] }) {
+import {
+  GDP_ACTIVE_MEMBERS_METRIC_KEY,
+  GDP_HEADLINE_METRIC_KEY,
+  formatGdpCount,
+  formatGdpUsd,
+  pickGdpMetricValue,
+  type GdpMetricRow,
+} from "./gdp-shared";
+import { GdpWorldMap } from "./gdp-world-map";
+
+export function GdpMap({ metricRows }: { metricRows: GdpMetricRow[] }) {
+  const gdpTotal = pickGdpMetricValue(metricRows, GDP_HEADLINE_METRIC_KEY);
+  const activeMembers = pickGdpMetricValue(metricRows, GDP_ACTIVE_MEMBERS_METRIC_KEY);
+  const hasData = gdpTotal !== null || activeMembers !== null;
   return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
-      <Globe size={64} style={{ color: COLOR, opacity: 0.3 }} />
-      <div style={{ fontSize: 18, fontWeight: 600, color: "#6B7280" }}>World Map — coming soon</div>
-      <div style={{ fontSize: 13, color: "#4B5563" }}>Live GDP distribution by country</div>
-      {countries.length > 0 ? (
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          {countries.slice(0, 5).map((c) => (
-            <span key={c.country} style={{ fontSize: 24 }}>{c.flag}</span>
-          ))}
-        </div>
-      ) : null}
-    </div>
+    <GdpWorldMap
+      headline={formatGdpUsd(gdpTotal)}
+      membersLabel={activeMembers !== null ? formatGdpCount(activeMembers) : null}
+      hasData={hasData}
+    />
   );
 }

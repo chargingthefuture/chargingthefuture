@@ -64,6 +64,39 @@ export const GDP_ESTIMATE_FOOTNOTE =
 
 export type GdpTab = "dashboard" | "map";
 
+// Real aggregate metric keys carried in gdp_metric_snapshots and surfaced on the
+// world map. These are community-wide aggregates only — never per-user figures.
+export const GDP_ACTIVE_MEMBERS_METRIC_KEY = "weekly_active_users";
+
+// Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
+// dash when the figure is absent so the map never invents a number.
+export function formatGdpUsd(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+  return `$${value.toLocaleString()}`;
+}
+
+// Format a member/people count into compact M/K form. Returns a dash when absent.
+export function formatGdpCount(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(value);
+}
+
+// Pull a single metric value out of the raw report metric rows. Returns null when
+// the metric is absent so callers render an honest empty state, never a fake value.
+export function pickGdpMetricValue(
+  rows: GdpMetricRow[] | undefined,
+  metricKey: string,
+): number | null {
+  if (!Array.isArray(rows)) return null;
+  const row = rows.find((m) => m && m.metricKey === metricKey);
+  return row ? row.metricValue : null;
+}
+
 // Matches the design's sidebar filter list (no "By Phase" — that term is banned
 // project-wide and is not present in the design mockup).
 export const SIDEBAR_FILTERS = ["Global Overview", "By Sector", "By Country", "Projections"];

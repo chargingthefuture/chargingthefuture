@@ -300,6 +300,8 @@ label, never as a per-wallet "N ServiceCredits = $X" equivalence.
 
 Estimate treatment shipped (2026-06-06, issue #312 P2): the headline GDP figure and the sidebar USD aggregate now show an understated "Estimate" chip plus a short footnote on web (`gdp-dashboard.tsx` hero — desktop and the mobile-responsive layout — and `gdp-sidebar.tsx` Live Ticker) and Android (`Gdp.tsx` overview hero), driven by the `isEstimate` flag the report projection surfaces off `gdp_metric_snapshots.is_estimate`. The chip/footnote render only where the data is flagged an estimate. Copy describes a community-wide normalized USD estimate (a morale/transparency metric, not a ledger), never a per-user redemption value, honoring the no-fiat-parity line.
 
+World map shipped (2026-06-07): the "Map" tab now renders a real inline-SVG world map instead of the "coming soon" stub. Web `components/gdp/gdp-world-map.tsx` draws simplified continent silhouettes on a 1000x500 canvas (no mapping dependency) and overlays the real community-wide aggregates read by key from `/api/gdp/report/current` (`gdp_total_revenue`, `weekly_active_users`); `gdp-map.tsx` is the thin data binder and `gdp-shell.tsx` threads the raw metric rows through. Android `Gdp.tsx` Home tab renders an equivalent static, View-based map (no SVG dependency) with the same real aggregate overlay. Per the real-data-only rule there is NO per-country GDP table, so every region renders in one neutral cyan "unpopulated" state and no per-country figures are invented; the map shows an honest empty caption when no report is published. Desktop, mobile-responsive, and Android all bind to the same aggregates. No schema/route/contract change.
+
 ---
 
 ## 7) Privacy Evidence Artifacts (Required)
@@ -333,6 +335,7 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-06-07: GDP world map shipped. Replaced the `gdp-map.tsx` "World Map — coming soon" stub with a real inline-SVG world map. Web: new `components/gdp/gdp-world-map.tsx` (simplified continent silhouettes on a 1000x500 equirectangular canvas, no mapping dependency, region tooltips, subtle pulse markers); `gdp-map.tsx` rewritten as a thin binder that reads the real community-wide aggregates by metric key (`gdp_total_revenue`, `weekly_active_users`) and overlays them; `gdp-shell.tsx` now keeps the raw metric rows in state and threads them to the map; shared helpers (`formatGdpUsd`, `formatGdpCount`, `pickGdpMetricValue`, `GDP_ACTIVE_MEMBERS_METRIC_KEY`) added to `gdp-shared.ts`. Android: `Gdp.tsx` Home tab now renders an equivalent static, View-based map with the same aggregate overlay (no SVG dependency added). Per the real-data-only rule, the GDP module has no per-country table, so regions render in one neutral cyan state and no per-country values are fabricated; an honest empty caption shows when no report is published. No new dependency, no schema/route/contract change. Desktop + mobile-responsive + Android.
 - 2026-06-06: GDP currency rate admin shipped (issue #312, prompt P2, surface 1). New admin-only
   endpoints `GET`/`POST /api/gdp/admin/currency-rates` (`app/api/gdp/admin/currency-rates/route.ts`),
   gated by `requireGdpAdminAccess()` with the GDP CSRF helper (`x-ctf-csrf: 1`) on the mutation.
