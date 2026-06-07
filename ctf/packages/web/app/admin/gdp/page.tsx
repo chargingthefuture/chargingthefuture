@@ -25,6 +25,17 @@ export default async function GdpAdminPage() {
         <p>Metrics in report: {report?.metrics.length ?? 0}</p>
       </section>
 
+      <section className="rounded-lg border bg-card p-5 text-sm space-y-2">
+        <h2 className="font-medium">Currency rate factors</h2>
+        <p className="text-muted-foreground">
+          Review and revise the owner-curated USD factors used only to roll multi-currency volume into the
+          single USD-denominated GDP estimate. These are not per-wallet or redemption values.
+        </p>
+        <p>
+          <Link className="underline underline-offset-4" href="/admin/gdp/rates">Open currency rate admin</Link>
+        </p>
+      </section>
+
       <p className="text-sm">
         <Link className="underline underline-offset-4" href="/apps/gdp">Open plugin shell</Link>
       </p>
