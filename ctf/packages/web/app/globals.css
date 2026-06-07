@@ -2,8 +2,96 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme token layer.
+ *
+ * The app historically hardcoded hex colors in CSS modules and inline styles. To
+ * support a user-toggled "comic" dark theme without rewriting every screen, the
+ * shared surface colors are now CSS custom properties. The DEFAULT values below
+ * are exactly the colors the app already shipped, so the default theme renders
+ * pixel-identical to before. The comic theme only overrides these variables under
+ * the `[data-theme="comic"]` selector (set on <html> by the theme toggle).
+ *
+ * Comic values come verbatim from design/artifacts/mockup-sandbox/COMIC_THEME_TOKENS.md.
+ */
 :root {
   color-scheme: dark;
+
+  /* Root document chrome (globals html/body). */
+  --ctf-root-bg: #0b1020;
+  --ctf-root-text: #e5e7eb;
+
+  /* Shared surface palette (community shell, account & data, plugin chrome). */
+  --ctf-bg: #0f1117;
+  --ctf-surface: #161b27;
+  --ctf-panel: #0d0f14;
+  --ctf-icon-rail: #090b0f;
+  --ctf-border: #1e2a3a;
+  --ctf-border-dim: #1e2a3a;
+  --ctf-text: #f9fafb;
+  --ctf-text-shell: #e8eaf0;
+  --ctf-text-secondary: #9ca3af;
+  --ctf-text-subtle: #6b7280;
+  --ctf-text-muted: #4b5563;
+
+  /* Accents and state. */
+  --ctf-brand: #e91e8c;
+  --ctf-gold: #38bdf8;
+  --ctf-danger: #b91c1c;
+  --ctf-success: #22c55e;
+
+  /* Primary call-to-action / logo treatment (the purple→cyan shell gradient). */
+  --ctf-cta-bg: linear-gradient(135deg, #7c3aed 0%, #0ea5e9 100%);
+  --ctf-cta-border: transparent;
+  --ctf-cta-text: #ffffff;
+
+  /* Elevation + geometry. Defaults preserve the existing soft-shadow / rounded look. */
+  --ctf-elevation-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --ctf-card-radius: 14px;
+  --ctf-control-radius: 10px;
+  --ctf-chip-radius: 6px;
+
+  /* Halftone/newsprint dotted texture — none in the default theme. */
+  --ctf-dot-bg: none;
+  --ctf-dot-size: 0;
+}
+
+:root[data-theme='comic'] {
+  /* Shared surface tokens — COMIC_THEME_TOKENS.md §1. */
+  --ctf-root-bg: #0d0d0d;
+  --ctf-root-text: #ede3cb;
+  --ctf-bg: #0d0d0d;
+  --ctf-surface: #141414;
+  --ctf-panel: #141414;
+  --ctf-icon-rail: #080808;
+  --ctf-border: #d4c49a;
+  --ctf-border-dim: #7a6a50;
+  --ctf-text: #ede3cb;
+  --ctf-text-shell: #ede3cb;
+  --ctf-text-secondary: #7a6a50;
+  --ctf-text-subtle: #7a6a50;
+  --ctf-text-muted: #4a3a2a;
+
+  /* Account/data destructive zone is danger-red; warm gold is the economy accent. */
+  --ctf-brand: #c8a84b;
+  --ctf-gold: #c8a84b;
+  --ctf-danger: #b91c1c;
+  --ctf-success: #22c55e;
+
+  /* No gradients in comic theme — flat ink panel + hard cream border + offset shadow (§12.5). */
+  --ctf-cta-bg: #141414;
+  --ctf-cta-border: #d4c49a;
+  --ctf-cta-text: #d4c49a;
+
+  /* Signature hard offset shadow, sharp corners (§2, §3). */
+  --ctf-elevation-shadow: 3px 3px 0 #d4c49a;
+  --ctf-card-radius: 0px;
+  --ctf-control-radius: 0px;
+  --ctf-chip-radius: 2px;
+
+  /* Newsprint dotted texture (§5). */
+  --ctf-dot-bg: radial-gradient(#d4c49a1a 1px, transparent 1px);
+  --ctf-dot-size: 8px 8px;
 }
 
 * {
@@ -15,8 +103,8 @@ body {
   margin: 0;
   padding: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  background: #0b1020;
-  color: #e5e7eb;
+  background: var(--ctf-root-bg);
+  color: var(--ctf-root-text);
 }
 
 /*

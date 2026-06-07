@@ -8,6 +8,7 @@ import {
   glyphForService, type AccountService,
 } from './account-data-shared';
 import type { AccountDataView } from './account-data-desktop';
+import { ThemeToggle } from '../theme/theme-toggle';
 
 type MobileProps = {
   view: AccountDataView;
@@ -37,10 +38,11 @@ export function AccountDataMobile({
           <div style={{ width: 34, height: 34, borderRadius: 9, background: `${BRAND}20`, border: `1px solid ${BRAND}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={16} color={BRAND} />
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: 16, fontWeight: 700 }}>Account &amp; Data</div>
             <div style={{ fontSize: 11, color: SUBTLE }}>{deletable.length + retained.length} services · your control</div>
           </div>
+          <ThemeToggle />
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {(['data', 'danger'] as const).map((t) => (

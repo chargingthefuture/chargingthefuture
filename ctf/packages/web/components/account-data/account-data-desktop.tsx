@@ -7,6 +7,7 @@ import {
   BRAND, BG, SURFACE, BORDER, TEXT, SUBTLE,
   glyphForService, type AccountService,
 } from './account-data-shared';
+import { ThemeToggle } from '../theme/theme-toggle';
 
 type View = 'data' | 'danger';
 
@@ -76,6 +77,10 @@ export function AccountDataDesktop({
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Your Data &amp; Privacy</div>
             <div style={{ fontSize: 12, color: SUBTLE }}>See and delete the data Survivor Hub holds across all services</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: SUBTLE, textTransform: 'uppercase' }}>Theme</span>
+            <ThemeToggle />
           </div>
         </header>
 

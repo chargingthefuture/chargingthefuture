@@ -658,9 +658,23 @@ CREATE TABLE IF NOT EXISTS feed_item_targets (
   item_id UUID NOT NULL REFERENCES feed_items(id) ON DELETE CASCADE,
   target_role TEXT,
   target_plugin TEXT,
-  target_region TEXT,
-  PRIMARY KEY (item_id, target_role, target_plugin, target_region)
+  target_region TEXT
 );
+-- A NULL target_plugin/target_region means "any plugin / any region" — the read path
+-- treats NULL as a wildcard (see listFeedTimeline: "t.target_plugin IS NULL"). NULL
+-- cannot live in a PRIMARY KEY (PK columns are implicitly NOT NULL), so the old
+-- PRIMARY KEY (item_id, target_role, target_plugin, target_region) made every
+-- default-targeted feed item fail to insert — which broke posting community messages
+-- and @comic questions. Replace it with a unique index that treats NULLs as equal
+-- (NULLS NOT DISTINCT, Postgres 15+) so default targeting works and duplicate
+-- (item, role, plugin, region) rows are still de-duplicated. Guarded DDL repairs
+-- legacy databases that still carry the old primary key.
+ALTER TABLE IF EXISTS feed_item_targets DROP CONSTRAINT IF EXISTS feed_item_targets_pkey;
+ALTER TABLE IF EXISTS feed_item_targets ALTER COLUMN target_role DROP NOT NULL;
+ALTER TABLE IF EXISTS feed_item_targets ALTER COLUMN target_plugin DROP NOT NULL;
+ALTER TABLE IF EXISTS feed_item_targets ALTER COLUMN target_region DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_item_targets_unique
+  ON feed_item_targets (item_id, target_role, target_plugin, target_region) NULLS NOT DISTINCT;
 CREATE TABLE IF NOT EXISTS feed_user_read_state (
   user_id TEXT NOT NULL,
   item_id UUID NOT NULL REFERENCES feed_items(id) ON DELETE CASCADE,
@@ -966,6 +980,9 @@ ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS submission_
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS reminder_schedule_hours INTEGER[] NOT NULL DEFAULT ARRAY[0,24,72,168];
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS incentive_amount TEXT NOT NULL DEFAULT '100';
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS support_only_after_expiry BOOLEAN NOT NULL DEFAULT TRUE;
+-- Multi-currency (issue #120): the verification incentive is an internal ServiceCredits payout.
+-- incentive_currency names the currency of incentive_amount; it defaults to ServiceCredits (code 'SC').
+ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS incentive_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
 -- === levelup_enrollments table (guarded DDL, schema drift prevention) ===
 CREATE TABLE IF NOT EXISTS levelup_enrollments (
@@ -1148,6 +1165,17 @@ CREATE TABLE IF NOT EXISTS trusttransport_earnings_ledger (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Multi-currency (issue #120): model the settlement currency as an admin-curated, referenced code.
+-- The legacy free-text `currency` column is superseded by `price_currency` (FK -> currencies.code), which
+-- the GDP estimation layer (issue #121) reads. Existing rows are backfilled from `currency` only where it
+-- already matches a known code; unknown legacy values are left for manual reconciliation so no money data
+-- is overwritten. This never asserts a ServiceCredits<->fiat parity.
+ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trusttransport_earnings_ledger ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+UPDATE trusttransport_payout_requests SET price_currency = currency
+  WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
+UPDATE trusttransport_earnings_ledger SET price_currency = currency
+  WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
 CREATE TABLE IF NOT EXISTS trusttransport_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -1795,7 +1823,8 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS cre
 CREATE TABLE IF NOT EXISTS directory_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claimed_by_user_id TEXT,
-  display_name TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
   headline TEXT,
   bio TEXT,
   profile_url TEXT,
@@ -1819,7 +1848,8 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
 );
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS claimed_by_user_id TEXT;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS first_name TEXT;
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS last_name TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TEXT;
@@ -2082,6 +2112,11 @@ ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB
 ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): LevelUp stipends and microgrants are internal ServiceCredits payouts.
+-- stipend_currency / microgrant_currency name the currency of stipend_amount_per_payout / microgrant_amount;
+-- both default to ServiceCredits (code 'SC').
+ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
 CREATE TABLE IF NOT EXISTS levelup_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2393,6 +2428,20 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessi
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): a Foundation provider can list a service rate on their profile.
+-- rate_amount is the listed amount; rate_currency names its currency (FK -> currencies.code). The quote
+-- process stays free-text/manual this version (no structured quote amount). "Accepts ServiceCredits" is a
+-- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+CREATE TABLE IF NOT EXISTS foundation_provider_accepted_currencies (
+  user_id TEXT NOT NULL REFERENCES foundation_user_extension(user_id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (user_id, currency_code)
+);
+ALTER TABLE IF EXISTS foundation_provider_accepted_currencies ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS foundation_provider_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_foundation_provider_accepted_currencies_user ON foundation_provider_accepted_currencies(user_id);
 
 CREATE TABLE IF NOT EXISTS foundation_call_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2483,6 +2532,36 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS claimed_fulf
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): SocketRelay is mutual aid and posts are free. These OPTIONAL columns let a
+-- request name an offered reward when one exists; "Free" must render from the ABSENCE of a price (NULL),
+-- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+-- Enforce the "Free = no price, never $0" rule at the DB level (issue #120 follow-up): a request either
+-- has no price (both NULL) or a positive amount in a named currency. Guarded so it is added only once.
+DO $socketrelay_requests_price_consistency$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'socketrelay_requests_price_consistency_check'
+  ) THEN
+    ALTER TABLE socketrelay_requests
+      ADD CONSTRAINT socketrelay_requests_price_consistency_check
+      CHECK (
+        (price_amount IS NULL AND price_currency IS NULL) OR
+        (price_amount IS NOT NULL AND price_amount > 0 AND price_currency IS NOT NULL)
+      );
+  END IF;
+END
+$socketrelay_requests_price_consistency$;
+CREATE TABLE IF NOT EXISTS socketrelay_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (request_id, currency_code)
+);
+ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_socketrelay_request_accepted_currencies_request ON socketrelay_request_accepted_currencies(request_id);
 
 CREATE TABLE IF NOT EXISTS socketrelay_request_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2585,6 +2664,13 @@ ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS dp_suppresse
 ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS lawful_basis TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS source_plugin TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency GDP recognition (issue #121): mark metrics that are USD-normalized ESTIMATES (e.g.
+-- gdp_total_revenue, which rolls multi-currency volume into USD via currency_usd_rates). The in-product
+-- "estimate" label reads this flag; small drift is acceptable and disclosed, since GDP is a morale/
+-- transparency figure, not an accounting ledger.
+ALTER TABLE IF EXISTS gdp_metric_snapshots ADD COLUMN IF NOT EXISTS is_estimate BOOLEAN NOT NULL DEFAULT FALSE;
+-- Mark the USD-normalized aggregate(s) as estimates for any rows that predate the column.
+UPDATE gdp_metric_snapshots SET is_estimate = TRUE WHERE metric_key = 'gdp_total_revenue' AND is_estimate = FALSE;
 
 CREATE TABLE IF NOT EXISTS gdp_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2606,6 +2692,29 @@ ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type
 ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS gdp_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Multi-currency GDP recognition (issue #121). The notional USD conversion factor per currency, used
+-- ONLY by the GDP estimation layer to roll multi-currency transaction volume into the single,
+-- estimate-labeled GDP figure. LEGAL GUARDRAIL: this rate is NEVER surfaced as a per-wallet or
+-- per-price "ServiceCredits = fiat" equivalence; a user never sees "your N ServiceCredits = $X". The
+-- only place a USD-normalized ServiceCredits value appears is inside the aggregate GDP estimate. The
+-- owner curates rates over time; the most recent as_of per currency_code is the active rate.
+CREATE TABLE IF NOT EXISTS currency_usd_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  usd_rate NUMERIC NOT NULL CHECK (usd_rate > 0),
+  as_of DATE NOT NULL,
+  source TEXT NOT NULL DEFAULT 'owner',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (currency_code, as_of)
+);
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS currency_code TEXT;
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS usd_rate NUMERIC;
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS as_of DATE;
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'owner';
+ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_currency_usd_rates_code_asof ON currency_usd_rates(currency_code, as_of DESC);
 
 -- === MOOD MODULE ===
 CREATE TABLE IF NOT EXISTS mood_submissions (
@@ -3452,6 +3561,18 @@ BEGIN
   END IF;
 END
 $comic_answer_ratings_rating_check$;
+
+-- === user_ui_preferences (per-user UI theme choice) ===
+-- Stores the signed-in user's selected app theme so the choice follows their account
+-- across devices. Anonymous visitors rely on localStorage only. `theme` is 'default'
+-- (the original dark UI) or 'comic' (the comic-book dark theme).
+CREATE TABLE IF NOT EXISTS user_ui_preferences (
+  user_id TEXT PRIMARY KEY,
+  theme TEXT NOT NULL DEFAULT 'default',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
