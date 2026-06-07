@@ -22,9 +22,6 @@ type CommunityShellProps = {
   initialSection?: ShellSection;
   isAuthenticated?: boolean;
   signInUrl?: string;
-  // Show the pre-selected chat suggestion chips. Hidden in production, on only in
-  // demo mode until their behavior is finished (tracked GitHub issue).
-  showChatSuggestions?: boolean;
 };
 
 type PluginsApiPayload = {
@@ -114,7 +111,7 @@ function sortPluginsForUi(
   });
 }
 
-export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, signInUrl = '/sign-in', showChatSuggestions = false }: CommunityShellProps) {
+export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, signInUrl = '/sign-in' }: CommunityShellProps) {
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
@@ -324,7 +321,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}
           {section === 'chat' ? (
-            <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} showSuggestions={showChatSuggestions} />
+            <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
           ) : (
             <ShellAppsPanel
               plugins={filteredPlugins}
