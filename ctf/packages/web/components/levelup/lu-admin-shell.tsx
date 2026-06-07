@@ -59,23 +59,23 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
   }, [loadCohorts]);
 
   const parsedAmount = Number(amountText);
-  const amountValid = amountText.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount !== 0;
+  // Grant-only: LevelUp never removes a member's Service Credits from the UI
+  // ("earn or earn nothing"). Only a positive amount is accepted here.
+  const amountValid = amountText.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount > 0;
   const formReady =
     targetUserId.trim().length > 0 &&
     amountValid &&
     reason.trim().length > 0 &&
     governanceTicketId.trim().length > 0;
 
-  // Plain-language description of exactly what the confirm step will do. Direction
-  // is derived only from the sign of the amount the operator typed — never invented.
-  const direction = parsedAmount >= 0 ? 'add' : 'remove';
-  const magnitude = Math.abs(parsedAmount);
+  // This UI only ever grants credits. The amount sent is always positive.
+  const magnitude = parsedAmount;
 
   const beginConfirm = useCallback(() => {
     setFormError(null);
     setNotice(null);
     if (!formReady) {
-      setFormError('Fill in member ID, a non-zero amount, a reason, and a governance ticket ID.');
+      setFormError('Fill in member ID, an amount greater than zero, a reason, and a governance ticket ID.');
       return;
     }
     setConfirming(true);
@@ -103,13 +103,13 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
       return;
     }
     setNotice(
-      `Adjustment recorded: ${direction === 'add' ? '+' : '-'}${magnitude} Service Credits for member ${targetUserId.trim()}.`,
+      `Grant recorded: +${magnitude} Service Credits for member ${targetUserId.trim()}.`,
     );
     setTargetUserId('');
     setAmountText('');
     setReason('');
     setGovernanceTicketId('');
-  }, [targetUserId, parsedAmount, reason, governanceTicketId, direction, magnitude]);
+  }, [targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10 space-y-6">
@@ -121,7 +121,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Program metrics, cohort overview, and Service Credits adjustments.
+          Program metrics, cohort overview, and Service Credits grants.
         </p>
       </header>
 
@@ -182,14 +182,14 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
         )}
       </section>
 
-      {/* Service Credits adjustment */}
+      {/* Service Credits grant (grant-only — never removes credits) */}
       <section className="space-y-3 rounded-lg border bg-card p-5">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Adjust member Service Credits</h2>
+          <h2 className="text-lg font-semibold">Grant member Service Credits</h2>
           <p className="text-sm text-muted-foreground">
-            A positive amount grants Service Credits to the member. A negative amount removes credits
-            from the member into the LevelUp treasury. Every adjustment is recorded against a governance
-            ticket and is written to the audit log.
+            LevelUp only ever grants Service Credits to a member — it never removes them. Enter an
+            amount greater than zero. Every grant is recorded against a governance ticket and is
+            written to the audit log.
           </p>
         </div>
 
@@ -217,7 +217,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium text-muted-foreground">
-              Amount (positive to add, negative to remove)
+              Amount to grant (greater than zero)
             </span>
             <input
               className="w-full rounded border bg-background px-3 py-2"
@@ -225,7 +225,8 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
               onChange={(event) => setAmountText(event.target.value)}
               disabled={confirming || submitting}
               inputMode="decimal"
-              placeholder="e.g. 25 or -10"
+              min={0}
+              placeholder="e.g. 25"
             />
           </label>
           <label className="space-y-1 text-sm md:col-span-2">
@@ -253,8 +254,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
         {confirming ? (
           <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
             <p className="text-sm font-medium text-amber-300">
-              Confirm: this will {direction} {magnitude} Service Credits{' '}
-              {direction === 'add' ? 'to' : 'from'} member {targetUserId.trim()}.
+              Confirm: this will add {magnitude} Service Credits to member {targetUserId.trim()}.
             </p>
             <p className="text-xs text-amber-200/80">
               Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
@@ -266,7 +266,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
                 disabled={submitting}
                 className="rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-60"
               >
-                {submitting ? 'Applying…' : `Yes, ${direction} ${magnitude} credits`}
+                {submitting ? 'Applying…' : `Yes, grant ${magnitude} credits`}
               </button>
               <button
                 type="button"
@@ -282,10 +282,10 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
           <button
             type="button"
             onClick={beginConfirm}
-            disabled={submitting}
+            disabled={submitting || !formReady}
             className="rounded bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-60"
           >
-            Review adjustment
+            Review grant
           </button>
         )}
       </section>

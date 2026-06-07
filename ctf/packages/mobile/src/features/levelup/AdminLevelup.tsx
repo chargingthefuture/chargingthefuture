@@ -65,22 +65,24 @@ export const AdminLevelup = () => {
   }, [authLoading, load]);
 
   const parsedAmount = Number(amountText);
+  // Grant-only: LevelUp never removes a member's Service Credits from the UI
+  // ("earn or earn nothing"). Only a positive amount is accepted here.
   const amountValid =
-    amountText.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount !== 0;
+    amountText.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount > 0;
   const formReady =
     targetUserId.trim().length > 0 &&
     amountValid &&
     reason.trim().length > 0 &&
     governanceTicketId.trim().length > 0;
 
-  const direction = parsedAmount >= 0 ? 'add' : 'remove';
-  const magnitude = Math.abs(parsedAmount);
+  // This UI only ever grants credits. The amount sent is always positive.
+  const magnitude = parsedAmount;
 
   const beginConfirm = useCallback(() => {
     setError(null);
     setNotice(null);
     if (!formReady) {
-      setError('Fill in member ID, a non-zero amount, a reason, and a governance ticket ID.');
+      setError('Fill in member ID, an amount greater than zero, a reason, and a governance ticket ID.');
       return;
     }
     setConfirming(true);
@@ -105,13 +107,13 @@ export const AdminLevelup = () => {
       return;
     }
     setNotice(
-      `Adjustment recorded: ${direction === 'add' ? '+' : '-'}${magnitude} Service Credits for member ${targetUserId.trim()}.`,
+      `Grant recorded: +${magnitude} Service Credits for member ${targetUserId.trim()}.`,
     );
     setTargetUserId('');
     setAmountText('');
     setReason('');
     setGovernanceTicketId('');
-  }, [auth, targetUserId, parsedAmount, reason, governanceTicketId, direction, magnitude]);
+  }, [auth, targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
@@ -134,7 +136,7 @@ export const AdminLevelup = () => {
       <View style={styles.headerRow}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.title}>LevelUp Admin</Text>
-          <Text style={styles.subtitle}>Cohort overview and Service Credits adjustments.</Text>
+          <Text style={styles.subtitle}>Cohort overview and Service Credits grants.</Text>
         </View>
         <View style={styles.adminBadge}>
           <Text style={styles.adminBadgeText}>ADMIN</Text>
@@ -170,13 +172,13 @@ export const AdminLevelup = () => {
         )}
       </View>
 
-      {/* Service Credits adjustment */}
+      {/* Service Credits grant (grant-only — never removes credits) */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Adjust member Service Credits</Text>
+        <Text style={styles.cardTitle}>Grant member Service Credits</Text>
         <Text style={styles.cardMeta}>
-          A positive amount grants Service Credits to the member. A negative amount removes credits from
-          the member into the LevelUp treasury. Every adjustment is recorded against a governance ticket
-          and written to the audit log.
+          LevelUp only ever grants Service Credits to a member — it never removes them. Enter an amount
+          greater than zero. Every grant is recorded against a governance ticket and written to the
+          audit log.
         </Text>
 
         <Text style={styles.label}>Member user ID</Text>
@@ -190,14 +192,14 @@ export const AdminLevelup = () => {
           editable={!confirming && !submitting}
         />
 
-        <Text style={styles.label}>Amount (positive to add, negative to remove)</Text>
+        <Text style={styles.label}>Amount to grant (greater than zero)</Text>
         <TextInput
           style={styles.input}
           value={amountText}
           onChangeText={setAmountText}
-          placeholder="e.g. 25 or -10"
+          placeholder="e.g. 25"
           placeholderTextColor={SUBTLE}
-          keyboardType="numbers-and-punctuation"
+          keyboardType="numeric"
           editable={!confirming && !submitting}
         />
 
@@ -226,8 +228,7 @@ export const AdminLevelup = () => {
         {confirming ? (
           <View style={styles.confirmBox}>
             <Text style={styles.confirmText}>
-              Confirm: this will {direction} {magnitude} Service Credits{' '}
-              {direction === 'add' ? 'to' : 'from'} member {targetUserId.trim()}.
+              Confirm: this will add {magnitude} Service Credits to member {targetUserId.trim()}.
             </Text>
             <Text style={styles.confirmMeta}>
               Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
@@ -241,7 +242,7 @@ export const AdminLevelup = () => {
                 <ActivityIndicator size="small" color="#000" />
               ) : (
                 <Text style={styles.confirmBtnText}>
-                  Yes, {direction} {magnitude} credits
+                  Yes, grant {magnitude} credits
                 </Text>
               )}
             </Pressable>
@@ -254,8 +255,12 @@ export const AdminLevelup = () => {
             </Pressable>
           </View>
         ) : (
-          <Pressable style={styles.primaryBtn} onPress={beginConfirm} disabled={submitting}>
-            <Text style={styles.primaryBtnText}>Review adjustment</Text>
+          <Pressable
+            style={[styles.primaryBtn, !formReady ? styles.btnBusy : null]}
+            onPress={beginConfirm}
+            disabled={submitting || !formReady}
+          >
+            <Text style={styles.primaryBtnText}>Review grant</Text>
           </Pressable>
         )}
       </View>
