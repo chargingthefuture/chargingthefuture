@@ -17,7 +17,7 @@ import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-progr
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
-import { Gdp } from './src/features/gdp';
+import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits } from './src/features/service-credits';
 import { Levelup } from './src/features/levelup';
 import { Unlock } from './src/features/unlock';
@@ -45,6 +45,7 @@ type FeatureKey =
   | 'weekly-performance'
   | 'weekly-performance-admin'
   | 'gdp'
+  | 'gdp-rate-admin'
   | 'service-credits'
   | 'levelup'
   | 'unlock'
@@ -76,6 +77,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'weekly-performance', label: 'Weekly Performance' },
   { key: 'weekly-performance-admin', label: 'Weekly Performance Admin' },
   { key: 'gdp', label: 'GDP' },
+  { key: 'gdp-rate-admin', label: 'GDP Rate Admin' },
   { key: 'service-credits', label: 'Service Credits' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
@@ -136,6 +138,8 @@ export default function App() {
         return <AdminWeeklyPerformance />;
       case 'gdp':
         return <Gdp />;
+      case 'gdp-rate-admin':
+        return <GdpRateAdmin />;
       case 'service-credits':
         return <ServiceCredits />;
       case 'levelup':

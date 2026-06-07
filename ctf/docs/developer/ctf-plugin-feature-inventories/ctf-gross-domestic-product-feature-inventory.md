@@ -87,6 +87,20 @@ The plugin must provide equivalent core behavior across web and Android, with ph
 2. Validation queue for failed metric checks.
 3. Backfill and replay controls for historical periods.
 
+### 2.4 Currency Rate Factor Management (issue #312 P2)
+
+1. Admin-only view of the owner-curated USD factor for every active currency: current factor,
+   `as_of` date, and source label, plus the prior factors as history (newest first).
+2. Revise action that adds a new dated `currency_usd_rates` row (the latest `as_of` becomes the
+   active factor); revising the same day updates that day's row, never overwriting older history.
+3. These factors are used ONLY to roll multi-currency volume into the single USD-denominated GDP
+   estimate. The surface carries a calm disclaimer that the factors only estimate GDP and are
+   never a redemption rate, per-wallet conversion, or the price of ServiceCredits. Currencies are
+   shown by their label (e.g. "ServiceCredits", "United States Dollar"), never the bare code as a
+   value. United States Dollar is the fixed baseline and is not revisable.
+4. Web: `/admin/gdp/rates` (linked from `/admin/gdp`), desktop + mobile-responsive via
+   `useIsMobile()`. Android: a GDP Rate Admin screen gated on `user.isAdmin`.
+
 ### 2.3 Policy and Compliance Operations
 
 1. Access controls for administrative metric mutation commands.
@@ -135,6 +149,23 @@ Admin routes:
 - `POST /api/gross-domestic-product/admin/snapshots/publish`
 - `POST /api/gross-domestic-product/admin/backfill`
 - `GET /api/gross-domestic-product/admin/audit-events`
+
+Implemented admin routes (currency rate factors, issue #312 P2):
+
+- `GET /api/gdp/admin/currency-rates` — admin-only. For each active currency returns
+  `code`, `label`, `symbol`, `isServiceCredits`, `decimalPlaces`, `sortOrder`, its current
+  factor (`current`: the latest `as_of` row's `usdRate`, `asOf`, `source`, or `null` when none
+  set) and its prior factors (`history`, newest first). Gated by `requireGdpAdminAccess()`.
+  Command contract: `admin.currency.rate.list`.
+- `POST /api/gdp/admin/currency-rates` — admin-only revise. Body
+  `{ currencyCode, usdRate, asOf?, source? }`. Inserts a `currency_usd_rates` row with
+  `ON CONFLICT (currency_code, as_of) DO UPDATE`, so revising the same `as_of` date updates that
+  row instead of failing the UNIQUE constraint; any other date adds a new history row and leaves
+  prior rows intact. `asOf` defaults to today; `source` defaults to `owner`. Validates
+  `usdRate > 0` and that `currencyCode` is an active currency. Requires the `x-ctf-csrf: 1`
+  header. Audited via `gdp_admin_audit_trail` (`gdp.currency-rate.revise`, allow + deny on
+  unknown currency). Command contract: `admin.currency.rate.revise`. LEGAL GUARDRAIL: these
+  factors only estimate aggregate GDP — never a per-wallet, per-price, or redemption value.
 
 ---
 
@@ -257,6 +288,16 @@ Web pixel pass complete: the shell (`gdp-shell.tsx` + `gdp-*` sub-components) is
 
 Android pixel pass complete (2026-05-31): `Gdp.tsx` rewritten to match `design/.../survivor-hub/MobileGDP.tsx` (+ Empty/Loading/Public states) using React Native primitives. Real `api.ts` created, bound exclusively to `GET /api/gdp/report/current`. Metric bindings: `gdp_total_revenue` (hero value) and `weekly_active_users` (active-users chip). Omissions per real-data-only rule: sector breakdown, country breakdown, per-user contribution, weekly trend series, and $300B target progress (none backed by an API field). `MockGdp.tsx` retained as dead code but no longer imported. Export `Gdp` preserved; `App.tsx` unchanged.
 
+Currency rate admin shipped (2026-06-06, issue #312 P2, surface 1): an admin-only screen to view
+and revise the owner-curated USD factors used only to roll multi-currency volume into the single
+USD-denominated GDP estimate. Web `/admin/gdp/rates` (`components/gdp/gdp-rate-admin.tsx`, desktop +
+mobile-responsive via `useIsMobile()`, linked from `/admin/gdp`) and Android (`GdpRateAdmin.tsx` +
+`rateAdminApi.ts`, gated on `user.isAdmin`) both bind to `GET`/`POST /api/gdp/admin/currency-rates`.
+Matches `design/.../survivor-hub/GDPRateAdmin.tsx` and `MobileGDPRateAdmin.tsx`. The hard legal line
+is honored everywhere: a calm disclaimer that these factors only estimate aggregate GDP and are never
+a redemption rate, per-wallet conversion, or the price of ServiceCredits; currencies are shown by
+label, never as a per-wallet "N ServiceCredits = $X" equivalence.
+
 Estimate treatment shipped (2026-06-06, issue #312 P2): the headline GDP figure and the sidebar USD aggregate now show an understated "Estimate" chip plus a short footnote on web (`gdp-dashboard.tsx` hero — desktop and the mobile-responsive layout — and `gdp-sidebar.tsx` Live Ticker) and Android (`Gdp.tsx` overview hero), driven by the `isEstimate` flag the report projection surfaces off `gdp_metric_snapshots.is_estimate`. The chip/footnote render only where the data is flagged an estimate. Copy describes a community-wide normalized USD estimate (a morale/transparency metric, not a ledger), never a per-user redemption value, honoring the no-fiat-parity line.
 
 ---
@@ -292,6 +333,27 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-06-06: GDP currency rate admin shipped (issue #312, prompt P2, surface 1). New admin-only
+  endpoints `GET`/`POST /api/gdp/admin/currency-rates` (`app/api/gdp/admin/currency-rates/route.ts`),
+  gated by `requireGdpAdminAccess()` with the GDP CSRF helper (`x-ctf-csrf: 1`) on the mutation.
+  `GET` returns each active currency with its current factor (latest `as_of`) and history (older
+  rows, newest first); `POST` revises by inserting a `currency_usd_rates` row with
+  `ON CONFLICT (currency_code, as_of) DO UPDATE` (same-day revise updates that row, preserving older
+  history; latest `as_of` stays active), `asOf` defaulting to today and `source` to `owner`,
+  validating `usdRate > 0` and that the currency exists. DB work added to `lib/gdp/repository.ts`
+  (`listCurrencyRateAdmin`, `currencyExists`, `upsertCurrencyUsdRate`); audited via
+  `gdp_admin_audit_trail` (`gdp.currency-rate.revise`). Web: `components/gdp/gdp-rate-admin.tsx`
+  client surface + `/admin/gdp/rates` page (admin-gated, linked from `/admin/gdp`), desktop and
+  mobile-responsive (`useIsMobile()`), states loading/empty/populated/saved, bound to the GET (no stub
+  data). Android: `packages/mobile/src/features/gdp/GdpRateAdmin.tsx` + `rateAdminApi.ts`, gated on
+  `user.isAdmin`, registered in `App.tsx`. Command + access-policy contracts added
+  (`admin.currency.rate.list`, `admin.currency.rate.revise`). Matches `GDPRateAdmin.tsx` /
+  `MobileGDPRateAdmin.tsx`. No schema change (`currency_usd_rates` already existed). LEGAL HARD LINE:
+  these factors only estimate aggregate GDP — never a per-wallet, per-price, or redemption
+  "ServiceCredits = fiat" value; currencies are shown by label. Mockup control omitted for lack of
+  backend: the mockup's editable `as_of` field is not exposed in the revise form (the endpoint accepts
+  an optional `asOf` but the UI always revises as of today, matching the "new dated row with today's
+  date" copy); no other controls omitted.
 - 2026-06-06: GDP "Estimate" treatment shipped (issue #312, prompt P2). Surfaced the existing `gdp_metric_snapshots.is_estimate` flag through the report read path: `lib/gdp/repository.ts` `mapMetric` now selects and maps `is_estimate` → `isEstimate`, and `GET /api/gdp/report/current` returns it per metric. Web (`gdp-shell.tsx` derives the headline-metric estimate flag; `gdp-dashboard.tsx` hero and `gdp-sidebar.tsx` Live Ticker render an understated "Estimate" chip + footnote on the GDP/USD-aggregate figures, desktop and mobile-responsive) and Android (`Gdp.tsx` overview hero + `api.ts` `pickMetricIsEstimate`) now show the chip/footnote only where the data is flagged an estimate, matching `design/.../survivor-hub/GDP.tsx`, `GDPPublic.tsx`, `MobileGDP.tsx`, `MobileGDPPublic.tsx`. Copy reads as a community-wide normalized USD estimate (a morale/transparency metric, not a ledger or redemption value); the ServiceCredits→USD factor stays confined to the aggregate, never a per-wallet/per-price fiat equivalence. No schema change (the column already existed). Read-only projection change, not design-gated.
 - 2026-06-01: GDP recognition pipeline (issue #121 follow-up): added an extensible source registry in `recognition.ts` (`RecognitionSource` + `recognizeGdpVolumeUsd`) and the `scripts/recognizeGdp.mjs` rollup job (`pnpm gdp:recognize`) that recognizes actual multi-currency volume into the `gdp_recognized_volume_usd` estimate metric, ALONGSIDE the projection target. First source: TrustTransport completed-task earnings (`credit`/`release`), normalized via `currency_usd_rates`; other plugins register as the owner approves them. Registered the metric in `canonical_metrics.yaml`. The rate-admin screen and the in-product "estimate" label stay design-gated (no mockup yet); their design brief is handed to the owner directly rather than committed (prompts are one-time, not kept in the repo). No schema change (reuses `gdp_metric_snapshots` + `currency_usd_rates`).
 - 2026-06-01: Multi-currency recognition foundation (issue #121): added the `currency_usd_rates` table (notional USD factor per currency, FK → `currencies.code`, with `as_of`) + `seedCurrencyUsdRates.mjs`; an `is_estimate` flag on `gdp_metric_snapshots`; and the GDP estimation-layer helper `ctf/packages/web/lib/gdp/recognition.ts` that rolls multi-currency volume into one USD estimate (the FX factor lives only here, never a per-wallet/per-price parity). Seeded `gdp_total_revenue` as an estimate. Documented the model and the no-fiat-parity guardrail; reconciled with the account-deletion-reclaim non-recognition rule (§4.4). The live automated rollup across plugin transaction tables, the admin rate-management UI, and the in-product estimate label remain next steps (the last two are design-gated).
