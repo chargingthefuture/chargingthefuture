@@ -1185,6 +1185,165 @@ export async function getAdminPanelData() {
   };
 }
 
+// === Trainers directory (read-only browse) ===
+type TrainerRow = {
+  id: string;
+  user_id: string;
+  display_name: string;
+  headline: string;
+  bio: string;
+  tracks: unknown;
+  status: string;
+  cohort_count: string;
+};
+
+export async function listTrainers(filter: { track?: string } = {}) {
+  const where: string[] = [`t.status = 'active'`];
+  const values: unknown[] = [];
+
+  if (filter.track) {
+    values.push(filter.track);
+    where.push(`t.tracks ? $${values.length}`);
+  }
+
+  const result = await queryDb<TrainerRow>(
+    `SELECT
+       t.id::text,
+       t.user_id,
+       t.display_name,
+       t.headline,
+       t.bio,
+       t.tracks,
+       t.status,
+       COALESCE(c.cohort_count, 0)::text AS cohort_count
+     FROM levelup_trainers t
+     LEFT JOIN (
+       SELECT created_by_user_id, COUNT(*)::int AS cohort_count
+       FROM levelup_cohorts
+       WHERE status IN ('open', 'active')
+       GROUP BY created_by_user_id
+     ) c ON c.created_by_user_id = t.user_id
+     WHERE ${where.join(' AND ')}
+     ORDER BY t.display_name ASC`,
+    values,
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    displayName: row.display_name,
+    headline: row.headline,
+    bio: row.bio,
+    tracks: Array.isArray(row.tracks) ? (row.tracks as string[]) : [],
+    status: row.status,
+    activeCohortCount: Number(row.cohort_count),
+  }));
+}
+
+// === Achievements (grant-only badges) ===
+type AchievementRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  track: string;
+  icon: string;
+  credit_reward: string;
+  sequence_no: number;
+  earned_at: Date | null;
+  granted_credits: string | null;
+};
+
+export async function listAchievementsForUser(userId: string) {
+  const result = await queryDb<AchievementRow>(
+    `SELECT
+       a.id::text,
+       a.slug,
+       a.name,
+       a.description,
+       a.track,
+       a.icon,
+       a.credit_reward::text,
+       a.sequence_no,
+       ua.earned_at,
+       ua.granted_credits::text
+     FROM levelup_achievements a
+     LEFT JOIN levelup_user_achievements ua
+       ON ua.achievement_id = a.id AND ua.user_id = $1
+     WHERE a.status = 'active'
+     ORDER BY a.sequence_no ASC, a.name ASC`,
+    [userId],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    track: row.track,
+    icon: row.icon,
+    creditReward: toNumber(row.credit_reward),
+    sequenceNo: row.sequence_no,
+    earned: row.earned_at != null,
+    earnedAtIso: row.earned_at ? row.earned_at.toISOString() : null,
+    grantedCredits: row.granted_credits != null ? toNumber(row.granted_credits) : 0,
+  }));
+}
+
+// === Wallet view: balance + grant-only earned history ===
+// LevelUp is grant-only: this surface only reads credits earned/granted
+// through LevelUp. It never spends or deducts a user's ServiceCredits.
+export async function getLevelupWalletView(userId: string) {
+  const wallet = await getWalletOverview(userId);
+
+  const [milestoneReleases, disbursements, achievementGrants] = await Promise.all([
+    queryDb<{ kind: string; amount: string; label: string; earned_at: Date }>(
+      `SELECT 'milestone_release' AS kind, e.held_amount::text AS amount, c.title AS label, v.released_at AS earned_at
+       FROM levelup_milestone_validations v
+       JOIN levelup_enrollments n ON n.id = v.enrollment_id
+       JOIN levelup_cohorts c ON c.id = n.cohort_id
+       JOIN levelup_enrollment_milestone_escrows e ON e.enrollment_id = v.enrollment_id AND e.milestone_id = v.milestone_id
+       WHERE n.user_id = $1 AND v.status = 'released' AND v.released_at IS NOT NULL`,
+      [userId],
+    ),
+    queryDb<{ kind: string; amount: string; label: string; earned_at: Date }>(
+      `SELECT d.disbursement_type AS kind, d.amount::text AS amount, c.title AS label, d.created_at AS earned_at
+       FROM levelup_disbursements d
+       JOIN levelup_enrollments n ON n.id = d.enrollment_id
+       JOIN levelup_cohorts c ON c.id = n.cohort_id
+       WHERE d.recipient_user_id = $1`,
+      [userId],
+    ),
+    queryDb<{ kind: string; amount: string; label: string; earned_at: Date }>(
+      `SELECT 'achievement' AS kind, ua.granted_credits::text AS amount, a.name AS label, ua.earned_at
+       FROM levelup_user_achievements ua
+       JOIN levelup_achievements a ON a.id = ua.achievement_id
+       WHERE ua.user_id = $1`,
+      [userId],
+    ),
+  ]);
+
+  const history = [...milestoneReleases.rows, ...disbursements.rows, ...achievementGrants.rows]
+    .map((row) => ({
+      kind: row.kind,
+      amount: toNumber(row.amount),
+      label: row.label,
+      earnedAtIso: row.earned_at ? row.earned_at.toISOString() : new Date(0).toISOString(),
+    }))
+    .filter((entry) => entry.amount > 0)
+    .sort((a, b) => (a.earnedAtIso < b.earnedAtIso ? 1 : -1));
+
+  const totalEarned = roundCurrency(history.reduce((sum, entry) => sum + entry.amount, 0));
+
+  return {
+    availableBalance: wallet.availableBalance,
+    walletEscrowBalance: wallet.walletEscrowBalance,
+    levelupEscrowedBalance: wallet.levelupEscrowedBalance,
+    totalEarned,
+    history,
+  };
+}
+
 export async function listEnrollmentMilestones(enrollmentId: string) {
   const milestones = await queryDb<{
     milestone_id: string;

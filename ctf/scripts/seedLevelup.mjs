@@ -29,6 +29,12 @@ const curriculumItemId = '77777777-7777-4777-8777-777777777778';
 const milestone1Id = '77777777-7777-4777-8777-777777777779';
 const milestone2Id = '77777777-7777-4777-8777-777777777780';
 
+// Deterministic UUIDs for the Trainers + Achievements surfaces.
+const trainerProfileId = '77777777-7777-4777-8777-777777777781';
+const achievementFirstMilestoneId = '77777777-7777-4777-8777-777777777782';
+const achievementCohortCompleteId = '77777777-7777-4777-8777-777777777783';
+const achievementMentorId = '77777777-7777-4777-8777-777777777784';
+
 async function seedWallet(client, userId, availableBalance) {
   await client.query(
     `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
@@ -98,9 +104,55 @@ async function main() {
       [milestone1Id, milestone2Id, cohortId],
     );
 
+    // Trainer directory profile for the seed trainer (read-only browse surface).
+    await client.query(
+      `INSERT INTO levelup_trainers (id, user_id, display_name, headline, bio, tracks, status)
+       VALUES ($1::uuid, $2, 'Maya R.', 'Survivor-advocate · Remote Dev mentor',
+         'Leads cohort-based engineering training and validates milestones for new survivors entering tech.',
+         '["Tech", "Finance"]'::jsonb, 'active')
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         display_name = EXCLUDED.display_name,
+         headline = EXCLUDED.headline,
+         bio = EXCLUDED.bio,
+         tracks = EXCLUDED.tracks,
+         status = EXCLUDED.status,
+         updated_at = NOW()`,
+      [trainerProfileId, users.trainer],
+    );
+
+    // Grant-only achievement definitions.
+    await client.query(
+      `INSERT INTO levelup_achievements (id, slug, name, description, track, icon, credit_reward, sequence_no, status)
+       VALUES
+         ($1::uuid, 'first-milestone', 'First Milestone', 'Complete your first cohort milestone.', 'Tech', 'trophy', 10, 1, 'active'),
+         ($2::uuid, 'cohort-complete', 'Cohort Graduate', 'Finish every milestone in a cohort.', 'Tech', 'award', 50, 2, 'active'),
+         ($3::uuid, 'peer-mentor', 'Peer Mentor', 'Support a fellow learner through a milestone.', 'Life Skills', 'users', 25, 3, 'active')
+       ON CONFLICT (slug)
+       DO UPDATE SET
+         name = EXCLUDED.name,
+         description = EXCLUDED.description,
+         track = EXCLUDED.track,
+         icon = EXCLUDED.icon,
+         credit_reward = EXCLUDED.credit_reward,
+         sequence_no = EXCLUDED.sequence_no,
+         status = EXCLUDED.status,
+         updated_at = NOW()`,
+      [achievementFirstMilestoneId, achievementCohortCompleteId, achievementMentorId],
+    );
+
+    // One earned badge for a trainee (grant-only: presence of the row means earned).
+    await client.query(
+      `INSERT INTO levelup_user_achievements (id, user_id, achievement_id, granted_credits, source_reference)
+       VALUES (gen_random_uuid(), $1, $2::uuid, 10, 'seed:first-milestone')
+       ON CONFLICT (user_id, achievement_id) DO NOTHING`,
+      [users.trainee1, achievementFirstMilestoneId],
+    );
+
     await client.query('COMMIT');
-    console.log('LevelUp phase-3 seed fixtures applied.');
+    console.log('LevelUp seed fixtures applied.');
     console.log('Seed users: 1 admin, 1 trainer, 3 trainees. Trainees each set to 500 ServiceCredits.');
+    console.log('Seeded: 1 trainer profile, 3 achievement definitions, 1 earned badge (trainee 1).');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
