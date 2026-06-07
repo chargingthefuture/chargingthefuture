@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
+import { ThemeProvider } from '@/hooks/useTheme';
 import {
   getClerkRuntimeOptions,
   getHostedSignInUrl,
@@ -40,6 +41,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/*
+          No-flash theme script: runs before paint, reads the saved theme from
+          localStorage, and sets data-theme="comic" on <html> so a returning comic-theme
+          user never sees a flash of the default theme. Default theme = no attribute.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(localStorage.getItem('sh-theme')==='comic'){document.documentElement.setAttribute('data-theme','comic');}}catch(e){}})();",
+          }}
+        />
         <ClerkProvider
           {...clerkOptions}
           {...(signInUrl ? { signInUrl } : {})}
@@ -49,7 +61,9 @@ export default function RootLayout({
             : {})}
           {...(afterSignOutUrl ? { afterSignOutUrl } : {})}
         >
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthProvider>
         </ClerkProvider>
       </body>
     </html>

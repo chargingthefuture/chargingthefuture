@@ -3564,6 +3564,18 @@ BEGIN
 END
 $comic_answer_ratings_rating_check$;
 
+-- === user_ui_preferences (per-user UI theme choice) ===
+-- Stores the signed-in user's selected app theme so the choice follows their account
+-- across devices. Anonymous visitors rely on localStorage only. `theme` is 'default'
+-- (the original dark UI) or 'comic' (the comic-book dark theme).
+CREATE TABLE IF NOT EXISTS user_ui_preferences (
+  user_id TEXT PRIMARY KEY,
+  theme TEXT NOT NULL DEFAULT 'default',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
 -- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table
