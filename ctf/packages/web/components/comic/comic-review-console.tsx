@@ -126,6 +126,18 @@ export function ComicReviewConsole() {
     async (resolution: 'approve' | 'correct' | 'reject') => {
       if (!selected || resolving) return;
 
+      // Confirm before any action that changes what a survivor sees: publishing (approve/correct)
+      // sends the answer; reject discards the draft. A misclick must not silently push or drop a reply.
+      const confirmPrompt =
+        resolution === 'reject'
+          ? 'Reject this draft? The survivor will not receive this answer.'
+          : resolution === 'correct'
+            ? 'Approve and send your corrected answer to the survivor?'
+            : 'Approve and send this answer to the survivor?';
+      if (typeof window !== 'undefined' && !window.confirm(confirmPrompt)) {
+        return;
+      }
+
       setResolving(true);
       setError(null);
 
