@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Menu } from 'lucide-react';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
-import type { HubChannelInfo, HubDMInfo } from '../../lib/hub/types';
+import type { HubChannelInfo } from '../../lib/hub/types';
 import type { PluginSortMode, ShellCurrentUser, ShellSection, ShellStats } from './shell-types';
 import { ShellIconRail } from './shell-icon-rail';
 import { ShellSidebar } from './shell-sidebar';
@@ -117,7 +117,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [plugins, setPlugins] = useState(initialPlugins);
   const [channels, setChannels] = useState<HubChannelInfo[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
-  const [dms, setDms] = useState<HubDMInfo[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeApp, setActiveApp] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<PluginSortMode>('recent');
@@ -165,10 +164,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
 
     async function loadHubData() {
       try {
-        const [channelsRes, dmsRes] = await Promise.all([
-          fetch('/api/hub/channels', { method: 'GET', cache: 'no-store' }),
-          fetch('/api/hub/dms', { method: 'GET', cache: 'no-store' }),
-        ]);
+        const channelsRes = await fetch('/api/hub/channels', { method: 'GET', cache: 'no-store' });
 
         if (channelsRes.ok) {
           const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
@@ -180,15 +176,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             setActiveChannel((current) => current ?? loadedChannels[0]?.slug ?? null);
           }
         }
-
-        if (dmsRes.ok) {
-          const dmsPayload = (await dmsRes.json()) as { threads: HubDMInfo[] };
-          if (!cancelled) {
-            setDms(dmsPayload.threads ?? []);
-          }
-        }
       } catch {
-        // Silently fail; channels and DMs will remain empty.
+        // Silently fail; channels will remain empty.
       }
     }
 
@@ -297,7 +286,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         <ShellSidebar
           section={section}
           channels={channels}
-          dms={dms}
           plugins={filteredPlugins}
           activeChannel={activeChannel}
           onChannelSelect={handleChannelSelect}

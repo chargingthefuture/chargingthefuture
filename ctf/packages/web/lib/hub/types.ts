@@ -33,19 +33,6 @@ export type HubChannelsResponse = {
   channels: HubChannelInfo[];
 };
 
-export type HubDMInfo = {
-  id: string;
-  counterpartIdOrBotSlug: string;
-  counterpartDisplayName: string;
-  counterpartAvatarUrl: string | null;
-  streamChannelId: string;
-  unreadCount: number;
-};
-
-export type HubDMsResponse = {
-  threads: HubDMInfo[];
-};
-
 export type HubBotInfo = {
   slug: string;
   displayName: string;
