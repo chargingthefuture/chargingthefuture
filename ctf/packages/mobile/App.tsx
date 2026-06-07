@@ -4,7 +4,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import { ChymeRoom } from './src/features/chyme';
 import { ComicReviewConsole } from './src/features/comic';
 import { HubHome } from './src/features/hub';
-import { DirectoryList } from './src/features/directory';
+import { DirectoryList, AdminDirectory } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
 import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
@@ -18,9 +18,9 @@ import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
-import { ServiceCredits } from './src/features/service-credits';
-import { Levelup } from './src/features/levelup';
-import { Unlock } from './src/features/unlock';
+import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
+import { Levelup, AdminLevelup } from './src/features/levelup';
+import { Unlock, AdminUnlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AccountData } from './src/features/account-data';
 import { AuthProvider } from './src/features/trusttransport/auth-context';
@@ -30,6 +30,7 @@ type FeatureKey =
   | 'chyme'
   | 'skills-taxonomy'
   | 'directory'
+  | 'directory-admin'
   | 'feed-announcements'
   | 'workforce'
   | 'skills-hunt'
@@ -46,21 +47,25 @@ type FeatureKey =
   | 'gdp'
   | 'gdp-rate-admin'
   | 'service-credits'
+  | 'service-credits-admin'
   | 'levelup'
   | 'unlock'
+  | 'unlock-admin'
   | 'account-data'
   | 'comic-review'
   | 'peer-programming-admin'
   | 'socketrelay-admin'
   | 'skills-hunt-admin'
   | 'lighthouse-admin'
-  | 'workforce-admin';
+  | 'workforce-admin'
+  | 'levelup-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
   { key: 'chyme', label: 'Chyme' },
   { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
   { key: 'directory', label: 'Directory' },
+  { key: 'directory-admin', label: 'Directory Admin' },
   { key: 'feed-announcements', label: 'Feed+Announcements' },
   { key: 'workforce', label: 'Workforce' },
   { key: 'skills-hunt', label: 'Skills Hunt' },
@@ -77,8 +82,10 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'gdp', label: 'GDP' },
   { key: 'gdp-rate-admin', label: 'GDP Rate Admin' },
   { key: 'service-credits', label: 'Service Credits' },
+  { key: 'service-credits-admin', label: 'Service Credits Admin' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
+  { key: 'unlock-admin', label: 'Unlock Admin' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'Peer Programming Admin' },
@@ -86,6 +93,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'skills-hunt-admin', label: 'Skills Hunt Admin' },
   { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
   { key: 'workforce-admin', label: 'Workforce Admin' },
+  { key: 'levelup-admin', label: 'LevelUp Admin' },
 ];
 
 export default function App() {
@@ -101,6 +109,8 @@ export default function App() {
         return <SkillsTaxonomy />;
       case 'directory':
         return <DirectoryList />;
+      case 'directory-admin':
+        return <AdminDirectory />;
       case 'feed-announcements':
         return (
           <ScrollView contentContainerStyle={styles.feedStack}>
@@ -138,10 +148,14 @@ export default function App() {
         return <GdpRateAdmin />;
       case 'service-credits':
         return <ServiceCredits />;
+      case 'service-credits-admin':
+        return <AdminServiceCredits />;
       case 'levelup':
         return <Levelup />;
       case 'unlock':
         return <Unlock />;
+      case 'unlock-admin':
+        return <AdminUnlock />;
       case 'account-data':
         return <AccountData />;
       case 'comic-review':
@@ -156,6 +170,8 @@ export default function App() {
         return <AdminLighthouse />;
       case 'workforce-admin':
         return <AdminWorkforce />;
+      case 'levelup-admin':
+        return <AdminLevelup />;
       default:
         return <ChymeRoom />;
     }
