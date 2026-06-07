@@ -23,9 +23,9 @@
 
 ## Implemented Admin Features
 
-1. Admin credit adjustment endpoint (`mint`/`adjustment` path).
+1. Admin credit grant endpoint (`mint`/`adjustment` path), wired to a real admin UI on both web and Android. Owner decision (2026-06-06): the admin UI is grant-only — it only ever grants Service Credits to a member ("earn or earn nothing") and exposes no remove/negative path; the amount input accepts positive values only and submit is disabled client-side for non-positive amounts. (The backend endpoint still technically accepts a signed amount so a mistaken grant can be corrected later, but the UI never sends a negative.) Every grant requires a member user ID, an amount greater than zero, a reason, and a governance ticket ID, and goes behind an explicit in-screen confirm step that restates exactly what will change ("add N credits to member X") before submit. The mutation carries the `x-ctf-csrf: '1'` header and is written to the audit log.
 2. Dispute resolution endpoint with optional adjustment transfer.
-3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout).
+3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout) plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/levelup/cohorts`.
 
 ## API Surface and Route Map
 
@@ -105,12 +105,27 @@ the design mockup (`MobileLevelUp.tsx` / `MobileLevelUpEmpty.tsx` / `MobileLevel
 Unbacked mockup elements omitted: `trainerName`, `tags`, `milestoneCount` (not returned by cohorts
 list endpoint); active-enrollment banner (no user-enrollment GET endpoint yet).
 
+Admin surface (2026-06-06): the `/admin/levelup` web page is now a real, mobile-responsive admin UI
+(`components/levelup/lu-admin-shell.tsx` + `lu-admin-shared.ts`, `useIsMobile()` responsive, admin-gated
+via `evaluatePluginAccess` at the route) showing KPI cards, the cohort overview, and the Service Credits
+adjustment action with an explicit confirm step. The Android admin screen
+(`ctf/packages/mobile/src/features/levelup/AdminLevelup.tsx` + `admin-api.ts`, registered in `App.tsx` as
+`levelup-admin`) mirrors the same cohort overview and adjustment action. The mockup
+`MobileLevelUpAdmin.tsx` shows a track/badge editor; no track or badge admin endpoints exist, so that
+layout is not implemented — the admin screens bind only the cohort list and the adjust-credits endpoint
+that exist today.
+
 ## Gaps and Known Technical Debt
 
 1. Dispute attachment storage uses URL metadata only (no secure file storage backend). This is a known limitation; full storage integration is a future optimization.
+2. No admin KPI read endpoint exists; the web admin page renders KPIs from server-side `getAdminPanelData()` and the Android admin screen has no KPI cards (no GET route to call). Add a `GET /api/levelup/admin/kpis` route to give the mobile screen the same KPI cards as web.
+3. No admin-gated GET route exists for the LevelUp admin screens, so the mobile admin screen cannot pre-gate by role before render; it relies on the server-side admin gate on `POST /adjust-credits` to deny non-admins. The cohort list (`GET /api/levelup/cohorts`) is read-access for any approved user. A dedicated admin-gated read route would let the mobile screen show the admin-only notice without attempting a mutation.
+4. The design mockup `MobileLevelUpAdmin.tsx` (track/badge management) has no backing endpoints; tracks are a free-text field on cohorts and there is no badge model. Building that surface would require new schema, routes, and contracts.
 
 ## Change Log
 
+- 2026-06-06: Owner decision — LevelUp admin UI is grant-only. An admin can never remove a member's Service Credits from the UI ("earn or earn nothing"). The web shell (`lu-admin-shell.tsx`) and the Android screen (`AdminLevelup.tsx`) now accept positive amounts only: the amount input is labelled "Amount to grant (greater than zero)", the action is labelled "Grant"/"Review grant", the confirm copy reads "add N credits to member X" (no "remove"), and submit is disabled client-side for non-positive amounts. The backend `POST /api/levelup/admin/adjust-credits` endpoint is unchanged (it still technically accepts a signed amount so a mistaken grant can be corrected later); only the UI no longer exposes a negative path. Member id, reason, governance ticket id, idempotency key, and the two-step confirm are all kept. Copy-only/validation-only UI change; no schema/route/contract changes.
+- 2026-06-06: Admin UI — turned the `/admin/levelup` web page from a KPI-only stub into a real, mobile-responsive admin UI (`components/levelup/lu-admin-shell.tsx` + `lu-admin-shared.ts`): KPI cards (server-fetched), a read-only cohort overview from `GET /api/levelup/cohorts`, and a Service Credits adjustment form wired to `POST /api/levelup/admin/adjust-credits` (CSRF header, idempotency key) behind an explicit confirm step that restates the member, direction (add/remove), and amount before submit. Added an Android admin screen (`ctf/packages/mobile/src/features/levelup/AdminLevelup.tsx` + `admin-api.ts`, registered in `App.tsx` as `levelup-admin`) mirroring the cohort overview and the same confirm-gated adjustment action. No new amounts are fabricated and no ServiceCredits→fiat equivalence is rendered. The mockup's track/badge editor was not built (no backing endpoints). No schema/route/contract changes. Documented endpoint gaps (no admin KPI GET, no admin-gated read route) in Gaps.
 - 2026-06-01: Multi-currency (issue #120): added `stipend_currency` and `microgrant_currency` (FK → `currencies.code`, default ServiceCredits) to `levelup_cohorts`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 - 2026-05-31: Android pixel pass — rewrote `ctf/packages/mobile/src/features/levelup/Levelup.tsx` to the design mockup (loading/empty/main states). Created real `api.ts` bound to `GET /api/levelup/cohorts` and `GET /api/service-credits/wallet`. Retired `MockLevelup.tsx`. Omitted unbacked fields: trainerName, tags, milestoneCount (not in cohorts list endpoint), active-enrollment banner (no user enrollment GET route). EOF, parity, and tsc gates all green.
 - 2026-05-30: Web pixel pass — rebuilt the web shell to the design mockup and decomposed the 520-line `levelup-shell.tsx` monolith into modular sub-components (`lu-shared.ts`, `lu-loading.tsx`, `lu-sidebar.tsx`, `lu-cohort-card.tsx`, `lu-browse.tsx`, `lu-progress.tsx`, `lu-right-panel.tsx`, thin shell) within rule-116 limits. Removed 6 dead unreferenced components (AdminPanel, CohortDetail, CohortList, EnrollModal, TrainerDashboard, UserDashboard). Shell binds real routes (cohorts, service-credits wallet, enroll, milestone validate); unbacked mockup figures omitted. No schema/route/contract changes.
