@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { AtSign } from 'lucide-react';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
@@ -39,7 +39,6 @@ type AuthenticatedChatPanelProps = {
   stats: ShellStats;
   plugins: PluginRegistryItem[];
   currentUser: ShellCurrentUser;
-  showSuggestions: boolean;
 };
 
 type ShellChatPanelProps = {
@@ -48,15 +47,11 @@ type ShellChatPanelProps = {
   currentUser: ShellCurrentUser;
   isAuthenticated?: boolean;
   signInUrl?: string;
-  // The pre-selected suggestion chips are hidden in production and shown only in
-  // demo mode while their behavior is finished — see GitHub issue tracked in the
-  // hub chat inventory. Defaults to hidden.
-  showSuggestions?: boolean;
 };
 
-export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, signInUrl = '/sign-in', showSuggestions = false }: ShellChatPanelProps) {
+export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = false, signInUrl = '/sign-in' }: ShellChatPanelProps) {
   if (isAuthenticated) {
-    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} showSuggestions={showSuggestions} />;
+    return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} />;
   }
 
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
@@ -119,7 +114,7 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
   );
 }
 
-function AuthenticatedChatPanel({ stats, plugins, currentUser, showSuggestions }: AuthenticatedChatPanelProps) {
+function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
   const {
@@ -139,6 +134,20 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser, showSuggestions }
     error,
   } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Tapping a suggestion chip fills the composer, then brings it into view and focuses it with the
+  // caret at the end — so the fill is visible even when the composer sits below the fold on mobile.
+  const selectSuggestion = (suggestion: string) => {
+    setInput(suggestion);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el.setSelectionRange(suggestion.length, suggestion.length);
+    });
+  };
 
   // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
   // epoch, then sort once so AI cards weave chronologically among community posts. `order` (source
@@ -268,15 +277,13 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser, showSuggestions }
         })}
       </div>
 
-      {showSuggestions ? (
-        <div className={styles.chatSuggestions}>
-          {SUGGESTIONS.map((suggestion) => (
-            <button key={suggestion} type="button" className={styles.chatChip} onClick={() => setInput(suggestion)}>
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className={styles.chatSuggestions}>
+        {SUGGESTIONS.map((suggestion) => (
+          <button key={suggestion} type="button" className={styles.chatChip} onClick={() => selectSuggestion(suggestion)}>
+            {suggestion}
+          </button>
+        ))}
+      </div>
 
       {/* @comic mention affordance + helper copy (per the locked design / naming rules). */}
       <div className={styles.comicComposerHelper}>
@@ -291,6 +298,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser, showSuggestions }
       <div className={styles.chatInputWrap}>
         <label className={styles.visuallyHidden} htmlFor="chat-input">Share with the community, or type @comic to ask the AI Assistant</label>
         <input
+          ref={inputRef}
           id="chat-input"
           className={styles.chatInput}
           placeholder="Share with the community, or type @comic to ask…"
