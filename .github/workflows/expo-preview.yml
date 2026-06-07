@@ -1,0 +1,103 @@
+name: Expo Preview APK
+
+# Builds an installable Android APK in Expo's cloud (EAS) for any pull request
+# that touches the mobile app, then posts a comment with the install link so a
+# reviewer can download and run it on a phone — no desktop or Android Studio needed.
+
+on:
+  pull_request:
+    paths:
+      - "ctf/packages/mobile/**"
+      - ".github/workflows/expo-preview.yml"
+
+concurrency:
+  group: expo-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build preview APK
+    runs-on: ubuntu-latest
+    environment: rewrite-mobile-preview
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      MOBILE_ENV_TARGET: preview
+      EAS_BUILD_PROFILE: preview
+      # Expo project wiring (variables, with the older fallback names accepted by config)
+      MOBILE_PROJECT_ID: ${{ vars.EXPO_MOBILE_PROJECT_ID || vars.MOBILE_PROJECT_ID }}
+      MOBILE_UPDATES_URL: ${{ vars.EXPO_MOBILE_UPDATES_URL || vars.MOBILE_UPDATES_URL }}
+      MOBILE_APP_URL: ${{ vars.MOBILE_APP_URL }}
+      MOBILE_CTF_USER_ID: ${{ vars.MOBILE_CTF_USER_ID }}
+      MOBILE_CTF_USERNAME: ${{ vars.MOBILE_CTF_USERNAME }}
+      MOBILE_CTF_USER_ROLE: ${{ vars.MOBILE_CTF_USER_ROLE }}
+      MOBILE_CTF_USER_APPROVED: ${{ vars.MOBILE_CTF_USER_APPROVED }}
+      MOBILE_OBSERVABILITY_PROVIDER: ${{ vars.MOBILE_OBSERVABILITY_PROVIDER }}
+      EXPO_OWNER: ${{ vars.EXPO_OWNER }}
+      # Sign-in keys and observability secret
+      MOBILE_AUTH_PUBLISHABLE_KEY_STAGING: ${{ secrets.MOBILE_AUTH_PUBLISHABLE_KEY_STAGING }}
+      EXPO_SENTRY_DSN: ${{ secrets.EXPO_SENTRY_DSN }}
+    steps:
+      - name: Fail fast when EXPO_TOKEN is missing
+        if: ${{ secrets.EXPO_TOKEN == '' }}
+        run: |
+          echo "EXPO_TOKEN secret is not set. Add it in repository settings before preview builds can run."
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install ctf dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Check mobile env contract
+        run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
+
+      - name: Build preview APK on EAS
+        id: build
+        working-directory: ctf/packages/mobile
+        run: |
+          set -euo pipefail
+          # --no-wait returns immediately with the build record (id + expo.dev page).
+          eas build --platform android --profile preview --non-interactive --no-wait --json > build.json
+          BUILD_ID=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('build.json','utf8'))[0].id)")
+          BUILD_URL="https://expo.dev/accounts/${EXPO_OWNER}/projects/charging-the-future/builds/${BUILD_ID}"
+          echo "build_url=${BUILD_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment install link on the pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = process.env.BUILD_URL;
+            const marker = '<!-- expo-preview-build -->';
+            const body = `${marker}\n**Android preview build started.**\n\nProfile: \`preview\` · Channel: \`preview\`\n\nOpen this page on your phone once the build finishes, then tap **Install** to put it on your Android device:\n\n${url}\n\nThe first build can take several minutes and may set up an Android signing key automatically.`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.data.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+        env:
+          BUILD_URL: ${{ steps.build.outputs.build_url }}

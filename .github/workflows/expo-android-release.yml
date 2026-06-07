@@ -1,0 +1,86 @@
+name: Expo Android Release
+
+# Builds a signed production Android APK in Expo's cloud (EAS) and attaches it to
+# a GitHub Release when a tag like `mobile-v1.2.3` is pushed. This is the "real
+# version" build users install, as opposed to the throwaway preview APKs on PRs.
+
+on:
+  push:
+    tags:
+      - "mobile-v*"
+
+concurrency:
+  group: expo-android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish signed APK
+    runs-on: ubuntu-latest
+    environment: rewrite-mobile-production
+    permissions:
+      contents: write
+    env:
+      MOBILE_ENV_TARGET: production
+      EAS_BUILD_PROFILE: production
+      MOBILE_PROJECT_ID: ${{ vars.EXPO_MOBILE_PROJECT_ID || vars.MOBILE_PROJECT_ID }}
+      MOBILE_UPDATES_URL: ${{ vars.EXPO_MOBILE_UPDATES_URL || vars.MOBILE_UPDATES_URL }}
+      MOBILE_APP_URL: ${{ vars.MOBILE_APP_URL }}
+      MOBILE_CTF_USER_ID: ${{ vars.MOBILE_CTF_USER_ID }}
+      MOBILE_CTF_USERNAME: ${{ vars.MOBILE_CTF_USERNAME }}
+      MOBILE_CTF_USER_ROLE: ${{ vars.MOBILE_CTF_USER_ROLE }}
+      MOBILE_CTF_USER_APPROVED: ${{ vars.MOBILE_CTF_USER_APPROVED }}
+      MOBILE_OBSERVABILITY_PROVIDER: ${{ vars.MOBILE_OBSERVABILITY_PROVIDER }}
+      EXPO_OWNER: ${{ vars.EXPO_OWNER }}
+      MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION }}
+      EXPO_SENTRY_DSN: ${{ secrets.EXPO_SENTRY_DSN }}
+    steps:
+      - name: Fail fast when EXPO_TOKEN is missing
+        if: ${{ secrets.EXPO_TOKEN == '' }}
+        run: |
+          echo "EXPO_TOKEN secret is not set. Add it in repository settings before release builds can run."
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install ctf dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Check mobile env contract
+        run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
+
+      - name: Build signed production APK on EAS
+        working-directory: ctf/packages/mobile
+        run: |
+          set -euo pipefail
+          # Wait for the build, then download the signed APK locally for upload.
+          eas build --platform android --profile production --non-interactive --json --wait > build.json
+          APK_URL=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('build.json','utf8'))[0].artifacts.buildUrl)")
+          curl -fSL "$APK_URL" -o charging-the-future-${GITHUB_REF_NAME}.apk
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ctf/packages/mobile/charging-the-future-${{ github.ref_name }}.apk
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
