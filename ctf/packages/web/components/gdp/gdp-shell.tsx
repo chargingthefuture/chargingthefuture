@@ -44,6 +44,7 @@ function GdpContent({
   sectors,
   countries,
   metrics,
+  metricRows,
 }: {
   error: string | null;
   report: GdpReport | null;
@@ -51,13 +52,14 @@ function GdpContent({
   sectors: GdpReport["sectors"];
   countries: GdpReport["countries"];
   metrics: GdpMetrics;
+  metricRows: GdpMetricRow[];
 }) {
   if (error) {
     return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14, padding: 24 }}>{error}</div>;
   }
   if (!report) return <EmptyReport />;
   if (tab === "dashboard") return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} />;
-  return <GdpMap countries={countries} />;
+  return <GdpMap metricRows={metricRows} />;
 }
 
 // Read the published headline GDP metric off the raw report payload and report
@@ -77,6 +79,10 @@ export default function GdpShell() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<GdpReport | null>(null);
   const [isEstimate, setIsEstimate] = useState(false);
+  // Raw per-metric rows from the report payload. Kept separately from the shaped
+  // GdpMetrics so the world map can read the real community-wide aggregates
+  // (gdp_total_revenue, weekly_active_users) by key. No per-country data exists.
+  const [metricRows, setMetricRows] = useState<GdpMetricRow[]>([]);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -91,6 +97,7 @@ export default function GdpShell() {
         if (!controller.signal.aborted) {
           setReport(data.report ?? null);
           setIsEstimate(deriveIsEstimate(data.report?.metrics));
+          setMetricRows(Array.isArray(data.report?.metrics) ? (data.report?.metrics as GdpMetricRow[]) : []);
         }
       } catch (e: unknown) {
         if (controller.signal.aborted) return;
@@ -131,7 +138,7 @@ export default function GdpShell() {
             ))}
           </div>
         </div>
-        <GdpContent error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} />
+        <GdpContent error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} metricRows={metricRows} />
       </div>
     );
   }
@@ -142,7 +149,7 @@ export default function GdpShell() {
       <GdpSidebar metrics={metrics} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <ShellHeader metrics={metrics} />
-        <GdpContent error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} />
+        <GdpContent error={error} report={report} tab={tab} sectors={sectors} countries={countries} metrics={metrics} metricRows={metricRows} />
       </div>
     </div>
   );
