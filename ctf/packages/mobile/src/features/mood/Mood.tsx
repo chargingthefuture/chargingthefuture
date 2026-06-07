@@ -1,8 +1,9 @@
 // Real Mood screen — pixel-pass to design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/MobileMood.tsx
-// API bindings: GET /api/mood/eligibility, POST /api/mood/submissions
-// Omissions vs mockup (no aggregate stats API):
-//   - Trends tab: replaced with honest empty state (no 7-day chart, no community counts — no backing API)
-//   - Community avg card in check-in tab: omitted (fabricated in mockup; no aggregate endpoint)
+// API bindings: GET /api/mood/eligibility, POST /api/mood/submissions, GET /api/mood/community
+// The Trends tab renders the real aggregate community pulse (7-day average-mood
+// chart + counts) from /api/mood/community. The backend returns only counts and
+// per-day averages — never per-user rows — and withholds data until a minimum
+// number of check-ins exist, so a clean empty state shows below that threshold.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -15,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { fetchMoodEligibility, submitMood } from './api';
+import { fetchMoodCommunity, fetchMoodEligibility, submitMood, type CommunityPulse } from './api';
 
 const COLOR = '#EC4899';
 const BG = '#0F1117';
@@ -151,12 +152,96 @@ function SubmittedView({ onReset }: { onReset: () => void }) {
   );
 }
 
-// Trends tab: no aggregate-stats API exists; honest empty state per real-data-only rule.
+function weekdayLabel(dateIso: string): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return '';
+  return ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.getUTCDay()];
+}
+
+function faceForAverage(avg: number | null): { emoji: string; color: string } {
+  if (avg === null || Number.isNaN(avg)) return { emoji: '·', color: '#6B7280' };
+  const rounded = Math.max(1, Math.min(5, Math.round(avg)));
+  const match = MOODS.find((m) => m.value === rounded);
+  return match ? { emoji: match.emoji, color: match.color } : { emoji: '·', color: '#6B7280' };
+}
+
+// Trends tab: real aggregate community pulse from GET /api/mood/community.
+// Shows an empty state until the backend reports enough check-ins.
 function TrendsView() {
+  const [pulse, setPulse] = useState<CommunityPulse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errored, setErrored] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setErrored(false);
+    fetchMoodCommunity()
+      .then((data) => { if (active) setPulse(data.pulse); })
+      .catch(() => { if (active) setErrored(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  if (loading) return <ActivityIndicator color={COLOR} style={s.loader} />;
+
+  if (errored || pulse === null || !pulse.hasEnoughData) {
+    return (
+      <View style={s.emptyWrap}>
+        <Text style={s.emptyTitle}>Community Wellness</Text>
+        <Text style={s.emptySub}>
+          Aggregated trends appear here once enough members have checked in. All data is fully anonymous — no names, no IDs, only mood scores by day.
+        </Text>
+      </View>
+    );
+  }
+
+  const headline = faceForAverage(pulse.averageMood);
+
   return (
-    <View style={s.emptyWrap}>
-      <Text style={s.emptyTitle}>Community Wellness</Text>
-      <Text style={s.emptySub}>Aggregated trends will appear here once community data is available.</Text>
+    <View>
+      <Text style={s.trendsTitle}>Community Wellness</Text>
+      <Text style={s.trendsSub}>Aggregated · Individual data never exposed</Text>
+
+      <View style={s.trendsCardsRow}>
+        <View style={[s.trendsCard, { backgroundColor: `${headline.color}10`, borderColor: `${headline.color}25` }]}>
+          <Text style={s.trendsCardEmoji}>{headline.emoji}</Text>
+          <Text style={[s.trendsCardValue, { color: headline.color }]}>
+            {pulse.averageMood !== null ? pulse.averageMood.toFixed(1) : '—'}/5
+          </Text>
+          <Text style={s.trendsCardLabel}>Avg mood ({pulse.windowDays}-day)</Text>
+        </View>
+        <View style={[s.trendsCard, { backgroundColor: `${COLOR}08`, borderColor: `${COLOR}20` }]}>
+          <Text style={[s.trendsCardValue, { color: COLOR }]}>{pulse.totalCount.toLocaleString()}</Text>
+          <Text style={s.trendsCardLabel}>Check-ins this week</Text>
+        </View>
+      </View>
+
+      <View style={s.chartCard}>
+        <Text style={s.chartTitle}>{pulse.windowDays}-Day Community Mood</Text>
+        <View style={s.chartRow}>
+          {pulse.days.map((day) => {
+            const heightPx = day.averageMood ? Math.max(6, (day.averageMood / 5) * 60) : 6;
+            return (
+              <React.Fragment key={day.dateIso}>
+                <View style={s.chartCol}>
+                  <View style={s.chartBarTrack}>
+                    <View
+                      style={[
+                        s.chartBar,
+                        { height: heightPx },
+                        day.averageMood ? { backgroundColor: COLOR } : s.chartBarEmpty,
+                      ]}
+                    />
+                  </View>
+                  <Text style={s.chartDayLabel}>{weekdayLabel(day.dateIso)}</Text>
+                  <Text style={s.chartDayValue}>{day.averageMood ? day.averageMood.toFixed(1) : '·'}</Text>
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
+      </View>
     </View>
   );
 }
@@ -345,6 +430,29 @@ const s = StyleSheet.create({
   emptyEmoji: { fontSize: 56, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB', marginBottom: 6, textAlign: 'center' },
   emptySub: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
+  trendsTitle: { fontSize: 18, fontWeight: '800', color: '#F9FAFB', marginBottom: 4 },
+  trendsSub: { fontSize: 12, color: '#6B7280', marginBottom: 16 },
+  trendsCardsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  trendsCard: { flex: 1, padding: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  trendsCardEmoji: { fontSize: 26, marginBottom: 2 },
+  trendsCardValue: { fontSize: 20, fontWeight: '800', marginBottom: 2 },
+  trendsCardLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
+  chartCard: {
+    padding: 16, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  },
+  chartTitle: { fontSize: 13, fontWeight: '700', color: '#9CA3AF', marginBottom: 12 },
+  chartRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-end', height: 96 },
+  chartCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  chartBarTrack: { width: '100%', height: 60, justifyContent: 'flex-end', alignItems: 'stretch' },
+  chartBar: { width: '100%', borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  chartBarEmpty: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed',
+  },
+  chartDayLabel: { fontSize: 10, color: '#4B5563', marginTop: 4 },
+  chartDayValue: { fontSize: 10, color: COLOR, fontWeight: '700' },
   navBar: {
     height: 72, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-around', paddingHorizontal: 8,
