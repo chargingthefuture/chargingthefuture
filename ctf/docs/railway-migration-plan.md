@@ -31,12 +31,11 @@
 ### Requirements
 
 1. **Full agentic access** (SSH, exec, logs, deployments)
-2. **Deploy pm-mcp-server as permanent service** (agents trigger feedback triage)
-3. **Keep Neon PostgreSQL** (managed, simpler than self-hosting)
-4. **Terminal/script-first** (no UI dependency)
-5. **Solo dev friendly, GitHub Codespaces compatible**
-6. **Month-to-month pricing** (not annual)
-7. **NOT AWS or Azure**
+2. **Keep Neon PostgreSQL** (managed, simpler than self-hosting)
+3. **Terminal/script-first** (no UI dependency)
+4. **Solo dev friendly, GitHub Codespaces compatible**
+5. **Month-to-month pricing** (not annual)
+6. **NOT AWS or Azure**
 
 ### Tech Constraints
 
@@ -92,7 +91,6 @@
 | **PostgreSQL** | Neon (free tier) | $0 | 3 free compute projects available |
 | | Neon (pro) | ~$15 | If you need performance upgrades |
 | **Infisical** | Docker on VPS | $0 | Containerized on same VPS |
-| **PM-MCP Server** | Docker on VPS | $0 | Another service in docker-compose |
 | **Domain/DNS** | Cloudflare | $0 | Free tier sufficient |
 | | Route53 | $0.50 | If you use AWS Route53 |
 | **Total estimate** | | **$5–20/mo** | Hetzner + free Neon + VPS containers |
@@ -111,11 +109,6 @@
 │  ┌─────────────────────────┐                            │
 │  │ Next.js App (@ctf/web)  │ ← Port 3000                │
 │  │ (Docker container)      │                            │
-│  └─────────────────────────┘                            │
-│           ↓                                              │
-│  ┌─────────────────────────┐                            │
-│  │ PM-MCP Server           │ ← Port 3001                │
-│  │ (feedback triage)       │                            │
 │  └─────────────────────────┘                            │
 │           ↓                                              │
 │  ┌─────────────────────────┐                            │
@@ -150,7 +143,6 @@ ssh root@<vps-ip>
 
 # Monitor logs in real-time
 docker-compose logs -f web
-docker-compose logs -f pm-mcp-server
 
 # Run pre-flight checks
 docker-compose exec web pnpm run check:formance-env
@@ -218,18 +210,6 @@ services:
       - infisical-data:/app/data
     environment:
       - INSTALL_URL=http://${VPS_IP}:8000
-    restart: unless-stopped
-
-  pm-mcp-server:
-    build:
-      context: ./ctf/packages/pm-mcp-server
-    ports:
-      - "3001:3001"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - PORT=3001
-    depends_on:
-      - web
     restart: unless-stopped
 
 volumes:

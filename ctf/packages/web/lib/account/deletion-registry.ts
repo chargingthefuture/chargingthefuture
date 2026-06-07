@@ -324,17 +324,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'feedback',
-    name: 'Feedback',
-    dataSummary: 'Your feedback items and votes.',
-    serviceScopeSupported: true,
-    tables: [
-      del('feedback_votes', 'user_id', 'Your votes.'),
-      del('feedback_items', 'user_id', 'Feedback you submitted.'),
-      retain('feedback_audit', 'Audit log; retained for compliance.'),
-    ],
-  },
-  {
     slug: 'weekly-performance',
     name: 'Weekly Performance',
     dataSummary: 'Weekly performance figures are aggregate; no per-user data is stored.',

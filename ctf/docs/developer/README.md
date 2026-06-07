@@ -16,9 +16,8 @@ what code does not.
 - [economic-models-plugin-plan.md](economic-models-plugin-plan.md) — economic models plugin design.
 - [EXTERNAL_LINK_FEATURE.md](EXTERNAL_LINK_FEATURE.md) — external link feature.
 
-## PM & Performance
+## Performance
 
-- [PM.md](PM.md) — feedback → matching → approval → implementation pipeline (MCP server + agents).
 - [PERFORMANCE.md](PERFORMANCE.md) — performance budgets + manual benchmark runbook.
 
 ## Process & Quality

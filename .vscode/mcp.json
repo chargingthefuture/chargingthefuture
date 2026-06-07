@@ -1,13 +1,5 @@
 {
   "servers": {
-    "pm-mcp-server": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["${workspaceFolder}/ctf/packages/pm-mcp-server/dist/index.js"],
-      "env": {
-        "DATABASE_URL": "${env:DATABASE_URL}"
-      }
-    },
     "agent-mcp-server": {
       "type": "stdio",
       "command": "node",

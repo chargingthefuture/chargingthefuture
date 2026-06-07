@@ -14,7 +14,6 @@ chargingthefuture/          ← repo root
 │   │   ├── web/            ← Next.js app (@ctf/web) — deployed to Railway
 │   │   ├── mobile/         ← React Native / Expo app (@ctf/mobile)
 │   │   ├── shared/         ← shared types, contracts, utilities
-│   │   ├── pm-mcp-server/  ← project management MCP server
 │   │   ├── education/
 │   │   ├── economic-models/
 │   │   └── eol/
@@ -46,11 +45,6 @@ chargingthefuture/          ← repo root
 No local dev. The v3 app runs as a **single production environment on Render**:
 the `ctf-web` service plus supporting services (`ctf-formance-ledger`,
 `ctf-ollama`). There is no separate staging deployment.
-
-> `pm-mcp-server` is a stdio MCP server and is **not** a Render service — it is
-> spawned on demand as a local subprocess by the PM agents (see
-> `ctf/docs/developer/PM.md`). Deploying a stdio server as a PaaS worker
-> crash-loops, so it must never be added back to `render.yaml`.
 
 **Canonical env contract:** the Infisical `production` environment is the single
 source of truth for all secrets (see below). Two integrations — GetStream and

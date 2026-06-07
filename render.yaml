@@ -84,18 +84,6 @@ services:
       # value is re-baked. Syncing a `NEXT_PUBLIC_*` value into Render at runtime
       # is a no-op for the client; do not rely on it.
 
-  # ── PM MCP Server — intentionally NOT a Render service ───────────
-  # ctf/packages/pm-mcp-server is a stdio MCP server (StdioServerTransport).
-  # A stdio server exits as soon as stdin closes, which always happens on a
-  # Render PaaS worker (no MCP client connects via stdin), so deploying it here
-  # produces a permanent crash-loop and Render eventually suspends it. This is
-  # the same reason ctf-agent-mcp-server was removed (commit ced4c54).
-  # It is consumed locally: built, then registered as a stdio server in an AI
-  # client (see ctf/docs/developer/PM.md) and spawned as a subprocess on demand
-  # by the feedback-matcher / implementation agents. Do not re-add it as a
-  # worker. If a hosted, network-reachable PM MCP endpoint is ever needed, it
-  # must first be rewritten to a long-running HTTP transport.
-
   # ── Ollama ────────────────────────────────────────────────────────
   # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-ollama:latest
   # Private service — reachable by other Render services via internal URL.
