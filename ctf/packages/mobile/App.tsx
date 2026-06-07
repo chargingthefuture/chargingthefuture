@@ -20,7 +20,7 @@ import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
 import { Levelup, AdminLevelup } from './src/features/levelup';
-import { Unlock } from './src/features/unlock';
+import { Unlock, AdminUnlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AccountData } from './src/features/account-data';
 import { AuthProvider } from './src/features/trusttransport/auth-context';
@@ -50,6 +50,7 @@ type FeatureKey =
   | 'service-credits-admin'
   | 'levelup'
   | 'unlock'
+  | 'unlock-admin'
   | 'account-data'
   | 'comic-review'
   | 'peer-programming-admin'
@@ -84,6 +85,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'service-credits-admin', label: 'Service Credits Admin' },
   { key: 'levelup', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
+  { key: 'unlock-admin', label: 'Unlock Admin' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'Peer Programming Admin' },
@@ -152,6 +154,8 @@ export default function App() {
         return <Levelup />;
       case 'unlock':
         return <Unlock />;
+      case 'unlock-admin':
+        return <AdminUnlock />;
       case 'account-data':
         return <AccountData />;
       case 'comic-review':
