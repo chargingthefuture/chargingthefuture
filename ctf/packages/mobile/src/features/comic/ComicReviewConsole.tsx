@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,6 +44,53 @@ function formatTime(iso: string): string {
 function confidenceLabel(value: number | null): string {
   if (value === null) return 'Not yet scored';
   return `${Math.round(value * 100)}%`;
+}
+
+type ConfidenceBand = { label: string; color: string; pct: number | null; low: boolean };
+
+// Map the real (possibly null) NLU confidence to a band, mirroring the web console. Rasa is not
+// deployed yet, so confidence is typically null — surfaced honestly rather than a fabricated number.
+function confidenceBand(value: number | null): ConfidenceBand {
+  if (value === null) return { label: 'Not yet scored', color: ACCENT_LIGHT, pct: null, low: false };
+  const pct = Math.round(value * 100);
+  if (pct >= 80) return { label: 'High confidence', color: '#22C55E', pct, low: false };
+  if (pct >= 50) return { label: 'Medium confidence', color: '#F59E0B', pct, low: false };
+  return { label: 'Low confidence', color: '#EF4444', pct, low: true };
+}
+
+function ConfidenceCard({ item }: { item: ComicReviewItem }) {
+  const band = confidenceBand(item.nluConfidence);
+  return (
+    <View>
+      <Text style={styles.sectionLabel}>Confidence</Text>
+      <View style={styles.confCard}>
+        <View style={styles.confTop}>
+          <Text style={[styles.confLabel, { color: band.color }]}>{band.label}</Text>
+          {band.pct !== null ? (
+            <Text style={[styles.confLabel, { color: band.color }]}>{band.pct}%</Text>
+          ) : null}
+        </View>
+        {band.pct !== null ? (
+          <View style={styles.confTrack}>
+            <View style={[styles.confFill, { width: `${band.pct}%`, backgroundColor: band.color }]} />
+          </View>
+        ) : (
+          <View style={styles.confHintRow}>
+            <Ionicons name="warning-outline" size={12} color="#FCD34D" />
+            <Text style={styles.confHintText}>
+              No calibrated confidence yet — every draft is held for human review.
+            </Text>
+          </View>
+        )}
+        {band.low ? (
+          <View style={styles.confHintRow}>
+            <Ionicons name="warning-outline" size={12} color="#FCA5A5" />
+            <Text style={styles.confLowText}>Safety-sensitive — review wording carefully.</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
 }
 
 function ConsoleHeader({ count, allClear }: { count: number; allClear: boolean }) {
@@ -149,7 +197,7 @@ export const ComicReviewConsole = () => {
     [items, selectedId],
   );
 
-  const resolve = useCallback(
+  const performResolve = useCallback(
     async (resolution: ComicReviewResolution) => {
       if (!selected || busy) return;
       setBusy(true);
@@ -170,6 +218,32 @@ export const ComicReviewConsole = () => {
       }
     },
     [selected, busy, draft, load],
+  );
+
+  // Confirm before any action that changes what a survivor sees: publishing (approve/correct) sends
+  // the answer; reject discards the draft. A misclick must not silently push or drop a reply.
+  const resolve = useCallback(
+    (resolution: ComicReviewResolution) => {
+      if (!selected || busy) return;
+      const message =
+        resolution === 'reject'
+          ? 'Reject this draft? The survivor will not receive this answer.'
+          : resolution === 'correct'
+            ? 'Approve and send your corrected answer to the survivor?'
+            : 'Approve and send this answer to the survivor?';
+      const confirmLabel = resolution === 'reject' ? 'Reject' : 'Approve & send';
+      Alert.alert(resolution === 'reject' ? 'Reject draft' : 'Approve answer', message, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: confirmLabel,
+          style: resolution === 'reject' ? 'destructive' : 'default',
+          onPress: () => {
+            void performResolve(resolution);
+          },
+        },
+      ]);
+    },
+    [selected, busy, performResolve],
   );
 
   const beginEdit = useCallback(() => {
@@ -260,65 +334,136 @@ export const ComicReviewConsole = () => {
           <Text style={styles.questionText}>{selected.questionBody}</Text>
         </View>
 
-        <View style={styles.draftHeader}>
-          <Text style={styles.sectionLabel}>AI draft</Text>
-          <View style={styles.notSentBadge}>
-            <Ionicons name="sparkles" size={8} color={ACCENT_LIGHT} />
-            <Text style={styles.notSentText}>Not sent</Text>
-          </View>
-        </View>
         {editing ? (
-          <TextInput
-            style={styles.editInput}
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-            placeholder="Correct the answer before approving…"
-            placeholderTextColor={SUBTLE}
-            editable={!busy}
-          />
-        ) : (
-          <View style={styles.draftBox}>
-            <Text style={styles.draftText}>{selected.draftBody}</Text>
-          </View>
-        )}
+          <>
+            {/* Original AI draft (read-only) — matches MobileAIReviewConsoleDetail. */}
+            <View style={styles.draftHeader}>
+              <Text style={styles.sectionLabel}>Original AI draft</Text>
+              <View style={styles.needsCorrectionBadge}>
+                <Text style={styles.needsCorrectionText}>Needs correction</Text>
+              </View>
+            </View>
+            <View style={styles.draftReadonlyBox}>
+              <Text style={styles.draftReadonlyText}>{selected.draftBody}</Text>
+            </View>
 
-        <ProvenanceRow item={selected} />
+            {/* Editable corrected answer with Reset + character count. */}
+            <View style={styles.draftHeader}>
+              <Text style={styles.sectionLabelCyan}>Your corrected answer</Text>
+              <Pressable
+                style={styles.resetBtn}
+                onPress={() => setDraft(selected.draftBody)}
+                disabled={busy}
+              >
+                <Ionicons name="refresh" size={11} color={SUBTLE} />
+                <Text style={styles.resetText}>Reset</Text>
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.editInput}
+              value={draft}
+              onChangeText={setDraft}
+              multiline
+              placeholder="Correct the answer before approving…"
+              placeholderTextColor={SUBTLE}
+              editable={!busy}
+            />
+            <Text style={styles.charCount}>{draft.length} characters</Text>
+
+            {/* Safety reminder banner. */}
+            <View style={styles.safetyBanner}>
+              <Ionicons name="warning-outline" size={15} color="#FBBF24" />
+              <Text style={styles.safetyBannerText}>
+                Make sure the corrected wording never pressures someone to reveal their location or
+                identity before they&apos;re ready.
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.draftHeader}>
+              <Text style={styles.sectionLabel}>{selected.safetyCategory ? 'No AI draft' : 'AI draft'}</Text>
+              <View style={styles.notSentBadge}>
+                <Ionicons name="sparkles" size={8} color={ACCENT_LIGHT} />
+                <Text style={styles.notSentText}>Not sent</Text>
+              </View>
+            </View>
+            <View style={styles.draftBox}>
+              <Text style={styles.draftText}>
+                {selected.safetyCategory
+                  ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
+                  : selected.draftBody}
+              </Text>
+            </View>
+
+            <ConfidenceCard item={selected} />
+            <ProvenanceRow item={selected} />
+          </>
+        )}
       </ScrollView>
 
       <View style={styles.actions}>
         {actionError && <Text style={styles.actionError}>{actionError}</Text>}
-        <Pressable
-          style={[styles.approveBtn, busy ? styles.btnBusy : null]}
-          onPress={() => resolve(editing ? 'correct' : 'approve')}
-          disabled={busy}
-        >
-          {busy ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="checkmark" size={16} color="#fff" />
-              <Text style={styles.approveText}>{editing ? 'Save & approve' : 'Approve & send'}</Text>
-            </>
-          )}
-        </Pressable>
-        <View style={styles.secondaryRow}>
-          {editing ? (
-            <Pressable style={styles.editBtn} onPress={() => setEditing(false)} disabled={busy}>
-              <Ionicons name="close" size={14} color={ACCENT_LIGHT} />
-              <Text style={styles.editText}>Cancel edit</Text>
+        {editing ? (
+          // Edit mode: primary = approve the corrected answer (disabled while empty), then Reject.
+          <>
+            <Pressable
+              style={[styles.approveBtn, busy || draft.trim().length === 0 ? styles.btnBusy : null]}
+              onPress={() => resolve('correct')}
+              disabled={busy || draft.trim().length === 0}
+            >
+              {busy ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Text style={styles.approveText}>Approve corrected</Text>
+                </>
+              )}
             </Pressable>
-          ) : (
-            <Pressable style={styles.editBtn} onPress={beginEdit} disabled={busy}>
-              <Ionicons name="pencil" size={14} color={ACCENT_LIGHT} />
-              <Text style={styles.editText}>Edit & approve</Text>
-            </Pressable>
-          )}
-          <Pressable style={styles.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
-            <Ionicons name="close" size={14} color="#F87171" />
-            <Text style={styles.rejectText}>Reject</Text>
-          </Pressable>
-        </View>
+            <View style={styles.secondaryRow}>
+              <Pressable style={styles.editBtn} onPress={() => setEditing(false)} disabled={busy}>
+                <Ionicons name="arrow-back" size={14} color={ACCENT_LIGHT} />
+                <Text style={styles.editText}>Cancel edit</Text>
+              </Pressable>
+              <Pressable style={styles.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
+                <Ionicons name="close" size={14} color="#F87171" />
+                <Text style={styles.rejectText}>Reject</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          // Default view: Approve & send (hidden for safety-flagged items with no AI draft to send),
+          // then Edit & approve + Reject.
+          <>
+            {selected.safetyCategory ? null : (
+              <Pressable
+                style={[styles.approveBtn, busy ? styles.btnBusy : null]}
+                onPress={() => resolve('approve')}
+                disabled={busy}
+              >
+                {busy ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                    <Text style={styles.approveText}>Approve &amp; send</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+            <View style={styles.secondaryRow}>
+              <Pressable style={styles.editBtn} onPress={beginEdit} disabled={busy}>
+                <Ionicons name="pencil" size={14} color={ACCENT_LIGHT} />
+                <Text style={styles.editText}>Edit &amp; approve</Text>
+              </Pressable>
+              <Pressable style={styles.rejectBtn} onPress={() => resolve('reject')} disabled={busy}>
+                <Ionicons name="close" size={14} color="#F87171" />
+                <Text style={styles.rejectText}>Reject</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
       </View>
     </View>
   );
@@ -499,6 +644,118 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#E8EAF0',
     lineHeight: 22,
+  },
+  sectionLabelCyan: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: ACCENT_LIGHT,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  needsCorrectionBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  needsCorrectionText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#FCA5A5',
+  },
+  draftReadonlyBox: {
+    padding: 14,
+    borderRadius: 11,
+    backgroundColor: 'rgba(239,68,68,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
+  },
+  draftReadonlyText: {
+    fontSize: 13,
+    color: '#D1D5DB',
+    lineHeight: 20,
+  },
+  resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  resetText: {
+    fontSize: 11,
+    color: SUBTLE,
+  },
+  charCount: {
+    fontSize: 10,
+    color: '#4B5563',
+    textAlign: 'right',
+    marginTop: 5,
+  },
+  safetyBanner: {
+    flexDirection: 'row',
+    gap: 9,
+    padding: 12,
+    borderRadius: 11,
+    backgroundColor: 'rgba(245,158,11,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.2)',
+    marginTop: 4,
+  },
+  safetyBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#FCD34D',
+    lineHeight: 18,
+  },
+  confCard: {
+    padding: 14,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  confTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  confLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  confTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  confFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  confHintRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 9,
+  },
+  confHintText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#FCD34D',
+    lineHeight: 16,
+  },
+  confLowText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#FCA5A5',
+    lineHeight: 16,
   },
   editInput: {
     minHeight: 120,

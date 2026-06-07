@@ -323,12 +323,16 @@ Target: `web+android` parity.
     `consentGranted` flag before any send.
   - The helpful / not_helpful / flag rating row, wired to `POST /api/comic/answers/[turnId]/rate`.
   - The Owner Review & Correction Console (`ComicReviewConsole.tsx`, matches `MobileAIReviewConsole`
-    / `MobileAIReviewConsoleEmpty`) at the "AI Review" tile in the mobile app shell; admin-gated
-    server-side (a non-admin sees an access notice). Queue chips + detail (question, AI draft,
-    provenance, real confidence) + Approve / Edit&approve / Reject, wired to `GET /api/comic/review`
-    and `POST /api/comic/review/[turnId]/resolve`. The mockup's fabricated "Sources" list and
-    hardcoded confidence buckets are intentionally not reproduced — only real provenance is shown,
-    matching the web console.
+    / `MobileAIReviewConsoleDetail` / `MobileAIReviewConsoleEmpty`) at the "AI Review" tile in the
+    mobile app shell; admin-gated server-side (a non-admin sees an access notice). Queue chips +
+    detail (question, AI draft, a dedicated **Confidence card** — band label + progress bar + a
+    low-confidence safety note — and real provenance) + Approve&send / Edit&approve / Reject. The
+    edit view now splits into a read-only **Original AI draft** ("Needs correction") beside an
+    editable **corrected answer** with **Reset** and a character count, plus a **safety reminder
+    banner**, matching `MobileAIReviewConsoleDetail`. Every publish/reject prompts a confirm dialog
+    (`Alert.alert`). Wired to `GET /api/comic/review` and `POST /api/comic/review/[turnId]/resolve`.
+    The mockup's fabricated "Sources" list and hardcoded confidence values are intentionally not
+    reproduced — only the real `nlu_confidence` and provenance are shown, matching the web console.
   - All requests send the `x-ctf-csrf: 1` header (mirrors the web CSRF handling) and target
     `/api/comic/*`. No third-party LLM egress.
   - Interim safety policy honored end-to-end: every answer routes through human review before it
@@ -420,6 +424,23 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-06-07: Aligned the **AI review console** (web + Android) to the newer `AIReviewConsole*` /
+  `MobileAIReviewConsole*` mockups (design `353f8f3`) on `feat/comic-ai-review-console-align`. No
+  backend change — binds only the existing `GET /api/comic/review` and
+  `POST /api/comic/review/[turnId]/resolve` endpoints (mutations send `x-ctf-csrf: 1`). Web: added a
+  confirm gesture (`window.confirm`) before every publish (approve / approve-corrected) and reject,
+  so a misclick cannot silently send or discard an answer. Android: added the dedicated **Confidence
+  card** (band label + progress bar + low-confidence safety note) mirroring the web console; rebuilt
+  the edit view to the `MobileAIReviewConsoleDetail` layout (read-only Original AI draft beside the
+  editable corrected answer, with Reset, a character count, and a safety reminder banner); hid the
+  "Approve & send" action for safety-flagged human-first items (no AI draft to send) to match the web
+  console; and added a confirm dialog (`Alert.alert`) before every publish/reject. The fabricated
+  "Sources" list and hardcoded confidence buckets in the mockups remain intentionally omitted — there
+  is no backend for source documents, so only the real `nlu_confidence` and provenance are shown. No
+  consent surface was added here; the existing first-use consent affordance already covers
+  `AIConsent` / `MobileAIConsent` and is unchanged. List keys are on the `key` prop of the mapped
+  `Pressable`/`View` rows (no `key` placed on a bare host element where the RN typings reject it), and
+  no new `App.tsx` feature key was added (`comic-review` was already registered).
 - 2026-06-01: Delivered the **Android UI** for `@comic` on `feat/comic-mobile-android-parity`
   against the LOCKED design `9a4a1af` (`Mobile*`/`MobileAIConsent`/`MobileAIReviewConsole*`). Added
   `ctf/packages/mobile/src/features/comic/`: `api.ts` (client for `/api/comic/conversation`,
