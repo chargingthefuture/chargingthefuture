@@ -1,6 +1,7 @@
 // Mood plugin API client — binds to real backend routes.
 // GET  /api/mood/eligibility?clientId=   → EligibilityResponse
 // POST /api/mood/submissions             → SubmitResponse
+// GET  /api/mood/community               → CommunityResponse (aggregate only)
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
 
@@ -9,6 +10,26 @@ export type EligibilityResponse = {
   eligible: boolean;
   cooldownUntilIso: string | null;
   lastSubmissionAtIso: string | null;
+};
+
+export type CommunityPulseDay = {
+  dateIso: string;
+  averageMood: number | null;
+  count: number;
+};
+
+export type CommunityPulse = {
+  windowDays: number;
+  minSample: number;
+  totalCount: number;
+  averageMood: number | null;
+  hasEnoughData: boolean;
+  days: CommunityPulseDay[];
+};
+
+export type CommunityResponse = {
+  ok: boolean;
+  pulse: CommunityPulse;
 };
 
 export type SubmitResponse = {
@@ -26,6 +47,15 @@ export async function fetchMoodEligibility(clientId: string): Promise<Eligibilit
     throw new Error(`eligibility_fetch_failed:${res.status}`);
   }
   return res.json() as Promise<EligibilityResponse>;
+}
+
+export async function fetchMoodCommunity(): Promise<CommunityResponse> {
+  const url = `${API_BASE}/api/mood/community`;
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`community_fetch_failed:${res.status}`);
+  }
+  return res.json() as Promise<CommunityResponse>;
 }
 
 export async function submitMood(

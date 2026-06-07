@@ -59,6 +59,44 @@ export function getMoodClientId(): string {
   }
 }
 
+// Community Pulse response from GET /api/mood/community. Aggregate only — no
+// per-user data is ever returned by the backend.
+export type MoodCommunityPulseDay = {
+  dateIso: string;
+  averageMood: number | null;
+  count: number;
+};
+
+export type MoodCommunityPulse = {
+  windowDays: number;
+  minSample: number;
+  totalCount: number;
+  averageMood: number | null;
+  hasEnoughData: boolean;
+  days: MoodCommunityPulseDay[];
+};
+
+export type MoodCommunityResponse = {
+  ok: boolean;
+  pulse: MoodCommunityPulse;
+};
+
+// Map a 1..5 average mood to the matching emoji + label + color for display.
+export function moodFaceForAverage(avg: number | null): { emoji: string; label: string; color: string } {
+  if (avg === null || Number.isNaN(avg)) return { emoji: "·", label: "No data", color: SUBTLE };
+  const rounded = Math.max(1, Math.min(5, Math.round(avg)));
+  const match = MOODS.find((m) => m.value === rounded);
+  return match ? { emoji: match.emoji, label: match.label, color: match.color } : { emoji: "·", label: "No data", color: SUBTLE };
+}
+
+// Short weekday label (Mon, Tue, …) for a yyyy-mm-dd date string, in UTC so it
+// lines up with the server's day buckets.
+export function weekdayLabel(dateIso: string): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return "";
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getUTCDay()];
+}
+
 export function daysUntil(iso: string | null): number | null {
   if (!iso) return null;
   const target = new Date(iso).getTime();
