@@ -39,7 +39,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Marketing banner */}
       <div style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_CYAN} 100%)`, padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -147,7 +147,7 @@ function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
 
 function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ background: `linear-gradient(90deg, ${ACCENT} 0%, ${ACCENT_CYAN} 100%)`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <Radio size={16} color="#fff" />

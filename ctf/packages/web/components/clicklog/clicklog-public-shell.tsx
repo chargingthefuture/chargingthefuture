@@ -16,7 +16,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <AlertTriangle size={18} color={BRAND} />
@@ -88,7 +88,7 @@ function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
 
 function MobileClickLogPublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', background: `${BRAND}10`, borderBottom: `1px solid ${BRAND}25`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

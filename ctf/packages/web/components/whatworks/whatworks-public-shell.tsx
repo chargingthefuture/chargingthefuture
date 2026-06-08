@@ -41,7 +41,7 @@ function PreviewEmptyState({ compact }: { compact?: boolean }) {
 
 function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10, flexShrink: 0, background: '#0D0F14' }}>
         <ListChecks size={18} color={BRAND} />
@@ -117,7 +117,7 @@ function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
 
 function MobileWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', height: '100vh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', background: '#0D0F14', borderBottom: `1px solid ${BORDER}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
         <ListChecks size={17} color={BRAND} />

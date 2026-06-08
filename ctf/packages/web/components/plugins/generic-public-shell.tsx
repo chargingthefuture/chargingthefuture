@@ -24,7 +24,7 @@ export function GenericPublicShell({ pluginName, signInUrl }: PublicVisitorShell
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: BG,
         fontFamily: "'Inter', system-ui, sans-serif",
         color: TEXT,
