@@ -28,31 +28,56 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 ## API Surface and Route Map
 
 - `GET /api/trust/user/self` — Implemented. Current user's trust panel data (status, evidence, visibility) from `trust_user_extension`; gated by server-side plugin authz (`evaluatePluginAccess`).
-- `GET /api/trust/user/[userId]` — Implemented (read only). Returns another user's trust panel. Visibility/policy enforcement is still a TODO in code, so cross-user reads are not yet gated by the visibility setting.
-- `POST /api/trust/visibility` — Stub. Intended to update the caller's visibility setting; currently returns "not yet implemented."
-- `POST /api/trust/signal/snapshot` — Stub. Intended to (re)compute the derived trust signal/snapshot by reading engagement stats from the other seeded plugins (e.g. SocketRelay trades, login frequency, platform engagement); currently returns "not yet implemented."
-- `POST /api/trust/admin/verification` — Stub. Intended admin verification review action; currently returns "not yet implemented."
+- `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel, gated by authentication AND the target's `trust_visibility`: `public` is readable by any authenticated, unlocked member; `private` and `restricted` are readable only by the owner (self) or an admin. A blocked viewer receives `403`. A target with no extension row defaults to `public`.
+- `POST /api/trust/visibility` — Implemented. Updates the caller's own visibility (`public` | `private` | `restricted`); rejects any other value with `400`; CSRF-guarded; writes a `trust_admin_audit_trail` row. Self-scope only.
+- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal from real cross-plugin engagement (login frequency/recency from `login_events`, completed SocketRelay trades from `socketrelay_fulfillments`, requests opened from `socketrelay_requests`), persists a `trust_signal_snapshot` row, and refreshes the caller's derived evidence. Never changes `trust_status`. CSRF-guarded; writes an audit row.
+- `POST /api/trust/admin/verification` — Implemented. Admin-only (`evaluatePluginAccess({ requiredRoles: ['admin'] })`). Sets a target user's `trust_status` to `verified` or `flagged`, appends an admin evidence item, and writes an audit row. Validates `targetUserId` and `trustStatus` (`400` on bad input). CSRF-guarded.
 
 ## Data Model and Storage Contracts
 
-- `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `trust_visibility` (default `public`), `updated_at`. No numeric trust-score column exists; the qualitative signal is derived at read time from cross-plugin engagement, not stored as a number.
-- `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`.
-- No `trust_signal_snapshots` table exists. The `TrustSignalSnapshot` type in `lib/trust/types.ts` describes a derived/ephemeral aggregate computed from other plugins, not a stored row.
+- `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `trust_visibility` (default `public`), `updated_at`. No numeric trust-score column exists; the qualitative signal is derived from cross-plugin engagement, not stored as a number. `trust_evidence` is rewritten by the snapshot route (derived items) and appended-to by the admin verification route (one admin item).
+- `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the visibility, snapshot, and admin-verification routes.
+- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — `loginDays`, `loginEvents`, `lastLoginAt`, `socketRelayCompletedTrades`, `socketRelayRequestsOpened`), `snapshot_type` (model version, default `cross_plugin_engagement_v1`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
+
+## Trust Signal Model (`cross_plugin_engagement_v1`)
+
+Trust derives a **qualitative, non-numeric** signal by counting **real rows** in already-seeded
+upstream plugins — it fabricates nothing. The snapshot route (`POST /api/trust/signal/snapshot`)
+computes these counts for the caller, persists them to `trust_signal_snapshot`, and turns them into
+human-readable evidence items on `trust_user_extension`. Real signals that feed the model:
+
+- **Login frequency/recency** — from `login_events`: distinct login days (`loginDays`), total events
+  (`loginEvents`), and the most recent sign-in (`lastLoginAt`). Evidence: "Active on N days".
+- **Completed SocketRelay trades** — from `socketrelay_fulfillments`: closed fulfillments where the
+  member was the requester or fulfiller (`socketRelayCompletedTrades`). Closing a fulfillment is how
+  a SocketRelay exchange is finished, so a `closed` row is a genuinely completed trade. Evidence:
+  "Completed N SocketRelay trades".
+- **SocketRelay requests opened** — from `socketrelay_requests`: count of requests the member owns
+  (`socketRelayRequestsOpened`). Evidence: "Opened N SocketRelay requests".
+
+Real-data-only rule: any signal whose backing rows are absent (count of 0 / no login) produces **no**
+evidence item, so the panel never claims activity that did not happen. No numeric score is ever
+computed or stored. The snapshot route never changes `trust_status` (that is admin-controlled).
 
 ## Security, Privacy, and Compliance Controls
 
-- Server-side authorization on `GET /api/trust/user/self` via `evaluatePluginAccess`.
-- Humane, privacy-respecting signal: Trust never exposes or persists a numeric score, and the badge is derived from aggregate cross-plugin engagement without exposing the underlying per-plugin records to viewers.
-- Admin-only gate is the intended control on `/api/trust/admin/*`; the route is currently a stub.
-- `logTrustAuditEvent` writes admin mutations to `trust_admin_audit_trail` (used once the admin/visibility routes are implemented).
+- Authentication on every route via `evaluatePluginAccess` (web Clerk headers or verified bearer token).
+- Cross-user read (`GET /api/trust/user/[userId]`) enforces the target's `trust_visibility`: `public`
+  = any authenticated member; `private`/`restricted` = owner or admin only. Blocked viewers get `403`.
+- Admin-only gate on `POST /api/trust/admin/verification` via `evaluatePluginAccess({ requiredRoles: ['admin'] })`.
+- All three mutation routes require the same-origin CSRF confirmation header and reject cross-origin
+  mutations.
+- Humane, privacy-respecting signal: Trust never exposes or persists a numeric score; evidence is
+  built from aggregate counts without exposing the underlying per-plugin records to viewers.
+- `logTrustAuditEvent` writes every visibility, snapshot, and admin-verification mutation to
+  `trust_admin_audit_trail` with a request id.
 - No raw moderation evidence is exposed to non-admin callers.
-- Known gap: visibility enforcement on `GET /api/trust/user/[userId]` is not yet implemented (TODO in code).
 
 ## Web and Android Delivery Status
 
 **Web: delivered (pixel pass complete).** Web renders the trust badge, evidence panel, status/visibility badges, the Directory profile panel (`TrustDirectoryProfilePanel.tsx`), and the right-rail card (`TrustRightRailCard.tsx`). The right-rail card completed its web pixel pass: it now renders `TrustWidgetCard.tsx`, an inline-styled widget aligned to `design/.../survivor-hub/Trust.tsx` (blue brand palette, ShieldCheck header + Verified/Unverified pill, onboarding steps, static visibility row, real `trustEvidence` list when present). Per the real-data-only rule the design's verified-state signal buckets are omitted (the snapshot route is a stub with no backing table) and the non-functional Request-Verification CTA / visibility dropdown are rendered as truthful static affordances.
 
-**Android: delivered (pixel pass complete — 2026-05-31).** `Trust.tsx` under `packages/mobile/src/features/trust` has been rewritten to align with `design/.../survivor-hub/MobileTrust.tsx`, `MobileTrustEmpty.tsx`, `MobileTrustLoading.tsx`, and `MobileTrustPublic.tsx`. A new `api.ts` binds to `GET /api/trust/user/self` for real data. The screen covers all four states: loading (branded taglines), public/unauthenticated (visitor marketing view), empty (no evidence yet), and populated (evidence list). `MockTrust.tsx` is retired. Real bindings: `trustStatus`, `trustVisibility`, `trustEvidence` array (type/summary/createdAt per item). Omissions per real-data-only rule: Last Active / Activity / Transactions / Active Plugins stats from the design's Trust Score card have no backing API field and are omitted; signal-progress percentage and hardcoded checklist items are omitted (snapshot route is a stub); visibility update dropdown rendered as display-only (POST /api/trust/visibility is a stub). Signal derivation, visibility update, and admin verification routes are not yet implemented.
+**Android: delivered (pixel pass complete — 2026-05-31).** `Trust.tsx` under `packages/mobile/src/features/trust` has been rewritten to align with `design/.../survivor-hub/MobileTrust.tsx`, `MobileTrustEmpty.tsx`, `MobileTrustLoading.tsx`, and `MobileTrustPublic.tsx`. A new `api.ts` binds to `GET /api/trust/user/self` for real data. The screen covers all four states: loading (branded taglines), public/unauthenticated (visitor marketing view), empty (no evidence yet), and populated (evidence list). `MockTrust.tsx` is retired. Real bindings: `trustStatus`, `trustVisibility`, `trustEvidence` array (type/summary/createdAt per item). Omissions per real-data-only rule: Last Active / Activity / Transactions / Active Plugins stats from the design's Trust Score card have no backing API field and are omitted; signal-progress percentage and hardcoded checklist items are omitted (snapshot route is a stub); visibility update dropdown rendered as display-only at the time of the pixel pass. The backend for signal derivation, visibility update, and admin verification is now implemented (2026-06-08); the Android/web clients can be wired to the live mutation routes in a follow-up UI pass.
 
 ## Directory Integration
 
@@ -60,19 +85,21 @@ Trust's primary user-facing surface is inside the Directory profile: a member's 
 
 ## Seed Coverage Status
 
-Trust has no dedicated seed script, and none is required. Trust is a derived plugin: it computes its badge/signal by reading engagement stats from the other already-seeded plugins (each plugin, not just Directory) — for example login frequency, the number of SocketRelay trades/fulfillments, and overall platform engagement. Seeding the upstream plugins is therefore sufficient to exercise Trust in dev. Trust adds only the per-user `trust_user_extension` overlay (status/evidence/visibility), for which defaults are applied on first read.
+Trust has no dedicated seed script, and none is required. Trust is a derived plugin: the snapshot route computes its evidence by reading engagement stats from the other already-seeded plugins — login frequency from `login_events`, completed SocketRelay trades from `socketrelay_fulfillments`, and requests opened from `socketrelay_requests`. Seeding the upstream plugins is therefore sufficient to exercise Trust in dev: run `POST /api/trust/signal/snapshot` for a seeded member and the real counts populate `trust_signal_snapshot` and the member's derived evidence. Trust adds only the per-user `trust_user_extension` overlay (status/evidence/visibility), for which defaults are applied on first read, and the `trust_signal_snapshot` history (created on demand by the snapshot route).
 
 ## Gaps and Known Technical Debt
 
-1. Signal derivation is the intended model but not yet wired: `POST /api/trust/signal/snapshot` is a stub, and the read endpoints return only the stored `trust_user_extension` (status/evidence/visibility) without an aggregated cross-plugin signal.
-2. `POST /api/trust/visibility` and `POST /api/trust/admin/verification` are stubs ("not yet implemented").
-3. `GET /api/trust/user/[userId]` does not yet enforce the visibility setting (TODO in code).
+1. ~~Signal derivation is the intended model but not yet wired: `POST /api/trust/signal/snapshot` is a stub.~~ Resolved (2026-06-08) — the snapshot route computes real cross-plugin engagement, persists a `trust_signal_snapshot` row, and refreshes derived evidence.
+2. ~~`POST /api/trust/visibility` and `POST /api/trust/admin/verification` are stubs.~~ Resolved (2026-06-08) — both implemented, validated, CSRF-guarded, and audited; admin verification is admin-only.
+3. ~~`GET /api/trust/user/[userId]` does not yet enforce the visibility setting.~~ Resolved (2026-06-08) — authentication plus `trust_visibility` enforcement (`public` open to members; `private`/`restricted` owner-or-admin only).
 4. ~~Mobile `Trust.tsx` renders mock data pending real API wiring.~~ Resolved — Android pixel pass complete (2026-05-31).
 5. Trust evidence content is rendered from a structured JSONB field on `trust_user_extension`; no rich-text schema or attachment storage contract has been published.
-6. No automated/scheduled refresh job exists for recomputing the derived signal.
+6. No automated/scheduled refresh job exists for recomputing the derived signal — refresh is on-demand via the snapshot route (a future scheduled job could call the same logic).
+7. The model counts engagement but does not yet expose a `member_since` or active-plugin-count signal; those design fields remain omitted per real-data-only until a backing source is wired.
 
 ## Change Log
 
+- 2026-06-08: Implemented the trust backend (no stubs). `POST /api/trust/signal/snapshot` now computes the caller's signal from real cross-plugin engagement (login frequency/recency from `login_events`, completed SocketRelay trades from `socketrelay_fulfillments`, requests opened from `socketrelay_requests`), persists a `trust_signal_snapshot` row, and rewrites the caller's derived evidence — without changing `trust_status`. `POST /api/trust/visibility` validates against the visibility enum and persists the caller's setting. `POST /api/trust/admin/verification` is admin-only and sets a target's status to `verified`/`flagged` with an appended admin evidence note. `GET /api/trust/user/[userId]` now requires authentication and enforces `trust_visibility` (public open to members; private/restricted owner-or-admin). All mutations are CSRF-guarded and write `trust_admin_audit_trail` rows. Added `trust_signal_snapshot` table (real schema, IF NOT EXISTS pattern) and registered it as a user-scoped delete in the account deletion registry. Reconciled the command/access/audit/deletion contracts to the shipped surface (renamed `trust_signal_snapshots` → `trust_signal_snapshot`; replaced draft bucket fields/roles). Real-data-only: any signal with no backing rows yields no evidence; no numeric score is ever produced.
 - 2026-05-31: Android pixel pass. Rewrote `Trust.tsx` to align to `design/.../survivor-hub/MobileTrust.tsx` (and Empty/Loading/Public variants). Added `api.ts` binding to `GET /api/trust/user/self` (real `trustStatus`, `trustVisibility`, `trustEvidence` fields). Retired `MockTrust.tsx`. Omitted per real-data-only: Trust Score stats (Last Active / Activity / Transactions / Active Plugins), signal-progress %, and hardcoded checklist items have no backing API field; visibility update rendered display-only (POST stub). All four states covered: loading, public, empty, populated. EOF, parity, and typecheck gates pass; tsc errors are pre-existing `expo/tsconfig.base not found` constraint only.
 - 2026-05-30: Web pixel pass for the right-rail Trust widget. Added `TrustWidgetCard.tsx` (inline-styled, aligned to `design/.../survivor-hub/Trust.tsx`) and wired the shared `TrustRightRailCard` to it; removed the now-unreachable `compact` branch from `TrustEvidencePanel`. Per real-data-only: omitted the design's unbacked verified-state signal buckets (rendering the real `trustEvidence` list instead) and rendered the non-functional Request-Verification CTA / visibility dropdown as truthful static affordances (both backing routes remain stubs). No schema/route/contract changes.
 - 2026-05-20: Corrected the trust model — Trust derives a **qualitative, non-numeric** trust signal/badge (deliberately not a numeric score, on humane grounds) indicating the likelihood a member is a genuine, safe participant, based on engagement/contribution aggregated across the platform's seeded plugins (e.g. login frequency, SocketRelay trades, overall engagement), not just Directory. This is why Trust needs no seed script of its own (it reads from already-seeded plugins). Documented the Directory integration (badge surfaced on the profile). Fixed the API surface (`POST /api/trust/visibility`, not `PUT`) and marked the snapshot/visibility/admin-verification routes as stubs; corrected delivery status from "web+android complete" to "shells delivered, backend logic pending"; noted the unguarded cross-user read and mobile mock data.
@@ -89,12 +116,12 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 - [x] Command, policy, and audit contracts drafted
 - [x] Migration SQL for trust tables delivered
 - [x] Feature inventory created in required folder
-- [ ] Shared Trust React components implemented
-- [ ] Right-rail and Directory profile UI surfaces wired up
-- [ ] API routes and backend logic for trust commands
-- [ ] Policy enforcement and audit logging
-- [ ] Seed script for plugin validation (deferred for MVP)
-- [ ] Mobile parity (deferred)
+- [x] Shared Trust React components implemented
+- [x] Right-rail and Directory profile UI surfaces wired up
+- [x] API routes and backend logic for trust commands
+- [x] Policy enforcement and audit logging
+- [ ] Seed script for plugin validation (not required — Trust reads from already-seeded plugins)
+- [x] Mobile parity (Android pixel pass complete)
 
 ### Notes
 - All compliance and modularity rules followed per product instructions.

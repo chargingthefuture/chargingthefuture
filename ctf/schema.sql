@@ -3042,6 +3042,27 @@ ALTER TABLE IF EXISTS trust_admin_audit_trail ADD COLUMN IF NOT EXISTS request_i
 ALTER TABLE IF EXISTS trust_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS trust_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- trust_signal_snapshot: an append-only record of one computed trust-signal pass for a user.
+-- Trust owns no primary participation data; each row captures the COARSE, derived metrics
+-- (login/engagement frequency and completed SocketRelay trades) read at snapshot time from the
+-- already-seeded upstream plugins, plus the human-readable evidence built from those real counts.
+-- It deliberately stores no numeric "trust score" — the signal is qualitative. `snapshot` holds the
+-- derived metric bundle as JSONB; `snapshot_type` names the derivation model version.
+CREATE TABLE IF NOT EXISTS trust_signal_snapshot (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  snapshot_type TEXT NOT NULL DEFAULT 'cross_plugin_engagement_v1',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS trust_signal_snapshot ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS trust_signal_snapshot ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS trust_signal_snapshot ADD COLUMN IF NOT EXISTS snapshot JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_signal_snapshot ADD COLUMN IF NOT EXISTS snapshot_type TEXT NOT NULL DEFAULT 'cross_plugin_engagement_v1';
+ALTER TABLE IF EXISTS trust_signal_snapshot ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_trust_signal_snapshot_user ON trust_signal_snapshot(user_id);
+CREATE INDEX IF NOT EXISTS idx_trust_signal_snapshot_created ON trust_signal_snapshot(created_at);
+
 -- === WEEKLY PERFORMANCE MODULE ===
 CREATE TABLE IF NOT EXISTS weekly_performance_metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

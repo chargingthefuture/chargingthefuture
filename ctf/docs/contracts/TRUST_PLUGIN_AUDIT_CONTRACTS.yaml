@@ -36,7 +36,7 @@ auditEvents:
       - trust_user_extension
     targetContext:
       subjectUserId: user_identifier
-      trustVisibilityLevel: visibility_level
+      trustVisibility: visibility_level
     requestId: request_identifier
     traceId: trace_identifier
     result:
@@ -59,9 +59,9 @@ auditEvents:
       - trust_admin_audit_trail
     targetContext:
       reviewerUserId: user_identifier
-      subjectUserId: user_identifier
-      verificationStatus: verification_status
-      internalReasonCode: moderation_reason_code
+      targetUserId: user_identifier
+      trustStatus: verification_status
+      note: optional_admin_note
     requestId: request_identifier
     traceId: trace_identifier
     result:
@@ -80,10 +80,10 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - trust_snapshot_metadata
-      - plugin_activity_bucket_metadata
+      - plugin_activity_metric_metadata
     targetContext:
       subjectUserId: user_identifier
-      sourcePlugins: approved_plugin_list
+      snapshotId: snapshot_identifier
       snapshotGeneratedAt: timestamp_identifier
     requestId: request_identifier
     traceId: trace_identifier
