@@ -23,7 +23,8 @@ import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock, AdminUnlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AccountData } from './src/features/account-data';
-import { AuthProvider } from './src/features/trusttransport/auth-context';
+import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
+import { LoadingScreen } from './src/components/shared/LoadingScreen';
 
 type FeatureKey =
   | 'home'
@@ -97,6 +98,15 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
 ];
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  );
+}
+
+function AppShell() {
+  const { isLoading } = useAuth();
   const [selected, setSelected] = useState<FeatureKey>('home');
 
   const featureView = useMemo(() => {
@@ -177,32 +187,37 @@ export default function App() {
     }
   }, [selected]);
 
+  // While the app is bootstrapping (restoring any stored sign-in session), show
+  // the universal "Exit Their Economy / Exit The Psyop" loading screen so the
+  // loading state is consistent app-wide and matches web.
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <AuthProvider>
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>ChargingTheFuture Mobile</Text>
-        <Text style={styles.subtitle}>Web/Android plugin parity hub</Text>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>ChargingTheFuture Mobile</Text>
+      <Text style={styles.subtitle}>Web/Android plugin parity hub</Text>
 
-        <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-          {featureOrder.map((feature) => (
-            <TouchableOpacity
-              key={feature.key}
-              style={[styles.pill, selected === feature.key ? styles.pillActive : null]}
-              onPress={() => setSelected(feature.key)}
+      <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
+        {featureOrder.map((feature) => (
+          <TouchableOpacity
+            key={feature.key}
+            style={[styles.pill, selected === feature.key ? styles.pillActive : null]}
+            onPress={() => setSelected(feature.key)}
+          >
+            <Text
+              style={[styles.pillText, selected === feature.key ? styles.pillTextActive : null]}
             >
-              <Text
-                style={[styles.pillText, selected === feature.key ? styles.pillTextActive : null]}
-              >
-                {feature.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {feature.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-        <View style={styles.content}>{featureView}</View>
-        <StatusBar style="auto" />
-      </SafeAreaView>
-    </AuthProvider>
+      <View style={styles.content}>{featureView}</View>
+      <StatusBar style="auto" />
+    </SafeAreaView>
   );
 }
 
