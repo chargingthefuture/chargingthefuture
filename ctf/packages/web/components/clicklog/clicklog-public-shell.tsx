@@ -1,0 +1,172 @@
+'use client';
+
+import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+
+// Palette from the ClickLogPublic / MobileClickLogPublic design mockups.
+const BRAND = '#E91E8C';
+const BG = '#0F1117';
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
+const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+
+function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
+  return (
+    <div style={{ width: '100%', minHeight: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+      {/* Top bar */}
+      <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <AlertTriangle size={18} color={BRAND} />
+        <span style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+            Sign In
+          </a>
+          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+            <UserPlus size={13} /> Join Free
+          </a>
+        </div>
+      </div>
+
+      {/* Hero */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 64px' }}>
+        <div style={{ maxWidth: 600, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, textAlign: 'center' }}>
+          {/* Locked button */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: 160, height: 160, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '4px solid rgba(233,30,140,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, filter: 'blur(2px)', opacity: 0.5 }}>
+              <AlertTriangle size={40} style={{ color: BRAND }} />
+              <span style={{ fontSize: 15, fontWeight: 800, color: BRAND }}>Log Incident</span>
+            </div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(233,30,140,0.15)', border: `2px solid ${BRAND}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Lock size={22} color={BRAND} />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800, lineHeight: 1.2, marginBottom: 12 }}>
+              Track incidents privately.<br />
+              <span style={{ color: BRAND }}>Sign in to start.</span>
+            </h1>
+            <p style={{ margin: 0, fontSize: 15, color: SUBTLE, lineHeight: 1.7, maxWidth: 440 }}>
+              One tap to log a personal safety incident. Add notes, attach location, and keep a private encrypted history — only visible to you.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Create free account
+            </a>
+            <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, color: '#9CA3AF', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              Sign In
+            </a>
+          </div>
+
+          {/* Features */}
+          <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+            {[
+              { Icon: Eye, label: 'Private by default', desc: 'No one else can see your logs — ever.' },
+              { Icon: ShieldCheck, label: 'Encrypted', desc: 'Your data is protected at rest and in transit.' },
+              { Icon: EyeOff, label: 'Discreet logging', desc: 'One tap — no visible confirmation needed.' },
+            ].map(({ Icon, label, desc }) => (
+              <div key={label} style={{ flex: 1, padding: '14px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, textAlign: 'center' }}>
+                <Icon size={20} color={BRAND} style={{ marginBottom: 8, opacity: 0.7 }} />
+                <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 4 }}>{label}</div>
+                <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileClickLogPublic({ signInUrl }: { signInUrl: string }) {
+  return (
+    <div style={{ width: '100%', minHeight: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ padding: '12px 16px', background: `${BRAND}10`, borderBottom: `1px solid ${BRAND}25`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={18} color={BRAND} />
+            <div style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 24px', textAlign: 'center', gap: 22 }}>
+        {/* Locked button */}
+        <div style={{ position: 'relative' }}>
+          <div style={{ width: 140, height: 140, borderRadius: '50%', background: 'rgba(233,30,140,0.1)', border: '3px solid rgba(233,30,140,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, filter: 'blur(2px)', opacity: 0.5 }}>
+            <AlertTriangle size={34} color={BRAND} />
+            <span style={{ fontSize: 13, fontWeight: 800, color: BRAND }}>Log Incident</span>
+          </div>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(233,30,140,0.12)', border: `2px solid ${BRAND}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Lock size={18} color={BRAND} />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 8 }}>
+            Track incidents privately
+          </div>
+          <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, maxWidth: 290 }}>
+            Sign in to start logging personal safety incidents — one tap, encrypted, private.
+          </div>
+        </div>
+
+        <a href={signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}>
+          <UserPlus size={15} /> Create free account
+        </a>
+
+        <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+          {[
+            { icon: '👆', label: 'One tap' },
+            { icon: '🔒', label: 'Private' },
+            { icon: '📍', label: 'Location' },
+          ].map(({ icon, label }) => (
+            <div key={label} style={{ flex: 1, padding: '12px 8px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, textAlign: 'center' }}>
+              <div style={{ fontSize: 18, marginBottom: 5 }}>{icon}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: SUBTLE }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom nav (locked) */}
+      <div style={{ height: 72, background: '#090B0F', borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexShrink: 0 }}>
+        {[AlertTriangle, Clock, FileText].map((Icon, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: 0.3 }}>
+            <Icon size={20} color={SUBTLE} />
+            <span style={{ fontSize: 10, color: SUBTLE }}>{['Log', 'History', 'Export'][i]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Signed-out visitor view for ClickLog. Pixel-faithful to the ClickLogPublic
+ * (desktop) and MobileClickLogPublic (phone) design mockups, with sign-in
+ * affordances pointing at the real hosted sign-in URL. It shows no private or
+ * per-user data — the whole point of ClickLog is a private, per-user incident
+ * log, so the visitor view is marketing copy and a locked "Log Incident" button
+ * only. The mockup's simulated phone status bar (clock / signal dots) is dropped
+ * because the real app renders inside the browser chrome.
+ */
+export function ClicklogPublicShell({ signInUrl }: PublicVisitorShellProps) {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileClickLogPublic signInUrl={signInUrl} /> : <DesktopClickLogPublic signInUrl={signInUrl} />;
+}
