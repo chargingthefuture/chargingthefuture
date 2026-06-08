@@ -1,7 +1,14 @@
-// LevelUp Achievements (mobile) — grant-only badges, aligned to web lu-achievements.tsx.
+// LevelUp Achievements (mobile) — layout aligned to
+// design/.../survivor-hub/MobileLevelUpAchievements.tsx. Real data only: every
+// value comes from GET /api/levelup/achievements. The mockup splits badges into
+// Earned / In Progress / Locked with per-badge emoji, rarity, and a progress
+// fraction. The endpoint exposes only an `earned` boolean, so we render two
+// honest buckets — Earned and Locked. There is no partial-progress signal in the
+// backend, so no "In Progress" section, no progress bars, no rarity, and no
+// emoji are invented.
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fetchAchievements, type Achievement } from './api';
 
 const GREEN = '#10B981';
@@ -18,41 +25,24 @@ const TRACK_COLORS: Record<string, string> = {
   'Life Skills': '#A855F7',
 };
 
-function formatDate(iso: string | null): string {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch {
-    return '';
-  }
-}
-
-function AchievementCard({ achievement }: { achievement: Achievement }) {
+function BadgeTile({ achievement }: { achievement: Achievement }) {
   const color = TRACK_COLORS[achievement.track] ?? GREEN;
   return (
-    <View style={[styles.card, achievement.earned ? styles.cardEarned : null]}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.iconBox, { backgroundColor: achievement.earned ? `${GREEN}18` : BORDER }]}>
-          <Text style={[styles.iconText, { color: achievement.earned ? GREEN : MUTED }]}>
-            {achievement.earned ? '★' : '🔒'}
-          </Text>
-        </View>
-        {achievement.track ? (
-          <View style={[styles.trackBadge, { backgroundColor: `${color}18` }]}>
-            <Text style={[styles.trackBadgeText, { color }]}>{achievement.track}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text style={styles.name}>{achievement.name}</Text>
-      {achievement.description ? <Text style={styles.description}>{achievement.description}</Text> : null}
-      <View style={styles.footer}>
-        <Text style={[styles.status, achievement.earned ? styles.statusEarned : null]}>
-          {achievement.earned ? `Earned ${formatDate(achievement.earnedAtIso)}` : 'Not earned yet'}
+    <View style={[styles.tile, achievement.earned ? styles.tileEarned : styles.tileLocked]}>
+      <View style={[styles.iconBox, { backgroundColor: achievement.earned ? `${GREEN}18` : BORDER }]}>
+        <Text style={[styles.iconText, { color: achievement.earned ? GREEN : MUTED }]}>
+          {achievement.earned ? '★' : '🔒'}
         </Text>
-        {achievement.creditReward > 0 ? (
-          <Text style={styles.reward}>+{achievement.creditReward} SC</Text>
-        ) : null}
       </View>
+      <Text style={[styles.tileName, { color: achievement.earned ? TEXT : SUBTLE }]} numberOfLines={2}>{achievement.name}</Text>
+      {achievement.track ? (
+        <View style={[styles.trackBadge, { backgroundColor: `${color}15` }]}>
+          <Text style={[styles.trackBadgeText, { color }]}>{achievement.track}</Text>
+        </View>
+      ) : null}
+      {achievement.creditReward > 0 ? (
+        <Text style={[styles.reward, { color: achievement.earned ? GREEN : SUBTLE }]}>+{achievement.creditReward} SC</Text>
+      ) : null}
     </View>
   );
 }
@@ -96,36 +86,65 @@ export function LevelupAchievements() {
     );
   }
 
-  const earnedCount = achievements.filter((a) => a.earned).length;
+  const earned = achievements.filter((a) => a.earned);
+  const locked = achievements.filter((a) => !a.earned);
+  const scFromBadges = earned.reduce((sum, a) => sum + (a.grantedCredits || a.creditReward), 0);
 
   return (
-    <FlatList
-      data={achievements}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <AchievementCard achievement={item} />}
-      contentContainerStyle={styles.list}
-      ListHeaderComponent={<Text style={styles.summary}>{earnedCount} of {achievements.length} earned</Text>}
-    />
+    <ScrollView contentContainerStyle={styles.list}>
+      <View style={styles.statsRow}>
+        {[
+          { label: 'Earned', value: String(earned.length), color: '#F59E0B' },
+          { label: 'Locked', value: String(locked.length), color: SUBTLE },
+          { label: 'SC Gained', value: String(scFromBadges), color: GREEN },
+        ].map(({ label, value, color }) => (
+          <View key={label} style={styles.statCard}>
+            <Text style={[styles.statValue, { color }]}>{value}</Text>
+            <Text style={styles.statLabel}>{label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {earned.length > 0 ? (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={styles.sectionLabel}>Earned — {earned.length} badges</Text>
+          <View style={styles.grid}>
+            {earned.map((a) => <BadgeTile key={a.id} achievement={a} />)}
+          </View>
+        </View>
+      ) : null}
+
+      {locked.length > 0 ? (
+        <View>
+          <Text style={styles.sectionLabelDim}>Locked — {locked.length} badges</Text>
+          <View style={[styles.grid, { opacity: 0.7 }]}>
+            {locked.map((a) => <BadgeTile key={a.id} achievement={a} />)}
+          </View>
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   list: { padding: 16, paddingBottom: 80 },
-  summary: { fontSize: 13, color: SUBTLE, marginBottom: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  card: { backgroundColor: SURFACE, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: BORDER, opacity: 0.7 },
-  cardEarned: { borderColor: `${GREEN}30`, opacity: 1 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 },
-  iconBox: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  statCard: { flex: 1, backgroundColor: SURFACE, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: BORDER, alignItems: 'center' },
+  statValue: { fontSize: 16, fontWeight: '700' },
+  statLabel: { fontSize: 10, color: SUBTLE, marginTop: 2 },
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 10 },
+  sectionLabelDim: { fontSize: 13, fontWeight: '600', color: SUBTLE, marginBottom: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tile: { width: '31%', backgroundColor: SURFACE, borderRadius: 10, padding: 12, borderWidth: 1, alignItems: 'center' },
+  tileEarned: { borderColor: `${GREEN}30` },
+  tileLocked: { borderColor: BORDER },
+  iconBox: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   iconText: { fontSize: 16 },
-  trackBadge: { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
-  trackBadgeText: { fontSize: 10, fontWeight: '600' },
-  name: { fontSize: 14, fontWeight: '600', color: TEXT, marginBottom: 6 },
-  description: { fontSize: 12, color: SUBTLE, lineHeight: 18, marginBottom: 10 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 10 },
-  status: { fontSize: 11, color: MUTED },
-  statusEarned: { color: GREEN, fontWeight: '600' },
-  reward: { fontSize: 12, fontWeight: '700', color: GREEN },
+  tileName: { fontSize: 11, fontWeight: '600', textAlign: 'center', marginBottom: 4, lineHeight: 14 },
+  trackBadge: { borderRadius: 12, paddingHorizontal: 6, paddingVertical: 1, marginBottom: 4 },
+  trackBadgeText: { fontSize: 9, fontWeight: '600' },
+  reward: { fontSize: 11, fontWeight: '700' },
   errorText: { fontSize: 14, color: '#EF4444', textAlign: 'center', marginBottom: 16 },
   retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 9, backgroundColor: GREEN },
   retryBtnText: { color: '#000', fontWeight: '700', fontSize: 13 },
