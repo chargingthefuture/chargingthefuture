@@ -13,7 +13,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 function DesktopGentlePulsePublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(20,184,166,0.1)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <Heart size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>GentlePulse</span>
@@ -52,7 +52,7 @@ function DesktopGentlePulsePublic({ signInUrl }: { signInUrl: string }) {
 
 function MobileGentlePulsePublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Heart size={20} color={COLOR} />
