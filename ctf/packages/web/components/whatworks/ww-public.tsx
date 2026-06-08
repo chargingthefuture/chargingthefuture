@@ -44,7 +44,7 @@ export function WhatWorksPublic() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, overflow: 'hidden' }}>
       <div style={{ height: 52, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10, flexShrink: 0, background: '#0D0F14' }}>
         <ListChecks size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>

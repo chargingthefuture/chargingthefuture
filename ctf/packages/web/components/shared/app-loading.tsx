@@ -15,7 +15,7 @@ const lineStyle: CSSProperties = {
 
 export function AppLoading() {
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', background: '#0F1117', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ display: 'flex', height: '100dvh', width: '100%', background: '#0F1117', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ textAlign: 'center', padding: '0 32px' }}>
         <div style={{ ...lineStyle, marginBottom: 16 }}>Exit Their Economy</div>
         <div style={lineStyle}>Exit The Psyop</div>

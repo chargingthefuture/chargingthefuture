@@ -31,7 +31,7 @@ export function AccountDataMobile({
   const isEmpty = remaining.length === 0;
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: '14px 16px 10px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>

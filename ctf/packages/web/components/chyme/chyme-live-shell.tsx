@@ -96,7 +96,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', background: DARK_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', width: '100%', background: DARK_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: 'column' }}>
       <ChymeHeader
         participantCount={room?.participants.length ?? 0}
         isLive={Boolean(room)}
