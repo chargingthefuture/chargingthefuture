@@ -164,7 +164,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   );
 };
 
-function ChymeAudioRoomLive({ onOpenChat, onLeave }: { onOpenChat: () => void; onLeave: () => void }) {
+const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void }> = ({ onOpenChat, onLeave }) => {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
 
@@ -203,7 +203,7 @@ function ChymeAudioRoomLive({ onOpenChat, onLeave }: { onOpenChat: () => void; o
   );
 }
 
-function ChymeSpeakerTile({ participant }: { participant: StreamVideoParticipant }) {
+const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant }> = ({ participant }) => {
   const isSelf = participant.isLocalParticipant;
   const speaking = participant.isSpeaking;
   const publishingAudio = isPublishingAudio(participant);
@@ -246,7 +246,7 @@ function ChymeSpeakerTile({ participant }: { participant: StreamVideoParticipant
   );
 }
 
-function ChymeAudioControls({ onOpenChat, onLeave }: { onOpenChat: () => void; onLeave: () => void }) {
+const ChymeAudioControls: React.FC<{ onOpenChat: () => void; onLeave: () => void }> = ({ onOpenChat, onLeave }) => {
   const { useMicrophoneState } = useCallStateHooks();
   const { microphone, isMute } = useMicrophoneState();
   const call = useCall();
@@ -265,7 +265,7 @@ function ChymeAudioControls({ onOpenChat, onLeave }: { onOpenChat: () => void; o
             <Text style={styles.controlIcon}>{isMute ? '🔇' : '🎤'}</Text>
           </View>
           <Text style={[styles.controlLabel, isMute && styles.controlLabelMuted]}>
-            {isMute ? 'Unmute' : 'Muted'}
+            {isMute ? 'Unmute' : 'Mute'}
           </Text>
         </TouchableOpacity>
 
