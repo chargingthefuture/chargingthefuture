@@ -3,6 +3,9 @@ name: Expo Android Release
 # Builds a signed production Android APK in Expo's cloud (EAS) and attaches it to
 # a GitHub Release when a tag like `mobile-v1.2.3` is pushed. This is the "real
 # version" build users install, as opposed to the throwaway preview APKs on PRs.
+#
+# There is ONE environment: production. This build uses the same production
+# backend and Clerk sign-in key as every other build.
 
 on:
   push:
@@ -17,23 +20,19 @@ jobs:
   release:
     name: Build and publish signed APK
     runs-on: ubuntu-latest
-    environment: rewrite-mobile-production
     permissions:
       contents: write
     env:
       MOBILE_ENV_TARGET: production
       EAS_BUILD_PROFILE: production
-      MOBILE_PROJECT_ID: ${{ vars.EXPO_MOBILE_PROJECT_ID || vars.MOBILE_PROJECT_ID }}
-      MOBILE_UPDATES_URL: ${{ vars.EXPO_MOBILE_UPDATES_URL || vars.MOBILE_UPDATES_URL }}
-      MOBILE_APP_URL: ${{ vars.MOBILE_APP_URL }}
-      MOBILE_CTF_USER_ID: ${{ vars.MOBILE_CTF_USER_ID }}
-      MOBILE_CTF_USERNAME: ${{ vars.MOBILE_CTF_USERNAME }}
-      MOBILE_CTF_USER_ROLE: ${{ vars.MOBILE_CTF_USER_ROLE }}
-      MOBILE_CTF_USER_APPROVED: ${{ vars.MOBILE_CTF_USER_APPROVED }}
-      MOBILE_OBSERVABILITY_PROVIDER: ${{ vars.MOBILE_OBSERVABILITY_PROVIDER }}
-      EXPO_OWNER: ${{ vars.EXPO_OWNER }}
-      MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION }}
-      EXPO_SENTRY_DSN: ${{ secrets.EXPO_SENTRY_DSN }}
+      # Same names the web app and app.config.ts read — reused production secrets.
+      NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+      NEXT_PUBLIC_AUTH_PROVIDER: ${{ secrets.NEXT_PUBLIC_AUTH_PROVIDER }}
+      NEXT_PUBLIC_AUTH_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_AUTH_SIGN_IN_URL }}
+      EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID }}
+      EXPO_MOBILE_PROJECT_ID: ${{ secrets.EXPO_MOBILE_PROJECT_ID }}
+      EXPO_MOBILE_UPDATES_URL: ${{ secrets.EXPO_MOBILE_UPDATES_URL }}
     steps:
       - name: Fail fast when EXPO_TOKEN is missing
         if: ${{ secrets.EXPO_TOKEN == '' }}

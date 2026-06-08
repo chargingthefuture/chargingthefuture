@@ -2,80 +2,122 @@
 
 This project uses cloud-first mobile delivery so development can proceed without Android Studio.
 
-## Required Secrets and Variables
+There is **one environment: production**. A preview build is just an install channel for reviewers —
+it points at the same production backend and the same Clerk sign-in key as a release build. Showing
+sample/demo data is a runtime Unleash flag, not a separate deploy environment, so there is no
+staging or preview backend.
 
-Configure in repository settings:
+## Required Secrets
 
-- `EXPO_TOKEN` (GitHub secret): token for EAS CLI auth.
-- `EXPO_OWNER` (GitHub variable): Expo account/organization owner for production release targeting.
-- `EXPO_MOBILE_PROJECT_ID` (GitHub variable): Expo project identifier used by `app.config.ts`.
-- `EXPO_MOBILE_UPDATES_URL` (GitHub variable): EAS updates URL for the project.
+Configure all of these as GitHub **secrets** (Settings → Secrets and variables → Actions → Secrets).
+The mobile workflows reuse the **same** secrets the web app already uses, so there is one set of
+values to manage.
 
-Compatibility fallback keys are still accepted by CI/config resolver:
+- `EXPO_TOKEN` — token for EAS CLI auth. The Expo account/owner is taken from this token; there is no
+  separate `EXPO_OWNER`.
+- `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY` — Clerk publishable key. The app derives the Clerk Frontend API
+  host (the OAuth sign-in server) from this key, so no separate URL is needed for the endpoints.
+- `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` — the client id of the Clerk OAuth application the mobile app
+  signs in against (see "Mobile sign-in: Clerk OAuth/OpenID Connect setup" below). Not a secret, but
+  configure it the same way as the other build-time values.
+- `NEXT_PUBLIC_APP_URL` — base URL of the deployed web/API host (https, no trailing slash).
+- `NEXT_PUBLIC_AUTH_PROVIDER` — auth provider name (defaults to `clerk` when unset).
+- `NEXT_PUBLIC_AUTH_SIGN_IN_URL` — optional hosted Clerk sign-in URL (kept for reference; the native
+  app no longer needs it for sign-in).
+- `EXPO_MOBILE_PROJECT_ID` — Expo project id used by `app.config.ts`.
+- `EXPO_MOBILE_UPDATES_URL` — EAS updates URL for the project.
 
-- `MOBILE_PROJECT_ID`
-- `MOBILE_UPDATES_URL`
+There is **no per-user identity** to configure. The signed-in user is resolved at runtime by an OAuth
+sign-in against Clerk, and every API call carries an `Authorization: Bearer <token>` the backend
+verifies.
 
-## Branch to Channel Mapping
+## Mobile sign-in: Clerk OAuth/OpenID Connect setup
 
-- `main` → `production`
-- `staging` or `release/staging` → `staging`
-- any other branch → `preview`
+The mobile app does **not** bundle `@clerk/clerk-js` / `@clerk/clerk-expo` (that pulls a large Web3
+wallet dependency tree). Instead it signs in with the standard OAuth 2.0 authorization-code flow with
+PKCE (a way to do OAuth safely from an app that cannot keep a secret) using `expo-auth-session`, with
+**Clerk acting as an OpenID Connect provider**. The flow returns a Clerk-signed OpenID Connect
+`id_token` (a JWT). That token is stored in the device keychain (`expo-secure-store`) and sent on
+every backend call as `Authorization: Bearer <id_token>`. The backend verifies it with
+`@clerk/backend`'s `verifyToken` — the same signing keys as a web session token — so the verifier is
+unchanged.
+
+The owner must configure Clerk once:
+
+1. **Create an OAuth application** in the Clerk Dashboard → **OAuth Applications** (a Clerk instance
+   acting as an OAuth/OpenID Connect provider). Note its **client id** and set it as
+   `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`.
+2. **Allow the `openid`, `profile`, and `email` scopes** on that OAuth application (the app requests
+   these so the `id_token` carries the user id and profile/email claims).
+3. **Register the redirect URIs.** The app uses its URL scheme `ctf`. Add:
+   - `ctf://oauth-callback` (standalone / release build), and
+   - the Expo development proxy URL Expo prints when you run `expo start` (for Expo Go testing).
+   These must match exactly or Clerk rejects the sign-in.
+4. **Customize the session/id token claims** in Clerk Dashboard → **Sessions → Customize session
+   token** so the verified token carries the same claims the web middleware reads. Add at least:
+   - `username`, `first_name`, `last_name`,
+   - `role` (or `metadata.role`), and
+   - `is_approved` (or `metadata.is_approved`).
+   The backend reads role/approval **only** from the verified token claims, never from request
+   headers, so these claims must be present for admin/approval gating to work on mobile.
+
+If `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` or the publishable key is missing, the app shows a clear
+"sign in not configured" message instead of attempting a broken flow.
+
+## Channels
+
+- `main` → `production` channel (over-the-air updates).
+- `mobile-v*` tag → signed `production` build attached to a GitHub Release.
+- Pull request touching `ctf/packages/mobile/**` → `preview` channel install APK (same production
+  backend).
 
 ## Workflows
 
 - `.github/workflows/expo-preview.yml`
-  - Builds Android APK with EAS for pull requests.
-  - Posts/updates a PR comment containing profile, channel, and install link when available.
-  - Runs in GitHub Environment `rewrite-mobile-preview`.
+  - Builds an Android APK with EAS for pull requests (`--profile preview`).
+  - Posts/updates a PR comment with the install link (the link is read from the EAS build response,
+    so no `EXPO_OWNER` is needed).
   - Fails fast when `EXPO_TOKEN` is missing.
 
 - `.github/workflows/expo-update.yml`
-  - Publishes EAS updates on branch pushes using branch-channel mapping.
+  - Publishes an over-the-air EAS update to the `production` channel on pushes to `main`.
   - Intended for JavaScript/asset-only updates.
-  - Maps branch to GitHub Environment: `rewrite-mobile-preview` / `rewrite-mobile-staging` / `rewrite-mobile-production`.
   - Fails fast when `EXPO_TOKEN` is missing.
 
 - `.github/workflows/expo-android-release.yml`
-  - Builds signed production APK and publishes to GitHub Releases on `mobile-v*` tags.
-  - Runs in GitHub Environment `rewrite-mobile-production`.
+  - Builds a signed production APK and publishes it to GitHub Releases on `mobile-v*` tags.
   - Fails fast when `EXPO_TOKEN` is missing.
 
 ## When to Use EAS Build vs EAS Update
 
 - Use **EAS Build** for native dependency/configuration changes.
-- Use **EAS Update** for JavaScript and asset-only changes compatible with current runtime version.
+- Use **EAS Update** for JavaScript and asset-only changes compatible with the current runtime
+  version.
 
-## Deployment Readiness Checklist (Current Rewrite)
+## Deployment Readiness Checklist
 
 Before shipping additional features, verify these first:
 
-1. **Environment variables** are configured for mobile runtime:
+1. **Secrets** are configured (the list above), all as GitHub secrets.
 
-- `MOBILE_CLERK_PUBLISHABLE_KEY_STAGING` (Expo Go/dev and non-production EAS profiles)
-- `MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION` (production APK/release)
-- `EXPO_OWNER` (required for production-target validation)
-- `MOBILE_APP_URL` (base URL of the deployed web/API host, no trailing slash)
-- `MOBILE_OBSERVABILITY_PROVIDER`
-- `MOBILE_SENTRY_DSN` (when using Sentry)
+2. **Env contract gate** passes in the Expo workflows:
 
-2. **CI preflight env gate** passes in Expo workflows:
-
-- `pnpm --filter @ctf/mobile run check:mobile-env`
-- Validates profile-sensitive env contract before EAS build/update steps.
+- `pnpm --dir ctf --filter @ctf/mobile run check:mobile-env`
+- Requires a Clerk publishable key, an https app URL, the EAS project id, and the updates URL.
 
 3. **Type safety** passes:
 
 - `pnpm --filter @ctf/mobile typecheck`
 
-4. **Invite-only flow smoke test** on a preview APK:
+4. **Real sign-in smoke test** on a preview APK:
 
-- Signed-out user sees sign-in form.
-- Signed-in, unapproved user is prompted for Quora URL.
-- After saving Quora URL, user sees pending approval state.
-- After admin approval (`users.is_approved = true`), user can access approved app shell.
+- Signed-out user taps sign-in and the OAuth browser tab opens Clerk's sign-in.
+- After signing in, the browser returns to the app via `ctf://oauth-callback`, the app exchanges the
+  code for a Clerk `id_token`, stores it, and API calls succeed (the backend accepts the bearer
+  token).
+- Signing out clears the stored session.
 
 5. **Cloud build path** succeeds:
 
-- `preview` build via `.github/workflows/expo-preview.yml`
-- install and launch generated APK on Android device.
+- `preview` build via `.github/workflows/expo-preview.yml`.
+- Install and launch the generated APK on an Android device.

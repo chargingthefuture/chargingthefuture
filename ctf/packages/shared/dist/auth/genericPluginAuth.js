@@ -1,4 +1,3 @@
-import { verifyClerkToken } from './clerkAuth';
 /**
  * Generic plugin authentication handler.
  *
@@ -11,13 +10,22 @@ export async function authenticatePluginUser(context) {
             if (!context.token) {
                 return { isAuthenticated: false, provider: 'clerk', error: 'No token provided' };
             }
-            const userId = verifyClerkToken(context.token);
+            // SECURITY: a Clerk token is only trusted when a real verifier is supplied.
+            // There is no decode-only fallback, because an unsigned/forged token would
+            // otherwise pass. See lib/auth/verify-bearer.ts in the web package for the
+            // server-side verifier.
+            if (!context.verifier) {
+                return {
+                    isAuthenticated: false,
+                    provider: 'clerk',
+                    error: 'No verifier supplied; refusing to trust an unverified token',
+                };
+            }
+            const userId = await context.verifier(context.token);
             if (userId) {
                 return { isAuthenticated: true, provider: 'clerk', userId };
             }
-            else {
-                return { isAuthenticated: false, provider: 'clerk', error: 'Invalid token' };
-            }
+            return { isAuthenticated: false, provider: 'clerk', error: 'Invalid token' };
         }
         case 'supabase':
             // TODO: Implement Supabase auth logic here

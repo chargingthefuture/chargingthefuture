@@ -1,16 +1,17 @@
 name: Expo Update (OTA)
 
-# Publishes a JavaScript/asset-only over-the-air update via EAS Update when a
-# branch is pushed. This does NOT rebuild native code — installed apps pick it up
+# Publishes a JavaScript/asset-only over-the-air update via EAS Update when
+# `main` is pushed. This does NOT rebuild native code — installed apps pick it up
 # on next launch. Use a fresh EAS build (expo-preview / expo-android-release)
 # whenever native dependencies or config change.
+#
+# There is ONE environment: production. `main` publishes to the `production`
+# channel. Demo/sample data is a runtime Unleash flag, not a separate channel.
 
 on:
   push:
     branches:
       - main
-      - staging
-      - "release/staging"
     paths:
       - "ctf/packages/mobile/**"
       - ".github/workflows/expo-update.yml"
@@ -23,40 +24,19 @@ jobs:
   update:
     name: Publish EAS update
     runs-on: ubuntu-latest
-    # Branch-to-channel mapping per docs/mobile/EXPO_CLOUD_WORKFLOW.md:
-    #   main -> production, staging/release-staging -> staging, everything else -> preview
-    environment: ${{ (github.ref == 'refs/heads/main' && 'rewrite-mobile-production') || (startsWith(github.ref, 'refs/heads/staging') || startsWith(github.ref, 'refs/heads/release/staging')) && 'rewrite-mobile-staging' || 'rewrite-mobile-preview' }}
     permissions:
       contents: read
     env:
-      MOBILE_PROJECT_ID: ${{ vars.EXPO_MOBILE_PROJECT_ID || vars.MOBILE_PROJECT_ID }}
-      MOBILE_UPDATES_URL: ${{ vars.EXPO_MOBILE_UPDATES_URL || vars.MOBILE_UPDATES_URL }}
-      MOBILE_APP_URL: ${{ vars.MOBILE_APP_URL }}
-      MOBILE_CTF_USER_ID: ${{ vars.MOBILE_CTF_USER_ID }}
-      MOBILE_CTF_USERNAME: ${{ vars.MOBILE_CTF_USERNAME }}
-      MOBILE_CTF_USER_ROLE: ${{ vars.MOBILE_CTF_USER_ROLE }}
-      MOBILE_CTF_USER_APPROVED: ${{ vars.MOBILE_CTF_USER_APPROVED }}
-      MOBILE_OBSERVABILITY_PROVIDER: ${{ vars.MOBILE_OBSERVABILITY_PROVIDER }}
-      EXPO_OWNER: ${{ vars.EXPO_OWNER }}
-      MOBILE_AUTH_PUBLISHABLE_KEY_STAGING: ${{ secrets.MOBILE_AUTH_PUBLISHABLE_KEY_STAGING }}
-      MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.MOBILE_AUTH_PUBLISHABLE_KEY_PRODUCTION }}
-      EXPO_SENTRY_DSN: ${{ secrets.EXPO_SENTRY_DSN }}
+      MOBILE_ENV_TARGET: production
+      # Same names the web app and app.config.ts read — reused production secrets.
+      NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+      NEXT_PUBLIC_AUTH_PROVIDER: ${{ secrets.NEXT_PUBLIC_AUTH_PROVIDER }}
+      NEXT_PUBLIC_AUTH_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_AUTH_SIGN_IN_URL }}
+      EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID }}
+      EXPO_MOBILE_PROJECT_ID: ${{ secrets.EXPO_MOBILE_PROJECT_ID }}
+      EXPO_MOBILE_UPDATES_URL: ${{ secrets.EXPO_MOBILE_UPDATES_URL }}
     steps:
-      - name: Resolve channel and env target
-        id: channel
-        run: |
-          set -euo pipefail
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            echo "channel=production" >> "$GITHUB_OUTPUT"
-            echo "env_target=production" >> "$GITHUB_OUTPUT"
-          elif [ "${GITHUB_REF}" = "refs/heads/staging" ] || [ "${GITHUB_REF}" = "refs/heads/release/staging" ]; then
-            echo "channel=staging" >> "$GITHUB_OUTPUT"
-            echo "env_target=staging" >> "$GITHUB_OUTPUT"
-          else
-            echo "channel=preview" >> "$GITHUB_OUTPUT"
-            echo "env_target=preview" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Fail fast when EXPO_TOKEN is missing
         if: ${{ secrets.EXPO_TOKEN == '' }}
         run: |
@@ -88,12 +68,10 @@ jobs:
         run: pnpm install --frozen-lockfile --dir ctf
 
       - name: Check mobile env contract
-        env:
-          MOBILE_ENV_TARGET: ${{ steps.channel.outputs.env_target }}
         run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
 
       - name: Publish EAS update
         working-directory: ctf/packages/mobile
         run: |
           set -euo pipefail
-          eas update --channel "${{ steps.channel.outputs.channel }}" --message "${GITHUB_SHA}: ${{ github.event.head_commit.message }}" --non-interactive
+          eas update --channel production --message "${GITHUB_SHA}: ${{ github.event.head_commit.message }}" --non-interactive
