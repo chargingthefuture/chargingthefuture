@@ -25,7 +25,7 @@ const TRACK_COLORS: Record<string, string> = {
   'Life Skills': '#A855F7',
 };
 
-function BadgeTile({ achievement }: { achievement: Achievement }) {
+const BadgeTile: React.FC<{ achievement: Achievement }> = ({ achievement }) => {
   const color = TRACK_COLORS[achievement.track] ?? GREEN;
   return (
     <View style={[styles.tile, achievement.earned ? styles.tileEarned : styles.tileLocked]}>
@@ -98,10 +98,12 @@ export function LevelupAchievements() {
           { label: 'Locked', value: String(locked.length), color: SUBTLE },
           { label: 'SC Gained', value: String(scFromBadges), color: GREEN },
         ].map(({ label, value, color }) => (
-          <View key={label} style={styles.statCard}>
-            <Text style={[styles.statValue, { color }]}>{value}</Text>
-            <Text style={styles.statLabel}>{label}</Text>
-          </View>
+          <React.Fragment key={label}>
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { color }]}>{value}</Text>
+              <Text style={styles.statLabel}>{label}</Text>
+            </View>
+          </React.Fragment>
         ))}
       </View>
 

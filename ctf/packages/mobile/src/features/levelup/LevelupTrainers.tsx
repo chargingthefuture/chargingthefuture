@@ -45,9 +45,11 @@ function TrainerCard({ trainer }: { trainer: Trainer }) {
             {trainer.tracks.map((track) => {
               const color = TRACK_COLORS[track] ?? GREEN;
               return (
-                <View key={track} style={[styles.trackBadge, { backgroundColor: `${color}15` }]}>
-                  <Text style={[styles.trackBadgeText, { color }]}>{track}</Text>
-                </View>
+                <React.Fragment key={track}>
+                  <View style={[styles.trackBadge, { backgroundColor: `${color}15` }]}>
+                    <Text style={[styles.trackBadgeText, { color }]}>{track}</Text>
+                  </View>
+                </React.Fragment>
               );
             })}
           </View>
@@ -122,10 +124,12 @@ export function LevelupTrainers() {
             { label: 'Tracks', value: String(trackSet.size), color: '#3B82F6' },
             { label: 'Cohorts', value: String(totalCohorts), color: '#F59E0B' },
           ].map(({ label, value, color }) => (
-            <View key={label} style={styles.statCard}>
-              <Text style={[styles.statValue, { color }]}>{value}</Text>
-              <Text style={styles.statLabel}>{label}</Text>
-            </View>
+            <React.Fragment key={label}>
+              <View style={styles.statCard}>
+                <Text style={[styles.statValue, { color }]}>{value}</Text>
+                <Text style={styles.statLabel}>{label}</Text>
+              </View>
+            </React.Fragment>
           ))}
         </View>
       }

@@ -40,7 +40,7 @@ function formatDate(iso: string): string {
   }
 }
 
-function HistoryRow({ entry }: { entry: WalletHistoryEntry }) {
+const HistoryRow: React.FC<{ entry: WalletHistoryEntry }> = ({ entry }) => {
   return (
     <View style={styles.row}>
       <View style={[styles.rowIcon, { backgroundColor: `${GREEN}12`, borderColor: `${GREEN}25` }]}>
