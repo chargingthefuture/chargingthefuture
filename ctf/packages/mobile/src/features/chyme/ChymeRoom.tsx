@@ -9,24 +9,31 @@
  *   error    → inline error with retry (no mockup state; safe fallback)
  *   empty    → ChymeEmpty (no rooms live yet; backed by callActive === false + 0 participants)
  *   roomList → ChymeRoomList (room directory; one real room from GET /api/chyme/room)
- *   inRoom   → ChymeActiveRoom (stage/controls; backed by room.participants)
+ *   inRoom   → ChymeAudioRoom (LIVE audio stage via the Stream Video SDK; you
+ *              hear and speak in real time, with one tile per live participant)
  *   chat     → ChymeChatView (companion text chat; GET+POST /api/chyme/messages)
  *
- * All data is real — bound to /api/chyme/* endpoints via api.ts.
- * No mock or fabricated data is rendered.
+ * All data is real — bound to /api/chyme/* endpoints via api.ts. The live audio
+ * room joins the same Stream call as the web room, using the same Stream user
+ * token (POST /api/chyme/join). No mock or fabricated data is rendered.
+ *
+ * NOTE: the live audio needs native WebRTC code, so the in-room screen only
+ * works in an EAS dev/production build — not in Expo Go (see app.config.ts).
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
+  chymeHandle,
   getChymeMessages,
   getChymeRoom,
   postChymeJoin,
   postChymeMessage,
 } from './api';
+import type { ChymeJoinResponse } from './ChymeApi';
 import { ChymeLoading } from './chyme-loading';
 import { ChymeEmpty } from './chyme-empty';
 import { ChymeRoomList } from './chyme-room-list';
-import { ChymeActiveRoom } from './chyme-active-room';
+import { ChymeAudioRoom } from './ChymeAudioRoom';
 import { ChymeChatView } from './chyme-chat-view';
 import type { ChatMessage } from './chyme-chat-view';
 
@@ -40,10 +47,10 @@ const PRIMARY = '#22C55E';
 export const ChymeRoom: React.FC = () => {
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [room, setRoom] = useState<RoomPayload | null>(null);
+  const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
+  const [joining, setJoining] = useState(false);
   const [messages, setMessages] = useState<MessagePayload[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
-  const [handRaised, setHandRaised] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
   const [tab, setTab] = useState<'live' | 'upcoming'>('live');
@@ -67,16 +74,31 @@ export const ChymeRoom: React.FC = () => {
   }, [loadRoom]);
 
   const handleJoinRoom = useCallback(async () => {
+    if (joining) return;
+    setJoining(true);
     try {
+      // POST /api/chyme/join mints the Stream credentials (api key, call id,
+      // user id, and the user token that serves both chat and audio). We hold
+      // onto them so the live audio room can join the same Stream call.
       const res = await postChymeJoin();
       if (res.ok) {
+        // Hold the join credentials and switch to the live audio room. The live
+        // participant list comes from Stream in real time, so we do NOT re-run
+        // loadRoom here — that would flip viewState back to the room list.
+        setJoinInfo(res);
         setViewState('inRoom');
-        await loadRoom();
       }
     } catch (err) {
       Alert.alert('Join failed', err instanceof Error ? err.message : 'Unable to join room.');
+    } finally {
+      setJoining(false);
     }
-  }, [loadRoom]);
+  }, [joining]);
+
+  const handleLeaveRoom = useCallback(() => {
+    setJoinInfo(null);
+    setViewState('roomList');
+  }, []);
 
   const handleSendMessage = useCallback(async () => {
     const trimmed = chatInput.trim();
@@ -133,17 +155,16 @@ export const ChymeRoom: React.FC = () => {
     );
   }
 
-  if (viewState === 'inRoom') {
+  if (viewState === 'inRoom' && joinInfo) {
     return (
-      <ChymeActiveRoom
-        roomName={room.roomName}
-        participants={room.participants}
-        muted={muted}
-        handRaised={handRaised}
-        onToggleMute={() => setMuted((v) => !v)}
-        onToggleHand={() => setHandRaised((v) => !v)}
+      <ChymeAudioRoom
+        joinInfo={joinInfo}
+        // Fallback display name only. The server already upserts each Chyme
+        // user's real handle to Stream, so participant tiles show that handle;
+        // this is just the local label until the server name resolves.
+        displayName={chymeHandle(null, joinInfo.streamUserId.replace(/^chyme-/, ''))}
         onOpenChat={() => setViewState('chat')}
-        onLeave={() => setViewState('roomList')}
+        onLeave={handleLeaveRoom}
       />
     );
   }
@@ -161,7 +182,7 @@ export const ChymeRoom: React.FC = () => {
         }}
         tab={tab}
         onTabChange={setTab}
-        onJoinRoom={() => setViewState('inRoom')}
+        onJoinRoom={handleJoinRoom}
         onStartRoom={handleJoinRoom}
       />
     </View>

@@ -26,7 +26,7 @@ const SNAPSHOT = [
 
 function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <BarChart2 size={18} color={COLOR} />
@@ -103,7 +103,7 @@ function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
 
 function MobileWorkforcePublic({ signInUrl }: { signInUrl: string }) {
   return (
-    <div style={{ width: '100%', minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <BarChart2 size={20} color={COLOR} />

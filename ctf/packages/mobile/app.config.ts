@@ -58,6 +58,30 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     web: {
       favicon: './assets/favicon.png',
     },
+    // Native build config for the Chyme live audio room (Stream Video).
+    // Stream's React Native Video SDK needs native code (WebRTC), so it only
+    // runs in an EAS dev/production build — NOT in Expo Go. These config
+    // plugins write the required native permissions and build settings during
+    // `expo prebuild` / EAS build:
+    //   - @stream-io/video-react-native-sdk: Android Bluetooth/wake-lock
+    //     permissions, iOS background audio mode, and the WebRTC build settings.
+    //   - @config-plugins/react-native-webrtc: the microphone/camera permission
+    //     text shown to the user (iOS Info.plist usage strings + Android
+    //     RECORD_AUDIO). Chyme is audio-only, but the camera string is required
+    //     by the WebRTC layer even when video is never published.
+    plugins: [
+      ...(config.plugins ?? []),
+      '@stream-io/video-react-native-sdk',
+      [
+        '@config-plugins/react-native-webrtc',
+        {
+          microphonePermission:
+            'Charging the Future needs microphone access so you can speak in a live Chyme audio room.',
+          cameraPermission:
+            'Charging the Future does not record video; this permission is required by the audio engine and is never used to capture video.',
+        },
+      ],
+    ],
     updates: {
       ...(updatesUrl ? { url: updatesUrl } : {}),
     },
