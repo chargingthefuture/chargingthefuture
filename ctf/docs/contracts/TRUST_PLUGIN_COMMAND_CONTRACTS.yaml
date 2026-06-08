@@ -2,37 +2,31 @@ contracts:
   - pluginId: trust
     command: trust.summary.read
     version: 1.0.0
-    description: Read public-safe trust summary signals for the authenticated member or a permitted viewed member.
+    description: Read a member's trust panel (status, derived evidence, visibility). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]; cross-user reads enforce the subject's trustVisibility.
     inputSchema:
       subjectUserId:
         type: string
         required: true
       surface:
         type: string
-        required: true
+        required: false
       viewerContext:
         type: string
         required: false
     outputSchema:
-      subjectUserId:
+      userId:
         type: string
-      verificationStatus:
+      trustStatus:
         type: string
-      memberSinceLabel:
+      trustEvidence:
+        type: array
+      trustVisibility:
         type: string
-      lastOnlineBucket:
-        type: string
-      activityBucket:
-        type: string
-      transactionBucket:
-        type: string
-      activePluginCount:
-        type: integer
-      trustVisibilityLevel:
+      updatedAt:
         type: string
     dataAccess:
       - trust_user_extension
-      - trust_signal_snapshots
+      - trust_signal_snapshot
     purpose: trust_signal_display
     retentionClass: derived_short_lived
     idempotency: true
@@ -40,15 +34,19 @@ contracts:
   - pluginId: trust
     command: trust.visibility.update
     version: 1.0.0
-    description: Update self-service visibility level for public trust summary surfaces.
+    description: Update the caller's own trust visibility (self-scope only). Implemented by POST /api/trust/visibility.
     inputSchema:
-      trustVisibilityLevel:
+      trustVisibility:
         type: string
         required: true
+        enum:
+          - public
+          - private
+          - restricted
     outputSchema:
       userId:
         type: string
-      trustVisibilityLevel:
+      trustVisibility:
         type: string
       updatedAt:
         type: string
@@ -62,26 +60,28 @@ contracts:
   - pluginId: trust
     command: trust.admin.verification.review
     version: 1.0.0
-    description: Apply moderator or admin verification decision for Trust badge state.
+    description: Admin-only decision setting a target user's Trust status to verified or flagged, with an appended admin evidence note. Implemented by POST /api/trust/admin/verification.
     inputSchema:
-      subjectUserId:
+      targetUserId:
         type: string
         required: true
-      verificationStatus:
+      trustStatus:
         type: string
         required: true
-      publicNote:
+        enum:
+          - verified
+          - flagged
+      note:
         type: string
         required: false
-      internalReasonCode:
-        type: string
-        required: true
     outputSchema:
-      subjectUserId:
+      userId:
         type: string
-      verificationStatus:
+      trustStatus:
         type: string
-      reviewedAt:
+      trustEvidence:
+        type: array
+      updatedAt:
         type: string
       reviewedByUserId:
         type: string
@@ -95,30 +95,29 @@ contracts:
   - pluginId: trust
     command: trust.signal.snapshot.refresh
     version: 1.0.0
-    description: Compute or refresh privacy-safe trust signal buckets from approved source systems.
-    inputSchema:
-      subjectUserId:
-        type: string
-        required: true
-      sourcePlugins:
-        type: array
-        required: false
+    description: Recompute the CALLER's trust signal from real cross-plugin engagement (login frequency and completed SocketRelay trades), persist a snapshot row, and refresh derived evidence. Never changes trustStatus. Implemented by POST /api/trust/signal/snapshot.
+    inputSchema: {}
     outputSchema:
-      subjectUserId:
+      snapshotId:
         type: string
-      snapshotGeneratedAt:
+      generatedAt:
         type: string
-      lastOnlineBucket:
+      metrics:
+        type: object
+        description: Real counts derived from upstream plugins (loginDays, loginEvents, lastLoginAt, socketRelayCompletedTrades, socketRelayRequestsOpened).
+      trustEvidence:
+        type: array
+      trustStatus:
         type: string
-      activityBucket:
+      trustVisibility:
         type: string
-      transactionBucket:
-        type: string
-      activePluginCount:
-        type: integer
     dataAccess:
-      - trust_signal_snapshots
+      - trust_signal_snapshot
       - trust_user_extension
+      - trust_admin_audit_trail
+      - login_events
+      - socketrelay_fulfillments
+      - socketrelay_requests
     purpose: trust_signal_aggregation
     retentionClass: derived_short_lived
     idempotency: true
