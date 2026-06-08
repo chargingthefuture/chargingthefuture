@@ -10,6 +10,10 @@ import { LighthousePublicShell } from '@/components/lighthouse/lighthouse-public
 import { MoodPublicShell } from '@/components/mood/mood-public-shell';
 import { PeerProgrammingPublicShell } from '@/components/peer-programming/peer-programming-public-shell';
 import { ServiceCreditsPublicShell } from '@/components/service-credits/service-credits-public-shell';
+import { UnlockPublicShell } from '@/components/unlock/unlock-public-shell';
+import { WeeklyPerformancePublicShell } from '@/components/weekly-performance/weekly-performance-public-shell';
+import { WhatWorksPublicShell } from '@/components/whatworks/whatworks-public-shell';
+import { WorkforcePublicShell } from '@/components/workforce/workforce-public-shell';
 import { GenericPublicShell } from '@/components/plugins/generic-public-shell';
 
 /**
@@ -49,6 +53,10 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   mood: MoodPublicShell,
   'peer-programming': PeerProgrammingPublicShell,
   'service-credits': ServiceCreditsPublicShell,
+  unlock: UnlockPublicShell,
+  'weekly-performance': WeeklyPerformancePublicShell,
+  whatworks: WhatWorksPublicShell,
+  workforce: WorkforcePublicShell,
 };
 
 /**
