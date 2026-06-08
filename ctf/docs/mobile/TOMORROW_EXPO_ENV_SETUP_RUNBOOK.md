@@ -6,15 +6,24 @@ Scope: `ctf/` mobile workflows only.
 
 ## Goal
 
-Configure the minimum Expo/GitHub secrets required for the mobile CI workflows:
+Configure the secrets required for the mobile CI workflows:
 
 - `.github/workflows/expo-preview.yml`
 - `.github/workflows/expo-update.yml`
 - `.github/workflows/expo-android-release.yml`
 
-There is **one environment: production**. The mobile workflows reuse the **same** secrets the web app
-already uses — there is no separate staging/preview backend, no per-user identity, and no
+There is **one environment: production**. The mobile workflows reuse the **same** app secrets the web
+app already uses — there is no separate staging/preview backend, no per-user identity, and no
 `EXPO_OWNER`.
+
+Secrets come from **two places**:
+
+- **Infisical** (the single source of truth for app secrets) holds the Clerk keys, the app URL, and
+  the Expo project id/updates URL. Each Expo workflow pulls them at run time with an "Inject secrets
+  from Infisical" step that loads them into the job environment for the build steps.
+- **GitHub Actions secrets** hold only the bootstrap credentials the workflow needs *before* it can
+  reach Infisical, plus the EAS token: `EXPO_TOKEN`, `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`,
+  `INFISICAL_PROJECT_SLUG`, `INFISICAL_URL`.
 
 ---
 
@@ -27,19 +36,36 @@ already uses — there is no separate staging/preview backend, no per-user ident
 
 ## Required Secrets
 
-Set all of these as GitHub **secrets** (Settings → Secrets and variables → Actions → Secrets):
+### GitHub Actions secrets (bootstrap only)
 
-1. `EXPO_TOKEN`
-2. `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
-3. `NEXT_PUBLIC_APP_URL`
-4. `NEXT_PUBLIC_AUTH_PROVIDER`
-5. `NEXT_PUBLIC_AUTH_SIGN_IN_URL` (optional)
-6. `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` (for native sign-in)
-7. `EXPO_MOBILE_PROJECT_ID`
-8. `EXPO_MOBILE_UPDATES_URL`
+Set these as GitHub **secrets** (Settings → Secrets and variables → Actions → Secrets). They are the
+credentials the workflow needs before it can reach Infisical, plus the EAS token:
 
-Most are the same names the web app reads, so they are already set. The new one is
-`EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`.
+1. `EXPO_TOKEN` — EAS CLI login.
+2. `INFISICAL_CLIENT_ID`
+3. `INFISICAL_CLIENT_SECRET`
+4. `INFISICAL_PROJECT_SLUG`
+5. `INFISICAL_URL`
+
+These four `INFISICAL_*` values are the same ones the other Infisical-backed workflows already use, so
+they are likely already set.
+
+### Infisical app secrets (the `prod` environment)
+
+These live in the Infisical `prod` environment, **not** as GitHub secrets. The Expo workflows load
+them at run time. The owner must make sure each one exists in Infisical `prod`:
+
+1. `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
+2. `NEXT_PUBLIC_APP_URL`
+3. `NEXT_PUBLIC_AUTH_PROVIDER`
+4. `NEXT_PUBLIC_AUTH_SIGN_IN_URL` (optional)
+5. `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` (for native sign-in)
+6. `EXPO_MOBILE_PROJECT_ID`
+7. `EXPO_MOBILE_UPDATES_URL`
+
+The first four are the same names the web app reads, so they are likely already in Infisical `prod`.
+The three Expo-specific ones — `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`, `EXPO_MOBILE_PROJECT_ID`, and
+`EXPO_MOBILE_UPDATES_URL` — may need to be added to Infisical `prod` if they are not there yet.
 
 ---
 

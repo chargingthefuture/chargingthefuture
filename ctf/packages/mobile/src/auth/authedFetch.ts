@@ -92,5 +92,8 @@ export async function authedFetchJson<T>(path: string, options?: RequestInit): P
         : `Network request failed: ${response.status}`;
     throw new Error(message);
   }
+  if (payload === null) {
+    throw new Error(`Expected JSON response from ${path}`);
+  }
   return payload as T;
 }

@@ -11,10 +11,11 @@ try {
 // The mobile app reads the SAME environment names as the web app and ships to a
 // SINGLE production environment (demo/staging data is a runtime Unleash flag, not
 // a deploy environment). It requires:
-//   - NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  Clerk publishable key (real sign-in)
-//   - NEXT_PUBLIC_APP_URL               https API base URL (the deployed host)
-//   - EXPO_MOBILE_PROJECT_ID            EAS project id
-//   - EXPO_MOBILE_UPDATES_URL           EAS updates URL
+//   - NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY   Clerk publishable key (real sign-in)
+//   - NEXT_PUBLIC_APP_URL                https API base URL (the deployed host)
+//   - EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID  Clerk OAuth client id (native sign-in)
+//   - EXPO_MOBILE_PROJECT_ID             EAS project id
+//   - EXPO_MOBILE_UPDATES_URL            EAS updates URL
 //
 // There is NO per-user identity to configure: the user signs in with Clerk at
 // runtime and API calls carry a verified bearer token. Profile is informational
@@ -40,6 +41,7 @@ function parseUrl(value) {
 
 requireVar('NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY');
 requireVar('NEXT_PUBLIC_APP_URL');
+requireVar('EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID');
 requireVar('EXPO_MOBILE_PROJECT_ID');
 requireVar('EXPO_MOBILE_UPDATES_URL');
 
