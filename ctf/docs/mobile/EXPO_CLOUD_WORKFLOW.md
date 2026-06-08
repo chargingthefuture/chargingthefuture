@@ -9,23 +9,42 @@ staging or preview backend.
 
 ## Required Secrets
 
-Configure all of these as GitHub **secrets** (Settings → Secrets and variables → Actions → Secrets).
-The mobile workflows reuse the **same** secrets the web app already uses, so there is one set of
-values to manage.
+Secrets come from **two places**. The app secrets live in Infisical (the single source of truth); the
+GitHub Actions secrets are only the bootstrap credentials the workflow needs before it can reach
+Infisical, plus the EAS token. The mobile workflows reuse the **same** app secret values the web app
+already uses, so there is one set of values to manage.
+
+### GitHub Actions secrets (bootstrap only)
+
+Configure these as GitHub **secrets** (Settings → Secrets and variables → Actions → Secrets):
 
 - `EXPO_TOKEN` — token for EAS CLI auth. The Expo account/owner is taken from this token; there is no
   separate `EXPO_OWNER`.
+- `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_SLUG`, `INFISICAL_URL` — the
+  credentials the "Inject secrets from Infisical" step uses to read the app secrets at run time. These
+  are the same four values the other Infisical-backed workflows already use, so they are likely
+  already set.
+
+### Infisical app secrets (the `prod` environment)
+
+These live in the Infisical `prod` environment, **not** as GitHub secrets. Each Expo workflow loads
+them into the job environment at run time with an "Inject secrets from Infisical" step. The owner must
+make sure each one exists in Infisical `prod`:
+
 - `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY` — Clerk publishable key. The app derives the Clerk Frontend API
   host (the OAuth sign-in server) from this key, so no separate URL is needed for the endpoints.
 - `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` — the client id of the Clerk OAuth application the mobile app
-  signs in against (see "Mobile sign-in: Clerk OAuth/OpenID Connect setup" below). Not a secret, but
-  configure it the same way as the other build-time values.
+  signs in against (see "Mobile sign-in: Clerk OAuth/OpenID Connect setup" below).
 - `NEXT_PUBLIC_APP_URL` — base URL of the deployed web/API host (https, no trailing slash).
 - `NEXT_PUBLIC_AUTH_PROVIDER` — auth provider name (defaults to `clerk` when unset).
 - `NEXT_PUBLIC_AUTH_SIGN_IN_URL` — optional hosted Clerk sign-in URL (kept for reference; the native
   app no longer needs it for sign-in).
 - `EXPO_MOBILE_PROJECT_ID` — Expo project id used by `app.config.ts`.
 - `EXPO_MOBILE_UPDATES_URL` — EAS updates URL for the project.
+
+The first four app names are the same ones the web app reads, so they are likely already in Infisical
+`prod`. The three Expo-specific ones — `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`, `EXPO_MOBILE_PROJECT_ID`,
+and `EXPO_MOBILE_UPDATES_URL` — may need to be added to Infisical `prod` if they are not there yet.
 
 There is **no per-user identity** to configure. The signed-in user is resolved at runtime by an OAuth
 sign-in against Clerk, and every API call carries an `Authorization: Bearer <token>` the backend
@@ -98,7 +117,8 @@ If `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` or the publishable key is missing, the ap
 
 Before shipping additional features, verify these first:
 
-1. **Secrets** are configured (the list above), all as GitHub secrets.
+1. **Secrets** are configured (the list above): the bootstrap credentials and `EXPO_TOKEN` as GitHub
+   secrets, and the app secrets in the Infisical `prod` environment.
 
 2. **Env contract gate** passes in the Expo workflows:
 
