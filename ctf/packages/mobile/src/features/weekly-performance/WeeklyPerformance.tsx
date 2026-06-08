@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../auth/auth-context';
 import {
   fetchCurrentWeek,
   fetchWeekMetrics,
