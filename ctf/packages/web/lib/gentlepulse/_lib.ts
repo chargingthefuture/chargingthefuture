@@ -7,7 +7,7 @@ export type GentlePulseApiGate =
   | { allowed: false; response: NextResponse };
 
 export async function requireGentlePulseReadAccess(): Promise<GentlePulseApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: false, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
   }
@@ -16,7 +16,7 @@ export async function requireGentlePulseReadAccess(): Promise<GentlePulseApiGate
 }
 
 export async function requireGentlePulseWriteAccess(): Promise<GentlePulseApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: false, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
   }

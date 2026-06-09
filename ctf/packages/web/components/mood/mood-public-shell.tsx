@@ -29,14 +29,18 @@ const MOOD_FACES_MOBILE: { emoji: string; label: string }[] = [
   { emoji: '😄', label: 'Great' },
 ];
 
-function DesktopMoodPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <Smile size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Mood</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Finish verifying</a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+          )}
         </div>
       </div>
 
@@ -72,8 +76,8 @@ function DesktopMoodPublic({ signInUrl }: { signInUrl: string }) {
                 </div>
               ))}
             </div>
-            <a href={signInUrl} style={{ padding: '12px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-              Join to track your journey
+            <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+              {verifyUrl ? 'Finish verifying' : 'Join to track your journey'}
             </a>
           </div>
 
@@ -84,7 +88,7 @@ function DesktopMoodPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileMoodPublic({ signInUrl }: { signInUrl: string }) {
+function MobileMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 40px', gap: 20, textAlign: 'center' }}>
@@ -116,8 +120,8 @@ function MobileMoodPublic({ signInUrl }: { signInUrl: string }) {
               </div>
             ))}
           </div>
-          <a href={signInUrl} style={{ marginTop: 16, width: '100%', padding: '13px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'block', textAlign: 'center', boxSizing: 'border-box' }}>
-            Join to track your journey
+          <a href={verifyUrl ?? signInUrl} style={{ marginTop: 16, width: '100%', padding: '13px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'block', textAlign: 'center', boxSizing: 'border-box' }}>
+            {verifyUrl ? 'Finish verifying' : 'Join to track your journey'}
           </a>
         </div>
       </div>
@@ -132,7 +136,7 @@ function MobileMoodPublic({ signInUrl }: { signInUrl: string }) {
  * shows no private or per-user data — the mood-face row is a static preview of
  * the check-in scale, not any recorded mood.
  */
-export function MoodPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function MoodPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileMoodPublic signInUrl={signInUrl} /> : <DesktopMoodPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileMoodPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopMoodPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

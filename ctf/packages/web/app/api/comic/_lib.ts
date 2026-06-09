@@ -15,7 +15,7 @@ export type ComicApiGate =
   };
 
 export async function requireComicReadAccess(): Promise<ComicApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,

@@ -9,7 +9,7 @@ export type LighthouseApiGate =
   | { allowed: false; response: NextResponse };
 
 export async function requireLighthouseReadAccess(): Promise<LighthouseApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,
@@ -24,7 +24,7 @@ export async function requireLighthouseReadAccess(): Promise<LighthouseApiGate> 
 }
 
 export async function requireLighthouseAdminAccess(): Promise<LighthouseApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,

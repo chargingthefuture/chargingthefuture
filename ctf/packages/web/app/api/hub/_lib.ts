@@ -22,9 +22,10 @@ export type HubApiGate =
 
 export async function requireHubAccess(): Promise<HubApiGate> {
   const authDecision = await evaluatePluginAccess({
-    allowUnlockSupportOnly: true,
     requireUsername: false,
-    requireApprovedUserOrAdmin: true,
+    // The Hub general channel is the support surface for not-yet-verified members, so
+    // support-only users may read and post here in addition to fully-approved users.
+    minUnlockTier: 'support_only',
   });
 
   if (!authDecision.allowed) {

@@ -12,7 +12,7 @@ const TEXT = '#F9FAFB';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function DesktopDirectoryPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -20,9 +20,15 @@ function DesktopDirectoryPublic({ signInUrl }: { signInUrl: string }) {
         <BookOpen size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Directory</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              Sign In
+            </a>
+          )}
         </div>
       </div>
 
@@ -40,12 +46,20 @@ function DesktopDirectoryPublic({ signInUrl }: { signInUrl: string }) {
           Trauma-informed therapists, housing navigators, legal advocates, employment coaches, and more.
         </p>
         <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-          <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Join the Hub — Free
-          </a>
-          <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Learn more
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+                Join the Hub — Free
+              </a>
+              <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                Learn more
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -62,8 +76,8 @@ function DesktopDirectoryPublic({ signInUrl }: { signInUrl: string }) {
             Know a survivor with skills the community needs? Sign in to submit their public profile and help grow the Directory. Earn points, badges, and prizes.
           </div>
         </div>
-        <a href={signInUrl} style={{ padding: '12px 22px', borderRadius: 12, background: HUNT_COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', textDecoration: 'none' }}>
-          Sign in to submit a profile
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 22px', borderRadius: 12, background: HUNT_COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : 'Sign in to submit a profile'}
         </a>
       </div>
 
@@ -77,8 +91,8 @@ function DesktopDirectoryPublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', maxWidth: 320, display: 'flex', alignItems: 'center', gap: 6 }}>
             <MapPin size={13} color="#6B7280" /> Filter by specialty, location, and Service Credit acceptance.
           </div>
-          <a href={signInUrl} style={{ padding: '12px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign in to connect
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Sign in to connect'}
           </a>
         </div>
       </div>
@@ -86,7 +100,7 @@ function DesktopDirectoryPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileDirectoryPublic({ signInUrl }: { signInUrl: string }) {
+function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '20px 20px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -96,7 +110,7 @@ function MobileDirectoryPublic({ signInUrl }: { signInUrl: string }) {
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Verified profiles</span>
         <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       {/* Skills Hunt pinned reward card */}
@@ -110,8 +124,8 @@ function MobileDirectoryPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5, marginBottom: 10 }}>
           Know a survivor? Sign in to submit their public profile and help grow the Directory. Earn points &amp; badges.
         </div>
-        <a href={signInUrl} style={{ display: 'block', width: '100%', padding: '11px', borderRadius: 10, background: HUNT_COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
-          Sign in to submit a profile
+        <a href={verifyUrl ?? signInUrl} style={{ display: 'block', width: '100%', padding: '11px', borderRadius: 10, background: HUNT_COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : 'Sign in to submit a profile'}
         </a>
       </div>
 
@@ -120,7 +134,7 @@ function MobileDirectoryPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ height: '100%', minHeight: 240, borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '32px 20px' }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to find providers</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -142,7 +156,7 @@ function MobileDirectoryPublic({ signInUrl }: { signInUrl: string }) {
  * sign-in URL instead of opening a form that cannot submit. The simulated phone
  * status bar is dropped because the real app renders inside the browser chrome.
  */
-export function DirectoryPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function DirectoryPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileDirectoryPublic signInUrl={signInUrl} /> : <DesktopDirectoryPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileDirectoryPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopDirectoryPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

@@ -16,7 +16,7 @@ const SERVICE_TYPES = [
   { icon: Utensils, label: 'Food', desc: 'Meal delivery', color: '#22C55E' },
 ];
 
-function DesktopTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -24,9 +24,15 @@ function DesktopTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
         <Car size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>TrustTransport</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              Sign In
+            </a>
+          )}
         </div>
       </div>
 
@@ -43,8 +49,8 @@ function DesktopTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
           <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 480 }}>
             Every driver is background-checked and trauma-informed. Your pickup location is never stored permanently. Pay with Service Credits.
           </p>
-          <a href={signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
-            Join the Hub — Free
+          <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
           </a>
         </div>
 
@@ -85,8 +91,8 @@ function DesktopTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', maxWidth: 300 }}>
             Schedule rides, track packages, and order food — all with trauma-informed drivers.
           </div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign in to book transport
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Sign in to book transport'}
           </a>
         </div>
       </div>
@@ -94,7 +100,7 @@ function DesktopTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
+function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -113,7 +119,7 @@ function MobileTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
             </div>
           ))}
         </div>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       {/* Blurred driver preview + lock (neutral placeholders) */}
@@ -134,7 +140,7 @@ function MobileTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to book transport</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -154,7 +160,7 @@ function MobileTrustTransportPublic({ signInUrl }: { signInUrl: string }) {
  * and are kept. The simulated phone status bar is dropped because the real app
  * renders inside the browser chrome.
  */
-export function TrustTransportPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function TrustTransportPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileTrustTransportPublic signInUrl={signInUrl} /> : <DesktopTrustTransportPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileTrustTransportPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopTrustTransportPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

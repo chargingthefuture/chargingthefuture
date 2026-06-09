@@ -32,6 +32,14 @@ export type PublicVisitorShellProps = {
   pluginSlug: string;
   pluginName: string;
   signInUrl: string;
+  /**
+   * When present, the viewer is a signed-in member who is not verified yet, so
+   * the shell shows a single "Finish verifying" call-to-action pointing at this
+   * URL (the Unlock flow) instead of its sign-in / sign-up CTAs. When absent
+   * (the default), the viewer is an anonymous visitor and the shell renders its
+   * normal "Sign In / Join Free" CTAs unchanged.
+   */
+  verifyUrl?: string;
 };
 
 export type PublicVisitorShell = ComponentType<PublicVisitorShellProps>;

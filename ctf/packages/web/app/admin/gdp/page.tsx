@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { getLatestPublication } from 'lib/gdp/repository';
 
 export default async function GdpAdminPage() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed || !decision.isAdmin) {
     redirect('/apps/gdp');
   }

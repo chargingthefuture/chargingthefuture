@@ -21,7 +21,7 @@ const WHY_JOIN = [
   { icon: '🗺️', t: 'GDP contribution', d: 'Each skill added grows the survivor-economy estimate.' },
 ];
 
-function DesktopSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -29,12 +29,20 @@ function DesktopSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
         <BookOpen size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Skills Taxonomy</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <LogIn size={13} /> Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Join Free
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <LogIn size={13} /> Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Join Free
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -51,8 +59,8 @@ function DesktopSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
           <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 500, lineHeight: 1.7 }}>
             Browse every skill, job title, and sector represented by survivors worldwide. Sign in to search, filter, and match skills to real opportunities.
           </p>
-          <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-            Sign in to explore <ChevronRight size={16} />
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : <>Sign in to explore <ChevronRight size={16} /></>}
           </a>
         </div>
 
@@ -103,8 +111,8 @@ function DesktopSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: SUBTLE, textAlign: 'center', maxWidth: 340 }}>
             Browse every skill and sector, search by job title, and see which survivors you can trade with.
           </div>
-          <a href={signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Create free account
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Create free account'}
           </a>
         </div>
       </div>
@@ -112,7 +120,7 @@ function DesktopSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
+function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -123,8 +131,14 @@ function MobileSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
             <div style={{ fontSize: 16, fontWeight: 700 }}>Skills Taxonomy</div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+            {verifyUrl ? (
+              <a href={verifyUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Finish verifying</a>
+            ) : (
+              <>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -137,8 +151,8 @@ function MobileSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 16 }}>
           Every skill, job title, and sector represented by survivors. Sign in to search, filter, and trade with survivors who have the skills you need.
         </div>
-        <a href={signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 16, textDecoration: 'none' }}>
-          <UserPlus size={15} /> Create free account
+        <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 16, textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Create free account</>}
         </a>
       </div>
 
@@ -183,7 +197,7 @@ function MobileSkillsTaxonomyPublic({ signInUrl }: { signInUrl: string }) {
  * the sign-in lock instead of invented taxonomy rows. The simulated phone status
  * bar is dropped because the real app renders inside the browser chrome.
  */
-export function SkillsTaxonomyPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function SkillsTaxonomyPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileSkillsTaxonomyPublic signInUrl={signInUrl} /> : <DesktopSkillsTaxonomyPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

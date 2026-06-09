@@ -4,7 +4,7 @@ import { getAppUrl } from 'lib/auth/runtime-env';
 import { ensureWeeklyPerformanceAdmin } from 'lib/weekly-performance/policy';
 
 export async function requireWeeklyPerformanceReadAccess() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };
   }

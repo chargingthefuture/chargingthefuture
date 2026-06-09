@@ -5,7 +5,7 @@ import { ServiceCreditsAdminShell } from '@/components/service-credits/service-c
 export const dynamic = 'force-dynamic';
 
 export default async function ServiceCreditsAdminPage() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed || !decision.isAdmin) {
     redirect('/apps/service-credits');
   }
