@@ -4,10 +4,11 @@ import {
   Shield, Trash2, Lock, AlertTriangle, Info, ChevronRight, Loader2,
 } from 'lucide-react';
 import {
-  BRAND, BG, SURFACE, BORDER, TEXT, SUBTLE,
-  glyphForService, type AccountService,
+  getAccountDataTokens,
+  glyphForService, type AccountService, type AccountDataTokens,
 } from './account-data-shared';
 import type { AccountDataView } from './account-data-desktop';
+import { useTheme } from '@/hooks/useTheme';
 import { ThemeToggle } from '../theme/theme-toggle';
 
 type MobileProps = {
@@ -27,6 +28,9 @@ export function AccountDataMobile({
   view, onViewChange, deletable, retained, deletedSlugs, pendingSlug, rowError,
   onDeleteService, onOpenAccountDelete,
 }: MobileProps) {
+  const { theme } = useTheme();
+  const tokens = getAccountDataTokens(theme);
+  const { BRAND, BG, BORDER, TEXT, SUBTLE } = tokens;
   const remaining = deletable.filter((s) => !deletedSlugs.includes(s.slug));
   const isEmpty = remaining.length === 0;
 
@@ -62,7 +66,7 @@ export function AccountDataMobile({
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '14px 16px 24px' }}>
         {view === 'data' ? (
           isEmpty ? (
-            <MobileEmpty retained={retained} />
+            <MobileEmpty retained={retained} tokens={tokens} />
           ) : (
             <MobileDataView
               remaining={remaining}
@@ -70,10 +74,11 @@ export function AccountDataMobile({
               pendingSlug={pendingSlug}
               rowError={rowError}
               onDeleteService={onDeleteService}
+              tokens={tokens}
             />
           )
         ) : (
-          <MobileDanger serviceCount={deletable.length} onOpenAccountDelete={onOpenAccountDelete} />
+          <MobileDanger serviceCount={deletable.length} onOpenAccountDelete={onOpenAccountDelete} tokens={tokens} />
         )}
       </div>
     </div>
@@ -81,14 +86,16 @@ export function AccountDataMobile({
 }
 
 function MobileDataView({
-  remaining, retained, pendingSlug, rowError, onDeleteService,
+  remaining, retained, pendingSlug, rowError, onDeleteService, tokens,
 }: {
   remaining: AccountService[];
   retained: AccountService[];
   pendingSlug: string | null;
   rowError: { slug: string; message: string } | null;
   onDeleteService: (service: AccountService) => void;
+  tokens: AccountDataTokens;
 }) {
+  const { BRAND, SURFACE, BORDER, TEXT, SUBTLE } = tokens;
   return (
     <>
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10, background: `${BRAND}06`, border: `1px solid ${BRAND}18`, marginBottom: 16 }}>
@@ -147,7 +154,8 @@ function MobileDataView({
   );
 }
 
-function MobileEmpty({ retained }: { retained: AccountService[] }) {
+function MobileEmpty({ retained, tokens }: { retained: AccountService[]; tokens: AccountDataTokens }) {
+  const { BRAND, TEXT, SUBTLE } = tokens;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 4px', textAlign: 'center' }}>
       <div style={{ width: 56, height: 56, borderRadius: 16, background: `${BRAND}08`, border: `1px dashed ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
@@ -169,7 +177,8 @@ function MobileEmpty({ retained }: { retained: AccountService[] }) {
   );
 }
 
-function MobileDanger({ serviceCount, onOpenAccountDelete }: { serviceCount: number; onOpenAccountDelete: () => void }) {
+function MobileDanger({ serviceCount, onOpenAccountDelete, tokens }: { serviceCount: number; onOpenAccountDelete: () => void; tokens: AccountDataTokens }) {
+  const { TEXT } = tokens;
   return (
     <div>
       <div style={{ padding: '18px', borderRadius: 14, background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.18)' }}>

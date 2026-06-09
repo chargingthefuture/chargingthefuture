@@ -4,6 +4,7 @@ import type { ShellSection } from './shell-types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo } from '../../lib/hub/types';
 import { getPluginVisuals } from './shell-plugin-config';
+import { useTheme } from '@/hooks/useTheme';
 import styles from './community-shell.module.css';
 
 type ShellSidebarProps = {
@@ -35,6 +36,7 @@ export function ShellSidebar({
   mobileOpen = false,
   onNavigate,
 }: ShellSidebarProps) {
+  const { theme } = useTheme();
   return (
     <aside className={`${styles.panel} ${styles.leftNav}${mobileOpen ? ` ${styles.leftNavMobileOpen}` : ''}`}>
       <div className={styles.sidebarHeader}>
@@ -78,7 +80,7 @@ export function ShellSidebar({
           </>
         ) : (
           plugins.map((plugin) => {
-            const { emoji, color } = getPluginVisuals(plugin.slug);
+            const { emoji, color } = getPluginVisuals(plugin.slug, theme);
             const isActive = activeApp === plugin.slug;
             return (
               <button

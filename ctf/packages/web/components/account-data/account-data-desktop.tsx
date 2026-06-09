@@ -4,9 +4,10 @@ import {
   Shield, Database, Trash2, Lock, AlertTriangle, Info, Loader2,
 } from 'lucide-react';
 import {
-  BRAND, BG, SURFACE, BORDER, TEXT, SUBTLE,
-  glyphForService, type AccountService,
+  getAccountDataTokens,
+  glyphForService, type AccountService, type AccountDataTokens,
 } from './account-data-shared';
+import { useTheme } from '@/hooks/useTheme';
 import { ThemeToggle } from '../theme/theme-toggle';
 
 type View = 'data' | 'danger';
@@ -28,6 +29,9 @@ export function AccountDataDesktop({
   view, onViewChange, deletable, retained, deletedSlugs, pendingSlug, rowError,
   onDeleteService, onOpenAccountDelete,
 }: DesktopProps) {
+  const { theme } = useTheme();
+  const tokens = getAccountDataTokens(theme);
+  const { BRAND, BG, BORDER, TEXT, SUBTLE } = tokens;
   const remaining = deletable.filter((s) => !deletedSlugs.includes(s.slug));
   const isEmpty = remaining.length === 0;
 
@@ -87,7 +91,7 @@ export function AccountDataDesktop({
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '28px 40px' }}>
           {view === 'data' ? (
             isEmpty ? (
-              <EmptyState retained={retained} />
+              <EmptyState retained={retained} tokens={tokens} />
             ) : (
               <DataView
                 remaining={remaining}
@@ -95,10 +99,11 @@ export function AccountDataDesktop({
                 pendingSlug={pendingSlug}
                 rowError={rowError}
                 onDeleteService={onDeleteService}
+                tokens={tokens}
               />
             )
           ) : (
-            <DangerZone serviceCount={deletable.length} onOpenAccountDelete={onOpenAccountDelete} />
+            <DangerZone serviceCount={deletable.length} onOpenAccountDelete={onOpenAccountDelete} tokens={tokens} />
           )}
         </div>
       </div>
@@ -107,14 +112,16 @@ export function AccountDataDesktop({
 }
 
 function DataView({
-  remaining, retained, pendingSlug, rowError, onDeleteService,
+  remaining, retained, pendingSlug, rowError, onDeleteService, tokens,
 }: {
   remaining: AccountService[];
   retained: AccountService[];
   pendingSlug: string | null;
   rowError: { slug: string; message: string } | null;
   onDeleteService: (service: AccountService) => void;
+  tokens: AccountDataTokens;
 }) {
+  const { BRAND, SURFACE, BORDER, TEXT, SUBTLE } = tokens;
   return (
     <>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 16px', borderRadius: 12, background: `${BRAND}06`, border: `1px solid ${BRAND}18`, marginBottom: 24 }}>
@@ -155,12 +162,13 @@ function DataView({
         })}
       </div>
 
-      <RetainedList retained={retained} />
+      <RetainedList retained={retained} tokens={tokens} />
     </>
   );
 }
 
-function RetainedList({ retained }: { retained: AccountService[] }) {
+function RetainedList({ retained, tokens }: { retained: AccountService[]; tokens: AccountDataTokens }) {
+  const { BORDER, TEXT, SUBTLE } = tokens;
   if (retained.length === 0) return null;
   return (
     <>
@@ -187,7 +195,8 @@ function RetainedList({ retained }: { retained: AccountService[] }) {
   );
 }
 
-function EmptyState({ retained }: { retained: AccountService[] }) {
+function EmptyState({ retained, tokens }: { retained: AccountService[]; tokens: AccountDataTokens }) {
+  const { BRAND, TEXT, SUBTLE } = tokens;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center', minHeight: '60vh' }}>
       <div style={{ width: 64, height: 64, borderRadius: 20, background: `${BRAND}08`, border: `1px dashed ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
@@ -209,7 +218,8 @@ function EmptyState({ retained }: { retained: AccountService[] }) {
   );
 }
 
-function DangerZone({ serviceCount, onOpenAccountDelete }: { serviceCount: number; onOpenAccountDelete: () => void }) {
+function DangerZone({ serviceCount, onOpenAccountDelete, tokens }: { serviceCount: number; onOpenAccountDelete: () => void; tokens: AccountDataTokens }) {
+  const { TEXT } = tokens;
   return (
     <div style={{ maxWidth: 600 }}>
       <div style={{ padding: '22px 24px', borderRadius: 16, background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.18)' }}>
