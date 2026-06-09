@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, BORDER, BRAND, TEXT, type StSector } from "./st-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getSkillsTaxonomyTokens, type StSector } from "./st-shared";
 import { SkillsTaxonomyIconRail } from "./st-icon-rail";
 import { SkillsTaxonomySectorsColumn } from "./st-sectors-column";
 import { SkillsTaxonomyTitlesColumn } from "./st-titles-column";
@@ -20,6 +21,8 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getSkillsTaxonomyTokens(theme);
   const [mobileView, setMobileView] = useState<"sectors" | "titles" | "skills">("sectors");
 
   useEffect(() => {
@@ -55,17 +58,17 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
     const backTarget = mobileView === "skills" ? "titles" : "sectors";
     const backLabel = mobileView === "skills" ? "Job titles" : "Sectors";
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: "flex", alignItems: "center", justifyContent: "center", color: BRAND, textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT, flex: 1 }}>Skills Taxonomy</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Skills Taxonomy</span>
           </div>
           {mobileView !== "sectors" && (
             <div style={{ padding: "0 12px 10px" }}>
-              <button type="button" onClick={() => setMobileView(backTarget)} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, color: "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <button type="button" onClick={() => setMobileView(backTarget)} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 12px", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
                 <ChevronLeft size={14} /> {backLabel}
               </button>
             </div>
@@ -102,7 +105,7 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
       <SkillsTaxonomyIconRail />
       <SkillsTaxonomySectorsColumn
         sectors={sectors}

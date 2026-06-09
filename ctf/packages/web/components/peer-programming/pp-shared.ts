@@ -1,8 +1,39 @@
 // Shared constants, types, and helpers for the Peer Programming web shell.
 // Palette/layout derive from design/.../survivor-hub/PeerProgramming.tsx.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+
 export const COLOR = "#8B5CF6";
 export const BG = "#0F1117";
+
+// Theme-aware chrome tokens for the Peer Programming shell. The shell paints its accent as the
+// solid #8B5CF6 and as rgba(139,92,246,…) tints; the default theme returns those exact strings
+// so it renders identically when the comic toggle is off. Comic uses the shared comic surface
+// tokens plus the Peer Programming comic-ink accent (as solid + matching alpha tints).
+export type PeerProgrammingTokens = PluginShellTokens & {
+  ACCENT_TINT_BG: string; // link/tab background tint (default 0.12)
+  ACCENT_TINT_BORDER: string; // link icon border tint (default 0.3)
+  ACCENT_TAB_BORDER: string; // active tab border tint (default 0.4)
+};
+
+export function getPeerProgrammingTokens(theme: ThemeName): PeerProgrammingTokens {
+  if (theme === "comic") {
+    const accent = getAppAccent("peer-programming", "comic");
+    return {
+      ...getPluginShellTokens(accent, theme),
+      ACCENT_TINT_BG: `${accent}1F`,
+      ACCENT_TINT_BORDER: `${accent}4D`,
+      ACCENT_TAB_BORDER: `${accent}66`,
+    };
+  }
+  return {
+    ...getPluginShellTokens(COLOR, theme),
+    ACCENT_TINT_BG: "rgba(139,92,246,0.12)",
+    ACCENT_TINT_BORDER: "rgba(139,92,246,0.3)",
+    ACCENT_TAB_BORDER: "rgba(139,92,246,0.4)",
+  };
+}
 
 export interface Participant {
   id: string;

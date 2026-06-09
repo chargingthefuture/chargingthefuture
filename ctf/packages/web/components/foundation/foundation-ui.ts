@@ -1,7 +1,19 @@
 import type { FoundationQuoteState } from "@/lib/foundation/types";
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
 export const COLOR = "#EF4444";
 export const FONT = "'Inter', system-ui, sans-serif";
+
+// Theme-aware color tokens for the Foundation shell chrome. The default theme keeps the exact
+// values the shell already shipped (accent stays Foundation's shipped #EF4444); comic uses the
+// shared comic surface tokens plus the Foundation comic-ink accent from getAppAccent.
+export type FoundationTokens = PluginShellTokens;
+
+export function getFoundationTokens(theme: ThemeName): FoundationTokens {
+  const accent = theme === "comic" ? getAppAccent("foundation", "comic") : COLOR;
+  return getPluginShellTokens(accent, theme);
+}
 
 /** Provider view model — only fields the real search API returns. */
 export interface ProviderView {

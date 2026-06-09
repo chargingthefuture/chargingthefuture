@@ -4,11 +4,23 @@
 // need/offer/credits/urgency framing is not backed by the data model, so the
 // shell renders the real request/claim/fulfillment model instead.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+
 export const COLOR = "#FB923C";
 export const BG = "#0F1117";
 export const TEXT = "#E8EAF0";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
+
+// Theme-aware chrome tokens for the SocketRelay shell. Default keeps the shipped values (accent
+// stays #FB923C); comic uses the shared comic surface tokens plus the SocketRelay comic-ink accent.
+export type SocketRelayTokens = PluginShellTokens;
+
+export function getSocketRelayTokens(theme: ThemeName): SocketRelayTokens {
+  const accent = theme === "comic" ? getAppAccent("socketrelay", "comic") : COLOR;
+  return getPluginShellTokens(accent, theme);
+}
 
 export type Tab = "feed" | "post" | "chat";
 

@@ -741,3 +741,175 @@
     width: 100%;
   }
 }
+
+/* ─── Comic theme overrides ──────────────────────────────────────────────────
+ *
+ * Only active under [data-theme='comic']; the default theme above is untouched and
+ * renders pixel-identical when the toggle is off. Values come from the comic surface
+ * variables in app/globals.css, which are set verbatim from
+ * design/artifacts/mockup-sandbox/COMIC_THEME_TOKENS.md — no gradients, no glow/neon,
+ * and the 3px 3px 0 offset shadow for elevation. This is the AI review console, so the
+ * standard cyan accent (#0EA5E9 / #7DD3FC) becomes the warm ink-dim accent (#7A6A50,
+ * the comic AI/Assistant colour from §6 — no blue in comic theme). Status colours the
+ * spec keeps across themes stay as shipped: success green (queue-clear, all-caught-up,
+ * high-confidence) and danger red (errors, rejects, safety flags, low-confidence). The
+ * loading screen is left untouched (§11 — loading screens are never themed).
+ */
+
+/* Chrome surfaces → comic page / panel / icon-rail backgrounds + cream ink dividers. */
+:global([data-theme='comic']) .console {
+  background: var(--ctf-bg);
+  color: var(--ctf-text);
+}
+
+:global([data-theme='comic']) .iconRail {
+  background: var(--ctf-icon-rail);
+  border-right: 1px solid var(--ctf-border);
+}
+
+:global([data-theme='comic']) .queueSidebar,
+:global([data-theme='comic']) .mainHeader,
+:global([data-theme='comic']) .rightRail {
+  background: var(--ctf-panel);
+}
+
+:global([data-theme='comic']) .queueSidebar,
+:global([data-theme='comic']) .rightRail {
+  border-color: var(--ctf-border);
+}
+
+:global([data-theme='comic']) .queueHeader,
+:global([data-theme='comic']) .mainHeader {
+  border-bottom-color: var(--ctf-border);
+}
+
+/* Body / title / secondary text tones → cream and ink-dim. */
+:global([data-theme='comic']) .queueKicker,
+:global([data-theme='comic']) .mainHeaderSub,
+:global([data-theme='comic']) .detailLabel,
+:global([data-theme='comic']) .detailMeta,
+:global([data-theme='comic']) .resetBtn {
+  color: var(--ctf-text-subtle);
+}
+
+:global([data-theme='comic']) .queueSub,
+:global([data-theme='comic']) .queueItemTime,
+:global([data-theme='comic']) .queueEmptyText,
+:global([data-theme='comic']) .charCount {
+  color: var(--ctf-text-muted);
+}
+
+:global([data-theme='comic']) .queueItemQuestion,
+:global([data-theme='comic']) .queueEmptyTitle,
+:global([data-theme='comic']) .draftReadonly,
+:global([data-theme='comic']) .provenanceRow,
+:global([data-theme='comic']) .allCaughtUpText,
+:global([data-theme='comic']) .guidanceItem {
+  color: var(--ctf-text-secondary);
+}
+
+:global([data-theme='comic']) .detailQuestion,
+:global([data-theme='comic']) .draftCard,
+:global([data-theme='comic']) .correctedTextarea {
+  color: var(--ctf-text);
+}
+
+/* Cyan AI accent → ink-dim (§6: AI elements use #7A6A50, no blue). */
+:global([data-theme='comic']) .iconRailLogo,
+:global([data-theme='comic']) .iconRailAvatar {
+  background: #7a6a5014;
+  border: 1px solid #7a6a5050;
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .iconRailBtnActive {
+  background: #7a6a5014;
+  border-color: #7a6a50;
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .queuePendingBadge {
+  background: #7a6a5014;
+  border: 1px solid #7a6a5050;
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .queueItemActive {
+  background: #7a6a5014;
+  border-color: #7a6a50;
+}
+
+:global([data-theme='comic']) .detailLabelCyan,
+:global([data-theme='comic']) .guidanceHead,
+:global([data-theme='comic']) .confNone {
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .notYetSentTag {
+  background: #7a6a5014;
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .draftCard,
+:global([data-theme='comic']) .guidanceCard {
+  background: #7a6a500d;
+  border: 1px solid #7a6a5050;
+}
+
+:global([data-theme='comic']) .correctedTextarea {
+  background: #7a6a500d;
+  border: 1px solid #7a6a5066;
+}
+
+:global([data-theme='comic']) .correctedTextarea:focus-visible {
+  outline-color: #7a6a50;
+  border-color: #7a6a50;
+}
+
+:global([data-theme='comic']) .guidanceBullet {
+  color: var(--ctf-border);
+}
+
+:global([data-theme='comic']) .editBtn {
+  background: #7a6a501a;
+  border: 1px solid #7a6a5066;
+  color: var(--ctf-border-dim);
+  box-shadow: var(--ctf-elevation-shadow);
+}
+
+/* Neutral chrome panels / inputs / chips → ink surfaces + cream borders. */
+:global([data-theme='comic']) .queueItem,
+:global([data-theme='comic']) .backBtn,
+:global([data-theme='comic']) .headerConfPill,
+:global([data-theme='comic']) .detailChannel,
+:global([data-theme='comic']) .provenanceRow,
+:global([data-theme='comic']) .confCard {
+  background: var(--ctf-surface);
+  border-color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .backBtn {
+  color: var(--ctf-text-secondary);
+}
+
+:global([data-theme='comic']) .confTrack {
+  background: #d4c49a1a;
+}
+
+/* Approve (success) button: drop the gradient for a flat success-green fill (§12.5). */
+:global([data-theme='comic']) .approveBtn {
+  background: var(--ctf-success);
+  box-shadow: var(--ctf-elevation-shadow);
+}
+
+/* Success-state surfaces keep comic-success green (§7). */
+:global([data-theme='comic']) .queueClearBadge {
+  background: #22c55e1f;
+  border: 1px solid #22c55e60;
+}
+
+:global([data-theme='comic']) .queueEmptyIcon,
+:global([data-theme='comic']) .allCaughtUpIcon {
+  background: #22c55e14;
+  border-color: #22c55e40;
+}
