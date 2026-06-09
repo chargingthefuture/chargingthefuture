@@ -55,7 +55,11 @@ export async function fetchMoodCommunity(): Promise<CommunityResponse> {
   if (!res.ok) {
     throw new Error(`community_fetch_failed:${res.status}`);
   }
-  return res.json() as Promise<CommunityResponse>;
+  const data = (await res.json()) as Partial<CommunityResponse>;
+  if (data?.ok !== true || !data.pulse) {
+    throw new Error('community_fetch_invalid_payload');
+  }
+  return data as CommunityResponse;
 }
 
 export async function submitMood(

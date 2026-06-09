@@ -23,13 +23,13 @@ Scope decisions locked for this rewrite:
 ### 1.1 Mood Check Submission
 
 1. Plugin route for mood check (`/apps/mood`).
-2. Authenticated user can submit a mood check via `POST /api/mood/checks`.
+2. Authenticated user can submit a mood check via `POST /api/mood/submissions`.
 3. Mood scale validation (`1..5`) is enforced.
 4. Submission response does not include severe-value safety trigger fields.
 
 ### 1.2 Eligibility Window
 
-1. Eligibility endpoint: `GET /api/mood/checks/eligible?clientId=...`.
+1. Eligibility endpoint: `GET /api/mood/eligibility?clientId=...`.
 2. Cooldown model: one check every 7 days.
 3. If no prior record (or parse failure), client is treated as eligible.
 
@@ -161,7 +161,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 - [ ] Finalize API route map for in-scope features.
   - Acceptance criteria:
-    - `POST /api/mood/checks` and `GET /api/mood/checks/eligible` are documented and versioned.
+    - `POST /api/mood/submissions` and `GET /api/mood/eligibility` are documented and versioned.
 - [ ] Finalize command contract map.
   - Acceptance criteria:
     - `mood.check.submit` and `mood.check.eligibility.fetch` are represented in command-contract artifacts.

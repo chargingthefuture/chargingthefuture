@@ -39,3 +39,32 @@ contracts:
     purpose: wellbeing_checkin_eligibility
     retentionClass: derived_short_lived
     idempotency: true
+
+  - pluginId: mood
+    command: mood.community.pulse.fetch
+    version: 1.0.0
+    description: >-
+      Read-only, anonymous community pulse. Returns aggregate counts and per-day
+      average mood over a trailing window. No per-user rows, notes, or
+      identifiers are returned. Output is withheld (hasEnoughData false, zeroed
+      day series) until at least the minimum sample of check-ins exist in the
+      window, so a single member can never be inferred from a thin aggregate.
+    inputSchema: {}
+    outputSchema:
+      windowDays:
+        type: integer
+      minSample:
+        type: integer
+      totalCount:
+        type: integer
+      averageMood:
+        type: number
+      hasEnoughData:
+        type: boolean
+      days:
+        type: array
+    dataAccess:
+      - mood_submissions
+    purpose: community_wellbeing_aggregate
+    retentionClass: derived_short_lived
+    idempotency: true

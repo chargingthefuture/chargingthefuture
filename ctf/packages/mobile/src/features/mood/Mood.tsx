@@ -185,7 +185,18 @@ function TrendsView() {
 
   if (loading) return <ActivityIndicator color={COLOR} style={s.loader} />;
 
-  if (errored || pulse === null || !pulse.hasEnoughData) {
+  if (errored) {
+    return (
+      <View style={s.emptyWrap}>
+        <Text style={s.emptyTitle}>Community Wellness</Text>
+        <Text style={s.emptySub}>
+          The community pulse could not be loaded right now. Please try again shortly.
+        </Text>
+      </View>
+    );
+  }
+
+  if (pulse === null || !pulse.hasEnoughData) {
     return (
       <View style={s.emptyWrap}>
         <Text style={s.emptyTitle}>Community Wellness</Text>
