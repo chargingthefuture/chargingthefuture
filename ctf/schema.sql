@@ -3233,6 +3233,32 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- skills_hunt_submissions (1 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- skills_hunt_submissions — companion ALTERs for every non-key column (2026-06-10).
+-- The demo schema's copy of this table predates several columns and the CREATE TABLE
+-- IF NOT EXISTS above skips existing tables, so the 2026-06-09 demo seed failed with
+-- 'column "full_name" of relation "skills_hunt_submissions" does not exist'. Per the
+-- migration rule, every column gets an ADD COLUMN IF NOT EXISTS so legacy tables are
+-- always healed. NOT NULL columns carry a DEFAULT so the ALTER succeeds on tables
+-- with existing rows. CHECK constraints are not re-added here (matches the existing
+-- companion-ALTER precedent above, e.g. url_validation_result).
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS submitter_username TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS full_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url_normalized TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_action TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_notes TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS score_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS points_awarded INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS directory_profile_generated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Skills Hunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
