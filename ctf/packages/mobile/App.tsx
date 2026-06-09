@@ -24,6 +24,7 @@ import { Unlock, AdminUnlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AccountData } from './src/features/account-data';
 import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
+import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 
 type FeatureKey =
@@ -100,13 +101,16 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
 export default function App() {
   return (
     <AuthProvider>
-      <AppShell />
+      <ThemeProvider>
+        <AppShell />
+      </ThemeProvider>
     </AuthProvider>
   );
 }
 
 function AppShell() {
   const { isLoading } = useAuth();
+  const { tokens } = useTheme();
   const [selected, setSelected] = useState<FeatureKey>('home');
 
   const featureView = useMemo(() => {
@@ -195,28 +199,43 @@ function AppShell() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>ChargingTheFuture Mobile</Text>
-      <Text style={styles.subtitle}>Web/Android plugin parity hub</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: tokens.bg }]}>
+      <Text style={[styles.title, { color: tokens.textPrimary }]}>ChargingTheFuture Mobile</Text>
+      <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
+        Web/Android plugin parity hub
+      </Text>
 
       <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-        {featureOrder.map((feature) => (
-          <TouchableOpacity
-            key={feature.key}
-            style={[styles.pill, selected === feature.key ? styles.pillActive : null]}
-            onPress={() => setSelected(feature.key)}
-          >
-            <Text
-              style={[styles.pillText, selected === feature.key ? styles.pillTextActive : null]}
+        {featureOrder.map((feature) => {
+          const active = selected === feature.key;
+          return (
+            <TouchableOpacity
+              key={feature.key}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: active ? tokens.textPrimary : tokens.surface,
+                  borderColor: active ? tokens.textPrimary : tokens.border,
+                  borderRadius: tokens.isComic ? 0 : 999,
+                },
+              ]}
+              onPress={() => setSelected(feature.key)}
             >
-              {feature.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: active ? tokens.bg : tokens.textSecondary },
+                ]}
+              >
+                {feature.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <View style={styles.content}>{featureView}</View>
-      <StatusBar style="auto" />
+      <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
     </SafeAreaView>
   );
 }
