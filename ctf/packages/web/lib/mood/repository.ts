@@ -30,12 +30,13 @@ export type MoodCommunityPulse = {
 export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
   const windowDays = MOOD_PULSE_WINDOW_DAYS;
 
-  const result = await queryDb<{ day: Date; avg_mood: string; count: string }>(
-    `SELECT date_trunc('day', submitted_at) AS day,
+  const result = await queryDb<{ day: string; avg_mood: string; count: string }>(
+    `SELECT to_char(date_trunc('day', submitted_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
             AVG(mood_value)::numeric(10,4) AS avg_mood,
             COUNT(*) AS count
      FROM mood_submissions
-     WHERE submitted_at >= NOW() - ($1::int * INTERVAL '1 day')
+     WHERE (submitted_at AT TIME ZONE 'UTC') >= date_trunc('day', NOW() AT TIME ZONE 'UTC') - (($1::int - 1) * INTERVAL '1 day')
+       AND (submitted_at AT TIME ZONE 'UTC') <  date_trunc('day', NOW() AT TIME ZONE 'UTC') + INTERVAL '1 day'
      GROUP BY day
      ORDER BY day ASC`,
     [windowDays],
@@ -49,7 +50,7 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
     const count = Number.parseInt(row.count, 10);
     const avg = Number.parseFloat(row.avg_mood);
     if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(avg)) continue;
-    const iso = new Date(row.day).toISOString().slice(0, 10);
+    const iso = row.day;
     byIso.set(iso, { sum: avg * count, count });
     totalCount += count;
     totalSum += avg * count;
