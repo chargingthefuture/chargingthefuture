@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, SUBTLE, TEXT, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getLevelupTokens, type LevelupTokens, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
 import { LevelUpSidebar } from "./lu-sidebar";
 import { LevelUpBrowse } from "./lu-browse";
 import { LevelUpProgress } from "./lu-progress";
@@ -67,18 +68,18 @@ async function fetchWalletView(signal: AbortSignal): Promise<WalletView | null> 
   return data.wallet ?? null;
 }
 
-function ShellHeader({ nav, isAdmin }: { nav: NavKey; isAdmin: boolean }) {
+function ShellHeader({ nav, isAdmin, t }: { nav: NavKey; isAdmin: boolean; t: LevelupTokens }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: TEXT }}>{HEADINGS[nav]}</h1>
-        <div style={{ fontSize: 13, color: SUBTLE, marginTop: 4 }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: t.TEXT_BODY }}>{HEADINGS[nav]}</h1>
+        <div style={{ fontSize: 13, color: t.TEXT_SUBTLE, marginTop: 4 }}>
           {SUBHEADINGS[nav]}
         </div>
       </div>
       {nav === "browse" && (
         <button type="button" disabled={!isAdmin}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", color: SUBTLE, border: "1px solid #1E2A3A", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: isAdmin ? "pointer" : "not-allowed", opacity: isAdmin ? 1 : 0.5 }}>
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", color: t.TEXT_SUBTLE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: isAdmin ? "pointer" : "not-allowed", opacity: isAdmin ? 1 : 0.5 }}>
           <Plus size={14} /> Create Cohort
         </button>
       )}
@@ -115,6 +116,7 @@ function ShellContent({
   trainers,
   achievements,
   wallet,
+  t,
 }: {
   nav: NavKey;
   loading: boolean;
@@ -124,15 +126,16 @@ function ShellContent({
   trainers: React.ReactNode;
   achievements: React.ReactNode;
   wallet: React.ReactNode;
+  t: LevelupTokens;
 }) {
-  if (loading) return <CenteredNote color={SUBTLE}>Loading…</CenteredNote>;
+  if (loading) return <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>;
   if (error) return <CenteredNote color="#EF4444">{error}</CenteredNote>;
   if (nav === "browse") return <>{browse}</>;
   if (nav === "progress") return <>{progress}</>;
   if (nav === "trainers") return <>{trainers}</>;
   if (nav === "achievements") return <>{achievements}</>;
   if (nav === "wallet") return <>{wallet}</>;
-  return <CenteredNote color={SUBTLE}>{HEADINGS[nav]} — coming soon</CenteredNote>;
+  return <CenteredNote color={t.TEXT_SUBTLE}>{HEADINGS[nav]} — coming soon</CenteredNote>;
 }
 
 export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
@@ -153,6 +156,8 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [walletView, setWalletView] = useState<WalletView | null>(null);
   const [sectionLoaded, setSectionLoaded] = useState<Record<string, boolean>>({});
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getLevelupTokens(theme);
 
   const load = useCallback(async (signal: AbortSignal) => {
     setLoading(true);
@@ -240,11 +245,12 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
 
   const content = (
     <>
-      <ShellHeader nav={nav} isAdmin={isAdmin} />
+      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} />
       <ShellContent
         nav={nav}
         loading={loading}
         error={error}
+        t={t}
         browse={(
           <LevelUpBrowse
             cohorts={filtered}
@@ -263,9 +269,9 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           />
         )}
         progress={<LevelUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} />}
-        trainers={sectionLoaded.trainers ? <LevelUpTrainers trainers={trainers} /> : <CenteredNote color={SUBTLE}>Loading…</CenteredNote>}
-        achievements={sectionLoaded.achievements ? <LevelUpAchievements achievements={achievements} /> : <CenteredNote color={SUBTLE}>Loading…</CenteredNote>}
-        wallet={sectionLoaded.wallet ? <LevelUpWallet wallet={walletView} /> : <CenteredNote color={SUBTLE}>Loading…</CenteredNote>}
+        trainers={sectionLoaded.trainers ? <LevelUpTrainers trainers={trainers} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
+        achievements={sectionLoaded.achievements ? <LevelUpAchievements achievements={achievements} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
+        wallet={sectionLoaded.wallet ? <LevelUpWallet wallet={walletView} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
       />
     </>
   );
@@ -279,17 +285,17 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
       { key: "wallet", label: "Wallet" },
     ];
     return (
-      <div style={{ minHeight: "100dvh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT_BODY }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#22C55E", textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: t.ACCENT_TINT_BG, border: `1px solid ${t.ACCENT_TINT_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>LevelUp</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>LevelUp</span>
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
             {navItems.map(({ key, label }) => (
-              <button key={key} onClick={() => setNav(key)} style={{ whiteSpace: "nowrap", padding: "6px 12px", borderRadius: 8, background: nav === key ? "rgba(34,197,94,0.12)" : "transparent", border: `1px solid ${nav === key ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.08)"}`, color: nav === key ? "#22C55E" : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{label}</button>
+              <button key={key} onClick={() => setNav(key)} style={{ whiteSpace: "nowrap", padding: "6px 12px", borderRadius: 8, background: nav === key ? t.ACCENT_TINT_BG : "transparent", border: `1px solid ${nav === key ? t.ACCENT_NAV_BORDER : t.BORDER_STRONG}`, color: nav === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{label}</button>
             ))}
           </div>
         </div>
@@ -299,7 +305,7 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT_BODY, overflow: "hidden" }}>
       <LevelUpSidebar nav={nav} onNav={setNav} isAdmin={isAdmin} balance={balance} escrow={escrow} />
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>

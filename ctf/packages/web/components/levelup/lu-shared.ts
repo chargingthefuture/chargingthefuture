@@ -2,6 +2,9 @@
 // Palette derives from design/.../survivor-hub/LevelUp.tsx.
 // LevelUp is grant-only ("earn or earn nothing") — no UI ever spends/deducts a user's ServiceCredits.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+
 export const GREEN = "#22C55E";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
@@ -9,6 +12,44 @@ export const BORDER = "#1E2A3A";
 export const MUTED = "#4B5563";
 export const TEXT = "#E2E8F0";
 export const SUBTLE = "#94A3B8";
+
+// Theme-aware chrome tokens for the LevelUp shell. Default keeps the shipped values (accent stays the
+// green #22C55E, painted as solid and as rgba(34,197,94,…) tints); comic uses the shared comic surface
+// tokens plus the LevelUp comic-ink accent. LevelUp uses its own body/secondary text tones (#E2E8F0,
+// #94A3B8) and a solid #1E2A3A chrome border, distinct from the shared defaults, so each is carried as
+// its own token to keep the default theme byte-for-byte identical.
+export type LevelupTokens = PluginShellTokens & {
+  BORDER_SOLID: string; // solid chrome border (default #1E2A3A)
+  TEXT_BODY: string; // primary body text (default #E2E8F0)
+  TEXT_SUBTLE: string; // secondary text (default #94A3B8)
+  ACCENT_TINT_BG: string; // back-button / active-nav background tint (default 0.12)
+  ACCENT_TINT_BORDER: string; // back-button icon border tint (default 0.3)
+  ACCENT_NAV_BORDER: string; // active-nav border tint (default 0.4)
+};
+
+export function getLevelupTokens(theme: ThemeName): LevelupTokens {
+  if (theme === "comic") {
+    const accent = getAppAccent("levelup", "comic");
+    return {
+      ...getPluginShellTokens(accent, theme),
+      BORDER_SOLID: "#D4C49A1A",
+      TEXT_BODY: "#EDE3CB",
+      TEXT_SUBTLE: "#7A6A50",
+      ACCENT_TINT_BG: `${accent}1F`,
+      ACCENT_TINT_BORDER: `${accent}4D`,
+      ACCENT_NAV_BORDER: `${accent}66`,
+    };
+  }
+  return {
+    ...getPluginShellTokens(GREEN, theme),
+    BORDER_SOLID: "#1E2A3A",
+    TEXT_BODY: "#E2E8F0",
+    TEXT_SUBTLE: "#94A3B8",
+    ACCENT_TINT_BG: "rgba(34,197,94,0.12)",
+    ACCENT_TINT_BORDER: "rgba(34,197,94,0.3)",
+    ACCENT_NAV_BORDER: "rgba(34,197,94,0.4)",
+  };
+}
 
 export const TRACK_COLORS: Record<string, string> = {
   Tech: "#3B82F6",
