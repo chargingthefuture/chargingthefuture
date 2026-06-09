@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ChevronLeft, Megaphone, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
 import { StreamChatPanel } from '../shared/stream-chat-panel';
 import { FeedAnnouncementsIconRail } from './feed-announcements-icon-rail';
 import { FeedAnnouncementsSidebar } from './feed-announcements-sidebar';
@@ -11,7 +12,7 @@ import { FeedAnnouncementsHeader } from './feed-announcements-header';
 import { FeedAnnouncementsRightPanel } from './feed-announcements-right-panel';
 import { FeedItemCard } from './feed-item-card';
 import { FeedQuestionForm, FeedCommunityForm } from './feed-compose-forms';
-import { FEED_COLOR, FEED_BG } from './feed-announcements-constants';
+import { getFeedTokens, type FeedTokens } from './feed-announcements-constants';
 
 type FeedStreamCredentials = {
   streamApiKey: string;
@@ -98,6 +99,8 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const chatFetchedRef = useRef(false);
+  const { theme } = useTheme();
+  const t = getFeedTokens(theme);
 
   useEffect(() => {
     if (uiTab === 'chat' && !chatFetchedRef.current) {
@@ -290,7 +293,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
   ];
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100dvh', background: FEED_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+    <div style={{ width: '100%', height: '100%', minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
       {!isMobile && <FeedAnnouncementsIconRail uiTab={uiTab} onTabChange={setUiTab} unreadCount={unreadCount} />}
 
       {!isMobile && (
@@ -303,21 +306,21 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
       )}
 
       {isMobile && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: FEED_BG, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: t.BG, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${FEED_COLOR}14`, border: `1px solid ${FEED_COLOR}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: FEED_COLOR, textDecoration: 'none', flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.ACCENT, textDecoration: 'none', flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <Megaphone size={18} style={{ color: FEED_COLOR, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#F9FAFB', flex: 1 }}>Feed</span>
-            <button onClick={openNewPost} style={{ padding: '8px 14px', borderRadius: 9, background: `${FEED_COLOR}1A`, border: `1px solid ${FEED_COLOR}40`, color: FEED_COLOR, fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>New post</button>
+            <Megaphone size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Feed</span>
+            <button onClick={openNewPost} style={{ padding: '8px 14px', borderRadius: 9, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>New post</button>
           </div>
           <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px' }}>
             {mobileTabs.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setUiTab(key)}
-                style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: uiTab === key ? `${FEED_COLOR}1A` : 'transparent', border: `1px solid ${uiTab === key ? FEED_COLOR + '40' : 'rgba(255,255,255,0.08)'}`, color: uiTab === key ? FEED_COLOR : '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: uiTab === key ? `${t.ACCENT}1A` : 'transparent', border: `1px solid ${uiTab === key ? t.ACCENT + '40' : t.BORDER_STRONG}`, color: uiTab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
                 {label}
               </button>
@@ -329,7 +332,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
-                  style={{ whiteSpace: 'nowrap', padding: '5px 12px', borderRadius: 14, background: filter === key ? `${FEED_COLOR}14` : 'transparent', border: `1px solid ${filter === key ? FEED_COLOR + '50' : 'rgba(255,255,255,0.1)'}`, color: filter === key ? FEED_COLOR : '#9CA3AF', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                  style={{ whiteSpace: 'nowrap', padding: '5px 12px', borderRadius: 14, background: filter === key ? `${t.ACCENT}14` : 'transparent', border: `1px solid ${filter === key ? t.ACCENT + '50' : t.BORDER_HI}`, color: filter === key ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
                 >
                   {label}
                 </button>
@@ -344,6 +347,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
 
         {uiTab === 'feed' && (
           <FeedTab
+            t={t}
             error={error}
             showPostForm={showPostForm}
             setShowPostForm={setShowPostForm}
@@ -384,14 +388,14 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
 
         {uiTab === 'chat' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24 }}>
-            <div style={{ marginBottom: 20, padding: '18px 24px', borderRadius: 16, background: `linear-gradient(135deg,${FEED_COLOR}15 0%,rgba(132,204,22,0.05) 100%)`, border: `1px solid ${FEED_COLOR}25` }}>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#F9FAFB', marginBottom: 4 }}>Community Chat</div>
-              <div style={{ fontSize: 14, color: '#9CA3AF' }}>Real-time community discussion</div>
+            <div style={{ marginBottom: 20, padding: '18px 24px', borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,${t.ACCENT_TINT_05} 100%)`, border: `1px solid ${t.ACCENT}25` }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Community Chat</div>
+              <div style={{ fontSize: 14, color: t.SUBTLE }}>Real-time community discussion</div>
             </div>
-            {chatLoading && <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading chat…</div>}
+            {chatLoading && <div style={{ color: t.SUBTLE, fontSize: 14 }}>Loading chat…</div>}
             {chatError && <div style={{ color: '#EF4444', fontSize: 14 }}>{chatError}</div>}
             {chatCredentials && (
-              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${FEED_COLOR}20`, minHeight: isMobile ? '65vh' : undefined }}>
+              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', border: `1px solid ${t.ACCENT}20`, minHeight: isMobile ? '65vh' : undefined }}>
                 <StreamChatPanel
                   streamApiKey={chatCredentials.streamApiKey}
                   streamToken={chatCredentials.streamToken}
@@ -405,6 +409,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
 
         {uiTab === 'admin' && (
           <AdminTab
+            t={t}
             items={items}
             alertCount={alertCount}
             unreadCount={unreadCount}
@@ -431,6 +436,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
 // ---------------------------------------------------------------------------
 
 type FeedTabProps = {
+  t: FeedTokens;
   error: string | null;
   showPostForm: 'question' | 'community' | null;
   setShowPostForm: (v: 'question' | 'community' | null) => void;
@@ -469,7 +475,7 @@ type FeedTabProps = {
 };
 
 function FeedTab({
-  error, showPostForm, setShowPostForm, enabledChannels,
+  t, error, showPostForm, setShowPostForm, enabledChannels,
   questionBody, questionCategory, questionZipCode, questionRadius, llmConsentGranted,
   communityBody, communityCategory,
   busyQuestionId, busyPostId, busyItemId, busyAnswerId,
@@ -522,10 +528,10 @@ function FeedTab({
       )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-        <div style={{ fontSize: 13, color: '#6B7280' }}>{items.length} items</div>
+        <div style={{ fontSize: 13, color: t.MUTED }}>{items.length} items</div>
         <button
           onClick={onRefresh}
-          style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9CA3AF', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+          style={{ padding: '5px 12px', borderRadius: 20, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
         >
           <RefreshCw size={12} style={{ opacity: isRefreshing ? 0.5 : 1 }} />
           {isRefreshing ? 'Refreshing…' : 'Refresh'}
@@ -533,7 +539,7 @@ function FeedTab({
       </div>
 
       {visibleItems.length === 0 ? (
-        <FeedEmptyState />
+        <FeedEmptyState t={t} />
       ) : (
         visibleItems.map((item) => (
           <FeedItemCard
@@ -561,23 +567,23 @@ function FeedTab({
 // Empty state — mirrors FeedAnnouncementsEmpty mockup
 // ---------------------------------------------------------------------------
 
-function FeedEmptyState() {
+function FeedEmptyState({ t }: { t: FeedTokens }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: 16 }}>
-      <div style={{ width: 72, height: 72, borderRadius: 20, background: 'rgba(132,204,22,0.1)', border: '1px solid rgba(132,204,22,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Megaphone size={32} style={{ color: FEED_COLOR, opacity: 0.5 }} />
+      <div style={{ width: 72, height: 72, borderRadius: 20, background: t.ACCENT_TINT_10, border: `1px solid ${t.ACCENT_TINT_20}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Megaphone size={32} style={{ color: t.ACCENT, opacity: 0.5 }} />
       </div>
       <div style={{ textAlign: 'center', maxWidth: 380 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#F9FAFB', marginBottom: 8 }}>No posts yet</div>
-        <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.7 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: t.TITLE, marginBottom: 8 }}>No posts yet</div>
+        <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7 }}>
           The community feed is quiet right now. Posts, announcements, and urgent alerts will stream here in real-time as the community grows.
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 520 }}>
         {['Announcements from the Hub team', 'Community stories from survivors', 'Urgent housing and safety alerts', 'Milestones and celebrations'].map((item) => (
-          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(132,204,22,0.3)', flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: '#6B7280' }}>{item}</span>
+          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: `1px dashed ${t.BORDER_STRONG}` }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.ACCENT_TINT_30, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: t.MUTED }}>{item}</span>
           </div>
         ))}
       </div>
@@ -590,32 +596,33 @@ function FeedEmptyState() {
 // ---------------------------------------------------------------------------
 
 type AdminTabProps = {
+  t: FeedTokens;
   items: FeedTimelineItem[];
   alertCount: number;
   unreadCount: number;
   isAdmin: boolean;
 };
 
-function AdminTab({ items, alertCount, unreadCount, isAdmin }: AdminTabProps) {
+function AdminTab({ t, items, alertCount, unreadCount, isAdmin }: AdminTabProps) {
   return (
     <div style={{ flex: 1, padding: '32px 40px' }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: '#F9FAFB', marginBottom: 20 }}>Admin: Announcements</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 20 }}>Admin: Announcements</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { l: 'Total Items', v: String(items.length), c: FEED_COLOR },
+          { l: 'Total Items', v: String(items.length), c: t.ACCENT },
           { l: 'Urgent Alerts', v: String(alertCount), c: '#EF4444' },
           { l: 'Unread', v: String(unreadCount), c: '#F59E0B' },
         ].map(({ l, v, c }) => (
           <div key={l} style={{ padding: 20, borderRadius: 14, background: `${c}08`, border: `1px solid ${c}20` }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: c, marginBottom: 4 }}>{v}</div>
-            <div style={{ fontSize: 13, color: '#6B7280' }}>{l}</div>
+            <div style={{ fontSize: 13, color: t.MUTED }}>{l}</div>
           </div>
         ))}
       </div>
       {isAdmin && (
         <Link
           href="/admin/feed-announcements"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: `${FEED_COLOR}15`, border: `1px solid ${FEED_COLOR}30`, color: FEED_COLOR, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
         >
           Open Admin Panel →
         </Link>
