@@ -46,12 +46,13 @@ export default async function HomePage() {
   const userId = identity?.isAuthenticated ? identity.userId : null;
   const isAdmin = identity?.isAdmin ?? false;
 
-  // Unlock is the single source of truth for how much of the Hub a signed-in member sees.
-  // Resolve the tier once and branch:
-  //   - not signed in            -> anonymous shell (sign-in prompt)
-  //   - admin OR approved_full   -> full shell
-  //   - locked_support_only      -> restricted shell (general channel only)
-  //   - pending_readonly / none  -> redirect into the Unlock flow
+  // Unlock is the single source of truth for who reaches the Hub. Resolve the tier once and branch:
+  //   - not signed in                         -> anonymous shell (sign-in prompt)
+  //   - admin / approved_full / support_only  -> the normal Hub
+  //   - pending_readonly / none               -> redirect into the Unlock flow
+  // A support_only member sees the same Hub as everyone else; the general channel is their
+  // support surface, and tapping a plugin they cannot use yet shows that plugin's public
+  // landing page (handled at the plugin route), not a denial wall. Nothing is hidden here.
   const tier = userId ? await getUnlockAccessTier(userId).catch(() => null) : null;
 
   if (userId && !isAdmin && tier !== 'approved_full' && tier !== 'locked_support_only') {
@@ -59,8 +60,6 @@ export default async function HomePage() {
   }
 
   const isAuthenticated = Boolean(userId);
-  const accessTier: 'approved_full' | 'support_only' =
-    tier === 'locked_support_only' && !isAdmin ? 'support_only' : 'approved_full';
 
   const currentUser = userId
     ? buildShellUser(userId, identity?.username ?? null)
@@ -82,7 +81,6 @@ export default async function HomePage() {
       currentUser={currentUser}
       trust={trust}
       isAuthenticated={isAuthenticated}
-      accessTier={accessTier}
       signInUrl={signInUrl}
     />
   );

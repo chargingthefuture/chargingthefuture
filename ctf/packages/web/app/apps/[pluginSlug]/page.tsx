@@ -70,16 +70,6 @@ function AccessDeniedView({ status, code, reason, requestedPluginSlug }: AccessD
           Username is required for this plugin route. Update your profile username and try again.
         </p>
       ) : null}
-      {reason === 'unlock_required' ? (
-        <p className="text-sm">
-          Your account is not verified yet, so this plugin is not open to you right now. You can still
-          use the{' '}
-          <Link className="underline underline-offset-4" href="/">general channel on the home page</Link>{' '}
-          to talk to the community and ask for help, and you can{' '}
-          <Link className="underline underline-offset-4" href="/plugin/unlock">share your Quora profile link</Link>{' '}
-          to get verified and open the rest of the app.
-        </p>
-      ) : null}
       <p className="text-sm">
         <Link className="underline underline-offset-4" href="/">Return to home</Link>
       </p>
@@ -158,12 +148,14 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   });
 
   if (!decision.allowed) {
-    // An anonymous visitor (no active session) is denied with AUTH_UNAUTHORIZED.
-    // Show that plugin's public visitor view instead of the access-denied wall so
-    // signed-out people can browse the plugin's marketing/empty-state content and
-    // sign in from there. The genuine 403 cases below (signed in but not
-    // permitted) keep the informative access-denied view.
-    if (decision.code === 'AUTH_UNAUTHORIZED') {
+    // Two cases see the plugin's public visitor view rather than a denial wall:
+    //  - an anonymous visitor (no session) denied with AUTH_UNAUTHORIZED, and
+    //  - a signed-in but not-yet-verified member denied with `unlock_required`.
+    // Both can browse the plugin's marketing/landing content the same way; the
+    // not-yet-verified member is nudged from there toward the Unlock flow, and the
+    // Hub general channel remains their support surface. Other 403s (e.g. a missing
+    // username or a role requirement) keep the informative access-denied view.
+    if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
       const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
       const signInUrl = getHostedSignInUrl() ?? '/sign-in';
       return (
