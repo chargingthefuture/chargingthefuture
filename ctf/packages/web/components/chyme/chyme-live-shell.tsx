@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import { DARK_BG, PRIMARY, type CurrentUser, requestJson } from './chyme-shared';
+import { useTheme } from '@/hooks/useTheme';
+import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
@@ -25,6 +26,8 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   const [showChat, setShowChat] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
 
   useEffect(() => {
     let active = true;
@@ -96,7 +99,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', width: '100%', background: DARK_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', width: '100%', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
       <ChymeHeader
         participantCount={room?.participants.length ?? 0}
         isLive={Boolean(room)}
@@ -120,11 +123,11 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
 
           {!room && !loading && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-              <div style={{ width: 80, height: 80, borderRadius: 24, background: `${PRIMARY}18`, border: `2px solid ${PRIMARY}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Radio size={36} style={{ color: PRIMARY }} />
+              <div style={{ width: 80, height: 80, borderRadius: 24, background: `${t.ACCENT}18`, border: `2px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Radio size={36} style={{ color: t.ACCENT }} />
               </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#F0FDF4' }}>Join a Room</div>
-              <div style={{ fontSize: 15, color: '#4B5563', textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE }}>Join a Room</div>
+              <div style={{ fontSize: 15, color: t.FAINT, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
                 Select a live room to listen, speak, and connect with survivors worldwide. All rooms are safe spaces.
               </div>
             </div>
