@@ -6,7 +6,9 @@ export type WhatWorksApiGate =
   | { allowed: true; auth: AllowDecision }
   | { allowed: false; response: NextResponse };
 
-// Reading is open to any authenticated survivor; suggesting and endorsing share this gate.
+// Reading, suggesting, and endorsing share this gate. It inherits the default
+// minUnlockTier 'approved_full', so it is open to fully-verified survivors (and admins) —
+// not to pending or support-only members.
 export async function requireWhatWorksAccess(): Promise<WhatWorksApiGate> {
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {

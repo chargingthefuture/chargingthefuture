@@ -33,12 +33,13 @@ function buildAllowDecision(
   username: string | null,
   role: string | null,
 ): AllowDecision {
+  const normalizedRole = role?.trim().toLowerCase() ?? null;
   return {
     allowed: true,
     userId,
     username,
-    role,
-    isAdmin: role === 'admin',
+    role: normalizedRole,
+    isAdmin: normalizedRole === 'admin',
   };
 }
 
@@ -62,6 +63,9 @@ export async function evaluatePluginAccess(
   } = options;
 
   const identity = await resolveRequestIdentity();
+  // Normalize the role once so every admin/role comparison below is case-insensitive,
+  // regardless of how a future identity source cases it.
+  const normalizedRole = identity.role?.trim().toLowerCase() ?? null;
   const normalizedRequiredRoles = normalizeRequiredRoles(requiredRoles);
 
   if (!identity.isAuthenticated || !identity.userId) {
@@ -73,8 +77,7 @@ export async function evaluatePluginAccess(
   }
 
   if (normalizedRequiredRoles.length > 0) {
-    const role = identity.role?.toLowerCase();
-    if (!role || !normalizedRequiredRoles.includes(role)) {
+    if (!normalizedRole || !normalizedRequiredRoles.includes(normalizedRole)) {
       return pluginAuthDeny.forbiddenRole(requiredRoles ?? []);
     }
   }
@@ -82,7 +85,7 @@ export async function evaluatePluginAccess(
   // Unlock access gate — the single source of truth for full app access. Admins always
   // pass. 'any_authenticated' routes (unlock submission/status, account/profile/deletion)
   // skip the tier check so a gated user can always submit and manage their own data.
-  if (identity.role !== 'admin' && minUnlockTier !== 'any_authenticated') {
+  if (normalizedRole !== 'admin' && minUnlockTier !== 'any_authenticated') {
     const tier = await getUnlockAccessTier(identity.userId);
     const allowed =
       minUnlockTier === 'support_only'
@@ -93,5 +96,5 @@ export async function evaluatePluginAccess(
     }
   }
 
-  return buildAllowDecision(identity.userId, identity.username, identity.role);
+  return buildAllowDecision(identity.userId, identity.username, normalizedRole);
 }

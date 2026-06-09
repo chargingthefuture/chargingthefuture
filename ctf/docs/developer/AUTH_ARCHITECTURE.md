@@ -78,7 +78,9 @@ falls back to the anonymous display name with no role — no regression, but Chy
 The middleware accepts either a flat claim (`username` / `role`) or one nested under `metadata`, so
 both common claim mappings work. Session tokens refresh about every minute, so after changing the
 config a signed-in user picks up the new claims on the next refresh (or after signing out and back
-in). Full access is **not** sourced from Clerk — it comes from the Unlock tier in the database.
+in). Full access is **not** sourced from Clerk — it is resolved by `getUnlockAccessTier` (the Unleash
+flag first, returning `approved_full` when the flag is on for the user; otherwise the database-stored
+Unlock tier as the fallback).
 
 > **Update (2026-06-09): Unlock is the single source of truth for full access.** The old v2
 > `isApproved` boolean has been removed from the request identity, the bearer-token identity, and the

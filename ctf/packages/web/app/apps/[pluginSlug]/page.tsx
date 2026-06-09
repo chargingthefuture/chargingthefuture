@@ -138,11 +138,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  // Every plugin route now requires full Unlock access (the default minUnlockTier
-  // 'approved_full'); a not-yet-verified member is sent to the Unlock flow via the
-  // access-denied view, and the Hub general channel is their support surface. Chyme
-  // keeps its anonymous public shell for signed-out visitors (the AUTH_UNAUTHORIZED
-  // branch below), which is why it does not require a username.
+  // Every plugin route requires full Unlock access (the default minUnlockTier
+  // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
+  // shown the plugin's public landing page below (not the access-denied view), which
+  // nudges them toward the Unlock flow; the Hub general channel is their support
+  // surface. Chyme does not require a username so its anonymous public shell still works.
   const decision = await evaluatePluginAccess({
     requireUsername: selectedPlugin.slug !== 'chyme',
   });
