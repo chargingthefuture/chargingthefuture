@@ -1,6 +1,8 @@
 // Shared constants, types, and helpers for the Skills Hunt web shell.
 // Palette/layout derive from design/.../survivor-hub/SkillsHunt.tsx.
 import { Search, Trophy, Target, Users } from "lucide-react";
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type {
   SkillsHuntRound,
   SkillsHuntLeaderboardItem,
@@ -23,6 +25,15 @@ export const COLOR = "#D946EF";
 export const BG = "#0F1117";
 export const BIO_MAX = 280;
 export const MAX_SKILLS = 10;
+
+// Theme-aware chrome tokens for the Skills Hunt shell. Default keeps the shipped values (accent
+// stays #D946EF); comic uses the shared comic surface tokens plus the Skills Hunt comic-ink accent.
+export type SkillsHuntTokens = PluginShellTokens;
+
+export function getSkillsHuntTokens(theme: ThemeName): SkillsHuntTokens {
+  const accent = theme === "comic" ? getAppAccent("skills-hunt", "comic") : COLOR;
+  return getPluginShellTokens(accent, theme);
+}
 
 export const SKILL_TAXONOMY: Record<string, string[]> = {
   "Technology":         ["Software Engineering", "UI/UX Design", "Data Analysis", "Cybersecurity", "Web Development", "IT Support"],
