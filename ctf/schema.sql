@@ -1673,7 +1673,6 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('chyme',              'Chyme',                'Room bootstrap, chat, join flow, and deletion behavior with policy/audit.',                       'implemented_shell', 10,  TRUE),
   ('skills-taxonomy',    'Skills Taxonomy',      'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Unified user/admin profile surface with claimed/unclaimed policy controls.',                      'implemented_shell', 30,  TRUE),
-  ('feed-announcements', 'Feed + Announcements', 'Timeline and announcement lifecycle in a coupled admin surface.',                                 'implemented_shell', 40,  FALSE),
   ('workforce',          'Workforce',            'Dashboard reporting and recruited-state derivation from upstream data.',                           'implemented_shell', 50,  TRUE),
   ('skills-hunt',        'Skills Hunt',          'Rounds, moderation, scoring, leaderboards, and governed profile generation.',                     'alpha',             60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
@@ -1696,6 +1695,13 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
   nav_rank           = EXCLUDED.nav_rank,
   is_visible         = EXCLUDED.is_visible,
   updated_at         = NOW();
+
+-- Feed + Announcements was consolidated into the Survivor Hub and is no longer a
+-- navigable app: its data layer (the feed_* tables + /api/feed/*) and its admin
+-- page at /admin/feed-announcements remain, but it is not a plugin tile/route.
+-- Remove any registry row left from when it was seeded as a visible app so the
+-- /apps/feed-announcements route 404s (idempotent; safe to re-run).
+DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'feed-announcements';
 
 -- === SKILLS TAXONOMY (parent tables first) ===
 CREATE TABLE IF NOT EXISTS skills_taxonomy_sectors (

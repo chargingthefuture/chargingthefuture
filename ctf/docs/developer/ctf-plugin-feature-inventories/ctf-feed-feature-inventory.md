@@ -11,9 +11,11 @@
 > Consequences tracked in the coding follow-up (ordered list in the Survivor Hub
 > inventory):
 >
-> - `feed-announcements` is retired as a separately navigable app (registry `isVisible: false`);
->   the `feed` / `announcements` aliases still resolve and the admin surface remains at
->   `/admin/feed-announcements`. The `/api/feed/*` routes and schema tables are now the Hub's
+> - `feed-announcements` is retired as a separately navigable app. Its plugin-registry row,
+>   `/apps/[pluginSlug]` route branch, the `feed` / `announcements` aliases, and the whole
+>   signed-in app shell under `components/feed/` have been removed (see the 2026-06-09 change-log
+>   entry), so `/apps/feed-announcements` now 404s. The admin surface remains at
+>   `/admin/feed-announcements`, and the `/api/feed/*` routes and schema tables are the Hub's
 >   data layer; the Hub home channel reads them via `GET /api/hub/messages`.
 > - The phantom `feed_user_extension` references (seed `INSERT`, deletion contract, and the
 >   data-model entry in §4.1 below) have been removed — no code read them and there is no real
@@ -445,6 +447,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Change Log
 
+- 2026-06-09: Deleted the retired Feed user-facing app surface (superseding the earlier same-day `is_visible = FALSE` hide — dead code is removed, not hidden). Removed the whole signed-in app shell under `components/feed/` (`feed-announcements-shell.tsx` and its icon rail, sidebar, header, right panel, compose forms, item card, and live view — all reachable only from the `/apps` route), the `feed-announcements` branch and import in `app/apps/[pluginSlug]/page.tsx`, the `feed-announcements` row from the `ctf_plugin_registry` seed and the code fallback array, and the `feed` / `announcements` aliases. Added an idempotent `DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'feed-announcements'` to `schema.sql` and `schema.demo.sql` so the existing production row is removed on deploy. `/apps/feed-announcements` now 404s. Verified `evaluatePluginAccess` takes only role/approval options (no registry lookup), so the admin page at `/admin/feed-announcements` and the `/api/feed/*` routes are unaffected; `lib/feed/*`, the Stream channel id, the account-deletion entry, and the Hub plugin styling are kept as the live data layer.
 - 2026-06-09: Corrected the `ctf_plugin_registry` seed in `schema.sql` (and `schema.demo.sql`) to set `feed-announcements` `is_visible = FALSE`, matching the 2026-05-31 consolidation decision above. The seed had still set it `TRUE`, so the live registry row stayed visible even though the code fallback array was `isVisible: false`; because `getPluginBySlug` reads `is_visible` from the database, a signed-out visitor reaching `/apps/feed-announcements` fell through to the generic public preview card instead of a 404. With the row hidden the app route 404s; Feed remains the Hub's data layer and keeps its admin lifecycle at `/admin/feed-announcements`. No table or column change.
 - 2026-06-02: Added `feed_community_posts.author_username` (nullable), captured from the poster's session when a community post is created (`createFeedCommunityPost` takes an `actorUsername`), and surfaced on the timeline as `FeedCommunityDetail.authorUsername`. Lets the Survivor Hub lead a peer post with the author's `@username` for signed-in members. Additive and forward-only — existing posts have a null username.
 - 2026-02-24: Created initial Feed rewrite checklist with approved web-first policy, central admin page decision, naming normalization/alias guidance, Postgres+Stream architecture controls, stream quota-impact gate, and schema drift predeployment evidence requirements.
