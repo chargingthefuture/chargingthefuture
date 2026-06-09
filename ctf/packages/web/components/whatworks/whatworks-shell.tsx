@@ -150,7 +150,7 @@ export function WhatWorksShell() {
   // the (legitimate) empty-list suggest state.
   if (!showSuggest && error && problems.length === 0) {
     return (
-      <div style={{ display: 'flex', height: '100vh', background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif", alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ display: 'flex', height: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif", alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 420, textAlign: 'center' }}>
           <div style={{ fontSize: 15, color: '#fecaca', marginBottom: 12 }}>{error}</div>
           <button
@@ -202,7 +202,7 @@ export function WhatWorksShell() {
 
   if (isMobile) {
     return (
-      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
+      <div style={{ minHeight: '100dvh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#0D0F14', borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND, textDecoration: 'none', flexShrink: 0 }}>
@@ -237,7 +237,7 @@ export function WhatWorksShell() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', maxHeight: '100%', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: 'hidden' }}>
       <WhatWorksIconRail />
       <WhatWorksSidebar
         problems={visibleProblems}

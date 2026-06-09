@@ -19,7 +19,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
   // and let the live shell fill the width and stack its panes vertically.
   if (isMobile) {
     return (
-      <div style={{ minHeight: '100vh', background: '#021006' }}>
+      <div style={{ minHeight: '100dvh', background: '#021006' }}>
         <div style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#030d05', borderBottom: '1px solid #052e16' }}>
           <Link
             href="/apps"
@@ -39,7 +39,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#021006' }}>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: '#021006' }}>
       {/* Left navigation rail */}
       <aside
         style={{
