@@ -32,7 +32,7 @@ export function AccountDataDesktop({
   const isEmpty = remaining.length === 0;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100dvh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: 'hidden' }}>
       {/* Left sidebar */}
       <aside style={{ width: 240, background: '#0D0F14', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '20px 16px 12px' }}>
