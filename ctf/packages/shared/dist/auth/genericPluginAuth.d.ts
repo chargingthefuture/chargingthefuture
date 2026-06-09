@@ -1,8 +1,17 @@
+import type { ClerkTokenVerifier } from './clerkAuth';
 export type AuthProvider = 'clerk' | 'supabase' | 'firebase' | 'custom';
 export interface PluginAuthContext {
     provider: AuthProvider;
     token?: string;
     userId?: string;
+    /**
+     * A real, cryptographic Clerk token verifier supplied by the caller (the web
+     * server passes one backed by `@clerk/backend`). REQUIRED to authenticate the
+     * `clerk` provider: without it, a Clerk token is NOT trusted. This keeps the
+     * shared package free of any server-only SDK while still refusing to
+     * authenticate on an unverified (forgeable) token.
+     */
+    verifier?: ClerkTokenVerifier;
 }
 export interface PluginAuthResult {
     isAuthenticated: boolean;

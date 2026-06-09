@@ -1,5 +1,6 @@
 // Shared constants, types, and helpers for the LevelUp web shell.
 // Palette derives from design/.../survivor-hub/LevelUp.tsx.
+// LevelUp is grant-only ("earn or earn nothing") — no UI ever spends/deducts a user's ServiceCredits.
 
 export const GREEN = "#22C55E";
 export const BG = "#0F1117";
@@ -70,6 +71,46 @@ export interface PendingValidation {
   milestoneId: string;
   learnerName?: string;
   task?: string;
+}
+
+export interface Trainer {
+  id: string;
+  userId: string;
+  displayName: string;
+  headline: string;
+  bio: string;
+  tracks: string[];
+  status: string;
+  activeCohortCount: number;
+}
+
+export interface Achievement {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  track: string;
+  icon: string;
+  creditReward: number;
+  sequenceNo: number;
+  earned: boolean;
+  earnedAtIso: string | null;
+  grantedCredits: number;
+}
+
+export interface WalletHistoryEntry {
+  kind: string;
+  amount: number;
+  label: string;
+  earnedAtIso: string;
+}
+
+export interface WalletView {
+  availableBalance: number;
+  walletEscrowBalance: number;
+  levelupEscrowedBalance: number;
+  totalEarned: number;
+  history: WalletHistoryEntry[];
 }
 
 export function idempotencyKey(): string {

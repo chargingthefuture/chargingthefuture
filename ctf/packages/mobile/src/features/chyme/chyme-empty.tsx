@@ -1,131 +1,125 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-const PRIMARY = '#22C55E';
+import { type ThemeTokens } from '../../theme';
 
 type Props = {
   onStartRoom: () => void;
+  tokens: ThemeTokens;
+  accent: string;
 };
 
-export const ChymeEmpty: React.FC<Props> = ({ onStartRoom }) => (
-  <View style={styles.container}>
-    <View style={styles.statusBar}>
-      <Text style={styles.clock}>9:41</Text>
-      <Text style={styles.signal}>●●●</Text>
-    </View>
-
-    <View style={styles.header}>
-      <Text style={styles.headerTitle}>Chyme</Text>
-    </View>
-
-    <View style={styles.body}>
-      <View style={styles.iconRing}>
-        {/* Radio icon placeholder — no backing field for icon asset */}
-        <Text style={styles.iconGlyph}>📻</Text>
+export const ChymeEmpty: React.FC<Props> = ({ onStartRoom, tokens, accent }) => {
+  const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
+  return (
+    <View style={styles.container}>
+      <View style={styles.statusBar}>
+        <Text style={styles.clock}>9:41</Text>
+        <Text style={styles.signal}>●●●</Text>
       </View>
-      <Text style={styles.title}>No rooms live yet</Text>
-      <Text style={styles.subtitle}>
-        Be the first to start a room. Topics can be healing, skills, or anything your community needs.
-      </Text>
-      {/* Start Room: backed by POST /api/chyme/join */}
-      <TouchableOpacity style={styles.primaryBtn} onPress={onStartRoom}>
-        <Text style={styles.primaryBtnText}>+ Start a Room</Text>
-      </TouchableOpacity>
-      {/* Schedule: no backend endpoint for scheduling yet — omitted as interactive action */}
-      <View style={styles.scheduleBtn}>
-        <Text style={styles.scheduleBtnText}>Schedule for Later</Text>
+
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Chyme</Text>
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.iconRing}>
+          {/* Radio icon placeholder — no backing field for icon asset */}
+          <Text style={styles.iconGlyph}>📻</Text>
+        </View>
+        <Text style={styles.title}>No rooms live yet</Text>
+        <Text style={styles.subtitle}>
+          Be the first to start a room. Topics can be healing, skills, or anything your community needs.
+        </Text>
+        {/* Start Room: backed by POST /api/chyme/join */}
+        <TouchableOpacity style={styles.primaryBtn} onPress={onStartRoom}>
+          <Text style={styles.primaryBtnText}>+ Start a Room</Text>
+        </TouchableOpacity>
+        {/* Schedule: no backend endpoint for scheduling yet — omitted as interactive action */}
+        <View style={styles.scheduleBtn}>
+          <Text style={styles.scheduleBtnText}>Schedule for Later</Text>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          🎤  Rooms are end-to-end encrypted and Safe Space verified
+        </Text>
       </View>
     </View>
+  );
+};
 
-    <View style={styles.footer}>
-      <Text style={styles.footerText}>
-        🎤  Rooms are end-to-end encrypted and Safe Space verified
-      </Text>
-    </View>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F1117' },
-  statusBar: {
-    backgroundColor: '#090B0F',
-    paddingTop: 12,
-    paddingBottom: 6,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  clock: { fontSize: 13, fontWeight: '600', color: '#F9FAFB' },
-  signal: { fontSize: 11, color: '#6B7280' },
-  header: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E2A3A',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: '#F9FAFB' },
-  body: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  iconRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${PRIMARY}15`,
-    borderWidth: 1,
-    borderColor: `${PRIMARY}40`,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  iconGlyph: { fontSize: 28 },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F9FAFB',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 22,
-    marginBottom: 28,
-    textAlign: 'center',
-  },
-  primaryBtn: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  primaryBtnText: { color: '#000', fontWeight: '700', fontSize: 15 },
-  scheduleBtn: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#161B27',
-    borderWidth: 1,
-    borderColor: '#1E2A3A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scheduleBtnText: { color: '#F9FAFB', fontWeight: '600', fontSize: 15 },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#1E2A3A',
-    backgroundColor: '#161B27',
-  },
-  footerText: { fontSize: 12, color: '#6B7280' },
-});
+function makeStyles(t: ThemeTokens, accent: string) {
+  const chrome = t.isComic ? t.surfaceAlt : '#090B0F';
+  const divider = t.isComic ? t.border : '#1E2A3A';
+  const r = t.radius;
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    statusBar: {
+      backgroundColor: chrome,
+      paddingTop: 12,
+      paddingBottom: 6,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    clock: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
+    signal: { fontSize: 11, color: t.textSecondary },
+    header: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: t.isComic ? 2 : 1,
+      borderBottomColor: divider,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    headerTitle: { fontSize: 15, fontWeight: '700', color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+    iconRing: {
+      width: 72,
+      height: 72,
+      borderRadius: t.isComic ? 0 : 36,
+      backgroundColor: t.isComic ? `${t.border}12` : `${accent}15`,
+      borderWidth: t.isComic ? 2 : 1,
+      borderColor: t.isComic ? t.border : `${accent}40`,
+      borderStyle: t.isComic ? 'solid' : 'dashed',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    iconGlyph: { fontSize: 28 },
+    title: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
+    subtitle: { fontSize: 14, color: t.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center' },
+    primaryBtn: {
+      width: '100%',
+      paddingVertical: 14,
+      borderRadius: r,
+      backgroundColor: t.isComic ? t.surface : accent,
+      borderWidth: t.isComic ? 1.5 : 0,
+      borderColor: t.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    primaryBtnText: { color: t.isComic ? t.border : '#000', fontWeight: t.isComic ? '800' : '700', fontSize: 15, textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    scheduleBtn: {
+      width: '100%',
+      paddingVertical: 14,
+      borderRadius: r,
+      backgroundColor: t.surface,
+      borderWidth: t.isComic ? 1.5 : 1,
+      borderColor: t.isComic ? `${t.borderDim}50` : '#1E2A3A',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    scheduleBtnText: { color: t.isComic ? t.textSecondary : t.textPrimary, fontWeight: '600', fontSize: 15 },
+    footer: {
+      padding: 16,
+      borderTopWidth: t.isComic ? 2 : 1,
+      borderTopColor: divider,
+      backgroundColor: t.surface,
+    },
+    footerText: { fontSize: 12, color: t.textSecondary },
+  });
+}

@@ -2,14 +2,13 @@
 
 import type { ShellSection } from './shell-types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
-import type { HubChannelInfo, HubDMInfo } from '../../lib/hub/types';
+import type { HubChannelInfo } from '../../lib/hub/types';
 import { getPluginVisuals } from './shell-plugin-config';
 import styles from './community-shell.module.css';
 
 type ShellSidebarProps = {
   section: ShellSection;
   channels: HubChannelInfo[];
-  dms: HubDMInfo[];
   plugins: PluginRegistryItem[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
@@ -26,7 +25,6 @@ type ShellSidebarProps = {
 export function ShellSidebar({
   section,
   channels,
-  dms,
   plugins,
   activeChannel,
   onChannelSelect,
@@ -77,23 +75,6 @@ export function ShellSidebar({
                 </button>
               );
             })}
-            <p className={styles.sidebarGroupLabel}>Direct Messages</p>
-            {dms.map((dm) => (
-              <button
-                key={dm.id}
-                type="button"
-                className={styles.sidebarDm}
-                onClick={() => {
-                  // TODO: Open DM thread; wire to shell-chat-panel to show DM thread view
-                }}
-              >
-                <span className={styles.sidebarDmDot} aria-hidden="true" />
-                <span className={styles.sidebarDmName}>{dm.counterpartDisplayName}</span>
-                {dm.unreadCount > 0 && (
-                  <span className={`${styles.sidebarBadge}`}>{dm.unreadCount}</span>
-                )}
-              </button>
-            ))}
           </>
         ) : (
           plugins.map((plugin) => {

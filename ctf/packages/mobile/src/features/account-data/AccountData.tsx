@@ -1,10 +1,14 @@
 // Real Account & Data screen — pixel-pass to
 // design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/MobileAccountData.tsx
-// (plus MobileAccountDataEmpty / MobileAccountDataConfirmDelete states).
+// (default theme) and ComicMobileAccountData.tsx / ComicMobileAccountDanger.tsx (comic theme).
 //
 // API bindings: GET /api/account/services, DELETE /api/account/services/:slug,
 // DELETE /api/account/full-account. Service names and summaries come from the live registry
 // projection — never hardcoded here.
+//
+// Theme: colours come from the active theme tokens (useTheme). In comic theme the panels use
+// the ink/cream/danger palette with sharp corners and the 3px offset shadow; in default theme
+// the screen is visually unchanged from before. The theme toggle lives in this screen's header.
 //
 // Omissions vs mockup (no backing API): "Export your data" and "Deactivate instead" controls are
 // not rendered — there is no export or deactivate endpoint, and the real-data-only rule forbids
@@ -21,20 +25,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme, type ThemeTokens } from '../../theme';
 import {
   fetchAccountServices,
   deleteServiceData,
   deleteFullAccount,
   type AccountService,
 } from './api';
-
-const BRAND = '#E91E8C';
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const DANGER = '#EF4444';
 
 const CONFIRM_PHRASE = 'delete my account';
 
@@ -50,9 +47,21 @@ function glyph(slug: string): string {
   return SERVICE_GLYPH[slug] ?? '📁';
 }
 
+// The Account & Data accent is the destructive-zone colour: comic-danger in comic theme,
+// the existing pink brand in default theme. Everything else is driven from the theme tokens.
+function accentFor(t: ThemeTokens): string {
+  return t.isComic ? '#B91C1C' : '#E91E8C';
+}
+
 type Tab = 'data' | 'danger';
 
+type Styles = ReturnType<typeof makeStyles>;
+
 export function AccountData() {
+  const { tokens, theme, setTheme } = useTheme();
+  const brand = accentFor(tokens);
+  const s = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
+
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [deletable, setDeletable] = useState<AccountService[]>([]);
@@ -80,7 +89,7 @@ export function AccountData() {
   }, [load]);
 
   const remaining = useMemo(
-    () => deletable.filter((s) => !deletedSlugs.includes(s.slug)),
+    () => deletable.filter((svc) => !deletedSlugs.includes(svc.slug)),
     [deletable, deletedSlugs],
   );
   const totalServices = deletable.length + retained.length;
@@ -114,7 +123,7 @@ export function AccountData() {
   if (loading) {
     return (
       <View style={[s.root, s.center]}>
-        <ActivityIndicator color={BRAND} />
+        <ActivityIndicator color={brand} />
       </View>
     );
   }
@@ -134,6 +143,9 @@ export function AccountData() {
   if (confirmOpen) {
     return (
       <ConfirmDelete
+        s={s}
+        tokens={tokens}
+        brand={brand}
         serviceCount={totalServices}
         onCancel={() => setConfirmOpen(false)}
       />
@@ -155,6 +167,13 @@ export function AccountData() {
             <Text style={s.headerSub}>{totalServices} services · your control</Text>
           </View>
         </View>
+
+        {/* App theme toggle — keeps web and mobile in sync for the signed-in user */}
+        <View style={s.themeRow}>
+          <Text style={s.themeLabel}>App theme</Text>
+          <ThemeToggleControl />
+        </View>
+
         <View style={s.tabRow}>
           {(['data', 'danger'] as Tab[]).map((t) => {
             const active = tab === t;
@@ -182,7 +201,7 @@ export function AccountData() {
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
         {tab === 'data' ? (
           isEmpty ? (
-            <EmptyState hasRetained={retained.length > 0} />
+            <EmptyState s={s} hasRetained={retained.length > 0} />
           ) : (
             <>
               <View style={s.notice}>
@@ -197,7 +216,7 @@ export function AccountData() {
                   const isPending = pendingSlug === service.slug;
                   const error = rowError?.slug === service.slug ? rowError.message : null;
                   return (
-                    // key goes on the Fragment, not the View: @types/react 19.2 rejects `key`
+                    // key goes on the Fragment, not the View: @types/react rejects `key`
                     // on class-based host components like View ("does not exist on ViewProps").
                     <React.Fragment key={service.slug}>
                       <View style={[s.row, error ? s.rowError : null, isPending && s.rowPending]}>
@@ -215,7 +234,7 @@ export function AccountData() {
                           accessibilityRole="button"
                           accessibilityLabel={`Delete your ${service.name} data`}
                         >
-                          {isPending ? <ActivityIndicator color={DANGER} size="small" /> : <Text style={s.deleteBtnText}>🗑</Text>}
+                          {isPending ? <ActivityIndicator color={brand} size="small" /> : <Text style={s.deleteBtnText}>🗑</Text>}
                         </TouchableOpacity>
                       </View>
                     </React.Fragment>
@@ -249,14 +268,41 @@ export function AccountData() {
             </>
           )
         ) : (
-          <DangerZone serviceCount={totalServices} onContinue={() => setConfirmOpen(true)} />
+          <DangerZone s={s} tokens={tokens} serviceCount={totalServices} onContinue={() => setConfirmOpen(true)} />
         )}
       </ScrollView>
     </View>
   );
+
+  // Inline so the toggle reads the same theme context (theme + setTheme) without prop
+  // drilling. Mirrors the shared ThemeToggle but uses this screen's themed styles.
+  function ThemeToggleControl() {
+    const options: Array<{ value: 'default' | 'comic'; label: string }> = [
+      { value: 'default', label: 'Default' },
+      { value: 'comic', label: 'Comic' },
+    ];
+    return (
+      <View accessibilityRole="radiogroup" accessibilityLabel="App theme" style={s.themeGroup}>
+        {options.map((opt) => {
+          const active = theme === opt.value;
+          return (
+            <TouchableOpacity
+              key={opt.value}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              onPress={() => setTheme(opt.value)}
+              style={[s.themeOption, active && s.themeOptionActive]}
+            >
+              <Text style={[s.themeOptionText, active && s.themeOptionTextActive]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  }
 }
 
-function EmptyState({ hasRetained }: { hasRetained: boolean }) {
+function EmptyState({ s, hasRetained }: { s: Styles; hasRetained: boolean }) {
   return (
     <View style={s.emptyWrap}>
       <View style={s.emptyAnchor}>
@@ -277,7 +323,8 @@ function EmptyState({ hasRetained }: { hasRetained: boolean }) {
   );
 }
 
-function DangerZone({ serviceCount, onContinue }: { serviceCount: number; onContinue: () => void }) {
+function DangerZone({ s, tokens, serviceCount, onContinue }: { s: Styles; tokens: ThemeTokens; serviceCount: number; onContinue: () => void }) {
+  const danger = tokens.danger;
   const points: Array<{ t: string; warn: boolean }> = [
     { t: 'All personal data permanently deleted', warn: true },
     { t: 'ServiceCredits settled via standard process', warn: false },
@@ -293,7 +340,7 @@ function DangerZone({ serviceCount, onContinue }: { serviceCount: number; onCont
       {points.map((p, i) => (
         <React.Fragment key={i}>
           <View style={s.bulletRow}>
-            <View style={[s.bulletDot, { backgroundColor: p.warn ? DANGER : '#4B5563' }]} />
+            <View style={[s.bulletDot, { backgroundColor: p.warn ? danger : tokens.textSecondary }]} />
             <Text style={[s.bulletText, p.warn ? s.bulletTextWarn : null]}>{p.t}</Text>
           </View>
         </React.Fragment>
@@ -305,7 +352,7 @@ function DangerZone({ serviceCount, onContinue }: { serviceCount: number; onCont
   );
 }
 
-function ConfirmDelete({ serviceCount, onCancel }: { serviceCount: number; onCancel: () => void }) {
+function ConfirmDelete({ s, tokens, brand, serviceCount, onCancel }: { s: Styles; tokens: ThemeTokens; brand: string; serviceCount: number; onCancel: () => void }) {
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -365,7 +412,7 @@ function ConfirmDelete({ serviceCount, onCancel }: { serviceCount: number; onCan
           {points.map((p, i) => (
             <React.Fragment key={i}>
               <View style={s.bulletRow}>
-                <Text style={[s.confirmBulletGlyph, { color: p.warn ? DANGER : SUBTLE }]}>{p.warn ? '🗑' : '🔒'}</Text>
+                <Text style={[s.confirmBulletGlyph, { color: p.warn ? tokens.danger : tokens.textSecondary }]}>{p.warn ? '🗑' : '🔒'}</Text>
                 <Text style={s.confirmBulletText}>{p.t}</Text>
               </View>
             </React.Fragment>
@@ -380,7 +427,7 @@ function ConfirmDelete({ serviceCount, onCancel }: { serviceCount: number; onCan
             value={input}
             onChangeText={setInput}
             placeholder={CONFIRM_PHRASE}
-            placeholderTextColor="#4B5563"
+            placeholderTextColor={tokens.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             style={[s.confirmInput, ready && s.confirmInputReady]}
@@ -400,7 +447,7 @@ function ConfirmDelete({ serviceCount, onCancel }: { serviceCount: number; onCan
           accessibilityRole="button"
         >
           {status === 'submitting' ? (
-            <ActivityIndicator color={DANGER} size="small" />
+            <ActivityIndicator color={brand} size="small" />
           ) : (
             <Text style={[s.confirmDeleteText, ready ? s.confirmDeleteTextReady : null]}>🗑 Delete permanently</Text>
           )}
@@ -418,86 +465,98 @@ function ConfirmDelete({ serviceCount, onCancel }: { serviceCount: number; onCan
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: BORDER },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  headerIcon: { width: 34, height: 34, borderRadius: 9, backgroundColor: `${BRAND}20`, borderWidth: 1, borderColor: `${BRAND}35`, alignItems: 'center', justifyContent: 'center' },
-  headerIconText: { fontSize: 16, color: BRAND },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
-  headerSub: { fontSize: 11, color: SUBTLE },
-  tabRow: { flexDirection: 'row', gap: 4 },
-  tab: { flex: 1, paddingVertical: 7, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: BORDER, alignItems: 'center' },
-  tabActive: { backgroundColor: `${BRAND}18`, borderColor: `${BRAND}40` },
-  tabDangerActive: { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.4)' },
-  tabText: { fontSize: 12, color: SUBTLE },
-  tabTextActive: { color: BRAND, fontWeight: '700' },
-  tabTextDangerActive: { color: DANGER, fontWeight: '700' },
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 28 },
-  notice: { padding: 12, borderRadius: 10, backgroundColor: `${BRAND}0D`, borderWidth: 1, borderColor: `${BRAND}25`, marginBottom: 16 },
-  noticeText: { fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: SUBTLE, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 10 },
-  list: { gap: 7, marginBottom: 22 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER },
-  rowError: { borderColor: 'rgba(239,68,68,0.35)' },
-  rowPending: { opacity: 0.7 },
-  rowGlyph: { width: 30, height: 30, borderRadius: 8, backgroundColor: `${BRAND}10`, borderWidth: 1, borderColor: `${BRAND}20`, alignItems: 'center', justifyContent: 'center' },
-  rowGlyphText: { fontSize: 14 },
-  rowBody: { flex: 1 },
-  rowName: { fontSize: 13, fontWeight: '600', color: TEXT },
-  rowSummary: { fontSize: 11, color: '#4B5563', lineHeight: 15, marginTop: 1 },
-  rowSummaryError: { color: '#F87171' },
-  deleteBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 7, backgroundColor: 'rgba(239,68,68,0.06)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', minWidth: 36, alignItems: 'center' },
-  deleteBtnText: { color: DANGER, fontSize: 13 },
-  retainedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 11, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: BORDER },
-  retainedGlyph: { width: 30, height: 30, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  retainedNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  retainedName: { fontSize: 13, fontWeight: '600', color: SUBTLE },
-  lockGlyph: { fontSize: 10 },
-  retainedReason: { fontSize: 11, color: '#4B5563', lineHeight: 15 },
-  emptyWrap: { alignItems: 'center', paddingVertical: 24 },
-  emptyAnchor: { width: 56, height: 56, borderRadius: 16, backgroundColor: `${BRAND}14`, borderWidth: 1, borderColor: `${BRAND}30`, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyAnchorText: { fontSize: 24 },
-  emptyTitle: { fontSize: 19, fontWeight: '800', color: TEXT, marginBottom: 8, textAlign: 'center' },
-  emptySub: { fontSize: 13, color: SUBTLE, lineHeight: 20, textAlign: 'center', marginBottom: 20 },
-  dangerCard: { padding: 18, borderRadius: 14, backgroundColor: 'rgba(239,68,68,0.04)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.18)' },
-  dangerTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 10 },
-  dangerBody: { fontSize: 13, color: '#9CA3AF', lineHeight: 20, marginBottom: 14 },
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 7 },
-  bulletDot: { width: 4, height: 4, borderRadius: 2, marginTop: 6 },
-  bulletText: { flex: 1, fontSize: 12, color: '#9CA3AF', lineHeight: 17 },
-  bulletTextWarn: { color: '#F87171' },
-  dangerBtn: { marginTop: 8, paddingVertical: 11, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.35)', alignItems: 'center' },
-  dangerBtnText: { color: DANGER, fontSize: 14, fontWeight: '700' },
-  confirmHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BORDER },
-  confirmHeaderIcon: { width: 34, height: 34, borderRadius: 9, backgroundColor: 'rgba(239,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)', alignItems: 'center', justifyContent: 'center' },
-  confirmHeaderIconText: { fontSize: 16 },
-  confirmClose: { width: 30, height: 30, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' },
-  confirmCloseText: { color: SUBTLE, fontSize: 14 },
-  confirmInfo: { padding: 16, borderRadius: 14, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.18)', marginBottom: 18 },
-  confirmInfoTitle: { fontSize: 14, fontWeight: '700', color: TEXT, marginBottom: 12 },
-  confirmBulletGlyph: { fontSize: 13, marginTop: 1 },
-  confirmBulletText: { flex: 1, fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
-  confirmFieldWrap: { padding: 14, borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, marginBottom: 18 },
-  confirmFieldLabel: { fontSize: 13, color: '#9CA3AF', marginBottom: 10, lineHeight: 19 },
-  confirmPhrase: { color: DANGER, fontWeight: '700' },
-  confirmInput: { paddingVertical: 11, paddingHorizontal: 12, backgroundColor: BG, borderWidth: 1, borderColor: BORDER, borderRadius: 9, fontSize: 14, color: TEXT },
-  confirmInputReady: { borderColor: 'rgba(239,68,68,0.5)', color: DANGER },
-  confirmErrorBox: { padding: 12, borderRadius: 8, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', marginBottom: 16 },
-  confirmErrorText: { color: '#F87171', fontSize: 13, lineHeight: 18 },
-  confirmDeleteBtn: { paddingVertical: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: BORDER, alignItems: 'center', marginBottom: 10 },
-  confirmDeleteBtnReady: { backgroundColor: 'rgba(239,68,68,0.14)', borderColor: 'rgba(239,68,68,0.45)' },
-  confirmDeleteText: { color: '#374151', fontSize: 15, fontWeight: '700' },
-  confirmDeleteTextReady: { color: DANGER },
-  keepBtn: { paddingVertical: 14, borderRadius: 12, backgroundColor: `${BRAND}12`, borderWidth: 1, borderColor: `${BRAND}30`, alignItems: 'center' },
-  keepText: { color: BRAND, fontSize: 15, fontWeight: '600' },
-  doneGlyph: { fontSize: 48, marginBottom: 18 },
-  doneTitle: { fontSize: 20, fontWeight: '800', color: TEXT, marginBottom: 10, textAlign: 'center' },
-  doneSub: { fontSize: 13, color: SUBTLE, lineHeight: 21, textAlign: 'center' },
-  errTitle: { fontSize: 16, fontWeight: '700', color: TEXT, marginBottom: 8, textAlign: 'center' },
-  errSub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginBottom: 16 },
-  retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 10, backgroundColor: `${BRAND}15`, borderWidth: 1, borderColor: `${BRAND}30` },
-  retryText: { color: BRAND, fontSize: 14, fontWeight: '600' },
-});
+function makeStyles(t: ThemeTokens, brand: string) {
+  const danger = t.danger;
+  const r = t.radius;
+  const rChip = t.radiusChip;
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: t.bg },
+    center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+    header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, borderBottomWidth: t.isComic ? 2 : 1, borderBottomColor: t.border },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+    headerIcon: { width: 34, height: 34, borderRadius: rChip, backgroundColor: t.isComic ? t.bg : `${brand}20`, borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? t.border : `${brand}35`, alignItems: 'center', justifyContent: 'center' },
+    headerIconText: { fontSize: 16, color: brand },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    headerSub: { fontSize: 11, color: t.textSecondary },
+    themeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+    themeLabel: { fontSize: 11, fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.7 },
+    themeGroup: { flexDirection: 'row', borderWidth: 1.5, borderColor: t.border, borderRadius: rChip, overflow: 'hidden', backgroundColor: t.surface },
+    themeOption: { paddingHorizontal: 14, paddingVertical: 5 },
+    themeOptionActive: { backgroundColor: t.isComic ? t.border : t.textPrimary },
+    themeOptionText: { fontSize: 11, fontWeight: '700', color: t.textSecondary, textTransform: 'uppercase', letterSpacing: 0.6 },
+    themeOptionTextActive: { color: t.bg },
+    tabRow: { flexDirection: 'row', gap: t.isComic ? 5 : 4 },
+    tab: { flex: 1, paddingVertical: 7, borderRadius: t.isComic ? 0 : 8, backgroundColor: t.isComic ? 'transparent' : 'rgba(255,255,255,0.04)', borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? `${t.borderDim}40` : t.border, alignItems: 'center' },
+    tabActive: { backgroundColor: t.isComic ? `${t.border}14` : `${brand}18`, borderColor: t.isComic ? t.border : `${brand}40` },
+    tabDangerActive: { backgroundColor: t.isComic ? `${danger}18` : 'rgba(239,68,68,0.12)', borderColor: t.isComic ? danger : 'rgba(239,68,68,0.4)' },
+    tabText: { fontSize: t.isComic ? 11 : 12, color: t.textSecondary, textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    tabTextActive: { color: t.isComic ? t.textPrimary : brand, fontWeight: '700' },
+    tabTextDangerActive: { color: danger, fontWeight: '700' },
+    scroll: { flex: 1 },
+    scrollContent: { padding: 16, paddingBottom: 28 },
+    notice: { padding: 12, borderRadius: r, backgroundColor: t.isComic ? `${t.border}08` : `${brand}0D`, borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? t.border : `${brand}25`, marginBottom: 16 },
+    noticeText: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
+    sectionLabel: { fontSize: t.isComic ? 9 : 12, fontWeight: t.isComic ? '800' : '700', color: t.isComic ? t.border : t.textSecondary, textTransform: 'uppercase', letterSpacing: t.isComic ? 1.4 : 0.7, marginBottom: 10, ...(t.isComic ? { borderLeftWidth: 3, borderLeftColor: t.border, paddingLeft: 7 } : {}) },
+    list: { gap: t.isComic ? 5 : 7, marginBottom: 22 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: r, backgroundColor: t.surface, borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? `${t.border}35` : t.border },
+    rowError: { borderColor: t.isComic ? danger : 'rgba(239,68,68,0.35)' },
+    rowPending: { opacity: 0.7 },
+    rowGlyph: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? `${t.border}0C` : `${brand}10`, borderWidth: 1, borderColor: t.isComic ? `${t.border}30` : `${brand}20`, alignItems: 'center', justifyContent: 'center' },
+    rowGlyphText: { fontSize: 14 },
+    rowBody: { flex: 1 },
+    rowName: { fontSize: 13, fontWeight: t.isComic ? '700' : '600', color: t.textPrimary },
+    rowSummary: { fontSize: t.isComic ? 10 : 11, color: t.textMuted, lineHeight: 15, marginTop: 1 },
+    rowSummaryError: { color: t.isComic ? danger : '#F87171' },
+    deleteBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: t.isComic ? 0 : 7, backgroundColor: t.isComic ? t.surface : 'rgba(239,68,68,0.06)', borderWidth: 1.5, borderColor: t.isComic ? `${danger}60` : 'rgba(239,68,68,0.2)', minWidth: 36, alignItems: 'center' },
+    deleteBtnText: { color: danger, fontSize: 13, fontWeight: t.isComic ? '800' : '400' },
+    retainedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 11, borderRadius: r, backgroundColor: t.isComic ? `${t.border}05` : 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: t.isComic ? `${t.borderDim}35` : t.border },
+    retainedGlyph: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? `${t.border}08` : 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: t.isComic ? `${t.borderDim}30` : t.border, alignItems: 'center', justifyContent: 'center' },
+    retainedNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+    retainedName: { fontSize: 13, fontWeight: t.isComic ? '700' : '600', color: t.textSecondary },
+    lockGlyph: { fontSize: 10 },
+    retainedReason: { fontSize: t.isComic ? 10 : 11, color: t.textMuted, lineHeight: 15 },
+    emptyWrap: { alignItems: 'center', paddingVertical: 24 },
+    emptyAnchor: { width: 56, height: 56, borderRadius: t.isComic ? 0 : 16, backgroundColor: t.isComic ? `${t.border}14` : `${brand}14`, borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? t.border : `${brand}30`, borderStyle: t.isComic ? 'solid' : 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+    emptyAnchorText: { fontSize: 24 },
+    emptyTitle: { fontSize: 19, fontWeight: '800', color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
+    emptySub: { fontSize: 13, color: t.textSecondary, lineHeight: 20, textAlign: 'center', marginBottom: 20 },
+    dangerCard: { padding: 18, borderRadius: r, backgroundColor: t.isComic ? `${danger}08` : 'rgba(239,68,68,0.04)', borderWidth: 2, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.18)' },
+    dangerTitle: { fontSize: 15, fontWeight: t.isComic ? '800' : '700', color: t.textPrimary, marginBottom: 10, textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    dangerBody: { fontSize: 13, color: t.textSecondary, lineHeight: 20, marginBottom: 14 },
+    bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 7 },
+    bulletDot: { width: 4, height: 4, borderRadius: t.isComic ? 0 : 2, marginTop: 6 },
+    bulletText: { flex: 1, fontSize: 12, color: t.textSecondary, lineHeight: 17 },
+    bulletTextWarn: { color: t.isComic ? `${danger}CC` : '#F87171' },
+    dangerBtn: { marginTop: 8, paddingVertical: 11, borderRadius: r, backgroundColor: t.isComic ? `${danger}12` : 'rgba(239,68,68,0.1)', borderWidth: 2, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.35)', alignItems: 'center' },
+    dangerBtnText: { color: danger, fontSize: 14, fontWeight: t.isComic ? '800' : '700', textTransform: t.isComic ? 'uppercase' : 'none', letterSpacing: t.isComic ? 0.6 : 0 },
+    confirmHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: t.isComic ? 2 : 1, borderBottomColor: t.isComic ? t.border : t.border },
+    confirmHeaderIcon: { width: 34, height: 34, borderRadius: rChip, backgroundColor: t.isComic ? `${danger}12` : 'rgba(239,68,68,0.12)', borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.25)', alignItems: 'center', justifyContent: 'center' },
+    confirmHeaderIconText: { fontSize: 16 },
+    confirmClose: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
+    confirmCloseText: { color: t.textSecondary, fontSize: 14 },
+    confirmInfo: { padding: 16, borderRadius: r, backgroundColor: t.isComic ? `${danger}08` : 'rgba(239,68,68,0.05)', borderWidth: 2, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.18)', marginBottom: 18 },
+    confirmInfoTitle: { fontSize: 14, fontWeight: '700', color: t.textPrimary, marginBottom: 12 },
+    confirmBulletGlyph: { fontSize: 13, marginTop: 1 },
+    confirmBulletText: { flex: 1, fontSize: 12, color: t.textSecondary, lineHeight: 18 },
+    confirmFieldWrap: { padding: 14, borderRadius: r, backgroundColor: t.surface, borderWidth: t.isComic ? 1.5 : 1, borderColor: t.border, marginBottom: 18 },
+    confirmFieldLabel: { fontSize: 13, color: t.textSecondary, marginBottom: 10, lineHeight: 19 },
+    confirmPhrase: { color: danger, fontWeight: '700' },
+    confirmInput: { paddingVertical: 11, paddingHorizontal: 12, backgroundColor: t.bg, borderWidth: t.isComic ? 1.5 : 1, borderColor: t.border, borderRadius: r, fontSize: 14, color: t.textPrimary },
+    confirmInputReady: { borderColor: t.isComic ? danger : 'rgba(239,68,68,0.5)', color: danger },
+    confirmErrorBox: { padding: 12, borderRadius: r, backgroundColor: t.isComic ? `${danger}10` : 'rgba(239,68,68,0.08)', borderWidth: 1.5, borderColor: t.isComic ? danger : 'rgba(239,68,68,0.3)', marginBottom: 16 },
+    confirmErrorText: { color: t.isComic ? danger : '#F87171', fontSize: 13, lineHeight: 18 },
+    confirmDeleteBtn: { paddingVertical: 14, borderRadius: r, backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.04)', borderWidth: t.isComic ? 1.5 : 1, borderColor: t.border, alignItems: 'center', marginBottom: 10 },
+    confirmDeleteBtnReady: { backgroundColor: t.isComic ? `${danger}14` : 'rgba(239,68,68,0.14)', borderColor: t.isComic ? danger : 'rgba(239,68,68,0.45)' },
+    confirmDeleteText: { color: t.textMuted, fontSize: 15, fontWeight: '700' },
+    confirmDeleteTextReady: { color: danger },
+    keepBtn: { paddingVertical: 14, borderRadius: r, backgroundColor: t.isComic ? `${t.border}12` : `${brand}12`, borderWidth: 1, borderColor: t.isComic ? t.border : `${brand}30`, alignItems: 'center' },
+    keepText: { color: t.isComic ? t.textPrimary : brand, fontSize: 15, fontWeight: '600' },
+    doneGlyph: { fontSize: 48, marginBottom: 18 },
+    doneTitle: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
+    doneSub: { fontSize: 13, color: t.textSecondary, lineHeight: 21, textAlign: 'center' },
+    errTitle: { fontSize: 16, fontWeight: '700', color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
+    errSub: { fontSize: 13, color: t.textSecondary, textAlign: 'center', marginBottom: 16 },
+    retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: r, backgroundColor: t.isComic ? `${t.border}15` : `${brand}15`, borderWidth: 1, borderColor: t.isComic ? t.border : `${brand}30` },
+    retryText: { color: t.isComic ? t.textPrimary : brand, fontSize: 14, fontWeight: '600' },
+  });
+}

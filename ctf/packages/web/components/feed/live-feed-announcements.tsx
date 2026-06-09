@@ -290,7 +290,7 @@ export function LiveFeedAnnouncements({ initialItems, initialConfig, initialErro
   ];
 
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100vh', background: FEED_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+    <div style={{ width: '100%', height: '100%', minHeight: '100dvh', background: FEED_BG, fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0', display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
       {!isMobile && <FeedAnnouncementsIconRail uiTab={uiTab} onTabChange={setUiTab} unreadCount={unreadCount} />}
 
       {!isMobile && (

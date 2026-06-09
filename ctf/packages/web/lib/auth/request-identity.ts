@@ -1,5 +1,5 @@
 import { cookies, headers } from 'next/headers';
-import { authenticatePluginUser, type AuthProvider } from '@ctf/shared';
+import { verifyBearerIdentity } from './verify-bearer';
 
 type MaybeValue = string | null | undefined;
 
@@ -57,42 +57,74 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const headerStore = await headers();
   const cookieStore = await cookies();
 
-  const userId = readIdentityValue('x-ctf-user-id', 'ctf_user_id', headerStore, cookieStore);
-  const authProviderRaw = readIdentityValue('x-ctf-auth-provider', 'ctf_auth_provider', headerStore, cookieStore);
-  const token = readIdentityValue('authorization', 'ctf_token', headerStore, cookieStore);
-  const provider = (authProviderRaw as AuthProvider) || 'custom';
+  // The web Clerk middleware is the ONLY thing allowed to set the managed
+  // `x-ctf-*` identity headers: it strips whatever the client sent and rewrites
+  // them from the verified Clerk session, marking the request with
+  // `x-ctf-authenticated`. So a same-origin web request (SSR/route handler) is
+  // already trusted here. We only read the `x-ctf-user-*` identity headers when
+  // the middleware confirmed authentication (`x-ctf-authenticated === 'true'`).
+  const middlewareAuthenticated =
+    normalizeBoolean(headerStore.get('x-ctf-authenticated')) === true &&
+    pickFirstNonEmpty(headerStore.get('x-ctf-user-id')) !== null;
 
-  // Delegate to canonical generic auth logic
-  const authResult = await authenticatePluginUser({
-    provider,
-    token: token || undefined,
-    userId: userId || undefined,
-  });
+  if (middlewareAuthenticated) {
+    const userId = readIdentityValue('x-ctf-user-id', 'ctf_user_id', headerStore, cookieStore);
+    const username = readIdentityValue('x-ctf-username', 'ctf_username', headerStore, cookieStore);
+    const firstName = readIdentityValue('x-ctf-first-name', 'ctf_first_name', headerStore, cookieStore);
+    const lastName = readIdentityValue('x-ctf-last-name', 'ctf_last_name', headerStore, cookieStore);
+    const role = normalizeRole(
+      readIdentityValue('x-ctf-user-role', 'ctf_user_role', headerStore, cookieStore),
+    );
+    const isApproved =
+      normalizeBoolean(
+        readIdentityValue('x-ctf-user-approved', 'ctf_user_approved', headerStore, cookieStore),
+      ) ?? true;
 
-  const explicitAuthenticationState = normalizeBoolean(
-    readIdentityValue('x-ctf-authenticated', 'ctf_authenticated', headerStore, cookieStore),
-  );
-  const isAuthenticated = explicitAuthenticationState ?? authResult.isAuthenticated;
-  const username = readIdentityValue('x-ctf-username', 'ctf_username', headerStore, cookieStore);
-  const firstName = readIdentityValue('x-ctf-first-name', 'ctf_first_name', headerStore, cookieStore);
-  const lastName = readIdentityValue('x-ctf-last-name', 'ctf_last_name', headerStore, cookieStore);
-  const role = normalizeRole(
-    readIdentityValue('x-ctf-user-role', 'ctf_user_role', headerStore, cookieStore),
-  );
-  const isApproved = normalizeBoolean(
-    readIdentityValue('x-ctf-user-approved', 'ctf_user_approved', headerStore, cookieStore),
-  ) ?? isAuthenticated;
+    return {
+      isAuthenticated: true,
+      authProvider: 'clerk',
+      userId,
+      username,
+      firstName,
+      lastName,
+      role,
+      isAdmin: role === 'admin',
+      isApproved,
+    };
+  }
 
+  // External API client path (e.g. the mobile app): the request carries an
+  // `Authorization: Bearer <clerk session token>`. We CRYPTOGRAPHICALLY verify
+  // that token with Clerk's server SDK and derive identity ONLY from the verified
+  // claims. Spoofable `x-ctf-user-*` headers are never read on this path, so an
+  // external caller cannot forge an identity.
+  const verified = await verifyBearerIdentity(headerStore.get('authorization'));
+  if (verified) {
+    const role = verified.role ? verified.role.toLowerCase() : null;
+    return {
+      isAuthenticated: true,
+      authProvider: 'clerk',
+      userId: verified.userId,
+      username: verified.username,
+      firstName: verified.firstName,
+      lastName: verified.lastName,
+      role,
+      isAdmin: role === 'admin',
+      isApproved: verified.isApproved ?? true,
+    };
+  }
+
+  // Unauthenticated.
   return {
-    isAuthenticated,
-    authProvider: provider,
-    userId: isAuthenticated ? authResult.userId || userId : null,
-    username: isAuthenticated ? username : null,
-    firstName: isAuthenticated ? firstName : null,
-    lastName: isAuthenticated ? lastName : null,
-    role: isAuthenticated ? role : null,
-    isAdmin: isAuthenticated ? role === 'admin' : false,
-    isApproved: isAuthenticated ? isApproved : false,
+    isAuthenticated: false,
+    authProvider: 'clerk',
+    userId: null,
+    username: null,
+    firstName: null,
+    lastName: null,
+    role: null,
+    isAdmin: false,
+    isApproved: false,
   };
 }
 

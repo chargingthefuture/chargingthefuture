@@ -1,11 +1,4 @@
-import Constants from 'expo-constants';
-
-type MobileRequestIdentity = {
-  userId: string;
-  username: string;
-  role: 'member' | 'admin';
-  isApproved: boolean;
-};
+import { authedFetchJson } from '../../auth/authedFetch';
 
 export function chymeHandle(username: string | null, userId: string): string {
   return username ? '@' + username : 'user-' + userId.slice(0, 8);
@@ -47,7 +40,7 @@ type ChymeSendResponse = {
   };
 };
 
-type ChymeJoinResponse = {
+export type ChymeJoinResponse = {
   ok: true;
   roomId: string;
   roomKey: string;
@@ -64,117 +57,34 @@ type ChymeDeletionResponse = {
   requestedAtIso: string;
 };
 
-type RuntimeConfig = {
-  mobileAppUrl?: string;
-  chymeRequestIdentity?: {
-    userId?: string;
-    username?: string;
-    role?: string;
-    isApproved?: string | boolean;
-  };
-};
+// Identity is no longer passed in: the user is whoever the verified Clerk
+// session token (Authorization: Bearer) resolves to on the backend. All requests
+// go through authedFetchJson, which attaches that token.
 
-function getRuntimeConfig(): RuntimeConfig {
-  return (Constants.expoConfig?.extra ?? Constants.manifest2?.extra ?? {}) as RuntimeConfig;
+export async function getChymeRoom(): Promise<ChymeRoomResponse> {
+  return authedFetchJson('/api/chyme/room');
 }
 
-function getBaseUrl(): string {
-  const mobileAppUrl = getRuntimeConfig().mobileAppUrl;
-  if (typeof mobileAppUrl === 'string' && mobileAppUrl.trim().length > 0) {
-    return mobileAppUrl.trim().replace(/\/$/, '');
-  }
-
-  throw new Error('MOBILE_APP_URL is required for Chyme mobile parity.');
+export async function getChymeMessages(): Promise<ChymeMessagesResponse> {
+  return authedFetchJson('/api/chyme/messages?limit=50');
 }
 
-function normalizeApproved(value: string | boolean | undefined): boolean {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-
-  const normalized = String(value ?? 'approved').trim().toLowerCase();
-  return ['1', 'true', 'yes', 'approved'].includes(normalized);
-}
-
-export function getChymeMobileIdentity(): MobileRequestIdentity {
-  const identity = getRuntimeConfig().chymeRequestIdentity;
-  const userId = identity?.userId?.trim();
-  const username = identity?.username?.trim();
-  const role = identity?.role?.trim().toLowerCase();
-
-  if (!userId || !username) {
-    throw new Error('Chyme mobile identity is missing. Configure MOBILE_CTF_USER_ID and MOBILE_CTF_USERNAME.');
-  }
-
-  if (role !== 'member' && role !== 'admin') {
-    throw new Error('Chyme mobile identity role must be member or admin.');
-  }
-
-  return {
-    userId,
-    username,
-    role,
-    isApproved: normalizeApproved(identity?.isApproved),
-  };
-}
-
-function buildIdentityHeaders(identity: MobileRequestIdentity): HeadersInit {
-  return {
-    'x-ctf-authenticated': 'true',
-    'x-ctf-auth-provider': 'mobile-provider-neutral',
-    'x-ctf-user-id': identity.userId,
-    'x-ctf-username': identity.username,
-    'x-ctf-user-role': identity.role,
-    'x-ctf-user-approved': identity.isApproved ? 'approved' : 'denied',
-  };
-}
-
-async function fetchJson<T>(path: string, identity: MobileRequestIdentity, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${getBaseUrl()}${path}`, {
-    ...options,
-    headers: {
-      ...buildIdentityHeaders(identity),
-      ...(options?.headers ?? {}),
-    },
-  });
-
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) {
-    const message = payload && typeof payload === 'object' && 'message' in payload && typeof payload.message === 'string'
-      ? payload.message
-      : `Network request failed: ${response.status}`;
-    throw new Error(message);
-  }
-
-  return payload as T;
-}
-
-export async function getChymeRoom(identity: MobileRequestIdentity): Promise<ChymeRoomResponse> {
-  return fetchJson('/api/chyme/room', identity);
-}
-
-export async function getChymeMessages(identity: MobileRequestIdentity): Promise<ChymeMessagesResponse> {
-  return fetchJson('/api/chyme/messages?limit=50', identity);
-}
-
-export async function postChymeMessage(identity: MobileRequestIdentity, text: string): Promise<ChymeSendResponse> {
-  return fetchJson('/api/chyme/messages', identity, {
+export async function postChymeMessage(text: string): Promise<ChymeSendResponse> {
+  return authedFetchJson('/api/chyme/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
 }
 
-export async function postChymeJoin(identity: MobileRequestIdentity): Promise<ChymeJoinResponse> {
-  return fetchJson('/api/chyme/join', identity, { method: 'POST' });
+export async function postChymeJoin(): Promise<ChymeJoinResponse> {
+  return authedFetchJson('/api/chyme/join', { method: 'POST' });
 }
 
-export async function deleteChymeProfile(identity: MobileRequestIdentity): Promise<ChymeDeletionResponse> {
-  return fetchJson('/api/account/chyme-profile', identity, { method: 'DELETE' });
+export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {
+  return authedFetchJson('/api/account/chyme-profile', { method: 'DELETE' });
 }
 
-export async function deleteFullAccount(identity: MobileRequestIdentity): Promise<ChymeDeletionResponse> {
-  return fetchJson('/api/account/full-account', identity, { method: 'DELETE' });
+export async function deleteFullAccount(): Promise<ChymeDeletionResponse> {
+  return authedFetchJson('/api/account/full-account', { method: 'DELETE' });
 }
-
-export type { MobileRequestIdentity };

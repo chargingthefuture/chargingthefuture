@@ -119,7 +119,16 @@ for file in "${files[@]}"; do
   fi
 
   if [[ "$file" =~ ^ctf/server/ ]] || [[ "$file" =~ ^ctf/packages/shared/ ]]; then
-    if [[ ! "$file" =~ (^|/)(docs?|tests?|__tests__|testing)(/|$) ]]; then
+    # Shared/server changes are DB-impacting by default, EXCEPT:
+    #  - docs/tests (never schema), and
+    #  - pure auth-logic files under shared/src/auth/** (and their compiled
+    #    shared/dist/**/auth/** outputs). Those hold token decode/verify helpers
+    #    only — no schema, SQL, migrations, or DB access — so a change there must
+    #    not force an accompanying ctf/schema.sql edit (false positive).
+    if [[ ! "$file" =~ (^|/)(docs?|tests?|__tests__|testing)(/|$) ]] \
+      && [[ ! "$file" =~ ^ctf/packages/shared/src/auth/ ]] \
+      && [[ ! "$file" =~ ^ctf/packages/shared/dist/.*/auth/ ]] \
+      && [[ ! "$file" =~ ^ctf/packages/shared/dist/auth/ ]]; then
       db_impacting_changed=true
     fi
   fi

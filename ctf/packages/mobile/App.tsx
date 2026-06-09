@@ -23,7 +23,9 @@ import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock, AdminUnlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { AccountData } from './src/features/account-data';
-import { AuthProvider } from './src/features/trusttransport/auth-context';
+import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
+import { ThemeProvider, useTheme } from './src/theme';
+import { LoadingScreen } from './src/components/shared/LoadingScreen';
 
 type FeatureKey =
   | 'home'
@@ -97,6 +99,18 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
 ];
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <AppShell />
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
+
+function AppShell() {
+  const { isLoading } = useAuth();
+  const { tokens } = useTheme();
   const [selected, setSelected] = useState<FeatureKey>('home');
 
   const featureView = useMemo(() => {
@@ -177,32 +191,52 @@ export default function App() {
     }
   }, [selected]);
 
-  return (
-    <AuthProvider>
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>ChargingTheFuture Mobile</Text>
-        <Text style={styles.subtitle}>Web/Android plugin parity hub</Text>
+  // While the app is bootstrapping (restoring any stored sign-in session), show
+  // the universal "Exit Their Economy / Exit The Psyop" loading screen so the
+  // loading state is consistent app-wide and matches web.
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
-        <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-          {featureOrder.map((feature) => (
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: tokens.bg }]}>
+      <Text style={[styles.title, { color: tokens.textPrimary }]}>ChargingTheFuture Mobile</Text>
+      <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
+        Web/Android plugin parity hub
+      </Text>
+
+      <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
+        {featureOrder.map((feature) => {
+          const active = selected === feature.key;
+          return (
             <TouchableOpacity
               key={feature.key}
-              style={[styles.pill, selected === feature.key ? styles.pillActive : null]}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: active ? tokens.textPrimary : tokens.surface,
+                  borderColor: active ? tokens.textPrimary : tokens.border,
+                  borderRadius: tokens.isComic ? 0 : 999,
+                },
+              ]}
               onPress={() => setSelected(feature.key)}
             >
               <Text
-                style={[styles.pillText, selected === feature.key ? styles.pillTextActive : null]}
+                style={[
+                  styles.pillText,
+                  { color: active ? tokens.bg : tokens.textSecondary },
+                ]}
               >
                 {feature.label}
               </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          );
+        })}
+      </ScrollView>
 
-        <View style={styles.content}>{featureView}</View>
-        <StatusBar style="auto" />
-      </SafeAreaView>
-    </AuthProvider>
+      <View style={styles.content}>{featureView}</View>
+      <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
+    </SafeAreaView>
   );
 }
 

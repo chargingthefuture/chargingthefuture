@@ -13,6 +13,17 @@ import {
   View,
 } from 'react-native';
 import { fetchCohorts, fetchWallet, type Cohort, type Wallet } from './api';
+import { LevelupTrainers } from './LevelupTrainers';
+import { LevelupAchievements } from './LevelupAchievements';
+import { LevelupWallet } from './LevelupWallet';
+
+type LevelupTab = 'browse' | 'trainers' | 'achievements' | 'wallet';
+const TABS: { key: LevelupTab; label: string }[] = [
+  { key: 'browse', label: 'Browse' },
+  { key: 'trainers', label: 'Trainers' },
+  { key: 'achievements', label: 'Achievements' },
+  { key: 'wallet', label: 'Wallet' },
+];
 
 // ---------------------------------------------------------------------------
 // Design tokens (from MobileLevelUp.tsx design-sync)
@@ -122,6 +133,7 @@ export function Levelup() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTrack, setActiveTrack] = useState('All');
+  const [tab, setTab] = useState<LevelupTab>('browse');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -147,16 +159,55 @@ export function Levelup() {
     ? cohorts
     : cohorts.filter((c) => c.track === activeTrack);
 
-  if (loading) return <LevelupLoading />;
+  if (tab === 'browse' && loading) return <LevelupLoading />;
 
-  if (error) {
+  function renderBrowse() {
+    if (error) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => void load()}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => void load()}>
-          <Text style={styles.retryBtnText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <>
+        {/* Track filter pills */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.trackPills}
+        >
+          {TRACKS.map((track) => (
+            <TouchableOpacity
+              key={track}
+              style={[styles.trackPill, activeTrack === track && styles.trackPillActive]}
+              onPress={() => setActiveTrack(track)}
+            >
+              <Text style={[styles.trackPillText, activeTrack === track && styles.trackPillTextActive]}>
+                {track}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Cohort list */}
+        {filtered.length === 0 ? (
+          <LevelupEmpty onBrowse={() => setActiveTrack('All')} />
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <CohortCard cohort={item} />}
+            contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <Text style={styles.sectionLabel}>Available Cohorts</Text>
+            }
+          />
+        )}
+      </>
     );
   }
 
@@ -181,39 +232,27 @@ export function Levelup() {
         )}
       </View>
 
-      {/* Track filter pills */}
+      {/* Section tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.trackPills}
+        contentContainerStyle={styles.tabBar}
       >
-        {TRACKS.map((track) => (
+        {TABS.map(({ key, label }) => (
           <TouchableOpacity
-            key={track}
-            style={[styles.trackPill, activeTrack === track && styles.trackPillActive]}
-            onPress={() => setActiveTrack(track)}
+            key={key}
+            style={[styles.tab, tab === key && styles.tabActive]}
+            onPress={() => setTab(key)}
           >
-            <Text style={[styles.trackPillText, activeTrack === track && styles.trackPillTextActive]}>
-              {track}
-            </Text>
+            <Text style={[styles.tabText, tab === key && styles.tabTextActive]}>{label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Cohort list */}
-      {filtered.length === 0 ? (
-        <LevelupEmpty onBrowse={() => setActiveTrack('All')} />
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CohortCard cohort={item} />}
-          contentContainerStyle={styles.list}
-          ListHeaderComponent={
-            <Text style={styles.sectionLabel}>Available Cohorts</Text>
-          }
-        />
-      )}
+      {tab === 'browse' && renderBrowse()}
+      {tab === 'trainers' && <LevelupTrainers />}
+      {tab === 'achievements' && <LevelupAchievements />}
+      {tab === 'wallet' && <LevelupWallet />}
     </View>
   );
 }
@@ -258,6 +297,13 @@ const styles = StyleSheet.create({
   },
   balanceLabel: { fontSize: 10, color: SUBTLE },
   balanceValue: { fontSize: 13, fontWeight: '700', color: GREEN },
+
+  // Section tabs
+  tabBar: { paddingHorizontal: 12, paddingVertical: 8, gap: 6, borderBottomWidth: 1, borderBottomColor: BORDER },
+  tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  tabActive: { backgroundColor: 'rgba(16,185,129,0.12)', borderColor: 'rgba(16,185,129,0.4)' },
+  tabText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+  tabTextActive: { color: GREEN },
 
   // Track pills
   trackPills: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },

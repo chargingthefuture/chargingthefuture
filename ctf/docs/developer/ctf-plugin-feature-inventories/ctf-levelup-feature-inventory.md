@@ -14,6 +14,9 @@
 3. Enrollment flow with optional deposit policy and escrow split per milestone.
 4. User dashboard with wallet balance, LevelUp escrow totals, active enrollments, and recent transactions.
 5. Dispute open flow with comments and attachment metadata support.
+6. Trainers directory (read-only browse): survivor-advocate trainer profiles with headline, bio, tracks, and active-cohort count.
+7. Achievements (grant-only badges): badge definitions with the signed-in user's earned status. Badges are awarded, never bought or spent.
+8. Credits Wallet (grant-only view): the signed-in user's ServiceCredits balance, total earned through LevelUp, escrow held, and a read-only history of credits earned/granted. Exposes no spend or transfer action.
 
 ## Implemented Trainer Features
 
@@ -38,6 +41,9 @@
 - `POST /api/levelup/disputes`
 - `POST /api/levelup/disputes/[disputeId]/resolve`
 - `POST /api/levelup/admin/adjust-credits`
+- `GET /api/levelup/trainers` — list trainer directory (read-only), optional `track` filter.
+- `GET /api/levelup/achievements` — list grant-only badges with the signed-in user's earned status.
+- `GET /api/levelup/wallet` — signed-in user's balance + grant-only earned/granted history (no spend path).
 
 ## Data Model and Storage Contracts
 
@@ -59,6 +65,9 @@ Core tables:
 12. `levelup_command_idempotency`
 13. `levelup_audit_events`
 14. `levelup_policy_config`
+15. `levelup_trainers` — trainer directory profile. Columns: `id` (PK), `user_id` (unique), `display_name`, `headline`, `bio`, `tracks` (jsonb array), `status`, `created_at`, `updated_at`. Read-only browse surface.
+16. `levelup_achievements` — grant-only badge definitions. Columns: `id` (PK), `slug` (unique), `name`, `description`, `track`, `icon`, `credit_reward` (display-only grant amount), `sequence_no`, `status`, `created_at`, `updated_at`.
+17. `levelup_user_achievements` — per-user earned badge rows (grant-only: a row means earned). Columns: `id` (PK), `user_id`, `achievement_id`, `earned_at`, `granted_credits`, `source_reference`, `created_at`; unique on `(user_id, achievement_id)`.
 
 Multi-currency (issue #120): `levelup_cohorts` carries `stipend_currency` and `microgrant_currency`
 (FK → `currencies.code`), naming the currency of `stipend_amount_per_payout` and `microgrant_amount`.
@@ -93,6 +102,9 @@ Seed content:
 1. 5 users by deterministic IDs (1 admin, 1 trainer, 3 trainees).
 2. Trainees set to 500 ServiceCredits each.
 3. Open cohort with required credits 300, milestones (30/70), and baseline payout/refund policy JSON.
+4. 1 trainer directory profile (`levelup_trainers`) for the seed trainer, with headline, bio, and tracks (`Tech`, `Finance`).
+5. 3 achievement definitions (`levelup_achievements`): First Milestone, Cohort Graduate, Peer Mentor — deterministic UUIDs.
+6. 1 earned badge row (`levelup_user_achievements`): trainee 1 has earned First Milestone.
 
 ## Web and Android Delivery Status
 
@@ -104,6 +116,29 @@ the design mockup (`MobileLevelUp.tsx` / `MobileLevelUpEmpty.tsx` / `MobileLevel
 `GET /api/levelup/cohorts` and `GET /api/service-credits/wallet`; `MockLevelup.tsx` retired.
 Unbacked mockup elements omitted: `trainerName`, `tags`, `milestoneCount` (not returned by cohorts
 list endpoint); active-enrollment banner (no user-enrollment GET endpoint yet).
+
+Trainers / Achievements / Credits Wallet (2026-06-07): the three former "coming soon" sidebar sections
+are now real, backed surfaces on web and Android. Web: `lu-trainers.tsx`, `lu-achievements.tsx`,
+`lu-wallet.tsx` rendered from the shell (`levelup-shell.tsx`), each lazy-loaded on first tab open and
+each with its own empty state; the desktop sidebar and the phone-width tab bar both reach all three.
+Android: `LevelupTrainers.tsx`, `LevelupAchievements.tsx`, `LevelupWallet.tsx` reached via a new tab bar
+in `Levelup.tsx`. Real-data-only: bind `GET /api/levelup/trainers`, `GET /api/levelup/achievements`,
+`GET /api/levelup/wallet`. Grant-only: the Wallet shows balance + earned/granted history with no spend or
+transfer action; Achievements are grant-only badges.
+
+Design refresh (2026-06-08, design submodule `b3742f7`): the three screens were brought up to the new
+`LevelUpTrainers` / `LevelUpAchievements` / `LevelUpCreditsWallet` mockups (and their `Mobile*` variants).
+Web Trainers now shows a stats row (trainers, tracks covered, active cohorts) and richer avatar cards;
+Achievements splits badges into honest Earned / Locked buckets with a stats row and icon tiles (the real
+`icon` name mapped to a glyph); the Wallet shows balance overview cards plus All / Earned / Escrow filter
+tabs over a transaction table. Real-data-only deviations from the mockups, recorded so the design team can
+decide whether to back them: trainer rating / handle / per-cohort name+status / learners / milestones
+validated / SC released / recent-activity feed (none in the trainers endpoint); achievement emoji / rarity /
+an "In Progress" bucket with a progress fraction (the endpoint exposes only an earned boolean); wallet
+"Total Spent", a per-row running balance, a "Spent" filter, a per-cohort escrow breakdown, and the
+"earn more" suggestion list (grant-only model has no spend path, and the wallet endpoint returns only an
+aggregate escrow figure). The shell's mobile root was switched from `100vh` to `100dvh` so there is no
+bottom gap on mobile browsers.
 
 Admin surface (2026-06-06): the `/admin/levelup` web page is now a real, mobile-responsive admin UI
 (`components/levelup/lu-admin-shell.tsx` + `lu-admin-shared.ts`, `useIsMobile()` responsive, admin-gated
@@ -124,6 +159,8 @@ that exist today.
 
 ## Change Log
 
+- 2026-06-08: Design refresh of the Trainers, Achievements, and Credits Wallet screens to the new design mockups (design submodule advanced to `b3742f7`). Web: rewrote `lu-trainers.tsx` (stats row + avatar cards), `lu-achievements.tsx` (Earned / Locked buckets, stats row, `icon`-name-to-glyph mapping), and `lu-wallet.tsx` (balance overview cards + All / Earned / Escrow filter tabs over a transaction table). Android: rewrote `LevelupTrainers.tsx`, `LevelupAchievements.tsx`, `LevelupWallet.tsx` to match the `Mobile*` mockups. Switched the shell's mobile root from `100vh` to `100dvh`. No backend, schema, route, or contract change — all three screens stay bound to the existing `GET /api/levelup/trainers`, `GET /api/levelup/achievements`, and `GET /api/levelup/wallet`. Real-data-only: the mockups' rating / handle / cohort-status / learners / SC-released fields, achievement emoji / rarity / in-progress progress bars, and wallet total-spent / running-balance / per-cohort escrow / earn-more list were not invented — only real fields are rendered, with honest empty states for sections that have no data.
+- 2026-06-07: Built the three former "coming soon" sections — Trainers, Achievements, Credits Wallet — into real surfaces on web and Android. Added three tables adjacent to the existing LevelUp tables in `schema.sql`: `levelup_trainers` (trainer directory profiles), `levelup_achievements` (grant-only badge definitions), and `levelup_user_achievements` (per-user earned badge rows, unique on user+achievement). Added three read-only API routes: `GET /api/levelup/trainers`, `GET /api/levelup/achievements`, `GET /api/levelup/wallet` — plus matching `trainer.list` / `achievement.list` / `wallet.view` command and access-policy contract entries. Web: `lu-trainers.tsx`, `lu-achievements.tsx`, `lu-wallet.tsx` wired into `levelup-shell.tsx` (lazy-loaded per tab; reachable from the desktop sidebar and the phone-width tab bar). Android: `LevelupTrainers.tsx`, `LevelupAchievements.tsx`, `LevelupWallet.tsx` reached via a new tab bar in `Levelup.tsx`. Extended `scripts/seedLevelup.mjs` with 1 trainer profile, 3 achievement definitions, and 1 earned badge. Owner rule applied throughout: LevelUp is grant-only ("earn or earn nothing") — the Wallet reads balance + earned/granted history only and exposes no spend or transfer action; Achievements are grant-only badges. Regenerated `schema.demo.sql`.
 - 2026-06-06: Owner decision — LevelUp admin UI is grant-only. An admin can never remove a member's Service Credits from the UI ("earn or earn nothing"). The web shell (`lu-admin-shell.tsx`) and the Android screen (`AdminLevelup.tsx`) now accept positive amounts only: the amount input is labelled "Amount to grant (greater than zero)", the action is labelled "Grant"/"Review grant", the confirm copy reads "add N credits to member X" (no "remove"), and submit is disabled client-side for non-positive amounts. The backend `POST /api/levelup/admin/adjust-credits` endpoint is unchanged (it still technically accepts a signed amount so a mistaken grant can be corrected later); only the UI no longer exposes a negative path. Member id, reason, governance ticket id, idempotency key, and the two-step confirm are all kept. Copy-only/validation-only UI change; no schema/route/contract changes.
 - 2026-06-06: Admin UI — turned the `/admin/levelup` web page from a KPI-only stub into a real, mobile-responsive admin UI (`components/levelup/lu-admin-shell.tsx` + `lu-admin-shared.ts`): KPI cards (server-fetched), a read-only cohort overview from `GET /api/levelup/cohorts`, and a Service Credits adjustment form wired to `POST /api/levelup/admin/adjust-credits` (CSRF header, idempotency key) behind an explicit confirm step that restates the member, direction (add/remove), and amount before submit. Added an Android admin screen (`ctf/packages/mobile/src/features/levelup/AdminLevelup.tsx` + `admin-api.ts`, registered in `App.tsx` as `levelup-admin`) mirroring the cohort overview and the same confirm-gated adjustment action. No new amounts are fabricated and no ServiceCredits→fiat equivalence is rendered. The mockup's track/badge editor was not built (no backing endpoints). No schema/route/contract changes. Documented endpoint gaps (no admin KPI GET, no admin-gated read route) in Gaps.
 - 2026-06-01: Multi-currency (issue #120): added `stipend_currency` and `microgrant_currency` (FK → `currencies.code`, default ServiceCredits) to `levelup_cohorts`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.

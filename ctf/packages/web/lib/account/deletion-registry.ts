@@ -238,6 +238,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your Trust extension record.',
     serviceScopeSupported: true,
     tables: [
+      del('trust_signal_snapshot', 'user_id', 'Computed trust-signal snapshots derived from your cross-plugin engagement.'),
       del('trust_user_extension', 'user_id', 'Your Trust state/evidence record.'),
       retain('trust_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],

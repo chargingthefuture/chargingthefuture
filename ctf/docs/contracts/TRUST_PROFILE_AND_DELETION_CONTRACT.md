@@ -59,31 +59,27 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
     - nullable/default: nullable
     - purpose: plugin-scoped deletion marker
 
-- Storage location (table or json path): `trust_signal_snapshots`
+- Storage location (table or json path): `trust_signal_snapshot`
 - Fields:
+  - field name: `id`
+    - type: uuid
+    - nullable/default: non-null, primary key
+    - purpose: snapshot row identifier
   - field name: `user_id`
-    - type: uuid or text keyed to canonical identity implementation
+    - type: text keyed to canonical identity implementation
     - nullable/default: non-null
     - purpose: snapshot subject
-  - field name: `last_online_bucket`
-    - type: enum (`active_today` | `active_this_week` | `active_this_month` | `inactive_30_plus`)
-    - nullable/default: nullable
-    - purpose: coarse presence display without exposing exact timestamps
-  - field name: `activity_bucket`
-    - type: enum (`new` | `light` | `established` | `long_term`)
-    - nullable/default: nullable
-    - purpose: coarse cumulative usage band without exact time totals
-  - field name: `transaction_bucket`
-    - type: enum (`none` | `one_to_five` | `six_to_twenty` | `twenty_plus`)
-    - nullable/default: nullable
-    - purpose: optional cross-plugin bucketed transaction summary
-  - field name: `active_plugin_count`
-    - type: integer
-    - nullable/default: default `0`
-    - purpose: high-level plugin footprint summary without raw event detail
-  - field name: `snapshot_generated_at`
+  - field name: `snapshot`
+    - type: jsonb
+    - nullable/default: non-null, default `{}`
+    - purpose: the derived metric bundle computed from real upstream rows (loginDays, loginEvents, lastLoginAt, socketRelayCompletedTrades, socketRelayRequestsOpened). No numeric trust score is stored.
+  - field name: `snapshot_type`
+    - type: text
+    - nullable/default: non-null, default `cross_plugin_engagement_v1`
+    - purpose: derivation model version so older snapshots stay self-describing
+  - field name: `created_at`
     - type: timestamptz
-    - nullable/default: non-null
+    - nullable/default: non-null, default `NOW()`
     - purpose: freshness marker for server-side safety controls and support diagnostics
 
 ## 4) Domain Data Owned by Plugin
@@ -92,10 +88,10 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
   - Contains personal data? yes
   - Retention period: long-lived while plugin is enabled
   - Legal/compliance note: extension-only trust state; not a second profile table
-- Table/entity: `trust_signal_snapshots`
-  - Contains personal data? yes (derived behavioral metadata in coarse buckets)
+- Table/entity: `trust_signal_snapshot`
+  - Contains personal data? yes (derived behavioral metadata: real engagement counts)
   - Retention period: rolling snapshots while plugin is enabled
-  - Legal/compliance note: must remain privacy-safe and avoid exact stalking-enabling telemetry
+  - Legal/compliance note: must remain privacy-safe; stores coarse counts and no numeric trust score
 - Table/entity: `trust_admin_audit_trail`
   - Contains personal data? minimal actor and target linkage
   - Retention period: compliance retention window
@@ -107,7 +103,7 @@ When user deletes Trust usage only:
 
 - Delete immediately:
   - `trust_user_extension`
-  - user-scoped `trust_signal_snapshots`
+  - user-scoped `trust_signal_snapshot`
 - Anonymize/pseudonymize:
   - none planned in Phase 1; snapshots should be removable without preserving user-identifiable copies
 - Retain for compliance/fraud/finance:
@@ -136,7 +132,7 @@ If user returns after service-scoped deletion:
 
 - Recreated defaults:
   - new `trust_user_extension` with `unverified` status and `standard` visibility
-  - empty or re-derived `trust_signal_snapshots`
+  - empty or re-derived `trust_signal_snapshot`
 - Data that is not restored:
   - prior public-safe trust summary state unless re-derived from approved source systems
 - Re-consent required? (yes/no):
@@ -187,4 +183,5 @@ If user returns after service-scoped deletion:
 
 ## Change Log
 
+- 2026-06-08: Reconciled with shipped schema. Renamed `trust_signal_snapshots` → `trust_signal_snapshot` (the real table) and replaced the draft bucket columns with the actual columns (`id`, `user_id`, `snapshot` JSONB, `snapshot_type`, `created_at`). User-scoped snapshot rows are deleted on service/account deletion (now wired in the account deletion registry).
 - 2026-03-25: Created initial Trust Phase 1 draft focused on privacy-safe trust signals, shared UI surfaces, and plugin-scoped extension storage.

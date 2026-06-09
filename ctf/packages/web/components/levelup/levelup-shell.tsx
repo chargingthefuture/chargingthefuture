@@ -4,19 +4,30 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, SUBTLE, TEXT, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, idempotencyKey } from "./lu-shared";
+import { BG, SUBTLE, TEXT, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
 import { LevelUpSidebar } from "./lu-sidebar";
 import { LevelUpBrowse } from "./lu-browse";
 import { LevelUpProgress } from "./lu-progress";
 import { LevelUpRightPanel } from "./lu-right-panel";
 import { LevelUpLoading } from "./lu-loading";
+import { LevelUpTrainers } from "./lu-trainers";
+import { LevelUpAchievements } from "./lu-achievements";
+import { LevelUpWallet } from "./lu-wallet";
 
 const HEADINGS: Record<NavKey, string> = {
   browse: "Browse Cohorts",
   progress: "My Progress",
-  trainers: "My Trainers",
+  trainers: "Trainers",
   achievements: "Achievements",
   wallet: "Credits Wallet",
+};
+
+const SUBHEADINGS: Record<NavKey, string> = {
+  browse: "Enroll in a training program and grow your skills",
+  progress: "Your LevelUp journey",
+  trainers: "Survivor-advocates who lead the cohorts",
+  achievements: "Badges you earn as you complete milestones",
+  wallet: "Your balance and the credits you've earned",
 };
 
 async function fetchCohorts(track: string, signal: AbortSignal): Promise<Cohort[]> {
@@ -35,13 +46,34 @@ async function fetchWallet(signal: AbortSignal): Promise<Wallet | null> {
   return "wallet" in wd && wd.wallet ? (wd.wallet as Wallet) : (wd as Wallet);
 }
 
+async function fetchTrainers(signal: AbortSignal): Promise<Trainer[]> {
+  const res = await fetch("/api/levelup/trainers", { signal });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { trainers?: Trainer[] };
+  return data.trainers ?? [];
+}
+
+async function fetchAchievements(signal: AbortSignal): Promise<Achievement[]> {
+  const res = await fetch("/api/levelup/achievements", { signal });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { achievements?: Achievement[] };
+  return data.achievements ?? [];
+}
+
+async function fetchWalletView(signal: AbortSignal): Promise<WalletView | null> {
+  const res = await fetch("/api/levelup/wallet", { signal });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { wallet?: WalletView };
+  return data.wallet ?? null;
+}
+
 function ShellHeader({ nav, isAdmin }: { nav: NavKey; isAdmin: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
       <div>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: TEXT }}>{HEADINGS[nav]}</h1>
         <div style={{ fontSize: 13, color: SUBTLE, marginTop: 4 }}>
-          {nav === "browse" ? "Enroll in a training program and grow your skills" : "Your LevelUp journey"}
+          {SUBHEADINGS[nav]}
         </div>
       </div>
       {nav === "browse" && (
@@ -80,17 +112,26 @@ function ShellContent({
   error,
   browse,
   progress,
+  trainers,
+  achievements,
+  wallet,
 }: {
   nav: NavKey;
   loading: boolean;
   error: string | null;
   browse: React.ReactNode;
   progress: React.ReactNode;
+  trainers: React.ReactNode;
+  achievements: React.ReactNode;
+  wallet: React.ReactNode;
 }) {
   if (loading) return <CenteredNote color={SUBTLE}>Loading…</CenteredNote>;
   if (error) return <CenteredNote color="#EF4444">{error}</CenteredNote>;
   if (nav === "browse") return <>{browse}</>;
   if (nav === "progress") return <>{progress}</>;
+  if (nav === "trainers") return <>{trainers}</>;
+  if (nav === "achievements") return <>{achievements}</>;
+  if (nav === "wallet") return <>{wallet}</>;
   return <CenteredNote color={SUBTLE}>{HEADINGS[nav]} — coming soon</CenteredNote>;
 }
 
@@ -107,6 +148,10 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [walletView, setWalletView] = useState<WalletView | null>(null);
+  const [sectionLoaded, setSectionLoaded] = useState<Record<string, boolean>>({});
   const isMobile = useIsMobile();
 
   const load = useCallback(async (signal: AbortSignal) => {
@@ -130,6 +175,32 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     void load(controller.signal);
     return () => { controller.abort(); };
   }, [load]);
+
+  useEffect(() => {
+    if (nav !== "trainers" && nav !== "achievements" && nav !== "wallet") return;
+    if (sectionLoaded[nav]) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    void (async () => {
+      try {
+        if (nav === "trainers") {
+          const data = await fetchTrainers(signal);
+          if (!signal.aborted) setTrainers(data);
+        } else if (nav === "achievements") {
+          const data = await fetchAchievements(signal);
+          if (!signal.aborted) setAchievements(data);
+        } else if (nav === "wallet") {
+          const data = await fetchWalletView(signal);
+          if (!signal.aborted) setWalletView(data);
+        }
+        if (!signal.aborted) setSectionLoaded((prev) => ({ ...prev, [nav]: true }));
+      } catch {
+        // Section fetch failures fall back to that section's empty/unavailable state.
+        if (!signal.aborted) setSectionLoaded((prev) => ({ ...prev, [nav]: true }));
+      }
+    })();
+    return () => { controller.abort(); };
+  }, [nav, sectionLoaded]);
 
   async function handleEnroll(cohort: Cohort) {
     if (enrollingId || enrolledIds.has(cohort.id)) return;
@@ -192,6 +263,9 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           />
         )}
         progress={<LevelUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} />}
+        trainers={sectionLoaded.trainers ? <LevelUpTrainers trainers={trainers} /> : <CenteredNote color={SUBTLE}>Loading…</CenteredNote>}
+        achievements={sectionLoaded.achievements ? <LevelUpAchievements achievements={achievements} /> : <CenteredNote color={SUBTLE}>Loading…</CenteredNote>}
+        wallet={sectionLoaded.wallet ? <LevelUpWallet wallet={walletView} /> : <CenteredNote color={SUBTLE}>Loading…</CenteredNote>}
       />
     </>
   );
@@ -205,7 +279,7 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
       { key: "wallet", label: "Wallet" },
     ];
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT }}>
+      <div style={{ minHeight: "100dvh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#22C55E", textDecoration: "none", flexShrink: 0 }}>

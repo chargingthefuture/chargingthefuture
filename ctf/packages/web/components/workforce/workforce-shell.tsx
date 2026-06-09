@@ -258,7 +258,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       <div
         style={{
           display: 'flex',
-          height: '100vh',
+          height: '100dvh',
           background: '#0F1117',
           alignItems: 'center',
           justifyContent: 'center',
@@ -291,7 +291,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     // ctf-self-responsive opts out of the global mobile de-flex so this flex
     // column keeps a real height — the dashboard's ScrollArea needs it to scroll.
     return (
-      <div className="ctf-self-responsive" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0F1117', fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0' }}>
+      <div className="ctf-self-responsive" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#0F1117', fontFamily: "'Inter', system-ui, sans-serif", color: '#E8EAF0' }}>
         <div style={{ background: '#0D0F14', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}20`, border: `1px solid ${COLOR}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLOR, textDecoration: 'none', flexShrink: 0 }}>
@@ -318,7 +318,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       style={{
         width: '100%',
         height: '100%',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: '#0F1117',
         fontFamily: "'Inter', system-ui, sans-serif",
         color: '#E8EAF0',

@@ -62,13 +62,11 @@ policies:
     command: trust.admin.verification.review
     version: 1.0.0
     requiredRoles:
-      - moderator
       - admin
     attributePolicies:
       activeSessionRequired: true
-      moderationRouteOnly: required
-      reviewTransitionRules: enforced
-      publicNoteSafetyReview: required
+      adminOnly: required
+      allowedStatusTransitionsOnly: true
     consentRequirements:
       scopes:
         - trust_admin_write
@@ -82,20 +80,23 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - insufficient_role
-      - invalid_verification_transition
-      - public_note_contains_sensitive_detail
-      - subject_not_found
+      - invalid_trust_status
+      - missing_target_user
 
   - pluginId: trust
     command: trust.signal.snapshot.refresh
     version: 1.0.0
     requiredRoles:
-      - system
+      - member
+      - contributor
+      - moderator
       - admin
     attributePolicies:
-      approvedSourcePluginsOnly: true
-      bucketedAggregationOnly: true
-      exactTelemetryWriteDenied: true
+      activeSessionRequired: true
+      selfScopeOnly: true
+      realDataOnlyAggregation: true
+      noNumericScoreProduced: true
+      statusUnchanged: enforced
     consentRequirements:
       scopes:
         - trust_signal_aggregation
@@ -108,7 +109,5 @@ policies:
       containsPHI: false
       requiresAdditionalAudit: true
     denyConditions:
-      - insufficient_role
-      - unapproved_source_plugin
-      - exact_activity_metric_requested
-      - subject_not_found
+      - unauthenticated_session
+      - unauthorized_scope

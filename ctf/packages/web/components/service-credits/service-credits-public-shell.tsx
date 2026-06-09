@@ -1,0 +1,152 @@
+'use client';
+
+import { Zap, Lock } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+
+// Palette from the ServiceCreditsPublic / MobileServiceCreditsPublic design mockups.
+const BG = '#0F1117';
+const COLOR = '#F59E0B';
+const EARN_GREEN = '#22C55E';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#9CA3AF';
+const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+
+// These earn/spend lists are static marketing copy describing how the Hub economy
+// works (program rules), not per-user balances or fabricated transactions, so they
+// are safe to render in a signed-out public shell.
+const EARN_WAYS = [
+  { action: 'Complete a GentlePulse session', credits: '+5' },
+  { action: 'Attend a LevelUp cohort session', credits: '+15' },
+  { action: 'Refer a verified survivor', credits: '+50' },
+  { action: 'Give peer support in Chyme', credits: '+3' },
+  { action: 'Complete Skills Hunt round', credits: '+100' },
+];
+
+const SPEND_WAYS = [
+  { action: 'Pay for housing (LightHouse)', credits: 'Variable' },
+  { action: 'Book a TrustTransport ride', credits: '12–40 ServiceCredits' },
+  { action: 'Hire from Foundation (trades)', credits: 'Variable' },
+  { action: 'Pay a Directory provider', credits: 'Variable' },
+];
+
+const EARN_WAYS_MOBILE = [
+  { action: 'Complete a GentlePulse session', credits: '+5' },
+  { action: 'Attend a LevelUp cohort', credits: '+15' },
+  { action: 'Refer a survivor', credits: '+50' },
+];
+
+const SPEND_WAYS_MOBILE = [
+  { action: 'Housing (LightHouse)', credits: 'Variable' },
+  { action: 'Transport (TrustTransport)', credits: '12–40 cr' },
+  { action: 'Trades (Foundation)', credits: 'Variable' },
+];
+
+function DesktopServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
+  return (
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
+        <Zap size={18} color={COLOR} />
+        <span style={{ fontSize: 16, fontWeight: 700 }}>ServiceCredits</span>
+        <div style={{ marginLeft: 'auto' }}>
+          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+        </div>
+      </div>
+
+      <div style={{ padding: '48px 64px 32px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <span style={{ padding: '4px 14px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 12, color: COLOR, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
+          The Survivor Hub economy
+        </span>
+        <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
+          Earn credits. Spend them<br /><span style={{ color: COLOR }}>on real services, for free.</span>
+        </h1>
+        <p style={{ margin: 0, fontSize: 15, color: SUBTLE, maxWidth: 520 }}>
+          ServiceCredits are earned by participating in the Hub and spent on housing, transport, healthcare, and trades. They are usable across all 18 plugins in the network.
+        </p>
+        <a href={signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none', display: 'inline-block' }}>
+          Join the Hub — Free
+        </a>
+      </div>
+
+      <div style={{ padding: '0 64px 48px', position: 'relative' }}>
+        <div style={{ display: 'flex', gap: 24, filter: 'blur(3px)', pointerEvents: 'none', opacity: 0.55 }} aria-hidden="true">
+          <div style={{ flex: 1, borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: EARN_GREEN, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Ways to Earn</div>
+            {EARN_WAYS.map((e) => (
+              <div key={e.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <span style={{ fontSize: 13 }}>{e.action}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: EARN_GREEN }}>{e.credits}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ flex: 1, borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)', padding: '20px 24px', background: 'rgba(255,255,255,0.02)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLOR, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>Ways to Spend</div>
+            {SPEND_WAYS.map((s) => (
+              <div key={s.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <span style={{ fontSize: 13 }}>{s.action}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: COLOR }}>{s.credits}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={22} color={COLOR} /></div>
+          <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to start earning credits</div>
+          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign in to earn credits</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
+  return (
+    <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
+      <div style={{ flex: 1, padding: '24px 20px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Zap size={20} color={COLOR} />
+          <span style={{ fontSize: 20, fontWeight: 800 }}>ServiceCredits</span>
+        </div>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>
+          Earn credits by participating.<br /><span style={{ color: COLOR }}>Spend them on real services.</span>
+        </h2>
+        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>Earn ServiceCredits through learning, mentoring, and community activities. Use them across housing, transport, trades, and more.</p>
+
+        <div style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)', padding: '16px', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: EARN_GREEN, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Ways to Earn</div>
+          {EARN_WAYS_MOBILE.map((e) => (
+            <div key={e.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ fontSize: 13 }}>{e.action}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: EARN_GREEN }}>{e.credits}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)', padding: '16px', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: COLOR, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Ways to Spend</div>
+          {SPEND_WAYS_MOBILE.map((s) => (
+            <div key={s.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ fontSize: 13 }}>{s.action}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: COLOR }}>{s.credits}</span>
+            </div>
+          ))}
+        </div>
+
+        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>Join to start earning</a>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Signed-out visitor view for ServiceCredits. Renders the public marketing
+ * experience pixel-faithful to the ServiceCreditsPublic (desktop) and
+ * MobileServiceCreditsPublic (phone) design mockups, with sign-in affordances
+ * pointing at the real hosted sign-in URL. It shows no private or per-user data:
+ * the earn/spend lists are static marketing copy describing the Hub economy's
+ * rules, not any per-user balance or transaction history.
+ */
+export function ServiceCreditsPublicShell({ signInUrl }: PublicVisitorShellProps) {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileServiceCreditsPublic signInUrl={signInUrl} /> : <DesktopServiceCreditsPublic signInUrl={signInUrl} />;
+}

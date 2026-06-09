@@ -1,210 +1,155 @@
-# Tomorrow Runbook: Expo Env Setup for Rewrite
+# Runbook: Expo Env Setup
 
-Date created: 2026-03-01
-Owner: Rewrite team
-Scope: `ctf/` rewrite mobile workflows only
+Scope: `ctf/` mobile workflows only.
 
 ---
 
 ## Goal
 
-Configure the minimum Expo/GitHub variables and secrets required for rewrite mobile CI workflows:
+Configure the secrets required for the mobile CI workflows:
 
 - `.github/workflows/expo-preview.yml`
 - `.github/workflows/expo-update.yml`
 - `.github/workflows/expo-android-release.yml`
 
-This runbook keeps legacy production isolated.
+There is **one environment: production**. The mobile workflows reuse the **same** app secrets the web
+app already uses — there is no separate staging/preview backend, no per-user identity, and no
+`EXPO_OWNER`.
 
----
+Secrets come from **two places**:
 
-## Time Budget
-
-- Total: ~25–40 minutes
-- Expo account/token: 5–10 min
-- EAS project info and values: 5–10 min
-- GitHub variables/secrets entry: 10–15 min
-- Validation run: 5 min
+- **Infisical** (the single source of truth for app secrets) holds the Clerk keys, the app URL, and
+  the Expo project id/updates URL. Each Expo workflow pulls them at run time with an "Inject secrets
+  from Infisical" step that loads them into the job environment for the build steps.
+- **GitHub Actions secrets** hold only the bootstrap credentials the workflow needs *before* it can
+  reach Infisical, plus the EAS token: `EXPO_TOKEN`, `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`,
+  `INFISICAL_PROJECT_SLUG`, `INFISICAL_URL`.
 
 ---
 
 ## Safety Rules (Do This First)
 
-1. Do **not** change legacy production secrets.
-2. Add rewrite values in rewrite-safe scope (repo or dedicated rewrite environment).
-3. Never paste secrets into code or committed files.
-4. Use staging values first; production values can be added last.
+1. Never paste secrets into code or committed files.
+2. Reuse the existing production web secrets; do not create parallel mobile-only copies.
 
 ---
 
-## Required Keys to Configure
+## Required Secrets
 
-### GitHub Secrets
+### GitHub Actions secrets (bootstrap only)
 
-1. `EXPO_TOKEN`
-2. `MOBILE_CLERK_PUBLISHABLE_KEY_STAGING`
-3. `MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION`
-4. (Optional) `MOBILE_SENTRY_DSN`
+Set these as GitHub **secrets** (Settings → Secrets and variables → Actions → Secrets). They are the
+credentials the workflow needs before it can reach Infisical, plus the EAS token:
 
-### GitHub Variables
+1. `EXPO_TOKEN` — EAS CLI login.
+2. `INFISICAL_CLIENT_ID`
+3. `INFISICAL_CLIENT_SECRET`
+4. `INFISICAL_PROJECT_SLUG`
+5. `INFISICAL_URL`
 
-1. `EXPO_MOBILE_PROJECT_ID`
-2. `EXPO_MOBILE_UPDATES_URL`
-3. `MOBILE_APP_URL`
-4. (Optional) `MOBILE_OBSERVABILITY_PROVIDER` (`sentry`, `signoz`, or `noop`)
-5. (Optional but recommended) `EXPO_OWNER`
+These four `INFISICAL_*` values are the same ones the other Infisical-backed workflows already use, so
+they are likely already set.
 
-Compatibility fallback variables (only if needed):
+### Infisical app secrets (the `prod` environment)
 
-- `MOBILE_UPDATES_URL`
+These live in the Infisical `prod` environment, **not** as GitHub secrets. The Expo workflows load
+them at run time. The owner must make sure each one exists in Infisical `prod`:
+
+1. `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY`
+2. `NEXT_PUBLIC_APP_URL`
+3. `NEXT_PUBLIC_AUTH_PROVIDER`
+4. `NEXT_PUBLIC_AUTH_SIGN_IN_URL` (optional)
+5. `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` (for native sign-in)
+6. `EXPO_MOBILE_PROJECT_ID`
+7. `EXPO_MOBILE_UPDATES_URL`
+
+The first four are the same names the web app reads, so they are likely already in Infisical `prod`.
+The three Expo-specific ones — `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`, `EXPO_MOBILE_PROJECT_ID`, and
+`EXPO_MOBILE_UPDATES_URL` — may need to be added to Infisical `prod` if they are not there yet.
 
 ---
 
 ## Where to Get Each Value
 
-### 1) `EXPO_TOKEN`
+### `EXPO_TOKEN`
 
 - Expo dashboard → Account Settings → Access Tokens → create token.
-- Name suggestion: `github-rewrite-mobile-ci`.
+- The Expo account/owner is taken from this token. There is no separate `EXPO_OWNER`.
 
-### 2) `EXPO_OWNER`
-
-From terminal (logged into Expo):
+### `EXPO_MOBILE_PROJECT_ID`
 
 ```bash
-cd /workspaces/chargingthefuture/ctf/packages/mobile
-npx expo whoami
-```
-
-Use that account/org slug as `EXPO_OWNER`.
-
-### 3) `EXPO_MOBILE_PROJECT_ID`
-
-```bash
-cd /workspaces/chargingthefuture/ctf/packages/mobile
+cd ctf/packages/mobile
 npx eas-cli project:info
 ```
 
 Copy `projectId`.
 
-### 4) `EXPO_MOBILE_UPDATES_URL`
+### `EXPO_MOBILE_UPDATES_URL`
 
-Build it from project ID:
+Build it from the project id:
 
 ```text
 https://u.expo.dev/<EXPO_MOBILE_PROJECT_ID>
 ```
 
-### 5) `MOBILE_APP_URL`
+### `NEXT_PUBLIC_APP_URL`
 
-Use rewrite backend base URL (Railway canonical host for rewrite), no trailing slash.
+The deployed web/API base URL, https, no trailing slash (e.g. `https://chargingthefuture.com`).
 
-Examples:
-- `https://the-comic.com`
-- `https://chargingthefuture.com`
+### Clerk keys
 
-### 6) Clerk publishable keys
+- `NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY` — Clerk publishable key (the web app's production key). The app
+  derives the Clerk Frontend API sign-in host from this key, so no separate endpoint URL is needed.
+- `NEXT_PUBLIC_AUTH_PROVIDER` — `clerk`.
+- `NEXT_PUBLIC_AUTH_SIGN_IN_URL` — kept for reference; the native app no longer needs it for sign-in.
 
-From Clerk dashboard API Keys for each environment:
-- staging Clerk project → `MOBILE_CLERK_PUBLISHABLE_KEY_STAGING`
-- production Clerk project → `MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION`
+### `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` (mobile sign-in)
 
----
+The mobile app signs in with an OAuth 2.0 authorization-code flow with PKCE (a way to do OAuth safely
+from an app that cannot keep a secret) against Clerk acting as an OpenID Connect provider — it does
+**not** bundle `@clerk/clerk-js`. One-time Clerk Dashboard setup:
 
-## GitHub Entry Checklist
+1. Clerk Dashboard → **OAuth Applications** → create an application. Copy its **client id** into
+   `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID`.
+2. Allow the `openid`, `profile`, and `email` scopes on it.
+3. Add these **redirect URIs** to the OAuth application (must match exactly):
+   - `ctf://oauth-callback` (release/standalone build), and
+   - the Expo development proxy URL printed by `expo start` (for Expo Go testing).
+4. Clerk Dashboard → **Sessions → Customize session token**: add the claims the backend reads
+   (`username`, `first_name`, `last_name`, `role` or `metadata.role`, and `is_approved` or
+   `metadata.is_approved`). The backend trusts these claims from the verified token only — never from
+   request headers — so admin/approval gating on mobile depends on them being present.
 
-Open GitHub repo settings:
-- Settings → Secrets and variables → Actions
-
-Then add:
-
-### Secrets tab
-
-- [ ] `EXPO_TOKEN`
-- [ ] `MOBILE_CLERK_PUBLISHABLE_KEY_STAGING`
-- [ ] `MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION`
-- [ ] `MOBILE_SENTRY_DSN` (optional)
-
-### Variables tab
-
-- [ ] `EXPO_MOBILE_PROJECT_ID`
-- [ ] `EXPO_MOBILE_UPDATES_URL`
-- [ ] `MOBILE_APP_URL`
-- [ ] `MOBILE_OBSERVABILITY_PROVIDER` (optional)
-- [ ] `EXPO_OWNER` (recommended)
+The full reasoning and verification flow is in
+[`EXPO_CLOUD_WORKFLOW.md`](EXPO_CLOUD_WORKFLOW.md#mobile-sign-in-clerk-oauthopenid-connect-setup).
 
 ---
 
 ## Local Validation (Copy/Paste)
 
-Run from repo root:
+Run from the `ctf` directory:
 
 ```bash
-cd /workspaces/chargingthefuture/ctf
+cd ctf
+NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=pk_live_example \
+NEXT_PUBLIC_APP_URL=https://chargingthefuture.com \
 EXPO_MOBILE_PROJECT_ID=proj_123 \
 EXPO_MOBILE_UPDATES_URL=https://u.expo.dev/proj_123 \
-MOBILE_APP_URL=https://the-comic.com \
-MOBILE_CLERK_PUBLISHABLE_KEY_STAGING=pk_test_staging \
-MOBILE_ENV_TARGET=preview \
-pnpm --filter @ctf/mobile run check:mobile-env
-```
-
-Production-mode validation:
-
-```bash
-cd /workspaces/chargingthefuture/ctf
-EXPO_MOBILE_PROJECT_ID=proj_123 \
-EXPO_MOBILE_UPDATES_URL=https://u.expo.dev/proj_123 \
-MOBILE_APP_URL=https://chargingthefuture.com \
-MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION=pk_live_production \
-MOBILE_ENV_TARGET=production \
 pnpm --filter @ctf/mobile run check:mobile-env
 ```
 
 Expected output:
+
 - `Mobile env validation passed for profile: preview`
-- `Mobile env validation passed for profile: production`
-
----
-
-## Optional CI Smoke Test Tomorrow
-
-After saving vars/secrets:
-
-1. Make a tiny mobile-only docs change.
-2. Push branch.
-3. Confirm workflow behavior:
-   - `Expo Preview Build` should run and pass env validation step.
-   - `Expo Update` should run and pass env validation step.
-
----
-
-## Troubleshooting
-
-### Missing env group error
-
-If workflow says missing project/update URL keys:
-- Ensure `EXPO_MOBILE_PROJECT_ID` and `EXPO_MOBILE_UPDATES_URL` exist (or fallback keys).
-
-### Missing Clerk key error
-
-- For preview/staging profiles: `MOBILE_CLERK_PUBLISHABLE_KEY_STAGING` required.
-- For production profile: `MOBILE_CLERK_PUBLISHABLE_KEY_PRODUCTION` required.
-
-### Expo ownership mismatch
-
-- Ensure `EXPO_TOKEN` belongs to account/org matching `EXPO_OWNER` and EAS project.
 
 ---
 
 ## Completion Criteria
 
-Mark done when all are true:
-
-- [ ] All required GitHub vars/secrets are entered.
-- [ ] Local `check:mobile-env` passes for preview and production modes.
-- [ ] Expo Preview workflow passes on next PR/push.
-- [ ] No legacy production secrets were modified.
+- [ ] All required GitHub secrets are entered.
+- [ ] Local `check:mobile-env` passes.
+- [ ] The Expo Preview workflow passes on the next PR that touches `ctf/packages/mobile/**`.
 
 ---
 

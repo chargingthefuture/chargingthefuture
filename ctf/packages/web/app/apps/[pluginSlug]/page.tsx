@@ -1,6 +1,8 @@
 // ...existing code...
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
+import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { canonicalizePluginSlug, getPluginBySlug } from 'lib/plugins/repository';
+import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
 import { FeedAnnouncementsShell } from '@/components/feed/feed-announcements-shell';
@@ -150,6 +152,23 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   });
 
   if (!decision.allowed) {
+    // An anonymous visitor (no active session) is denied with AUTH_UNAUTHORIZED.
+    // Show that plugin's public visitor view instead of the access-denied wall so
+    // signed-out people can browse the plugin's marketing/empty-state content and
+    // sign in from there. The genuine 403 cases below (signed in but not
+    // permitted) keep the informative access-denied view.
+    if (decision.code === 'AUTH_UNAUTHORIZED') {
+      const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
+      const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+      return (
+        <PublicVisitorShell
+          pluginSlug={selectedPlugin.slug}
+          pluginName={selectedPlugin.name}
+          signInUrl={signInUrl}
+        />
+      );
+    }
+
     return (
       <AccessDeniedView
         status={decision.status}

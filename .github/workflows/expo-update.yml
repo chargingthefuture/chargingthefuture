@@ -1,0 +1,93 @@
+name: Expo Update (OTA)
+
+# Publishes a JavaScript/asset-only over-the-air update via EAS Update when
+# `main` is pushed. This does NOT rebuild native code — installed apps pick it up
+# on next launch. Use a fresh EAS build (expo-preview / expo-android-release)
+# whenever native dependencies or config change.
+#
+# There is ONE environment: production. `main` publishes to the `production`
+# channel. Demo/sample data is a runtime Unleash flag, not a separate channel.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ctf/packages/mobile/**"
+      - ".github/workflows/expo-update.yml"
+
+concurrency:
+  group: expo-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Publish EAS update
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      MOBILE_ENV_TARGET: production
+      # The app secrets (Clerk keys, app URL, Expo project id/updates URL) are no
+      # longer GitHub Actions secrets — Infisical is the single source of truth.
+      # The "Inject secrets from Infisical" step below loads them into the job env
+      # for all later steps, so app.config.ts and check:mobile-env read them from
+      # process.env exactly as before.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Infisical is the single source of truth for app secrets. This step injects
+      # the Clerk keys, the app URL, and the Expo project id/updates URL into the
+      # job env for every later step. env-slug is the environment *slug* (not its
+      # display name): the Production environment's slug is "prod", so
+      # env-slug: production returns a 404. recursive:true also reads secrets
+      # nested in sub-folders, not just the root path.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Fail fast when EXPO_TOKEN is missing
+        if: ${{ secrets.EXPO_TOKEN == '' }}
+        run: |
+          echo "EXPO_TOKEN secret is not set. Add it in repository settings before OTA updates can run."
+          exit 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install ctf dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Check mobile env contract
+        run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
+
+      - name: Publish EAS update
+        working-directory: ctf/packages/mobile
+        env:
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          eas update --channel production --message "${GITHUB_SHA}: ${HEAD_COMMIT_MESSAGE}" --non-interactive

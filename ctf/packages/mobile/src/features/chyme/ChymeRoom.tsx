@@ -9,64 +9,58 @@
  *   error    → inline error with retry (no mockup state; safe fallback)
  *   empty    → ChymeEmpty (no rooms live yet; backed by callActive === false + 0 participants)
  *   roomList → ChymeRoomList (room directory; one real room from GET /api/chyme/room)
- *   inRoom   → ChymeActiveRoom (stage/controls; backed by room.participants)
+ *   inRoom   → ChymeAudioRoom (LIVE audio stage via the Stream Video SDK; you
+ *              hear and speak in real time, with one tile per live participant)
  *   chat     → ChymeChatView (companion text chat; GET+POST /api/chyme/messages)
  *
- * All data is real — bound to /api/chyme/* endpoints via api.ts.
- * No mock or fabricated data is rendered.
+ * All data is real — bound to /api/chyme/* endpoints via api.ts. The live audio
+ * room joins the same Stream call as the web room, using the same Stream user
+ * token (POST /api/chyme/join). No mock or fabricated data is rendered.
+ *
+ * NOTE: the live audio needs native WebRTC code, so the in-room screen only
+ * works in an EAS dev/production build — not in Expo Go (see app.config.ts).
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  getChymeMobileIdentity,
+  chymeHandle,
   getChymeMessages,
   getChymeRoom,
   postChymeJoin,
   postChymeMessage,
 } from './api';
+import type { ChymeJoinResponse } from './ChymeApi';
 import { ChymeLoading } from './chyme-loading';
 import { ChymeEmpty } from './chyme-empty';
 import { ChymeRoomList } from './chyme-room-list';
-import { ChymeActiveRoom } from './chyme-active-room';
+import { ChymeAudioRoom } from './ChymeAudioRoom';
 import { ChymeChatView } from './chyme-chat-view';
 import type { ChatMessage } from './chyme-chat-view';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 type ViewState = 'loading' | 'error' | 'empty' | 'roomList' | 'inRoom' | 'chat';
 
 type RoomPayload = Awaited<ReturnType<typeof getChymeRoom>>;
 type MessagePayload = Awaited<ReturnType<typeof getChymeMessages>>['messages'][number];
 
-const PRIMARY = '#22C55E';
-
 export const ChymeRoom: React.FC = () => {
+  const { tokens, theme } = useTheme();
+  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
+  const accent = getAppAccent('chyme', theme);
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [room, setRoom] = useState<RoomPayload | null>(null);
+  const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
+  const [joining, setJoining] = useState(false);
   const [messages, setMessages] = useState<MessagePayload[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
-  const [handRaised, setHandRaised] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
   const [tab, setTab] = useState<'live' | 'upcoming'>('live');
 
-  const identity = useMemo(() => {
-    try {
-      return getChymeMobileIdentity();
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Chyme identity not configured.');
-      setViewState('error');
-      return null;
-    }
-  }, []);
-
   const loadRoom = useCallback(async () => {
-    if (!identity) return;
     setViewState('loading');
     try {
-      const [roomPayload, msgPayload] = await Promise.all([
-        getChymeRoom(identity),
-        getChymeMessages(identity),
-      ]);
+      const [roomPayload, msgPayload] = await Promise.all([getChymeRoom(), getChymeMessages()]);
       setRoom(roomPayload);
       setMessages(msgPayload.messages ?? []);
       const hasParticipants = (roomPayload.participants?.length ?? 0) > 0;
@@ -75,33 +69,45 @@ export const ChymeRoom: React.FC = () => {
       setErrorMsg(err instanceof Error ? err.message : 'Unable to load Chyme room.');
       setViewState('error');
     }
-  }, [identity]);
+  }, []);
 
   useEffect(() => {
-    if (identity) {
-      void loadRoom();
-    }
-  }, [identity, loadRoom]);
+    void loadRoom();
+  }, [loadRoom]);
 
   const handleJoinRoom = useCallback(async () => {
-    if (!identity) return;
+    if (joining) return;
+    setJoining(true);
     try {
-      const res = await postChymeJoin(identity);
+      // POST /api/chyme/join mints the Stream credentials (api key, call id,
+      // user id, and the user token that serves both chat and audio). We hold
+      // onto them so the live audio room can join the same Stream call.
+      const res = await postChymeJoin();
       if (res.ok) {
+        // Hold the join credentials and switch to the live audio room. The live
+        // participant list comes from Stream in real time, so we do NOT re-run
+        // loadRoom here — that would flip viewState back to the room list.
+        setJoinInfo(res);
         setViewState('inRoom');
-        await loadRoom();
       }
     } catch (err) {
       Alert.alert('Join failed', err instanceof Error ? err.message : 'Unable to join room.');
+    } finally {
+      setJoining(false);
     }
-  }, [identity, loadRoom]);
+  }, [joining]);
+
+  const handleLeaveRoom = useCallback(() => {
+    setJoinInfo(null);
+    setViewState('roomList');
+  }, []);
 
   const handleSendMessage = useCallback(async () => {
     const trimmed = chatInput.trim();
-    if (!trimmed || !identity || sending) return;
+    if (!trimmed || sending) return;
     setSending(true);
     try {
-      const res = await postChymeMessage(identity, trimmed);
+      const res = await postChymeMessage(trimmed);
       setMessages((prev) => [...prev, res.message]);
       setChatInput('');
     } catch (err) {
@@ -109,7 +115,7 @@ export const ChymeRoom: React.FC = () => {
     } finally {
       setSending(false);
     }
-  }, [chatInput, identity, sending]);
+  }, [chatInput, sending]);
 
   if (viewState === 'loading') {
     return <ChymeLoading />;
@@ -128,7 +134,7 @@ export const ChymeRoom: React.FC = () => {
   }
 
   if (viewState === 'empty' || !room) {
-    return <ChymeEmpty onStartRoom={handleJoinRoom} />;
+    return <ChymeEmpty onStartRoom={handleJoinRoom} tokens={tokens} accent={accent} />;
   }
 
   if (viewState === 'chat') {
@@ -151,17 +157,16 @@ export const ChymeRoom: React.FC = () => {
     );
   }
 
-  if (viewState === 'inRoom') {
+  if (viewState === 'inRoom' && joinInfo) {
     return (
-      <ChymeActiveRoom
-        roomName={room.roomName}
-        participants={room.participants}
-        muted={muted}
-        handRaised={handRaised}
-        onToggleMute={() => setMuted((v) => !v)}
-        onToggleHand={() => setHandRaised((v) => !v)}
+      <ChymeAudioRoom
+        joinInfo={joinInfo}
+        // Fallback display name only. The server already upserts each Chyme
+        // user's real handle to Stream, so participant tiles show that handle;
+        // this is just the local label until the server name resolves.
+        displayName={chymeHandle(null, joinInfo.streamUserId.replace(/^chyme-/, ''))}
         onOpenChat={() => setViewState('chat')}
-        onLeave={() => setViewState('roomList')}
+        onLeave={handleLeaveRoom}
       />
     );
   }
@@ -179,40 +184,48 @@ export const ChymeRoom: React.FC = () => {
         }}
         tab={tab}
         onTabChange={setTab}
-        onJoinRoom={() => setViewState('inRoom')}
+        onJoinRoom={handleJoinRoom}
         onStartRoom={handleJoinRoom}
+        tokens={tokens}
+        accent={accent}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#021006',
-    paddingHorizontal: 24,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F0FDF4',
-    marginBottom: 8,
-  },
-  errorMsg: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  retryBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    backgroundColor: PRIMARY,
-  },
-  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  roomListContainer: { flex: 1, backgroundColor: '#021006' },
-});
+function makeStyles(t: ThemeTokens) {
+  // Default theme keeps the deep-green Chyme chrome; comic theme uses the ink palette.
+  const bg = t.isComic ? t.bg : '#021006';
+  return StyleSheet.create({
+    errorContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: bg,
+      paddingHorizontal: 24,
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: t.isComic ? t.textPrimary : '#F0FDF4',
+      marginBottom: 8,
+    },
+    errorMsg: {
+      fontSize: 14,
+      color: t.textSecondary,
+      textAlign: 'center',
+      marginBottom: 20,
+      lineHeight: 22,
+    },
+    retryBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 32,
+      borderRadius: t.radius,
+      backgroundColor: t.isComic ? t.surface : t.success,
+      borderWidth: t.isComic ? 1.5 : 0,
+      borderColor: t.border,
+    },
+    retryBtnText: { color: t.isComic ? t.border : '#fff', fontWeight: '700', fontSize: 15 },
+    roomListContainer: { flex: 1, backgroundColor: bg },
+  });
+}

@@ -62,7 +62,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
 
   if (added) {
     return (
-      <div style={{ width: '100%', height: '100vh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         <div style={{ maxWidth: 460, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '0 32px' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${BRAND}15`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircle size={34} color={BRAND} />
@@ -85,7 +85,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, overflow: 'hidden' }}>
       <div style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 12, background: '#0D0F14', flexShrink: 0 }}>
         <ListChecks size={18} color={BRAND} />
         <div style={{ flex: 1 }}>
