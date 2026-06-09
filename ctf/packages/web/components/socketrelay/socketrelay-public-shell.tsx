@@ -20,7 +20,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 const CATEGORIES = ['All', 'Food', 'Transport', 'Legal', 'Employment', 'Childcare', 'Housing', 'Mental Health'];
 
-function DesktopSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const COLOR = DESKTOP_COLOR;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT }}>
@@ -31,12 +31,20 @@ function DesktopSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
           <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>SocketRelay · Mutual aid, free forever</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-            <LogIn size={13} /> Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Post a Need Free →
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <LogIn size={13} /> Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Post a Need Free →
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -79,8 +87,8 @@ function DesktopSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
             <Lock size={16} color={SUBTLE} style={{ marginBottom: 6 }} />
             <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>Sign in to post or respond</div>
             <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 10 }}>Posting is always free. Anonymous posts supported.</div>
-            <a href={signInUrl} style={{ display: 'block', width: '100%', padding: '9px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxSizing: 'border-box', textDecoration: 'none' }}>
-              Create Free Account →
+            <a href={verifyUrl ?? signInUrl} style={{ display: 'block', width: '100%', padding: '9px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxSizing: 'border-box', textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : 'Create Free Account →'}
             </a>
           </div>
         </aside>
@@ -127,8 +135,8 @@ function DesktopSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
               <div style={{ fontSize: 13, color: SUBTLE, textAlign: 'center', maxWidth: 320 }}>
                 Browse open needs and offers, then respond directly. Posting is always free and anonymous posts are supported.
               </div>
-              <a href={signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
-                Sign in to respond
+              <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+                {verifyUrl ? 'Finish verifying' : 'Sign in to respond'}
               </a>
             </div>
           </div>
@@ -136,12 +144,20 @@ function DesktopSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
           {/* Bottom CTA */}
           <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, alignItems: 'center' }}>
             <div style={{ fontSize: 13, color: SUBTLE }}>Want to help or need something?</div>
-            <a href={signInUrl} style={{ padding: '9px 22px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-              <Plus size={14} /> Post a Need
-            </a>
-            <a href={signInUrl} style={{ padding: '9px 22px', borderRadius: 9, background: 'transparent', border: `1px solid ${COLOR}50`, color: COLOR, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-              <Heart size={14} /> Post an Offer
-            </a>
+            {verifyUrl ? (
+              <a href={verifyUrl} style={{ padding: '9px 22px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                Finish verifying
+              </a>
+            ) : (
+              <>
+                <a href={signInUrl} style={{ padding: '9px 22px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                  <Plus size={14} /> Post a Need
+                </a>
+                <a href={signInUrl} style={{ padding: '9px 22px', borderRadius: 9, background: 'transparent', border: `1px solid ${COLOR}50`, color: COLOR, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                  <Heart size={14} /> Post an Offer
+                </a>
+              </>
+            )}
             <div style={{ marginLeft: 'auto', fontSize: 12, color: SUBTLE, display: 'flex', alignItems: 'center', gap: 5 }}>
               <Shield size={12} color={SUBTLE} /> Anonymous posts always available
             </div>
@@ -152,7 +168,7 @@ function DesktopSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
+function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const COLOR = MOBILE_COLOR;
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
@@ -163,7 +179,7 @@ function MobileSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Peer-to-peer needs board</span>
         <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Post what you need, offer what you have. Clothing, furniture, skills, time — the survivor community connects directly.</p>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       {/* Blurred feed preview + lock (neutral placeholders) */}
@@ -185,7 +201,7 @@ function MobileSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to post and respond</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -210,7 +226,7 @@ function MobileSocketRelayPublic({ signInUrl }: { signInUrl: string }) {
  * decoration; the simulated phone status bar is dropped because the real app
  * renders inside the browser chrome.
  */
-export function SocketRelayPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function SocketRelayPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileSocketRelayPublic signInUrl={signInUrl} /> : <DesktopSocketRelayPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileSocketRelayPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopSocketRelayPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

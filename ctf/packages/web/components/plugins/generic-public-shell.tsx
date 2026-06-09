@@ -16,7 +16,7 @@ const COLOR = '#22C55E';
  * access-denied wall while bespoke public shells are built out one plugin at a
  * time.
  */
-export function GenericPublicShell({ pluginName, signInUrl }: PublicVisitorShellProps) {
+export function GenericPublicShell({ pluginName, signInUrl, verifyUrl }: PublicVisitorShellProps) {
   return (
     <div
       style={{
@@ -67,7 +67,7 @@ export function GenericPublicShell({ pluginName, signInUrl }: PublicVisitorShell
           where a public view exists; taking part requires a free account.
         </p>
         <a
-          href={signInUrl}
+          href={verifyUrl ?? signInUrl}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -85,7 +85,7 @@ export function GenericPublicShell({ pluginName, signInUrl }: PublicVisitorShell
             textDecoration: 'none',
           }}
         >
-          <LogIn size={15} /> Sign in
+          {verifyUrl ? 'Finish verifying' : <><LogIn size={15} /> Sign in</>}
         </a>
       </div>
     </div>

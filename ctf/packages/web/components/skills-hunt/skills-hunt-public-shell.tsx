@@ -40,7 +40,7 @@ const HOW_IT_WORKS = [
 
 const NOMINATE_FIELDS = ['First Name', 'Bio', 'Quora Profile URL', 'Skills', 'Claimed Professions'];
 
-function DesktopSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -48,9 +48,15 @@ function DesktopSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
         <Search size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Skills Hunt</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              Sign In
+            </a>
+          )}
         </div>
       </div>
 
@@ -68,8 +74,8 @@ function DesktopSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
             This is not a referral button. You nominate someone you believe may be a survivor — entering their first name, bio, Quora profile, skills, and claimed professions. Their profile seeds the Directory so we can trade and stop depending on traffickers for basic needs.
           </p>
           <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-            <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-              Join the Hub — Free
+            <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
             </a>
           </div>
         </div>
@@ -128,8 +134,8 @@ function DesktopSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', maxWidth: 320 }}>
             Survivors only. Sign in to nominate people you believe may be survivors and help grow our self-sustaining economy.
           </div>
-          <a href={signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign in to scout
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Sign in to scout'}
           </a>
         </div>
       </div>
@@ -137,7 +143,7 @@ function DesktopSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
+function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       {/* Header */}
@@ -157,7 +163,7 @@ function MobileSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
           This is not a referral button. You nominate someone you believe may be a survivor — first name, bio, Quora profile, skills, and professions. Their profile seeds the Directory so we can trade and stop depending on traffickers.
         </p>
 
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       {/* Blurred form preview + lock (neutral placeholders) */}
@@ -178,7 +184,7 @@ function MobileSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Join to start scouting</div>
           <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>Survivors only. Nominate people you believe may be survivors and help build our self-sustaining economy.</div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in to scout</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in to scout'}</a>
         </div>
       </div>
     </div>
@@ -200,7 +206,7 @@ function MobileSkillsHuntPublic({ signInUrl }: { signInUrl: string }) {
  * its calls to action point at the sign-in URL. The simulated phone status bar is
  * dropped because the real app renders inside the browser chrome.
  */
-export function SkillsHuntPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function SkillsHuntPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileSkillsHuntPublic signInUrl={signInUrl} /> : <DesktopSkillsHuntPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileSkillsHuntPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopSkillsHuntPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

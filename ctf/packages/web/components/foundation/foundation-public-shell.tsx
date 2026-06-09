@@ -11,7 +11,7 @@ const TEXT = '#F9FAFB';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function DesktopFoundationPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -19,9 +19,15 @@ function DesktopFoundationPublic({ signInUrl }: { signInUrl: string }) {
         <Hammer size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Foundation</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              Sign In
+            </a>
+          )}
         </div>
       </div>
 
@@ -37,8 +43,8 @@ function DesktopFoundationPublic({ signInUrl }: { signInUrl: string }) {
         <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 520 }}>
           Vetted electricians, plumbers, carpenters, HVAC techs, and more. All background-checked, all trauma-informed. Pay with Service Credits or cash.
         </p>
-        <a href={signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
-          Join the Hub — Free
+        <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
         </a>
       </div>
 
@@ -52,8 +58,8 @@ function DesktopFoundationPublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', maxWidth: 300 }}>
             Filter by trade, location, availability, and Service Credit acceptance.
           </div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign in to access Foundation
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Sign in to access Foundation'}
           </a>
         </div>
       </div>
@@ -61,7 +67,7 @@ function DesktopFoundationPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileFoundationPublic({ signInUrl }: { signInUrl: string }) {
+function MobileFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -70,7 +76,7 @@ function MobileFoundationPublic({ signInUrl }: { signInUrl: string }) {
           <span style={{ fontSize: 20, fontWeight: 800 }}>Foundation</span>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Vetted electricians, plumbers, carpenters, and more. All background-checked and trauma-informed. Pay with Service Credits.</p>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       {/* Sign-in gate (no fabricated provider cards) */}
@@ -78,7 +84,7 @@ function MobileFoundationPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ height: '100%', minHeight: 240, borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '32px 20px' }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to book tradespeople</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -96,7 +102,7 @@ function MobileFoundationPublic({ signInUrl }: { signInUrl: string }) {
  * honest sign-in gate. The marketing hero copy is kept. The simulated phone
  * status bar is dropped because the real app renders inside the browser chrome.
  */
-export function FoundationPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function FoundationPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileFoundationPublic signInUrl={signInUrl} /> : <DesktopFoundationPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileFoundationPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopFoundationPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

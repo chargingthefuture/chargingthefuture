@@ -30,7 +30,7 @@ const REASONS = [
   { icon: '🌐', t: 'Public profile only', d: 'We only need your public Quora URL — no login access.' },
 ];
 
-function DesktopUnlockPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopUnlockPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -38,12 +38,20 @@ function DesktopUnlockPublic({ signInUrl }: { signInUrl: string }) {
         <UnlockIcon size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Unlock Access</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Create Account
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Create Account
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -61,8 +69,8 @@ function DesktopUnlockPublic({ signInUrl }: { signInUrl: string }) {
             Survivor Hub uses Quora profile verification to confirm that members are real people. This protects the community from trafficker infiltration and protects the integrity of this economy.
           </p>
           <div style={{ display: 'flex', gap: 12 }}>
-            <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-              <UserPlus size={16} /> Get started — it&apos;s free
+            <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : <><UserPlus size={16} /> Get started — it&apos;s free</>}
             </a>
           </div>
         </div>
@@ -97,8 +105,8 @@ function DesktopUnlockPublic({ signInUrl }: { signInUrl: string }) {
             </div>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-              Start now <ChevronRight size={15} />
+            <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 24px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : <>Start now <ChevronRight size={15} /></>}
             </a>
           </div>
         </div>
@@ -107,7 +115,7 @@ function DesktopUnlockPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileUnlockPublic({ signInUrl }: { signInUrl: string }) {
+function MobileUnlockPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -118,8 +126,14 @@ function MobileUnlockPublic({ signInUrl }: { signInUrl: string }) {
             <span style={{ fontSize: 16, fontWeight: 700 }}>Unlock Access</span>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+            {verifyUrl ? (
+              <a href={verifyUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Finish verifying</a>
+            ) : (
+              <>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -138,8 +152,8 @@ function MobileUnlockPublic({ signInUrl }: { signInUrl: string }) {
           Survivor Hub uses Quora profile verification to confirm members are real people. This protects the community and protects the integrity of this economy.
         </p>
 
-        <a href={signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 20, textDecoration: 'none' }}>
-          <UserPlus size={15} /> Get started — it&apos;s free
+        <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 20, textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Get started — it&apos;s free</>}
         </a>
 
         {/* How it works */}
@@ -173,8 +187,8 @@ function MobileUnlockPublic({ signInUrl }: { signInUrl: string }) {
           ))}
         </div>
 
-        <a href={signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}>
-          Start verification <ChevronRight size={14} />
+        <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : <>Start verification <ChevronRight size={14} /></>}
         </a>
       </div>
     </div>
@@ -191,7 +205,7 @@ function MobileUnlockPublic({ signInUrl }: { signInUrl: string }) {
  * The simulated phone status bar and the decorative locked bottom nav are
  * dropped because the real app renders inside the browser chrome.
  */
-export function UnlockPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function UnlockPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileUnlockPublic signInUrl={signInUrl} /> : <DesktopUnlockPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileUnlockPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopUnlockPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

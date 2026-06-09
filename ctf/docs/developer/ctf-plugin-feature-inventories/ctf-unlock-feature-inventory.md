@@ -253,6 +253,8 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ### Change Log
 
+- 2026-06-09: A signed-in member who is not yet verified, when browsing a plugin's public landing page, now sees a single "Finish verifying" call-to-action that points at the Unlock flow (`/plugin/unlock`) instead of the anonymous "Sign In" / "Join Free" buttons. This is delivered through a new optional `verifyUrl` prop on the public visitor shells (`PublicVisitorShellProps`); the plugin route page (`app/apps/[pluginSlug]/page.tsx`) passes `verifyUrl="/plugin/unlock"` only when access is denied with `unlock_required` (a signed-in-but-not-verified member) and omits it for an anonymous visitor. Anonymous visitors are unchanged. No schema or contract change.
+
 - 2026-06-01: Multi-currency (issue #120): added `incentive_currency` (FK → `currencies.code`, default ServiceCredits) to `unlock_runtime_config`, naming the currency of `incentive_amount`. Documented the no-fiat-parity rule. Schema + inventory only; the currency UI is design-gated.
 
 - 2026-03-25: Created initial Unlock rewrite checklist with contracts, schema, submission/moderation, incentive, and access-tier enforcement phases.

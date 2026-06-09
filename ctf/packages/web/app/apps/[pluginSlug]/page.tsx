@@ -158,11 +158,19 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
       const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
       const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+      // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
+      // is already authenticated, so the public shell's "Sign In / Join Free"
+      // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
+      // "Finish verifying" action pointing at the Unlock flow instead. An
+      // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
+      // normal sign-in / sign-up CTAs.
+      const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
       return (
         <PublicVisitorShell
           pluginSlug={selectedPlugin.slug}
           pluginName={selectedPlugin.name}
           signInUrl={signInUrl}
+          verifyUrl={verifyUrl}
         />
       );
     }

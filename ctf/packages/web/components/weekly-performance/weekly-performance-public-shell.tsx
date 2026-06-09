@@ -33,7 +33,7 @@ const ACCESS_ITEMS = [
   { icon: '📤', t: 'Admin export (gated)', d: 'Admins can export data as CSV' },
 ];
 
-function DesktopWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
+function DesktopWeeklyPerformancePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -41,12 +41,20 @@ function DesktopWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
         <BarChart2 size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Weekly Performance</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <LogIn size={13} /> Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Join Free
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <LogIn size={13} /> Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Join Free
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -64,8 +72,8 @@ function DesktopWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
             Member growth, plugin engagement, and GDP delta — all tracked weekly. Sign in to view current and historical data.
           </p>
           <div style={{ display: 'flex', gap: 12 }}>
-            <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-              Sign in to view metrics
+            <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : 'Sign in to view metrics'}
             </a>
           </div>
         </div>
@@ -107,8 +115,8 @@ function DesktopWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: SUBTLE, textAlign: 'center', maxWidth: 340, lineHeight: 1.6 }}>
             Survivors can view weekly metrics. Admin accounts can additionally lock weeks and export data.
           </div>
-          <a href={signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Create free account
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '12px 28px', borderRadius: 9, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Create free account'}
           </a>
         </div>
       </div>
@@ -116,7 +124,7 @@ function DesktopWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
+function MobileWeeklyPerformancePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -127,8 +135,14 @@ function MobileWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
             <div style={{ fontSize: 16, fontWeight: 700 }}>Weekly Performance</div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+            {verifyUrl ? (
+              <a href={verifyUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Finish verifying</a>
+            ) : (
+              <>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -139,8 +153,8 @@ function MobileWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 16 }}>
           Member growth, plugin engagement, and GDP delta — tracked week over week.
         </div>
-        <a href={signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 20, textDecoration: 'none' }}>
-          <UserPlus size={15} /> Create free account
+        <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 20, textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Create free account</>}
         </a>
       </div>
 
@@ -182,7 +196,7 @@ function MobileWeeklyPerformancePublic({ signInUrl }: { signInUrl: string }) {
  * simulated phone status bar and the decorative locked bottom nav are dropped
  * because the real app renders inside the browser chrome.
  */
-export function WeeklyPerformancePublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function WeeklyPerformancePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileWeeklyPerformancePublic signInUrl={signInUrl} /> : <DesktopWeeklyPerformancePublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileWeeklyPerformancePublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopWeeklyPerformancePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

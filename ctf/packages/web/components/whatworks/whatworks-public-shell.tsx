@@ -39,7 +39,7 @@ function PreviewEmptyState({ compact }: { compact?: boolean }) {
   );
 }
 
-function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopWhatWorksPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Top bar */}
@@ -48,10 +48,18 @@ function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>
         <span style={{ fontSize: 12, color: SUBTLE, marginLeft: 4 }}>· survivor-verified tools</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Create Account
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Create Account
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -69,8 +77,8 @@ function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
               Pick a problem you&apos;re facing. Underneath it is a list of specific products a survivor here bought, used, and said helped — each with a direct link to get it. No ads. No affiliates. Nothing sold.
             </p>
             <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-              <a href={signInUrl} style={{ padding: '13px 28px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-                <UserPlus size={16} /> Join to suggest items
+              <a href={verifyUrl ?? signInUrl} style={{ padding: '13px 28px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+                {verifyUrl ? 'Finish verifying' : <><UserPlus size={16} /> Join to suggest items</>}
               </a>
             </div>
           </div>
@@ -105,8 +113,8 @@ function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
               <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 4 }}>See every problem — and add what worked for you</div>
               <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6 }}>Create a free, verified account to view the full list and suggest the tools that helped you.</div>
             </div>
-            <a href={signInUrl} style={{ padding: '13px 26px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, textDecoration: 'none' }}>
-              Get started <ChevronRight size={15} />
+            <a href={verifyUrl ?? signInUrl} style={{ padding: '13px 26px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : <>Get started <ChevronRight size={15} /></>}
             </a>
           </div>
         </div>
@@ -115,14 +123,14 @@ function DesktopWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
+function MobileWhatWorksPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', background: '#0D0F14', borderBottom: `1px solid ${BORDER}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
         <ListChecks size={17} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>
-        <a href={signInUrl} style={{ marginLeft: 'auto', padding: '6px 13px', borderRadius: 8, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+        <a href={verifyUrl ?? signInUrl} style={{ marginLeft: 'auto', padding: '6px 13px', borderRadius: 8, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign In'}</a>
       </div>
 
       {/* Scroll */}
@@ -151,8 +159,8 @@ function MobileWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>See every problem &amp; add yours</div>
           <div style={{ fontSize: 12.5, color: SUBTLE, lineHeight: 1.55, marginBottom: 14 }}>Create a free, verified account to view the full list and suggest what worked for you.</div>
-          <a href={signInUrl} style={{ width: '100%', padding: '12px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxSizing: 'border-box', textDecoration: 'none' }}>
-            <UserPlus size={15} /> Create free account
+          <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '12px', borderRadius: 10, background: BRAND, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxSizing: 'border-box', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Create free account</>}
           </a>
         </div>
       </div>
@@ -173,7 +181,7 @@ function MobileWhatWorksPublic({ signInUrl }: { signInUrl: string }) {
  * reviews or verified counts. The simulated phone status bar is dropped because
  * the real app renders inside the browser chrome.
  */
-export function WhatWorksPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function WhatWorksPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileWhatWorksPublic signInUrl={signInUrl} /> : <DesktopWhatWorksPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileWhatWorksPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopWhatWorksPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }
