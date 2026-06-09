@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ChevronLeft, Unlock as UnlockIcon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, BORDER, STATUS_CONFIG, SUBTLE, TEXT, type DisplayStatus } from "./unlock-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { STATUS_CONFIG, getUnlockTokens, type DisplayStatus } from "./unlock-shared";
 import { UnlockIconRail } from "./unlock-icon-rail";
 import { UnlockSidebar } from "./unlock-sidebar";
 import { UnlockStatusCard } from "./unlock-status-card";
@@ -27,6 +28,8 @@ export function UnlockStatusView({
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
 
   const content = (
     <UnlockStatusCard
@@ -41,14 +44,14 @@ export function UnlockStatusView({
 
   if (isMobile) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${cfg.color}1A`, border: `1px solid ${cfg.color}40`, display: "flex", alignItems: "center", justifyContent: "center", color: cfg.color, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
             <UnlockIcon size={18} color={cfg.color} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT, flex: 1 }}>Verification Status</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Verification Status</span>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, background: cfg.bg, border: `1px solid ${cfg.color}30`, fontSize: 11, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
               <Icon size={11} /> {cfg.label}
             </div>
@@ -60,16 +63,16 @@ export function UnlockStatusView({
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
       <UnlockIconRail />
       <UnlockSidebar status={status} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
+        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <UnlockIcon size={18} color={cfg.color} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Verification Status</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Quora profile · account unlock</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Verification Status</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Quora profile · account unlock</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, background: cfg.bg, border: `1px solid ${cfg.color}30`, fontSize: 11, fontWeight: 600, color: cfg.color }}>
             <Icon size={11} /> {cfg.label}
