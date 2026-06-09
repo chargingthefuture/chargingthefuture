@@ -7,7 +7,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, ChevronLeft, Search, MessageSquare, Users, Bell, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, COLOR, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
+import { useTheme } from "@/hooks/useTheme";
+import { BG, getDirectoryTokens, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryProfileDetail } from "./directory-profile-detail";
 import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
 import { DirectoryBrowse } from "./directory-browse";
@@ -52,6 +53,8 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
   const [rewardCard, setRewardCard] = useState<SkillsHuntRewardCard | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getDirectoryTokens(theme);
 
   useEffect(() => {
     async function fetchMeta() {
@@ -210,29 +213,29 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
 
   if (isMobile) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <BookOpen size={18} style={{ color: COLOR, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>Directory</span>
+            <BookOpen size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Directory</span>
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {TABS.map(({ key }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{key}</button>
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{key}</button>
             ))}
           </div>
           {tab === "browse" && (
             <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ position: "relative" }}>
-                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4B5563" }} />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 13, color: "#9CA3AF", outline: "none", boxSizing: "border-box" }} />
+                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
               </div>
               <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
                 {sectorFilters.map((f) => (
-                  <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${COLOR}14` : "transparent", border: `1px solid ${activeFilter === f ? COLOR + "50" : "rgba(255,255,255,0.1)"}`, color: activeFilter === f ? COLOR : "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
+                  <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${t.ACCENT}14` : "transparent", border: `1px solid ${activeFilter === f ? t.ACCENT + "50" : t.BORDER_HI}`, color: activeFilter === f ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
                 ))}
               </div>
             </div>
@@ -244,75 +247,75 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       {/* Icon rail */}
-      <aside style={{ width: 72, background: "#090B0F", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}30`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-          <BookOpen size={20} style={{ color: COLOR }} />
+      <aside style={{ width: 72, background: t.RAIL, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+          <BookOpen size={20} style={{ color: t.ACCENT }} />
         </div>
         {TABS.map(({ icon: Icon, key }) => (
-          <button key={key} onClick={() => setTab(key)} style={{ width: 44, height: 44, borderRadius: 12, background: tab === key ? `${COLOR}20` : "transparent", border: tab === key ? `1px solid ${COLOR}40` : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: tab === key ? COLOR : "#6B7280" }}>
+          <button key={key} onClick={() => setTab(key)} style={{ width: 44, height: 44, borderRadius: 12, background: tab === key ? `${t.ACCENT}20` : "transparent", border: tab === key ? `1px solid ${t.ACCENT}40` : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: tab === key ? t.ACCENT : t.MUTED }}>
             <Icon size={20} />
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}>
+        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
           <Bell size={18} />
         </button>
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}>
+        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
           <Settings size={18} />
         </button>
         <Avatar style={{ width: 36, height: 36, marginTop: 4 }}>
-          <AvatarFallback style={{ background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
+          <AvatarFallback style={{ background: `${t.ACCENT}30`, color: t.ACCENT, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
         </Avatar>
       </aside>
 
       {/* Sidebar */}
-      <aside style={{ width: 240, background: "#0D0F14", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+      <aside style={{ width: 240, background: t.HEADER, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
         <div style={{ padding: "20px 16px 12px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 12 }}>📇 Directory</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 12 }}>📇 Directory</div>
           <div style={{ position: "relative", marginBottom: 12 }}>
-            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4B5563" }} />
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search providers…"
-              style={{ width: "100%", padding: "7px 10px 7px 30px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 13, color: "#9CA3AF", outline: "none", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "7px 10px 7px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }}
             />
           </div>
         </div>
         <ScrollArea style={{ flex: 1 }}>
           <div style={{ padding: "0 8px 16px" }}>
             {sectorFilters.map((f) => (
-              <div key={f} onClick={() => setActiveFilter(f)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: activeFilter === f ? `${COLOR}18` : "transparent", borderLeft: activeFilter === f ? `2px solid ${COLOR}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
-                <span style={{ fontSize: 13, color: activeFilter === f ? "#E8EAF0" : "#9CA3AF", flex: 1 }}>{f}</span>
+              <div key={f} onClick={() => setActiveFilter(f)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: activeFilter === f ? `${t.ACCENT}18` : "transparent", borderLeft: activeFilter === f ? `2px solid ${t.ACCENT}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, color: activeFilter === f ? t.TEXT : t.SUBTLE, flex: 1 }}>{f}</span>
               </div>
             ))}
-            <div style={{ margin: "16px 0 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#4B5563", textTransform: "uppercase", padding: "0 10px" }}>Community Stats</div>
+            <div style={{ margin: "16px 0 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", padding: "0 10px" }}>Community Stats</div>
             {[{ l: "Sectors", v: String(sectors.length) }, { l: "Active Listings", v: String(members.length) }].map(({ l, v }) => (
-              <div key={l} style={{ padding: "6px 10px", fontSize: 12, color: "#6B7280" }}>
-                {l}: <span style={{ color: COLOR, fontWeight: 600 }}>{v}</span>
+              <div key={l} style={{ padding: "6px 10px", fontSize: 12, color: t.MUTED }}>
+                {l}: <span style={{ color: t.ACCENT, fontWeight: 600 }}>{v}</span>
               </div>
             ))}
           </div>
         </ScrollArea>
-        <div style={{ padding: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ padding: "10px 12px", borderRadius: 10, background: `${COLOR}10`, border: `1px solid ${COLOR}25` }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: COLOR, marginBottom: 2 }}>Become a Provider</div>
-            <div style={{ fontSize: 11, color: "#6B7280" }}>Claim your profile today</div>
+        <div style={{ padding: 12, borderTop: `1px solid ${t.BORDER}` }}>
+          <div style={{ padding: "10px 12px", borderRadius: 10, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}25` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t.ACCENT, marginBottom: 2 }}>Become a Provider</div>
+            <div style={{ fontSize: 11, color: t.MUTED }}>Claim your profile today</div>
           </div>
         </div>
       </aside>
 
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
-          <BookOpen size={18} style={{ color: COLOR }} />
+        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
+          <BookOpen size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#E8EAF0" }}>📇 Directory</div>
-            <div style={{ fontSize: 12, color: "#6B7280" }}>Verified providers · Trauma-informed · Safe</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>📇 Directory</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Verified providers · Trauma-informed · Safe</div>
           </div>
-          <Badge style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
+          <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
             ✓ Verified Network
           </Badge>
         </header>

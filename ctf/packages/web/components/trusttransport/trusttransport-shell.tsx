@@ -6,7 +6,8 @@ import { Car, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { AppLoading } from "@/components/shared/app-loading";
-import { BG, deriveRideTypes, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { BG, deriveRideTypes, getTrustTransportTokens, type ChatCreds, type Mode, type Tab, type TripRequest, type TrustTransportTokens } from "./tt-shared";
 import { TrustTransportIconRail } from "./tt-icon-rail";
 import { TrustTransportSidebar } from "./tt-sidebar";
 import { TrustTransportBookTab } from "./tt-book-tab";
@@ -14,13 +15,13 @@ import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
 
-function ShellHeader() {
+function ShellHeader({ t }: { t: TrustTransportTokens }) {
   return (
-    <header style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
-      <Car size={18} style={{ color: "#F97316" }} />
+    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
+      <Car size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#E8EAF0" }}>TrustTransport</div>
-        <div style={{ fontSize: 12, color: "#6B7280" }}>Rides · Packages · Food · Safety-first</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>TrustTransport</div>
+        <div style={{ fontSize: 12, color: t.MUTED }}>Rides · Packages · Food · Safety-first</div>
       </div>
       <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
         Safety-First
@@ -49,6 +50,8 @@ export function TrustTransportShell() {
   // can't overwrite the credentials for a trip the user has since switched to.
   const activeChatReqRef = useRef<string | null>(null);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
 
   async function fetchRequests() {
     const res = await fetch("/api/trusttransport/requests");
@@ -184,18 +187,18 @@ export function TrustTransportShell() {
       { key: "chat", label: "Chat" },
     ];
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#F97316", textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: t.ACCENT_TINT_BG, border: `1px solid ${t.ACCENT_TINT_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <Car size={18} style={{ color: "#F97316", flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>TrustTransport</span>
+            <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>TrustTransport</span>
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? "rgba(249,115,22,0.12)" : "transparent", border: `1px solid ${tab === key ? "rgba(249,115,22,0.4)" : "rgba(255,255,255,0.08)"}`, color: tab === key ? "#F97316" : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? t.ACCENT_TINT_BG : "transparent", border: `1px solid ${tab === key ? t.ACCENT_TAB_BORDER : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
             ))}
           </div>
         </div>
@@ -205,11 +208,11 @@ export function TrustTransportShell() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <TrustTransportIconRail tab={tab} onTab={setTab} />
       <TrustTransportSidebar rideTypes={rideTypes} rideType={rideType} onRideType={setRideType} requests={requests} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <ShellHeader />
+        <ShellHeader t={t} />
         {content}
       </div>
       <TrustTransportRightPanel requestCount={requests.length} modeCount={modes.length || rideTypes.length} onBook={() => setTab("book")} />
