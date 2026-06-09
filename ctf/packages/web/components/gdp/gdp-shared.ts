@@ -1,8 +1,20 @@
 // Shared constants and types for the GDP web shell.
 // Palette/layout derive from design/.../survivor-hub/GDP.tsx.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+
 export const COLOR = "#06B6D4";
 export const BG = "#0F1117";
+
+// Theme-aware chrome tokens for the GDP shell. Default keeps the shipped values (accent
+// stays #06B6D4); comic uses the shared comic surface tokens plus the GDP comic-ink accent.
+export type GdpTokens = PluginShellTokens;
+
+export function getGdpTokens(theme: ThemeName): GdpTokens {
+  const accent = theme === "comic" ? getAppAccent("gdp", "comic") : COLOR;
+  return getPluginShellTokens(accent, theme);
+}
 
 export interface GdpSector {
   name: string;

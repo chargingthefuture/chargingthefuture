@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useTheme } from "@/hooks/useTheme";
 import { AppLoading } from "@/components/shared/app-loading";
 import {
-  BG, COLOR, TABS, type Tab,
+  getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
   type SkillsHuntNotification, type SkillsHuntSubmission, type SkillsHuntMissionWithProgress,
 } from "./sh-shared";
@@ -20,21 +21,21 @@ import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
 import { SkillsHuntRightPanel } from "./sh-right-panel";
 import { useNominationForm } from "./sh-use-nomination-form";
 
-function CenteredNote({ color, children }: { color: string; children: React.ReactNode }) {
+function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: string; children: React.ReactNode }) {
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: t.BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ fontSize: 14, color }}>{children}</div>
     </div>
   );
 }
 
-function ShellHeader({ activeRound }: { activeRound: SkillsHuntRound | null }) {
+function ShellHeader({ t, activeRound }: { t: SkillsHuntTokens; activeRound: SkillsHuntRound | null }) {
   return (
-    <header style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
-      <Search size={18} style={{ color: COLOR }} />
+    <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
+      <Search size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#E8EAF0" }}>Skills Hunt</div>
-        <div style={{ fontSize: 12, color: "#6B7280" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Skills Hunt</div>
+        <div style={{ fontSize: 12, color: t.MUTED }}>
           {activeRound ? activeRound.name : "Nominate survivors · build the Directory · grow the economy"}
         </div>
       </div>
@@ -113,6 +114,8 @@ export function SkillsHuntShell({
   const [loadingFinds, setLoadingFinds] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
 
   const { form, submitted, resetForm } = useNominationForm(activeRound);
 
@@ -235,7 +238,7 @@ export function SkillsHuntShell({
   }
 
   if (loadingRounds) return <AppLoading />;
-  if (globalError) return <CenteredNote color="#EF4444">{globalError}</CenteredNote>;
+  if (globalError) return <CenteredNote t={t} color="#EF4444">{globalError}</CenteredNote>;
 
   const { currentUserEntry, noActiveRound, unreadCount } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds, notifications });
   const showModeratorTools = isAdmin || isModerator;
@@ -251,22 +254,22 @@ export function SkillsHuntShell({
 
   if (isMobile) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}1A`, border: `1px solid ${COLOR}40`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <Search size={18} style={{ color: COLOR, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>Skills Hunt</span>
-            <button type="button" onClick={() => setNotifOpen((o) => !o)} aria-label="Notifications" style={{ position: "relative", width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9CA3AF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+            <Search size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Skills Hunt</span>
+            <button type="button" onClick={() => setNotifOpen((o) => !o)} aria-label="Notifications" style={{ position: "relative", width: 38, height: 38, borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={18} />
               {unreadCount > 0 && <span style={{ position: "absolute", top: 5, right: 5, width: 8, height: 8, borderRadius: "50%", background: "#EF4444" }} />}
             </button>
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
-            {TABS.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)} style={{ whiteSpace: "nowrap", padding: "6px 12px", borderRadius: 8, background: tab === t.key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === t.key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === t.key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{t.label}</button>
+            {TABS.map((tabItem) => (
+              <button key={tabItem.key} onClick={() => setTab(tabItem.key)} style={{ whiteSpace: "nowrap", padding: "6px 12px", borderRadius: 8, background: tab === tabItem.key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === tabItem.key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === tabItem.key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{tabItem.label}</button>
             ))}
           </div>
         </div>
@@ -279,14 +282,14 @@ export function SkillsHuntShell({
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <SkillsHuntIconRail tab={tab} onTab={setTab} notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((o) => !o)} unreadCount={unreadCount} />
       {notifOpen && (
         <SkillsHuntNotifications notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
       )}
       <SkillsHuntSidebar tab={tab} onTab={setTab} achievements={achievements} currentUserEntry={currentUserEntry} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <ShellHeader activeRound={activeRound} />
+        <ShellHeader t={t} activeRound={activeRound} />
         <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
           {content}
         </div>
