@@ -40,7 +40,7 @@ type ChymeSendResponse = {
   };
 };
 
-type ChymeJoinResponse = {
+export type ChymeJoinResponse = {
   ok: true;
   roomId: string;
   roomKey: string;
