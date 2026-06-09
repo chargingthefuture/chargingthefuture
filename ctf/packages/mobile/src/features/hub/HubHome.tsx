@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,19 +10,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
 import { fetchHubMessages, sendHubMessage } from './api';
 import type { HubMessage } from './api';
-
-// Palette pulled from the locked mobile mockups (MobileHome.tsx / MobileHubPublic.tsx).
-const BG = '#0F1117';
-const HEADER_BG = '#090B0F';
-const TEXT = '#F9FAFB';
-const SUBTLE = '#6B7280';
-const DIMMER = '#4B5563';
-const BRAND = '#7C3AED';
-const BRAND_LIGHT = '#A78BFA';
-const CYAN = '#0EA5E9';
-const BORDER = 'rgba(255,255,255,0.06)';
 
 // The Hub stream is feed-backed and flattened on the server to one author shape per message:
 // "Survivor Hub" for admin announcements + AI Q&A, "Community member" for peer-to-peer posts.
@@ -53,43 +43,47 @@ function dedupKey(message: HubMessage): string {
   return `${message.userId}|${message.displayName}|${message.text}|${message.sentAtIso}`;
 }
 
-function MessageCard({ message }: { message: HubMessage }) {
+type Styles = ReturnType<typeof makeStyles>;
+
+function MessageCard({ message, s, tokens, theme }: { message: HubMessage; s: Styles; tokens: ThemeTokens; theme: ThemeName }) {
   const official = isOfficial(message);
-  const accent = official ? BRAND_LIGHT : '#22C55E';
+  // Official posts use the Hub brand (chyme accent in comic). Community posts use the
+  // success/green accent. Both come from the active theme so they switch with the toggle.
+  const accent = official ? getAppAccent('chyme', theme) : tokens.success;
 
   return (
-    <View style={[styles.card, official ? styles.cardOfficial : styles.cardCommunity]}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.avatar, official ? styles.avatarOfficial : { backgroundColor: `${accent}22` }]}>
-          <Text style={[styles.avatarText, official ? styles.avatarTextOfficial : { color: accent }]}>
+    <View style={[s.card, official ? s.cardOfficial : s.cardCommunity]}>
+      <View style={s.cardHeader}>
+        <View style={[s.avatar, { backgroundColor: tokens.isComic ? `${accent}18` : `${accent}22`, borderWidth: tokens.isComic ? 1 : 0, borderColor: `${accent}40` }]}>
+          <Text style={[s.avatarText, { color: tokens.isComic ? tokens.textPrimary : accent }]}>
             {avatarInitials(message)}
           </Text>
         </View>
-        <View style={styles.cardMeta}>
-          <View style={styles.cardNameRow}>
-            <Text style={styles.cardName}>{message.displayName}</Text>
+        <View style={s.cardMeta}>
+          <View style={s.cardNameRow}>
+            <Text style={s.cardName}>{message.displayName}</Text>
             {official && (
-              <View style={styles.officialBadge}>
-                <Text style={styles.officialBadgeText}>Official</Text>
+              <View style={s.officialBadge}>
+                <Text style={s.officialBadgeText}>Official</Text>
               </View>
             )}
           </View>
-          <Text style={styles.cardTime}>{formatTime(message.sentAtIso)}</Text>
+          <Text style={s.cardTime}>{formatTime(message.sentAtIso)}</Text>
         </View>
       </View>
-      <Text style={styles.cardBody}>{message.text}</Text>
+      <Text style={s.cardBody}>{message.text}</Text>
     </View>
   );
 }
 
-function EmptyState() {
+function EmptyState({ s }: { s: Styles }) {
   return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIcon}>
+    <View style={s.emptyWrap}>
+      <View style={s.emptyIcon}>
         <Text style={{ fontSize: 28 }}>💬</Text>
       </View>
-      <Text style={styles.emptyTitle}>Nothing posted yet</Text>
-      <Text style={styles.emptyBody}>
+      <Text style={s.emptyTitle}>Nothing posted yet</Text>
+      <Text style={s.emptyBody}>
         Announcements, answers, and community posts will appear here. Be the first to share an update.
       </Text>
     </View>
@@ -97,6 +91,9 @@ function EmptyState() {
 }
 
 export const HubHome = () => {
+  const { tokens, theme } = useTheme();
+  const s = useMemo(() => makeStyles(tokens, theme), [tokens, theme]);
+
   const [messages, setMessages] = useState<HubMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,62 +155,64 @@ export const HubHome = () => {
     }
   }, [input, sending]);
 
+  const hubAccent = getAppAccent('chyme', theme);
+
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.headerAvatar}>
-          <Text style={styles.headerAvatarText}>SH</Text>
+    <View style={s.screen}>
+      <View style={s.header}>
+        <View style={s.headerAvatar}>
+          <Text style={s.headerAvatarText}>SH</Text>
         </View>
         <View>
-          <Text style={styles.headerTitle}>Survivor Hub</Text>
-          <Text style={styles.headerSub}>Community · Live</Text>
+          <Text style={s.headerTitle}>Survivor Hub</Text>
+          <Text style={s.headerSub}>Community · Live</Text>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={BRAND_LIGHT} />
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={hubAccent} />
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
+        <View style={s.center}>
+          <Text style={s.errorText}>{error}</Text>
+          <Pressable style={s.retryBtn} onPress={load}>
+            <Text style={s.retryText}>Retry</Text>
           </Pressable>
         </View>
       ) : messages.length === 0 ? (
-        <EmptyState />
+        <EmptyState s={s} />
       ) : (
         <FlatList
           data={messages}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <MessageCard message={item} />}
-          contentContainerStyle={styles.list}
+          renderItem={({ item }) => <MessageCard message={item} s={s} tokens={tokens} theme={theme} />}
+          contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
         />
       )}
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {sendError && <Text style={styles.sendError}>{sendError}</Text>}
-        <View style={styles.composer}>
+        {sendError && <Text style={s.sendError}>{sendError}</Text>}
+        <View style={s.composer}>
           <TextInput
-            style={styles.input}
+            style={s.input}
             value={input}
             onChangeText={setInput}
             placeholder="Share an update with the community…"
-            placeholderTextColor={DIMMER}
+            placeholderTextColor={tokens.textMuted}
             multiline
             editable={!sending}
           />
           <Pressable
-            style={[styles.sendBtn, input.trim() ? styles.sendBtnActive : null]}
+            style={[s.sendBtn, input.trim() ? s.sendBtnActive : null]}
             onPress={handleSend}
             disabled={!input.trim() || sending}
           >
             {sending ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={tokens.isComic ? tokens.bg : '#fff'} />
             ) : (
-              <Text style={[styles.sendBtnText, input.trim() ? styles.sendBtnTextActive : null]}>Send</Text>
+              <Text style={[s.sendBtnText, input.trim() ? s.sendBtnTextActive : null]}>Send</Text>
             )}
           </Pressable>
         </View>
@@ -222,220 +221,94 @@ export const HubHome = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: HEADER_BG,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: BRAND,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerAvatarText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: TEXT,
-  },
-  headerSub: {
-    fontSize: 11,
-    color: '#22C55E',
-  },
-  list: {
-    padding: 16,
-    gap: 10,
-  },
-  card: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 10,
-  },
-  cardOfficial: {
-    backgroundColor: 'rgba(124,58,237,0.07)',
-    borderColor: 'rgba(124,58,237,0.22)',
-  },
-  cardCommunity: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarOfficial: {
-    backgroundColor: BRAND,
-  },
-  avatarText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  avatarTextOfficial: {
-    color: '#fff',
-  },
-  cardMeta: {
-    flex: 1,
-  },
-  cardNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cardName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  officialBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    backgroundColor: 'rgba(124,58,237,0.2)',
-  },
-  officialBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: BRAND_LIGHT,
-  },
-  cardTime: {
-    fontSize: 11,
-    color: DIMMER,
-    marginTop: 1,
-  },
-  cardBody: {
-    fontSize: 13,
-    color: '#D1D5DB',
-    lineHeight: 21,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#EF4444',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(124,58,237,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.4)',
-  },
-  retryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: BRAND_LIGHT,
-  },
-  emptyWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  emptyIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(124,58,237,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.3)',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: TEXT,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontSize: 14,
-    color: SUBTLE,
-    lineHeight: 22,
-    textAlign: 'center',
-  },
-  sendError: {
-    fontSize: 12,
-    color: '#F87171',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: HEADER_BG,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-  input: {
-    flex: 1,
-    maxHeight: 120,
-    minHeight: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#E8EAF0',
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnActive: {
-    backgroundColor: CYAN,
-  },
-  sendBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: DIMMER,
-  },
-  sendBtnTextActive: {
-    color: '#fff',
-  },
-});
+function makeStyles(t: ThemeTokens, theme: ThemeName) {
+  const r = t.radius;
+  const official = getAppAccent('chyme', theme);
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderBottomWidth: t.isComic ? 2 : 1,
+      borderBottomColor: t.isComic ? t.border : t.borderFaint,
+    },
+    headerAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: t.isComic ? 0 : 10,
+      backgroundColor: t.isComic ? t.surface : official,
+      borderWidth: t.isComic ? 2 : 0,
+      borderColor: t.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerAvatarText: { fontSize: 13, fontWeight: '800', color: t.isComic ? t.border : '#fff' },
+    headerTitle: { fontSize: 16, fontWeight: '800', color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    headerSub: { fontSize: 11, color: t.success },
+    list: { padding: 16, gap: 10 },
+    card: { borderRadius: r, borderWidth: t.isComic ? 1.5 : 1, padding: 14, marginBottom: 10 },
+    cardOfficial: { backgroundColor: t.isComic ? `${official}10` : 'rgba(124,58,237,0.07)', borderColor: t.isComic ? `${official}50` : 'rgba(124,58,237,0.22)' },
+    cardCommunity: { backgroundColor: t.surface, borderColor: t.isComic ? `${t.border}40` : t.borderFaint },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    avatar: { width: 28, height: 28, borderRadius: t.isComic ? 0 : 8, alignItems: 'center', justifyContent: 'center' },
+    avatarText: { fontSize: 11, fontWeight: '800' },
+    cardMeta: { flex: 1 },
+    cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    cardName: { fontSize: 13, fontWeight: '700', color: t.textPrimary, letterSpacing: t.isComic ? 0.4 : 0 },
+    officialBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: t.radiusChip, backgroundColor: t.isComic ? 'transparent' : 'rgba(124,58,237,0.2)', borderWidth: t.isComic ? 1 : 0, borderColor: `${t.border}40` },
+    officialBadgeText: { fontSize: 10, fontWeight: t.isComic ? '700' : '600', color: t.isComic ? t.border : '#A78BFA', letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
+    cardTime: { fontSize: 11, color: t.textSecondary, marginTop: 1 },
+    cardBody: { fontSize: 13, color: t.isComic ? t.textPrimary : '#D1D5DB', lineHeight: 21 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+    errorText: { fontSize: 14, color: t.danger, textAlign: 'center', marginBottom: 16 },
+    retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: r, backgroundColor: t.isComic ? `${t.border}14` : 'rgba(124,58,237,0.2)', borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? t.border : 'rgba(124,58,237,0.4)' },
+    retryText: { fontSize: 13, fontWeight: '700', color: t.isComic ? t.textPrimary : '#A78BFA' },
+    emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    emptyIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: t.isComic ? 0 : 36,
+      backgroundColor: t.isComic ? `${t.border}12` : 'rgba(124,58,237,0.12)',
+      borderWidth: t.isComic ? 2 : 1,
+      borderColor: t.isComic ? t.border : 'rgba(124,58,237,0.3)',
+      borderStyle: t.isComic ? 'solid' : 'dashed',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    emptyTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
+    emptyBody: { fontSize: 14, color: t.textSecondary, lineHeight: 22, textAlign: 'center' },
+    sendError: { fontSize: 12, color: t.danger, paddingHorizontal: 16, paddingTop: 8 },
+    composer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: t.surfaceAlt,
+      borderTopWidth: t.isComic ? 2 : 1,
+      borderTopColor: t.isComic ? t.border : t.borderFaint,
+    },
+    input: {
+      flex: 1,
+      maxHeight: 120,
+      minHeight: 44,
+      borderRadius: r,
+      backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.04)',
+      borderWidth: t.isComic ? 2 : 1,
+      borderColor: t.isComic ? `${t.border}60` : 'rgba(255,255,255,0.1)',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: t.textPrimary,
+    },
+    sendBtn: { width: 44, height: 44, borderRadius: r, backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.06)', borderWidth: t.isComic ? 1.5 : 0, borderColor: `${t.borderDim}60`, alignItems: 'center', justifyContent: 'center' },
+    sendBtnActive: { backgroundColor: t.isComic ? t.border : '#0EA5E9', borderColor: t.border },
+    sendBtnText: { fontSize: 12, fontWeight: '700', color: t.textSecondary },
+    sendBtnTextActive: { color: t.isComic ? t.bg : '#fff' },
+  });
+}

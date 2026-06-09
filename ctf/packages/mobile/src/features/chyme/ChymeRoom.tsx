@@ -36,15 +36,17 @@ import { ChymeRoomList } from './chyme-room-list';
 import { ChymeAudioRoom } from './ChymeAudioRoom';
 import { ChymeChatView } from './chyme-chat-view';
 import type { ChatMessage } from './chyme-chat-view';
+import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
 type ViewState = 'loading' | 'error' | 'empty' | 'roomList' | 'inRoom' | 'chat';
 
 type RoomPayload = Awaited<ReturnType<typeof getChymeRoom>>;
 type MessagePayload = Awaited<ReturnType<typeof getChymeMessages>>['messages'][number];
 
-const PRIMARY = '#22C55E';
-
 export const ChymeRoom: React.FC = () => {
+  const { tokens, theme } = useTheme();
+  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
+  const accent = getAppAccent('chyme', theme);
   const [viewState, setViewState] = useState<ViewState>('loading');
   const [room, setRoom] = useState<RoomPayload | null>(null);
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
@@ -132,7 +134,7 @@ export const ChymeRoom: React.FC = () => {
   }
 
   if (viewState === 'empty' || !room) {
-    return <ChymeEmpty onStartRoom={handleJoinRoom} />;
+    return <ChymeEmpty onStartRoom={handleJoinRoom} tokens={tokens} accent={accent} />;
   }
 
   if (viewState === 'chat') {
@@ -184,38 +186,46 @@ export const ChymeRoom: React.FC = () => {
         onTabChange={setTab}
         onJoinRoom={handleJoinRoom}
         onStartRoom={handleJoinRoom}
+        tokens={tokens}
+        accent={accent}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#021006',
-    paddingHorizontal: 24,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#F0FDF4',
-    marginBottom: 8,
-  },
-  errorMsg: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  retryBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    backgroundColor: PRIMARY,
-  },
-  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  roomListContainer: { flex: 1, backgroundColor: '#021006' },
-});
+function makeStyles(t: ThemeTokens) {
+  // Default theme keeps the deep-green Chyme chrome; comic theme uses the ink palette.
+  const bg = t.isComic ? t.bg : '#021006';
+  return StyleSheet.create({
+    errorContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: bg,
+      paddingHorizontal: 24,
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: t.isComic ? t.textPrimary : '#F0FDF4',
+      marginBottom: 8,
+    },
+    errorMsg: {
+      fontSize: 14,
+      color: t.textSecondary,
+      textAlign: 'center',
+      marginBottom: 20,
+      lineHeight: 22,
+    },
+    retryBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 32,
+      borderRadius: t.radius,
+      backgroundColor: t.isComic ? t.surface : t.success,
+      borderWidth: t.isComic ? 1.5 : 0,
+      borderColor: t.border,
+    },
+    retryBtnText: { color: t.isComic ? t.border : '#fff', fontWeight: '700', fontSize: 15 },
+    roomListContainer: { flex: 1, backgroundColor: bg },
+  });
+}
