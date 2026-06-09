@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, COLOR, type ChatCredentials, type Match, type Profile, type Property, type Tab } from "./shared";
+import { useTheme } from "@/hooks/useTheme";
+import { BG, getLighthouseTokens, type ChatCredentials, type Match, type Profile, type Property, type Tab } from "./shared";
 import { LighthouseIconRail } from "./lighthouse-icon-rail";
 import { LighthouseFilterSidebar, type ListingFilter, filterProperties } from "./lighthouse-filter-sidebar";
 import { LighthouseRightPanel } from "./lighthouse-right-panel";
@@ -30,6 +31,8 @@ export function LighthouseShell() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getLighthouseTokens(theme);
 
   useEffect(() => {
     async function fetchAll() {
@@ -89,9 +92,9 @@ export function LighthouseShell() {
 
   if (!profile) {
     return (
-      <div style={{ width: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 40, textAlign: "center" }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB" }}>Welcome to LightHouse</div>
-        <div style={{ fontSize: 14, color: "#9CA3AF", maxWidth: 420, lineHeight: 1.6 }}>No profile found yet. Create your LightHouse profile to browse safe, verified housing and connect with hosts.</div>
+      <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 40, textAlign: "center" }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE }}>Welcome to LightHouse</div>
+        <div style={{ fontSize: 14, color: t.SUBTLE, maxWidth: 420, lineHeight: 1.6 }}>No profile found yet. Create your LightHouse profile to browse safe, verified housing and connect with hosts.</div>
       </div>
     );
   }
@@ -151,29 +154,29 @@ export function LighthouseShell() {
       { key: "credits", label: "Credits" },
     ];
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0" }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${COLOR}14`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR, textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", flex: 1 }}>🏠 LightHouse</span>
-            <span style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>✓ Private</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>🏠 LightHouse</span>
+            <span style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>✓ Private</span>
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${COLOR}1A` : "transparent", border: `1px solid ${tab === key ? COLOR + "40" : "rgba(255,255,255,0.08)"}`, color: tab === key ? COLOR : "#9CA3AF", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
             ))}
           </div>
           {tab === "browse" && (
             <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ position: "relative" }}>
-                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#4B5563" }} />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="City or neighborhood…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 13, color: "#9CA3AF", outline: "none", boxSizing: "border-box" }} />
+                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="City or neighborhood…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
               </div>
               <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
                 {filters.map(({ key, label }) => (
-                  <button key={key} onClick={() => setFilter(key)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: filter === key ? `${COLOR}14` : "transparent", border: `1px solid ${filter === key ? COLOR + "50" : "rgba(255,255,255,0.1)"}`, color: filter === key ? COLOR : "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{label}</button>
+                  <button key={key} onClick={() => setFilter(key)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: filter === key ? `${t.ACCENT}14` : "transparent", border: `1px solid ${filter === key ? t.ACCENT + "50" : t.BORDER_HI}`, color: filter === key ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{label}</button>
                 ))}
               </div>
             </div>
@@ -185,17 +188,17 @@ export function LighthouseShell() {
   }
 
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <LighthouseIconRail tab={tab} onTab={setTab} />
       <LighthouseFilterSidebar properties={properties} search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
+        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#E8EAF0" }}>🏠 LightHouse — Safe Housing</div>
-            <div style={{ fontSize: 12, color: "#6B7280" }}>Verified listings · Privacy-first</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>🏠 LightHouse — Safe Housing</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Verified listings · Privacy-first</div>
           </div>
-          <span style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>✓ Privacy Protected</span>
+          <span style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>✓ Privacy Protected</span>
         </header>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
