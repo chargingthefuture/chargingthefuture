@@ -5,9 +5,18 @@
   background:
     radial-gradient(circle at 15% 10%, rgba(124, 58, 237, 0.22), transparent 35%),
     radial-gradient(circle at 85% 5%, rgba(14, 165, 233, 0.15), transparent 28%),
-    #0F1117;
-  color: #E8EAF0;
+    var(--ctf-bg);
+  color: var(--ctf-text-shell);
   font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * Comic theme: no gradients, no glow (COMIC_THEME_TOKENS.md §12.5). Drop the purple/cyan
+ * radial glows and fall back to the flat ink page background. The default theme keeps the
+ * original glow, so it renders exactly as before when the toggle is off.
+ */
+:global([data-theme='comic']) .shell {
+  background: var(--ctf-bg);
 }
 
 .frame {
@@ -20,13 +29,13 @@
 
 /* ─── Shared panel base ───────────────────────────────────────────────────── */
 .panel {
-  background: #0D0F14;
+  background: var(--ctf-panel);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* ─── Icon rail (leftmost 72px column) ───────────────────────────────────── */
 .iconRail {
-  background: #090B0F;
+  background: var(--ctf-icon-rail);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
@@ -61,14 +70,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   font-size: 18px;
   transition: background 0.12s, color 0.12s;
 }
 
 .iconRailBtn:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
 }
 
 .iconRailBtnDisabled,
@@ -80,7 +89,7 @@
 .iconRailBtnDisabled:hover,
 .iconRailBtn:disabled:hover {
   background: transparent;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .iconRailBtnActive {
@@ -127,7 +136,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 .sidebarSearch {
@@ -137,13 +146,13 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   outline: none;
   box-sizing: border-box;
 }
 
 .sidebarSearch::placeholder {
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 .sidebarBody {
@@ -165,7 +174,7 @@
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   font-size: 14px;
   text-align: left;
   text-decoration: none;
@@ -174,12 +183,12 @@
 
 .sidebarChannel:hover {
   background: rgba(255, 255, 255, 0.04);
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
 }
 
 .sidebarChannelActive {
   background: rgba(124, 58, 237, 0.16);
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
 }
 
 .sidebarChannelActive .sidebarChannelHash {
@@ -187,7 +196,7 @@
 }
 
 .sidebarChannelHash {
-  color: #4B5563;
+  color: var(--ctf-text-muted);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -217,7 +226,7 @@
   background: transparent;
   cursor: pointer;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   text-align: left;
   transition: background 0.1s;
   width: calc(100% - 2px);
@@ -254,7 +263,7 @@
 .sidebarFooterMeta {
   margin: 0;
   font-size: 11px;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 /* ─── Main content panel ─────────────────────────────────────────────────── */
@@ -313,14 +322,14 @@
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 800;
-  color: #F9FAFB;
+  color: var(--ctf-text);
   line-height: 1.3;
 }
 
 .heroBannerSub {
   margin: 0;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
 }
 
 .heroStats {
@@ -348,7 +357,7 @@
 
 .heroStatLabel {
   font-size: 11px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   display: block;
 }
 
@@ -397,7 +406,7 @@
   padding: 12px 16px;
   font-size: 14px;
   line-height: 1.6;
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
 }
 
 .chatBubbleHub {
@@ -455,14 +464,14 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
 .chatChip:hover {
   background: rgba(255, 255, 255, 0.08);
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
 }
 
 .chatSignInLink {
@@ -486,7 +495,7 @@
   margin-top: 12px;
   text-align: center;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   line-height: 1.5;
 }
 
@@ -508,11 +517,11 @@
   border: none;
   outline: none;
   font-size: 14px;
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
 }
 
 .chatInput::placeholder {
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 .chatSendBtn {
@@ -525,7 +534,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
   font-size: 14px;
   flex-shrink: 0;
   transition: background 0.1s;
@@ -571,7 +580,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .appsSortSelect {
@@ -593,13 +602,13 @@
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 800;
-  color: #F9FAFB;
+  color: var(--ctf-text);
 }
 
 .appsPanelSub {
   margin: 0;
   font-size: 14px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .appsGrid {
@@ -609,7 +618,7 @@
 }
 
 .appsEmpty {
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   font-size: 14px;
   margin: 0 0 12px;
 }
@@ -650,7 +659,7 @@
 
 .appCardPhase {
   font-size: 10px;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 .appCardLive {
@@ -662,13 +671,13 @@
   margin: 0 0 4px;
   font-size: 15px;
   font-weight: 700;
-  color: #F9FAFB;
+  color: var(--ctf-text);
 }
 
 .appCardDesc {
   margin: 0 0 14px;
   font-size: 13px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   line-height: 1.5;
 }
 
@@ -726,13 +735,13 @@
   margin: 0 0 4px;
   font-size: 15px;
   font-weight: 700;
-  color: #F9FAFB;
+  color: var(--ctf-text);
 }
 
 .profileMeta {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .profileBadge {
@@ -763,7 +772,7 @@
 .quoteAuthor {
   margin: 0;
   font-size: 11px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .memberList {
@@ -784,13 +793,13 @@
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid transparent;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   text-decoration: none;
 }
 
 .memberItem:hover {
   background: rgba(255, 255, 255, 0.05);
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
 }
 
 .memberItemName {
@@ -822,7 +831,7 @@
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #F9FAFB;
+  color: var(--ctf-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -830,7 +839,7 @@
 .sectionDesc {
   margin: 0;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   line-height: 1.5;
 }
 
@@ -852,13 +861,13 @@
   margin: 0 0 2px;
   font-size: 22px;
   font-weight: 800;
-  color: #F9FAFB;
+  color: var(--ctf-text);
 }
 
 .gdpCardSub {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .gdpProgressTrack {
@@ -880,7 +889,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 /* ─── Shared / auth ──────────────────────────────────────────────────────── */
@@ -931,7 +940,7 @@
   gap: 10px;
   height: 52px;
   padding: 0 12px;
-  background: #090B0F;
+  background: var(--ctf-icon-rail);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
@@ -942,7 +951,7 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -975,7 +984,7 @@
 .mobileBarTitle {
   font-size: 14px;
   font-weight: 700;
-  color: #F9FAFB;
+  color: var(--ctf-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -993,7 +1002,7 @@
   border-radius: 8px;
   background: transparent;
   border: 1px solid transparent;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1159,7 +1168,7 @@
 .comicCardName {
   font-size: 14px;
   font-weight: 700;
-  color: #F9FAFB;
+  color: var(--ctf-text);
 }
 
 .comicCardBadge {
@@ -1174,7 +1183,7 @@
 
 .comicCardMeta {
   font-size: 12px;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
 }
 
 .comicCardQuestion {
@@ -1193,7 +1202,7 @@
 
 .comicCardQuestionText {
   font-size: 14px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
 }
 
 .comicCardAnswer {
@@ -1217,7 +1226,7 @@
 
 .comicRatingPrompt {
   font-size: 11px;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
   margin-right: 2px;
 }
 
@@ -1229,7 +1238,7 @@
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1255,7 +1264,7 @@
   border-radius: 7px;
   background: transparent;
   border: 1px solid transparent;
-  color: #4B5563;
+  color: var(--ctf-text-muted);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1357,7 +1366,7 @@
 
 .comicComposerHelperText {
   font-size: 12px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .comicComposerHelperToken {
@@ -1384,7 +1393,7 @@
 
 .comicLockedText {
   font-size: 14px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   flex: 1;
 }
 
@@ -1417,7 +1426,7 @@
   max-height: 90vh;
   overflow-y: auto;
   border-radius: 22px;
-  background: #0D0F14;
+  background: var(--ctf-panel);
   border: 1px solid rgba(124, 58, 237, 0.3);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
 }
@@ -1442,7 +1451,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
 }
 
 .comicConsentHeaderRow {
@@ -1466,7 +1475,7 @@
 .comicConsentTitle {
   font-size: 19px;
   font-weight: 800;
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
   margin: 0;
 }
 
@@ -1486,7 +1495,7 @@
 
 .comicConsentLede {
   font-size: 13.5px;
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   line-height: 1.6;
   margin: 0;
 }
@@ -1525,13 +1534,13 @@
 .comicConsentPointTitle {
   font-size: 14px;
   font-weight: 700;
-  color: #E8EAF0;
+  color: var(--ctf-text-shell);
   margin-bottom: 3px;
 }
 
 .comicConsentPointDesc {
   font-size: 12.5px;
-  color: #6B7280;
+  color: var(--ctf-text-subtle);
   line-height: 1.55;
 }
 
@@ -1562,7 +1571,7 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #9CA3AF;
+  color: var(--ctf-text-secondary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -1587,4 +1596,177 @@
   .comicConsentDismiss {
     width: 100%;
   }
+}
+
+/* ─── Comic theme overrides ──────────────────────────────────────────────────
+ *
+ * Only active under [data-theme='comic']; the default theme above is untouched and
+ * renders pixel-identical when the toggle is off. Values come verbatim from
+ * design/artifacts/mockup-sandbox/COMIC_THEME_TOKENS.md — no gradients, no glow/neon,
+ * sharp corners, and the 3px 3px 0 offset shadow. The standard theme's purple/cyan
+ * accents become the warm ink palette (cream #D4C49A, inkDim #7A6A50). The AI
+ * Assistant surfaces use inkDim specifically (§6, §9 — no blue in comic theme).
+ */
+
+/* Gradient logos, avatars, and primary buttons → flat ink panel + hard cream border
+ * + offset shadow (§12.5). */
+:global([data-theme='comic']) .iconRailLogo,
+:global([data-theme='comic']) .iconRailAvatar,
+:global([data-theme='comic']) .chatAvatar,
+:global([data-theme='comic']) .mobileBarLogo,
+:global([data-theme='comic']) .mobileBarAvatar,
+:global([data-theme='comic']) .profileAvatar {
+  background: var(--ctf-cta-bg);
+  border: 1.5px solid var(--ctf-cta-border);
+  box-shadow: var(--ctf-elevation-shadow);
+  color: var(--ctf-cta-text);
+}
+
+:global([data-theme='comic']) .chatSignInLink,
+:global([data-theme='comic']) .profileLoginBtn,
+:global([data-theme='comic']) .mobileBarSignIn,
+:global([data-theme='comic']) .chatSendBtnActive,
+:global([data-theme='comic']) .comicLockedJoinBtn,
+:global([data-theme='comic']) .comicConsentConfirm,
+:global([data-theme='comic']) .comicConsentHeaderIcon {
+  background: var(--ctf-cta-bg);
+  border: 1.5px solid var(--ctf-cta-border);
+  box-shadow: var(--ctf-elevation-shadow);
+  color: var(--ctf-cta-text);
+}
+
+/* Purple active nav / badge tints → cream ink tint + cream text. */
+:global([data-theme='comic']) .iconRailBtnActive,
+:global([data-theme='comic']) .mobileBarSectionBtnActive {
+  background: #d4c49a14;
+  border-color: #d4c49a;
+  color: var(--ctf-text);
+}
+
+:global([data-theme='comic']) .iconRailBtnActive,
+:global([data-theme='comic']) .sidebarChannelActive {
+  background: #d4c49a14;
+}
+
+:global([data-theme='comic']) .sidebarChannelActive .sidebarChannelHash,
+:global([data-theme='comic']) .sidebarFooterTitle,
+:global([data-theme='comic']) .heroBannerTag,
+:global([data-theme='comic']) .profileBadge,
+:global([data-theme='comic']) .quoteText {
+  color: var(--ctf-border);
+}
+
+:global([data-theme='comic']) .sidebarBadge {
+  background: var(--ctf-border);
+  color: var(--ctf-bg);
+}
+
+:global([data-theme='comic']) .profileBadge,
+:global([data-theme='comic']) .quoteCard {
+  background: #d4c49a08;
+  border-color: #d4c49a45;
+}
+
+/* Hero banner gradient → flat ink surface + cream border. */
+:global([data-theme='comic']) .heroBanner {
+  background: var(--ctf-surface);
+  border: 1.5px solid var(--ctf-border);
+  box-shadow: var(--ctf-elevation-shadow);
+}
+
+/* User chat bubble gradient → flat ink panel + cream border. */
+:global([data-theme='comic']) .chatBubbleUser {
+  background: var(--ctf-surface);
+  border: 1.5px solid var(--ctf-border);
+}
+
+/* AI Assistant cards use inkDim, not cyan (§9). */
+:global([data-theme='comic']) .comicCard {
+  background: var(--ctf-surface);
+  border: 1.5px solid #7a6a5060;
+  box-shadow: 2px 2px 0 #7a6a5030;
+}
+
+:global([data-theme='comic']) .comicCardAvatar,
+:global([data-theme='comic']) .comicPendingAvatar {
+  background: #7a6a5014;
+  border: 1.5px solid #7a6a5050;
+}
+
+:global([data-theme='comic']) .comicCardBadge {
+  background: var(--ctf-surface);
+  border: 1px solid #7a6a5050;
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .comicCardQa,
+:global([data-theme='comic']) .comicCardQuestionText {
+  color: var(--ctf-border);
+}
+
+:global([data-theme='comic']) .comicCardQuestion {
+  background: var(--ctf-bg);
+  border: 1.5px solid #d4c49a28;
+}
+
+:global([data-theme='comic']) .comicRatingRow {
+  border-top: 1.5px solid #d4c49a20;
+}
+
+:global([data-theme='comic']) .comicRatingBtnUp {
+  background: #22c55e14;
+  border-color: #22c55e;
+  color: var(--ctf-success);
+}
+
+:global([data-theme='comic']) .comicRatingBtnDown {
+  background: var(--ctf-surface);
+  border-color: var(--ctf-border-dim);
+  color: var(--ctf-text);
+}
+
+/* AI pending ("reviewing for safety") card → dashed inkDim. */
+:global([data-theme='comic']) .comicPendingCard {
+  background: var(--ctf-surface);
+  border: 1.5px dashed #7a6a5060;
+}
+
+:global([data-theme='comic']) .comicPendingBadge {
+  background: var(--ctf-surface);
+  border: 1px solid #7a6a5040;
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .comicPendingDot {
+  background: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .comicPendingText {
+  color: var(--ctf-border-dim);
+}
+
+/* @comic composer mention chip → inkDim chip on ink background. */
+:global([data-theme='comic']) .comicMentionChip {
+  background: var(--ctf-bg);
+  border: 1px solid var(--ctf-border-dim);
+  color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .comicMentionChipActive {
+  background: #7a6a5022;
+  border-color: var(--ctf-border-dim);
+}
+
+:global([data-theme='comic']) .comicComposerHelperToken {
+  color: var(--ctf-border-dim);
+}
+
+/* Consent modal gradient header → flat ink. */
+:global([data-theme='comic']) .comicConsentModal {
+  background: var(--ctf-panel);
+  border: 1.5px solid var(--ctf-border);
+}
+
+:global([data-theme='comic']) .comicConsentHeader {
+  background: var(--ctf-surface);
 }

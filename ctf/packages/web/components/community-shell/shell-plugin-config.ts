@@ -1,3 +1,5 @@
+import { getAppAccent, type ThemeName } from '../../lib/theme/theme-tokens';
+
 type PluginVisuals = {
   emoji: string;
   color: string;
@@ -27,6 +29,18 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
 
 const FALLBACK: PluginVisuals = { emoji: '🔌', color: '#9CA3AF', bg: '#1a1a2e' };
 
-export function getPluginVisuals(slug: string): PluginVisuals {
-  return PLUGIN_VISUALS[slug] ?? FALLBACK;
+// In comic theme the per-card surface tint is the flat ink surface (COMIC_THEME_TOKENS.md §1,
+// §9 — no neon, no gradients). The accent comes from getAppAccent so the `${color}NN` opacity
+// call sites keep working with the deep, ink-compatible accent.
+const COMIC_CARD_SURFACE = '#141414';
+
+// Resolve a plugin's emoji, accent color, and card-background base for the active theme. The default
+// theme returns the exact colors the shell already shipped (pixel-identical when the toggle is off);
+// comic theme swaps the accent to its deep ink variant and flattens the card base to the ink surface.
+export function getPluginVisuals(slug: string, theme: ThemeName = 'default'): PluginVisuals {
+  const base = PLUGIN_VISUALS[slug] ?? FALLBACK;
+  if (theme === 'comic') {
+    return { emoji: base.emoji, color: getAppAccent(slug, theme), bg: COMIC_CARD_SURFACE };
+  }
+  return base;
 }

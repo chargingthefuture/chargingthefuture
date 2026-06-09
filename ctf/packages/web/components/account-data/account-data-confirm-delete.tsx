@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Trash2, Lock, CheckCircle, X, Loader2 } from 'lucide-react';
 import {
-  BRAND, BG, BORDER, TEXT, SUBTLE, FULL_ACCOUNT_CONFIRM_PHRASE,
+  getAccountDataTokens, FULL_ACCOUNT_CONFIRM_PHRASE,
 } from './account-data-shared';
+import { useTheme } from '@/hooks/useTheme';
 
 type ConfirmStatus = 'idle' | 'submitting' | 'done' | 'error';
 
@@ -21,6 +22,8 @@ type ConfirmProps = {
 // AccountDataConfirmDelete.tsx / MobileAccountDataConfirmDelete.tsx. On success it shows the
 // "Deletion queued" acknowledgement; the parent decides where to send the user next.
 export function AccountDataConfirmDelete({ serviceCount, isMobile, onCancel, onConfirm }: ConfirmProps) {
+  const { theme } = useTheme();
+  const { BRAND, BG, BORDER, TEXT, SUBTLE } = getAccountDataTokens(theme);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<ConfirmStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

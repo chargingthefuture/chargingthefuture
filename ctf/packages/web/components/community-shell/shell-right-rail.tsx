@@ -6,6 +6,7 @@ import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { ShellCurrentUser } from './shell-types';
 import { getPluginVisuals } from './shell-plugin-config';
 import { TrustRightRailCard } from '../shared/trust/TrustRightRailCard';
+import { useTheme } from '@/hooks/useTheme';
 import styles from './community-shell.module.css';
 
 type ShellRightRailProps = {
@@ -18,6 +19,7 @@ type ShellRightRailProps = {
 };
 
 export function ShellRightRail({ readyApps, implementedCount, currentUser, trust, isAuthenticated = false, signInUrl = '/sign-in' }: ShellRightRailProps) {
+  const { theme } = useTheme();
   const displayName = currentUser.displayName;
   const initial = currentUser.initial;
 
@@ -65,7 +67,7 @@ export function ShellRightRail({ readyApps, implementedCount, currentUser, trust
         <p className={styles.rightRailSectionTitle}>Ready Apps</p>
         <ul className={styles.memberList}>
           {readyApps.map((plugin) => {
-            const { emoji, color } = getPluginVisuals(plugin.slug);
+            const { emoji, color } = getPluginVisuals(plugin.slug, theme);
             const pluginHref = `/apps/${plugin.slug}`;
             return (
               <li key={plugin.slug}>

@@ -1,15 +1,49 @@
 // Shared design tokens and types for the Account & Data surface.
 //
-// Tokens mirror the survivor-hub mockups exactly (BRAND `#E91E8C`, bg `#0F1117`, surface `#161B27`,
-// border `#1E2A3A`, text `#F9FAFB`, subtle `#6B7280`). The shell uses inline styles to match the
-// mockup conventions for this surface.
+// The default-theme tokens mirror the survivor-hub mockups exactly (BRAND `#E91E8C`, bg `#0F1117`,
+// surface `#161B27`, border `#1E2A3A`, text `#F9FAFB`, subtle `#6B7280`). The shell uses inline
+// styles with a `${color}NN` opacity pattern (e.g. `background: ${BRAND}15`) that plain CSS
+// variables can't retrofit, so colors are resolved through a theme-aware token object instead.
+//
+// The comic-theme values come verbatim from the Account & Data comic mockup
+// (design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/ComicAccountData.tsx) and
+// COMIC_THEME_TOKENS.md §1: bg `#0D0D0D`, surface `#141414`, ink border `#D4C49A`, cream text
+// `#EDE3CB`, inkDim secondary `#7A6A50`, and the destructive danger red `#B91C1C` for BRAND.
 
-export const BRAND = '#E91E8C';
-export const BG = '#0F1117';
-export const SURFACE = '#161B27';
-export const BORDER = '#1E2A3A';
-export const TEXT = '#F9FAFB';
-export const SUBTLE = '#6B7280';
+import type { ThemeName } from '../../lib/theme/theme-tokens';
+
+export type AccountDataTokens = {
+  BRAND: string;
+  BG: string;
+  SURFACE: string;
+  BORDER: string;
+  TEXT: string;
+  SUBTLE: string;
+};
+
+const DEFAULT_TOKENS: AccountDataTokens = {
+  BRAND: '#E91E8C',
+  BG: '#0F1117',
+  SURFACE: '#161B27',
+  BORDER: '#1E2A3A',
+  TEXT: '#F9FAFB',
+  SUBTLE: '#6B7280',
+};
+
+const COMIC_TOKENS: AccountDataTokens = {
+  BRAND: '#B91C1C',
+  BG: '#0D0D0D',
+  SURFACE: '#141414',
+  BORDER: '#D4C49A',
+  TEXT: '#EDE3CB',
+  SUBTLE: '#7A6A50',
+};
+
+// Resolve the Account & Data color tokens for the active theme. The default theme returns the
+// exact colors the surface already shipped, so it renders pixel-identical when the toggle is off.
+export function getAccountDataTokens(theme: ThemeName): AccountDataTokens {
+  return theme === 'comic' ? COMIC_TOKENS : DEFAULT_TOKENS;
+}
 
 // One service entry as returned by GET /api/account/services. Names and summaries come straight
 // from the deletion registry — never hardcoded in the components.

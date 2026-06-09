@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { PluginAvailabilityState, PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PluginSortMode } from './shell-types';
 import { getPluginVisuals } from './shell-plugin-config';
+import { useTheme } from '@/hooks/useTheme';
 import styles from './community-shell.module.css';
 
 function getPluginHref(slug: string): string {
@@ -28,6 +29,7 @@ type ShellAppsPanelProps = {
 };
 
 export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSortModeChange }: ShellAppsPanelProps) {
+  const { theme } = useTheme();
 
   return (
     <div className={styles.appsPanel}>
@@ -57,7 +59,7 @@ export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSo
 
       <div className={styles.appsGrid}>
         {plugins.map((plugin) => {
-          const { emoji, color, bg } = getPluginVisuals(plugin.slug);
+          const { emoji, color, bg } = getPluginVisuals(plugin.slug, theme);
           const isActive = activeApp === plugin.slug;
           const pluginHref = getPluginHref(plugin.slug);
           return (
