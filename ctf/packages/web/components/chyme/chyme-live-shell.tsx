@@ -128,7 +128,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE }}>Join a Room</div>
               <div style={{ fontSize: 15, color: t.FAINT, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
-                Select a live room to listen, speak, and connect with survivors worldwide. All rooms are safe spaces.
+                Select a live room to listen, speak, and connect with survivors worldwide.
               </div>
             </div>
           )}

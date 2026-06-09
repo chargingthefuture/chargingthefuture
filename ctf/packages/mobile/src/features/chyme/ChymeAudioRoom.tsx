@@ -87,7 +87,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     void (async () => {
       try {
         await activeCall.join({ create: true });
-        // Audio-only safe space: never publish video, and join muted so a new
+        // Audio-only room: never publish video, and join muted so a new
         // listener is not live until they choose to unmute.
         try {
           await activeCall.camera.disable();
@@ -176,7 +176,7 @@ const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
           </View>
-          <Text style={styles.safeLabel}>Safe Space 🔒</Text>
+          <Text style={styles.roomLabel}>Members Only 🔒</Text>
           <TouchableOpacity style={styles.chatBtn} onPress={onOpenChat}>
             <Text style={styles.chatBtnIcon}>💬</Text>
           </TouchableOpacity>
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: PRIMARY },
   liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700' },
-  safeLabel: { fontSize: 11, color: '#4B5563', flex: 1 },
+  roomLabel: { fontSize: 11, color: '#4B5563', flex: 1 },
   chatBtn: {
     width: 34,
     height: 34,
