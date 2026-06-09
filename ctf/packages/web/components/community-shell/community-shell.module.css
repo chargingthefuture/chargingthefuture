@@ -285,6 +285,13 @@
   flex-shrink: 0;
 }
 
+.supportBannerLink {
+  color: #FDE68A;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ─── Chat panel ─────────────────────────────────────────────────────────── */
 .chatPanelWrap {
   display: flex;

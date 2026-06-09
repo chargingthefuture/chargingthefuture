@@ -9,9 +9,11 @@ type IconRailProps = {
   section: ShellSection;
   onSectionChange: (s: ShellSection) => void;
   initial?: string;
+  // When false, the Apps button is hidden (support-only members get the general channel only).
+  showApps?: boolean;
 };
 
-export function ShellIconRail({ section, onSectionChange, initial = 'S' }: IconRailProps) {
+export function ShellIconRail({ section, onSectionChange, initial = 'S', showApps = true }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
       <div className={styles.iconRailLogo} aria-hidden="true">SH</div>
@@ -26,15 +28,17 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S' }: IconR
         <MessageSquare size={18} />
       </button>
 
-      <button
-        type="button"
-        className={section === 'apps' ? `${styles.iconRailBtn} ${styles.iconRailBtnActive}` : styles.iconRailBtn}
-        onClick={() => onSectionChange('apps')}
-        aria-label="Apps"
-        aria-pressed={section === 'apps'}
-      >
-        <Zap size={18} />
-      </button>
+      {showApps ? (
+        <button
+          type="button"
+          className={section === 'apps' ? `${styles.iconRailBtn} ${styles.iconRailBtnActive}` : styles.iconRailBtn}
+          onClick={() => onSectionChange('apps')}
+          aria-label="Apps"
+          aria-pressed={section === 'apps'}
+        >
+          <Zap size={18} />
+        </button>
+      ) : null}
 
       <div className={styles.iconRailSpacer} aria-hidden="true" />
 

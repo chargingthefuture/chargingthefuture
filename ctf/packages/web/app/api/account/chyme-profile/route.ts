@@ -8,8 +8,7 @@ import { reportError } from 'lib/observability/report';
 export async function DELETE() {
   const decision = await evaluatePluginAccess({
     requireUsername: false,
-    requireApprovedUserOrAdmin: false,
-    allowUnlockSupportOnly: true,
+    minUnlockTier: 'any_authenticated',
   });
   if (!decision.allowed) {
     return NextResponse.json(decision, { status: decision.status });

@@ -5,7 +5,7 @@ import { WeeklyPerformanceAdminShell } from 'components/weekly-performance/wp-ad
 export const dynamic = 'force-dynamic';
 
 export default async function WeeklyPerformanceAdminPage() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed || !decision.isAdmin) {
     redirect('/apps/weekly-performance');
   }

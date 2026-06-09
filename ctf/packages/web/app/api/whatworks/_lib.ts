@@ -8,7 +8,7 @@ export type WhatWorksApiGate =
 
 // Reading is open to any authenticated survivor; suggesting and endorsing share this gate.
 export async function requireWhatWorksAccess(): Promise<WhatWorksApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: false, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
   }
@@ -17,7 +17,7 @@ export async function requireWhatWorksAccess(): Promise<WhatWorksApiGate> {
 
 // Curating problems and moderating suggestions require an admin.
 export async function requireWhatWorksAdminAccess(): Promise<WhatWorksApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: false, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
   }

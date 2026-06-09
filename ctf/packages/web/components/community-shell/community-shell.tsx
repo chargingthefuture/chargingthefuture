@@ -21,8 +21,16 @@ type CommunityShellProps = {
   trust: TrustUserExtension;
   initialSection?: ShellSection;
   isAuthenticated?: boolean;
+  // How much of the Hub this person can use. 'approved_full' is the normal shell.
+  // 'support_only' is the limited state for a signed-in member who has not been verified
+  // yet: only the general channel (read + post) is shown, with a banner pointing to the
+  // Unlock flow. Defaults to 'approved_full'.
+  accessTier?: 'approved_full' | 'support_only';
   signInUrl?: string;
 };
+
+// The home/general channel slug — the support surface kept open to not-yet-verified members.
+const GENERAL_CHANNEL_SLUG = 'general';
 
 type PluginsApiPayload = {
   plugins?: PluginRegistryItem[];
@@ -111,8 +119,10 @@ function sortPluginsForUi(
   });
 }
 
-export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, signInUrl = '/sign-in' }: CommunityShellProps) {
-  const [section, setSection] = useState<ShellSection>(initialSection);
+export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, accessTier = 'approved_full', signInUrl = '/sign-in' }: CommunityShellProps) {
+  // Support-only members get a limited Hub: just the general channel, no plugin grid.
+  const isSupportOnly = accessTier === 'support_only';
+  const [section, setSection] = useState<ShellSection>(isSupportOnly ? 'chat' : initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
   const [channels, setChannels] = useState<HubChannelInfo[]>([]);
@@ -169,7 +179,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         if (channelsRes.ok) {
           const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
           if (!cancelled) {
-            const loadedChannels = channelsPayload.channels ?? [];
+            const allChannels = channelsPayload.channels ?? [];
+            // Support-only members may only see the general channel; everyone else sees all.
+            const loadedChannels = isSupportOnly
+              ? allChannels.filter((channel) => channel.slug === GENERAL_CHANNEL_SLUG)
+              : allChannels;
             setChannels(loadedChannels);
             // Default the open channel to the first one (general) so the sidebar
             // shows which channel the chat panel is already displaying.
@@ -185,7 +199,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isSupportOnly]);
 
   const orderedPlugins = useMemo(
     () => sortPluginsForUi(plugins, sortMode, recentPluginSlugs, pluginUsageCounts),
@@ -199,6 +213,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
       `${p.name} ${p.summary}`.toLowerCase().includes(normalizedQuery),
     );
   }, [normalizedQuery, orderedPlugins]);
+
+  // Support-only members do not get the plugin grid or the plugin tiles in the rails —
+  // only the general channel. Hand the shell an empty plugin list in that state so every
+  // plugin surface (sidebar tiles, apps grid, right-rail "ready apps") renders empty.
+  const shellPlugins = isSupportOnly ? [] : filteredPlugins;
 
   const handleAppSelect = (slug: string | null) => {
     setActiveApp(slug);
@@ -232,10 +251,13 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
     window.localStorage.setItem(PLUGIN_SORT_MODE_STORAGE_KEY, mode);
   };
 
-  const implementedCount = plugins.filter((p) => p.availabilityState === 'implemented_shell').length;
-  const readyApps = orderedPlugins
-    .filter((p) => p.availabilityState === 'implemented_shell')
-    .slice(0, 5);
+  const implementedCount = isSupportOnly ? 0 : plugins.filter((p) => p.availabilityState === 'implemented_shell').length;
+  const readyApps = isSupportOnly
+    ? []
+    : orderedPlugins.filter((p) => p.availabilityState === 'implemented_shell').slice(0, 5);
+
+  // Support-only members are pinned to the chat section even if local state drifts.
+  const effectiveSection: ShellSection = isSupportOnly ? 'chat' : section;
 
   return (
     <div className={`${styles.shell} ctf-self-responsive`}>
@@ -257,21 +279,23 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           <button
             type="button"
             role="tab"
-            aria-selected={section === 'chat'}
-            className={section === 'chat' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
+            aria-selected={effectiveSection === 'chat'}
+            className={effectiveSection === 'chat' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
             onClick={() => setSection('chat')}
           >
             Chat
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === 'apps'}
-            className={section === 'apps' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
-            onClick={() => setSection('apps')}
-          >
-            Apps
-          </button>
+          {isSupportOnly ? null : (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectiveSection === 'apps'}
+              className={effectiveSection === 'apps' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
+              onClick={() => setSection('apps')}
+            >
+              Apps
+            </button>
+          )}
         </div>
         <div className={styles.mobileBarAuth}>
           {isAuthenticated ? (
@@ -282,11 +306,11 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         </div>
       </header>
       <div className={styles.frame}>
-        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} />
+        <ShellIconRail section={effectiveSection} onSectionChange={setSection} initial={currentUser.initial} showApps={!isSupportOnly} />
         <ShellSidebar
-          section={section}
+          section={effectiveSection}
           channels={channels}
-          plugins={filteredPlugins}
+          plugins={shellPlugins}
           activeChannel={activeChannel}
           onChannelSelect={handleChannelSelect}
           activeApp={activeApp}
@@ -308,11 +332,22 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           {loadError ? (
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}
-          {section === 'chat' ? (
-            <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
+          {isSupportOnly ? (
+            <section className={styles.usernameAlert} role="status">
+              You have limited access for now. While we verify your profile you can use the general
+              channel below to talk to the community and ask for help — for example, finding your
+              Quora profile link.{' '}
+              <Link className={styles.supportBannerLink} href="/plugin/unlock">
+                Share your Quora link to get verified
+              </Link>{' '}
+              and the rest of the Hub opens up.
+            </section>
+          ) : null}
+          {effectiveSection === 'chat' ? (
+            <ShellChatPanel stats={shellStats} plugins={shellPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} signInUrl={signInUrl} />
           ) : (
             <ShellAppsPanel
-              plugins={filteredPlugins}
+              plugins={shellPlugins}
               activeApp={activeApp}
               onAppSelect={handleAppSelect}
               sortMode={sortMode}

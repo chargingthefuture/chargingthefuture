@@ -4,7 +4,7 @@ import { getAppUrl } from '../auth/runtime-env';
 import { MOOD_ERROR_CODE } from './constants';
 
 export async function requireMoodAccess() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };
   }

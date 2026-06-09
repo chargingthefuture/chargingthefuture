@@ -71,9 +71,14 @@ function AccessDeniedView({ status, code, reason, requestedPluginSlug }: AccessD
           Username is required for this plugin route. Update your profile username and try again.
         </p>
       ) : null}
-      {reason === 'unlock_support_only' ? (
+      {reason === 'unlock_required' ? (
         <p className="text-sm">
-          This account is currently limited to support access only. Open Chyme to continue with customer service community chat while verification is unresolved.
+          Your account is not verified yet, so this plugin is not open to you right now. You can still
+          use the{' '}
+          <Link className="underline underline-offset-4" href="/">general channel on the home page</Link>{' '}
+          to talk to the community and ask for help, and you can{' '}
+          <Link className="underline underline-offset-4" href="/plugin/unlock">share your Quora profile link</Link>{' '}
+          to get verified and open the rest of the app.
         </p>
       ) : null}
       <p className="text-sm">
@@ -144,11 +149,13 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  const shouldRequireUsername = selectedPlugin.slug !== 'chyme';
+  // Every plugin route now requires full Unlock access (the default minUnlockTier
+  // 'approved_full'); a not-yet-verified member is sent to the Unlock flow via the
+  // access-denied view, and the Hub general channel is their support surface. Chyme
+  // keeps its anonymous public shell for signed-out visitors (the AUTH_UNAUTHORIZED
+  // branch below), which is why it does not require a username.
   const decision = await evaluatePluginAccess({
-    requireUsername: shouldRequireUsername,
-    allowUnlockSupportOnly: selectedPlugin.slug === 'chyme',
-    requireApprovedUserOrAdmin: selectedPlugin.slug === 'chyme',
+    requireUsername: selectedPlugin.slug !== 'chyme',
   });
 
   if (!decision.allowed) {

@@ -172,8 +172,11 @@ The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_d
   pending card, the `@comic` composer, consent, and ratings — are delivered separately in the comic
   Android parity work (see `ctf-comic-feature-inventory.md`).
 - Public unauthenticated read of the blended channel is **not** part of this Android pass: like web,
-  `GET /api/hub/messages` still requires an approved-user-or-admin session. The public read path is a
-  separate, security-sensitive follow-up (see Gaps #1).
+  `GET /api/hub/messages` still requires a signed-in session. As of 2026-06-09 the Hub routes use the
+  `support_only` access tier, so both fully-approved members and not-yet-verified `locked_support_only`
+  members may read and post here — the general channel is the support surface for members still in the
+  Unlock flow. The public unauthenticated read path is a separate, security-sensitive follow-up (see
+  Gaps #1).
 
 Parity Status: web+android complete.
 
@@ -190,6 +193,7 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-06-09: Hub general channel is now the support surface for not-yet-verified members. As part of making Unlock the single source of truth for full access, `requireHubAccess` (`/api/hub/_lib.ts`) moved from "approved-user-or-admin" to the new `support_only` access tier, so `locked_support_only` members can read and post in the general channel in addition to fully-approved members. The home page renders the community shell in a restricted "general channel only" mode for these members (no plugin grid, no other channels, a banner pointing to `/plugin/unlock`). Copy that previously pointed degraded users at Chyme now points them here. No schema or contract change.
 - 2026-06-01: Android parity delivered for the feed-backed Survivor Hub home channel. Added `ctf/packages/mobile/src/features/hub/` (`api.ts` reads `GET /api/hub/messages` and posts to `POST /api/hub/messages` with `x-ctf-csrf: 1`; `HubHome.tsx` renders the blended stream — official announcements/AI Q&A vs community posts — and a composer that creates a peer-to-peer community post). Wired `HubHome` as the default surface in the mobile app shell (`App.tsx`). Reconciled the `feed-announcements` parity contract `mobileFeatureDirs` to include `hub`. Removed the dead GetStream-based survivor-hub-chat mobile fixtures (`MockSurvivorHubChat.tsx`, `SurvivorHubChat.tsx`, `fetchSurvivorHubChatStreamCredentials.ts`, `index.ts`) — GetStream was removed from the platform. Public unauthenticated read left as a separate follow-up (Gaps #1). Parity: web+android complete.
 - 2026-05-31: Survivor Hub ⟵ Feed consolidation implemented. `GET/POST /api/hub/messages` repointed at the Feed model (`listFeedTimeline` / `createFeedCommunityPost`, CSRF-guarded); added `feed_render_config.is_public` (default TRUE) and read it into `FeedConfig`; retired `feed-announcements` as a navigable app tile (`isVisible: false`); removed the phantom `feed_user_extension` from the seed; dropped the `hub_channels`/`hub_messages`/`hub_bot_routes`/`hub_dm_threads`/`hub_bots` plan and reconciled this inventory + the Feed deletion contract to real tables. Channels/DMs/bots deferred to a single blended channel.
 - 2026-05-12: Inventory rewritten as a clean snapshot per the updated rule 120. (Superseded by the 2026-05-31 consolidation: the Hub no longer owns `hub_*` schema or a dedicated GetStream scope.)

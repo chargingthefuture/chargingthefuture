@@ -49,10 +49,6 @@ export default async function AdminPage() {
           <dt className="font-medium">Role</dt>
           <dd>{decision.role ?? 'not set'}</dd>
         </div>
-        <div className="mt-2 flex justify-between gap-4">
-          <dt className="font-medium">Approved state</dt>
-          <dd>{decision.isApproved ? 'approved' : 'not approved'}</dd>
-        </div>
       </dl>
       <p className="text-sm">
         <Link className="underline underline-offset-4" href="/apps/chyme">Open plugin route</Link>

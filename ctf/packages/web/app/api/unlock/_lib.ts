@@ -3,7 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { ensureUnlockAdmin } from 'lib/unlock/policy';
 
 export async function requireUnlockUserAccess() {
-  const decision = await evaluatePluginAccess({ requireUsername: false, allowUnlockSupportOnly: true });
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'any_authenticated' });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };
   }

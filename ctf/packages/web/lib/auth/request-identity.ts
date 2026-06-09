@@ -12,7 +12,6 @@ export type RequestIdentity = {
   lastName: string | null;
   role: string | null;
   isAdmin: boolean;
-  isApproved: boolean;
 };
 
 function pickFirstNonEmpty(...values: MaybeValue[]): string | null {
@@ -75,10 +74,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
     const role = normalizeRole(
       readIdentityValue('x-ctf-user-role', 'ctf_user_role', headerStore, cookieStore),
     );
-    const isApproved =
-      normalizeBoolean(
-        readIdentityValue('x-ctf-user-approved', 'ctf_user_approved', headerStore, cookieStore),
-      ) ?? true;
 
     return {
       isAuthenticated: true,
@@ -89,7 +84,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
       lastName,
       role,
       isAdmin: role === 'admin',
-      isApproved,
     };
   }
 
@@ -110,7 +104,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
       lastName: verified.lastName,
       role,
       isAdmin: role === 'admin',
-      isApproved: verified.isApproved ?? true,
     };
   }
 
@@ -124,7 +117,6 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
     lastName: null,
     role: null,
     isAdmin: false,
-    isApproved: false,
   };
 }
 

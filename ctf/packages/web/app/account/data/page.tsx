@@ -10,8 +10,7 @@ import { AccountDataShell } from '@/components/account-data/account-data-shell';
 export default async function AccountDataPage() {
   const decision = await evaluatePluginAccess({
     requireUsername: false,
-    requireApprovedUserOrAdmin: false,
-    allowUnlockSupportOnly: true,
+    minUnlockTier: 'any_authenticated',
   });
 
   if (!decision.allowed) {

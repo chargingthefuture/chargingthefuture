@@ -20,9 +20,11 @@ export type ChymeApiGate =
 
 export async function requireChymeAccess(): Promise<ChymeApiGate> {
   const authDecision = await evaluatePluginAccess({
-    allowUnlockSupportOnly: true,
     requireUsername: false,
-    requireApprovedUserOrAdmin: true,
+    // Chyme requires full access; not-yet-unlocked users are sent to the Unlock flow
+    // (and to the Hub general channel for support) instead. The default approved_full
+    // tier enforces that. The anonymous public Chyme shell is a separate path.
+    minUnlockTier: 'approved_full',
   });
 
   if (!authDecision.allowed) {

@@ -15,7 +15,7 @@ export type SkillsHuntApiGate =
   };
 
 export async function requireSkillsHuntReadAccess(): Promise<SkillsHuntApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,
@@ -30,7 +30,7 @@ export async function requireSkillsHuntReadAccess(): Promise<SkillsHuntApiGate> 
 }
 
 export async function requireSkillsHuntSubmitAccess(): Promise<SkillsHuntApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: true });
+  const decision = await evaluatePluginAccess({ requireUsername: true });
   if (!decision.allowed) {
     return {
       allowed: false,
@@ -45,7 +45,7 @@ export async function requireSkillsHuntSubmitAccess(): Promise<SkillsHuntApiGate
 }
 
 export async function requireSkillsHuntModeratorAccess(): Promise<SkillsHuntApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,
@@ -68,7 +68,7 @@ export async function requireSkillsHuntModeratorAccess(): Promise<SkillsHuntApiG
 }
 
 export async function requireSkillsHuntAdminAccess(): Promise<SkillsHuntApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,

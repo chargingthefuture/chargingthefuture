@@ -1,6 +1,6 @@
 import { resolveRequestIdentity } from './request-identity';
 import { pluginAuthDeny, type PluginDenyResponse } from './deny-taxonomy';
-import { isUserUnlocked } from 'lib/unlock/access';
+import { getUnlockAccessTier } from 'lib/unlock/access';
 
 export type AllowDecision = {
   allowed: true;
@@ -8,25 +8,30 @@ export type AllowDecision = {
   username: string | null;
   role: string | null;
   isAdmin: boolean;
-  isApproved: boolean;
 };
 
 export type PluginAuthDecision = AllowDecision | PluginDenyResponse;
 
+// How much Unlock access a route requires. Unlock is the single source of truth for
+// full app access:
+//  - 'approved_full' (default): only fully-approved users (or admins) may enter.
+//  - 'support_only': approved OR support-only users may enter (e.g. the Hub general
+//    channel, which is the support surface for not-yet-verified members).
+//  - 'any_authenticated': any signed-in user may enter regardless of tier (e.g. the
+//    Unlock submission/status routes and the account/profile/deletion routes, so a
+//    gated user can always submit and can always manage or delete their own data).
+type MinUnlockTier = 'approved_full' | 'support_only' | 'any_authenticated';
+
 type EvaluatePluginAccessOptions = {
   requiredRoles?: string[];
   requireUsername?: boolean;
-  requireApprovedUserOrAdmin?: boolean;
-  // When true, users who have not yet been unlocked (pending / rejected) can still
-  // reach the route (e.g. unlock submission, chyme, hub, account endpoints).
-  allowUnlockSupportOnly?: boolean;
+  minUnlockTier?: MinUnlockTier;
 };
 
 function buildAllowDecision(
   userId: string,
   username: string | null,
   role: string | null,
-  isApproved: boolean,
 ): AllowDecision {
   return {
     allowed: true,
@@ -34,7 +39,6 @@ function buildAllowDecision(
     username,
     role,
     isAdmin: role === 'admin',
-    isApproved,
   };
 }
 
@@ -54,8 +58,7 @@ export async function evaluatePluginAccess(
   const {
     requiredRoles,
     requireUsername = false,
-    requireApprovedUserOrAdmin = false,
-    allowUnlockSupportOnly = false,
+    minUnlockTier = 'approved_full',
   } = options;
 
   const identity = await resolveRequestIdentity();
@@ -76,24 +79,19 @@ export async function evaluatePluginAccess(
     }
   }
 
-  // Unlock access gate: check flag + DB rather than cookie/header tier.
-  // Admins bypass this check entirely; routes that allow unapproved users (e.g. unlock
-  // submission, chyme, hub) pass allowUnlockSupportOnly: true to opt out.
-  if (!allowUnlockSupportOnly && identity.role !== 'admin') {
-    const unlocked = await isUserUnlocked(identity.userId);
-    if (!unlocked) {
-      return pluginAuthDeny.forbiddenPolicy('unlock_support_only');
+  // Unlock access gate — the single source of truth for full app access. Admins always
+  // pass. 'any_authenticated' routes (unlock submission/status, account/profile/deletion)
+  // skip the tier check so a gated user can always submit and manage their own data.
+  if (identity.role !== 'admin' && minUnlockTier !== 'any_authenticated') {
+    const tier = await getUnlockAccessTier(identity.userId);
+    const allowed =
+      minUnlockTier === 'support_only'
+        ? tier === 'approved_full' || tier === 'locked_support_only'
+        : tier === 'approved_full';
+    if (!allowed) {
+      return pluginAuthDeny.forbiddenPolicy('unlock_required');
     }
   }
 
-  if (requireApprovedUserOrAdmin && identity.role !== 'admin' && !identity.isApproved) {
-    return pluginAuthDeny.forbiddenPolicy('policy_denied');
-  }
-
-  return buildAllowDecision(
-    identity.userId,
-    identity.username,
-    identity.role,
-    identity.isApproved,
-  );
+  return buildAllowDecision(identity.userId, identity.username, identity.role);
 }
