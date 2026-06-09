@@ -5,7 +5,6 @@ import { canonicalizePluginSlug, getPluginBySlug } from 'lib/plugins/repository'
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
-import { FeedAnnouncementsShell } from '@/components/feed/feed-announcements-shell';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
 import { GentlePulseShell } from '@/components/gentlepulse/gentlepulse-shell';
@@ -200,16 +199,6 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
 
   if (selectedPlugin.slug === 'directory') {
     return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'feed-announcements') {
-    return (
-      <FeedAnnouncementsShell
-        userId={decision.userId}
-        role={decision.role}
-        isAdmin={decision.isAdmin}
-      />
-    );
   }
 
   if (selectedPlugin.slug === 'workforce') {

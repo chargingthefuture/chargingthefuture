@@ -20,12 +20,6 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "feed-announcements",
-      "mobileFeatureDirs": ["hub", "feed", "announcements", "questions", "community", "comic"],
-      "requiresMobileSurface": true,
-      "requiresExplicitWebShell": false
-    },
-    {
       "slug": "workforce",
       "mobileFeatureDirs": ["workforce"],
       "requiresMobileSurface": true,
