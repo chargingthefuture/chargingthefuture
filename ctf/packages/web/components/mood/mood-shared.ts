@@ -1,6 +1,9 @@
 // Shared constants, types, and helpers for the Mood web shell.
 // Palette derives from design/.../survivor-hub/Mood.tsx.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+
 export const COLOR = "#EC4899";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
@@ -8,6 +11,23 @@ export const BORDER = "#1E2A3A";
 export const TEXT = "#F9FAFB";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
+
+// Theme-aware chrome tokens for the Mood shell. The default theme keeps the shipped
+// values so default-dark renders pixel-identical: the accent stays the shell's shipped
+// pink #EC4899 (not the registry's mood.standard green — the shell has always rendered
+// pink, and pixel-identical default wins). The comic theme uses the shared comic surface
+// tokens plus the Mood comic-ink accent. Mood paints a solid #1E2A3A chrome border in
+// some places, carried as BORDER_SOLID (default #1E2A3A, comic comic-border-faint), and a
+// solid #161B27 card surface carried as SURFACE (default #161B27, comic comic-surface).
+export type MoodTokens = PluginShellTokens & { BORDER_SOLID: string; SURFACE: string };
+
+export function getMoodTokens(theme: ThemeName): MoodTokens {
+  if (theme === "comic") {
+    const accent = getAppAccent("mood", "comic");
+    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: "#D4C49A1A", SURFACE: "#141414" };
+  }
+  return { ...getPluginShellTokens(COLOR, theme), BORDER_SOLID: "#1E2A3A", SURFACE: "#161B27" };
+}
 
 export type Tab = "checkin" | "community";
 
