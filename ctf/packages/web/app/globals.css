@@ -168,3 +168,27 @@ a {
     min-width: 0 !important;
   }
 }
+
+/*
+ * Breakpoint switch helpers. Render a desktop layout and a phone layout side by
+ * side in the markup and wrap each in `.ctf-bp-desktop` / `.ctf-bp-mobile`; CSS
+ * then shows exactly one at the same 768px breakpoint the rest of the app uses.
+ * This is for shells that nest their desktop multi-column row below their root
+ * (so the small-screen un-row fallback above can't reach it) — choosing the
+ * layout in CSS keeps it correct without depending on a client `matchMedia`
+ * hook that only flips after hydration. Pair the wrapper with
+ * `ctf-self-responsive` so the un-row fallback leaves it alone.
+ */
+.ctf-bp-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .ctf-bp-desktop {
+    display: none;
+  }
+
+  .ctf-bp-mobile {
+    display: block;
+  }
+}
