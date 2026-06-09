@@ -279,7 +279,7 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
       { key: "wallet", label: "Wallet" },
     ];
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT }}>
+      <div style={{ minHeight: "100dvh", background: BG, fontFamily: "Inter, system-ui, sans-serif", color: TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
             <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#22C55E", textDecoration: "none", flexShrink: 0 }}>

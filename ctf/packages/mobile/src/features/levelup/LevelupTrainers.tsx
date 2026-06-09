@@ -1,4 +1,9 @@
-// LevelUp Trainers directory (mobile) — read-only browse, aligned to web lu-trainers.tsx.
+// LevelUp Trainers directory (mobile) — layout aligned to
+// design/.../survivor-hub/MobileLevelUpTrainers.tsx. Real data only:
+// every value comes from GET /api/levelup/trainers. The mockup also shows a
+// per-trainer rating, a cohort name with status, milestones validated, a
+// "message" action, and a recent-activity feed; the trainers endpoint returns
+// none of those, so they are intentionally not rendered (no fabricated numbers).
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -18,31 +23,42 @@ const TRACK_COLORS: Record<string, string> = {
   'Life Skills': '#A855F7',
 };
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function TrainerCard({ trainer }: { trainer: Trainer }) {
+  const primaryTrack = trainer.tracks[0];
+  const tc = (primaryTrack && TRACK_COLORS[primaryTrack]) || GREEN;
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{trainer.displayName.slice(0, 1).toUpperCase()}</Text>
+        <View style={[styles.avatar, { backgroundColor: `${tc}18`, borderColor: `${tc}40` }]}>
+          <Text style={[styles.avatarText, { color: tc }]}>{initials(trainer.displayName)}</Text>
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.name}>{trainer.displayName}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{trainer.displayName}</Text>
+            {trainer.tracks.map((track) => {
+              const color = TRACK_COLORS[track] ?? GREEN;
+              return (
+                <React.Fragment key={track}>
+                  <View style={[styles.trackBadge, { backgroundColor: `${color}15` }]}>
+                    <Text style={[styles.trackBadgeText, { color }]}>{track}</Text>
+                  </View>
+                </React.Fragment>
+              );
+            })}
+          </View>
           {trainer.headline ? <Text style={styles.headline}>{trainer.headline}</Text> : null}
         </View>
       </View>
-      {trainer.bio ? <Text style={styles.bio}>{trainer.bio}</Text> : null}
-      {trainer.tracks.length > 0 ? (
-        <View style={styles.tracks}>
-          {trainer.tracks.map((track) => {
-            const color = TRACK_COLORS[track] ?? GREEN;
-            return (
-              <React.Fragment key={track}>
-                <View style={[styles.trackBadge, { backgroundColor: `${color}18` }]}>
-                  <Text style={[styles.trackBadgeText, { color }]}>{track}</Text>
-                </View>
-              </React.Fragment>
-            );
-          })}
+      {trainer.bio ? (
+        <View style={styles.bioBox}>
+          <Text style={styles.bio}>{trainer.bio}</Text>
         </View>
       ) : null}
       <Text style={styles.cohortCount}>
@@ -91,12 +107,32 @@ export function LevelupTrainers() {
     );
   }
 
+  const trackSet = new Set<string>();
+  trainers.forEach((t) => t.tracks.forEach((track) => trackSet.add(track)));
+  const totalCohorts = trainers.reduce((sum, t) => sum + t.activeCohortCount, 0);
+
   return (
     <FlatList
       data={trainers}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => <TrainerCard trainer={item} />}
       contentContainerStyle={styles.list}
+      ListHeaderComponent={
+        <View style={styles.statsRow}>
+          {[
+            { label: 'Trainers', value: String(trainers.length), color: GREEN },
+            { label: 'Tracks', value: String(trackSet.size), color: '#3B82F6' },
+            { label: 'Cohorts', value: String(totalCohorts), color: '#F59E0B' },
+          ].map(({ label, value, color }) => (
+            <React.Fragment key={label}>
+              <View style={styles.statCard}>
+                <Text style={[styles.statValue, { color }]}>{value}</Text>
+                <Text style={styles.statLabel}>{label}</Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+      }
     />
   );
 }
@@ -104,17 +140,22 @@ export function LevelupTrainers() {
 const styles = StyleSheet.create({
   list: { padding: 16, paddingBottom: 80 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  statCard: { flex: 1, backgroundColor: SURFACE, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: BORDER, alignItems: 'center' },
+  statValue: { fontSize: 16, fontWeight: '700' },
+  statLabel: { fontSize: 10, color: SUBTLE, marginTop: 2 },
   card: { backgroundColor: SURFACE, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: BORDER },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: `${GREEN}18`, borderWidth: 1, borderColor: `${GREEN}30`, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: GREEN, fontWeight: '700', fontSize: 16 },
-  name: { fontSize: 14, fontWeight: '600', color: TEXT },
+  avatar: { width: 40, height: 40, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontWeight: '700', fontSize: 13 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
+  name: { fontSize: 14, fontWeight: '700', color: TEXT },
   headline: { fontSize: 12, color: SUBTLE },
-  bio: { fontSize: 12, color: SUBTLE, lineHeight: 18, marginBottom: 10 },
-  tracks: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  trackBadge: { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
+  bioBox: { backgroundColor: '#0F1117', borderRadius: 7, borderWidth: 1, borderColor: BORDER, padding: 10, marginBottom: 10 },
+  bio: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  trackBadge: { borderRadius: 12, paddingHorizontal: 7, paddingVertical: 2 },
   trackBadgeText: { fontSize: 10, fontWeight: '600' },
-  cohortCount: { fontSize: 12, color: MUTED, borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 10 },
+  cohortCount: { fontSize: 12, color: MUTED },
   errorText: { fontSize: 14, color: '#EF4444', textAlign: 'center', marginBottom: 16 },
   retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 9, backgroundColor: GREEN },
   retryBtnText: { color: '#000', fontWeight: '700', fontSize: 13 },
