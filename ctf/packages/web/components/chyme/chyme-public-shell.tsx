@@ -36,7 +36,7 @@ const LOCKED_CONTROLS = [
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
+function DesktopChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Marketing banner */}
@@ -47,12 +47,20 @@ function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Free to listen · Sign in to speak</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-            <LogIn size={13} /> Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Join Free
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <LogIn size={13} /> Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Join Free
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -111,12 +119,20 @@ function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
                 <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>Public rooms are open to all. Sign in to speak, react, or raise your hand.</div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'transparent', border: `1px solid ${BORDER}`, color: SUBTLE, fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-                  <LogIn size={12} /> Sign In
-                </a>
-                <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-                  <UserPlus size={12} /> Create Account
-                </a>
+                {verifyUrl ? (
+                  <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                    Finish verifying
+                  </a>
+                ) : (
+                  <>
+                    <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'transparent', border: `1px solid ${BORDER}`, color: SUBTLE, fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                      <LogIn size={12} /> Sign In
+                    </a>
+                    <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                      <UserPlus size={12} /> Create Account
+                    </a>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -133,8 +149,8 @@ function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 12, color: SUBTLE }}>Want to speak?</span>
-              <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-                Sign In to Participate →
+              <a href={verifyUrl ?? signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+                {verifyUrl ? 'Finish verifying' : 'Sign In to Participate →'}
               </a>
             </div>
           </div>
@@ -144,7 +160,7 @@ function DesktopChymePublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
+function MobileChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Header */}
@@ -154,12 +170,20 @@ function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Chyme</div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>Live audio for survivors</div>
         </div>
-        <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', fontWeight: 600, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-          <LogIn size={11} /> Sign In
-        </a>
-        <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 11, textDecoration: 'none' }}>
-          Join
-        </a>
+        {verifyUrl ? (
+          <a href={verifyUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 11, textDecoration: 'none' }}>
+            Finish verifying
+          </a>
+        ) : (
+          <>
+            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', fontWeight: 600, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+              <LogIn size={11} /> Sign In
+            </a>
+            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 11, textDecoration: 'none' }}>
+              Join
+            </a>
+          </>
+        )}
       </div>
 
       {/* Search */}
@@ -186,12 +210,20 @@ function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, marginBottom: 6 }}>Live audio rooms for survivors</div>
         <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 12, lineHeight: 1.5 }}>Listen in for free. Sign in to speak, react, or host your own room.</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Join Free to Listen
-          </a>
-          <a href={signInUrl} style={{ padding: '9px 14px', borderRadius: 9, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-            <LogIn size={13} /> Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Join Free to Listen
+              </a>
+              <a href={signInUrl} style={{ padding: '9px 14px', borderRadius: 9, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                <LogIn size={13} /> Sign In
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -209,8 +241,8 @@ function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ flex: 1, padding: '10px', borderRadius: 9, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'not-allowed', opacity: 0.6 }}>
           <Lock size={12} /> Start a Room
         </div>
-        <a href={signInUrl} style={{ flex: 1, padding: '10px', borderRadius: 9, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}>
-          <UserPlus size={13} /> Join Free →
+        <a href={verifyUrl ?? signInUrl} style={{ flex: 1, padding: '10px', borderRadius: 9, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : <><UserPlus size={13} /> Join Free →</>}
         </a>
       </div>
     </div>
@@ -225,7 +257,7 @@ function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
  * feed yet, so the room list renders an honest empty state rather than the
  * mockup's placeholder rooms.
  */
-export function ChymePublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   // Render both layouts and let CSS pick by the 768px breakpoint, rather than a
   // client `matchMedia` hook. This page is server-rendered for signed-out
   // visitors; a CSS switch is always in lock-step with the breakpoint and needs
@@ -235,10 +267,10 @@ export function ChymePublicShell({ signInUrl }: PublicVisitorShellProps) {
   return (
     <div className="ctf-self-responsive">
       <div className="ctf-bp-desktop">
-        <DesktopChymePublic signInUrl={signInUrl} />
+        <DesktopChymePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />
       </div>
       <div className="ctf-bp-mobile">
-        <MobileChymePublic signInUrl={signInUrl} />
+        <MobileChymePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />
       </div>
     </div>
   );

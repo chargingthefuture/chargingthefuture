@@ -13,8 +13,7 @@ import { ACCOUNT_ERROR_CODE } from 'lib/account/constants';
 export async function requireAccountAccess() {
   const decision = await evaluatePluginAccess({
     requireUsername: false,
-    requireApprovedUserOrAdmin: false,
-    allowUnlockSupportOnly: true,
+    minUnlockTier: 'any_authenticated',
   });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };

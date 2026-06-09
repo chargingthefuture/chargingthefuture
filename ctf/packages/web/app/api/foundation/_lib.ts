@@ -9,7 +9,7 @@ export type FoundationApiGate =
   | { allowed: false; response: NextResponse };
 
 export async function requireFoundationReadAccess(): Promise<FoundationApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,
@@ -24,7 +24,7 @@ export async function requireFoundationReadAccess(): Promise<FoundationApiGate> 
 }
 
 export async function requireFoundationAdminAccess(): Promise<FoundationApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,

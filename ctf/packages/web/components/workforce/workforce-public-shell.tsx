@@ -24,7 +24,7 @@ const SNAPSHOT = [
   { label: 'Exploring', color: '#6B7280' },
 ];
 
-function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
+function DesktopWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -32,9 +32,15 @@ function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
         <BarChart2 size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Workforce</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+              Sign In
+            </a>
+          )}
         </div>
       </div>
 
@@ -51,8 +57,8 @@ function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
           <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 460 }}>
             Live skills distribution, employment gaps, and personalized pathways across our growing network. Your workforce coach lives here.
           </p>
-          <a href={signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
-            Join the Hub — Free
+          <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
           </a>
         </div>
 
@@ -92,8 +98,8 @@ function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
             <Lock size={22} color={COLOR} />
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to see your personalized pathway</div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign in to access Workforce
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Sign in to access Workforce'}
           </a>
         </div>
       </div>
@@ -101,7 +107,7 @@ function DesktopWorkforcePublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileWorkforcePublic({ signInUrl }: { signInUrl: string }) {
+function MobileWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -125,7 +131,7 @@ function MobileWorkforcePublic({ signInUrl }: { signInUrl: string }) {
             ))}
           </div>
         </div>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       <div style={{ flex: 1, padding: '0 20px 20px', position: 'relative', minHeight: 300 }}>
@@ -133,7 +139,7 @@ function MobileWorkforcePublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>Sign in for your personalized pathway</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -154,7 +160,7 @@ function MobileWorkforcePublic({ signInUrl }: { signInUrl: string }) {
  * neutral placeholder rows instead of invented figures. The simulated phone
  * status bar is dropped because the real app renders inside the browser chrome.
  */
-export function WorkforcePublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function WorkforcePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileWorkforcePublic signInUrl={signInUrl} /> : <DesktopWorkforcePublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileWorkforcePublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopWorkforcePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

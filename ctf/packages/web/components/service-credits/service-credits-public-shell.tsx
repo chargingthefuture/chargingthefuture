@@ -42,14 +42,18 @@ const SPEND_WAYS_MOBILE = [
   { action: 'Trades (Foundation)', credits: 'Variable' },
 ];
 
-function DesktopServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <Zap size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>ServiceCredits</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Finish verifying</a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+          )}
         </div>
       </div>
 
@@ -63,8 +67,8 @@ function DesktopServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
         <p style={{ margin: 0, fontSize: 15, color: SUBTLE, maxWidth: 520 }}>
           ServiceCredits are earned by participating in the Hub and spent on housing, transport, healthcare, and trades. They are usable across all 18 plugins in the network.
         </p>
-        <a href={signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none', display: 'inline-block' }}>
-          Join the Hub — Free
+        <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none', display: 'inline-block' }}>
+          {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
         </a>
       </div>
 
@@ -92,14 +96,14 @@ function DesktopServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={22} color={COLOR} /></div>
           <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to start earning credits</div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign in to earn credits</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in to earn credits'}</a>
         </div>
       </div>
     </div>
   );
 }
 
-function MobileServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
+function MobileServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ flex: 1, padding: '24px 20px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -132,7 +136,7 @@ function MobileServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
           ))}
         </div>
 
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>Join to start earning</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join to start earning'}</a>
       </div>
     </div>
   );
@@ -146,7 +150,7 @@ function MobileServiceCreditsPublic({ signInUrl }: { signInUrl: string }) {
  * the earn/spend lists are static marketing copy describing the Hub economy's
  * rules, not any per-user balance or transaction history.
  */
-export function ServiceCreditsPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function ServiceCreditsPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileServiceCreditsPublic signInUrl={signInUrl} /> : <DesktopServiceCreditsPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileServiceCreditsPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopServiceCreditsPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

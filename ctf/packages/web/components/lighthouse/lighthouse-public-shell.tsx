@@ -47,16 +47,22 @@ function LockedListingCard({ orientation }: { orientation: 'row' | 'stacked' }) 
   );
 }
 
-function DesktopLightHousePublic({ signInUrl }: { signInUrl: string }) {
+function DesktopLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <Home size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>LightHouse</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-            Sign In
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+              Sign In
+            </a>
+          )}
         </div>
       </div>
 
@@ -72,12 +78,20 @@ function DesktopLightHousePublic({ signInUrl }: { signInUrl: string }) {
           All listings are privacy-minimized. Your location is never shared without consent. Trauma-informed hosts. Service Credits accepted. Month-to-month options available.
         </p>
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-          <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-            Join the Hub — Free
-          </a>
-          <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-            How it works
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+                Join the Hub — Free
+              </a>
+              <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+                How it works
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -95,8 +109,8 @@ function DesktopLightHousePublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, color: MUTED, textAlign: 'center', maxWidth: 300 }}>
             Filter by price, location, availability, and Service Credit acceptance.
           </div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-            Sign in to browse listings
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+            {verifyUrl ? 'Finish verifying' : 'Sign in to browse listings'}
           </a>
         </div>
       </div>
@@ -104,7 +118,7 @@ function DesktopLightHousePublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileLightHousePublic({ signInUrl }: { signInUrl: string }) {
+function MobileLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -114,7 +128,7 @@ function MobileLightHousePublic({ signInUrl }: { signInUrl: string }) {
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Privacy-first housing</span>
         <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>Safe, verified housing. Your location is never shared without consent. Trauma-informed hosts. Service Credits accepted.</p>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       <div style={{ flex: 1, padding: '0 20px 20px', position: 'relative' }}>
@@ -126,7 +140,7 @@ function MobileLightHousePublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to view listings</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -141,7 +155,7 @@ function MobileLightHousePublic({ signInUrl }: { signInUrl: string }) {
  * feed, so the locked region behind the sign-in overlay renders neutral blurred
  * placeholder cards rather than the mockup's fabricated sample listings.
  */
-export function LighthousePublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function LighthousePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileLightHousePublic signInUrl={signInUrl} /> : <DesktopLightHousePublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileLightHousePublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopLightHousePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

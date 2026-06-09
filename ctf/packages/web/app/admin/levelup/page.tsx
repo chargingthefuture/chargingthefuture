@@ -6,7 +6,7 @@ import { getAdminPanelData } from 'lib/levelup/repository';
 import { LevelupAdminShell } from '@/components/levelup/lu-admin-shell';
 
 export default async function LevelupAdminPage() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed || !decision.isAdmin) {
     redirect('/apps/levelup');
   }

@@ -27,7 +27,7 @@ const MOBILE_SIGNALS = [
   'Cohort completion record',
 ];
 
-function DesktopTrustPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -35,7 +35,11 @@ function DesktopTrustPublic({ signInUrl }: { signInUrl: string }) {
         <Shield size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>Trust</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Finish verifying</a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+          )}
         </div>
       </div>
 
@@ -60,8 +64,8 @@ function DesktopTrustPublic({ signInUrl }: { signInUrl: string }) {
                 </div>
               ))}
             </div>
-            <a href={signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
-              Join the Hub — Free
+            <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
             </a>
           </div>
 
@@ -83,8 +87,8 @@ function DesktopTrustPublic({ signInUrl }: { signInUrl: string }) {
                 </div>
               ))}
             </div>
-            <a href={signInUrl} style={{ width: '100%', padding: '11px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
-              Sign in to verify
+            <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '11px', borderRadius: 9, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
+              {verifyUrl ? 'Finish verifying' : 'Sign in to verify'}
             </a>
           </div>
         </div>
@@ -93,7 +97,7 @@ function DesktopTrustPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileTrustPublic({ signInUrl }: { signInUrl: string }) {
+function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ flex: 1, padding: '24px 20px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -127,8 +131,8 @@ function MobileTrustPublic({ signInUrl }: { signInUrl: string }) {
             <div style={{ fontSize: 28, fontWeight: 900, color: COLOR, marginTop: 2 }}>—</div>
             <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Sign in to build yours</div>
           </div>
-          <a href={signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
-            Join the Hub — Free
+          <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
+            {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
           </a>
         </div>
       </div>
@@ -147,7 +151,7 @@ function MobileTrustPublic({ signInUrl }: { signInUrl: string }) {
  * phone status bar is dropped because the real app renders inside the browser
  * chrome.
  */
-export function TrustPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function TrustPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileTrustPublic signInUrl={signInUrl} /> : <DesktopTrustPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileTrustPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopTrustPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

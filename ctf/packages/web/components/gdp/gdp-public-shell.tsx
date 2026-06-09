@@ -18,7 +18,7 @@ const ACCENT_CYAN = '#0EA5E9';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function DesktopGDPPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Marketing banner */}
@@ -28,12 +28,20 @@ function DesktopGDPPublic({ signInUrl }: { signInUrl: string }) {
           <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Survivor Hub GDP Tracker · The economic output of the survivor community · Public read-only</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-            <LogIn size={13} /> Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Add Your Skills →
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <LogIn size={13} /> Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Add Your Skills →
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -127,9 +135,15 @@ function DesktopGDPPublic({ signInUrl }: { signInUrl: string }) {
               Every verified skill you add increases the collective value of the TI Skills Economy. Create a free account to contribute, earn Service Credits, and appear on the global map.
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
-                <UserPlus size={15} style={{ display: 'inline', marginRight: 7 }} /> Add Your Skills Free
-              </a>
+              {verifyUrl ? (
+                <a href={verifyUrl} style={{ padding: '11px 28px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+                  Finish verifying
+                </a>
+              ) : (
+                <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontWeight: 700, fontSize: 14, cursor: 'pointer', textDecoration: 'none' }}>
+                  <UserPlus size={15} style={{ display: 'inline', marginRight: 7 }} /> Add Your Skills Free
+                </a>
+              )}
             </div>
           </div>
         </main>
@@ -138,7 +152,7 @@ function DesktopGDPPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileGDPPublic({ signInUrl }: { signInUrl: string }) {
+function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -157,14 +171,14 @@ function MobileGDPPublic({ signInUrl }: { signInUrl: string }) {
           <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Economy totals are coming soon</div>
           <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>Live totals build up as verified members add their skills. Sign in to contribute.</div>
         </div>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       <div style={{ flex: 1, padding: '0 20px 20px' }}>
         <div style={{ height: '100%', minHeight: 200, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '32px 20px' }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 14, fontWeight: 700, textAlign: 'center' }}>Sign in for contributor rankings</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -184,7 +198,7 @@ function MobileGDPPublic({ signInUrl }: { signInUrl: string }) {
  * marketing copy are kept. The simulated phone status bar is dropped because the
  * real app renders inside the browser chrome.
  */
-export function GdpPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function GdpPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileGDPPublic signInUrl={signInUrl} /> : <DesktopGDPPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileGDPPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopGDPPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

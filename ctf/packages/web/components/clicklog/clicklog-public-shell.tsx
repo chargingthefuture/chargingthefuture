@@ -14,7 +14,7 @@ const SUBTLE = '#6B7280';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -22,12 +22,20 @@ function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
         <AlertTriangle size={18} color={BRAND} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-            Sign In
-          </a>
-          <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
-            <UserPlus size={13} /> Join Free
-          </a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+              Finish verifying
+            </a>
+          ) : (
+            <>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                Sign In
+              </a>
+              <a href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: BRAND, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                <UserPlus size={13} /> Join Free
+              </a>
+            </>
+          )}
         </div>
       </div>
 
@@ -58,12 +66,20 @@ function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
           </div>
 
           <div style={{ display: 'flex', gap: 12 }}>
-            <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
-              Create free account
-            </a>
-            <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, color: '#9CA3AF', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-              Sign In
-            </a>
+            {verifyUrl ? (
+              <a href={verifyUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+                Finish verifying
+              </a>
+            ) : (
+              <>
+                <a href={signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+                  Create free account
+                </a>
+                <a href={signInUrl} style={{ padding: '14px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER}`, color: '#9CA3AF', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                  Sign In
+                </a>
+              </>
+            )}
           </div>
 
           {/* Features */}
@@ -86,7 +102,7 @@ function DesktopClickLogPublic({ signInUrl }: { signInUrl: string }) {
   );
 }
 
-function MobileClickLogPublic({ signInUrl }: { signInUrl: string }) {
+function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -97,8 +113,14 @@ function MobileClickLogPublic({ signInUrl }: { signInUrl: string }) {
             <div style={{ fontSize: 16, fontWeight: 700 }}>ClickLog</div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+            {verifyUrl ? (
+              <a href={verifyUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Finish verifying</a>
+            ) : (
+              <>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>Sign In</a>
+                <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: BRAND, border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>Join Free</a>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -126,8 +148,8 @@ function MobileClickLogPublic({ signInUrl }: { signInUrl: string }) {
           </div>
         </div>
 
-        <a href={signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}>
-          <UserPlus size={15} /> Create free account
+        <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}>
+          {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Create free account</>}
         </a>
 
         <div style={{ display: 'flex', gap: 8, width: '100%' }}>
@@ -166,7 +188,7 @@ function MobileClickLogPublic({ signInUrl }: { signInUrl: string }) {
  * only. The mockup's simulated phone status bar (clock / signal dots) is dropped
  * because the real app renders inside the browser chrome.
  */
-export function ClicklogPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function ClicklogPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileClickLogPublic signInUrl={signInUrl} /> : <DesktopClickLogPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileClickLogPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopClickLogPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

@@ -78,8 +78,20 @@ falls back to the anonymous display name with no role — no regression, but Chy
 The middleware accepts either a flat claim (`username` / `role`) or one nested under `metadata`, so
 both common claim mappings work. Session tokens refresh about every minute, so after changing the
 config a signed-in user picks up the new claims on the next refresh (or after signing out and back
-in). Approval (`isApproved`) is **not** sourced from Clerk — it comes from the database unlock tier
-(`isUserUnlocked`), so it is intentionally left out of the session claims.
+in). Full access is **not** sourced from Clerk — it is resolved by `getUnlockAccessTier` (the Unleash
+flag first, returning `approved_full` when the flag is on for the user; otherwise the database-stored
+Unlock tier as the fallback).
+
+> **Update (2026-06-09): Unlock is the single source of truth for full access.** The old v2
+> `isApproved` boolean has been removed from the request identity, the bearer-token identity, and the
+> access decision (it came from an `x-ctf-user-approved` header the middleware never set, so it
+> defaulted to true for everyone). The central gate `evaluatePluginAccess` now resolves the Unlock
+> tier with `getUnlockAccessTier` and takes one option, `minUnlockTier`:
+> `approved_full` (default — full access; everyone else is sent to the Unlock flow with reason
+> `unlock_required`), `support_only` (also lets `locked_support_only` members in — used by the Hub
+> general channel, which is their support surface), and `any_authenticated` (any signed-in member —
+> used by the Unlock submission/status and account/profile/deletion routes). Admins always pass.
+> Chyme requires `approved_full`; its anonymous public shell is unchanged.
 
 ---
 
@@ -168,7 +180,8 @@ import { resolveRequestIdentity } from "@/lib/auth/request-identity";
 
 const identity = await resolveRequestIdentity();
 // identity.userId — null when unauthenticated
-// identity.isAuthenticated, identity.isApproved, identity.role, identity.unlockAccessTier
+// identity.isAuthenticated, identity.role, identity.isAdmin
+// Full access is decided by the Unlock tier, not the identity — see getUnlockAccessTier.
 ```
 
 For access policy decisions:
@@ -176,7 +189,9 @@ For access policy decisions:
 ```ts
 import { evaluatePluginAccess } from "@/lib/auth/server-authz";
 
-const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true });
+// Default minUnlockTier is 'approved_full' (full access). Use 'support_only' for the Hub
+// general channel and 'any_authenticated' for unlock/account/deletion routes.
+const decision = await evaluatePluginAccess();
 if (!decision.allowed) redirect("/sign-in");
 ```
 

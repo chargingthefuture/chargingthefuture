@@ -34,14 +34,18 @@ function LockedPlaceholderRow({ rounded }: { rounded: number }) {
   );
 }
 
-function DesktopLevelUpPublic({ signInUrl }: { signInUrl: string }) {
+function DesktopLevelUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <BookOpen size={18} color={COLOR} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>LevelUp</span>
         <div style={{ marginLeft: 'auto' }}>
-          <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+          {verifyUrl ? (
+            <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Finish verifying</a>
+          ) : (
+            <a href={signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign In</a>
+          )}
         </div>
       </div>
 
@@ -63,8 +67,8 @@ function DesktopLevelUpPublic({ signInUrl }: { signInUrl: string }) {
             </div>
           ))}
         </div>
-        <a href={signInUrl} style={{ marginTop: 4, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none', display: 'inline-block' }}>
-          Join the Hub — Free
+        <a href={verifyUrl ?? signInUrl} style={{ marginTop: 4, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none', display: 'inline-block' }}>
+          {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
         </a>
       </div>
 
@@ -77,14 +81,14 @@ function DesktopLevelUpPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
           <div style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={22} color={COLOR} /></div>
           <div style={{ fontSize: 16, fontWeight: 700, textAlign: 'center' }}>Sign in to enroll in cohorts</div>
-          <a href={signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign in to start learning</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '11px 28px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in to start learning'}</a>
         </div>
       </div>
     </div>
   );
 }
 
-function MobileLevelUpPublic({ signInUrl }: { signInUrl: string }) {
+function MobileLevelUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -101,7 +105,7 @@ function MobileLevelUpPublic({ signInUrl }: { signInUrl: string }) {
             </div>
           ))}
         </div>
-        <a href={signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>Join the Hub — Free</a>
+        <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
       <div style={{ flex: 1, padding: '0 20px 20px', position: 'relative' }}>
@@ -113,7 +117,7 @@ function MobileLevelUpPublic({ signInUrl }: { signInUrl: string }) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${COLOR}50`, background: COLOR + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={COLOR} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to enroll</div>
-          <a href={signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Sign in</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: COLOR, border: 'none', color: '#000', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -128,7 +132,7 @@ function MobileLevelUpPublic({ signInUrl }: { signInUrl: string }) {
  * the locked region behind the sign-in overlay renders neutral blurred
  * placeholders rather than the mockup's fabricated sample cohort rows.
  */
-export function LevelupPublicShell({ signInUrl }: PublicVisitorShellProps) {
+export function LevelupPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileLevelUpPublic signInUrl={signInUrl} /> : <DesktopLevelUpPublic signInUrl={signInUrl} />;
+  return isMobile ? <MobileLevelUpPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopLevelUpPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
 }

@@ -15,7 +15,7 @@ export type DirectoryApiGate =
   };
 
 export async function requireDirectoryReadAccess(): Promise<DirectoryApiGate> {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return {
       allowed: false,

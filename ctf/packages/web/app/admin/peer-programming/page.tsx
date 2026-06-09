@@ -5,7 +5,7 @@ import { PeerProgrammingAdminShell } from '@/components/peer-programming/pp-admi
 export const dynamic = 'force-dynamic';
 
 export default async function PeerProgrammingAdminPage() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed || !decision.isAdmin) {
     redirect('/apps/peer-programming');
   }

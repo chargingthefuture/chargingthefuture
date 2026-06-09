@@ -70,11 +70,6 @@ function AccessDeniedView({ status, code, reason, requestedPluginSlug }: AccessD
           Username is required for this plugin route. Update your profile username and try again.
         </p>
       ) : null}
-      {reason === 'unlock_support_only' ? (
-        <p className="text-sm">
-          This account is currently limited to support access only. Open Chyme to continue with customer service community chat while verification is unresolved.
-        </p>
-      ) : null}
       <p className="text-sm">
         <Link className="underline underline-offset-4" href="/">Return to home</Link>
       </p>
@@ -143,27 +138,39 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  const shouldRequireUsername = selectedPlugin.slug !== 'chyme';
+  // Every plugin route requires full Unlock access (the default minUnlockTier
+  // 'approved_full'). A not-yet-verified member is denied with `unlock_required` and
+  // shown the plugin's public landing page below (not the access-denied view), which
+  // nudges them toward the Unlock flow; the Hub general channel is their support
+  // surface. Chyme does not require a username so its anonymous public shell still works.
   const decision = await evaluatePluginAccess({
-    requireUsername: shouldRequireUsername,
-    allowUnlockSupportOnly: selectedPlugin.slug === 'chyme',
-    requireApprovedUserOrAdmin: selectedPlugin.slug === 'chyme',
+    requireUsername: selectedPlugin.slug !== 'chyme',
   });
 
   if (!decision.allowed) {
-    // An anonymous visitor (no active session) is denied with AUTH_UNAUTHORIZED.
-    // Show that plugin's public visitor view instead of the access-denied wall so
-    // signed-out people can browse the plugin's marketing/empty-state content and
-    // sign in from there. The genuine 403 cases below (signed in but not
-    // permitted) keep the informative access-denied view.
-    if (decision.code === 'AUTH_UNAUTHORIZED') {
+    // Two cases see the plugin's public visitor view rather than a denial wall:
+    //  - an anonymous visitor (no session) denied with AUTH_UNAUTHORIZED, and
+    //  - a signed-in but not-yet-verified member denied with `unlock_required`.
+    // Both can browse the plugin's marketing/landing content the same way; the
+    // not-yet-verified member is nudged from there toward the Unlock flow, and the
+    // Hub general channel remains their support surface. Other 403s (e.g. a missing
+    // username or a role requirement) keep the informative access-denied view.
+    if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
       const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
       const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+      // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
+      // is already authenticated, so the public shell's "Sign In / Join Free"
+      // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
+      // "Finish verifying" action pointing at the Unlock flow instead. An
+      // anonymous visitor (AUTH_UNAUTHORIZED) gets no verifyUrl and sees the
+      // normal sign-in / sign-up CTAs.
+      const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
       return (
         <PublicVisitorShell
           pluginSlug={selectedPlugin.slug}
           pluginName={selectedPlugin.name}
           signInUrl={signInUrl}
+          verifyUrl={verifyUrl}
         />
       );
     }

@@ -5,7 +5,7 @@ import GdpRateAdmin from '@/components/gdp/gdp-rate-admin';
 export const dynamic = 'force-dynamic';
 
 export default async function GdpRateAdminPage() {
-  const decision = await evaluatePluginAccess({ requireApprovedUserOrAdmin: true, requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed || !decision.isAdmin) {
     redirect('/apps/gdp');
   }
