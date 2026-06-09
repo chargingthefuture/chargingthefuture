@@ -50,7 +50,12 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
         { status: 403 },
       );
     }
-  } catch {}
+  } catch {
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.csrfDenied, message: 'Invalid request origin metadata.' },
+      { status: 403 },
+    );
+  }
   return null;
 }
 
