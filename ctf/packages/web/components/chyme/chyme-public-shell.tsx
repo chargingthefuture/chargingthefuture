@@ -14,7 +14,6 @@ import {
   Bell,
   Star,
 } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the ChymePublic / MobileChymePublic design mockups.
@@ -227,6 +226,20 @@ function MobileChymePublic({ signInUrl }: { signInUrl: string }) {
  * mockup's placeholder rooms.
  */
 export function ChymePublicShell({ signInUrl }: PublicVisitorShellProps) {
-  const isMobile = useIsMobile();
-  return isMobile ? <MobileChymePublic signInUrl={signInUrl} /> : <DesktopChymePublic signInUrl={signInUrl} />;
+  // Render both layouts and let CSS pick by the 768px breakpoint, rather than a
+  // client `matchMedia` hook. This page is server-rendered for signed-out
+  // visitors; a CSS switch is always in lock-step with the breakpoint and needs
+  // no hydration, so the phone never gets stuck on the desktop two-column row.
+  // `ctf-self-responsive` opts this wrapper out of the small-screen un-row
+  // fallback so it manages its own layout.
+  return (
+    <div className="ctf-self-responsive">
+      <div className="ctf-bp-desktop">
+        <DesktopChymePublic signInUrl={signInUrl} />
+      </div>
+      <div className="ctf-bp-mobile">
+        <MobileChymePublic signInUrl={signInUrl} />
+      </div>
+    </div>
+  );
 }
