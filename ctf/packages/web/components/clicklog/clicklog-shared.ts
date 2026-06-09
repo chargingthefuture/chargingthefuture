@@ -1,6 +1,8 @@
 // Shared constants, types, and derivations for the ClickLog web shell.
 // Palette derives from design/.../survivor-hub/ClickLog.tsx.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { ClicklogIncident } from "../../lib/clicklog/types";
 
 export const BRAND = "#E91E8C";
@@ -10,6 +12,20 @@ export const BORDER = "#1E2A3A";
 export const TEXT = "#F9FAFB";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
+
+// Theme-aware chrome tokens for the ClickLog shell. Default keeps the shipped values (accent stays
+// #E91E8C); comic uses the shared comic surface tokens plus the ClickLog comic-ink accent. The shell
+// paints a solid #1E2A3A chrome border that is distinct from the shared white-alpha border, so it is
+// carried as its own BORDER_SOLID token (default #1E2A3A, comic comic-border-faint).
+export type ClicklogTokens = PluginShellTokens & { BORDER_SOLID: string };
+
+export function getClicklogTokens(theme: ThemeName): ClicklogTokens {
+  if (theme === "comic") {
+    const accent = getAppAccent("clicklog", "comic");
+    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: "#D4C49A1A" };
+  }
+  return { ...getPluginShellTokens(BRAND, theme), BORDER_SOLID: "#1E2A3A" };
+}
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 

@@ -2,6 +2,8 @@
 // Palette derives from design/.../survivor-hub/Unlock.tsx.
 
 import { CheckCircle, Clock, XCircle } from "lucide-react";
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { UnlockReviewStatus } from "../../lib/unlock/types";
 
 export const BRAND = "#10B981";
@@ -11,6 +13,25 @@ export const BORDER = "#1E2A3A";
 export const TEXT = "#F9FAFB";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
+
+// Theme-aware chrome tokens for the Unlock shell chrome (the submission and status views — the
+// UnlockShell itself is a thin controller with no inline colors). Default keeps the shipped values
+// (accent stays the green #10B981); comic uses the shared comic surface tokens plus the Unlock
+// comic-ink accent. The shell paints a solid #1E2A3A chrome border and a #161B27 card surface that are
+// distinct from the shared defaults, so each is carried as its own token to keep the default theme
+// byte-for-byte identical.
+export type UnlockTokens = PluginShellTokens & {
+  BORDER_SOLID: string; // solid chrome border (default #1E2A3A)
+  SURFACE_CARD: string; // raised card surface (default #161B27)
+};
+
+export function getUnlockTokens(theme: ThemeName): UnlockTokens {
+  if (theme === "comic") {
+    const accent = getAppAccent("unlock", "comic");
+    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: "#D4C49A1A", SURFACE_CARD: "#141414" };
+  }
+  return { ...getPluginShellTokens(BRAND, theme), BORDER_SOLID: "#1E2A3A", SURFACE_CARD: "#161B27" };
+}
 
 export type DisplayStatus = "pending" | "approved" | "rejected";
 

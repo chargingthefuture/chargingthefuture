@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ClicklogIncident } from "../../lib/clicklog/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { BG, BORDER, BRAND, SUBTLE, TEXT, deriveClicklogStats } from "./clicklog-shared";
+import { useTheme } from "@/hooks/useTheme";
+import { deriveClicklogStats, getClicklogTokens } from "./clicklog-shared";
 import { ClicklogIconRail } from "./clicklog-icon-rail";
 import { ClicklogSidebar } from "./clicklog-sidebar";
 import { ClicklogRightRail } from "./clicklog-right-rail";
@@ -26,6 +27,8 @@ export function ClicklogShell() {
   const [geo, setGeo] = useState<Geo>({});
   const [logged, setLogged] = useState(false);
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getClicklogTokens(theme);
 
   async function fetchIncidents(initial = false): Promise<void> {
     if (initial) setLoading(true);
@@ -133,16 +136,16 @@ export function ClicklogShell() {
 
   if (isMobile) {
     return (
-      <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#0D0F14", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${BRAND}20`, border: `1px solid ${BRAND}40`, display: "flex", alignItems: "center", justifyContent: "center", color: BRAND, textDecoration: "none", flexShrink: 0 }}>
+            <Link href="/apps" aria-label="Back to apps" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}40`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, textDecoration: "none", flexShrink: 0 }}>
               <ChevronLeft size={20} />
             </Link>
-            <AlertTriangle size={18} color={BRAND} style={{ flexShrink: 0 }} />
+            <AlertTriangle size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Incident Log</div>
-              <div style={{ fontSize: 11, color: SUBTLE }}>{stats.total} incidents total</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Incident Log</div>
+              <div style={{ fontSize: 11, color: t.MUTED }}>{stats.total} incidents total</div>
             </div>
           </div>
         </div>
@@ -152,16 +155,16 @@ export function ClicklogShell() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
       <ClicklogIconRail />
       <ClicklogSidebar total={stats.total} weekdayCounts={stats.weekdayCounts} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
-          <AlertTriangle size={18} color={BRAND} />
+        <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
+          <AlertTriangle size={18} color={t.ACCENT} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Incident Log</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>Personal safety tracking — {stats.total} incidents total</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Incident Log</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Personal safety tracking — {stats.total} incidents total</div>
           </div>
         </header>
 

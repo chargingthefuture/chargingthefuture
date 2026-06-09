@@ -5,8 +5,20 @@
 // it must NEVER be shown at a fiat / dollar equivalent. Balances render as
 // "credits" only.
 
+import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
+import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+
 export const COLOR = "#F59E0B";
 export const BG = "#0F1117";
+
+// Theme-aware chrome tokens for the ServiceCredits shell. Default keeps the shipped values (accent
+// stays #F59E0B); comic uses the shared comic surface tokens plus the ServiceCredits comic-ink accent.
+export type ServiceCreditsTokens = PluginShellTokens;
+
+export function getServiceCreditsTokens(theme: ThemeName): ServiceCreditsTokens {
+  const accent = theme === "comic" ? getAppAccent("service-credits", "comic") : COLOR;
+  return getPluginShellTokens(accent, theme);
+}
 
 export type WalletData = { availableBalance: number; escrowBalance: number };
 export type Tab = "wallet" | "earn" | "info";
