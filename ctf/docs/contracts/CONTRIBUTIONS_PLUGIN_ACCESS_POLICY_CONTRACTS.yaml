@@ -1,0 +1,267 @@
+# Contributions plugin access policies.
+#
+# Plugin-wide policy statements:
+# - User commands require only a signed-in member (minUnlockTier any_authenticated). A
+#   contribution does NOT require Unlock verification and never alters Unlock state. A
+#   not-yet-verified member can contribute and hold the thank-you credits; they simply cannot
+#   spend them inside verification-gated plugins until they finish Unlock (deliberate owner
+#   decision, 2026-06-10).
+# - Credits granted on confirmation are thank-you grants, never redeemable for real money.
+# - Gift-card codes are never accepted, stored, or logged by any command. Members are told to
+#   send codes to the owner over Signal only.
+# - Access to the platform is never gated on contributing; declining or never contributing
+#   has no effect on any feature.
+policies:
+  - pluginId: contributions
+    command: contributions.submission.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      minUnlockTier: any_authenticated
+      submitterScopeOnly: true
+      giftCardCodeFieldsRejected: enforced
+      signalContactRequiredForGiftCard: enforced
+    consentRequirements:
+      scopes:
+        - contributions_submit
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - unauthenticated_session
+      - invalid_kind_or_method
+      - amount_out_of_bounds
+      - missing_signal_contact_for_gift_card
+      - gift_card_code_field_present
+
+  - pluginId: contributions
+    command: contributions.status.get
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      minUnlockTier: any_authenticated
+      ownRowsOnly: enforced
+    consentRequirements:
+      scopes:
+        - contributions_read_own
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated_session
+
+  - pluginId: contributions
+    command: contributions.fundraiser.get
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      minUnlockTier: any_authenticated
+      aggregateProgressOnly: enforced
+    consentRequirements:
+      scopes:
+        - contributions_read_progress
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated_session
+
+  - pluginId: contributions
+    command: contributions.banner.dismiss
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      activeSessionRequired: true
+      minUnlockTier: any_authenticated
+      ownRowsOnly: enforced
+      silentSnooze: enforced
+    consentRequirements:
+      scopes:
+        - contributions_banner_state
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated_session
+
+  - pluginId: contributions
+    command: contributions.admin.submission.list
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyQueueAccess: required
+      signalContactVisibleToAdminOnly: enforced
+    consentRequirements:
+      scopes:
+        - contributions_admin_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: contributions
+    command: contributions.admin.submission.review
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyModerationDecision: required
+      pendingStatusRequired: enforced
+      confirmExactlyOnce: enforced
+      perUserCycleCreditCap: enforced
+      creditGrantDelegatedToServiceCredits: enforced
+      idempotencyKeyRequired: true
+    consentRequirements:
+      scopes:
+        - contributions_admin_write
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - submission_not_found
+      - submission_not_pending
+      - missing_confirmed_amount_for_gift_card
+
+  - pluginId: contributions
+    command: contributions.admin.config.get
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyConfigAccess: required
+    consentRequirements:
+      scopes:
+        - contributions_admin_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: contributions
+    command: contributions.admin.config.update
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyConfigAccess: required
+      positiveNumericKnobs: enforced
+      noRealContactDetailsInSeedOrDefaults: enforced
+    consentRequirements:
+      scopes:
+        - contributions_admin_write
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - invalid_config_value
+
+  - pluginId: contributions
+    command: contributions.admin.cycle.create
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyCycleManagement: required
+      validWindowRequired: enforced
+    consentRequirements:
+      scopes:
+        - contributions_admin_write
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - invalid_cycle_window
+
+  - pluginId: contributions
+    command: contributions.admin.cycle.update
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyCycleManagement: required
+      validWindowRequired: enforced
+    consentRequirements:
+      scopes:
+        - contributions_admin_write
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - cycle_not_found
+      - invalid_cycle_window

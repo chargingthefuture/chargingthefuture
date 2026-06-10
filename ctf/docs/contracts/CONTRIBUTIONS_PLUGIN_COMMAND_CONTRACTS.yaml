@@ -1,0 +1,285 @@
+# Contributions plugin command contracts.
+#
+# Core invariants, repeated where they matter:
+# - Gift-card CODES are never accepted, stored, or logged by any command. The member sends
+#   the code to the owner over Signal, outside the platform. There is no code field anywhere.
+# - Credits granted on confirmation are thank-you grants of ServiceCredits (the platform's
+#   internal barter token). They are never redeemable for real money (one-way, like
+#   gas-station reward points).
+# - Contributing never requires Unlock verification and never changes Unlock state. No
+#   command reads or writes any unlock_* table.
+contracts:
+  - pluginId: contributions
+    command: contributions.submission.create
+    version: 1.0.0
+    description: Submit a contribution claim (gift card, Quora comment, or GitHub star). Gift-card claims require the member's Signal contact; the gift-card code itself is never collected.
+    inputSchema:
+      kind:
+        type: string
+        required: true
+        enum: [gift_card, quora_comment, github_star]
+      method:
+        type: string
+        required: false
+        enum: [amazon, apple, dennys]
+        note: Required when kind is gift_card; rejected otherwise.
+      claimedAmountUsd:
+        type: number
+        required: false
+        note: Required when kind is gift_card; greater than 0 and at most 500.
+      signalContact:
+        type: string
+        required: false
+        note: Required when kind is gift_card (member's Signal URL or phone number; personal data, admin-only, never logged).
+      quoraPostUrl:
+        type: string
+        required: false
+        note: Optional for kind quora_comment (the owner can paste it in during review).
+      githubProfileUrl:
+        type: string
+        required: false
+        note: Optional for kind github_star (the owner can paste it in during review).
+    outputSchema:
+      submissionId:
+        type: string
+      status:
+        type: string
+      cycleId:
+        type: string
+    dataAccess:
+      - contributions_submissions
+      - contributions_cycles
+      - contributions_audit_log
+    purpose: voluntary_contribution_claim
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: contributions
+    command: contributions.status.get
+    version: 1.0.0
+    description: List the signed-in member's own contribution claims and their statuses.
+    inputSchema: {}
+    outputSchema:
+      items:
+        type: array
+    dataAccess:
+      - contributions_submissions
+    purpose: own_contribution_history
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.fundraiser.get
+    version: 1.0.0
+    description: Read the current fundraiser cycle, collective progress toward its three goals, and whether the fundraiser banner is visible for this member.
+    inputSchema: {}
+    outputSchema:
+      cycle:
+        type: object
+      fiatConfirmedUsd:
+        type: number
+      quoraCommentsConfirmed:
+        type: integer
+      githubStarsConfirmed:
+        type: integer
+      contributorCount:
+        type: integer
+      bannerVisible:
+        type: boolean
+    dataAccess:
+      - contributions_cycles
+      - contributions_submissions
+      - contributions_runtime_config
+      - contributions_banner_state
+    purpose: collective_fundraiser_progress
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.banner.dismiss
+    version: 1.0.0
+    description: Dismiss the fundraiser banner. Silently snoozes it for the configured number of months; the snooze length is internal and not returned. Deliberately not audited.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - contributions_banner_state
+      - contributions_runtime_config
+    purpose: banner_snooze
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.admin.submission.list
+    version: 1.0.0
+    description: Admin review queue of contribution claims, filterable by status. The admin projection includes the member's Signal contact so the owner can match a gift-card code received over Signal to the claim.
+    inputSchema:
+      status:
+        type: string
+        required: false
+        enum: [pending, confirmed, rejected]
+      limit:
+        type: integer
+        required: false
+    outputSchema:
+      items:
+        type: array
+    dataAccess:
+      - contributions_submissions
+      - contributions_audit_log
+    purpose: moderation_queue
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.admin.submission.review
+    version: 1.0.0
+    description: Confirm or reject a pending claim, exactly once. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-user-per-cycle cap) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly.
+    inputSchema:
+      submissionId:
+        type: string
+        required: true
+      action:
+        type: string
+        required: true
+        enum: [confirm, reject]
+      confirmedAmountUsd:
+        type: number
+        required: false
+        note: Required for gift_card confirmation; defaults to non_monetary_unit_value_usd for quora_comment and github_star.
+      reviewNote:
+        type: string
+        required: false
+    outputSchema:
+      submissionId:
+        type: string
+      status:
+        type: string
+      creditsGranted:
+        type: number
+      creditGovernanceEventId:
+        type: string
+    dataAccess:
+      - contributions_submissions
+      - contributions_cycles
+      - contributions_runtime_config
+      - contributions_audit_log
+      # Credit grant path — delegated to the service-credits plugin's governance.mint.grant
+      # command (canonical mintGrant()); listed here for traceability only:
+      - service_credits_wallets
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+    purpose: moderation_and_thank_you_grant
+    retentionClass: financial_audit_long_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.admin.config.get
+    version: 1.0.0
+    description: Read the runtime configuration knobs (credit valuation, per-cycle cap, banner behavior, Signal instructions copy).
+    inputSchema: {}
+    outputSchema:
+      config:
+        type: object
+    dataAccess:
+      - contributions_runtime_config
+    purpose: configuration_read
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.admin.config.update
+    version: 1.0.0
+    description: Update the runtime configuration knobs. signal_instructions is owner-authored copy shown after a gift-card submission (codes go to the owner on Signal; all other communication belongs in the public Hub support channel).
+    inputSchema:
+      creditsPerUsd:
+        type: number
+        required: false
+      nonMonetaryUnitValueUsd:
+        type: number
+        required: false
+      perUserCycleCreditCap:
+        type: number
+        required: false
+      bannerSnoozeMonths:
+        type: integer
+        required: false
+      bannerEnabled:
+        type: boolean
+        required: false
+      signalInstructions:
+        type: string
+        required: false
+    outputSchema:
+      config:
+        type: object
+    dataAccess:
+      - contributions_runtime_config
+      - contributions_audit_log
+    purpose: configuration_update
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.admin.cycle.create
+    version: 1.0.0
+    description: Create a fundraiser cycle (time window plus the three goals).
+    inputSchema:
+      startsAt:
+        type: string
+        required: true
+      endsAt:
+        type: string
+        required: true
+      fiatGoalUsd:
+        type: number
+        required: false
+      quoraCommentGoal:
+        type: integer
+        required: false
+      githubStarGoal:
+        type: integer
+        required: false
+    outputSchema:
+      cycleId:
+        type: string
+    dataAccess:
+      - contributions_cycles
+      - contributions_audit_log
+    purpose: fundraiser_cycle_management
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: contributions
+    command: contributions.admin.cycle.update
+    version: 1.0.0
+    description: Update a fundraiser cycle's window or goals.
+    inputSchema:
+      cycleId:
+        type: string
+        required: true
+      startsAt:
+        type: string
+        required: false
+      endsAt:
+        type: string
+        required: false
+      fiatGoalUsd:
+        type: number
+        required: false
+      quoraCommentGoal:
+        type: integer
+        required: false
+      githubStarGoal:
+        type: integer
+        required: false
+    outputSchema:
+      cycleId:
+        type: string
+    dataAccess:
+      - contributions_cycles
+      - contributions_audit_log
+    purpose: fundraiser_cycle_management
+    retentionClass: transactional_long_lived
+    idempotency: true

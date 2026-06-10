@@ -332,6 +332,19 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [],
   },
   {
+    slug: 'contributions',
+    name: 'Contributions',
+    dataSummary: 'Your contribution claims (including the Signal contact you provided) and fundraiser banner snooze state.',
+    serviceScopeSupported: true,
+    tables: [
+      del('contributions_submissions', 'user_id', 'Your contribution claims, including the Signal contact you provided.'),
+      del('contributions_banner_state', 'user_id', 'Your fundraiser banner snooze state.'),
+      retain('contributions_audit_log', 'Audit log; retained for compliance. Contains no Signal contact values.'),
+      // contributions_cycles and contributions_runtime_config are global (owner-managed).
+      // Granted credits live in the ServiceCredits ledger and follow that plugin's policy below.
+    ],
+  },
+  {
     slug: 'service-credits',
     name: 'ServiceCredits',
     dataSummary: 'Your ServiceCredits wallet, ledger, transfers, and escrow.',
