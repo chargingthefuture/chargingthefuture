@@ -1,10 +1,24 @@
 // Turns a route (named waypoints) or a single point into plain text a person
 // can read at a glance or have Siri read aloud. No HTML, no styling — just text.
+// Phrasing is written to be spoken cleanly: directions are words ("northwest"),
+// temperatures say "degrees", and times are 12-hour, so Siri reads it naturally.
 
 import { geocode, sampleAt, fetchUSAlerts, inUS } from './providers.mjs';
 
-const ROAD_FACTOR = 1.2; // straight-line miles → rough driving miles
-const DEFAULT_MPH = 55;
+// Straight-line miles → rough driving miles. Highway routing is typically
+// 1.2–1.3× the great-circle distance once roads bend around terrain.
+const ROAD_FACTOR = 1.25;
+// Effective rolling average for a loaded truck over a long haul (governed cruise
+// minus grades and slower state limits). Only used to bucket each stop to the
+// nearest forecast hour, so approximate is fine. Override per request with `mph`.
+const DEFAULT_MPH = 58;
+
+const COMPASS_WORDS = {
+  N: 'north', NNE: 'north-northeast', NE: 'northeast', ENE: 'east-northeast',
+  E: 'east', ESE: 'east-southeast', SE: 'southeast', SSE: 'south-southeast',
+  S: 'south', SSW: 'south-southwest', SW: 'southwest', WSW: 'west-southwest',
+  W: 'west', WNW: 'west-northwest', NW: 'northwest', NNW: 'north-northwest',
+};
 
 // Great-circle distance in miles.
 function haversineMiles(a, b) {
@@ -36,9 +50,10 @@ function ymdInTz(timeZone, date) {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+// 12-hour clock, e.g. "6:00 AM" — reads better aloud than "06:00".
 function clockInTz(timeZone, epoch) {
   return new Intl.DateTimeFormat('en-US', {
-    timeZone, hour: '2-digit', minute: '2-digit', hour12: false,
+    timeZone, hour: 'numeric', minute: '2-digit', hour12: true,
   }).format(new Date(epoch));
 }
 
@@ -58,12 +73,22 @@ function resolveDepart(depart, originTz) {
   return Number.isNaN(parsed) ? now : parsed;
 }
 
+function windPhrase(s) {
+  if (!s.windText && !s.windDir) return '';
+  const dir = s.windDir ? (COMPASS_WORDS[s.windDir] || s.windDir.toLowerCase()) : '';
+  let phrase = 'wind';
+  if (dir) phrase += ` ${dir}`;
+  if (s.windText) phrase += ` ${s.windText}`;
+  if (s.gust) phrase += ` gusting ${s.gust}`;
+  return phrase;
+}
+
 function fmtSample(s) {
-  const bits = [`${s.tempF == null ? '?' : s.tempF}F`];
-  if (s.wind) bits.push(`wind ${s.wind}`);
-  if (s.gust) bits.push(`gust ${s.gust}`);
-  if (s.condition) bits.push(s.condition);
-  return bits.join('  ');
+  const parts = [`${s.tempF == null ? 'temperature unavailable' : `${s.tempF} degrees`}`];
+  const wind = windPhrase(s);
+  if (wind) parts.push(wind);
+  if (s.condition) parts.push(s.condition);
+  return parts.join(', ');
 }
 
 // Build the multi-stop route report from origin, optional waypoints, destination.
@@ -74,7 +99,6 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   const places = [];
   for (const n of names) {
     // Sequential: a few geocodes, keeps it simple and within rate limits.
-    // eslint-disable-next-line no-await-in-loop
     places.push(await geocode(n));
   }
 
@@ -97,21 +121,22 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
     }),
   );
 
-  const head = `ROUTE WX  ${places[0].name} ${places[0].region} -> ${places[places.length - 1].name} ${places[places.length - 1].region}`;
-  const lines = [head, ''];
+  const first = places[0];
+  const last = places[places.length - 1];
+  const lines = [`ROUTE WX. ${first.name} ${first.region} to ${last.name} ${last.region}.`, ''];
   rows.forEach((r, i) => {
     const when = i === 0 && Math.abs(r.eta - Date.now()) < 30 * 60 * 1000
-      ? 'NOW  '
+      ? 'Now'
       : clockInTz(originTz, r.eta);
-    const tag = r.alerts.length ? `  [ALERT: ${r.alerts[0]}]` : '';
-    lines.push(`${when} ${r.place.name} ${r.place.region}  ${fmtSample(r.sample)}${tag}`);
+    const tag = r.alerts.length ? ` ALERT: ${r.alerts[0]}.` : '';
+    lines.push(`${when}, ${r.place.name} ${r.place.region}: ${fmtSample(r.sample)}.${tag}`);
   });
 
-  const allAlerts = rows.flatMap((r) => r.alerts.map((a) => `- ${r.place.name} ${r.place.region}: ${a}`));
-  if (allAlerts.length) {
-    lines.push('', 'ALERTS:', ...[...new Set(allAlerts)]);
-  }
-  lines.push('', `(times in ${originTz}; ETAs assume ${speed} mph)`);
+  const allAlerts = [...new Set(
+    rows.flatMap((r) => r.alerts.map((a) => `${a} at ${r.place.name} ${r.place.region}`)),
+  )];
+  if (allAlerts.length) lines.push('', `Alerts: ${allAlerts.join('; ')}.`);
+  lines.push('', `(Times in ${originTz}. ETAs assume ${speed} mph and are approximate.)`);
   return lines.join('\n');
 }
 
@@ -124,12 +149,12 @@ export async function buildPointReport({ lat, lon }) {
   const samples = await Promise.all(hours.map((h) => sampleAt(point, now + h * 3600 * 1000)));
   const alerts = inUS(point.lat, point.lon) ? await fetchUSAlerts(point.lat, point.lon) : [];
   const tz = samples[0].timeZone;
-  const lines = [`HERE WX  ${point.lat.toFixed(3)}, ${point.lon.toFixed(3)}`, ''];
+  const lines = [`HERE WX. ${point.lat.toFixed(3)}, ${point.lon.toFixed(3)}.`, ''];
   samples.forEach((s, i) => {
-    const label = i === 0 ? 'NOW  ' : clockInTz(tz, now + hours[i] * 3600 * 1000);
-    lines.push(`${label} ${fmtSample(s)}`);
+    const label = i === 0 ? 'Now' : clockInTz(tz, now + hours[i] * 3600 * 1000);
+    lines.push(`${label}: ${fmtSample(s)}.`);
   });
-  if (alerts.length) lines.push('', 'ALERTS:', ...[...new Set(alerts)].map((a) => `- ${a}`));
-  lines.push('', `(times in ${tz})`);
+  if (alerts.length) lines.push('', `Alerts: ${[...new Set(alerts)].join('; ')}.`);
+  lines.push('', `(Times in ${tz}.)`);
   return lines.join('\n');
 }

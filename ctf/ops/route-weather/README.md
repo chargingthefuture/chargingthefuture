@@ -45,22 +45,24 @@ GET /weather?from=Denver,CO&to=Salt Lake City,UT&via=Vail,CO&via=Grand Junction,
 - `lat`+`lon` → current conditions plus the next three hours at that point.
 - `from`+`to` (plus any number of `via`) → one line per stop, each showing the
   forecast for the estimated time you'll arrive. `depart` is `HH:MM` (read in the
-  origin's time zone) or a full timestamp; `mph` defaults to 55. Arrival times are
-  estimated from straight-line distance × 1.2, so treat them as approximate.
+  origin's time zone) or a full timestamp; `mph` defaults to 58 (a loaded truck's
+  effective rolling average). Arrival times are estimated from straight-line
+  distance × 1.25, so treat them as approximate — they only bucket each stop to
+  the nearest forecast hour.
 
-Example reply:
+The phrasing is written to be spoken cleanly by Siri (directions as words,
+"degrees", 12-hour times) while still reading fine by eye. Example reply:
 
 ```
-ROUTE WX  Denver CO -> Salt Lake City UT
+ROUTE WX. Denver Colorado to Salt Lake City Utah.
 
-NOW   Denver CO  34F  wind 12 W  clear
-10:30 Vail CO  21F  wind 28 NW  gust 41  light snow  [ALERT: Winter Weather Advisory]
-17:30 Salt Lake City UT  44F  wind 9 S  rain
+Now, Denver Colorado: 34 degrees, wind west 12, clear.
+10:36 AM, Vail Colorado: 21 degrees, wind northwest 28 gusting 41, light snow. ALERT: Winter Weather Advisory.
+5:10 PM, Salt Lake City Utah: 44 degrees, wind south 9, rain.
 
-ALERTS:
-- Vail CO: Winter Weather Advisory
+Alerts: Winter Weather Advisory at Vail Colorado.
 
-(times in America/Denver; ETAs assume 55 mph)
+(Times in America/Denver. ETAs assume 58 mph and are approximate.)
 ```
 
 ### Access token

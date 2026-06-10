@@ -11,8 +11,13 @@ name: Route weather briefing
 
 on:
   schedule:
-    # 11:00 UTC daily. Adjust to your departure time / time zone as you like.
-    - cron: '0 11 * * *'
+    # 10:00 UTC daily — early morning before a day's driving. GitHub cron is
+    # ALWAYS in UTC and does not shift for daylight saving, so set it for your
+    # home time zone. Rough guide (standard time):
+    #   5 AM Eastern  = 10:00 UTC   |  5 AM Central = 11:00 UTC
+    #   5 AM Mountain = 12:00 UTC   |  5 AM Pacific = 13:00 UTC
+    # (subtract 1 hour during daylight saving). Change the number below to suit.
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 permissions:

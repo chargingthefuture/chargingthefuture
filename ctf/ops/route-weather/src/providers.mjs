@@ -106,7 +106,10 @@ async function sampleNWS(lat, lon, etaEpoch) {
     provider: 'NWS',
     timeZone,
     tempF: round(p.temperatureUnit === 'F' ? p.temperature : p.temperature * 1.8 + 32),
-    wind: (p.windSpeed || '').replace(/ mph$/i, '') + (p.windDirection ? ` ${p.windDirection}` : ''),
+    // NWS gives windSpeed as text ("12 mph" or "10 to 15 mph") and a compass
+    // abbreviation; NWS hourly does not include a separate gust value.
+    windText: (p.windSpeed || '').replace(/ mph$/i, '').trim(),
+    windDir: p.windDirection || '',
     gust: '',
     condition: (p.shortForecast || '').toLowerCase(),
   };
@@ -134,12 +137,12 @@ async function sampleOpenMeteo(lat, lon, etaEpoch) {
   // hourly.time are local wall-clock strings; convert to true UTC epoch.
   const epochs = (h.time || []).map((t) => Date.parse(`${t}:00Z`) - offset);
   const i = nearestIndex(epochs, etaEpoch);
-  const dir = degToCompass(h.wind_direction_10m?.[i]);
   return {
     provider: 'Open-Meteo',
     timeZone: data.timezone || 'UTC',
     tempF: round(h.temperature_2m?.[i]),
-    wind: `${round(h.wind_speed_10m?.[i])}${dir ? ` ${dir}` : ''}`,
+    windText: h.wind_speed_10m?.[i] != null ? String(round(h.wind_speed_10m[i])) : '',
+    windDir: degToCompass(h.wind_direction_10m?.[i]),
     gust: h.wind_gusts_10m?.[i] != null ? String(round(h.wind_gusts_10m[i])) : '',
     condition: WMO[h.weather_code?.[i]] || '',
   };
