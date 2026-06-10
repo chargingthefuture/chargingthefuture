@@ -73,13 +73,22 @@ flow is one-way, like gas-station reward points.
 - Create and edit fundraiser cycles (window plus the three goals).
 - Edit runtime configuration: credit valuation knobs, per-cycle cap, banner on/off, banner snooze
   months, and the Signal instructions copy.
+- Credit-per-action mapping in the admin settings UI: the stored model is authoritative — a
+  confirmed comment or star is worth `non_monetary_unit_value_usd` USD, and credits = USD-equivalent
+  x `credits_per_usd`. The settings screen presents a single "Credits per comment or star" control
+  as the **resulting SC** (`non_monetary_unit_value_usd × credits_per_usd`, with a live helper
+  showing the underlying USD value), and converts it back to `non_monetary_unit_value_usd` before
+  saving, so the stored USD-equivalent model stays the source of truth.
 
 ## 5. API Surface and Route Map
 
 - `POST /api/contributions/submission` — Create a contribution claim (any signed-in member).
 - `GET /api/contributions/submission` — The member's own claim history.
 - `GET /api/contributions/fundraiser` — Current cycle, collective progress, banner visibility for
-  the viewer, and the member-safe Signal instructions copy.
+  the viewer, the member-safe Signal instructions copy, `githubStarAlreadyCredited` (true when the
+  viewer already holds a confirmed, credit-earning github_star — the UI greys out that path), and
+  `ownerSignalUrl` (the owner's Signal contact from the server-only `CONTRIBUTIONS_OWNER_SIGNAL_URL`
+  env var, or null to fall back to the instructions copy).
 - `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
 - `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
 - `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
@@ -174,6 +183,22 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 - **Per-cycle credit cap** (default 300 credits per member per cycle) limits pay-to-accumulate
   inequity: a wealthy member cannot convert money into outsized credit holdings inside the barter
   economy.
+- **GitHub star is creditable at most once per member, ever** (anti-gaming, money-adjacent). A star
+  earns credits only the first time; `hasCreditedGithubStar(userId)` is true once the member has a
+  `github_star` submission that is `confirmed` with `credits_granted > 0`. A rejected star, or a
+  confirmed-but-zero-credit star (e.g. one clamped to 0 by the per-cycle cap), does **not** lock the
+  member out, so honest retries still work. Enforced twice: at submission create (`createSubmission`
+  rejects with `github_star_already_credited` → HTTP 409
+  `contributions_github_star_already_credited`), and again at review confirm
+  (`reviewSubmission` grants 0 credits for a duplicate star, still marks it `confirmed`, records the
+  reason in the review note, and never calls the mint path). Gift cards and Quora comments are
+  unaffected (repeatable). No schema change — the rule is derived from existing rows.
+- **Owner Signal URL is a server-only secret.** `CONTRIBUTIONS_OWNER_SIGNAL_URL` (read in
+  `lib/contributions/owner-signal-env.ts`) holds the owner's Signal contact shown to signed-in
+  members on the confirmation screen. It is **not** prefixed `NEXT_PUBLIC_`, so it never enters the
+  client bundle; it is read server-side only and surfaced through the fundraiser response field
+  `ownerSignalUrl`. It is never logged. When unset/empty the field is null and the UI falls back to
+  the admin-editable `signal_instructions` copy. Managed in Infisical; documented in rule 123.
 - **Unlock boundary:** no `unlock_*` reads or writes; user routes gate at
   `minUnlockTier: 'any_authenticated'`; contributing never changes any access tier.
 - **Money-adjacent integrity:** confirmation is exactly-once (row locked, must be `pending`);
@@ -201,14 +226,24 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## 8. Web and Android Delivery Status
 
-- Web: **foundation only** (schema, contracts, library, API routes, metrics, seed, registry
-  entry). No UI exists yet; the registry entry is `isVisible: false`, `availabilityState: alpha`.
-  The member shell, admin surface, and fundraiser banner are design-gated: blocked by the design
-  pass for the Contributions surfaces in the `design/` submodule.
-- Android: not started; blocked by the same design pass plus the web shell.
-- Parity: `config/plugin-parity-contracts.json` has a `contributions` entry (required by the CI
-  parity gate for every registry plugin). It declares the future mobile dir; the mobile-surface
-  requirement only activates when the registry state moves past `alpha` to `implemented_shell`.
+- Web: **shipped** (schema, contracts, library, API routes, metrics, seed, registry entry, and the
+  full UI). The registry entry is `isVisible: true`, `availabilityState: implemented_shell`. The
+  member surfaces live at `app/apps/contributions/page.tsx` (gating on `any_authenticated`, not the
+  dynamic route's full-Unlock default) with components under `components/contributions/` — signed-out
+  public shell, loading, main (drive progress + the three paths + thank-you note + history), the
+  post-submit confirmation (Signal URL inline), and the empty-history state. The owner-only admin
+  console is at `app/admin/contributions/page.tsx` with components under
+  `components/contributions/admin/` — queue, drive management, settings. The app-wide fundraiser
+  banner (`components/contributions/contributions-banner.tsx`) is integrated non-blocking at the top
+  of the Hub content area for signed-in members. Desktop and phone-width layouts are both built
+  (rule 105).
+- Android: **shipped** at `packages/mobile/src/features/contributions/` (`Contributions.tsx`,
+  `ContributionsAdmin.tsx`, `ContributionsApi.ts`) mirroring the web behavior one-to-one, including
+  the greyed github-star path and the inline Signal URL on confirmation.
+- Parity: `config/plugin-parity-contracts.json` has the `contributions` entry
+  (`mobileFeatureDirs: ["contributions"]`, `requiresMobileSurface: true`,
+  `requiresExplicitWebShell: false`); the mobile dir now exists and the web/android parity check
+  passes.
 
 ## 9. Seed Coverage Status
 
@@ -228,8 +263,15 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## 10. Gaps and Known Technical Debt
 
-- No UI of any kind yet (member shell, admin surface, fundraiser banner) — all blocked by the
-  design pass; see the Build Checklist.
+- The member surfaces show the credit valuations (10 SC/dollar, 50 SC/action) as copy using the
+  seeded defaults; the member fundraiser route does not expose the live config, so if the owner
+  tunes those knobs the member copy can lag until that route also returns the valuations. The admin
+  settings screen is the source of truth for the live values. (Low priority — the figures are
+  framed as a thank-you, not a contract.)
+- The mobile admin screen mirrors the day-to-day review path (confirm/reject) and shows drive and
+  settings as read-only summaries; creating/editing a drive and editing the config knobs is done on
+  the web admin console. The GitHub-star brand icon is rendered with lucide's `Star` (the brand
+  mark was dropped in the app's lucide-react version).
 - The confirmed seed row is display-only (no ledger event behind it); harmless in demo data,
   but anyone reconciling seed data against the credits ledger should expect that one-row gap.
 - `getFundraiserSnapshot` records `last_shown_at` on read (so the future banner has an accurate
@@ -242,6 +284,22 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-06-10: UI build + two owner-requested backend rules. Shipped the full Contributions UI on
+  web and Android from the approved design mockups (issue #393): the member surfaces (signed-out
+  public shell, loading, main drive/contribute/history, post-submit confirmation, empty history) at
+  `app/apps/contributions` gating on `any_authenticated`; the owner-only admin console (queue, drive
+  management, settings) at `app/admin/contributions`; and the app-wide, non-blocking fundraiser
+  banner integrated into the Hub shell. Built the matching Android feature at
+  `packages/mobile/src/features/contributions/`. Flipped the registry entry to `isVisible: true`,
+  `availabilityState: implemented_shell`. Two backend rules added with no schema change: (1) a
+  `github_star` is creditable at most once per member ever — enforced at submission create (409
+  `contributions_github_star_already_credited`) and again at review confirm (duplicate star confirms
+  with 0 credits, reason recorded, mint never called); the fundraiser response now carries
+  `githubStarAlreadyCredited` and the UI greys out the star path. (2) Added a server-only
+  `CONTRIBUTIONS_OWNER_SIGNAL_URL` env var (Infisical-managed, never `NEXT_PUBLIC_`, never logged),
+  surfaced as `ownerSignalUrl` on the fundraiser response and shown inline on the confirmation
+  screen, falling back to the editable `signal_instructions` copy when unset. Updated rule 123 and
+  the fundraiser command contract `outputSchema`.
 - 2026-06-10: Review hardening pass. Added database integrity constraints (CHECKs for positive
   config knobs; cycle window `ends_at > starts_at` and non-negative goals; submission amounts
   null-or-non-negative and `credits_granted >= 0`; a gift-card claim must carry a Signal contact)
@@ -278,14 +336,10 @@ Flat ordered list; each item names what blocks it.
    ships. (No dependencies; done with 1.)
 8. [x] Account-deletion registry entry for the two per-user tables. (Blocked by 1.)
 9. [x] Feature inventory (this document). (Blocked by all of the above.)
-10. [ ] Member web shell at `/apps/contributions` (submit flows, history, collective progress) —
-    blocked by: design pass for the Contributions surfaces in the `design/` submodule.
-11. [ ] Web route registration `app/apps/contributions/page.tsx` — blocked by 10 (and the design
-    pass).
-12. [ ] Admin surface (review queue, config, cycles) — blocked by: design pass for the
-    Contributions surfaces in the `design/` submodule.
-13. [ ] Fundraiser banner surface (collective progress + silent dismiss) — blocked by: design
-    pass for the Contributions surfaces in the `design/` submodule.
-14. [ ] Android/Expo feature at `packages/mobile/src/features/contributions/` (the parity
-    contract entry already exists) — blocked by 10 and the design pass.
-15. [ ] Flip the registry entry to `isVisible: true` — blocked by 10–13.
+10. [x] Member web shell at `/apps/contributions` (submit flows, history, collective progress).
+11. [x] Web route registration `app/apps/contributions/page.tsx` (gating on `any_authenticated`).
+12. [x] Admin surface (review queue, drive management, settings) at `app/admin/contributions`.
+13. [x] Fundraiser banner surface (collective progress + silent dismiss), integrated into the Hub
+    shell non-blocking for signed-in members.
+14. [x] Android/Expo feature at `packages/mobile/src/features/contributions/` (member + admin).
+15. [x] Flip the registry entry to `isVisible: true` (`availabilityState: implemented_shell`).
