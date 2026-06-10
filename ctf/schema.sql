@@ -1687,7 +1687,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('gdp',                'GDP',                  'Aggregate transparency and admin publish flows with compliance controls.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'Service Credits',      'Wallet/transfers/escrow/disputes and treasury governance workflows.',                             'implemented_shell', 160, TRUE),
   ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE),
-  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE)
+  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE),
+  ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 210, FALSE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -3754,6 +3755,54 @@ CREATE TABLE IF NOT EXISTS user_ui_preferences (
 );
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- === BUG REPORTS (in-app "Report a problem" capture; raw text stays private) ===
+-- Users file problem reports from inside the app and never touch GitHub. The raw
+-- message is the private source of truth and is NEVER published. A separate process
+-- redacts it and creates an issue in the private triage repo (see rule 129). Anything
+-- flagged is held for owner review and is never auto-published (fail closed).
+CREATE TABLE IF NOT EXISTS bug_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'new'
+    CHECK (status IN ('new', 'held_for_review', 'issue_created', 'rejected', 'resolved')),
+  raw_message TEXT NOT NULL,
+  raw_context TEXT NULL,
+  page_url TEXT NULL,
+  plugin_slug TEXT NULL,
+  app_version TEXT NULL,
+  user_agent TEXT NULL,
+  redacted_message TEXT NULL,
+  redacted_context TEXT NULL,
+  risk_flags TEXT[] NOT NULL DEFAULT '{}',
+  risk_level TEXT NOT NULL DEFAULT 'unknown'
+    CHECK (risk_level IN ('clean', 'flagged', 'unknown')),
+  triage_repo TEXT NULL,
+  issue_number INTEGER NULL,
+  issue_url TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS raw_message TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS raw_context TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS page_url TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS plugin_slug TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS user_agent TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS redacted_message TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS redacted_context TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS risk_flags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS risk_level TEXT NOT NULL DEFAULT 'unknown';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS triage_repo TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS issue_number INTEGER NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS issue_url TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created_at ON bug_reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_id, created_at DESC);
 
 -- skills_taxonomy_dependency_graph view — defined at the END so its source table
 -- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the

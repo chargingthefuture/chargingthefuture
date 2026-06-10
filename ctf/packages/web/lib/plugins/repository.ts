@@ -187,6 +187,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 200,
     isVisible: true,
   },
+  {
+    slug: 'bug-reporting',
+    name: 'Bug Reporting',
+    summary: 'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.',
+    availabilityState: 'planned',
+    navRank: 210,
+    isVisible: false,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {
