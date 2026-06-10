@@ -188,11 +188,20 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
+    slug: 'contributions',
+    name: 'Contributions',
+    summary: 'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',
+    availabilityState: 'alpha',
+    navRank: 210,
+    // Foundation only: no UI yet. Flip to true when the designed shell ships.
+    isVisible: false,
+  },
+  {
     slug: 'bug-reporting',
     name: 'Bug Reporting',
     summary: 'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.',
     availabilityState: 'planned',
-    navRank: 210,
+    navRank: 220,
     isVisible: false,
   },
 ];

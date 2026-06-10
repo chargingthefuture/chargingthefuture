@@ -1393,3 +1393,138 @@ canonical_metrics:
     retention: 24 months
     allowed_thresholds:
       min: 0
+
+  - id: contributions_fiat_confirmed_total
+    name: Contributions Fiat Confirmed Total
+    description: Cumulative USD value of confirmed gift-card contributions across all fundraiser cycles (the amount the owner actually redeemed, not the claimed amount).
+    owner: economics-team@chargingthefuture.org
+    data_type: currency
+    unit: USD
+    calculation: |
+      SELECT COALESCE(SUM(confirmed_amount_usd), 0) AS contributions_fiat_confirmed_total
+      FROM contributions_submissions
+      WHERE kind = 'gift_card'
+        AND status = 'confirmed';
+    inputs:
+      - name: contributions_submissions.kind
+        type: string
+      - name: contributions_submissions.status
+        type: string
+      - name: contributions_submissions.confirmed_amount_usd
+        type: currency
+    example_values:
+      - 120
+      - 185.5
+    last_updated: "2026-06-10T00:00:00Z"
+    update_cadence: daily
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
+
+  - id: contributions_cycle_fiat_confirmed
+    name: Contributions Cycle Fiat Confirmed
+    description: USD value of confirmed gift-card contributions inside the current fundraiser cycle (the cycle whose window contains now), shown as collective progress toward the cycle's fiat goal.
+    owner: economics-team@chargingthefuture.org
+    data_type: currency
+    unit: USD
+    calculation: |
+      WITH current_cycle AS (
+        SELECT id
+        FROM contributions_cycles
+        WHERE starts_at <= NOW() AND ends_at > NOW()
+        ORDER BY starts_at DESC
+        LIMIT 1
+      )
+      SELECT COALESCE(SUM(s.confirmed_amount_usd), 0) AS contributions_cycle_fiat_confirmed
+      FROM contributions_submissions s
+      JOIN current_cycle c ON c.id = s.cycle_id
+      WHERE s.kind = 'gift_card'
+        AND s.status = 'confirmed';
+    inputs:
+      - name: contributions_submissions.kind
+        type: string
+      - name: contributions_submissions.status
+        type: string
+      - name: contributions_submissions.confirmed_amount_usd
+        type: currency
+      - name: contributions_submissions.cycle_id
+        type: uuid
+      - name: contributions_cycles.starts_at
+        type: datetime
+      - name: contributions_cycles.ends_at
+        type: datetime
+    example_values:
+      - 45
+    last_updated: "2026-06-10T00:00:00Z"
+    update_cadence: hourly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: contributions_confirmed_count
+    name: Contributions Confirmed Count
+    description: Cumulative count of confirmed contribution claims of every kind (gift card, Quora comment, GitHub star).
+    owner: economics-team@chargingthefuture.org
+    data_type: integer
+    unit: submissions
+    calculation: |
+      SELECT COUNT(*) AS contributions_confirmed_count
+      FROM contributions_submissions
+      WHERE status = 'confirmed';
+    inputs:
+      - name: contributions_submissions.status
+        type: string
+    example_values:
+      - 32
+    last_updated: "2026-06-10T00:00:00Z"
+    update_cadence: daily
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
+
+  - id: contributions_credits_granted_total
+    name: Contributions Credits Granted Total
+    description: Cumulative ServiceCredits granted as thank-yous for confirmed contributions. Grants flow through the canonical service-credits mint path; this sums the per-submission grant record (already clamped by the per-user-per-cycle cap).
+    owner: service-credits-governance@chargingthefuture.org
+    data_type: integer
+    unit: SC
+    calculation: |
+      SELECT COALESCE(SUM(credits_granted), 0) AS contributions_credits_granted_total
+      FROM contributions_submissions
+      WHERE status = 'confirmed';
+    inputs:
+      - name: contributions_submissions.status
+        type: string
+      - name: contributions_submissions.credits_granted
+        type: integer
+    example_values:
+      - 950
+    last_updated: "2026-06-10T00:00:00Z"
+    update_cadence: hourly
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
+
+  - id: contributions_nonmonetary_confirmed_count
+    name: Contributions Non-Monetary Confirmed Count
+    description: Cumulative count of confirmed non-monetary contributions (Quora comments plus GitHub stars).
+    owner: economics-team@chargingthefuture.org
+    data_type: integer
+    unit: submissions
+    calculation: |
+      SELECT COUNT(*) AS contributions_nonmonetary_confirmed_count
+      FROM contributions_submissions
+      WHERE status = 'confirmed'
+        AND kind IN ('quora_comment', 'github_star');
+    inputs:
+      - name: contributions_submissions.status
+        type: string
+      - name: contributions_submissions.kind
+        type: string
+    example_values:
+      - 18
+    last_updated: "2026-06-10T00:00:00Z"
+    update_cadence: daily
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
