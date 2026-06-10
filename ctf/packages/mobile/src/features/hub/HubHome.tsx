@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
+import { useAuth } from '../../auth/auth-context';
 import { fetchHubMessages, sendHubMessage } from './api';
 import type { HubMessage } from './api';
 
@@ -92,6 +93,7 @@ function EmptyState({ s }: { s: Styles }) {
 
 export const HubHome = () => {
   const { tokens, theme } = useTheme();
+  const { isAuthenticated, signIn } = useAuth();
   const s = useMemo(() => makeStyles(tokens, theme), [tokens, theme]);
 
   const [messages, setMessages] = useState<HubMessage[]>([]);
@@ -192,31 +194,44 @@ export const HubHome = () => {
         />
       )}
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {sendError && <Text style={s.sendError}>{sendError}</Text>}
-        <View style={s.composer}>
-          <TextInput
-            style={s.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Share an update with the community…"
-            placeholderTextColor={tokens.textMuted}
-            multiline
-            editable={!sending}
-          />
-          <Pressable
-            style={[s.sendBtn, input.trim() ? s.sendBtnActive : null]}
-            onPress={handleSend}
-            disabled={!input.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color={tokens.isComic ? tokens.bg : '#fff'} />
-            ) : (
-              <Text style={[s.sendBtnText, input.trim() ? s.sendBtnTextActive : null]}>Send</Text>
-            )}
+      {isAuthenticated ? (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {sendError && <Text style={s.sendError}>{sendError}</Text>}
+          <View style={s.composer}>
+            <TextInput
+              style={s.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Share an update with the community…"
+              placeholderTextColor={tokens.textMuted}
+              multiline
+              editable={!sending}
+            />
+            <Pressable
+              style={[s.sendBtn, input.trim() ? s.sendBtnActive : null]}
+              onPress={handleSend}
+              disabled={!input.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color={tokens.isComic ? tokens.bg : '#fff'} />
+              ) : (
+                <Text style={[s.sendBtnText, input.trim() ? s.sendBtnTextActive : null]}>Send</Text>
+              )}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      ) : (
+        // Signed-out visitors can read the general channel but must sign in to post,
+        // matching the web Hub's locked composer. The general channel is where a
+        // signed-in member posts to ask for help, so the door to it is sign-in.
+        <View style={s.lockedComposer}>
+          <Text style={s.lockedLock} accessibilityElementsHidden>🔒</Text>
+          <Text style={s.lockedText}>Sign in to post in the general channel.</Text>
+          <Pressable style={s.signInBtn} onPress={() => signIn()} accessibilityRole="button">
+            <Text style={s.signInBtnText}>Sign in</Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      )}
     </View>
   );
 };
@@ -310,5 +325,32 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     sendBtnActive: { backgroundColor: t.isComic ? t.border : '#0EA5E9', borderColor: t.border },
     sendBtnText: { fontSize: 12, fontWeight: '700', color: t.textSecondary },
     sendBtnTextActive: { color: t.isComic ? t.bg : '#fff' },
+    lockedComposer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      backgroundColor: t.surfaceAlt,
+      borderTopWidth: t.isComic ? 2 : 1,
+      borderTopColor: t.isComic ? t.border : t.borderFaint,
+    },
+    lockedLock: { fontSize: 15 },
+    lockedText: { flex: 1, fontSize: 13, color: t.textSecondary },
+    signInBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: r,
+      backgroundColor: t.isComic ? t.border : official,
+      borderWidth: t.isComic ? 1.5 : 0,
+      borderColor: t.border,
+    },
+    signInBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: t.isComic ? t.bg : '#fff',
+      letterSpacing: t.isComic ? 0.4 : 0,
+      textTransform: t.isComic ? 'uppercase' : 'none',
+    },
   });
 }
