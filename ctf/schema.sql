@@ -3259,6 +3259,40 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS directory_profile_generated_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- skills_hunt_submissions: retire the pre-rename `display_name` column (2026-06-10).
+-- The 2026-06-02 rename (`display_name` -> `full_name`) shipped as
+-- db/migrations/post/0004, which the demo-schema apply path never runs, so a legacy
+-- table can still carry `display_name NOT NULL` and reject inserts that only set
+-- `full_name`. Two legacy states are healed here, idempotently:
+--   1. `display_name` exists and `full_name` does not -> rename (same as post/0004).
+--   2. both exist (the companion ALTER above added `full_name` next to the old
+--      column) -> backfill `full_name` from `display_name`, then drop `display_name`.
+-- Fresh databases and already-renamed tables match neither branch (no-op).
+DO $skills_hunt_submissions_retire_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'display_name'
+  ) THEN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'skills_hunt_submissions'
+        AND column_name = 'full_name'
+    ) THEN
+      UPDATE skills_hunt_submissions
+      SET full_name = display_name
+      WHERE (full_name IS NULL OR full_name = '') AND display_name IS NOT NULL;
+      ALTER TABLE skills_hunt_submissions DROP COLUMN display_name;
+    ELSE
+      ALTER TABLE skills_hunt_submissions RENAME COLUMN display_name TO full_name;
+    END IF;
+  END IF;
+END
+$skills_hunt_submissions_retire_display_name$;
+
 -- Skills Hunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
