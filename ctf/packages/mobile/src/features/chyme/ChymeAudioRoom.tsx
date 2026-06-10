@@ -176,7 +176,7 @@ const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
           </View>
-          <Text style={styles.safeLabel}>Members Only 🔒</Text>
+          <Text style={styles.roomLabel}>Members Only 🔒</Text>
           <TouchableOpacity style={styles.chatBtn} onPress={onOpenChat}>
             <Text style={styles.chatBtnIcon}>💬</Text>
           </TouchableOpacity>
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: PRIMARY },
   liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700' },
-  safeLabel: { fontSize: 11, color: '#4B5563', flex: 1 },
+  roomLabel: { fontSize: 11, color: '#4B5563', flex: 1 },
   chatBtn: {
     width: 34,
     height: 34,
