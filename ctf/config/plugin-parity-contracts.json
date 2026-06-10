@@ -126,6 +126,12 @@
       "mobileFeatureDirs": ["contributions"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": false
+    },
+    {
+      "slug": "bug-reporting",
+      "mobileFeatureDirs": ["bug-reporting"],
+      "requiresMobileSurface": false,
+      "requiresExplicitWebShell": false
     }
   ]
 }

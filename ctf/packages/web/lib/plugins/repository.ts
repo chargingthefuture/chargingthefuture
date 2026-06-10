@@ -196,6 +196,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     // Foundation only: no UI yet. Flip to true when the designed shell ships.
     isVisible: false,
   },
+  {
+    slug: 'bug-reporting',
+    name: 'Bug Reporting',
+    summary: 'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.',
+    availabilityState: 'planned',
+    navRank: 220,
+    isVisible: false,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {
