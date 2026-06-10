@@ -9,8 +9,8 @@ name: Bug Reports — Triage
 # the script no-ops safely.
 on:
   workflow_dispatch: {}
-  # schedule:
-  #   - cron: "*/30 * * * *"   # every 30 minutes once enabled
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes
 
 jobs:
   triage:
