@@ -5,7 +5,7 @@
 // Each builder returns { text, verdict } so callers can act on the verdict
 // (set a response header, or only push an alert when it is not DRIVE).
 
-import { geocode, sampleAt, fetchUSAlerts, inUS } from './providers.mjs';
+import { geocode, sampleAt, fetchUSAlerts, inUS, reverseGeocode } from './providers.mjs';
 import { assessHazard, worst, classifyAlert } from './hazard.mjs';
 import { fetchRoadEvents } from './roadconditions.mjs';
 
@@ -207,16 +207,22 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
   }
 
   const isUS = inUS(point.lat, point.lon);
-  const [samples, alerts, roadEvents] = await Promise.all([
+  const [samples, alerts, roadEvents, place] = await Promise.all([
     Promise.all(stops.map((s) => sampleAt(s.point, s.at))),
     isUS ? fetchUSAlerts(point.lat, point.lon) : Promise.resolve([]),
     isUS ? fetchRoadEvents(point.lat, point.lon) : Promise.resolve([]),
+    reverseGeocode(point.lat, point.lon),
   ]);
   const assessments = samples.map((s) => assessHazard(s, alerts, roadEvents));
   const overall = worst(assessments.map((a) => a.level));
   const tz = samples[0].timeZone;
 
-  const lines = ['Road weather.'];
+  // Name where this is, so it's clear aloud (e.g. "near Aurora, Colorado").
+  let where = '';
+  if (place?.city && place?.region) where = ` near ${place.city}, ${place.region}`;
+  else if (place?.region) where = ` in ${place.region}`;
+  else if (place?.city) where = ` near ${place.city}`;
+  const lines = [`Road weather${where}.`];
   if (overall === 'DRIVE') lines.push('VERDICT: DRIVE. Clear nearby.', '');
   else {
     const idx = assessments.findIndex((a) => a.level === overall);

@@ -79,6 +79,23 @@ export async function geocode(query) {
   };
 }
 
+// Turn coordinates into a place name (city + state/region). Keyless and
+// best-effort: returns null on any failure so the report still works.
+export async function reverseGeocode(lat, lon) {
+  try {
+    const data = await getJson(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+    );
+    const city = data.city || data.locality || '';
+    const region = data.principalSubdivision || '';
+    const country = (data.countryCode || '').toUpperCase();
+    if (!city && !region) return null;
+    return { city, region, country };
+  } catch {
+    return null;
+  }
+}
+
 // Pick the forecast entry closest to a target time.
 function nearestIndex(epochs, targetEpoch) {
   let best = 0;

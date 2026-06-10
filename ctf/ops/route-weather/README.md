@@ -78,9 +78,11 @@ GET /weather?lat=39.74&lon=-104.99&heading=270&speed=58
 GET /weather?from=Denver,CO&to=Salt Lake City,UT&via=Vail,CO&via=Grand Junction,CO&depart=06:00&mph=55
 ```
 
-- `lat`+`lon` → current conditions plus the next three hours at that point. Add
-  `heading` (compass degrees) and optional `speed` (mph) to also get a look
-  about one hour down that bearing — useful for "what's coming" while moving.
+- `lat`+`lon` → current conditions plus the next three hours at that point. It
+  names the place it's reporting for (city + state, via a keyless reverse-geocode
+  lookup; silently omitted if that lookup fails). Add `heading` (compass degrees)
+  and optional `speed` (mph) to also get a look about one hour down that bearing —
+  useful for "what's coming" while moving.
 - `from`+`to` (plus any number of `via`) → one line per stop, each showing the
   forecast for the estimated time you'll arrive. `depart` is `HH:MM` (read in the
   origin's time zone) or a full timestamp; `mph` defaults to 58 (a loaded truck's
