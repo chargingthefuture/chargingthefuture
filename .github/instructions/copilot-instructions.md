@@ -69,7 +69,11 @@ and hides meaning.
   that there is only one app. Prefer "the v3 app" or just "the app".
 - **No new repositories.** Going forward, ship changes as app versions only — `v3.0.1`, `v3.1.0`,
   `v3.1.1`, etc. (semver under the `v3` major). Do not propose or create a new repo for a "v4" or a
-  fresh rewrite; increment the version instead.
+  fresh rewrite; increment the version instead. This rule targets new *product/app* repos. It does
+  **not** forbid internal operational repos: the project already runs a separate design repo and a
+  separate landing-page repo, and the owner has approved a separate **private** bug-report triage repo
+  (decided 2026-06-10 — see `129-bug-reporting-and-triage-rules.mdc`). Do not flag that triage repo as
+  a violation of this rule.
 - Note: the CI workflow was renamed `rewrite-ci.yml` → `ci.yml` during the Render migration (PRs
   #98–#117 on `main`); its jobs (`pr-parity-status`, `formatting-eof`, `schema-drift-gate`, etc.) are
   unchanged. The package name still retains the historical name for stability; do not rename it without
@@ -107,6 +111,7 @@ and hides meaning.
 - [126-design-mockup-implementation-rules.mdc](126-design-mockup-implementation-rules.mdc)
 - [127-design-pass-gating-rules.mdc](127-design-pass-gating-rules.mdc)
 - [128-design-sync-workflow-rules.mdc](128-design-sync-workflow-rules.mdc)
+- [129-bug-reporting-and-triage-rules.mdc](129-bug-reporting-and-triage-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](202-plugin-access-policy-schema-template.mdc)

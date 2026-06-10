@@ -1,0 +1,52 @@
+name: Bug Reports — Create Triage Issues
+
+# Drains clean, user-filed bug reports from the app database into the PRIVATE triage
+# repo as issues. Raw user text never leaves the database — only redacted text is
+# published. See rule 129 (Bug Reporting and Triage Rules).
+#
+# Runs on manual dispatch for now. Turn the schedule on once these are in place:
+#   1. The private triage repo exists (chargingthefuture/bug-reports).
+#   2. GH_PAT can create issues in that repo (issues: write).
+#   3. The labels `user-report` and `needs-triage` exist in that repo.
+#   4. DATABASE_URL is available (injected by Infisical below).
+# Until then the script no-ops safely, so an early run does no harm.
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   - cron: "*/15 * * * *"   # every 15 minutes once enabled
+
+jobs:
+  create-triage-issues:
+    name: Create triage issues from new reports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # DATABASE_URL is a runtime secret; Infisical is the single source of truth.
+      # GH_PAT is a GitHub-native secret and is read straight from repo secrets below.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # The script needs only the Postgres client. Install it standalone so we do not
+      # pay for a full monorepo install on every run.
+      - name: Install Postgres client
+        run: npm install --no-save pg@8
+
+      - name: Create triage issues
+        env:
+          # DATABASE_URL is injected by the Infisical step above.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          BUG_REPORTS_TRIAGE_REPO: chargingthefuture/bug-reports
+        run: node ctf/scripts/createBugReportIssues.mjs
