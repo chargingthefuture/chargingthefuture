@@ -121,6 +121,20 @@ title (`fix:`, `feat:`, …). This is an explicit owner instruction (2026-06-10)
   triage repo, and `DATABASE_URL` is available. Then uncomment its schedule.
 - The plugin is registered as `bug-reporting` (`planned`, hidden) so no broken tile shows until the UI
   ships.
+- **Triage agent**: `ctf/scripts/triageBugReportIssues.mjs` + `.github/workflows/bug-reports-triage.yml`.
+  Investigates the oldest `needs-triage` issue against the checked-out code, posts a root-cause + fix
+  plan, and relabels it `awaiting-owner-approval`. It never writes code. Uses the proven direct
+  Anthropic API pattern (as in `generate-update.mjs`). Manual-dispatch until enabled.
+- **Build agent** (human-gated): `.github/workflows/bug-reports-build.yml`. Runs ONLY against an issue
+  the owner approved with the `approved-to-build` label; implements the smallest fix, opens a PR on the
+  app repo with a descriptive `fix/<summary>` branch and a Conventional-Commit title, links the issue,
+  and relabels it `built`. Uses the external Claude Code GitHub Action — pin its version and confirm
+  its inputs on first run. Manual-dispatch only on purpose (the owner kicks each build until the
+  pipeline is trusted).
+
+**Label flow in the triage repo** (create these in `chargingthefuture/bug-reports`):
+`user-report` → `needs-triage` → (triage) `triaged` + `awaiting-owner-approval` → (owner adds)
+`approved-to-build` → (build) `built`.
 
 **Deferred and why:**
 
@@ -128,8 +142,5 @@ title (`fix:`, `feat:`, …). This is an explicit owner instruction (2026-06-10)
   only once a design lands in the `design/` submodule. `DESIGN PASS REQUIRED` was announced on
   2026-06-10 and a design-prompt issue was filed for the Replit design agent.
 - The private in-app admin view for `held_for_review` reports is not built yet.
-- The **triage agent** and the **approval-gated build agent** workflows are not built: the repo has no
-  coding-agent-in-CI runner yet (the only existing agent-in-CI is a one-shot Anthropic API content
-  call in `generate-product-update.yml`, not an autonomous coder). Building these is the next step and
-  needs a runner decision. Until then, the owner reads each triage issue and acts manually; the
-  `approved-to-build` label remains the approval signal so the wiring does not change when automated.
+- All three workflows are manual-dispatch until the triage repo's labels exist, `GH_PAT` can read+write
+  it, and `ANTHROPIC_API_KEY` / `DATABASE_URL` are available; then uncomment the schedules.

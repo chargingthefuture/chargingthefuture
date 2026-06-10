@@ -102,10 +102,11 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 - The "Report a problem" UI is not built (design-gated).
 - The private admin view for held reports is not built.
-- The triage agent and the approval-gated build agent workflows are not built — they need a
-  coding-agent-in-CI runner that the repo does not have yet (see rule 129 for the plan).
-- The create-issues workflow is manual-dispatch only until the triage repo's labels exist
-  and `GH_PAT` can write to it.
+- The triage agent (`bug-reports-triage.yml`) and the human-gated build agent
+  (`bug-reports-build.yml`) are built but manual-dispatch only until the triage repo's labels
+  exist, `GH_PAT` can read+write it, and `ANTHROPIC_API_KEY` / `DATABASE_URL` are available.
+- The build workflow uses the external Claude Code GitHub Action; pin its version and confirm
+  its inputs on the first run.
 - Redaction is deterministic and conservative; a model-based restatement can be layered on
   later for higher-quality issue text.
 
