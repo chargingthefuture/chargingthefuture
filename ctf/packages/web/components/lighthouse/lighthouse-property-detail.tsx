@@ -36,7 +36,7 @@ export function LighthousePropertyDetail({ property, onBack }: { property: Prope
                 <Lock size={12} style={{ color: COLOR }} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: COLOR }}>Privacy Protected</span>
               </div>
-              <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your exact location is never shown to hosts until you confirm a booking. All communications are end-to-end encrypted.</div>
+              <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your exact location is never shown to hosts until you confirm a booking.</div>
             </div>
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>

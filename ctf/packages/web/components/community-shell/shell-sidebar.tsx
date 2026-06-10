@@ -102,7 +102,7 @@ export function ShellSidebar({
       </div>
 
       <div className={styles.sidebarFooter}>
-        <p className={styles.sidebarFooterTitle}>Safe Space · Invite Only</p>
+        <p className={styles.sidebarFooterTitle}>Verified Community · Invite Only</p>
         <p className={styles.sidebarFooterMeta}>4.9M survivors worldwide</p>
       </div>
     </aside>

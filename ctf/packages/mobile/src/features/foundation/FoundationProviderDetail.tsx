@@ -114,7 +114,7 @@ export function FoundationProviderDetail({ provider, onBack }: FoundationProvide
         <View style={styles.safetyBox}>
           <Text style={styles.safetyTitle}>&#x1F6E1;&#xFE0F; Safety Guarantee</Text>
           <Text style={styles.safetyBody}>
-            Background-checked, insured, trauma-informed. All communications are end-to-end encrypted.
+            Background-checked, insured, trauma-informed.
           </Text>
         </View>
       </ScrollView>

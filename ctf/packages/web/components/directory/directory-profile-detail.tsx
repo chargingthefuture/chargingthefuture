@@ -89,8 +89,8 @@ export function DirectoryProfileDetail({
                 ))}
               </div>
               <div style={{ padding: "20px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 8 }}>Encrypted Chat</div>
-                <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>All messages are end-to-end encrypted and trauma-informed by design.</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 8 }}>Direct Chat</div>
+                <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>All messages are trauma-informed by design.</div>
               </div>
               {showAttach && (
                 <div style={{ marginTop: 16, padding: "20px", borderRadius: 16, background: `${COLOR}0A`, border: `1px solid ${COLOR}30` }}>

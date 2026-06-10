@@ -36,7 +36,7 @@ export function SocketRelayRightPanel({
           <Shield size={12} style={{ color: COLOR }} />
           <span style={{ fontSize: 12, fontWeight: 600, color: COLOR }}>Privacy Minimized</span>
         </div>
-        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>Public requests never include identifying information. All connections via encrypted channels.</div>
+        <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6 }}>Public requests never include identifying information.</div>
       </div>
       <button onClick={onPost} style={{ width: "100%", marginTop: 12, padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
         + Post a Request

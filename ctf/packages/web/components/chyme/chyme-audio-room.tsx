@@ -63,7 +63,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
     void (async () => {
       try {
         await activeCall.join({ create: true });
-        // Audio-only safe space: never publish video, and join muted so a new
+        // Audio-only room: never publish video, and join muted so a new
         // listener is not live until they choose to unmute.
         try { await activeCall.camera.disable(); } catch { /* no camera to disable */ }
         try { await activeCall.microphone.disable(); } catch { /* already muted */ }
