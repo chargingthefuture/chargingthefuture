@@ -11,6 +11,15 @@ on:
   push:
     tags:
       - "mobile-v*"
+  # Lets the owner cut a release from the GitHub Actions UI (e.g. on a phone),
+  # with no terminal and no tag push. Enter the version without the "mobile-v"
+  # prefix; the run builds the APK and creates the mobile-v<version> tag + Release.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, without the mobile-v prefix (e.g. 0.1.1). Must be new — releases are immutable.'
+        required: true
+        type: string
 
 concurrency:
   group: expo-android-release-${{ github.ref }}
@@ -25,6 +34,11 @@ jobs:
     env:
       MOBILE_ENV_TARGET: production
       EAS_BUILD_PROFILE: production
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # On a tag push this is the tag itself (e.g. mobile-v0.1.1); on a manual run
+      # it is built from the version input. Used for the APK name, the Release
+      # name, and the tag the Release creates.
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && format('mobile-v{0}', inputs.version) || github.ref_name }}
       # The app secrets (Clerk keys, app URL, Expo project id/updates URL) are no
       # longer GitHub Actions secrets — Infisical is the single source of truth.
       # The "Inject secrets from Infisical" step below loads them into the job env
@@ -52,7 +66,7 @@ jobs:
           recursive: true
 
       - name: Fail fast when EXPO_TOKEN is missing
-        if: ${{ secrets.EXPO_TOKEN == '' }}
+        if: ${{ env.EXPO_TOKEN == '' }}
         run: |
           echo "EXPO_TOKEN secret is not set. Add it in repository settings before release builds can run."
           exit 1
@@ -88,12 +102,12 @@ jobs:
           # Wait for the build, then download the signed APK locally for upload.
           eas build --platform android --profile production --non-interactive --json --wait > build.json
           APK_URL=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('build.json','utf8'))[0].artifacts.buildUrl)")
-          curl -fSL "$APK_URL" -o charging-the-future-${GITHUB_REF_NAME}.apk
+          curl -fSL "$APK_URL" -o charging-the-future-${RELEASE_TAG}.apk
 
       - name: Publish APK to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: ctf/packages/mobile/charging-the-future-${{ github.ref_name }}.apk
-          name: ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          files: ctf/packages/mobile/charging-the-future-${{ env.RELEASE_TAG }}.apk
+          name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true

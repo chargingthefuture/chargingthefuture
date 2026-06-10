@@ -12,7 +12,7 @@ try {
 // SINGLE production environment (demo/staging data is a runtime Unleash flag, not
 // a deploy environment). It requires:
 //   - NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY   Clerk publishable key (real sign-in)
-//   - NEXT_PUBLIC_APP_URL                https API base URL (the deployed host)
+//   - APP_URL                https API base URL (the deployed host)
 //   - EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID  Clerk OAuth client id (native sign-in)
 //   - EXPO_MOBILE_PROJECT_ID             EAS project id
 //   - EXPO_MOBILE_UPDATES_URL            EAS updates URL
@@ -40,26 +40,26 @@ function parseUrl(value) {
 }
 
 requireVar('NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY');
-requireVar('NEXT_PUBLIC_APP_URL');
+requireVar('APP_URL');
 requireVar('EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID');
 requireVar('EXPO_MOBILE_PROJECT_ID');
 requireVar('EXPO_MOBILE_UPDATES_URL');
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+const appUrl = process.env.APP_URL;
 const parsedAppUrl = parseUrl(appUrl);
 
 if (!parsedAppUrl) {
-  console.error(`Invalid NEXT_PUBLIC_APP_URL format: ${appUrl}`);
+  console.error(`Invalid APP_URL format: ${appUrl}`);
   process.exitCode = 1;
 } else {
   if (parsedAppUrl.protocol !== 'https:') {
-    console.error(`NEXT_PUBLIC_APP_URL must use https. Received: ${appUrl}`);
+    console.error(`APP_URL must use https. Received: ${appUrl}`);
     process.exitCode = 1;
   }
 
   const appHost = parsedAppUrl.hostname.toLowerCase();
   if (appHost === 'localhost' || appHost === '127.0.0.1') {
-    console.error(`NEXT_PUBLIC_APP_URL cannot use localhost for cloud mobile builds. Received host: ${parsedAppUrl.hostname}`);
+    console.error(`APP_URL cannot use localhost for cloud mobile builds. Received host: ${parsedAppUrl.hostname}`);
     process.exitCode = 1;
   }
 }

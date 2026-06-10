@@ -7,7 +7,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * source of truth and one production environment (see
  * docs/mobile/EXPO_CLOUD_WORKFLOW.md):
  *   - NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  Clerk publishable key (sign-in)
- *   - NEXT_PUBLIC_APP_URL               API base URL (the deployed web host)
+ *   - APP_URL                           API base URL (the deployed web host)
  *   - NEXT_PUBLIC_AUTH_PROVIDER         auth provider name (defaults to 'clerk')
  *   - NEXT_PUBLIC_AUTH_SIGN_IN_URL      optional hosted sign-in URL
  *   - EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID Clerk OAuth application client id (native sign-in)
@@ -92,7 +92,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.extra ?? {}),
       authProvider: process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'clerk',
       authPublishableKey: process.env.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY,
-      appUrl: process.env.NEXT_PUBLIC_APP_URL,
+      appUrl: process.env.APP_URL,
       signInUrl: process.env.NEXT_PUBLIC_AUTH_SIGN_IN_URL,
       oauthClientId: process.env.EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID,
       updatesUrl,

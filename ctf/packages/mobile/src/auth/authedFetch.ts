@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
  * Centralized authenticated fetch for the mobile app.
  *
  * Every call to the backend goes through here so there is ONE place that:
- *   - resolves the API base URL from runtime config (NEXT_PUBLIC_APP_URL), and
+ *   - resolves the API base URL from runtime config (APP_URL), and
  *   - attaches the current Clerk session token as `Authorization: Bearer <jwt>`.
  *
  * The backend verifies that bearer token with Clerk's server SDK before trusting
@@ -47,7 +47,7 @@ export function getApiBaseUrl(): string {
   if (typeof appUrl === 'string' && appUrl.trim().length > 0) {
     return appUrl.trim().replace(/\/$/, '');
   }
-  throw new Error('NEXT_PUBLIC_APP_URL is required for mobile API calls.');
+  throw new Error('APP_URL is required for mobile API calls.');
 }
 
 async function resolveAuthToken(): Promise<string | null> {
