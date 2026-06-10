@@ -118,6 +118,27 @@
   margin-top: 4px;
 }
 
+/* Clerk account widget (UserButton) in the shell. The slot keeps the rail layout;
+   the avatarBox classes size Clerk's avatar to match the old static avatars
+   (36px on the desktop rail, 32px on the phone-width top bar). */
+.clerkAvatarSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.clerkAvatarBox {
+  width: 36px;
+  height: 36px;
+}
+
+.clerkMobileAvatarBox {
+  width: 32px;
+  height: 32px;
+}
+
 /* ─── Left sidebar ────────────────────────────────────────────────────────── */
 .leftNav {
   display: flex;

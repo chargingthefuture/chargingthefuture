@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { UserButton } from '@clerk/nextjs';
 import { MessageSquare, Zap, Shield } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import styles from './community-shell.module.css';
@@ -9,9 +10,10 @@ type IconRailProps = {
   section: ShellSection;
   onSectionChange: (s: ShellSection) => void;
   initial?: string;
+  isAuthenticated?: boolean;
 };
 
-export function ShellIconRail({ section, onSectionChange, initial = 'S' }: IconRailProps) {
+export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
       <div className={styles.iconRailLogo} aria-hidden="true">SH</div>
@@ -47,7 +49,17 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S' }: IconR
         <Shield size={18} />
       </Link>
 
-      <div className={styles.iconRailAvatar} aria-hidden="true">{initial}</div>
+      {isAuthenticated ? (
+        // Clerk's own account widget: clicking the avatar opens Clerk's menu, and
+        // "Manage account" opens Clerk's profile UI where the member edits their
+        // first name, last name, username, and email. This is the one place in the
+        // shell that leads to identity editing, so it must stay a live control.
+        <span className={styles.clerkAvatarSlot} title="Your account — edit name, username, and email">
+          <UserButton appearance={{ elements: { avatarBox: styles.clerkAvatarBox } }} />
+        </span>
+      ) : (
+        <div className={styles.iconRailAvatar} aria-hidden="true">{initial}</div>
+      )}
     </aside>
   );
 }
