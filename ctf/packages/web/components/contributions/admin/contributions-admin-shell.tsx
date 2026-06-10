@@ -1,0 +1,262 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Heart } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTheme } from '@/hooks/useTheme';
+import type {
+  ContributionSubmissionAdminView,
+  ContributionsCycle,
+  ContributionsRuntimeConfig,
+} from '@/lib/contributions/types';
+import { FONT_FAMILY, getContributionsTokens } from '../contributions-shared';
+import {
+  createCycle,
+  fetchConfig,
+  fetchCycles,
+  fetchSubmissions,
+  nonMonetaryUnitValueFromCreditsPerAction,
+  reviewSubmission,
+  updateConfig,
+  updateCycle,
+  type AdminTab,
+  type QueueFilter,
+} from './contributions-admin-shared';
+import { ContributionsAdminQueue } from './contributions-admin-queue';
+import { ContributionsAdminDrive } from './contributions-admin-drive';
+import { ContributionsAdminSettings, type SettingsSaveInput } from './contributions-admin-settings';
+
+const TABS: { key: AdminTab; label: string }[] = [
+  { key: 'queue', label: 'Submission queue' },
+  { key: 'drive', label: 'Drive management' },
+  { key: 'settings', label: 'Settings' },
+];
+
+export function ContributionsAdminShell() {
+  const isMobile = useIsMobile();
+  const { theme } = useTheme();
+  const t = getContributionsTokens(theme);
+
+  const [tab, setTab] = useState<AdminTab>('queue');
+  const [submissions, setSubmissions] = useState<ContributionSubmissionAdminView[]>([]);
+  const [config, setConfig] = useState<ContributionsRuntimeConfig | null>(null);
+  const [currentCycle, setCurrentCycle] = useState<ContributionsCycle | null>(null);
+
+  const [filter, setFilter] = useState<QueueFilter>('all');
+  const [search, setSearch] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [savingDrive, setSavingDrive] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  const reloadSubmissions = useCallback(async (currentFilter: QueueFilter) => {
+    try {
+      setSubmissions(await fetchSubmissions(currentFilter));
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Could not load the queue.');
+    }
+  }, []);
+
+  const pickCurrentCycle = useCallback((cycles: ContributionsCycle[]): ContributionsCycle | null => {
+    const now = Date.now();
+    const active = cycles.find((c) => Date.parse(c.startsAt) <= now && Date.parse(c.endsAt) > now);
+    return active ?? cycles[0] ?? null;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [subs, cfg, cycles] = await Promise.all([fetchSubmissions('all'), fetchConfig(), fetchCycles()]);
+        if (cancelled) {
+          return;
+        }
+        setSubmissions(subs);
+        setConfig(cfg);
+        setCurrentCycle(pickCurrentCycle(cycles));
+      } catch (e) {
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : 'Could not load the admin console.');
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [pickCurrentCycle]);
+
+  const onFilter = useCallback(
+    (next: QueueFilter) => {
+      setFilter(next);
+      void reloadSubmissions(next);
+    },
+    [reloadSubmissions],
+  );
+
+  const onReview = useCallback(
+    async (submissionId: string, input: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string }) => {
+      setReviewing(submissionId);
+      setLoadError(null);
+      try {
+        await reviewSubmission(submissionId, input);
+        await reloadSubmissions(filter);
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : 'Review failed.');
+      } finally {
+        setReviewing(null);
+      }
+    },
+    [filter, reloadSubmissions],
+  );
+
+  const onSaveDrive = useCallback(
+    async (input: { cycleId: string | null; startsAt: string; endsAt: string; fiatGoalUsd: number; quoraCommentGoal: number; githubStarGoal: number }) => {
+      setSavingDrive(true);
+      setDriveError(null);
+      try {
+        const saved = input.cycleId
+          ? await updateCycle(input.cycleId, {
+              startsAt: input.startsAt || undefined,
+              endsAt: input.endsAt || undefined,
+              fiatGoalUsd: input.fiatGoalUsd,
+              quoraCommentGoal: input.quoraCommentGoal,
+              githubStarGoal: input.githubStarGoal,
+            })
+          : await createCycle({
+              startsAt: input.startsAt,
+              endsAt: input.endsAt,
+              fiatGoalUsd: input.fiatGoalUsd,
+              quoraCommentGoal: input.quoraCommentGoal,
+              githubStarGoal: input.githubStarGoal,
+            });
+        setCurrentCycle(saved);
+      } catch (e) {
+        setDriveError(e instanceof Error ? e.message : 'Could not save the drive.');
+      } finally {
+        setSavingDrive(false);
+      }
+    },
+    [],
+  );
+
+  const onSaveSettings = useCallback(
+    async (input: SettingsSaveInput) => {
+      setSavingSettings(true);
+      setSettingsError(null);
+      try {
+        const saved = await updateConfig({
+          creditsPerUsd: input.creditsPerUsd,
+          nonMonetaryUnitValueUsd: nonMonetaryUnitValueFromCreditsPerAction(input.creditsPerAction, input.creditsPerUsd),
+          perUserCycleCreditCap: input.perUserCycleCreditCap,
+          bannerEnabled: input.bannerEnabled,
+          signalInstructions: input.signalInstructions,
+        });
+        setConfig(saved);
+      } catch (e) {
+        setSettingsError(e instanceof Error ? e.message : 'Could not save settings.');
+      } finally {
+        setSavingSettings(false);
+      }
+    },
+    [],
+  );
+
+  const pendingCount = submissions.filter((s) => s.status === 'pending').length;
+
+  const content = (
+    <>
+      {tab === 'queue' && (
+        <ContributionsAdminQueue
+          t={t}
+          config={config}
+          submissions={submissions}
+          filter={filter}
+          onFilter={onFilter}
+          search={search}
+          onSearch={setSearch}
+          reviewing={reviewing}
+          onReview={onReview}
+          isMobile={isMobile}
+        />
+      )}
+      {tab === 'drive' && (
+        <ContributionsAdminDrive t={t} cycle={currentCycle} saving={savingDrive} error={driveError} onSave={onSaveDrive} isMobile={isMobile} />
+      )}
+      {tab === 'settings' &&
+        (config ? (
+          <ContributionsAdminSettings t={t} config={config} saving={savingSettings} error={settingsError} onSave={onSaveSettings} isMobile={isMobile} />
+        ) : (
+          <div style={{ flex: 1, padding: 24, fontSize: 13, color: t.MUTED }}>Loading settings…</div>
+        ))}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Heart size={13} color="#fff" />
+            </div>
+            <span style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Contributions Admin</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
+          {TABS.map(({ key }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              style={{ flex: 1, padding: '10px 0', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === key ? 700 : 400, color: tab === key ? t.ACCENT : t.MUTED, borderBottom: tab === key ? `2px solid ${t.ACCENT}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+            >
+              {key === 'queue' ? 'Queue' : key === 'drive' ? 'Drive' : 'Settings'}
+              {key === 'queue' && pendingCount > 0 && <span style={{ background: '#F59E0B', color: '#000', fontSize: 9, fontWeight: 700, padding: '0 4px', borderRadius: 99, lineHeight: '14px' }}>{pendingCount}</span>}
+            </button>
+          ))}
+        </div>
+        {loadError && <div style={{ padding: '8px 14px', fontSize: 12, color: '#EF4444' }}>{loadError}</div>}
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, overflow: 'hidden' }}>
+      <div style={{ width: 200, background: t.SURFACE, borderRight: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ padding: '18px 14px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Heart size={14} color="#fff" />
+            </div>
+            <span style={{ fontWeight: 700, fontSize: 14, color: t.TITLE }}>Contributions</span>
+          </div>
+          <div style={{ fontSize: 11, color: t.MUTED }}>Admin console</div>
+        </div>
+        <nav style={{ padding: '10px 8px', flex: 1 }}>
+          {TABS.map(({ key, label }) => {
+            const isActive = tab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 7, marginBottom: 2, fontSize: 13, cursor: 'pointer', background: isActive ? `${t.ACCENT}18` : 'transparent', color: isActive ? t.ACCENT : t.MUTED, fontWeight: isActive ? 600 : 400, border: 'none', borderLeft: isActive ? `3px solid ${t.ACCENT}` : '3px solid transparent' }}
+              >
+                {label}
+                {key === 'queue' && pendingCount > 0 && <span style={{ background: '#F59E0B', color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>{pendingCount}</span>}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {loadError && <div style={{ padding: '10px 24px', fontSize: 12, color: '#EF4444' }}>{loadError}</div>}
+        {content}
+      </div>
+    </div>
+  );
+}
