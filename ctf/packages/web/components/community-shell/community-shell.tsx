@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { UserButton } from '@clerk/nextjs';
 import { Menu } from 'lucide-react';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -275,14 +276,18 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         </div>
         <div className={styles.mobileBarAuth}>
           {isAuthenticated ? (
-            <span className={styles.mobileBarAvatar} aria-hidden="true">{currentUser.initial}</span>
+            // Clerk's account widget on the phone-width bar too: avatar opens
+            // Clerk's menu; "Manage account" edits name, username, and email.
+            <span className={styles.clerkAvatarSlot} title="Your account — edit name, username, and email">
+              <UserButton appearance={{ elements: { avatarBox: styles.clerkMobileAvatarBox } }} />
+            </span>
           ) : (
             <Link className={styles.mobileBarSignIn} href={signInUrl}>Sign in</Link>
           )}
         </div>
       </header>
       <div className={styles.frame}>
-        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} />
+        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} />
         <ShellSidebar
           section={section}
           channels={channels}
