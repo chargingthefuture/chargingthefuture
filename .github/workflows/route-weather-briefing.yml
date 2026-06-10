@@ -45,5 +45,7 @@ jobs:
           ROUTE_VIA: ${{ vars.ROUTE_VIA }}
           ROUTE_DEPART: ${{ vars.ROUTE_DEPART }}
           ROUTE_MPH: ${{ vars.ROUTE_MPH }}
+          # Set ALERT_ONLY=1 to push only when the verdict is not DRIVE.
+          ALERT_ONLY: ${{ vars.ALERT_ONLY }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: node src/briefing.mjs

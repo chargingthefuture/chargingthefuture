@@ -1,9 +1,12 @@
-// Turns a route (named waypoints) or a single point into plain text a person
-// can read at a glance or have Siri read aloud. No HTML, no styling — just text.
-// Phrasing is written to be spoken cleanly: directions are words ("northwest"),
-// temperatures say "degrees", and times are 12-hour, so Siri reads it naturally.
+// Turns a route (named waypoints) or a point into plain text a person can read
+// at a glance or have Siri read aloud, with a driving verdict (DRIVE / CAUTION /
+// HOLD). No HTML, no styling. Phrasing is written to be spoken cleanly: directions
+// are words ("northwest"), temperatures say "degrees", times are 12-hour.
+// Each builder returns { text, verdict } so callers can act on the verdict
+// (set a response header, or only push an alert when it is not DRIVE).
 
 import { geocode, sampleAt, fetchUSAlerts, inUS } from './providers.mjs';
+import { assessHazard, worst } from './hazard.mjs';
 
 // Straight-line miles → rough driving miles. Highway routing is typically
 // 1.2–1.3× the great-circle distance once roads bend around terrain.
@@ -31,6 +34,21 @@ function haversineMiles(a, b) {
   const h =
     Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Point reached by travelling `distMiles` along `bearingDeg` from a start point.
+function destinationPoint(lat, lon, bearingDeg, distMiles) {
+  const R = 3958.8;
+  const br = (bearingDeg * Math.PI) / 180;
+  const dr = distMiles / R;
+  const la1 = (lat * Math.PI) / 180;
+  const lo1 = (lon * Math.PI) / 180;
+  const la2 = Math.asin(Math.sin(la1) * Math.cos(dr) + Math.cos(la1) * Math.sin(dr) * Math.cos(br));
+  const lo2 = lo1 + Math.atan2(
+    Math.sin(br) * Math.sin(dr) * Math.cos(la1),
+    Math.cos(dr) - Math.sin(la1) * Math.sin(la2),
+  );
+  return { lat: (la2 * 180) / Math.PI, lon: (((lo2 * 180) / Math.PI + 540) % 360) - 180 };
 }
 
 // Timezone offset like "-06:00" for a given IANA zone at a given moment.
@@ -91,6 +109,12 @@ function fmtSample(s) {
   return parts.join(', ');
 }
 
+// "DRIVE." or "CAUTION (gusting 41, snow)." — the spoken verdict for one line.
+function verdictTag(hz) {
+  if (hz.level === 'DRIVE') return 'DRIVE.';
+  return hz.reasons.length ? `${hz.level} (${hz.reasons.join(', ')}).` : `${hz.level}.`;
+}
+
 // Build the multi-stop route report from origin, optional waypoints, destination.
 export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   if (!from || !to) throw new Error('need both a "from" and a "to" place');
@@ -117,19 +141,27 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
     places.map(async (p, i) => {
       const sample = await sampleAt(p, etas[i]);
       const alerts = p.countryCode === 'US' || inUS(p.lat, p.lon) ? await fetchUSAlerts(p.lat, p.lon) : [];
-      return { place: p, eta: etas[i], sample, alerts };
+      return { place: p, eta: etas[i], sample, alerts, hz: assessHazard(sample, alerts) };
     }),
   );
 
+  const overall = worst(rows.map((r) => r.hz.level));
   const first = places[0];
   const last = places[places.length - 1];
-  const lines = [`ROUTE WX. ${first.name} ${first.region} to ${last.name} ${last.region}.`, ''];
+  const lines = [`ROUTE WX. ${first.name} ${first.region} to ${last.name} ${last.region}.`];
+
+  if (overall === 'DRIVE') {
+    lines.push('VERDICT: DRIVE. Clear along the route.', '');
+  } else {
+    const w = rows.find((r) => r.hz.level === overall);
+    lines.push(`VERDICT: ${overall} at ${w.place.name} ${w.place.region} — ${w.hz.reasons.join(', ')}.`, '');
+  }
+
   rows.forEach((r, i) => {
     const when = i === 0 && Math.abs(r.eta - Date.now()) < 30 * 60 * 1000
       ? 'Now'
       : clockInTz(originTz, r.eta);
-    const tag = r.alerts.length ? ` ALERT: ${r.alerts[0]}.` : '';
-    lines.push(`${when}, ${r.place.name} ${r.place.region}: ${fmtSample(r.sample)}.${tag}`);
+    lines.push(`${when}, ${r.place.name} ${r.place.region}: ${fmtSample(r.sample)}. ${verdictTag(r.hz)}`);
   });
 
   const allAlerts = [...new Set(
@@ -137,24 +169,42 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   )];
   if (allAlerts.length) lines.push('', `Alerts: ${allAlerts.join('; ')}.`);
   lines.push('', `(Times in ${originTz}. ETAs assume ${speed} mph and are approximate.)`);
-  return lines.join('\n');
+  return { text: lines.join('\n'), verdict: overall };
 }
 
-// Build the single-point report (current conditions + the next few hours).
-export async function buildPointReport({ lat, lon }) {
+// Build the single-point report: current conditions + the next few hours, and an
+// optional look-ahead one hour down the road when heading (and speed) are given.
+export async function buildPointReport({ lat, lon, heading, speed }) {
   const point = { lat: Number(lat), lon: Number(lon) };
   if (Number.isNaN(point.lat) || Number.isNaN(point.lon)) throw new Error('need numeric lat and lon');
   const now = Date.now();
   const hours = [0, 1, 2, 3];
-  const samples = await Promise.all(hours.map((h) => sampleAt(point, now + h * 3600 * 1000)));
+
+  const stops = hours.map((h) => ({ label: h === 0 ? 'Now' : null, at: now + h * 3600 * 1000, point }));
+  const headingNum = Number(heading);
+  if (Number.isFinite(headingNum)) {
+    const mph = Number(speed) > 0 ? Number(speed) : DEFAULT_MPH;
+    stops.push({ label: 'Ahead (~1h)', at: now + 3600 * 1000, point: destinationPoint(point.lat, point.lon, headingNum, mph) });
+  }
+
+  const samples = await Promise.all(stops.map((s) => sampleAt(s.point, s.at)));
   const alerts = inUS(point.lat, point.lon) ? await fetchUSAlerts(point.lat, point.lon) : [];
+  const assessments = samples.map((s) => assessHazard(s, alerts));
+  const overall = worst(assessments.map((a) => a.level));
   const tz = samples[0].timeZone;
-  const lines = [`HERE WX. ${point.lat.toFixed(3)}, ${point.lon.toFixed(3)}.`, ''];
-  samples.forEach((s, i) => {
-    const label = i === 0 ? 'Now' : clockInTz(tz, now + hours[i] * 3600 * 1000);
-    lines.push(`${label}: ${fmtSample(s)}.`);
+
+  const lines = [`HERE WX. ${point.lat.toFixed(3)}, ${point.lon.toFixed(3)}.`];
+  if (overall === 'DRIVE') lines.push('VERDICT: DRIVE. Clear nearby.', '');
+  else {
+    const idx = assessments.findIndex((a) => a.level === overall);
+    lines.push(`VERDICT: ${overall} — ${assessments[idx].reasons.join(', ')}.`, '');
+  }
+
+  stops.forEach((s, i) => {
+    const label = s.label || clockInTz(tz, s.at);
+    lines.push(`${label}: ${fmtSample(samples[i])}. ${verdictTag(assessments[i])}`);
   });
   if (alerts.length) lines.push('', `Alerts: ${[...new Set(alerts)].join('; ')}.`);
   lines.push('', `(Times in ${tz}.)`);
-  return lines.join('\n');
+  return { text: lines.join('\n'), verdict: overall };
 }
