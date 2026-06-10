@@ -107,6 +107,52 @@ If `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` or the publishable key is missing, the ap
   - Builds a signed production APK and publishes it to GitHub Releases on `mobile-v*` tags.
   - Fails fast when `EXPO_TOKEN` is missing.
 
+## Cutting an Android Release (runbook)
+
+**Yes — every native Android release needs a new `mobile-v*` tag.** That is the only
+trigger for `expo-android-release.yml`; it has no manual "Run workflow" button. Pushing a
+new tag *is* the release. (This is settled; do not re-litigate it.)
+
+You do **not** tag for JavaScript/asset-only changes — those ship automatically as an
+over-the-air update via `expo-update.yml` the moment they land on `main`. Tag only when you
+need a brand-new signed build users install (native dependency/config change, or a real
+version bump you want on a Release page).
+
+Steps to release:
+
+1. **Bump the version** in `ctf/packages/mobile/app.config.ts` (and `package.json`) and let it
+   merge to `main`. The tag is the version of record — the release name and APK filename come
+   from the tag (`github.ref_name`) — so keep the app version and the tag in step.
+2. **Create and push the tag against `main`** (the deployed commit):
+
+   ```
+   git fetch origin main
+   git tag -a mobile-v<X.Y.Z> origin/main -m "Android release v<X.Y.Z>"
+   git push origin mobile-v<X.Y.Z>
+   ```
+
+3. **Watch Actions → "Expo Android Release."** It builds the signed APK in EAS, then creates
+   the `mobile-v<X.Y.Z>` GitHub Release with the APK attached. A green run leaves a downloadable
+   signed APK on that release.
+
+**Do NOT create/publish the GitHub Release by hand in the UI first.** The workflow creates the
+release and attaches the APK itself (via `softprops/action-gh-release`). **Immutable Releases are
+enabled on this repo**, so a release you publish manually is locked the instant you publish it —
+the workflow then can't add the APK to it, the upload step fails, and you are left with an empty
+release. Let the workflow own the release.
+
+Other rules that fall out of immutable releases:
+
+- **Every tag/version must be new and unique.** You cannot re-publish or overwrite a
+  `mobile-v*` release; bump the version for every attempt, even a retry of a failed build.
+- **Release notes can't be edited after publish.** The workflow publishes with an empty body,
+  so there is nowhere to add notes after the fact. If notes matter for a release, add them to
+  the workflow's release step (a `body:`/`body_path:` input on `action-gh-release`) before
+  tagging — not in the UI afterward.
+- **Tag creation needs a human (or a token with tag permission).** `mobile-v*` tags are
+  protected; the Claude Code session token can push branches but is blocked (HTTP 403) from
+  pushing release tags, so the owner runs the `git push origin mobile-v<X.Y.Z>` step.
+
 ## When to Use EAS Build vs EAS Update
 
 - Use **EAS Build** for native dependency/configuration changes.
