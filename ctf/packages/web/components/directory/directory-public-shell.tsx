@@ -36,7 +36,7 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
       <div style={{ padding: '48px 64px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ padding: '4px 14px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 12, color: COLOR, fontWeight: 600 }}>Verified profiles</span>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>Encrypted chat</span>
+          <span style={{ padding: '4px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>Direct chat</span>
         </div>
         <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, lineHeight: 1.1 }}>
           Connect with verified<br />

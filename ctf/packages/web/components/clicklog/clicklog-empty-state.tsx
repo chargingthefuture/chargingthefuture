@@ -8,7 +8,7 @@ import { BG, BORDER, BRAND, SUBTLE, SURFACE, TEXT } from "./clicklog-shared";
 const STEPS = [
   { icon: "👆", title: "One tap", desc: "Instantly log an incident — no typing required." },
   { icon: "📝", title: "Add context", desc: "Optionally add notes or location to any log." },
-  { icon: "🔒", title: "Private", desc: "Encrypted. Only you can see your history." },
+  { icon: "🔒", title: "Private", desc: "Only you can see your history." },
 ];
 
 export function ClicklogEmptyState({ onLog }: { onLog: () => void }) {
@@ -18,7 +18,7 @@ export function ClicklogEmptyState({ onLog }: { onLog: () => void }) {
         <AlertTriangle size={18} color={BRAND} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>ClickLog</div>
-          <div style={{ fontSize: 12, color: SUBTLE }}>Personal incident counter — private &amp; encrypted</div>
+          <div style={{ fontSize: 12, color: SUBTLE }}>Personal incident counter — private</div>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ export function ClicklogEmptyState({ onLog }: { onLog: () => void }) {
           <div>
             <div style={{ fontSize: 24, fontWeight: 800, color: TEXT, marginBottom: 10 }}>No incidents logged</div>
             <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7, maxWidth: 440 }}>
-              ClickLog lets you silently track personal safety incidents — one tap, optionally add a note or location. All data is end-to-end encrypted and only visible to you.
+              ClickLog lets you silently track personal safety incidents — one tap, optionally add a note or location. All data is only visible to you.
             </div>
           </div>
 

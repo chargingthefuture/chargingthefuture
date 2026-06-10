@@ -131,7 +131,7 @@ function CheckinView({
               <Text style={s.submitBtnText}>Submit Anonymously</Text>
             )}
           </TouchableOpacity>
-          <Text style={s.anonNote}>Not linked to your account · Encrypted</Text>
+          <Text style={s.anonNote}>Not linked to your account</Text>
         </>
       )}
       {error !== null && <Text style={s.errorText}>{error}</Text>}

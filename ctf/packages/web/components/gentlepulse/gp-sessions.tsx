@@ -85,7 +85,7 @@ export function GentlePulseSessions({
     <ScrollArea style={{ flex: 1 }}>
       <div style={{ padding: "24px" }}>
         <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(20,184,166,0.03) 100%)`, border: `1px solid ${COLOR}20` }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Your Safe Space to Breathe</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Your Space to Breathe</div>
           <div style={{ fontSize: 14, color: SUBTLE }}>{sessions.length} sessions · Trauma-informed therapists · Always free</div>
         </div>
         {sessions.length === 0 ? (
