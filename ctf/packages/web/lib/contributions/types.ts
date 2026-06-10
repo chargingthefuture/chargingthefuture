@@ -107,6 +107,9 @@ export type FundraiserSnapshot = {
   githubStarsConfirmed: number;
   contributorCount: number;
   bannerVisible: boolean;
+  // True when this member already holds a confirmed, credit-earning github_star contribution.
+  // The github-star path is then a once-per-member-ever lifetime grant, so the UI greys it out.
+  githubStarAlreadyCredited: boolean;
 };
 
 export type ContributionsQueueFilters = {

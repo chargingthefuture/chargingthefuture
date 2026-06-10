@@ -13,6 +13,7 @@ import { ShellSidebar } from './shell-sidebar';
 import { ShellChatPanel } from './shell-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
+import { ContributionsBanner } from '../contributions/contributions-banner';
 import styles from './community-shell.module.css';
 
 type CommunityShellProps = {
@@ -310,6 +311,9 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           />
         ) : null}
         <main className={`${styles.panel} ${styles.content}`}>
+          {/* App-wide fundraiser banner — non-blocking, top of the content area, signed-in only.
+              The banner self-hides unless a drive is active and visible for this member. */}
+          {isAuthenticated ? <ContributionsBanner /> : null}
           {loadError ? (
             <section className={styles.usernameAlert} role="alert">{loadError}</section>
           ) : null}

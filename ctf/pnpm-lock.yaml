@@ -199,6 +199,9 @@ importers:
       '@config-plugins/react-native-webrtc':
         specifier: 14.0.0
         version: 14.0.0(expo@55.0.14)
+      '@types/react':
+        specifier: 19.2.14
+        version: 19.2.14
       eslint-plugin-react-hooks:
         specifier: ^7.0.1
         version: 7.0.1(eslint@9.39.4(jiti@2.6.1))

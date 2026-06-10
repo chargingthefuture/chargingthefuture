@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { ChymePublicShell } from '@/components/chyme/chyme-public-shell';
 import { ClicklogPublicShell } from '@/components/clicklog/clicklog-public-shell';
+import { ContributionsPublicShell } from '@/components/contributions/contributions-public-shell';
 import { DirectoryPublicShell } from '@/components/directory/directory-public-shell';
 import { FoundationPublicShell } from '@/components/foundation/foundation-public-shell';
 import { GdpPublicShell } from '@/components/gdp/gdp-public-shell';
@@ -57,6 +58,7 @@ export type PublicVisitorShell = ComponentType<PublicVisitorShellProps>;
 const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   chyme: ChymePublicShell,
   clicklog: ClicklogPublicShell,
+  contributions: ContributionsPublicShell,
   directory: DirectoryPublicShell,
   foundation: FoundationPublicShell,
   gdp: GdpPublicShell,

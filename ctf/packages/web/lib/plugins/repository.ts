@@ -191,10 +191,9 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     slug: 'contributions',
     name: 'Contributions',
     summary: 'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',
-    availabilityState: 'alpha',
+    availabilityState: 'implemented_shell',
     navRank: 210,
-    // Foundation only: no UI yet. Flip to true when the designed shell ships.
-    isVisible: false,
+    isVisible: true,
   },
   {
     slug: 'bug-reporting',
