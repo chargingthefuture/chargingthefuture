@@ -154,6 +154,17 @@ export function contributionsErrorResponse(error: unknown, fallbackMessage: stri
     );
   }
 
+  if (code === 'github_star_already_credited') {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: 'contributions_github_star_already_credited',
+        message: "You've already received credits for starring the repository — thank you.",
+      },
+      { status: 409 },
+    );
+  }
+
   reportError(error, { area: 'contributions', op });
   return NextResponse.json({ ok: false, code: 'contributions_unavailable', message: fallbackMessage }, { status: 503 });
 }

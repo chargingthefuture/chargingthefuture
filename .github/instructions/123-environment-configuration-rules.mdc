@@ -122,6 +122,21 @@ credential set for the two integrations that need it:
 `demo-mode` selects between the two sets at request time; see the
 per-environment-credentials note above.
 
+### Contributions plugin: owner Signal contact
+
+| Variable | Layer | Used by | Purpose |
+|---|---|---|---|
+| `CONTRIBUTIONS_OWNER_SIGNAL_URL` | Server | web (Node) | The owner's Signal contact (a `signal.me` URL or phone number) shown to signed-in members on the contribution confirmation screen so they know where to send a gift-card code. |
+
+- Managed in Infisical (the single source of truth), `production` environment.
+- **Server-only.** It is deliberately **not** prefixed `NEXT_PUBLIC_`, so it never enters the
+  client bundle; it is read server-side only (`lib/contributions/owner-signal-env.ts`) and surfaced
+  to the browser only through the `GET /api/contributions/fundraiser` response field `ownerSignalUrl`.
+- **Optional.** When unset or empty the API returns `ownerSignalUrl: null` and the confirmation
+  screen falls back to the admin-editable `signal_instructions` copy, so the screen never breaks.
+- **Never commit or log the value.** It holds personal contact info; do not print it in logs,
+  errors, or job summaries.
+
 ## Implementation Rules
 
 ### When Deploying

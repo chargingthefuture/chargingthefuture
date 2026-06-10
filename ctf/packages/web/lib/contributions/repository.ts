@@ -417,8 +417,46 @@ function kindSpecificInsertValues(input: CreateContributionSubmissionInput): (st
   return [null, null, null, null, input.githubProfileUrl ?? null];
 }
 
+/**
+ * True when this member already holds a confirmed github_star contribution that earned credits
+ * (credits_granted > 0), across all cycles. A github_star is a once-per-member-ever thank-you, so
+ * this gate stops star/unstar gaming. A rejected star, or a confirmed-but-zero-credit star (e.g.
+ * clamped by the per-cycle cap), does NOT lock the member out — honest retries must still work.
+ */
+export async function hasCreditedGithubStar(userId: string): Promise<boolean> {
+  const result = await queryDb<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM contributions_submissions
+       WHERE user_id = $1 AND kind = 'github_star' AND status = 'confirmed' AND credits_granted > 0
+     ) AS exists`,
+    [userId],
+  );
+
+  return result.rows[0]?.exists ?? false;
+}
+
+async function hasCreditedGithubStarWithClient(client: PoolClient, userId: string, excludeSubmissionId: string): Promise<boolean> {
+  const result = await client.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM contributions_submissions
+       WHERE user_id = $1 AND kind = 'github_star' AND status = 'confirmed'
+         AND credits_granted > 0 AND id <> $2
+     ) AS exists`,
+    [userId, excludeSubmissionId],
+  );
+
+  return result.rows[0]?.exists ?? false;
+}
+
 export async function createSubmission(input: CreateContributionSubmissionInput): Promise<ContributionSubmission> {
   validateCreateSubmission(input);
+
+  // A github_star is creditable at most once per member, ever. Reject a new star claim outright
+  // when the member already has a confirmed, credit-earning star. Gift cards and Quora comments
+  // are unaffected (they remain repeatable).
+  if (input.kind === 'github_star' && (await hasCreditedGithubStar(input.userId))) {
+    throw new Error('github_star_already_credited');
+  }
 
   const cycle = await getCurrentCycle();
   const result = await queryDb<SubmissionRow>(
@@ -514,6 +552,8 @@ export async function getFundraiserSnapshot(userId: string): Promise<FundraiserS
     await recordBannerShown(userId);
   }
 
+  const githubStarAlreadyCredited = await hasCreditedGithubStar(userId);
+
   return {
     cycle,
     fiatConfirmedUsd: Number(progress.fiat_confirmed_usd),
@@ -521,6 +561,7 @@ export async function getFundraiserSnapshot(userId: string): Promise<FundraiserS
     githubStarsConfirmed: Number(progress.github_stars_confirmed),
     contributorCount: Number(progress.contributor_count),
     bannerVisible,
+    githubStarAlreadyCredited,
   };
 }
 
@@ -685,13 +726,27 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
     const config = await getContributionsConfigWithClient(client);
     const confirmedAmountUsd = resolveConfirmedAmount(row, input, config);
     const cycleId = row.cycle_id ?? (await getCurrentCycle())?.id ?? null;
-    const computedCredits = confirmedAmountUsd * config.creditsPerUsd;
+
+    // Once-per-member-ever github_star: if this member already holds a different confirmed,
+    // credit-earning star, confirming this one grants 0 credits (we still mark it confirmed and
+    // record the reason). This is defense in depth — the create gate already blocks a duplicate
+    // star at submission time — and it never double-grants.
+    const githubStarAlreadyCredited =
+      row.kind === 'github_star' && (await hasCreditedGithubStarWithClient(client, row.user_id, row.id));
+
+    const computedCredits = githubStarAlreadyCredited ? 0 : confirmedAmountUsd * config.creditsPerUsd;
     const creditsGranted = await computeCycleCappedGrant(client, {
       userId: row.user_id,
       cycleId,
       computedCredits,
       cap: config.perUserCycleCreditCap,
     });
+
+    const reviewNote = githubStarAlreadyCredited
+      ? [input.reviewNote, 'No credits: member already received credits for an earlier GitHub star (once-per-member limit).']
+          .filter((part): part is string => Boolean(part && part.trim()))
+          .join(' ')
+      : input.reviewNote ?? null;
 
     let governanceEventId: string | null = null;
     if (creditsGranted > 0) {
@@ -712,7 +767,7 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
       submissionId: input.submissionId,
       status: 'confirmed',
       actorUserId: input.actorUserId,
-      reviewNote: input.reviewNote ?? null,
+      reviewNote,
       confirmedAmountUsd,
       creditsGranted,
       creditGovernanceEventId: governanceEventId,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { contributionsErrorResponse, requireContributionsUserAccess } from '../_lib';
 import { getContributionsConfig, getFundraiserSnapshot } from 'lib/contributions/repository';
+import { getOwnerSignalUrl } from 'lib/contributions/owner-signal-env';
 
 export async function GET() {
   const gate = await requireContributionsUserAccess();
@@ -14,10 +15,15 @@ export async function GET() {
 
     // Only member-safe config copy is exposed (the Signal instructions shown after a gift-card
     // submission). Internal knobs such as the snooze length are never surfaced.
+    //
+    // ownerSignalUrl is read from a server-only env var (CONTRIBUTIONS_OWNER_SIGNAL_URL); it is
+    // shown inline on the confirmation screen. When unset it is null and the UI falls back to the
+    // editable signalInstructions copy. The value is never logged.
     return NextResponse.json({
       ok: true,
       fundraiser: snapshot,
       signalInstructions: config.signalInstructions,
+      ownerSignalUrl: getOwnerSignalUrl(),
     });
   } catch (error) {
     return contributionsErrorResponse(error, 'Fundraiser status unavailable.', 'fundraiser_get');
