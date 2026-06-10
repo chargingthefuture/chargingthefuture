@@ -1,0 +1,110 @@
+name: Bug Reports — Build Approved Fix
+
+# Implements ONE owner-approved bug fix and opens a pull request on this app repo.
+#
+# This only ever runs against an issue the owner has approved by adding the
+# `approved-to-build` label in the PRIVATE triage repo. It is the step that turns a
+# proposal into code. See rule 129.
+#
+# Manual-dispatch only on purpose: this is the autonomous-coding step, so the owner kicks
+# each build until the pipeline has been trusted in practice. To target a specific issue,
+# pass its number; otherwise the oldest `approved-to-build` issue is picked. Enable a
+# schedule later if you want it fully hands-off.
+#
+# First-run note: this uses the external Claude Code GitHub Action. Pin the action to a
+# version you trust and confirm its input names on the first run.
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Triage issue number to build (blank = oldest approved-to-build)"
+        required: false
+        type: string
+
+jobs:
+  build-approved-fix:
+    name: Build approved fix and open PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # Decide which approved issue to build. Skips the job cleanly if there is none.
+      - name: Select approved issue
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          TRIAGE_REPO: chargingthefuture/bug-reports
+          REQUESTED: ${{ inputs.issue_number }}
+        run: |
+          if [ -n "$REQUESTED" ]; then
+            echo "number=$REQUESTED" >> "$GITHUB_OUTPUT"
+            echo "Selected requested issue #$REQUESTED."
+            exit 0
+          fi
+          NUM=$(gh issue list --repo "$TRIAGE_REPO" --label approved-to-build --state open \
+            --json number,createdAt --limit 50 \
+            --jq 'sort_by(.createdAt) | .[0].number // empty')
+          if [ -z "$NUM" ]; then
+            echo "number=" >> "$GITHUB_OUTPUT"
+            echo "No issues labeled approved-to-build; nothing to build."
+          else
+            echo "number=$NUM" >> "$GITHUB_OUTPUT"
+            echo "Selected oldest approved issue #$NUM."
+          fi
+
+      - name: Implement fix and open PR
+        if: steps.pick.outputs.number != ''
+        # Pin this to a version you trust before relying on it in production.
+        uses: anthropics/claude-code-action@v1
+        env:
+          # Use the PAT for git/gh so the push and PR trigger CI (the default token does
+          # not), and so the agent can read+comment on the cross-repo triage issue.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        with:
+          anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_PAT }}
+          prompt: |
+            You are implementing one owner-approved bug fix for the "Charging the Future"
+            app. Follow the repository rules in CLAUDE.md and .github/instructions exactly.
+
+            The approved work item is issue #${{ steps.pick.outputs.number }} in the private
+            triage repo `chargingthefuture/bug-reports`. Do this in order:
+
+            1. Read the full issue and ALL its comments:
+               `gh issue view ${{ steps.pick.outputs.number }} --repo chargingthefuture/bug-reports --comments`
+               The latest "Automated triage proposal" comment holds the agreed plan.
+            2. Implement the SMALLEST change that fixes the reported problem, per that plan.
+               Do not refactor beyond what the fix needs.
+            3. Create a DESCRIPTIVE branch named `fix/<short-kebab-summary>` — never random
+               words or an opaque slug. Commit with a clear message.
+            4. Run `pnpm --filter @ctf/web typecheck` and fix any errors before pushing.
+            5. Push the branch and open a pull request on `chargingthefuture/chargingthefuture`
+               with a Conventional-Commit title (`fix: ...`) and a description that includes
+               the line `Parity Status: web + mobile-responsive + android complete` (or a
+               `Parity Ticket:` line if UI parity is deferred). Link the triage issue.
+            6. Comment the PR URL on the triage issue, then relabel it: add `built`, remove
+               `approved-to-build`
+               (`gh issue edit ${{ steps.pick.outputs.number }} --repo chargingthefuture/bug-reports --add-label built --remove-label approved-to-build`).
+
+            If the plan is ambiguous or the fix would be large or risky, do NOT guess: post a
+            comment on the triage issue explaining the blocker and stop without opening a PR.

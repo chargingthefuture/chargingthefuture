@@ -1,0 +1,146 @@
+# In-App Bug Reporting and Agent Triage Rules
+
+## Status
+
+**Decided by the owner, 2026-06-10. This is settled — do not relitigate the architecture below.**
+Build against it; if a genuine conflict with another rule arises, raise it with the owner rather than
+quietly choosing a different shape.
+
+## Why this exists
+
+The app serves a **non-technical user base** on a sensitive product. Two facts drive every decision
+here:
+
+1. Users cannot be asked to open a GitHub issue themselves. GitHub stays entirely behind the scenes;
+   users only ever see an in-app "Report a problem" control.
+2. The main app repo is **public and open source**. Anything posted to it is world-visible, indexed,
+   and cached even after deletion. Raw user text must therefore never auto-flow to a public surface.
+
+The owner is a **solo developer and the only staff member**, and the system must scale toward
+**~5 million users**. So the pipeline is built to minimize manual labor (automated sanitizing and
+triage) while keeping a human gate on anything published or built.
+
+## The settled architecture
+
+```
+User taps "Report a problem" in the app (never sees GitHub)
+        │
+        ▼
+New API route stores the raw report as a row in a private DB table
+   (source of truth — raw text NEVER leaves the database)
+        │
+        ▼
+Sanitizing gate: redact PII + classify abusive/sensitive content,
+   then produce a paraphrased technical restatement (not the user's verbatim words)
+        │
+        ├─ flagged / low-confidence ─▶ held for owner review in a PRIVATE in-app admin view
+        │                               (fail closed — never auto-published)
+        │
+        ▼ clean
+Cron workflow creates an issue in a SEPARATE PRIVATE triage repo
+   (labels: user-report, needs-triage) — NOT in the public app repo
+        │
+        ▼
+Cron wakes a triage agent: it investigates, posts root cause + a proposed fix plan,
+   relabels triaged + awaiting-owner-approval, then STOPS (no branch, no PR)
+        │
+        ▼
+Owner approves by adding the label `approved-to-build` (one tap; no typing)
+        │
+        ▼
+Build workflow spawns a build agent: creates branch + PR on the PUBLIC app repo
+   (the PR contains code, never the user's raw words) → existing CodeRabbit / auto-merge lanes
+```
+
+## Non-negotiable decisions
+
+These are the points the owner has fixed. Implement exactly these; do not substitute alternatives.
+
+- **Private triage repo.** Bug-report issues are created in a **separate, private** triage repository,
+  not in the public app repo. This is the primary defense: even if sanitizing misses something, the
+  issue is not public. This is an **explicit, owner-approved exception to the "No new repositories"
+  rule** in `copilot-instructions.md` — that rule targets new *product/app* repos (a "v4" rewrite),
+  not internal operational repos. Precedent already exists: the project runs a separate design repo
+  and a separate landing-page repo. **Do not relitigate this as a violation of the no-new-repos rule.**
+
+- **Sanitizing stays on even though the triage repo is private.** Defense in depth, and it reduces the
+  owner's manual labor by turning raw reports into clean, paraphrased, actionable issues. The private
+  repo and the sanitizing gate are **both** required — neither replaces the other.
+
+- **Raw text is private and never published.** The raw user report lives only in the private DB table.
+  What reaches even the private triage repo is the agent's **restatement**, not verbatim user text.
+
+- **Fail closed.** Anything the sanitizer flags (PII detected, abusive/sensitive content, or low
+  confidence) is **held for owner review** in a private in-app admin view and is **never
+  auto-posted**. Withhold by default; it is far cheaper to publish a held report later than to scrub a
+  leaked one.
+
+- **Human gate before any build.** The triage agent only investigates and proposes; it must never open
+  a branch or PR. A PR is created only after the owner adds `approved-to-build`.
+
+- **The form sets expectations.** The in-app form tells the user, in plain words, that the team reads
+  these reports to fix problems and asks them not to include passwords or personal details. This does
+  not replace the sanitizer; it reduces accidental leaks at the source.
+
+## Scale and labor constraints to honor
+
+- Built for one operator. Default to automation; reserve human steps for approval and for reviewing
+  held/flagged reports.
+- Built toward millions of users. Expect duplicates, empty "it's broken" reports, and accidental taps.
+  Plan for **duplicate detection** (link, don't re-investigate) and a **per-user rate limit** on the
+  submit route so the queue stays useful rather than flooded.
+
+## Cross-references
+
+- `copilot-instructions.md` → "App Versioning and Repository Policy" (the "No new repositories" rule
+  and its carve-out for the private triage repo).
+- Existing precedent for the cron-creates-a-GitHub-issue pattern:
+  `.github/workflows/generate-product-update.yml`.
+- Security and Secrets Policy in `CLAUDE.md` / `copilot-instructions.md`: the GitHub token used to
+  create triage issues lives only in CI secrets, never in the web app.
+
+## Descriptive branch and PR names (build agent)
+
+When the build agent acts on an approved report, the branch and PR names it generates must be
+**descriptive — never random dictionary words or opaque slugs.** Derive a short kebab-case summary
+from the report (e.g. `fix/payments-page-blank-after-submit`), and give the PR a Conventional-Commit
+title (`fix:`, `feat:`, …). This is an explicit owner instruction (2026-06-10); do not relitigate it.
+
+## Build status (2026-06-10) — what exists and what is deferred
+
+**Built (backend foundation):**
+
+- `bug_reports` table in `ctf/schema.sql` (raw text private; redacted copy + risk flags stored).
+- Submit route `POST /api/bug-reports` (`app/api/bug-reports/`), open to any authenticated user, with
+  CSRF, length caps, and a per-user rate limit.
+- The redaction + risk gate `lib/bug-reports/sanitize.ts` and storage `lib/bug-reports/repository.ts`.
+  Flagged reports are stored as `held_for_review` and never auto-published.
+- `ctf/scripts/createBugReportIssues.mjs` + `.github/workflows/bug-reports-create-issues.yml`, which
+  publish **only redacted** text into the private triage repo. The workflow is **manual-dispatch only**
+  until: the triage repo's `user-report` / `needs-triage` labels exist, `GH_PAT` can write to the
+  triage repo, and `DATABASE_URL` is available. Then uncomment its schedule.
+- The plugin is registered as `bug-reporting` (`planned`, hidden) so no broken tile shows until the UI
+  ships.
+- **Triage agent**: `ctf/scripts/triageBugReportIssues.mjs` + `.github/workflows/bug-reports-triage.yml`.
+  Investigates the oldest `needs-triage` issue against the checked-out code, posts a root-cause + fix
+  plan, and relabels it `awaiting-owner-approval`. It never writes code. Uses the proven direct
+  Anthropic API pattern (as in `generate-update.mjs`). Manual-dispatch until enabled.
+- **Build agent** (human-gated): `.github/workflows/bug-reports-build.yml`. Runs ONLY against an issue
+  the owner approved with the `approved-to-build` label; implements the smallest fix, opens a PR on the
+  app repo with a descriptive `fix/<summary>` branch and a Conventional-Commit title, links the issue,
+  and relabels it `built`. Uses the external Claude Code GitHub Action — pin its version and confirm
+  its inputs on first run. Manual-dispatch only on purpose (the owner kicks each build until the
+  pipeline is trusted).
+
+**Label flow in the triage repo** (create these in `chargingthefuture/bug-reports`):
+`user-report` → `needs-triage` → (triage) `triaged` + `awaiting-owner-approval` → (owner adds)
+`approved-to-build` → (build) `built`.
+
+**Deferred and why:**
+
+- The in-app "Report a problem" form is a net-new surface and is **design-gated** (rule 127). Build it
+  only once a design lands in the `design/` submodule. `DESIGN PASS REQUIRED` was announced on
+  2026-06-10 and a design-prompt issue was filed for the Replit design agent.
+- The private in-app admin view for `held_for_review` reports is not built yet.
+- All three workflows are manual-dispatch until the triage repo's labels exist, `GH_PAT` can read+write
+  it, and `ANTHROPIC_API_KEY` / `DATABASE_URL` are available; then uncomment the schedules.
