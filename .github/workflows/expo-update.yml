@@ -28,6 +28,7 @@ jobs:
       contents: read
     env:
       MOBILE_ENV_TARGET: production
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # The app secrets (Clerk keys, app URL, Expo project id/updates URL) are no
       # longer GitHub Actions secrets — Infisical is the single source of truth.
       # The "Inject secrets from Infisical" step below loads them into the job env
@@ -55,7 +56,7 @@ jobs:
           recursive: true
 
       - name: Fail fast when EXPO_TOKEN is missing
-        if: ${{ secrets.EXPO_TOKEN == '' }}
+        if: ${{ env.EXPO_TOKEN == '' }}
         run: |
           echo "EXPO_TOKEN secret is not set. Add it in repository settings before OTA updates can run."
           exit 1
