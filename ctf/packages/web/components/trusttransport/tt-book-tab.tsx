@@ -25,7 +25,7 @@ function BookedCard({ onReset }: { onReset: () => void }) {
         <CheckCircle size={20} style={{ color: "#22C55E" }} />
         <div style={{ fontSize: 16, fontWeight: 700, color: "#22C55E" }}>Request submitted!</div>
       </div>
-      <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 6 }}>Your request is being matched with nearby drivers. All comms encrypted.</div>
+      <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 6 }}>Your request is being matched with nearby drivers.</div>
       <button type="button" onClick={onReset} style={{ marginTop: 12, padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 13, cursor: "pointer" }}>
         Book Another
       </button>

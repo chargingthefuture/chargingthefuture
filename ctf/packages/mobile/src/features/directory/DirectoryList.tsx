@@ -173,7 +173,7 @@ function ProfileDetail({
           <View style={styles.privacyBox}>
             <Text style={styles.privacyTitle}>🔒 Privacy Guaranteed</Text>
             <Text style={styles.privacyBody}>
-              All messages are end-to-end encrypted. Your identity is never exposed.
+              Your identity is never exposed.
             </Text>
           </View>
           {/* Endorsements omitted — no endorsements API */}
@@ -291,9 +291,6 @@ export const DirectoryList = () => {
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle}>Directory</Text>
           </View>
-          <View style={styles.encryptedBadge}>
-            <Text style={styles.encryptedBadgeText}>Encrypted</Text>
-          </View>
         </View>
         {/* Search bar */}
         <View style={styles.searchWrap}>
@@ -410,15 +407,6 @@ const styles = StyleSheet.create({
   headerIconText: { fontSize: 18 },
   headerTitleWrap: { flex: 1 },
   headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
-  encryptedBadge: {
-    backgroundColor: `${COLOR}20`,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: `${COLOR}35`,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  encryptedBadgeText: { fontSize: 11, color: COLOR, fontWeight: '600' },
 
   // Search
   searchWrap: {

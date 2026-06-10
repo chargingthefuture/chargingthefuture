@@ -54,7 +54,7 @@ export function ChymeControls({
       </button>
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 12, color: '#4B5563', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Volume2 size={14} /> Audio — encrypted
+        <Volume2 size={14} /> Audio
       </div>
       {joinReady && (
         <button

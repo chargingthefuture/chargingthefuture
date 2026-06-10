@@ -64,9 +64,6 @@ export const ChymeChatView: React.FC<Props> = ({
         <Text style={styles.backBtnText}>‹ Room</Text>
       </TouchableOpacity>
       <Text style={styles.title}>Room Chat</Text>
-      <View style={styles.encryptedBadge}>
-        <Text style={styles.encryptedText}>Encrypted</Text>
-      </View>
     </View>
 
     <FlatList
@@ -146,15 +143,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#F0FDF4',
   },
-  encryptedBadge: {
-    backgroundColor: `${PRIMARY}15`,
-    borderWidth: 1,
-    borderColor: `${PRIMARY}30`,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  encryptedText: { fontSize: 10, color: PRIMARY },
   list: { flex: 1 },
   listContent: { padding: 16 },
   messageItem: { marginBottom: 16 },

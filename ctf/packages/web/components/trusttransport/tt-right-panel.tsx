@@ -7,7 +7,7 @@ const SAFETY_FEATURES = [
   { icon: Shield, l: "Background Checked", v: "All drivers", c: "#22C55E" },
   { icon: Phone, l: "Emergency SOS", v: "One-tap alert", c: "#EF4444" },
   { icon: CheckCircle, l: "Identity Verified", v: "Photo ID required", c: COLOR },
-  { icon: Zap, l: "Real-time Tracking", v: "End-to-end encrypted", c: "#38BDF8" },
+  { icon: Zap, l: "Real-time Tracking", v: "Live updates", c: "#38BDF8" },
 ];
 
 export function TrustTransportRightPanel({
