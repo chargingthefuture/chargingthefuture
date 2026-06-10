@@ -132,7 +132,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
       <View style={styles.bookedBox}>
         <Text style={styles.bookedTitle}>Request submitted!</Text>
         <Text style={styles.bookedDesc}>
-          Your request is being matched with nearby drivers. All comms encrypted.
+          Your request is being matched with nearby drivers.
         </Text>
         <TouchableOpacity
           style={styles.secondaryBtn}

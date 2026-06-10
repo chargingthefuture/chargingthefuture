@@ -42,7 +42,7 @@ export const ChymeEmpty: React.FC<Props> = ({ onStartRoom, tokens, accent }) => 
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          🎤  Rooms are end-to-end encrypted and members-only
+          🎤  Rooms are members-only
         </Text>
       </View>
     </View>

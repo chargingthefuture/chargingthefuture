@@ -253,7 +253,7 @@ export function SocketRelay() {
       <View style={styles.privacyNotice}>
         <Text style={styles.privacyTitle}>🛡 Privacy Minimized</Text>
         <Text style={styles.privacyBody}>
-          Never includes identifying info. End-to-end encrypted.
+          Never includes identifying info.
         </Text>
       </View>
     </ScrollView>

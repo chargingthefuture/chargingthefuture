@@ -61,7 +61,7 @@ function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
               <span style={{ color: BRAND }}>Sign in to start.</span>
             </h1>
             <p style={{ margin: 0, fontSize: 15, color: SUBTLE, lineHeight: 1.7, maxWidth: 440 }}>
-              One tap to log a personal safety incident. Add notes, attach location, and keep a private encrypted history — only visible to you.
+              One tap to log a personal safety incident. Add notes, attach location, and keep a private history — only visible to you.
             </p>
           </div>
 
@@ -86,7 +86,7 @@ function DesktopClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
           <div style={{ display: 'flex', gap: 12, width: '100%' }}>
             {[
               { Icon: Eye, label: 'Private by default', desc: 'No one else can see your logs — ever.' },
-              { Icon: ShieldCheck, label: 'Encrypted', desc: 'Your data is protected at rest and in transit.' },
+              { Icon: ShieldCheck, label: 'Private', desc: 'Only you can see your incidents.' },
               { Icon: EyeOff, label: 'Discreet logging', desc: 'One tap — no visible confirmation needed.' },
             ].map(({ Icon, label, desc }) => (
               <div key={label} style={{ flex: 1, padding: '14px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, textAlign: 'center' }}>
@@ -144,7 +144,7 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
             Track incidents privately
           </div>
           <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, maxWidth: 290 }}>
-            Sign in to start logging personal safety incidents — one tap, encrypted, private.
+            Sign in to start logging personal safety incidents — one tap, private.
           </div>
         </div>
 
