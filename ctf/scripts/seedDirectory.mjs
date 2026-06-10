@@ -22,14 +22,16 @@ const seedUsers = [
   {
     profileId: 'd1100000-0000-4000-8000-000000000001',
     userId: 'seed-directory-user-001',
-    displayName: 'Amina Johnson',
+    firstName: 'Amina',
+    lastName: 'Johnson',
     headline: 'Community support navigator',
     bio: 'Deterministic seed profile for directory phase-0 validation.',
   },
   {
     profileId: 'd1100000-0000-4000-8000-000000000002',
     userId: 'seed-directory-user-002',
-    displayName: 'Luis Rivera',
+    firstName: 'Luis',
+    lastName: 'Rivera',
     headline: 'Legal advocacy coordinator',
     bio: 'Second deterministic profile for pagination and claimed-state checks.',
   },
@@ -88,13 +90,14 @@ async function main() {
             UPDATE directory_profiles
             SET
               claimed_by_user_id = NULL,
-              display_name = $2,
-              headline = $3,
-              bio = $4,
+              first_name = $2,
+              last_name = $3,
+              headline = $4,
+              bio = $5,
               profile_url = NULL,
               source = 'admin',
-              sector_id = $5::uuid,
-              job_title_id = $6::uuid,
+              sector_id = $6::uuid,
+              job_title_id = $7::uuid,
               is_active = true,
               deleted_at = NULL,
               updated_at = NOW()
@@ -103,7 +106,8 @@ async function main() {
           `,
           [
             existingProfile.rows[0].id,
-            user.displayName,
+            user.firstName,
+            user.lastName,
             user.headline,
             user.bio,
             selectors.sectorId,
@@ -114,14 +118,15 @@ async function main() {
         profileResult = await client.query(
           `
             INSERT INTO directory_profiles
-              (id, claimed_by_user_id, display_name, headline, bio, profile_url, source, sector_id, job_title_id, is_active)
+              (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, source, sector_id, job_title_id, is_active)
             VALUES
-              ($1::uuid, NULL, $2::text, $3::text, $4::text, NULL, 'admin', $5::uuid, $6::uuid, true)
+              ($1::uuid, NULL, $2::text, $3::text, $4::text, $5::text, NULL, 'admin', $6::uuid, $7::uuid, true)
             RETURNING id
           `,
           [
             user.profileId,
-            user.displayName,
+            user.firstName,
+            user.lastName,
             user.headline,
             user.bio,
             selectors.sectorId,
