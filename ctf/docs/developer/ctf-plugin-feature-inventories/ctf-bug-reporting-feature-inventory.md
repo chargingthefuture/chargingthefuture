@@ -92,7 +92,9 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 - **mobile-responsive / android:** not started; follows the web UI once its design lands.
 
 The plugin is registered as `bug-reporting` (`planned`, hidden) so it does not show a
-broken tile until the UI ships.
+broken tile until the UI ships. Its `ctf/config/plugin-parity-contracts.json` entry declares
+no mobile surface yet (`requiresMobileSurface: false`, `requiresExplicitWebShell: false`);
+flip these on when the web shell and mobile feature land.
 
 ## Seed Coverage Status
 
