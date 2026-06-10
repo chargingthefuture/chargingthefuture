@@ -1,0 +1,44 @@
+name: Route weather briefing
+
+# Builds the plain-text route weather report for a fixed route and pushes it to
+# your phone via ntfy.sh. Free: runs on a GitHub Actions cron, no always-on
+# server. Configure the route under Settings → Secrets and variables → Actions:
+#   Variables: ROUTE_FROM (required), ROUTE_TO (required), ROUTE_VIA (optional,
+#              ';'-separated), ROUTE_DEPART (optional), ROUTE_MPH (optional)
+#   Secret:    NTFY_TOPIC (the ntfy.sh topic to publish to; keep it private)
+# If NTFY_TOPIC is unset the report is printed in the run log instead.
+# See ctf/ops/route-weather/README.md.
+
+on:
+  schedule:
+    # 11:00 UTC daily. Adjust to your departure time / time zone as you like.
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  briefing:
+    name: Build and push briefing
+    runs-on: ubuntu-latest
+    # Skip the scheduled run if the route is not configured yet; manual runs
+    # still execute so you can test.
+    if: github.event_name == 'workflow_dispatch' || vars.ROUTE_FROM != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build and push the briefing
+        working-directory: ctf/ops/route-weather
+        env:
+          ROUTE_FROM: ${{ vars.ROUTE_FROM }}
+          ROUTE_TO: ${{ vars.ROUTE_TO }}
+          ROUTE_VIA: ${{ vars.ROUTE_VIA }}
+          ROUTE_DEPART: ${{ vars.ROUTE_DEPART }}
+          ROUTE_MPH: ${{ vars.ROUTE_MPH }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node src/briefing.mjs
