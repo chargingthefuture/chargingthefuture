@@ -358,20 +358,22 @@ async function seedLighthouse(c) {
 }
 
 async function seedDirectory(c) {
+  // directory_profiles stores first_name/last_name (the display_name column was
+  // retired by db/migrations/post/0001).
   const profiles = [
-    [ID.dirProfileOwner, OWNER, 'Demo Participant', 'Platform Engineer', 'Building the future of work, one deploy at a time.'],
-    [ID.dirProfilePeer1, PEER_1, 'Alex Rivera', 'Community Navigator', 'Connecting people with the resources they need.'],
-    [ID.dirProfilePeer2, PEER_2, 'Jordan Kim', 'Legal Advocacy Coordinator', 'Rights-first approach to community support.'],
+    [ID.dirProfileOwner, OWNER, 'Demo', 'Participant', 'Platform Engineer', 'Building the future of work, one deploy at a time.'],
+    [ID.dirProfilePeer1, PEER_1, 'Alex', 'Rivera', 'Community Navigator', 'Connecting people with the resources they need.'],
+    [ID.dirProfilePeer2, PEER_2, 'Jordan', 'Kim', 'Legal Advocacy Coordinator', 'Rights-first approach to community support.'],
   ];
 
-  for (const [id, userId, name, headline, bio] of profiles) {
+  for (const [id, userId, firstName, lastName, headline, bio] of profiles) {
     await c.query(
       `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, display_name, headline, bio, is_active, source)
-       VALUES ($1::uuid, $2, $3, $4, $5, true, 'self')
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, is_active, source)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, true, 'self')
        ON CONFLICT (id) DO UPDATE SET
-         display_name = EXCLUDED.display_name, headline = EXCLUDED.headline, updated_at = NOW()`,
-      [id, userId, name, headline, bio],
+         first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, headline = EXCLUDED.headline, updated_at = NOW()`,
+      [id, userId, firstName, lastName, headline, bio],
     );
 
     await c.query(
