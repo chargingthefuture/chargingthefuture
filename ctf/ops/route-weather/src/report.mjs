@@ -166,7 +166,10 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
     const when = i === 0 && Math.abs(r.eta - Date.now()) < 30 * 60 * 1000
       ? 'Now'
       : clockInTz(originTz, r.eta);
-    lines.push(`${when}, ${r.place.name} ${r.place.region}: ${fmtSample(r.sample)}. ${verdictTag(r.hz)}`);
+    // Only call out a stop's verdict when it is not DRIVE — the overall verdict
+    // is already stated up top, so repeating "DRIVE" on every line reads badly.
+    const tag = r.hz.level === 'DRIVE' ? '' : ` ${verdictTag(r.hz)}`;
+    lines.push(`${when}, ${r.place.name} ${r.place.region}: ${fmtSample(r.sample)}.${tag}`);
   });
 
   const label = (r, a) => `${a} at ${r.place.name} ${r.place.region}`;
@@ -231,7 +234,8 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
 
   stops.forEach((s, i) => {
     const label = s.label || clockInTz(tz, s.at);
-    lines.push(`${label}: ${fmtSample(samples[i])}. ${verdictTag(assessments[i])}`);
+    const tag = assessments[i].level === 'DRIVE' ? '' : ` ${verdictTag(assessments[i])}`;
+    lines.push(`${label}: ${fmtSample(samples[i])}.${tag}`);
   });
   const drivingAlerts = [...new Set(alerts.filter((a) => classifyAlert(a) !== 'none'))];
   const otherAlerts = [...new Set(alerts.filter((a) => classifyAlert(a) === 'none'))];
