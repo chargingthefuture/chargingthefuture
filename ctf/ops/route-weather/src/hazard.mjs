@@ -24,6 +24,21 @@ function maxNumber(str) {
   return found ? Math.max(...found.map(Number)) : null;
 }
 
+// Classify an NWS alert by how it affects DRIVING. Many real alerts have nothing
+// to do with whether the road is drivable — Red Flag / fire weather, heat, air
+// quality, frost/freeze (agricultural), wind chill, marine/beach — so they must
+// not force a HOLD. Road hazards (snow, ice, high wind, fog, dust, flooding,
+// tornado, etc.) do: a Warning → HOLD, an Advisory/Watch → CAUTION.
+export function classifyAlert(event) {
+  const e = String(event).toLowerCase();
+  if (/(red flag|fire weather|heat|air quality|smoke|frost|freeze|wind chill|small craft|rip current|beach|stagnation|special weather statement|hydrologic|ashfall)/.test(e)) {
+    return 'none';
+  }
+  const road = /(snow|blizzard|ice|sleet|freezing|winter|wind|dust|fog|flood|tornado|thunderstorm|hurricane|tropical|squall|avalanche|storm)/.test(e);
+  if (!road) return 'none';
+  return /warning|emergency/.test(e) ? 'HOLD' : 'CAUTION';
+}
+
 // Assess one sample against active alert names and nearby road events. Returns
 // the level and the short reasons that drove it (already worded for speaking).
 export function assessHazard(sample, alerts = [], roadEvents = []) {
@@ -55,8 +70,8 @@ export function assessHazard(sample, alerts = [], roadEvents = []) {
   if (hasFog) bump('CAUTION', 'fog');
 
   for (const event of alerts) {
-    if (/warning/i.test(event)) bump('HOLD', event);
-    else if (/(advisory|watch)/i.test(event)) bump('CAUTION', event);
+    const level = classifyAlert(event);
+    if (level !== 'none') bump(level, event);
   }
 
   // A reported road closure is a hard HOLD; any other reported road event is at

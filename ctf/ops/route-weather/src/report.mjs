@@ -6,7 +6,7 @@
 // (set a response header, or only push an alert when it is not DRIVE).
 
 import { geocode, sampleAt, fetchUSAlerts, inUS } from './providers.mjs';
-import { assessHazard, worst } from './hazard.mjs';
+import { assessHazard, worst, classifyAlert } from './hazard.mjs';
 import { fetchRoadEvents } from './roadconditions.mjs';
 
 // Straight-line miles → rough driving miles. Highway routing is typically
@@ -169,10 +169,15 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
     lines.push(`${when}, ${r.place.name} ${r.place.region}: ${fmtSample(r.sample)}. ${verdictTag(r.hz)}`);
   });
 
-  const allAlerts = [...new Set(
-    rows.flatMap((r) => r.alerts.map((a) => `${a} at ${r.place.name} ${r.place.region}`)),
+  const label = (r, a) => `${a} at ${r.place.name} ${r.place.region}`;
+  const drivingAlerts = [...new Set(
+    rows.flatMap((r) => r.alerts.filter((a) => classifyAlert(a) !== 'none').map((a) => label(r, a))),
   )];
-  if (allAlerts.length) lines.push('', `Alerts: ${allAlerts.join('; ')}.`);
+  if (drivingAlerts.length) lines.push('', `Alerts: ${drivingAlerts.join('; ')}.`);
+  const otherAlerts = [...new Set(
+    rows.flatMap((r) => r.alerts.filter((a) => classifyAlert(a) === 'none').map((a) => label(r, a))),
+  )];
+  if (otherAlerts.length) lines.push('', `Also active (not driving): ${otherAlerts.join('; ')}.`);
 
   const allRoad = [...new Set(
     rows.flatMap((r) => r.roadEvents.map((e) => `${e} (near ${r.place.name} ${r.place.region})`)),
@@ -211,7 +216,7 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
   const overall = worst(assessments.map((a) => a.level));
   const tz = samples[0].timeZone;
 
-  const lines = [`HERE WX. ${point.lat.toFixed(3)}, ${point.lon.toFixed(3)}.`];
+  const lines = ['ROAD WX.'];
   if (overall === 'DRIVE') lines.push('VERDICT: DRIVE. Clear nearby.', '');
   else {
     const idx = assessments.findIndex((a) => a.level === overall);
@@ -222,7 +227,10 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
     const label = s.label || clockInTz(tz, s.at);
     lines.push(`${label}: ${fmtSample(samples[i])}. ${verdictTag(assessments[i])}`);
   });
-  if (alerts.length) lines.push('', `Alerts: ${[...new Set(alerts)].join('; ')}.`);
+  const drivingAlerts = [...new Set(alerts.filter((a) => classifyAlert(a) !== 'none'))];
+  const otherAlerts = [...new Set(alerts.filter((a) => classifyAlert(a) === 'none'))];
+  if (drivingAlerts.length) lines.push('', `Alerts: ${drivingAlerts.join('; ')}.`);
+  if (otherAlerts.length) lines.push('', `Also active (not driving): ${otherAlerts.join('; ')}.`);
   if (roadEvents.length) lines.push('', `Road conditions: ${[...new Set(roadEvents)].join('; ')}.`);
   if (!isUS) lines.push('', 'Note: government hazard alerts are US-only; outside the US the verdict uses wind, temperature, and conditions.');
   lines.push('', `(Times in ${tz}.)`);
