@@ -282,7 +282,7 @@ export const Contributions: React.FC = () => {
   ];
   const alreadyCredited = f.githubStarAlreadyCredited;
 
-  const paths: { key: Path; label: string; sub: string; credits: string }[] = [
+  const paths: { key: 'gift_card' | 'quora_comment' | 'github_star'; label: string; sub: string; credits: string }[] = [
     { key: 'gift_card', label: 'Gift card', sub: "Amazon, Apple, or Denny's", credits: `${DEFAULT_CREDITS_PER_USD} SC per dollar` },
     { key: 'quora_comment', label: 'Quora comment', sub: 'Comment on a Quora post', credits: `${DEFAULT_CREDITS_PER_ACTION} SC` },
     { key: 'github_star', label: 'GitHub star', sub: 'Star our repository', credits: `${DEFAULT_CREDITS_PER_ACTION} SC` },
@@ -306,7 +306,14 @@ export const Contributions: React.FC = () => {
           <>
             <Text style={[st.bodyText, { marginBottom: 16 }]}>If everyone who's able gave a little, the platform's costs would be covered — and it stays free for everyone.</Text>
             {goals.map((g) => (
-              <GoalRow key={g.label} {...g} />
+              <GoalRow
+                key={g.label}
+                label={g.label}
+                current={g.current}
+                target={g.target}
+                unit={g.unit}
+                color={g.color}
+              />
             ))}
           </>
         )}
@@ -385,7 +392,7 @@ export const Contributions: React.FC = () => {
                   const sc = statusColor(item.status);
                   const showCredits = item.status === 'confirmed' && item.creditsGranted > 0;
                   return (
-                    <View key={item.id} style={st.historyCard}>
+                    <View key={String(item.id)} style={st.historyCard}>
                       <Text style={st.historyLabel}>{submissionLabel(item)}</Text>
                       <View style={st.historyMeta}>
                         <View style={[st.statusPill, { backgroundColor: `${sc}15` }]}>

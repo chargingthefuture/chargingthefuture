@@ -225,7 +225,7 @@ export const ContributionsAdmin: React.FC = () => {
           <ScrollView style={{ flex: 1, backgroundColor: BG }}>
             {submissions.length === 0 ? <Text style={[st.bodyText, { padding: 16 }]}>No submissions match this view.</Text> : null}
             {submissions.map((row) => (
-              <QueueRow key={row.id} row={row} config={config} reviewing={reviewing === row.id} onReview={onReview} />
+              <QueueRow key={String(row.id)} row={row} config={config} reviewing={reviewing === row.id} onReview={onReview} />
             ))}
           </ScrollView>
         </>
