@@ -62,6 +62,13 @@ in a "Road conditions" line. NWS weather *alerts* already cover the go/no-go
 weather hazards with no setup — the feeds add literal closures/incidents on top.
 Tell me which states you drive and I can wire verified feeds for you.
 
+There is also an optional **511.org (San Francisco Bay Area)** source — a
+regional, token-based fallback covering Bay Area roads only. Set
+`SF_BAY_511_TOKEN` to your token from <https://511.org/open-data/token>. Like the
+state feeds it is entirely best-effort: with no token, or if 511.org is down or
+rate-limited, it simply contributes nothing and the rest of the report is
+unaffected. The feature never depends on it.
+
 ## The endpoint
 
 ```
