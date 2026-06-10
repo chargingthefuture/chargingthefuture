@@ -1,0 +1,291 @@
+# Contributions Plugin Feature Inventory
+
+## 1. Scope and Boundary
+
+- Plugin slug: `contributions`
+- Contributions owns voluntary fundraiser drives: members who are able can chip in toward the
+  platform's real infrastructure costs (Railway/Render and similar bills, which the owner pays
+  personally in real money), and the platform thanks them with ServiceCredits.
+- Surfaces it owns:
+  - All `/api/contributions/*` routes and the `contributions_*` tables.
+  - The future member surface at `/apps/contributions`, the future admin surface, and the future
+    fundraiser banner — all design-gated and not yet built (foundation only today).
+- Explicitly does **not** own:
+  - Any `unlock_*` table or any part of Unlock verification. Contributions never reads or writes
+    Unlock data and never affects access tiers. It is a completely separate plugin from Unlock
+    (which is Quora social-proof verification that keeps bad actors out).
+  - The ServiceCredits ledger. Thank-you grants are delegated to the service-credits plugin's
+    canonical `mintGrant()`; Contributions never writes `service_credits_*` tables directly.
+- Owner decision to remember (2026-06-10, deliberate and active): a not-yet-verified member CAN
+  contribute and hold thank-you credits they cannot spend in verification-gated plugins until they
+  finish Unlock. Keep this behavior. This note exists so the owner remembers it was an active
+  choice, not an oversight.
+
+## 2. Intent and Outcome
+
+The platform serves trafficking survivors and access is free — and stays free. Contributions lets
+members who are able give back, Wikipedia-style: time-boxed collective fundraiser drives (about
+three months each) with shared goals on three external surfaces — gift-card money toward the
+hosting bills, Quora comments, and GitHub stars. Trauma-informed framing rules, enforced in copy
+and behavior:
+
+- It is always a **collective drive**, never a personal bill. Progress is shown only as shared
+  totals.
+- **No shaming, ever.** Not contributing has zero consequences and is never surfaced.
+- **Access is never gated on payment.** Nothing in the product is unlocked by contributing.
+- Dismissing the fundraiser banner silently snoozes it for six months (a config knob, not shown to
+  the member). No guilt copy, no countdown.
+
+As a thank-you, confirmed contributions grant ServiceCredits — the platform's internal barter
+token. Credits are a thank-you, **not a purchase**: they are never redeemable for real money. The
+flow is one-way, like gas-station reward points.
+
+## 3. Target User Features
+
+- Submit a contribution claim of one of three kinds:
+  - **Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most
+    500 USD) and their own Signal contact (URL or phone number — reduces fraud). The gift-card
+    **code is never collected or stored anywhere** — the member sends the code to the owner over
+    Signal, outside the app. After submitting, the member sees the owner-authored Signal
+    instructions (codes go to the owner on Signal; everything else belongs in the public Hub
+    support channel).
+  - **Quora comment**: the post URL is optional, because much of the user base struggles with
+    URLs; the owner finds the comment via notifications and pastes the URL in during review.
+  - **GitHub star**: profile URL likewise optional, same reason.
+- See their own claim history and statuses (pending / confirmed / rejected).
+- See the current fundraiser cycle and collective progress (USD raised, comments, stars,
+  contributor count) toward the owner-set goals.
+- Dismiss the fundraiser banner — a silent six-month snooze.
+- Open to any signed-in member: contributing requires no Unlock verification and never changes
+  Unlock state.
+
+## 4. Target Admin Features
+
+- Review queue of claims, filterable by status. Only the admin projection includes the member's
+  Signal contact (to match a gift-card code received over Signal to its claim).
+- Confirm or reject each claim, exactly once:
+  - On confirm the admin supplies the confirmed USD amount (for gift cards: what was actually
+    redeemed; for comments/stars it defaults to the configured USD-equivalent unit value).
+  - Credits = confirmed amount x `credits_per_usd`, clamped by the per-user-per-cycle cap; a
+    positive grant goes through the canonical service-credits mint with idempotency key
+    `contribution-<submissionId>`. A grant clamped to 0 still confirms with `credits_granted = 0`.
+  - Rejection grants nothing.
+- Create and edit fundraiser cycles (window plus the three goals).
+- Edit runtime configuration: credit valuation knobs, per-cycle cap, banner on/off, banner snooze
+  months, and the Signal instructions copy.
+
+## 5. API Surface and Route Map
+
+- `POST /api/contributions/submission` — Create a contribution claim (any signed-in member).
+- `GET /api/contributions/submission` — The member's own claim history.
+- `GET /api/contributions/fundraiser` — Current cycle, collective progress, banner visibility for
+  the viewer, and the member-safe Signal instructions copy.
+- `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
+- `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
+- `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
+  `action`, optional `confirmedAmountUsd`, optional `reviewNote`).
+- `GET /api/contributions/admin/config` / `PUT /api/contributions/admin/config` — Runtime config.
+- `GET /api/contributions/admin/cycles` / `POST /api/contributions/admin/cycles` — List/create
+  cycles.
+- `PUT /api/contributions/admin/cycles/[cycleId]` — Edit a cycle.
+
+All mutating routes require the `x-ctf-csrf: 1` confirmation header (same-origin enforced).
+User routes gate on `evaluatePluginAccess({ minUnlockTier: 'any_authenticated' })`; admin routes
+additionally require the admin role (`ensureContributionsAdmin`).
+
+## 6. Data Model and Storage Contracts
+
+- Table: `contributions_cycles` — fundraiser drives (global, owner-managed).
+  - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+  - `starts_at`, `ends_at TIMESTAMPTZ NOT NULL` (the "current cycle" is the row whose window
+    contains now; latest `starts_at` wins if windows overlap)
+  - `fiat_goal_usd NUMERIC NOT NULL DEFAULT 0`
+  - `quora_comment_goal INTEGER NOT NULL DEFAULT 0`
+  - `github_star_goal INTEGER NOT NULL DEFAULT 0`
+  - `created_by_user_id TEXT`, `created_at`, `updated_at`
+  - Index: `idx_contributions_cycles_window (starts_at, ends_at)`
+  - CHECK `contributions_cycles_window_check` (`ends_at > starts_at`)
+  - CHECK `contributions_cycles_goals_check` (`fiat_goal_usd >= 0` and both goal counts `>= 0`)
+- Table: `contributions_submissions` — contribution claims.
+  - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+  - `user_id TEXT NOT NULL`
+  - `kind TEXT NOT NULL` CHECK in (`gift_card`, `quora_comment`, `github_star`)
+  - `method TEXT` (null unless gift_card; `amazon` / `apple` / `dennys`)
+  - `claimed_amount_usd NUMERIC` (gift_card only; validated over 0, at most 500)
+  - `signal_contact TEXT` (gift_card only; required at submit; personal data — admin-only
+    projection, never logged, deleted with the account). **There is deliberately no gift-card
+    code column, and validation rejects any code-like request field.**
+  - `quora_post_url TEXT`, `github_profile_url TEXT` (both optional)
+  - `status TEXT NOT NULL DEFAULT 'pending'` CHECK in (`pending`, `confirmed`, `rejected`)
+  - `confirmed_amount_usd NUMERIC`, `credits_granted NUMERIC NOT NULL DEFAULT 0`,
+    `credit_governance_event_id TEXT` (the service-credits governance event backing the grant)
+  - `cycle_id UUID` (**nullable on purpose** — a claim made while no drive is active has no
+    cycle), `reviewed_by_user_id TEXT`, `reviewed_at TIMESTAMPTZ`, `review_note TEXT`
+  - `created_at`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+  - Indexes: `idx_contributions_submissions_user (user_id)`,
+    `idx_contributions_submissions_status (status)`
+  - CHECK `contributions_submissions_amounts_check` (`claimed_amount_usd`/`confirmed_amount_usd`
+    null-or-`>= 0`; `credits_granted >= 0`)
+  - CHECK `contributions_submissions_gift_card_signal_check`
+    (`kind <> 'gift_card' OR NULLIF(signal_contact,'') IS NOT NULL` — a gift-card claim must carry
+    a Signal contact)
+  - FK `contributions_submissions_cycle_id_fkey` (`cycle_id` REFERENCES
+    `contributions_cycles(id)`; constrains non-null values only, column stays nullable)
+- Table: `contributions_runtime_config` — singleton (`id BOOLEAN PRIMARY KEY DEFAULT TRUE`, the
+  `service_credits_treasury_config` pattern; individual columns like `unlock_runtime_config`).
+  - `credits_per_usd NUMERIC NOT NULL DEFAULT 10`
+  - `non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1` (USD-equivalent of one confirmed
+    comment or star)
+  - `per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300` (300 credits = 30 USD-equivalent)
+  - `banner_snooze_months INTEGER NOT NULL DEFAULT 6` (internal; never surfaced to members)
+  - `banner_enabled BOOLEAN NOT NULL DEFAULT TRUE`
+  - `signal_instructions TEXT NOT NULL DEFAULT ''` (owner-authored copy shown after a gift-card
+    submission)
+  - `updated_by_user_id TEXT`, `updated_at`
+  - CHECK `contributions_runtime_config_positive_check` (`credits_per_usd`,
+    `non_monetary_unit_value_usd`, `per_user_cycle_credit_cap`, `banner_snooze_months` all `> 0`)
+- Table: `contributions_banner_state` — per-member banner snooze.
+  - `user_id TEXT PRIMARY KEY`, `snoozed_until TIMESTAMPTZ`, `last_shown_at TIMESTAMPTZ`,
+    `updated_at`
+- Table: `contributions_audit_log` — plugin audit trail.
+  - `id UUID PRIMARY KEY`, `actor_user_id TEXT`, `action TEXT NOT NULL`,
+    `target_submission_id UUID`, `metadata JSONB NOT NULL DEFAULT '{}'`, `created_at`
+  - Logged: submission created, review confirmed, review rejected, config updated, cycle
+    created/updated, admin queue reads. Banner dismissal is deliberately **not** logged (low
+    value, privacy). `signal_contact` values never enter metadata.
+
+All DDL is guarded (`CREATE TABLE IF NOT EXISTS` plus `ALTER TABLE IF EXISTS ... ADD COLUMN IF
+NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
+`ctf/schema.demo.sql`.
+
+## 7. Security, Privacy, and Compliance Controls
+
+- **Gift-card codes never touch the system.** No schema column, no input field, no log line. The
+  member sends the code to the owner over Signal (a side channel outside the platform), and
+  server-side validation rejects any request field whose name looks like a code
+  (`assertNoGiftCardCodeFields`).
+- **`signal_contact` is personal data.** It exists only on gift-card claims, appears only in the
+  admin projection, is excluded from every audit row and log, and is deleted with the member's
+  account (see the deletion contract).
+- **Credits are thank-you grants, never redeemable for real money** (gas-station rewards model).
+  The 10-credits-per-USD valuation and the 1-USD-equivalent for comments/stars are config knobs.
+  Noted risk: publishing a credits-per-USD number can read as a fiat peg; the framing everywhere
+  must stay "thank-you", and the knob exists so the owner can tune it if that risk materializes.
+- **Per-cycle credit cap** (default 300 credits per member per cycle) limits pay-to-accumulate
+  inequity: a wealthy member cannot convert money into outsized credit holdings inside the barter
+  economy.
+- **Unlock boundary:** no `unlock_*` reads or writes; user routes gate at
+  `minUnlockTier: 'any_authenticated'`; contributing never changes any access tier.
+- **Money-adjacent integrity:** confirmation is exactly-once (row locked, must be `pending`);
+  grants go only through the canonical `mintGrant()` with idempotency key
+  `contribution-<submissionId>`; Contributions never writes `service_credits_*` tables directly.
+- CSRF: every mutation requires the `x-ctf-csrf: 1` header. When both the app URL and the
+  request `Origin` header are present they must match host-for-host; when either is absent the
+  check passes (fail-open on missing Origin), matching the established repo convention
+  (`app/api/foundation/_lib.ts`) so non-browser clients that omit `Origin` still work. The
+  required header is what blocks browser CSRF.
+- Request bodies on mutations are parsed through a shared `parseJsonObject` guard that rejects
+  null, arrays, and primitives with `400 contributions_invalid_payload`, so handlers never read
+  properties off a non-object. The admin queue `limit` is validated as a positive integer and
+  clamped to 100.
+- Audit writes are best-effort: the audit insert on each mutation is wrapped so an audit-only
+  failure is reported and swallowed, never turning a successful mutation (or its idempotent credit
+  grant) into a 5xx that a client would retry.
+- Contracts: see
+  [CONTRIBUTIONS_PLUGIN_COMMAND_CONTRACTS.yaml](../../contracts/CONTRIBUTIONS_PLUGIN_COMMAND_CONTRACTS.yaml),
+  [CONTRIBUTIONS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml](../../contracts/CONTRIBUTIONS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml),
+  [CONTRIBUTIONS_PLUGIN_AUDIT_CONTRACTS.yaml](../../contracts/CONTRIBUTIONS_PLUGIN_AUDIT_CONTRACTS.yaml),
+  [CONTRIBUTIONS_PROFILE_AND_DELETION_CONTRACT.md](../../contracts/CONTRIBUTIONS_PROFILE_AND_DELETION_CONTRACT.md).
+- Account deletion wiring: registered in `lib/account/deletion-registry.ts` (delete
+  `contributions_submissions` and `contributions_banner_state`; retain the audit log).
+
+## 8. Web and Android Delivery Status
+
+- Web: **foundation only** (schema, contracts, library, API routes, metrics, seed, registry
+  entry). No UI exists yet; the registry entry is `isVisible: false`, `availabilityState: alpha`.
+  The member shell, admin surface, and fundraiser banner are design-gated: blocked by the design
+  pass for the Contributions surfaces in the `design/` submodule.
+- Android: not started; blocked by the same design pass plus the web shell.
+- Parity: `config/plugin-parity-contracts.json` has a `contributions` entry (required by the CI
+  parity gate for every registry plugin). It declares the future mobile dir; the mobile-surface
+  requirement only activates when the registry state moves past `alpha` to `implemented_shell`.
+
+## 9. Seed Coverage Status
+
+- Seed: [scripts/seedContributionsPhase0.mjs](../../../scripts/seedContributionsPhase0.mjs)
+  (the `Phase0` suffix is the established seed-script naming convention).
+- Deterministic and idempotent (fixed UUIDs and timestamps, upserts). Seeds:
+  - the runtime config singleton with the defaults above and **placeholder** Signal instructions
+    (no real contact info anywhere in the seed);
+  - one demo cycle (2026-05-01 to 2026-08-01, containing the authoring date; goals 100 USD / 50
+    comments / 25 stars);
+  - three demo claims in mixed statuses: a pending Amazon gift-card claim (placeholder Signal
+    contact, no code — codes never exist in the system), a confirmed Quora comment (1 USD
+    equivalent, 10 credits), and a rejected GitHub star.
+- Known seed limitation: the confirmed demo claim records `credits_granted = 10` for display but
+  has no backing governance event (`credit_governance_event_id` is null) because seeding does not
+  run the real mint path.
+
+## 10. Gaps and Known Technical Debt
+
+- No UI of any kind yet (member shell, admin surface, fundraiser banner) — all blocked by the
+  design pass; see the Build Checklist.
+- The confirmed seed row is display-only (no ledger event behind it); harmless in demo data,
+  but anyone reconciling seed data against the credits ledger should expect that one-row gap.
+- `getFundraiserSnapshot` records `last_shown_at` on read (so the future banner has an accurate
+  shown-state); if read-path writes ever become a performance concern, move the write to the
+  banner surface itself.
+- Editing only one end of a cycle window is validated against the supplied value, not against the
+  stored other end; the owner is the only writer, so this is acceptable for now.
+- Metrics are registered in `canonical_metrics.yaml` as calculation definitions; no dashboard
+  wiring yet.
+
+## Change Log
+
+- 2026-06-10: Review hardening pass. Added database integrity constraints (CHECKs for positive
+  config knobs; cycle window `ends_at > starts_at` and non-negative goals; submission amounts
+  null-or-non-negative and `credits_granted >= 0`; a gift-card claim must carry a Signal contact)
+  plus a foreign key from `contributions_submissions.cycle_id` to `contributions_cycles(id)` with
+  the column left **nullable**. Corrected the `contributions_cycle_fiat_confirmed` metric to read
+  the single current cycle (CTE) instead of summing across all overlapping cycles. Reconciled the
+  contracts with the implemented routes: audit contract now lists the real
+  `contributions.admin.submission.confirm`/`.reject` actions (was a single `.review`), and every
+  command `outputSchema` mirrors the actual `{ ok, ... }` response wrappers. Hardened the API:
+  shared `parseJsonObject` body guard on all mutations, positive-integer clamp on the admin queue
+  `limit`, a code comment recording the fail-open-on-missing-Origin CSRF convention, and
+  best-effort audit logging so an audit failure can no longer 5xx a successful mutation.
+- 2026-06-10: Non-UI foundation. Schema (`contributions_cycles`, `contributions_submissions`,
+  `contributions_runtime_config`, `contributions_banner_state`, `contributions_audit_log`),
+  command/access/audit/deletion contracts, web library (`types.ts`, `repository.ts`,
+  `policy.ts`), full `/api/contributions/*` surface (member submission/status/fundraiser/banner +
+  admin review/config/cycles), five canonical metrics, deterministic seed, plugin registry entry
+  (hidden, alpha), and account-deletion registry wiring. UI deferred behind the design pass.
+
+## Build Checklist
+
+Flat ordered list; each item names what blocks it.
+
+1. [x] Schema: the five `contributions_*` tables with guarded DDL + demo schema regeneration.
+2. [x] Contracts: command, access policy, audit, profile-and-deletion. (Blocked by 1 for table
+   names.)
+3. [x] Web library: `lib/contributions/types.ts`, `repository.ts` (validation, fundraiser
+   snapshot, exactly-once review + capped `mintGrant()` flow), `policy.ts`. (Blocked by 1.)
+4. [x] API routes: member submission/status, fundraiser, banner dismiss; admin queue, review,
+   config, cycles — with CSRF and audit writes. (Blocked by 3.)
+5. [x] Canonical metrics: the five `contributions_*` metric definitions. (Blocked by 1.)
+6. [x] Seed: `scripts/seedContributionsPhase0.mjs`. (Blocked by 1.)
+7. [x] Plugin registry entries (schema seed + `repository.ts` fallback), hidden until the UI
+   ships. (No dependencies; done with 1.)
+8. [x] Account-deletion registry entry for the two per-user tables. (Blocked by 1.)
+9. [x] Feature inventory (this document). (Blocked by all of the above.)
+10. [ ] Member web shell at `/apps/contributions` (submit flows, history, collective progress) —
+    blocked by: design pass for the Contributions surfaces in the `design/` submodule.
+11. [ ] Web route registration `app/apps/contributions/page.tsx` — blocked by 10 (and the design
+    pass).
+12. [ ] Admin surface (review queue, config, cycles) — blocked by: design pass for the
+    Contributions surfaces in the `design/` submodule.
+13. [ ] Fundraiser banner surface (collective progress + silent dismiss) — blocked by: design
+    pass for the Contributions surfaces in the `design/` submodule.
+14. [ ] Android/Expo feature at `packages/mobile/src/features/contributions/` (the parity
+    contract entry already exists) — blocked by 10 and the design pass.
+15. [ ] Flip the registry entry to `isVisible: true` — blocked by 10–13.

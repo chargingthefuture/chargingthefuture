@@ -120,6 +120,12 @@
       "mobileFeatureDirs": ["whatworks"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
+    },
+    {
+      "slug": "contributions",
+      "mobileFeatureDirs": ["contributions"],
+      "requiresMobileSurface": true,
+      "requiresExplicitWebShell": false
     }
   ]
 }

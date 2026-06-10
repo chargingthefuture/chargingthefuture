@@ -5,6 +5,7 @@ This index is the Rule 114 baseline artifact map for coding readiness.
 | Plugin inventory slug    | Profile/deletion contract                                                | Status  |
 | ------------------------ | ------------------------------------------------------------------------ | ------- |
 | `announcements`          | `ctf/docs/contracts/ANNOUNCEMENTS_PROFILE_AND_DELETION_CONTRACT.md`      | Present |
+| `contributions`          | `ctf/docs/contracts/CONTRIBUTIONS_PROFILE_AND_DELETION_CONTRACT.md`      | Present |
 | `directory`              | `ctf/docs/contracts/DIRECTORY_PROFILE_AND_DELETION_CONTRACT.md`          | Present |
 | `feed`                   | `ctf/docs/contracts/FEED_PROFILE_AND_DELETION_CONTRACT.md`               | Present |
 | `foundation`             | `ctf/docs/contracts/FOUNDATION_PROFILE_AND_DELETION_CONTRACT.md`         | Present |

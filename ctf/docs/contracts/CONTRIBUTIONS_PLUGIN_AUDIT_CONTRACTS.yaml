@@ -1,0 +1,176 @@
+# Contributions plugin audit events. Written to contributions_audit_log.
+#
+# Privacy rules:
+# - signal_contact values are NEVER written to audit metadata or logs.
+# - Gift-card codes never exist anywhere in the system, so they cannot appear in audit data.
+# - contributions.banner.dismiss is deliberately NOT audited (low value, privacy).
+auditEvents:
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.submission.create
+    commandVersion: 1.0.0
+    purpose: voluntary_contribution_claim
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_submissions
+      - contributions_cycles
+    targetContext:
+      userId: user_identifier
+      submissionId: submission_identifier
+      kind: contribution_kind
+      cycleId: cycle_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.admin.submission.list
+    commandVersion: 1.0.0
+    purpose: moderation_queue
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_submissions
+    targetContext:
+      adminUserId: user_identifier
+      statusFilter: status_filter
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # The review route emits two distinct actions, one per outcome, not a single
+  # .review action: contributions.admin.submission.confirm and
+  # contributions.admin.submission.reject.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.admin.submission.confirm
+    commandVersion: 1.0.0
+    purpose: moderation_and_thank_you_grant
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_submissions
+      - contributions_cycles
+      - contributions_runtime_config
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+    targetContext:
+      adminUserId: user_identifier
+      submissionId: submission_identifier
+      targetUserId: user_identifier
+      kind: contribution_kind
+      confirmedAmountUsd: usd_amount
+      creditsGranted: credit_amount
+      creditGovernanceEventId: governance_event_identifier
+      cycleId: cycle_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.admin.submission.reject
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_submissions
+      - contributions_cycles
+    targetContext:
+      adminUserId: user_identifier
+      submissionId: submission_identifier
+      targetUserId: user_identifier
+      kind: contribution_kind
+      confirmedAmountUsd: usd_amount
+      creditsGranted: credit_amount
+      creditGovernanceEventId: governance_event_identifier
+      cycleId: cycle_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.admin.config.update
+    commandVersion: 1.0.0
+    purpose: configuration_update
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_runtime_config
+    targetContext:
+      adminUserId: user_identifier
+      changedKnobs: config_field_names
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.admin.cycle.create
+    commandVersion: 1.0.0
+    purpose: fundraiser_cycle_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_cycles
+    targetContext:
+      adminUserId: user_identifier
+      cycleId: cycle_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributions
+    command: contributions.admin.cycle.update
+    commandVersion: 1.0.0
+    purpose: fundraiser_cycle_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributions_cycles
+    targetContext:
+      adminUserId: user_identifier
+      cycleId: cycle_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
