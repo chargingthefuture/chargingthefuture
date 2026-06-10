@@ -153,7 +153,7 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   const overall = worst(rows.map((r) => r.hz.level));
   const first = places[0];
   const last = places[places.length - 1];
-  const lines = [`ROUTE WX. ${first.name} ${first.region} to ${last.name} ${last.region}.`];
+  const lines = [`Route weather. ${first.name} ${first.region} to ${last.name} ${last.region}.`];
 
   if (overall === 'DRIVE') {
     lines.push('VERDICT: DRIVE. Clear along the route.', '');
@@ -216,7 +216,7 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
   const overall = worst(assessments.map((a) => a.level));
   const tz = samples[0].timeZone;
 
-  const lines = ['ROAD WX.'];
+  const lines = ['Road weather.'];
   if (overall === 'DRIVE') lines.push('VERDICT: DRIVE. Clear nearby.', '');
   else {
     const idx = assessments.findIndex((a) => a.level === overall);
