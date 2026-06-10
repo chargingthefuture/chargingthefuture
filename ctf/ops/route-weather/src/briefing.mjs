@@ -11,6 +11,8 @@
 //   ROUTE_MPH     optional, defaults to 55
 //   NTFY_TOPIC    optional, an ntfy.sh topic name to publish to (ntfy.sh app)
 //   NTFY_URL      optional, full base URL of a self-hosted ntfy (default https://ntfy.sh)
+//   ALERT_ONLY    optional, "1"/"true" to push ONLY when the verdict is not DRIVE
+//                 (quiet on clear days; speaks up when there is a hazard)
 // If no NTFY_TOPIC is set the report is printed to stdout (visible in the Action log).
 
 import { buildRouteReport } from './report.mjs';
@@ -27,13 +29,19 @@ async function main() {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const text = await buildRouteReport({
+  const { text, verdict } = await buildRouteReport({
     from,
     to,
     via,
     depart: process.env.ROUTE_DEPART || undefined,
     mph: process.env.ROUTE_MPH || undefined,
   });
+
+  const alertOnly = /^(1|true|yes)$/i.test(process.env.ALERT_ONLY || '');
+  if (alertOnly && verdict === 'DRIVE') {
+    console.log('[briefing] verdict DRIVE and ALERT_ONLY set — nothing to push.');
+    return;
+  }
 
   const topic = process.env.NTFY_TOPIC;
   if (!topic) {
@@ -43,7 +51,7 @@ async function main() {
   const base = (process.env.NTFY_URL || 'https://ntfy.sh').replace(/\/$/, '');
   const res = await fetch(`${base}/${topic}`, {
     method: 'POST',
-    headers: { Title: 'Route weather', 'Content-Type': 'text/plain; charset=utf-8' },
+    headers: { Title: `Route weather — ${verdict}`, 'Content-Type': 'text/plain; charset=utf-8' },
     body: text,
   });
   if (!res.ok) {
