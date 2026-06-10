@@ -29,19 +29,38 @@ each forecast lines up with roughly when you'll be at that stop — not routing.
 | **On-demand** | An HTTP endpoint you call (e.g. from an Apple Shortcut) and get plain text back | `ctf-route-weather` web service on Render | one small instance |
 | **Scheduled briefing** | A daily/whenever push of a fixed route to your phone | a GitHub Actions cron → ntfy.sh notification | free |
 
-## Data sources (both keyless)
+## Data sources (all keyless)
 
 - **US points → National Weather Service** (`api.weather.gov`): temperature, wind,
   and active hazard alerts (high wind, winter storm, ice, blowing dust, etc.).
 - **Everywhere else → Open-Meteo** (`api.open-meteo.com`): temperature, wind, and
-  explicit wind **gusts**, worldwide. No hazard alerts outside the US.
+  explicit wind **gusts**, worldwide. No government hazard alerts outside the US.
 - Place names → Open-Meteo geocoding.
 
-**Honest limit on "road conditions":** weather APIs do not report road surface
-state (ice on the deck, closures, chain controls). What you get here is the
-*weather hazard* half — the part that tells you whether to roll — via NWS alerts
-plus wind/temp. True surface and closure data comes from each state's DOT 511
-feed; wiring those in is a later add, not in this first version.
+### Coverage
+
+Weather and the drive/hold verdict work in the **US, Canada, and Mexico** (the
+US uses NWS, elsewhere uses Open-Meteo). Government hazard *alerts* are US-only;
+on a cross-border stop the report says so and the verdict falls back to wind,
+temperature, and conditions.
+
+### Road conditions (optional, opt-in per state)
+
+There is no single nationwide keyless 511 API — state DOT feeds differ and many
+need a key — so road events are **off until you turn them on**. Point the service
+at any *open* GeoJSON road-event feed with one environment variable per state:
+
+```
+ROAD_FEED_CO=https://…       ROAD_FEED_WY=https://…
+ROAD_EVENT_RADIUS_MILES=25   # optional, default 25
+```
+
+Every feed is queried and only events within the radius of a stop are kept, so a
+stop in one state only matches that state's feed. A reported **closure** makes
+that stop HOLD; any other reported road event makes it CAUTION; both also appear
+in a "Road conditions" line. NWS weather *alerts* already cover the go/no-go
+weather hazards with no setup — the feeds add literal closures/incidents on top.
+Tell me which states you drive and I can wire verified feeds for you.
 
 ## The endpoint
 

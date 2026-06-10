@@ -7,6 +7,7 @@
 
 import { geocode, sampleAt, fetchUSAlerts, inUS } from './providers.mjs';
 import { assessHazard, worst } from './hazard.mjs';
+import { fetchRoadEvents } from './roadconditions.mjs';
 
 // Straight-line miles → rough driving miles. Highway routing is typically
 // 1.2–1.3× the great-circle distance once roads bend around terrain.
@@ -140,8 +141,12 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   const rows = await Promise.all(
     places.map(async (p, i) => {
       const sample = await sampleAt(p, etas[i]);
-      const alerts = p.countryCode === 'US' || inUS(p.lat, p.lon) ? await fetchUSAlerts(p.lat, p.lon) : [];
-      return { place: p, eta: etas[i], sample, alerts, hz: assessHazard(sample, alerts) };
+      const isUS = p.countryCode === 'US' || inUS(p.lat, p.lon);
+      const [alerts, roadEvents] = await Promise.all([
+        isUS ? fetchUSAlerts(p.lat, p.lon) : Promise.resolve([]),
+        isUS ? fetchRoadEvents(p.lat, p.lon) : Promise.resolve([]),
+      ]);
+      return { place: p, eta: etas[i], sample, alerts, roadEvents, hz: assessHazard(sample, alerts, roadEvents) };
     }),
   );
 
@@ -168,6 +173,15 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
     rows.flatMap((r) => r.alerts.map((a) => `${a} at ${r.place.name} ${r.place.region}`)),
   )];
   if (allAlerts.length) lines.push('', `Alerts: ${allAlerts.join('; ')}.`);
+
+  const allRoad = [...new Set(
+    rows.flatMap((r) => r.roadEvents.map((e) => `${e} (near ${r.place.name} ${r.place.region})`)),
+  )];
+  if (allRoad.length) lines.push('', `Road conditions: ${allRoad.join('; ')}.`);
+
+  if (rows.some((r) => r.place.countryCode && r.place.countryCode !== 'US')) {
+    lines.push('', 'Note: government hazard alerts are US-only; outside the US the verdict uses wind, temperature, and conditions.');
+  }
   lines.push('', `(Times in ${originTz}. ETAs assume ${speed} mph and are approximate.)`);
   return { text: lines.join('\n'), verdict: overall };
 }
@@ -187,9 +201,13 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
     stops.push({ label: 'Ahead (~1h)', at: now + 3600 * 1000, point: destinationPoint(point.lat, point.lon, headingNum, mph) });
   }
 
-  const samples = await Promise.all(stops.map((s) => sampleAt(s.point, s.at)));
-  const alerts = inUS(point.lat, point.lon) ? await fetchUSAlerts(point.lat, point.lon) : [];
-  const assessments = samples.map((s) => assessHazard(s, alerts));
+  const isUS = inUS(point.lat, point.lon);
+  const [samples, alerts, roadEvents] = await Promise.all([
+    Promise.all(stops.map((s) => sampleAt(s.point, s.at))),
+    isUS ? fetchUSAlerts(point.lat, point.lon) : Promise.resolve([]),
+    isUS ? fetchRoadEvents(point.lat, point.lon) : Promise.resolve([]),
+  ]);
+  const assessments = samples.map((s) => assessHazard(s, alerts, roadEvents));
   const overall = worst(assessments.map((a) => a.level));
   const tz = samples[0].timeZone;
 
@@ -205,6 +223,8 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
     lines.push(`${label}: ${fmtSample(samples[i])}. ${verdictTag(assessments[i])}`);
   });
   if (alerts.length) lines.push('', `Alerts: ${[...new Set(alerts)].join('; ')}.`);
+  if (roadEvents.length) lines.push('', `Road conditions: ${[...new Set(roadEvents)].join('; ')}.`);
+  if (!isUS) lines.push('', 'Note: government hazard alerts are US-only; outside the US the verdict uses wind, temperature, and conditions.');
   lines.push('', `(Times in ${tz}.)`);
   return { text: lines.join('\n'), verdict: overall };
 }
