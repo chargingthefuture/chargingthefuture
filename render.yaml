@@ -84,6 +84,31 @@ services:
       # value is re-baked. Syncing a `NEXT_PUBLIC_*` value into Render at runtime
       # is a no-op for the client; do not rely on it.
 
+  # ── route-weather (personal, no-UI plain-text weather) ───────────
+  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-route-weather:latest
+  # Standalone service (NOT a plugin): no DB, no schema, no UI surface, not in the
+  # plugin registry. Returns text/plain weather for a route or a point so an Apple
+  # Shortcut / Siri can read it. See ctf/ops/route-weather/README.md.
+  # First deploy: make the new GHCR package public so Render can pull it.
+  - type: web
+    name: ctf-route-weather
+    runtime: image
+    image:
+      url: ghcr.io/chargingthefuture/ctf-route-weather:latest
+    region: ohio
+    # Cheapest tier is plenty — dependency-free Node, no DB. Starter avoids the
+    # free-tier spin-down so the endpoint answers quickly when asked while driving.
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      # PORT is injected by Render and read by the server. Do NOT hardcode it.
+      - key: NODE_ENV
+        value: production
+      # Shared access token — set in Render/Infisical, never committed. When set,
+      # every /weather call must present it. Generate with: openssl rand -hex 16
+      - key: ROUTE_WEATHER_TOKEN
+        sync: false
+
   # ── Ollama ────────────────────────────────────────────────────────
   # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-ollama:latest
   # Private service — reachable by other Render services via internal URL.

@@ -1,0 +1,14 @@
+{
+  "name": "ctf-route-weather",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "No-UI plain-text route weather service (personal/experimental).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "briefing": "node src/briefing.mjs"
+  }
+}
