@@ -13,6 +13,15 @@ registry — so it does not go through the design-pass gate or the plugin featur
 inventory process. It reuses the repo's existing build-and-deploy pipeline
 (GitHub Actions builds a Docker image → GHCR → Render pulls it) and nothing else.
 
+## Scope — not a navigation tool (permanent non-goal)
+
+This **never plans routes or gives directions**, and never will — you use a
+trucker's GPS and atlas for that. You tell it the places you're already driving
+through (origin, any stops, destination) and it reports the weather and a
+drive/hold verdict for each. The waypoints are inputs *you* supply, not a route
+it computes. The only use of distance here is a rough arrival-time estimate so
+each forecast lines up with roughly when you'll be at that stop — not routing.
+
 ## Two halves
 
 | Half | What it is | Where it runs | Cost |
