@@ -12,8 +12,8 @@ name: Bug Reports — Create Triage Issues
 # Until then the script no-ops safely, so an early run does no harm.
 on:
   workflow_dispatch: {}
-  # schedule:
-  #   - cron: "*/15 * * * *"   # every 15 minutes once enabled
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
 
 jobs:
   create-triage-issues:
