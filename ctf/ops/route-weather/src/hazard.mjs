@@ -24,9 +24,9 @@ function maxNumber(str) {
   return found ? Math.max(...found.map(Number)) : null;
 }
 
-// Assess one sample against active alert names. Returns the level and the short
-// reasons that drove it (already worded for speaking aloud).
-export function assessHazard(sample, alerts = []) {
+// Assess one sample against active alert names and nearby road events. Returns
+// the level and the short reasons that drove it (already worded for speaking).
+export function assessHazard(sample, alerts = [], roadEvents = []) {
   let level = 'DRIVE';
   const reasons = [];
   const bump = (candidate, reason) => {
@@ -57,6 +57,13 @@ export function assessHazard(sample, alerts = []) {
   for (const event of alerts) {
     if (/warning/i.test(event)) bump('HOLD', event);
     else if (/(advisory|watch)/i.test(event)) bump('CAUTION', event);
+  }
+
+  // A reported road closure is a hard HOLD; any other reported road event is at
+  // least a CAUTION.
+  for (const event of roadEvents) {
+    if (/clos/i.test(event)) bump('HOLD', event);
+    else bump('CAUTION', event);
   }
 
   return { level, reasons };
