@@ -96,7 +96,7 @@ The phrasing is written to be spoken cleanly by Siri (directions as words,
 "degrees", 12-hour times) while still reading fine by eye. Example reply:
 
 ```
-ROUTE WX. Denver Colorado to Salt Lake City Utah.
+Route weather. Denver Colorado to Salt Lake City Utah.
 VERDICT: HOLD at Vail Colorado — gusting 41, snow, Winter Weather Advisory.
 
 Now, Denver Colorado: 34 degrees, wind west 12, clear. DRIVE.
