@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
+  auditBestEffort,
   contributionsErrorResponse,
   ensureMutationCsrf,
   isUuid,
+  parseJsonObject,
   requireContributionsAdminAccess,
 } from '../../../../_lib';
-import { insertContributionsAudit, reviewSubmission } from 'lib/contributions/repository';
+import { reviewSubmission } from 'lib/contributions/repository';
 
 type RouteParams = {
   params: Promise<{
@@ -35,12 +37,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: false, code: 'contributions_invalid_payload', message: 'submissionId must be a UUID.' }, { status: 400 });
   }
 
-  let body: ReviewBody;
-  try {
-    body = (await request.json()) as ReviewBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'contributions_invalid_payload', message: 'Invalid JSON payload.' }, { status: 400 });
+  const parsed = await parseJsonObject(request);
+  if (!parsed.ok) {
+    return parsed.response;
   }
+  const body = parsed.body as ReviewBody;
 
   if (body.action !== 'confirm' && body.action !== 'reject') {
     return NextResponse.json(
@@ -63,7 +64,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Audit metadata deliberately excludes signal_contact (personal data).
-    await insertContributionsAudit({
+    await auditBestEffort('admin_submission_review', {
       actorUserId: gate.auth.userId,
       action: body.action === 'confirm' ? 'contributions.admin.submission.confirm' : 'contributions.admin.submission.reject',
       targetSubmissionId: submission.id,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { ensureContributionsAdmin } from 'lib/contributions/policy';
+import { insertContributionsAudit } from 'lib/contributions/repository';
 import { reportError } from 'lib/observability/report';
 
 // Contributing is open to any signed-in member: it does not require Unlock verification and
@@ -43,6 +44,9 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
 
   const appUrl = getAppUrl();
   const origin = request.headers.get('origin');
+  // Fail open when the app URL or the Origin header is absent — this matches the established
+  // repo convention (see app/api/foundation/_lib.ts). Non-browser clients (the mobile app) do
+  // not always send Origin; the required x-ctf-csrf header above is what blocks browser CSRF.
   if (!appUrl || !origin) {
     return null;
   }
@@ -62,6 +66,59 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
   }
 
   return null;
+}
+
+/**
+ * Write an audit row without ever turning an audit-only failure into a request failure. The
+ * primary mutation has already succeeded (and any credit grant went through the idempotent
+ * transactional mintGrant), so audit logging here is observability — a failed insert is reported
+ * and swallowed, never propagated. Retrying the request must not be required to "fix" the audit
+ * gap, because a retry could create a duplicate submission.
+ */
+export async function auditBestEffort(
+  op: string,
+  input: Parameters<typeof insertContributionsAudit>[0],
+): Promise<void> {
+  try {
+    await insertContributionsAudit(input);
+  } catch (err) {
+    reportError(err, { area: 'contributions', op });
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// A fresh response per call — a NextResponse body is a single-use stream, so this must not be
+// a shared singleton.
+function invalidPayloadResponse(): NextResponse {
+  return NextResponse.json(
+    { ok: false, code: 'contributions_invalid_payload', message: 'Invalid JSON payload.' },
+    { status: 400 },
+  );
+}
+
+/**
+ * Parse a mutation request body and guarantee it is a plain JSON object. Returns a 400
+ * `contributions_invalid_payload` response when the body is missing, not valid JSON, or parses
+ * to null, an array, or a primitive — so callers never read properties off a non-object.
+ */
+export async function parseJsonObject(
+  request: Request,
+): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; response: NextResponse }> {
+  let parsed: unknown;
+  try {
+    parsed = await request.json();
+  } catch {
+    return { ok: false, response: invalidPayloadResponse() };
+  }
+
+  if (!isPlainObject(parsed)) {
+    return { ok: false, response: invalidPayloadResponse() };
+  }
+
+  return { ok: true, body: parsed };
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -40,12 +40,11 @@ contracts:
         required: false
         note: Optional for kind github_star (the owner can paste it in during review).
     outputSchema:
-      submissionId:
-        type: string
-      status:
-        type: string
-      cycleId:
-        type: string
+      ok:
+        type: boolean
+      submission:
+        type: object
+        note: The created submission (member projection — no signalContact). Includes id, userId, kind, method, claimedAmountUsd, quoraPostUrl, githubProfileUrl, status, confirmedAmountUsd, creditsGranted, creditGovernanceEventId, cycleId, reviewedByUserId, reviewedAt, reviewNote, createdAt, updatedAt.
     dataAccess:
       - contributions_submissions
       - contributions_cycles
@@ -60,8 +59,11 @@ contracts:
     description: List the signed-in member's own contribution claims and their statuses.
     inputSchema: {}
     outputSchema:
-      items:
+      ok:
+        type: boolean
+      submissions:
         type: array
+        note: The member's own submissions (member projection — no signalContact), newest first.
     dataAccess:
       - contributions_submissions
     purpose: own_contribution_history
@@ -74,18 +76,14 @@ contracts:
     description: Read the current fundraiser cycle, collective progress toward its three goals, and whether the fundraiser banner is visible for this member.
     inputSchema: {}
     outputSchema:
-      cycle:
-        type: object
-      fiatConfirmedUsd:
-        type: number
-      quoraCommentsConfirmed:
-        type: integer
-      githubStarsConfirmed:
-        type: integer
-      contributorCount:
-        type: integer
-      bannerVisible:
+      ok:
         type: boolean
+      fundraiser:
+        type: object
+        note: "Snapshot object with: cycle (object or null), fiatConfirmedUsd (number), quoraCommentsConfirmed (integer), githubStarsConfirmed (integer), contributorCount (integer), bannerVisible (boolean)."
+      signalInstructions:
+        type: string
+        note: Member-safe Signal instructions copy (shown after a gift-card submission).
     dataAccess:
       - contributions_cycles
       - contributions_submissions
@@ -122,9 +120,13 @@ contracts:
       limit:
         type: integer
         required: false
+        note: Clamped to 1..100 (default 100); non-positive or non-numeric input is rejected with 400.
     outputSchema:
-      items:
+      ok:
+        type: boolean
+      submissions:
         type: array
+        note: Admin projection — each item includes signalContact in addition to the member fields.
     dataAccess:
       - contributions_submissions
       - contributions_audit_log
@@ -152,14 +154,11 @@ contracts:
         type: string
         required: false
     outputSchema:
-      submissionId:
-        type: string
-      status:
-        type: string
-      creditsGranted:
-        type: number
-      creditGovernanceEventId:
-        type: string
+      ok:
+        type: boolean
+      submission:
+        type: object
+        note: Admin projection of the reviewed submission (includes signalContact), with status confirmed|rejected, confirmedAmountUsd, creditsGranted, creditGovernanceEventId, cycleId, reviewedByUserId, reviewedAt, reviewNote populated.
     dataAccess:
       - contributions_submissions
       - contributions_cycles
@@ -180,6 +179,8 @@ contracts:
     description: Read the runtime configuration knobs (credit valuation, per-cycle cap, banner behavior, Signal instructions copy).
     inputSchema: {}
     outputSchema:
+      ok:
+        type: boolean
       config:
         type: object
     dataAccess:
@@ -212,6 +213,8 @@ contracts:
         type: string
         required: false
     outputSchema:
+      ok:
+        type: boolean
       config:
         type: object
     dataAccess:
@@ -242,8 +245,11 @@ contracts:
         type: integer
         required: false
     outputSchema:
-      cycleId:
-        type: string
+      ok:
+        type: boolean
+      cycle:
+        type: object
+        note: The created/updated cycle (id, startsAt, endsAt, fiatGoalUsd, quoraCommentGoal, githubStarGoal, createdByUserId, createdAt, updatedAt).
     dataAccess:
       - contributions_cycles
       - contributions_audit_log
@@ -275,8 +281,11 @@ contracts:
         type: integer
         required: false
     outputSchema:
-      cycleId:
-        type: string
+      ok:
+        type: boolean
+      cycle:
+        type: object
+        note: The created/updated cycle (id, startsAt, endsAt, fiatGoalUsd, quoraCommentGoal, githubStarGoal, createdByUserId, createdAt, updatedAt).
     dataAccess:
       - contributions_cycles
       - contributions_audit_log

@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import {
+  auditBestEffort,
   contributionsErrorResponse,
   ensureMutationCsrf,
+  parseJsonObject,
   requireContributionsUserAccess,
 } from '../_lib';
 import {
   assertNoGiftCardCodeFields,
   createSubmission,
-  insertContributionsAudit,
   listOwnSubmissions,
 } from 'lib/contributions/repository';
 import type { ContributionKind, GiftCardMethod } from 'lib/contributions/types';
@@ -32,12 +33,11 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  let rawBody: Record<string, unknown>;
-  try {
-    rawBody = (await request.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'contributions_invalid_payload', message: 'Invalid JSON payload.' }, { status: 400 });
+  const parsed = await parseJsonObject(request);
+  if (!parsed.ok) {
+    return parsed.response;
   }
+  const rawBody = parsed.body;
 
   try {
     // Gift-card codes are never accepted by the platform; reject any code-like field outright.
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     });
 
     // Audit metadata deliberately excludes signal_contact (personal data).
-    await insertContributionsAudit({
+    await auditBestEffort('submission_create', {
       actorUserId: gate.auth.userId,
       action: 'contributions.submission.create',
       targetSubmissionId: submission.id,

@@ -134,6 +134,11 @@ If the user returns after a service-scoped deletion:
 
 - [x] Product approved data behavior (owner spec, 2026-06-10)
 - [x] Engineering reviewed schema boundaries
-- [ ] Compliance/privacy reviewed retention and deletion
+- [ ] Compliance/privacy reviewed retention and deletion — **Blocked:** this plugin is not
+      cleared for release until the owner reviews and signs off on how personal data is kept and
+      removed here (the member's Signal contact on a gift-card claim, and what happens to
+      submissions when an account is deleted). The owner is the compliance authority; this is a
+      foundation only, with no UI shipped. Do not treat this box as checkable until that review
+      happens.
 - [x] Observability added (without sensitive payloads)
 - [ ] Web and Android parity confirmed (UI is design-gated; not yet built)

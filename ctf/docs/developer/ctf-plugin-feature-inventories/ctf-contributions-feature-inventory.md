@@ -104,6 +104,8 @@ additionally require the admin role (`ensureContributionsAdmin`).
   - `github_star_goal INTEGER NOT NULL DEFAULT 0`
   - `created_by_user_id TEXT`, `created_at`, `updated_at`
   - Index: `idx_contributions_cycles_window (starts_at, ends_at)`
+  - CHECK `contributions_cycles_window_check` (`ends_at > starts_at`)
+  - CHECK `contributions_cycles_goals_check` (`fiat_goal_usd >= 0` and both goal counts `>= 0`)
 - Table: `contributions_submissions` — contribution claims.
   - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
   - `user_id TEXT NOT NULL`
@@ -117,10 +119,18 @@ additionally require the admin role (`ensureContributionsAdmin`).
   - `status TEXT NOT NULL DEFAULT 'pending'` CHECK in (`pending`, `confirmed`, `rejected`)
   - `confirmed_amount_usd NUMERIC`, `credits_granted NUMERIC NOT NULL DEFAULT 0`,
     `credit_governance_event_id TEXT` (the service-credits governance event backing the grant)
-  - `cycle_id UUID`, `reviewed_by_user_id TEXT`, `reviewed_at TIMESTAMPTZ`, `review_note TEXT`
+  - `cycle_id UUID` (**nullable on purpose** — a claim made while no drive is active has no
+    cycle), `reviewed_by_user_id TEXT`, `reviewed_at TIMESTAMPTZ`, `review_note TEXT`
   - `created_at`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
   - Indexes: `idx_contributions_submissions_user (user_id)`,
     `idx_contributions_submissions_status (status)`
+  - CHECK `contributions_submissions_amounts_check` (`claimed_amount_usd`/`confirmed_amount_usd`
+    null-or-`>= 0`; `credits_granted >= 0`)
+  - CHECK `contributions_submissions_gift_card_signal_check`
+    (`kind <> 'gift_card' OR NULLIF(signal_contact,'') IS NOT NULL` — a gift-card claim must carry
+    a Signal contact)
+  - FK `contributions_submissions_cycle_id_fkey` (`cycle_id` REFERENCES
+    `contributions_cycles(id)`; constrains non-null values only, column stays nullable)
 - Table: `contributions_runtime_config` — singleton (`id BOOLEAN PRIMARY KEY DEFAULT TRUE`, the
   `service_credits_treasury_config` pattern; individual columns like `unlock_runtime_config`).
   - `credits_per_usd NUMERIC NOT NULL DEFAULT 10`
@@ -132,6 +142,8 @@ additionally require the admin role (`ensureContributionsAdmin`).
   - `signal_instructions TEXT NOT NULL DEFAULT ''` (owner-authored copy shown after a gift-card
     submission)
   - `updated_by_user_id TEXT`, `updated_at`
+  - CHECK `contributions_runtime_config_positive_check` (`credits_per_usd`,
+    `non_monetary_unit_value_usd`, `per_user_cycle_credit_cap`, `banner_snooze_months` all `> 0`)
 - Table: `contributions_banner_state` — per-member banner snooze.
   - `user_id TEXT PRIMARY KEY`, `snoozed_until TIMESTAMPTZ`, `last_shown_at TIMESTAMPTZ`,
     `updated_at`
@@ -167,7 +179,18 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 - **Money-adjacent integrity:** confirmation is exactly-once (row locked, must be `pending`);
   grants go only through the canonical `mintGrant()` with idempotency key
   `contribution-<submissionId>`; Contributions never writes `service_credits_*` tables directly.
-- CSRF: every mutation requires `x-ctf-csrf: 1` and same-origin.
+- CSRF: every mutation requires the `x-ctf-csrf: 1` header. When both the app URL and the
+  request `Origin` header are present they must match host-for-host; when either is absent the
+  check passes (fail-open on missing Origin), matching the established repo convention
+  (`app/api/foundation/_lib.ts`) so non-browser clients that omit `Origin` still work. The
+  required header is what blocks browser CSRF.
+- Request bodies on mutations are parsed through a shared `parseJsonObject` guard that rejects
+  null, arrays, and primitives with `400 contributions_invalid_payload`, so handlers never read
+  properties off a non-object. The admin queue `limit` is validated as a positive integer and
+  clamped to 100.
+- Audit writes are best-effort: the audit insert on each mutation is wrapped so an audit-only
+  failure is reported and swallowed, never turning a successful mutation (or its idempotent credit
+  grant) into a 5xx that a client would retry.
 - Contracts: see
   [CONTRIBUTIONS_PLUGIN_COMMAND_CONTRACTS.yaml](../../contracts/CONTRIBUTIONS_PLUGIN_COMMAND_CONTRACTS.yaml),
   [CONTRIBUTIONS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml](../../contracts/CONTRIBUTIONS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml),
@@ -219,6 +242,18 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-06-10: Review hardening pass. Added database integrity constraints (CHECKs for positive
+  config knobs; cycle window `ends_at > starts_at` and non-negative goals; submission amounts
+  null-or-non-negative and `credits_granted >= 0`; a gift-card claim must carry a Signal contact)
+  plus a foreign key from `contributions_submissions.cycle_id` to `contributions_cycles(id)` with
+  the column left **nullable**. Corrected the `contributions_cycle_fiat_confirmed` metric to read
+  the single current cycle (CTE) instead of summing across all overlapping cycles. Reconciled the
+  contracts with the implemented routes: audit contract now lists the real
+  `contributions.admin.submission.confirm`/`.reject` actions (was a single `.review`), and every
+  command `outputSchema` mirrors the actual `{ ok, ... }` response wrappers. Hardened the API:
+  shared `parseJsonObject` body guard on all mutations, positive-integer clamp on the admin queue
+  `limit`, a code comment recording the fail-open-on-missing-Origin CSRF convention, and
+  best-effort audit logging so an audit failure can no longer 5xx a successful mutation.
 - 2026-06-10: Non-UI foundation. Schema (`contributions_cycles`, `contributions_submissions`,
   `contributions_runtime_config`, `contributions_banner_state`, `contributions_audit_log`),
   command/access/audit/deletion contracts, web library (`types.ts`, `repository.ts`,

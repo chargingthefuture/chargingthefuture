@@ -3782,6 +3782,29 @@ ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS created_by_u
 ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_contributions_cycles_window ON contributions_cycles(starts_at, ends_at);
+DO $contributions_cycles_window_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'contributions_cycles_window_check'
+  ) THEN
+    ALTER TABLE contributions_cycles
+      ADD CONSTRAINT contributions_cycles_window_check CHECK (ends_at > starts_at);
+  END IF;
+END
+$contributions_cycles_window_check$;
+DO $contributions_cycles_goals_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'contributions_cycles_goals_check'
+  ) THEN
+    ALTER TABLE contributions_cycles
+      ADD CONSTRAINT contributions_cycles_goals_check
+      CHECK (fiat_goal_usd >= 0 AND quora_comment_goal >= 0 AND github_star_goal >= 0);
+  END IF;
+END
+$contributions_cycles_goals_check$;
 
 -- Contribution claims. The gift-card CODE is never collected or stored anywhere in the
 -- platform — the member sends it to the owner over Signal, outside the app. signal_contact
@@ -3826,6 +3849,51 @@ ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS created
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_contributions_submissions_user ON contributions_submissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_contributions_submissions_status ON contributions_submissions(status);
+DO $contributions_submissions_amounts_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'contributions_submissions_amounts_check'
+  ) THEN
+    ALTER TABLE contributions_submissions
+      ADD CONSTRAINT contributions_submissions_amounts_check
+      CHECK (
+        (claimed_amount_usd IS NULL OR claimed_amount_usd >= 0) AND
+        (confirmed_amount_usd IS NULL OR confirmed_amount_usd >= 0) AND
+        credits_granted >= 0
+      );
+  END IF;
+END
+$contributions_submissions_amounts_check$;
+-- A gift-card claim must carry the member's Signal contact (the only way the owner can match
+-- a code received over Signal to the claim). Non-monetary kinds never set it.
+DO $contributions_submissions_gift_card_signal_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'contributions_submissions_gift_card_signal_check'
+  ) THEN
+    ALTER TABLE contributions_submissions
+      ADD CONSTRAINT contributions_submissions_gift_card_signal_check
+      CHECK (kind <> 'gift_card' OR NULLIF(signal_contact, '') IS NOT NULL);
+  END IF;
+END
+$contributions_submissions_gift_card_signal_check$;
+-- cycle_id stays NULLABLE on purpose: a claim made while no drive is active has no cycle. The
+-- foreign key only constrains non-null values.
+DO $contributions_submissions_cycle_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'contributions_submissions_cycle_id_fkey'
+      AND constraint_type = 'FOREIGN KEY'
+  ) THEN
+    ALTER TABLE contributions_submissions
+      ADD CONSTRAINT contributions_submissions_cycle_id_fkey
+      FOREIGN KEY (cycle_id) REFERENCES contributions_cycles(id);
+  END IF;
+END
+$contributions_submissions_cycle_fk$;
 
 -- Runtime configuration singleton (id BOOLEAN PRIMARY KEY DEFAULT TRUE, same pattern as
 -- service_credits_treasury_config; fields are individual columns like unlock_runtime_config).
@@ -3850,6 +3918,23 @@ ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS bann
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS signal_instructions TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+DO $contributions_runtime_config_positive_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'contributions_runtime_config_positive_check'
+  ) THEN
+    ALTER TABLE contributions_runtime_config
+      ADD CONSTRAINT contributions_runtime_config_positive_check
+      CHECK (
+        credits_per_usd > 0 AND
+        non_monetary_unit_value_usd > 0 AND
+        per_user_cycle_credit_cap > 0 AND
+        banner_snooze_months > 0
+      );
+  END IF;
+END
+$contributions_runtime_config_positive_check$;
 
 -- Per-user fundraiser banner state. Dismissing the banner silently snoozes it for
 -- banner_snooze_months; nothing is shown to the member about the snooze length.

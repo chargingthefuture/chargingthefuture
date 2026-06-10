@@ -1428,13 +1428,18 @@ canonical_metrics:
     data_type: currency
     unit: USD
     calculation: |
+      WITH current_cycle AS (
+        SELECT id
+        FROM contributions_cycles
+        WHERE starts_at <= NOW() AND ends_at > NOW()
+        ORDER BY starts_at DESC
+        LIMIT 1
+      )
       SELECT COALESCE(SUM(s.confirmed_amount_usd), 0) AS contributions_cycle_fiat_confirmed
       FROM contributions_submissions s
-      JOIN contributions_cycles c ON c.id = s.cycle_id
+      JOIN current_cycle c ON c.id = s.cycle_id
       WHERE s.kind = 'gift_card'
-        AND s.status = 'confirmed'
-        AND c.starts_at <= NOW()
-        AND c.ends_at > NOW();
+        AND s.status = 'confirmed';
     inputs:
       - name: contributions_submissions.kind
         type: string

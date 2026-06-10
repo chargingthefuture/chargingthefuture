@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
+  auditBestEffort,
   contributionsErrorResponse,
   ensureMutationCsrf,
+  parseJsonObject,
   requireContributionsAdminAccess,
 } from '../../_lib';
 import {
   getContributionsConfig,
-  insertContributionsAudit,
   updateContributionsConfig,
 } from 'lib/contributions/repository';
 
@@ -44,12 +45,11 @@ export async function PUT(request: Request) {
     return csrfDeny;
   }
 
-  let body: ConfigBody;
-  try {
-    body = (await request.json()) as ConfigBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'contributions_invalid_payload', message: 'Invalid JSON payload.' }, { status: 400 });
+  const parsed = await parseJsonObject(request);
+  if (!parsed.ok) {
+    return parsed.response;
   }
+  const body = parsed.body as ConfigBody;
 
   try {
     const config = await updateContributionsConfig({
@@ -62,7 +62,7 @@ export async function PUT(request: Request) {
       signalInstructions: body.signalInstructions,
     });
 
-    await insertContributionsAudit({
+    await auditBestEffort('admin_config_update', {
       actorUserId: gate.auth.userId,
       action: 'contributions.admin.config.update',
       metadata: {

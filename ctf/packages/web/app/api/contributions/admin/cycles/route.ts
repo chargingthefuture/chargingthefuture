@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import {
+  auditBestEffort,
   contributionsErrorResponse,
   ensureMutationCsrf,
+  parseJsonObject,
   requireContributionsAdminAccess,
 } from '../../_lib';
-import { createCycle, insertContributionsAudit, listCycles } from 'lib/contributions/repository';
+import { createCycle, listCycles } from 'lib/contributions/repository';
 
 type CycleBody = {
   startsAt?: string;
@@ -42,12 +44,11 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  let body: CycleBody;
-  try {
-    body = (await request.json()) as CycleBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'contributions_invalid_payload', message: 'Invalid JSON payload.' }, { status: 400 });
+  const parsed = await parseJsonObject(request);
+  if (!parsed.ok) {
+    return parsed.response;
   }
+  const body = parsed.body as CycleBody;
 
   if (typeof body.startsAt !== 'string' || typeof body.endsAt !== 'string') {
     return NextResponse.json(
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
       githubStarGoal: body.githubStarGoal ?? 0,
     });
 
-    await insertContributionsAudit({
+    await auditBestEffort('admin_cycle_create', {
       actorUserId: gate.auth.userId,
       action: 'contributions.admin.cycle.create',
       metadata: { cycleId: cycle.id, startsAt: cycle.startsAt, endsAt: cycle.endsAt },
