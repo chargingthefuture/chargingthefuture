@@ -3291,6 +3291,19 @@ BEGIN
 END
 $skills_hunt_submissions_retire_display_name$;
 
+-- The companion ALTERs above add full_name/bio/quora_profile_url/
+-- quora_profile_url_normalized/signature_hash with a temporary DEFAULT '' so a
+-- legacy table with existing rows can satisfy NOT NULL during the heal. The
+-- canonical CREATE TABLE has no default on these columns, so drop the temporary
+-- default now that the columns are populated — otherwise a healed database would
+-- accept inserts that a fresh database rejects. DROP DEFAULT on a column that has
+-- no default is a no-op, so this stays idempotent.
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN full_name DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN bio DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url_normalized DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN signature_hash DROP DEFAULT;
+
 -- Skills Hunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;

@@ -372,7 +372,12 @@ async function seedDirectory(c) {
        (id, claimed_by_user_id, first_name, last_name, headline, bio, is_active, source)
        VALUES ($1::uuid, $2, $3, $4, $5, $6, true, 'self')
        ON CONFLICT (id) DO UPDATE SET
-         first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, headline = EXCLUDED.headline, updated_at = NOW()`,
+         claimed_by_user_id = EXCLUDED.claimed_by_user_id,
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
+         headline = EXCLUDED.headline,
+         bio = EXCLUDED.bio,
+         updated_at = NOW()`,
       [id, userId, firstName, lastName, headline, bio],
     );
 

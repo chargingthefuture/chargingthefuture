@@ -56,8 +56,14 @@ async function readPostMigrations() {
   let entries;
   try {
     entries = await fs.readdir(postMigrationsDir);
-  } catch {
-    return '';
+  } catch (err) {
+    // A missing post-migrations directory is fine (nothing to append). Any other
+    // read error (permissions, I/O) must not be swallowed — silently returning ''
+    // would regenerate an incomplete demo schema and reintroduce drift.
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT') {
+      return '';
+    }
+    throw err;
   }
   const files = entries.filter((name) => name.endsWith('.sql')).sort();
   let combined = '';
