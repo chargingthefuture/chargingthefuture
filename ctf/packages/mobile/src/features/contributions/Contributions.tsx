@@ -14,6 +14,7 @@ import {
   type FundraiserResponse,
   type GiftCardMethod,
 } from './ContributionsApi';
+import { LoadingScreen } from '../../components/shared/LoadingScreen';
 
 const COLOR = '#F472B6';
 const BG = '#0F1117';
@@ -244,11 +245,7 @@ export const Contributions: React.FC = () => {
   }
 
   if (loading && !fundraiser) {
-    return (
-      <View style={[st.fill, st.center]}>
-        <Text style={st.bodyText}>Loading the drive…</Text>
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   if (error || !fundraiser) {

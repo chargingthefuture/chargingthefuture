@@ -14,7 +14,7 @@ import {
   type SubmissionCreateResponse,
   type SubmissionsResponse,
 } from './contributions-shared';
-import { ContributionsLoading } from './contributions-loading';
+import { AppLoading } from '@/components/shared/app-loading';
 import { goalsFromFundraiser, GoalCard, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
@@ -131,7 +131,7 @@ export function ContributionsShell() {
   );
 
   if (loading && !fundraiser) {
-    return <ContributionsLoading t={t} isMobile={isMobile} />;
+    return <AppLoading />;
   }
 
   if (error || !fundraiser) {
