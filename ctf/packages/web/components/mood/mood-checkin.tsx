@@ -68,7 +68,7 @@ export function MoodCheckin({
           <>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>How are you feeling right now?</div>
-              <div style={{ fontSize: 15, color: t.MUTED }}>Anonymous, safe, and encrypted. Your check-in is never linked to your identity.</div>
+              <div style={{ fontSize: 15, color: t.MUTED }}>Anonymous and safe. Your check-in is never linked to your identity.</div>
             </div>
             <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 40, flexWrap: "wrap" }}>
               {MOODS.map((m) => (
@@ -84,7 +84,7 @@ export function MoodCheckin({
                 <button type="button" onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 16, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
                   {submitting ? "Submitting…" : "Submit Anonymously"}
                 </button>
-                <div style={{ textAlign: "center", fontSize: 12, color: t.FAINT }}>Not linked to your account · Encrypted · One check-in per week</div>
+                <div style={{ textAlign: "center", fontSize: 12, color: t.FAINT }}>Not linked to your account · One check-in per week</div>
               </div>
             )}
             {error && <div style={{ fontSize: 13, color: "#EF4444", marginTop: 12, textAlign: "center" }}>{error}</div>}

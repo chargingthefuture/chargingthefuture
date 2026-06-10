@@ -32,7 +32,7 @@ export function LighthouseRightPanel() {
           <Eye size={12} style={{ color: COLOR }} />
           <span style={{ fontSize: 12, fontWeight: 600, color: COLOR }}>Privacy by Design</span>
         </div>
-        <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your location is never exposed to landlords without your consent. All matches are end-to-end encrypted.</div>
+        <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your location is never exposed to landlords without your consent.</div>
       </div>
     </aside>
   );

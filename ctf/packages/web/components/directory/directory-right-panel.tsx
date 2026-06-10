@@ -43,7 +43,7 @@ export function DirectoryRightPanel({
           <Shield size={14} style={{ color: COLOR }} />
           <span style={{ fontSize: 12, fontWeight: 600, color: COLOR }}>Privacy Guarantee</span>
         </div>
-        <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your identity is protected. All interactions are end-to-end encrypted.</div>
+        <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your identity is protected.</div>
       </div>
 
       {sectors.length > 0 && (

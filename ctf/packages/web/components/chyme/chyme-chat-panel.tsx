@@ -29,7 +29,6 @@ export function ChymeChatPanel({
       <div style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Hash size={14} style={{ color: PRIMARY }} />
         <span style={{ fontSize: 14, fontWeight: 600, color: '#F0FDF4' }}>Room Chat</span>
-        <span style={{ marginLeft: 'auto', background: `${PRIMARY}15`, color: PRIMARY, border: `1px solid ${PRIMARY}25`, fontSize: 10, padding: '2px 8px', borderRadius: 12 }}>Encrypted</span>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: isMobile ? 220 : undefined }}>
         {messages.length === 0 ? (
