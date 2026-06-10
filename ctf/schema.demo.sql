@@ -3748,3 +3748,167 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
   SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
   FROM skills_taxonomy_consumer_bindings
   GROUP BY target_type, target_id;
+
+-- ── post migration: 0001_directory_display_name_to_first_last.sql ──
+-- Directory: move the single v2 `display_name` field to honest v3
+-- `first_name` + `last_name` columns, then drop `display_name`.
+--
+-- Why this exists:
+--   schema.sql now defines `directory_profiles` with `first_name` and
+--   `last_name` and no `display_name`. On a fresh v3 database those columns
+--   already exist and there is nothing to do. But a database cloned from v2
+--   still carries the old `display_name` column (and may hold the only copy of
+--   a person's name there). schema.sql is purely additive and cannot drop a
+--   column, so the drop and the data carry-over live here, after the canonical
+--   schema has run.
+--
+-- What it does, only when the old column is still present:
+--   1. Carry any name that lives only in `display_name` into `first_name`
+--      (where `first_name` is empty/NULL), as a best-effort single-name value.
+--   2. Drop the `display_name` column.
+--
+-- Safe to re-run: the whole body is guarded on `display_name` still existing.
+-- Once the column has been dropped, every later run is a no-op.
+
+DO $directory_display_name_to_first_last$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'directory_profiles'
+      AND column_name = 'display_name'
+  ) THEN
+    UPDATE directory_profiles
+    SET first_name = btrim(display_name),
+        updated_at = NOW()
+    WHERE (first_name IS NULL OR btrim(first_name) = '')
+      AND display_name IS NOT NULL
+      AND btrim(display_name) <> '';
+
+    ALTER TABLE directory_profiles DROP COLUMN display_name;
+  END IF;
+END
+$directory_display_name_to_first_last$;
+
+
+-- ── post migration: 0002_chyme_drop_display_name.sql ──
+-- Chyme: drop the redundant `display_name` column from `chyme_room_members`
+-- and `chyme_messages`.
+--
+-- Why this exists:
+--   Chyme already stores the raw `username` on both tables and the app now
+--   renders the author handle as `@username` (falling back to `user-<id>` when
+--   the username is null). The old `display_name` column only ever held that
+--   same `@username` string, so it is redundant. schema.sql no longer defines
+--   the column, but it is purely additive and cannot drop a column that a
+--   database cloned from an earlier shape still carries. The drop lives here,
+--   after the canonical schema has run.
+--
+-- What it does, only when the old column is still present:
+--   Drop `display_name` from `chyme_room_members`, then from `chyme_messages`.
+--
+-- Safe to re-run: each drop is guarded on `display_name` still existing, so
+-- once a column has been dropped every later run is a no-op.
+
+DO $chyme_room_members_drop_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'chyme_room_members'
+      AND column_name = 'display_name'
+  ) THEN
+    ALTER TABLE chyme_room_members DROP COLUMN display_name;
+  END IF;
+END
+$chyme_room_members_drop_display_name$;
+
+DO $chyme_messages_drop_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'chyme_messages'
+      AND column_name = 'display_name'
+  ) THEN
+    ALTER TABLE chyme_messages DROP COLUMN display_name;
+  END IF;
+END
+$chyme_messages_drop_display_name$;
+
+
+-- ── post migration: 0003_socketrelay_drop_display_name.sql ──
+-- SocketRelay: drop the unused `display_name` column from
+-- `socketrelay_user_extension`.
+--
+-- Why this exists:
+--   The column held an optional per-user profile name, but nothing in the v3
+--   product ever rendered it — SocketRelay identifies people by their Clerk
+--   `@username` (built in the chat/relay routes), not a stored display name.
+--   schema.sql no longer defines the column, but it is purely additive and
+--   cannot drop a column that a database cloned from an earlier shape still
+--   carries, so the drop lives here, after the canonical schema has run.
+--
+-- What it does, only when the old column is still present:
+--   Drop `display_name` from `socketrelay_user_extension`.
+--
+-- Safe to re-run: guarded on the column still existing, so once it has been
+-- dropped every later run is a no-op.
+
+DO $socketrelay_user_extension_drop_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'socketrelay_user_extension'
+      AND column_name = 'display_name'
+  ) THEN
+    ALTER TABLE socketrelay_user_extension DROP COLUMN display_name;
+  END IF;
+END
+$socketrelay_user_extension_drop_display_name$;
+
+
+-- ── post migration: 0004_skills_hunt_submissions_display_name_to_full_name.sql ──
+-- Skills Hunt: rename `display_name` to `full_name` on `skills_hunt_submissions`.
+--
+-- Why this exists:
+--   The owner relabeled the nominee's name field from "Display name" to
+--   "Full name" (a design bypass was granted for the copy change). A Skills
+--   Hunt nominee is a free-text full name, not a signed-up user, so the field
+--   stays a single free-text value. schema.sql now defines the column as
+--   `full_name`, but a database cloned from an earlier shape still carries the
+--   old `display_name` column. A plain CREATE/ALTER cannot rename it, so the
+--   rename lives here, after the canonical schema has run.
+--
+-- What it does, only when the old column is still present and the new one is
+-- not: rename `display_name` to `full_name` on `skills_hunt_submissions`.
+--
+-- Safe to re-run: the rename is guarded on `display_name` still existing AND
+-- `full_name` not yet existing, so once the column has been renamed every later
+-- run is a no-op.
+
+DO $skills_hunt_submissions_display_name_to_full_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'display_name'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'full_name'
+  ) THEN
+    ALTER TABLE skills_hunt_submissions RENAME COLUMN display_name TO full_name;
+  END IF;
+END
+$skills_hunt_submissions_display_name_to_full_name$;
+
