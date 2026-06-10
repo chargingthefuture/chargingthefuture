@@ -14,7 +14,7 @@ export function PeerProgrammingSessionTab({ room, participants }: { room: Room |
       </div>
       <div style={{ padding: "60px 0", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}30`, textAlign: "center", marginBottom: 20 }}>
         <Video size={48} style={{ color: COLOR, display: "block", margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 16, color: "#6B7280", marginBottom: 4 }}>Video session — encrypted</div>
+        <div style={{ fontSize: 16, color: "#6B7280", marginBottom: 4 }}>Video session</div>
         {!hasCohort && <div style={{ fontSize: 13, color: "#4B5563" }}>Join a cohort to access live sessions</div>}
         {hasCohort && (
           <button type="button" style={{ marginTop: 16, padding: "12px 32px", borderRadius: 10, background: COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>

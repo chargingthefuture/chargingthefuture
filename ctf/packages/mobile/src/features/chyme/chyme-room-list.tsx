@@ -65,7 +65,7 @@ export const ChymeRoomList: React.FC<Props> = ({
           </View>
           <View>
             <Text style={styles.headerTitle}>Chyme 🎙️</Text>
-            <Text style={styles.headerSubtitle}>Social Audio · Encrypted</Text>
+            <Text style={styles.headerSubtitle}>Social Audio</Text>
           </View>
         </View>
       </View>

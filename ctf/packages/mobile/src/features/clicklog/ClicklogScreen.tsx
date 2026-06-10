@@ -129,7 +129,7 @@ function ClicklogPublic() {
         <View style={styles.publicCopy}>
           <Text style={styles.publicHeading}>Track incidents privately</Text>
           <Text style={styles.publicSubtext}>
-            Sign in to start logging personal safety incidents — one tap, encrypted, private.
+            Sign in to start logging personal safety incidents — one tap, private.
           </Text>
         </View>
 

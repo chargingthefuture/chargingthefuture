@@ -180,17 +180,18 @@ async function main() {
     await client.query(
       `
         INSERT INTO directory_profiles
-          (id, claimed_by_user_id, display_name, headline, bio,
+          (id, claimed_by_user_id, first_name, last_name, headline, bio,
            is_active, source, invited_by_username, unclaimed_handle,
            created_at, updated_at)
         VALUES
-          ($1::uuid, NULL, 'Seed Nominee',
+          ($1::uuid, NULL, 'Seed', 'Nominee',
            'Community-generated profile seeded for @handle validation.',
            'Seeded by the Skills Hunt Phase-1 fixture.',
            TRUE, 'community-generated', 'seed-user-01', 'community-seed01',
            NOW(), NOW())
         ON CONFLICT (id) DO UPDATE SET
-          display_name = EXCLUDED.display_name,
+          first_name = EXCLUDED.first_name,
+          last_name = EXCLUDED.last_name,
           headline = EXCLUDED.headline,
           bio = EXCLUDED.bio,
           is_active = TRUE,

@@ -117,8 +117,7 @@ export const LighthousePropertyDetail: React.FC<Props> = ({ property, onBack }) 
             <Text style={styles.privacyNoteTitle}>Privacy Protected</Text>
           </View>
           <Text style={styles.privacyBody}>
-            Your location is never shown until you confirm. All communications are
-            end-to-end encrypted.
+            Your location is never shown until you confirm.
           </Text>
         </View>
       </ScrollView>

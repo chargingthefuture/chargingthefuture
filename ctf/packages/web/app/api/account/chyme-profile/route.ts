@@ -1,17 +1,25 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
+import { ensureMutationCsrf } from '../_lib';
 import { markServiceDeletion } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { reportError } from 'lib/observability/report';
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const decision = await evaluatePluginAccess({
     requireUsername: false,
     minUnlockTier: 'any_authenticated',
   });
   if (!decision.allowed) {
     return NextResponse.json(decision, { status: decision.status });
+  }
+
+  // Same-origin CSRF guard before the destructive delete, matching the shared account
+  // deletion routes and the Skills Hunt profile-delete path.
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   try {

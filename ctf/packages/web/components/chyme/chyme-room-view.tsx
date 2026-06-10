@@ -59,7 +59,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
               <span style={{ background: `${PRIMARY}15`, color: PRIMARY, border: `1px solid ${PRIMARY}30`, fontSize: 11, padding: '2px 10px', borderRadius: 20 }}>
                 {room.callActive ? '🔴 Live' : 'Idle'}
               </span>
-              <span style={{ fontSize: 12, color: '#4B5563' }}>Safe Space Room</span>
+              <span style={{ fontSize: 12, color: '#4B5563' }}>Members-Only Room</span>
               <Lock size={12} style={{ color: '#4B5563' }} />
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#F0FDF4', lineHeight: 1.3, marginBottom: 4 }}>{room.roomName}</div>

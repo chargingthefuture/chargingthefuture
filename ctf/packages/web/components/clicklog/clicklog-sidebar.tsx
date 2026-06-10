@@ -7,7 +7,7 @@ export function ClicklogSidebar({ total, weekdayCounts }: { total: number; weekd
     <aside style={{ width: 240, background: "#0D0F14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: SUBTLE, textTransform: "uppercase", marginBottom: 4 }}>🚨 ClickLog</div>
-        <div style={{ fontSize: 12, color: FAINT, lineHeight: 1.5 }}>Personal incident counter — private &amp; encrypted</div>
+        <div style={{ fontSize: 12, color: FAINT, lineHeight: 1.5 }}>Personal incident counter — private</div>
       </div>
       <div style={{ padding: "0 12px", flex: 1 }}>
         <div style={{ padding: "16px", borderRadius: 14, background: `${BRAND}08`, border: `1px solid ${BRAND}18`, marginBottom: 14 }}>
@@ -34,7 +34,7 @@ export function ClicklogSidebar({ total, weekdayCounts }: { total: number; weekd
         </div>
       </div>
       <div style={{ padding: 12, borderTop: `1px solid ${BORDER}` }}>
-        <div style={{ fontSize: 11, color: FAINT, lineHeight: 1.5 }}>🔒 All data is end-to-end encrypted. Only you can see your incidents.</div>
+        <div style={{ fontSize: 11, color: FAINT, lineHeight: 1.5 }}>🔒 Only you can see your incidents.</div>
       </div>
     </aside>
   );
