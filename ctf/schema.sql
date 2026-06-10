@@ -3234,6 +3234,79 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- skills_hunt_submissions (1 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- skills_hunt_submissions — companion ALTERs for every non-key column (2026-06-10).
+-- The demo schema's copy of this table predates several columns and the CREATE TABLE
+-- IF NOT EXISTS above skips existing tables, so the 2026-06-09 demo seed failed with
+-- 'column "full_name" of relation "skills_hunt_submissions" does not exist'. Per the
+-- migration rule, every column gets an ADD COLUMN IF NOT EXISTS so legacy tables are
+-- always healed. NOT NULL columns carry a DEFAULT so the ALTER succeeds on tables
+-- with existing rows. CHECK constraints are not re-added here (matches the existing
+-- companion-ALTER precedent above, e.g. url_validation_result).
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS submitter_username TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS full_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url_normalized TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_action TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_notes TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS score_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS points_awarded INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS directory_profile_generated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- skills_hunt_submissions: retire the pre-rename `display_name` column (2026-06-10).
+-- The 2026-06-02 rename (`display_name` -> `full_name`) shipped as
+-- db/migrations/post/0004, which the demo-schema apply path never runs, so a legacy
+-- table can still carry `display_name NOT NULL` and reject inserts that only set
+-- `full_name`. Two legacy states are healed here, idempotently:
+--   1. `display_name` exists and `full_name` does not -> rename (same as post/0004).
+--   2. both exist (the companion ALTER above added `full_name` next to the old
+--      column) -> backfill `full_name` from `display_name`, then drop `display_name`.
+-- Fresh databases and already-renamed tables match neither branch (no-op).
+DO $skills_hunt_submissions_retire_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'display_name'
+  ) THEN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'skills_hunt_submissions'
+        AND column_name = 'full_name'
+    ) THEN
+      UPDATE skills_hunt_submissions
+      SET full_name = display_name
+      WHERE (full_name IS NULL OR full_name = '') AND display_name IS NOT NULL;
+      ALTER TABLE skills_hunt_submissions DROP COLUMN display_name;
+    ELSE
+      ALTER TABLE skills_hunt_submissions RENAME COLUMN display_name TO full_name;
+    END IF;
+  END IF;
+END
+$skills_hunt_submissions_retire_display_name$;
+
+-- The companion ALTERs above add full_name/bio/quora_profile_url/
+-- quora_profile_url_normalized/signature_hash with a temporary DEFAULT '' so a
+-- legacy table with existing rows can satisfy NOT NULL during the heal. The
+-- canonical CREATE TABLE has no default on these columns, so drop the temporary
+-- default now that the columns are populated — otherwise a healed database would
+-- accept inserts that a fresh database rejects. DROP DEFAULT on a column that has
+-- no default is a no-op, so this stays idempotent.
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN full_name DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN bio DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url_normalized DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN signature_hash DROP DEFAULT;
+
 -- Skills Hunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;

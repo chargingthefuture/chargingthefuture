@@ -3232,6 +3232,79 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- skills_hunt_submissions (1 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- skills_hunt_submissions — companion ALTERs for every non-key column (2026-06-10).
+-- The demo schema's copy of this table predates several columns and the CREATE TABLE
+-- IF NOT EXISTS above skips existing tables, so the 2026-06-09 demo seed failed with
+-- 'column "full_name" of relation "skills_hunt_submissions" does not exist'. Per the
+-- migration rule, every column gets an ADD COLUMN IF NOT EXISTS so legacy tables are
+-- always healed. NOT NULL columns carry a DEFAULT so the ALTER succeeds on tables
+-- with existing rows. CHECK constraints are not re-added here (matches the existing
+-- companion-ALTER precedent above, e.g. url_validation_result).
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS submitter_username TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS full_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url_normalized TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_action TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS review_notes TEXT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS score_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS points_awarded INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS directory_profile_generated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- skills_hunt_submissions: retire the pre-rename `display_name` column (2026-06-10).
+-- The 2026-06-02 rename (`display_name` -> `full_name`) shipped as
+-- db/migrations/post/0004, which the demo-schema apply path never runs, so a legacy
+-- table can still carry `display_name NOT NULL` and reject inserts that only set
+-- `full_name`. Two legacy states are healed here, idempotently:
+--   1. `display_name` exists and `full_name` does not -> rename (same as post/0004).
+--   2. both exist (the companion ALTER above added `full_name` next to the old
+--      column) -> backfill `full_name` from `display_name`, then drop `display_name`.
+-- Fresh databases and already-renamed tables match neither branch (no-op).
+DO $skills_hunt_submissions_retire_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'display_name'
+  ) THEN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'demo'
+        AND table_name = 'skills_hunt_submissions'
+        AND column_name = 'full_name'
+    ) THEN
+      UPDATE skills_hunt_submissions
+      SET full_name = display_name
+      WHERE (full_name IS NULL OR full_name = '') AND display_name IS NOT NULL;
+      ALTER TABLE skills_hunt_submissions DROP COLUMN display_name;
+    ELSE
+      ALTER TABLE skills_hunt_submissions RENAME COLUMN display_name TO full_name;
+    END IF;
+  END IF;
+END
+$skills_hunt_submissions_retire_display_name$;
+
+-- The companion ALTERs above add full_name/bio/quora_profile_url/
+-- quora_profile_url_normalized/signature_hash with a temporary DEFAULT '' so a
+-- legacy table with existing rows can satisfy NOT NULL during the heal. The
+-- canonical CREATE TABLE has no default on these columns, so drop the temporary
+-- default now that the columns are populated — otherwise a healed database would
+-- accept inserts that a fresh database rejects. DROP DEFAULT on a column that has
+-- no default is a no-op, so this stays idempotent.
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN full_name DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN bio DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url_normalized DROP DEFAULT;
+ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN signature_hash DROP DEFAULT;
+
 -- Skills Hunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
@@ -3813,3 +3886,167 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
   SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
   FROM skills_taxonomy_consumer_bindings
   GROUP BY target_type, target_id;
+
+-- ── post migration: 0001_directory_display_name_to_first_last.sql ──
+-- Directory: move the single v2 `display_name` field to honest v3
+-- `first_name` + `last_name` columns, then drop `display_name`.
+--
+-- Why this exists:
+--   schema.sql now defines `directory_profiles` with `first_name` and
+--   `last_name` and no `display_name`. On a fresh v3 database those columns
+--   already exist and there is nothing to do. But a database cloned from v2
+--   still carries the old `display_name` column (and may hold the only copy of
+--   a person's name there). schema.sql is purely additive and cannot drop a
+--   column, so the drop and the data carry-over live here, after the canonical
+--   schema has run.
+--
+-- What it does, only when the old column is still present:
+--   1. Carry any name that lives only in `display_name` into `first_name`
+--      (where `first_name` is empty/NULL), as a best-effort single-name value.
+--   2. Drop the `display_name` column.
+--
+-- Safe to re-run: the whole body is guarded on `display_name` still existing.
+-- Once the column has been dropped, every later run is a no-op.
+
+DO $directory_display_name_to_first_last$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'directory_profiles'
+      AND column_name = 'display_name'
+  ) THEN
+    UPDATE directory_profiles
+    SET first_name = btrim(display_name),
+        updated_at = NOW()
+    WHERE (first_name IS NULL OR btrim(first_name) = '')
+      AND display_name IS NOT NULL
+      AND btrim(display_name) <> '';
+
+    ALTER TABLE directory_profiles DROP COLUMN display_name;
+  END IF;
+END
+$directory_display_name_to_first_last$;
+
+
+-- ── post migration: 0002_chyme_drop_display_name.sql ──
+-- Chyme: drop the redundant `display_name` column from `chyme_room_members`
+-- and `chyme_messages`.
+--
+-- Why this exists:
+--   Chyme already stores the raw `username` on both tables and the app now
+--   renders the author handle as `@username` (falling back to `user-<id>` when
+--   the username is null). The old `display_name` column only ever held that
+--   same `@username` string, so it is redundant. schema.sql no longer defines
+--   the column, but it is purely additive and cannot drop a column that a
+--   database cloned from an earlier shape still carries. The drop lives here,
+--   after the canonical schema has run.
+--
+-- What it does, only when the old column is still present:
+--   Drop `display_name` from `chyme_room_members`, then from `chyme_messages`.
+--
+-- Safe to re-run: each drop is guarded on `display_name` still existing, so
+-- once a column has been dropped every later run is a no-op.
+
+DO $chyme_room_members_drop_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'chyme_room_members'
+      AND column_name = 'display_name'
+  ) THEN
+    ALTER TABLE chyme_room_members DROP COLUMN display_name;
+  END IF;
+END
+$chyme_room_members_drop_display_name$;
+
+DO $chyme_messages_drop_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'chyme_messages'
+      AND column_name = 'display_name'
+  ) THEN
+    ALTER TABLE chyme_messages DROP COLUMN display_name;
+  END IF;
+END
+$chyme_messages_drop_display_name$;
+
+
+-- ── post migration: 0003_socketrelay_drop_display_name.sql ──
+-- SocketRelay: drop the unused `display_name` column from
+-- `socketrelay_user_extension`.
+--
+-- Why this exists:
+--   The column held an optional per-user profile name, but nothing in the v3
+--   product ever rendered it — SocketRelay identifies people by their Clerk
+--   `@username` (built in the chat/relay routes), not a stored display name.
+--   schema.sql no longer defines the column, but it is purely additive and
+--   cannot drop a column that a database cloned from an earlier shape still
+--   carries, so the drop lives here, after the canonical schema has run.
+--
+-- What it does, only when the old column is still present:
+--   Drop `display_name` from `socketrelay_user_extension`.
+--
+-- Safe to re-run: guarded on the column still existing, so once it has been
+-- dropped every later run is a no-op.
+
+DO $socketrelay_user_extension_drop_display_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'socketrelay_user_extension'
+      AND column_name = 'display_name'
+  ) THEN
+    ALTER TABLE socketrelay_user_extension DROP COLUMN display_name;
+  END IF;
+END
+$socketrelay_user_extension_drop_display_name$;
+
+
+-- ── post migration: 0004_skills_hunt_submissions_display_name_to_full_name.sql ──
+-- Skills Hunt: rename `display_name` to `full_name` on `skills_hunt_submissions`.
+--
+-- Why this exists:
+--   The owner relabeled the nominee's name field from "Display name" to
+--   "Full name" (a design bypass was granted for the copy change). A Skills
+--   Hunt nominee is a free-text full name, not a signed-up user, so the field
+--   stays a single free-text value. schema.sql now defines the column as
+--   `full_name`, but a database cloned from an earlier shape still carries the
+--   old `display_name` column. A plain CREATE/ALTER cannot rename it, so the
+--   rename lives here, after the canonical schema has run.
+--
+-- What it does, only when the old column is still present and the new one is
+-- not: rename `display_name` to `full_name` on `skills_hunt_submissions`.
+--
+-- Safe to re-run: the rename is guarded on `display_name` still existing AND
+-- `full_name` not yet existing, so once the column has been renamed every later
+-- run is a no-op.
+
+DO $skills_hunt_submissions_display_name_to_full_name$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'display_name'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'skills_hunt_submissions'
+      AND column_name = 'full_name'
+  ) THEN
+    ALTER TABLE skills_hunt_submissions RENAME COLUMN display_name TO full_name;
+  END IF;
+END
+$skills_hunt_submissions_display_name_to_full_name$;
+
