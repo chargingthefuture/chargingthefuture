@@ -93,10 +93,22 @@ export function TrustTransportShell() {
     setSubmitting(true);
     setBookingError(null);
     try {
+      // The API expects mode + title + details (both required) and optional pickup/dropoff cities — not
+      // fromLocation/toLocation. Build a title/details from the pickup and destination the user typed,
+      // and send the x-ctf-csrf header every mutation requires (without it the request is denied 403).
+      const pickup = from.trim();
+      const dropoff = to.trim();
+      const modeLabel = rideType.charAt(0).toUpperCase() + rideType.slice(1);
       const res = await fetch("/api/trusttransport/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: rideType, fromLocation: from, toLocation: to }),
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({
+          mode: rideType,
+          title: `${modeLabel}: ${pickup} → ${dropoff}`.slice(0, 160),
+          details: `Pickup: ${pickup}\nDrop-off: ${dropoff}`,
+          pickupCity: pickup,
+          dropoffCity: dropoff,
+        }),
       });
       if (!res.ok) throw new Error("Failed to create request");
       setBooked(true);
@@ -115,7 +127,7 @@ export function TrustTransportShell() {
     setChatError(null);
     setChatLoading(true);
     try {
-      const res = await fetch(`/api/trusttransport/trips/${req.id}/chat`, { method: "POST" });
+      const res = await fetch(`/api/trusttransport/trips/${req.id}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
       if (!res.ok) throw new Error("Failed to fetch chat credentials");
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "No chat credentials");
