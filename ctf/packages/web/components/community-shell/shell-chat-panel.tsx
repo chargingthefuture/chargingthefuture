@@ -306,6 +306,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
+              // While the first-use consent modal is open, Enter belongs to the modal ("turn it
+              // on"), not the composer. Sending here would only re-open the already-open modal.
+              if (consentModalOpen) return;
               void sendMessage();
             }
           }}

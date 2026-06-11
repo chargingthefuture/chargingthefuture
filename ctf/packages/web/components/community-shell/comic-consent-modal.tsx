@@ -40,6 +40,15 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
         return;
       }
 
+      // Enter confirms the dialog. On mobile the soft keyboard keeps focus in the chat input, so a
+      // press of Return would otherwise fall through to the composer and silently re-open this same
+      // modal instead of turning the assistant on. Treat Enter as "turn it on" regardless of focus.
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        onConfirm();
+        return;
+      }
+
       if (event.key !== 'Tab') return;
 
       // Focus trap: keep Tab / Shift+Tab cycling within the dialog.
@@ -72,7 +81,7 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
       // Restore focus to the opener on close/unmount.
       opener?.focus?.();
     };
-  }, [open, onDismiss]);
+  }, [open, onDismiss, onConfirm]);
 
   if (!open) {
     return null;
