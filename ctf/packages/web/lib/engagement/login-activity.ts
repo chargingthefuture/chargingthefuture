@@ -24,3 +24,23 @@ export async function countActiveUsersLastDays(days: number): Promise<number> {
 
   return Number.parseInt(result.rows[0]?.total ?? '0', 10);
 }
+
+// Total people signed up — the headline "Members" figure. Prefer the Clerk-mirrored `users`
+// identity table (one row per account), which is the true signup count. Environments built only
+// from the canonical schema.sql have no `users` table, so fall back to the count of distinct
+// authenticated users seen in login_events. Returns null only if neither source can be read.
+export async function countTotalMembers(): Promise<number | null> {
+  const usersTable = await queryDb<{ reg: string | null }>(
+    `SELECT to_regclass('public.users')::text AS reg`,
+  );
+
+  if (usersTable.rows[0]?.reg) {
+    const result = await queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM users`);
+    return Number.parseInt(result.rows[0]?.total ?? '0', 10);
+  }
+
+  const fallback = await queryDb<{ total: string }>(
+    `SELECT COUNT(DISTINCT user_id)::text AS total FROM login_events`,
+  );
+  return Number.parseInt(fallback.rows[0]?.total ?? '0', 10);
+}
