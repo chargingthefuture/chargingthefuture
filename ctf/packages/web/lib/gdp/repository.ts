@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
+import { countTotalMembers } from 'lib/engagement/login-activity';
 
 type PublicationRow = {
   id: string;
@@ -106,12 +107,17 @@ export async function upsertPublication(input: {
 }
 
 export async function getGdpShellStats(): Promise<{ memberCount: number | null; gdpValueUsd: number | null }> {
-  const report = await getLatestPublication();
-  if (!report) return { memberCount: null, gdpValueUsd: null };
-  const memberMetric = report.metrics.find((m) => m.metricKey === 'weekly_active_users');
-  const gdpMetric = report.metrics.find((m) => m.metricKey === 'gdp_total_revenue');
+  // Member count is the total number of people signed up (every account), read directly from the
+  // identity table — independent of whether a weekly GDP report has been published. The GDP value
+  // still comes from the latest published report. The two are fetched together but kept separate so
+  // a missing report never blanks the member count, and a member-count read error never blanks GDP.
+  const [memberCount, report] = await Promise.all([
+    countTotalMembers().catch(() => null),
+    getLatestPublication().catch(() => null),
+  ]);
+  const gdpMetric = report?.metrics.find((m) => m.metricKey === 'gdp_total_revenue') ?? null;
   return {
-    memberCount: memberMetric ? memberMetric.metricValue : null,
+    memberCount,
     gdpValueUsd: gdpMetric ? gdpMetric.metricValue : null,
   };
 }
