@@ -121,60 +121,32 @@ canonical_metrics:
       alert_rules:
         - "alert_if_annual_value < 250000000000"
 
-  - id: gdp_recognized_volume_usd
-    name: GDP Recognized Volume (USD estimate)
-    description: Actual recognized economic volume across applicable plugins (TrustTransport completed-task earnings), each fiat/crypto currency normalized to USD via the currency_usd_rates factors. EXCLUDES ServiceCredits, which is non-redeemable and reported separately in SC units (see gdp_recognized_volume_sc). A morale/transparency ESTIMATE that augments — does not replace — the projection target (issue #121). Only eligible settled spend is recognized; transfers and deletion/reclaim reallocations are excluded.
+  - id: gdp_value_index
+    name: Community Value Index
+    description: One composite measure of all recognized economic activity in the community, folding every value type (fiat, crypto, ServiceCredits, barter) into a single relative figure via owner-set, non-binding contribution weights (USD is only the reference base = 1). A community-built transparency measure in the spirit of GDP — NOT money, NOT a price, and NOT an exchange or redemption value for any currency or token; displayed with no currency symbol. Augments, does not replace, the projection target (issue #121). Only eligible settled value is recognized; transfers and deletion/reclaim reallocations are excluded.
     owner: economics-team@chargingthefuture.org
-    data_type: currency
-    unit: USD
+    data_type: integer
+    unit: index
     calculation: |
       -- Aggregated server-side by ctf/packages/web/lib/gdp/recognition.ts (and scripts/recognizeGdp.mjs):
-      -- for each registered source, SUM(eligible settled spend) grouped by currency, converted to USD
-      -- via the latest currency_usd_rates factor per currency, then summed across all sources.
-      -- ServiceCredits ('SC') is skipped here and counted in gdp_recognized_volume_sc instead.
-      SELECT SUM(amount * usd_rate) AS gdp_recognized_volume_usd
-      FROM eligible_settled_spend
-      JOIN latest_currency_usd_rates USING (currency_code)
-      WHERE currency_code <> 'SC';
+      -- for each registered source, SUM(eligible settled value) grouped by value type, multiplied by the
+      -- latest contribution weight per type (currency_usd_rates, USD = 1 reference base), summed across
+      -- all sources and value types. ServiceCredits and barter are included; a type with no active weight
+      -- is surfaced and excluded. The result is a relative index, never a monetary amount.
+      SELECT SUM(amount * weight) AS gdp_value_index
+      FROM eligible_settled_value
+      JOIN latest_contribution_weights USING (currency_code);
     inputs:
       - name: trusttransport_earnings_ledger.amount
         type: currency
-      - name: trusttransport_earnings_ledger.entry_type
-        type: string
+      - name: service_credits_governance_events.amount
+        type: integer
       - name: currency_usd_rates.usd_rate
-        type: currency
+        type: number
       - name: currency_usd_rates.as_of
         type: datetime
     example_values:
-      - 12500
-    last_updated: "2026-06-01T00:00:00Z"
-    update_cadence: weekly
-    retention: 120 months
-    allowed_thresholds:
-      min: 0
-
-  - id: gdp_recognized_volume_sc
-    name: GDP Recognized Volume (ServiceCredits)
-    description: Recognized economic volume denominated in ServiceCredits — community mutual-aid and service activity that settles in the platform's non-redeemable utility token. Reported in SC units and NEVER converted to USD (no fiat peg or redemption value); shown alongside the USD GDP so neither figure alone understates community self-sufficiency. First SC source is LevelUp trainer payouts for validated work (mint grants, reason 'levelup_trainer_split'). Exact count, not an estimate.
-    owner: economics-team@chargingthefuture.org
-    data_type: integer
-    unit: ServiceCredits
-    calculation: |
-      -- Aggregated server-side by ctf/packages/web/lib/gdp/recognition.ts (and scripts/recognizeGdp.mjs):
-      -- SUM(amount) of eligible ServiceCredits-denominated settled spend across registered sources. No
-      -- currency conversion is applied — ServiceCredits is never expressed in USD.
-      SELECT SUM(amount) AS gdp_recognized_volume_sc
-      FROM service_credits_governance_events
-      WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split';
-    inputs:
-      - name: service_credits_governance_events.amount
-        type: integer
-      - name: service_credits_governance_events.event_type
-        type: string
-      - name: service_credits_governance_events.reason
-        type: string
-    example_values:
-      - 8400
+      - 13340
     last_updated: "2026-06-11T00:00:00Z"
     update_cadence: weekly
     retention: 120 months

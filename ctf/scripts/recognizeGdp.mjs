@@ -1,17 +1,18 @@
 import { Pool } from 'pg';
 import crypto from 'crypto';
 
-// GDP recognition rollup (issue #121). Recognizes ACTUAL multi-currency transaction volume across the
-// applicable plugins, normalizes it to one USD estimate via currency_usd_rates, and writes the
-// `gdp_recognized_volume_usd` metric (is_estimate = TRUE) for the week — ALONGSIDE the projection
-// target, not replacing it. A production scheduler runs this weekly.
+// Community Value Index rollup (issue #121). Recognizes ACTUAL economic activity across the applicable
+// plugins and folds every value type (fiat, crypto, ServiceCredits, barter) into ONE relative index via
+// owner-set contribution weights (currency_usd_rates; USD is the reference base = 1). Writes the
+// `gdp_value_index` metric for the week — ALONGSIDE the projection target, not replacing it. A
+// production scheduler runs this weekly.
 //
-// Starts with TrustTransport. Add more eligible-spend sources to the SOURCES list below as the owner
-// approves them, keeping it in step with ctf/packages/web/lib/gdp/recognition.ts (the app-side layer).
-// Only eligible settled spend is recognized — never transfers or deletion/reclaim reallocations.
+// Starts with TrustTransport and LevelUp. Add more eligible-value sources to the SOURCES list below as
+// the owner approves them, keeping it in step with ctf/packages/web/lib/gdp/recognition.ts (the app-side
+// layer). Only eligible settled value is recognized — never transfers or deletion/reclaim reallocations.
 //
-// LEGAL GUARDRAIL: the currency_usd_rates factors (including ServiceCredits) are applied ONLY here,
-// inside the aggregate estimate — never surfaced as a per-wallet or per-price fiat equivalence.
+// IMPORTANT: the Community Value Index is NOT money and carries no currency symbol. The contribution
+// weights are never surfaced as a price, an exchange rate, or a per-wallet/per-token fiat equivalence.
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -68,60 +69,45 @@ async function run() {
     );
     const rates = new Map(ratesResult.rows.map((row) => [row.currency_code, Number(row.usd_rate)]));
 
-    // ServiceCredits ('SC') is a non-redeemable utility token and is NEVER converted to USD. Its
-    // recognized volume is summed separately in SC units and written as its own metric, shown alongside
-    // the USD figure. Convertible (fiat/crypto) volume is normalized to USD via the active rates.
-    const SERVICE_CREDITS_CODE = 'SC';
-    let usdEstimate = 0;
-    let serviceCreditsVolume = 0;
-    const unrated = new Set();
+    // Community Value Index: fold EVERY value type (fiat, crypto, ServiceCredits, barter) into one
+    // relative figure via its owner-set contribution weight. The index is NOT money and carries no
+    // currency symbol; the weights (here USD is the reference base = 1) are never a price or redemption
+    // rate. A value type with no active weight is surfaced and excluded, never silently zeroed.
+    let valueIndex = 0;
+    const unweighted = new Set();
     for (const source of SOURCES) {
       const res = await client.query(source.sql);
       for (const row of res.rows) {
         const code = row.currency_code;
         if (!code) continue;
         const amount = Number(row.total) || 0;
-        if (code === SERVICE_CREDITS_CODE) {
-          serviceCreditsVolume += amount;
+        const weight = rates.get(code);
+        if (weight === undefined) {
+          unweighted.add(code);
           continue;
         }
-        const rate = rates.get(code);
-        if (rate === undefined) {
-          unrated.add(code);
-          continue;
-        }
-        usdEstimate += amount * rate;
+        valueIndex += amount * weight;
       }
     }
 
-    const metricIdFor = (metricKey) =>
-      crypto.createHash('sha256').update(`${WEEK_START}${metricKey}gdp`).digest('hex').slice(0, 32);
-
-    const recognizedUsd = Math.round(usdEstimate);
+    const metricId = crypto
+      .createHash('sha256')
+      .update(`${WEEK_START}gdp_value_indexgdp`)
+      .digest('hex')
+      .slice(0, 32);
+    const recognizedIndex = Math.round(valueIndex);
     await client.query(
       `INSERT INTO gdp_metric_snapshots
          (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin, is_estimate)
-       VALUES ($1, $2, 'gdp_recognized_volume_usd', $3, false, 'service-delivery', 'gdp', true)
+       VALUES ($1, $2, 'gdp_value_index', $3, false, 'service-delivery', 'gdp', true)
        ON CONFLICT (id) DO UPDATE SET metric_value = EXCLUDED.metric_value, is_estimate = EXCLUDED.is_estimate`,
-      [metricIdFor('gdp_recognized_volume_usd'), WEEK_START, recognizedUsd],
+      [metricId, WEEK_START, recognizedIndex],
     );
 
-    // ServiceCredits volume is an exact count of SC, not a normalized estimate → is_estimate = false.
-    const recognizedSc = Math.round(serviceCreditsVolume);
-    await client.query(
-      `INSERT INTO gdp_metric_snapshots
-         (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin, is_estimate)
-       VALUES ($1, $2, 'gdp_recognized_volume_sc', $3, false, 'service-delivery', 'gdp', false)
-       ON CONFLICT (id) DO UPDATE SET metric_value = EXCLUDED.metric_value, is_estimate = EXCLUDED.is_estimate`,
-      [metricIdFor('gdp_recognized_volume_sc'), WEEK_START, recognizedSc],
-    );
-
-    if (unrated.size > 0) {
-      console.warn(`Excluded currencies with no active rate: ${[...unrated].join(', ')}`);
+    if (unweighted.size > 0) {
+      console.warn(`Excluded value types with no active contribution weight: ${[...unweighted].join(', ')}`);
     }
-    console.log(
-      `Recognized for week ${WEEK_START}: USD estimate ${recognizedUsd}, ServiceCredits volume ${recognizedSc} SC`,
-    );
+    console.log(`Community Value Index for week ${WEEK_START}: ${recognizedIndex}`);
   } finally {
     client.release();
     await pool.end();

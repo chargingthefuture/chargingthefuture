@@ -6,27 +6,23 @@
 // overlays the real community-wide USD estimate and active-member count.
 
 import {
+  COMMUNITY_VALUE_INDEX_METRIC_KEY,
   GDP_ACTIVE_MEMBERS_METRIC_KEY,
-  GDP_HEADLINE_METRIC_KEY,
-  GDP_RECOGNIZED_SC_METRIC_KEY,
+  formatCommunityValueIndex,
   formatGdpCount,
-  formatGdpServiceCredits,
-  formatGdpUsd,
   pickGdpMetricValue,
   type GdpMetricRow,
 } from "./gdp-shared";
 import { GdpWorldMap } from "./gdp-world-map";
 
 export function GdpMap({ metricRows }: { metricRows: GdpMetricRow[] }) {
-  const gdpTotal = pickGdpMetricValue(metricRows, GDP_HEADLINE_METRIC_KEY);
+  const valueIndex = pickGdpMetricValue(metricRows, COMMUNITY_VALUE_INDEX_METRIC_KEY);
   const activeMembers = pickGdpMetricValue(metricRows, GDP_ACTIVE_MEMBERS_METRIC_KEY);
-  const serviceCredits = pickGdpMetricValue(metricRows, GDP_RECOGNIZED_SC_METRIC_KEY);
-  const hasData = gdpTotal !== null || activeMembers !== null || serviceCredits !== null;
+  const hasData = valueIndex !== null || activeMembers !== null;
   return (
     <GdpWorldMap
-      headline={formatGdpUsd(gdpTotal)}
+      headline={formatCommunityValueIndex(valueIndex)}
       membersLabel={activeMembers !== null ? formatGdpCount(activeMembers) : null}
-      serviceCreditsLabel={serviceCredits !== null ? formatGdpServiceCredits(serviceCredits) : null}
       hasData={hasData}
     />
   );

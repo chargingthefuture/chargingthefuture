@@ -1,18 +1,20 @@
 import { Pool } from 'pg';
 
-// Seed the `currency_usd_rates` table (issue #121). These are the notional USD conversion factors the
-// GDP estimation layer uses to roll multi-currency transaction volume into one USD-denominated
-// estimate. They are owner-curated estimates, not market quotes, and are revised over time (a new row
-// per currency_code with a later `as_of` becomes the active rate).
+// Seed the `currency_usd_rates` table (issue #121). Despite its historical name, this table now holds
+// the Community Value Index CONTRIBUTION WEIGHTS: how much one unit of each value type adds to the
+// single relative index. USD is just the reference base (weight 1). They are owner-curated, non-binding
+// weights — not market quotes — and are revised over time (a new row per currency_code with a later
+// `as_of` becomes the active weight).
 //
-// LEGAL GUARDRAIL: these factors are used ONLY inside the aggregate, estimate-labeled GDP figure. They
-// are NEVER shown as a per-wallet or per-price fiat equivalence. ServiceCredits is deliberately NOT in
-// this table — the non-redeemable utility token has no USD rate and is never converted to fiat; its
-// recognized volume is reported separately in SC units (metric gdp_recognized_volume_sc).
+// IMPORTANT: these weights are used ONLY to compute the aggregate Community Value Index, which is a
+// relative measure, NOT money. They are NEVER shown as a price, an exchange rate, or a per-wallet/
+// per-token fiat equivalence. The ServiceCredits and Barter weights in particular are non-binding index
+// inputs, not redemption values — ServiceCredits is never convertible to fiat.
 const AS_OF = '2026-01-01';
 const SOURCE = 'owner-seed';
 
-// 1 unit of <code> is counted as <usdRate> USD inside the GDP estimate. Approximate, owner-revisable.
+// 1 unit of <code> contributes <usdRate> to the Community Value Index (USD = 1 reference base).
+// Owner-revisable, non-binding weights — not prices or redemption rates.
 const RATES = [
   { code: 'USD', usdRate: 1 },
   { code: 'EUR', usdRate: 1.08 },
@@ -25,9 +27,13 @@ const RATES = [
   { code: 'INR', usdRate: 0.012 },
   { code: 'BRL', usdRate: 0.18 },
   { code: 'BTC', usdRate: 65000 },
-  // ServiceCredits ('SC') is intentionally NOT given a USD rate. It is a non-redeemable utility token
-  // with no fiat peg or redemption value, so it is never converted to USD. Its recognized volume is
-  // reported separately in SC units (metric gdp_recognized_volume_sc) and shown alongside the USD GDP.
+  // ServiceCredits: a non-binding index weight, NOT a redemption rate — ServiceCredits is never
+  // convertible to fiat. It contributes to the relative Community Value Index only.
+  { code: 'SC', usdRate: 0.1 },
+  // Barter: a no-money exchange. Counted by the NUMBER of completed barter trades; this weight is the
+  // notional index contribution per trade (non-binding, owner-revisable). requires_amount is FALSE on
+  // the currencies catalog row, so barter never carries a monetary amount.
+  { code: 'BARTER', usdRate: 5 },
 ];
 
 function requireEnv(name) {

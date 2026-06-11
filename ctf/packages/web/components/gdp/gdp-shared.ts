@@ -80,11 +80,18 @@ export type GdpTab = "dashboard" | "map";
 // world map. These are community-wide aggregates only — never per-user figures.
 export const GDP_ACTIVE_MEMBERS_METRIC_KEY = "weekly_active_users";
 
-// Recognized service activity denominated in ServiceCredits — the platform's
-// non-redeemable utility token. Shown alongside the USD GDP, always in SC units and
-// NEVER converted to a dollar value (no fiat peg). It reflects community mutual-aid
-// activity so the USD figure alone does not understate self-sufficiency.
-export const GDP_RECOGNIZED_SC_METRIC_KEY = "gdp_recognized_volume_sc";
+// The Community Value Index — one composite measure of all recognized economic
+// activity, folding every value type (fiat, crypto, ServiceCredits, barter) into a
+// single relative figure. It is NOT money: shown as a plain number with no currency
+// symbol, and never a price or redemption value for any currency or token.
+export const COMMUNITY_VALUE_INDEX_METRIC_KEY = "gdp_value_index";
+
+// On-screen label and the plain-language disclaimer (one source of truth so the legal
+// wording cannot drift across surfaces). The plugin stays "GDP"; this reframes the
+// figure as a custom, community-specific measure in the spirit of GDP.
+export const COMMUNITY_VALUE_INDEX_LABEL = "Community Value Index";
+export const COMMUNITY_VALUE_INDEX_DISCLAIMER =
+  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
 // Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
 // dash when the figure is absent so the map never invents a number.
@@ -104,13 +111,15 @@ export function formatGdpCount(value: number | null | undefined): string {
   return String(value);
 }
 
-// Format a ServiceCredits amount into compact M/K form with the "SC" unit. Returns a
-// dash when absent. Never prefixed with a currency symbol — ServiceCredits is not fiat.
-export function formatGdpServiceCredits(value: number | null | undefined): string {
+// Format the Community Value Index into compact M/K form. NEVER prefixed with a
+// currency symbol — the index is a relative measure, not money. Returns a dash when
+// absent so the surface never invents a number.
+export function formatCommunityValueIndex(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M SC`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K SC`;
-  return `${value.toLocaleString()} SC`;
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toLocaleString();
 }
 
 // Pull a single metric value out of the raw report metric rows. Returns null when

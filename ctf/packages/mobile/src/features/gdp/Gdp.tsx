@@ -11,12 +11,16 @@ import {
 import { useAuth } from '../../auth/auth-context';
 import { fetchGdpCurrentReport, pickMetric, pickMetricIsEstimate, GdpReport } from './api';
 
-// Shared estimate copy — mirrors the web GDP shell (gdp-shared.ts) so the legal
-// wording stays identical: a community-wide normalized USD estimate, never a
-// per-user redemption value.
+// Shared estimate copy — mirrors the web GDP shell (gdp-shared.ts) so the wording
+// stays identical.
 const GDP_ESTIMATE_CHIP_LABEL = 'Estimate';
-const GDP_ESTIMATE_FOOTNOTE =
-  '* USD estimate normalized across currencies — a transparency metric, not a ledger.';
+
+// The Community Value Index — one composite of all value types (fiat, crypto,
+// ServiceCredits, barter), shown with no currency symbol. Label + disclaimer mirror
+// gdp-shared.ts so the legal wording cannot drift across platforms.
+const COMMUNITY_VALUE_INDEX_LABEL = 'Community Value Index';
+const COMMUNITY_VALUE_INDEX_DISCLAIMER =
+  "Community Value is one measure of all the value exchanged in this community — money, crypto, ServiceCredits, and barter — combined through community-set weights. It's a relative index for transparency, in the spirit of GDP. It isn't money, a price, or an exchange or redemption value for any currency or token.";
 
 // ─── Design tokens (from MobileGDP.tsx design-sync) ──────────────────────────
 const COLOR = '#06B6D4';
@@ -136,22 +140,20 @@ function GdpMainView({ report }: { report: GdpReport }) {
   const [activeNav, setActiveNav] = useState<NavKey>('overview');
 
   // Real metric bindings — keys observed in web repository.ts getGdpShellStats()
-  const totalRevenue = pickMetric(report.metrics, 'gdp_total_revenue');
+  // The headline figure is the Community Value Index — one composite of all value types (fiat, crypto,
+  // ServiceCredits, barter), shown as a plain number with no currency symbol (a relative measure, not
+  // money). Replaces the prior USD revenue figure as the prominent economy number.
+  const valueIndex = pickMetric(report.metrics, 'gdp_value_index');
   const weeklyActiveUsers = pickMetric(report.metrics, 'weekly_active_users');
-  // Recognized ServiceCredits activity — shown alongside the USD figure, always in SC units and never
-  // converted to dollars (ServiceCredits is a non-redeemable utility token with no fiat peg).
-  const serviceCreditsVolume = pickMetric(report.metrics, 'gdp_recognized_volume_sc');
-  // The headline GDP figure shows the estimate treatment only when the published
-  // data flags it a normalized USD estimate.
-  const totalRevenueIsEstimate = pickMetricIsEstimate(report.metrics, 'gdp_total_revenue');
+  const valueIndexIsEstimate = pickMetricIsEstimate(report.metrics, 'gdp_value_index');
 
   // Format helpers
-  function fmtUsd(n: number | null): string {
+  function fmtIndex(n: number | null): string {
     if (n === null) return '—';
-    if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
-    return `$${n.toLocaleString()}`;
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString();
   }
 
   function fmtCount(n: number | null): string {
@@ -159,14 +161,6 @@ function GdpMainView({ report }: { report: GdpReport }) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return String(n);
-  }
-
-  // ServiceCredits, never a fiat symbol — the unit is "SC", not "$".
-  function fmtServiceCredits(n: number | null): string {
-    if (n === null) return '—';
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M SC`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K SC`;
-    return `${n.toLocaleString()} SC`;
   }
 
   return (
@@ -197,10 +191,10 @@ function GdpMainView({ report }: { report: GdpReport }) {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentPad}>
         {activeNav === 'overview' && (
           <GdpOverviewTab
-            totalRevenue={totalRevenue}
-            totalRevenueIsEstimate={totalRevenueIsEstimate}
+            valueIndex={valueIndex}
+            valueIndexIsEstimate={valueIndexIsEstimate}
             weeklyActiveUsers={weeklyActiveUsers}
-            fmtUsd={fmtUsd}
+            fmtIndex={fmtIndex}
             fmtCount={fmtCount}
             publication={report.publication}
           />
@@ -209,10 +203,10 @@ function GdpMainView({ report }: { report: GdpReport }) {
           <GdpSectorsTab />
         )}
         {activeNav === 'trend' && (
-          <GdpTrendTab totalRevenue={totalRevenue} fmtUsd={fmtUsd} />
+          <GdpTrendTab valueIndex={valueIndex} fmtIndex={fmtIndex} />
         )}
         {activeNav === 'home' && (
-          <GdpHomeTab totalRevenue={totalRevenue} weeklyActiveUsers={weeklyActiveUsers} serviceCreditsVolume={serviceCreditsVolume} fmtUsd={fmtUsd} fmtCount={fmtCount} fmtServiceCredits={fmtServiceCredits} />
+          <GdpHomeTab valueIndex={valueIndex} weeklyActiveUsers={weeklyActiveUsers} fmtIndex={fmtIndex} fmtCount={fmtCount} />
         )}
       </ScrollView>
 
@@ -248,17 +242,17 @@ function navIcon(key: NavKey): string {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 function GdpOverviewTab({
-  totalRevenue,
-  totalRevenueIsEstimate,
+  valueIndex,
+  valueIndexIsEstimate,
   weeklyActiveUsers,
-  fmtUsd,
+  fmtIndex,
   fmtCount,
   publication,
 }: {
-  totalRevenue: number | null;
-  totalRevenueIsEstimate: boolean;
+  valueIndex: number | null;
+  valueIndexIsEstimate: boolean;
   weeklyActiveUsers: number | null;
-  fmtUsd: (_n: number | null) => string;
+  fmtIndex: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
   publication: GdpReport['publication'];
 }) {
@@ -266,20 +260,17 @@ function GdpOverviewTab({
     <>
       {/* Hero card */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>TI SKILLS ECONOMY</Text>
+        <Text style={styles.heroLabel}>{COMMUNITY_VALUE_INDEX_LABEL.toUpperCase()}</Text>
         <View style={styles.heroValueRow}>
-          <Text style={styles.heroValue}>{fmtUsd(totalRevenue)}</Text>
-          {totalRevenueIsEstimate && (
+          <Text style={styles.heroValue}>{fmtIndex(valueIndex)}</Text>
+          {valueIndexIsEstimate && (
             <View style={styles.estimateChip}>
               <Text style={styles.estimateChipText}>{GDP_ESTIMATE_CHIP_LABEL}</Text>
             </View>
           )}
         </View>
         <Text style={styles.heroSub}>{publication.title}</Text>
-        {/* Progress bar omitted — $300B target figure has no API backing field */}
-        {totalRevenueIsEstimate && (
-          <Text style={styles.estimateFootnote}>{GDP_ESTIMATE_FOOTNOTE}</Text>
-        )}
+        <Text style={styles.estimateFootnote}>{COMMUNITY_VALUE_INDEX_DISCLAIMER}</Text>
       </View>
 
       {/* Stat chips */}
@@ -330,11 +321,11 @@ function GdpSectorsTab() {
 
 // ─── Trend tab ────────────────────────────────────────────────────────────────
 function GdpTrendTab({
-  totalRevenue,
-  fmtUsd,
+  valueIndex,
+  fmtIndex,
 }: {
-  totalRevenue: number | null;
-  fmtUsd: (_n: number | null) => string;
+  valueIndex: number | null;
+  fmtIndex: (_n: number | null) => string;
 }) {
   /*
    * Weekly series data (M/T/W/T/F/S/S bar chart) is not returned by
@@ -346,7 +337,7 @@ function GdpTrendTab({
       <Text style={styles.trendTitle}>Weekly Growth</Text>
       <View style={styles.trendCard}>
         <Text style={styles.trendLabel}>Current total (latest published report)</Text>
-        <Text style={styles.trendValue}>{fmtUsd(totalRevenue)}</Text>
+        <Text style={styles.trendValue}>{fmtIndex(valueIndex)}</Text>
         <Text style={styles.trendNote}>
           Weekly trend series is not yet available in the current report.
         </Text>
@@ -374,34 +365,25 @@ const MAP_REGIONS: { key: string; top: DimensionValue; left: DimensionValue; wid
 ];
 
 function GdpHomeTab({
-  totalRevenue,
+  valueIndex,
   weeklyActiveUsers,
-  serviceCreditsVolume,
-  fmtUsd,
+  fmtIndex,
   fmtCount,
-  fmtServiceCredits,
 }: {
-  totalRevenue: number | null;
+  valueIndex: number | null;
   weeklyActiveUsers: number | null;
-  serviceCreditsVolume: number | null;
-  fmtUsd: (_n: number | null) => string;
+  fmtIndex: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
-  fmtServiceCredits: (_n: number | null) => string;
 }) {
-  const hasData = totalRevenue !== null || weeklyActiveUsers !== null || serviceCreditsVolume !== null;
+  const hasData = valueIndex !== null || weeklyActiveUsers !== null;
   return (
     <View>
       <View style={styles.mapHeaderRow}>
-        <Text style={styles.mapHeadline}>{fmtUsd(totalRevenue)}</Text>
-        <Text style={styles.mapHeadlineLabel}>TI Skills Economy</Text>
+        <Text style={styles.mapHeadline}>{fmtIndex(valueIndex)}</Text>
+        <Text style={styles.mapHeadlineLabel}>{COMMUNITY_VALUE_INDEX_LABEL}</Text>
       </View>
       {weeklyActiveUsers !== null && (
         <Text style={styles.mapMembers}>{fmtCount(weeklyActiveUsers)} active members</Text>
-      )}
-      {serviceCreditsVolume !== null && (
-        <Text style={styles.mapServiceCredits}>
-          {fmtServiceCredits(serviceCreditsVolume)} in community service activity
-        </Text>
       )}
       <View style={styles.mapCanvas}>
         {MAP_REGIONS.map((r) => (
@@ -785,12 +767,6 @@ const styles = StyleSheet.create({
   mapMembers: {
     fontSize: 12,
     color: TEXT_MUTED,
-    marginBottom: 4,
-  },
-  mapServiceCredits: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#A78BFA',
     marginBottom: 12,
   },
   mapCanvas: {

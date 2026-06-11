@@ -144,7 +144,11 @@ INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_p
   ('CNY', 'Chinese Yuan',          'fiat',   FALSE, 'CN¥', 2, TRUE, 80),
   ('INR', 'Indian Rupee',          'fiat',   FALSE, '₹',   2, TRUE, 90),
   ('BRL', 'Brazilian Real',        'fiat',   FALSE, 'R$',  2, TRUE, 100),
-  ('BTC', 'Bitcoin',               'crypto', FALSE, '₿',   8, TRUE, 110)
+  ('BTC', 'Bitcoin',               'crypto', FALSE, '₿',   8, TRUE, 110),
+  -- Barter: a no-money exchange (goods/services traded directly). requires_amount = FALSE because a
+  -- barter trade has no monetary amount; it is selectable as a payment type and each completed barter
+  -- trade contributes to the Community Value Index by count, never by a fiat amount.
+  ('BARTER', 'Barter (no money)',  'barter', FALSE, NULL,  0, FALSE, 120)
 ON CONFLICT (code) DO UPDATE SET
   label              = EXCLUDED.label,
   kind               = EXCLUDED.kind,
