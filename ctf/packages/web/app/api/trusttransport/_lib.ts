@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
-import { getAppUrl } from 'lib/auth/runtime-env';
+import { checkMutationOrigin } from 'lib/auth/csrf';
 import { TRUSTTRANSPORT_ERROR_CODE } from 'lib/trusttransport/constants';
 import { ensureTrustTransportAdmin, ensureTrustTransportProviderRole } from 'lib/trusttransport/policy';
 import { reportError } from 'lib/observability/report';
@@ -58,24 +58,17 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
     );
   }
 
-  const appUrl = getAppUrl();
-  const origin = request.headers.get('origin');
-  if (!appUrl || !origin) {
-    return null;
-  }
-
-  try {
-    const appHost = new URL(appUrl).host;
-    const originHost = new URL(origin).host;
-    if (appHost !== originHost) {
-      return NextResponse.json(
-        { ok: false, code: TRUSTTRANSPORT_ERROR_CODE.csrfDenied, message: 'Cross-origin mutation denied by CSRF policy.' },
-        { status: 403 },
-      );
-    }
-  } catch {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
     return NextResponse.json(
       { ok: false, code: TRUSTTRANSPORT_ERROR_CODE.csrfDenied, message: 'Invalid request origin metadata.' },
+      { status: 403 },
+    );
+  }
+
+  if (originCheck === 'cross_origin') {
+    return NextResponse.json(
+      { ok: false, code: TRUSTTRANSPORT_ERROR_CODE.csrfDenied, message: 'Cross-origin mutation denied by CSRF policy.' },
       { status: 403 },
     );
   }

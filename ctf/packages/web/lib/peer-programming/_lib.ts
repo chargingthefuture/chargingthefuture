@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from '../auth/server-authz';
-import { getAppUrl } from '../auth/runtime-env';
+import { checkMutationOrigin } from '../auth/csrf';
 import { PEER_PROGRAMMING_ERROR_CODE } from './constants';
 import { ensurePeerProgrammingAdmin } from './policy';
 
@@ -38,21 +38,16 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
       { status: 403 },
     );
   }
-  const appUrl = getAppUrl();
-  const origin = request.headers.get('origin');
-  if (!appUrl || !origin) {
-    return null;
-  }
-  try {
-    if (new URL(appUrl).host !== new URL(origin).host) {
-      return NextResponse.json(
-        { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.csrfDenied, message: 'Cross-origin mutation denied by CSRF policy.' },
-        { status: 403 },
-      );
-    }
-  } catch {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
     return NextResponse.json(
       { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.csrfDenied, message: 'Invalid request origin metadata.' },
+      { status: 403 },
+    );
+  }
+  if (originCheck === 'cross_origin') {
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.csrfDenied, message: 'Cross-origin mutation denied by CSRF policy.' },
       { status: 403 },
     );
   }
