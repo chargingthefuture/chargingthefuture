@@ -199,7 +199,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     slug: 'bug-reporting',
     name: 'Bug Reporting',
     summary: 'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.',
-    availabilityState: 'planned',
+    availabilityState: 'implemented_shell',
     navRank: 220,
     isVisible: false,
   },

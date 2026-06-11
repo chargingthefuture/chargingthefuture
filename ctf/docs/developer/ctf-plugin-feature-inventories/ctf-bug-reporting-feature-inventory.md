@@ -25,11 +25,14 @@ and does no external calls.
 
 ## Target User Features
 
-- A "Report a problem" control (design-gated; not built yet — see Delivery Status).
-- One short form: what went wrong (required), what you were trying to do (optional). Page,
-  plugin, app version, and browser are attached automatically.
-- Immediate, private storage of the report with a friendly confirmation. No technical
-  detail is ever asked of the user.
+- A "Report a problem" control reached from the global Help control (the "?" item in the
+  shell's icon rail on the desktop layout, and the top bar on the phone-width layout). It is
+  **not** a plugin grid tile and **not** a standalone page — it opens a modal.
+- One short form: what went wrong (required), what you were trying to do (optional). Page and
+  plugin are attached automatically; the browser is read server-side. (No app-version constant
+  exists in the app yet, so `appVersion` is not sent.)
+- Immediate, private storage of the report with a calm confirmation. No technical detail is
+  ever asked of the user.
 
 ## Target Admin Features
 
@@ -87,14 +90,23 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 
 - **Web (backend):** complete — schema, submit route, redaction/risk gate, repository,
   create-issues job and workflow.
-- **Web (UI):** not started — the "Report a problem" form is a net-new surface and is
-  **design-gated** (rule 127). Awaiting a design in the `design/` submodule.
-- **mobile-responsive / android:** not started; follows the web UI once its design lands.
+- **Web (UI):** complete — the global Help control + popover (`components/bug-reports/help-control.tsx`,
+  wired into `components/community-shell/shell-icon-rail.tsx` on the desktop rail and into the
+  phone-width top bar in `community-shell.tsx`) and the report modal
+  (`components/bug-reports/bug-report-modal.tsx` with `bug-report-form.tsx`,
+  `bug-report-result.tsx`, `bug-report-submit.ts`, and `bug-report-modal.module.css`). The modal
+  carries all five states — form, submitting, success, error, rate-limited — using the app's theme
+  tokens (no hard-coded gradient).
+- **mobile-responsive:** complete — the same web modal renders as a bottom sheet at phone width
+  and the Help control sits on the top bar.
+- **android:** complete — `packages/mobile/src/features/bug-reporting/` (`BugReportModal.tsx`,
+  `ReportAProblemEntry.tsx`, `api.ts`) mirrors the web surface one-to-one with the same five states
+  and the same endpoint + CSRF wiring.
 
-The plugin is registered as `bug-reporting` (`planned`, hidden) so it does not show a
-broken tile until the UI ships. Its `ctf/config/plugin-parity-contracts.json` entry declares
-no mobile surface yet (`requiresMobileSurface: false`, `requiresExplicitWebShell: false`);
-flip these on when the web shell and mobile feature land.
+The plugin is registered as `bug-reporting` (`implemented_shell`, hidden) — it stays hidden
+because it is a Help-menu modal, not a grid tile. Its `ctf/config/plugin-parity-contracts.json`
+entry declares `mobileFeatureDirs: ["bug-reporting"]` with `requiresMobileSurface: false`
+(the mobile entry is a help/settings row, not a required full plugin surface).
 
 ## Seed Coverage Status
 
@@ -102,7 +114,6 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Gaps & Known Technical Debt
 
-- The "Report a problem" UI is not built (design-gated).
 - The private admin view for held reports is not built.
 - The triage agent (`bug-reports-triage.yml`) and the human-gated build agent
   (`bug-reports-build.yml`) are built but manual-dispatch only until the triage repo's labels
@@ -117,3 +128,16 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 - 2026-06-10: Initial backend foundation — `bug_reports` table, submit route, redaction/risk
   gate, repository, create-issues script and (dispatch-only) workflow, plugin registration
   (hidden), and this inventory. UI deferred pending design.
+- 2026-06-11: Web + Android UI built against the approved design. The surface is the global
+  Help control (the "?" item in the shell icon rail on desktop, and the phone-width top bar) that
+  opens a popover whose one live item, "Report a problem", opens a modal. The modal carries all
+  five states — form, submitting, success, error (preserving the typed text), rate-limited — and
+  posts to `POST /api/bug-reports` with the `x-ctf-csrf: 1` header and same-origin cookies. It
+  attaches `pageUrl` and (on `/apps/<slug>`) `pluginSlug` automatically; `appVersion` is omitted
+  because no app-version constant exists yet. Status codes map to states: 201 → success (a
+  `held_for_review` status varies one line to say a human will review it), 429 → rate-limited,
+  any other non-201 → error. The "Help center" item in the mockup popover/Settings row was
+  omitted because no help-center URL exists in the app or config (no dead links). Android mirror
+  added at `packages/mobile/src/features/bug-reporting/`. Registry `availabilityState` flipped to
+  `implemented_shell` (still `isVisible: false`). Theme tokens replace the mockup's hard-coded
+  gradient.

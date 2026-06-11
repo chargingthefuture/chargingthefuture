@@ -1,0 +1,397 @@
+/* Report-a-problem modal — translated from the design's ReportAProblem* mockups
+   into the app's theme tokens. The mockups used a hard-coded purple→cyan gradient
+   and fixed hex values; here every surface, border, and text colour reads from the
+   shared --ctf-* tokens so the modal follows the active theme (default and comic). */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.modal {
+  width: 100%;
+  max-width: 540px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--ctf-surface);
+  border: 1px solid var(--ctf-border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  color: var(--ctf-text);
+}
+
+.modalNarrow {
+  max-width: 480px;
+  padding: 44px 36px 36px;
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ctf-text);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--ctf-text-subtle);
+  margin: 4px 0 0;
+}
+
+.close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ctf-text-subtle);
+  flex-shrink: 0;
+}
+
+.close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.close:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.fieldContext {
+  margin-bottom: 18px;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ctf-text);
+}
+
+.badgeRequired {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+}
+
+.badgeOptional {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ctf-text-subtle);
+}
+
+.textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ctf-text-shell);
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.textarea:focus {
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  resize: none;
+}
+
+.privacyNote {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 22px;
+}
+
+.privacyNoteIcon {
+  color: var(--ctf-text-subtle);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.privacyNoteText {
+  font-size: 12px;
+  color: var(--ctf-text-subtle);
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btnGhost {
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--ctf-text-subtle);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.btnGhost:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btnPrimary {
+  padding: 10px 22px;
+  border-radius: 8px;
+  background: var(--ctf-cta-bg);
+  border: 1px solid var(--ctf-cta-border);
+  color: var(--ctf-cta-text);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnPrimary:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.sendingDots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.sendingDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  display: inline-block;
+  animation: bugReportPulse 1.1s ease-in-out infinite;
+}
+
+.sendingDot:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.sendingDot:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes bugReportPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* ─── Result states (success / error / rate-limited) ───────────────────────── */
+.resultIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.resultIconSuccess {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: #22c55e;
+}
+
+.resultIconError {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #ef4444;
+}
+
+.resultIconWait {
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.22);
+  color: #9ca3af;
+}
+
+.resultTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ctf-text);
+  margin: 0 0 10px;
+}
+
+.resultBody {
+  font-size: 14px;
+  color: var(--ctf-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 30px;
+}
+
+.btnBlock {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--ctf-cta-bg);
+  border: 1px solid var(--ctf-cta-border);
+  color: var(--ctf-cta-text);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  font-family: inherit;
+}
+
+.btnLink {
+  background: none;
+  border: none;
+  color: var(--ctf-text-subtle);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
+.btnNeutral {
+  padding: 11px 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ctf-text-shell);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ─── Help popover (icon-rail entry) ───────────────────────────────────────── */
+.helpWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.helpPopover {
+  position: absolute;
+  bottom: -4px;
+  left: calc(100% + 12px);
+  background: var(--ctf-surface);
+  border: 1px solid var(--ctf-border);
+  border-radius: 14px;
+  padding: 6px 0;
+  min-width: 210px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 1001;
+}
+
+.helpItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  background: rgba(167, 139, 250, 0.1);
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.helpItem:hover {
+  background: rgba(167, 139, 250, 0.16);
+}
+
+.helpItemLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.helpItemIcon {
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+/* Phone-width: present the modal as a bottom sheet to match the mobile mockups,
+   and anchor the help popover below the top-bar button so it stays on screen. */
+@media (max-width: 900px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal,
+  .modalNarrow {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    max-height: 85vh;
+  }
+
+  .helpPopover {
+    bottom: auto;
+    left: auto;
+    right: 0;
+    top: calc(100% + 8px);
+  }
+}

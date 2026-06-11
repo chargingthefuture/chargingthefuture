@@ -14,6 +14,7 @@ import { ShellChatPanel } from './shell-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
 import { ContributionsBanner } from '../contributions/contributions-banner';
+import { HelpControl } from '../bug-reports/help-control';
 import styles from './community-shell.module.css';
 
 type CommunityShellProps = {
@@ -276,6 +277,10 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           </button>
         </div>
         <div className={styles.mobileBarAuth}>
+          {/* Help control on the phone-width top bar: the desktop icon rail (which
+              hosts it) is hidden below 900px, so signed-in members reach the
+              "Report a problem" modal from here instead. */}
+          {isAuthenticated ? <HelpControl /> : null}
           {isAuthenticated ? (
             // Clerk's account widget on the phone-width bar too: avatar opens
             // Clerk's menu; "Manage account" edits name, username, and email.
