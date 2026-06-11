@@ -133,7 +133,7 @@ canonical_metrics:
       -- latest contribution weight per type (currency_usd_rates, USD = 1 reference base), summed across
       -- all sources and value types. ServiceCredits and barter are included; a type with no active weight
       -- is surfaced and excluded. The result is a relative index, never a monetary amount.
-      SELECT SUM(amount * weight) AS gdp_value_index
+      SELECT COALESCE(SUM(amount * weight), 0) AS gdp_value_index
       FROM eligible_settled_value
       JOIN latest_contribution_weights USING (currency_code);
     inputs:
