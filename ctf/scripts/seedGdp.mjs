@@ -35,6 +35,11 @@ const METRICS = [
   // volume via currency_usd_rates in the GDP estimation layer. isEstimate = true so the UI can label
   // it an estimate. The value here is a deterministic placeholder the owner/recognition layer revises.
   { key: 'gdp_total_revenue', value: 12500, source: 'gdp', isEstimate: true },
+  // Community Value Index (issue #121 follow-up): one composite, relative measure folding all value
+  // types (fiat, crypto, ServiceCredits, barter) via contribution weights. NOT money, shown without a
+  // currency symbol. The recognition job (pnpm gdp:recognize) revises this from real activity; this
+  // seeds a demo value.
+  { key: 'gdp_value_index', value: 13340, source: 'gdp', isEstimate: true },
 ];
 
 function deterministicId(weekDate, metricKey, sourcePlugin) {

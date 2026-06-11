@@ -10,7 +10,7 @@
 // aggregate is overlaid on the map. We never invent per-country values. If a
 // per-country table is added later, `regionFill` can be made data-driven.
 
-import { COLOR } from "./gdp-shared";
+import { COLOR, COMMUNITY_VALUE_INDEX_DISCLAIMER, COMMUNITY_VALUE_INDEX_LABEL } from "./gdp-shared";
 
 // Simplified continent outlines on a 1000x500 equirectangular canvas. These are
 // coarse silhouettes, accurate enough to read as a world map at dashboard scale.
@@ -62,7 +62,8 @@ export function GdpWorldMap({
   membersLabel,
   hasData,
 }: {
-  // Real aggregate USD estimate (already formatted), or a dash when absent.
+  // Community Value Index (already formatted, no currency symbol — it is a relative measure, not money),
+  // or a dash when absent.
   headline: string;
   // Real active-member count (already formatted), or null to hide the chip.
   membersLabel: string | null;
@@ -174,7 +175,7 @@ export function GdpWorldMap({
               textTransform: "uppercase",
             }}
           >
-            TI Skills Economy
+            {COMMUNITY_VALUE_INDEX_LABEL}
           </div>
           <div style={{ fontSize: 34, fontWeight: 900, color: COLOR, lineHeight: 1 }}>{headline}</div>
           {membersLabel ? (
@@ -185,8 +186,8 @@ export function GdpWorldMap({
 
       <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>
         {hasData
-          ? "Regions show where the survivor economy is active. The figure above is the community-wide USD estimate — per-country breakdowns are not published yet, so regions are shown in a single neutral state."
-          : "No published GDP report yet. The map activates once an aggregate figure is published."}
+          ? `Regions show where the survivor economy is active (per-country breakdowns are not published yet, so regions are shown in a single neutral state). ${COMMUNITY_VALUE_INDEX_DISCLAIMER}`
+          : "No published report yet. The map activates once a figure is published."}
       </div>
     </div>
   );

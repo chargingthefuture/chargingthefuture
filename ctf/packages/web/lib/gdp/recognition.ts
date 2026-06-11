@@ -1,84 +1,86 @@
 import { queryDb } from 'lib/db/postgres';
 
-// Multi-currency GDP recognition (issue #121). This module is the GDP "estimation layer": the ONLY
-// place the notional USD conversion factors from currency_usd_rates are applied. It rolls
-// multi-currency transaction volume into the single, estimate-labeled GDP figure.
+// Community Value Index recognition (issue #121). This module is the GDP plugin's "value layer": it
+// rolls all recognized economic activity across applicable plugins into ONE composite figure — the
+// Community Value Index — by weighting each value type (fiat, crypto, ServiceCredits, barter) with an
+// owner-curated, non-binding contribution weight.
 //
-// LEGAL GUARDRAIL: these factors must never be surfaced as a per-wallet or per-price
-// "ServiceCredits = fiat" equivalence. A user never sees "your N ServiceCredits = $X". The only place
-// a USD-normalized ServiceCredits value appears is inside the aggregate, estimate-labeled GDP total.
+// IMPORTANT — the index is NOT money. It is a relative, community-built measure for transparency, in the
+// spirit of GDP. The contribution weights (stored in currency_usd_rates, USD used only as the reference
+// base = 1) are NEVER surfaced as a price, an exchange rate, or a per-wallet/per-token fiat equivalence.
+// The index is displayed as a plain number with no currency symbol; nothing is pegged or redeemable.
 
-/** A single-currency transaction volume to recognize into the USD GDP estimate. */
+/** A single value-type volume to fold into the Community Value Index. */
 export interface CurrencyVolume {
   amount: number;
   currencyCode: string;
 }
 
-/** The result of rolling multi-currency volume into one USD estimate. */
-export interface UsdEstimate {
-  /** USD-denominated estimate (not an accounting figure; small drift is acceptable and disclosed). */
-  usdEstimate: number;
-  /** Currency codes that had no active rate and were therefore excluded (surfaced, never silently dropped). */
-  unratedCurrencies: string[];
+// Barter is a no-money exchange. It is a recognized value type (selectable as a payment kind), counted
+// in the index by the NUMBER of completed barter trades times its contribution weight — never by a
+// monetary amount, because a barter trade has none.
+export const BARTER_CODE = 'BARTER';
+
+/** The composite index plus the value types that had no contribution weight (surfaced, never silently dropped). */
+export interface CommunityValueResult {
+  /** The Community Value Index — a relative, non-monetary measure. Not dollars; shown without a symbol. */
+  valueIndex: number;
+  /** Value-type codes with no active contribution weight; excluded and surfaced rather than treated as zero. */
+  unweightedCurrencies: string[];
+  /** Per-value-type breakdown: the raw recognized volume in that type's own units (SC as SC, BTC as BTC). */
+  perCurrency: Array<{ currencyCode: string; amount: number }>;
 }
 
 /**
- * The active USD conversion factor per currency: the most recent `as_of` row per `currency_code` in
- * `currency_usd_rates`. `1` unit of the currency is worth `usd_rate` USD (a notional estimate the owner
- * curates). Returns a map keyed by currency code.
+ * The active contribution weight per value type: the most recent `as_of` row per `currency_code` in
+ * `currency_usd_rates`. `1` unit of the type contributes `usd_rate` to the Community Value Index, where
+ * USD is the reference base (weight 1). These are owner-curated, non-binding weights — not market quotes
+ * and not redemption rates. (The table keeps its historical name; it is the index weight table now.)
  */
-export async function getActiveUsdRates(): Promise<Map<string, number>> {
+export async function getActiveContributionWeights(): Promise<Map<string, number>> {
   const result = await queryDb<{ currency_code: string; usd_rate: string }>(
     `SELECT DISTINCT ON (currency_code) currency_code, usd_rate::text AS usd_rate
        FROM currency_usd_rates
        ORDER BY currency_code, as_of DESC`,
   );
-  const rates = new Map<string, number>();
+  const weights = new Map<string, number>();
   for (const row of result.rows) {
-    rates.set(row.currency_code, Number(row.usd_rate));
+    weights.set(row.currency_code, Number(row.usd_rate));
   }
-  return rates;
+  return weights;
 }
 
 /**
- * Roll a set of multi-currency volumes into one USD-denominated estimate using the active rates.
- * A currency with no active rate is excluded and reported in `unratedCurrencies` rather than being
- * treated as zero-value without surfacing it. The output is an ESTIMATE, labeled as such in-product.
+ * Fold a set of value-type volumes into the Community Value Index using the active contribution weights.
+ * A value type with no active weight is excluded and reported in `unweightedCurrencies` rather than being
+ * silently treated as zero. The output is a relative index, never a monetary figure.
  */
-export function normalizeVolumesToUsd(
+export function foldVolumesIntoIndex(
   volumes: CurrencyVolume[],
-  rates: Map<string, number>,
-): UsdEstimate {
-  let usdEstimate = 0;
-  const unrated = new Set<string>();
+  weights: Map<string, number>,
+): { valueIndex: number; unweightedCurrencies: string[] } {
+  let valueIndex = 0;
+  const unweighted = new Set<string>();
   for (const volume of volumes) {
-    const rate = rates.get(volume.currencyCode);
-    if (rate === undefined) {
-      unrated.add(volume.currencyCode);
+    const weight = weights.get(volume.currencyCode);
+    if (weight === undefined) {
+      unweighted.add(volume.currencyCode);
       continue;
     }
-    usdEstimate += volume.amount * rate;
+    valueIndex += volume.amount * weight;
   }
-  return { usdEstimate, unratedCurrencies: [...unrated] };
-}
-
-/** Convenience: load the active rates and normalize in one call (server-side only). */
-export async function recognizeUsdEstimate(volumes: CurrencyVolume[]): Promise<UsdEstimate> {
-  const rates = await getActiveUsdRates();
-  return normalizeVolumesToUsd(volumes, rates);
+  return { valueIndex, unweightedCurrencies: [...unweighted] };
 }
 
 /**
- * A named source of recognizable economic volume — one per contributing plugin. GDP recognition spans
- * all applicable plugins; sources register below and the aggregator rolls them up. TrustTransport is
- * the first source; add others (e.g. LightHouse paid rent, LevelUp disbursements) here as the owner
- * approves them. A source must contribute ONLY eligible settled spend — never transfers or
- * deletion/reclaim reallocations, which the GDP non-recognition rules exclude.
+ * A named source of recognizable economic activity — one per contributing plugin. The aggregator rolls
+ * these up into the Community Value Index. A source must contribute ONLY eligible settled value — never
+ * transfers or deletion/reclaim reallocations, which the non-recognition rules exclude.
  */
 export interface RecognitionSource {
   pluginSlug: string;
   label: string;
-  /** Load this source's eligible settled spend, one entry per currency (server-side). */
+  /** Load this source's eligible settled value, one entry per value type (server-side). */
   loadVolumes(): Promise<CurrencyVolume[]>;
 }
 
@@ -86,7 +88,7 @@ export interface RecognitionSource {
  * TrustTransport: the value of completed marketplace tasks credited to providers. Recognizes the
  * positive earning entries (`credit` + `release`); excludes `debit`/`hold` (internal/pending) and any
  * reclaim/reallocation. Groups by the referenced `price_currency`, falling back to the legacy
- * free-text `currency`; unknown codes are surfaced (not silently dropped) by the normalizer.
+ * free-text `currency`; unknown codes are surfaced (not silently dropped) by the aggregator.
  */
 export const trustTransportSource: RecognitionSource = {
   pluginSlug: 'trusttransport',
@@ -105,32 +107,71 @@ export const trustTransportSource: RecognitionSource = {
 };
 
 /**
- * Registered GDP recognition sources. Start with TrustTransport; append other plugins' eligible-spend
- * sources here (and document them in the GDP inventory) as the owner approves each one.
+ * LevelUp: ServiceCredits paid to a trainer for validated mentorship work. Each trainer payout is a
+ * governed mint grant (`mintGrant` with reason `levelup_trainer_split`) recorded in
+ * `service_credits_governance_events`; the amount is always in ServiceCredits (code `SC`). This is the
+ * one eligible-value slice of LevelUp — service delivered for validated work. Deliberately EXCLUDES
+ * learner-side amounts (escrow returns, completion bonuses, stipends, microgrants), which are
+ * incentives/returns, not spend. We read the governance-events record, not the SC ledger, because the
+ * ledger marks these entries `accounting_scope = service_credits_non_gdp` by design.
  */
-export const RECOGNITION_SOURCES: RecognitionSource[] = [trustTransportSource];
+export const levelUpTrainerPayoutSource: RecognitionSource = {
+  pluginSlug: 'levelup',
+  label: 'LevelUp trainer payouts for validated work',
+  async loadVolumes() {
+    const result = await queryDb<{ total: string | null }>(
+      `SELECT SUM(amount)::text AS total
+         FROM service_credits_governance_events
+         WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split'`,
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return [];
+    }
+    return [{ amount: total, currencyCode: 'SC' }];
+  },
+};
 
-/** A USD estimate plus the per-source breakdown that composes it. */
-export interface RecognitionBreakdown extends UsdEstimate {
-  perSource: Array<{ pluginSlug: string; usdEstimate: number }>;
+/**
+ * Registered recognition sources, one per plugin, owner-approved one at a time. Append other plugins'
+ * eligible-value sources here (and document them in the GDP inventory) as the owner approves each one.
+ * Barter trades register as a `BARTER`-coded source (counted by completed-trade count) once a plugin
+ * settles barter on-platform via the shared payment selector (issue #420).
+ */
+export const RECOGNITION_SOURCES: RecognitionSource[] = [trustTransportSource, levelUpTrainerPayoutSource];
+
+/** The composite index plus the per-source contribution breakdown. */
+export interface RecognitionBreakdown extends CommunityValueResult {
+  perSource: Array<{ pluginSlug: string; valueIndex: number }>;
 }
 
 /**
- * Roll recognized volume across every registered source into one USD estimate, applying the active
- * `currency_usd_rates` factors once. This multi-plugin aggregate AUGMENTS the projection-based GDP
- * target (it does not replace it) and is always labeled an estimate.
+ * Roll recognized value across every registered source into the single Community Value Index, applying
+ * the active contribution weights once. Every value type — fiat, crypto, ServiceCredits, barter — folds
+ * into the one figure; each type's raw volume is also returned for the per-type breakdown. The index
+ * AUGMENTS the projection-based target (it does not replace it) and is always a relative, non-monetary
+ * measure.
  */
-export async function recognizeGdpVolumeUsd(): Promise<RecognitionBreakdown> {
-  const rates = await getActiveUsdRates();
-  let usdEstimate = 0;
-  const unrated = new Set<string>();
-  const perSource: Array<{ pluginSlug: string; usdEstimate: number }> = [];
+export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdown> {
+  const weights = await getActiveContributionWeights();
+  let valueIndex = 0;
+  const unweighted = new Set<string>();
+  const perCurrency = new Map<string, number>();
+  const perSource: Array<{ pluginSlug: string; valueIndex: number }> = [];
   for (const source of RECOGNITION_SOURCES) {
     const volumes = await source.loadVolumes();
-    const result = normalizeVolumesToUsd(volumes, rates);
-    usdEstimate += result.usdEstimate;
-    result.unratedCurrencies.forEach((code) => unrated.add(code));
-    perSource.push({ pluginSlug: source.pluginSlug, usdEstimate: result.usdEstimate });
+    const result = foldVolumesIntoIndex(volumes, weights);
+    valueIndex += result.valueIndex;
+    result.unweightedCurrencies.forEach((code) => unweighted.add(code));
+    for (const volume of volumes) {
+      perCurrency.set(volume.currencyCode, (perCurrency.get(volume.currencyCode) ?? 0) + volume.amount);
+    }
+    perSource.push({ pluginSlug: source.pluginSlug, valueIndex: result.valueIndex });
   }
-  return { usdEstimate, unratedCurrencies: [...unrated], perSource };
+  return {
+    valueIndex,
+    unweightedCurrencies: [...unweighted],
+    perCurrency: [...perCurrency].map(([currencyCode, amount]) => ({ currencyCode, amount })),
+    perSource,
+  };
 }
