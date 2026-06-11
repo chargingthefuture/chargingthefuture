@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { MessageSquare, Zap, Shield } from 'lucide-react';
 import type { ShellSection } from './shell-types';
+import { HelpControl } from '../bug-reports/help-control';
 import styles from './community-shell.module.css';
 
 type IconRailProps = {
@@ -48,6 +49,11 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
       >
         <Shield size={18} />
       </Link>
+
+      {/* Global Help control: opens a small popover with "Report a problem", which
+          opens the bug-report modal. Signed-in members only — anonymous users can't
+          file a report (the route requires any_authenticated). */}
+      {isAuthenticated ? <HelpControl /> : null}
 
       {isAuthenticated ? (
         // Clerk's own account widget: clicking the avatar opens Clerk's menu, and
