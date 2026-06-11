@@ -324,7 +324,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       </div>
 
       <p className={styles.chatFootnote}>
-        {isLive ? 'Live support connected through Chyme and GetStream.' : 'Live support keeps syncing as new messages arrive.'}
+        {isLive ? 'Human-in-the-loop AI support and community support channel.' : 'Support channel keeps syncing as new messages arrive.'}
       </p>
 
       <ComicConsentModal open={consentModalOpen} onConfirm={() => void confirmConsent()} onDismiss={dismissConsent} />
