@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from '../auth/server-authz';
 import { ensureFoundationAdmin } from './policy';
+import { checkMutationOrigin } from '../auth/csrf';
 import { FOUNDATION_ERROR_CODE } from './constants';
 
 export type FoundationApiGate =
@@ -53,6 +54,20 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
   if (request.headers.get('x-ctf-csrf') !== '1') {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.csrfDenied, message: 'Missing CSRF confirmation header.' },
+      { status: 403 },
+    );
+  }
+
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.csrfDenied, message: 'Invalid request origin metadata.' },
+      { status: 403 },
+    );
+  }
+  if (originCheck === 'cross_origin') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.csrfDenied, message: 'Cross-origin mutation denied by CSRF policy.' },
       { status: 403 },
     );
   }

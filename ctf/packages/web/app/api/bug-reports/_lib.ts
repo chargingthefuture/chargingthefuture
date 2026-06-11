@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
-import { getAppUrl } from 'lib/auth/runtime-env';
+import { checkMutationOrigin } from 'lib/auth/csrf';
 import { BUG_REPORT_ERROR_CODE } from 'lib/bug-reports/constants';
 
 export type BugReportApiGate =
@@ -34,25 +34,14 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
     );
   }
 
-  const appUrl = getAppUrl();
-  const origin = request.headers.get('origin');
-  if (!appUrl || !origin) {
-    return null;
-  }
-
-  let appHost = '';
-  let originHost = '';
-  try {
-    appHost = new URL(appUrl).host;
-    originHost = new URL(origin).host;
-  } catch {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
     return NextResponse.json(
       { ok: false, code: BUG_REPORT_ERROR_CODE.csrfDenied, message: 'Invalid request origin metadata.' },
       { status: 403 },
     );
   }
-
-  if (appHost !== originHost) {
+  if (originCheck === 'cross_origin') {
     return NextResponse.json(
       { ok: false, code: BUG_REPORT_ERROR_CODE.csrfDenied, message: 'Cross-origin mutation denied by CSRF policy.' },
       { status: 403 },

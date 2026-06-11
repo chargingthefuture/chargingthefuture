@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
-import { getAppUrl } from 'lib/auth/runtime-env';
+import { checkMutationOrigin } from 'lib/auth/csrf';
 
 export type WhatWorksApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -44,18 +44,12 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
     return whatworksError('Missing CSRF confirmation header.', 'whatworks_csrf_denied', 403);
   }
 
-  const appUrl = getAppUrl();
-  const origin = request.headers.get('origin');
-  if (!appUrl || !origin) {
-    return null;
-  }
-
-  try {
-    if (new URL(appUrl).host !== new URL(origin).host) {
-      return whatworksError('Cross-origin mutation denied by CSRF policy.', 'whatworks_csrf_denied', 403);
-    }
-  } catch {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
     return whatworksError('Invalid request origin metadata.', 'whatworks_csrf_denied', 403);
+  }
+  if (originCheck === 'cross_origin') {
+    return whatworksError('Cross-origin mutation denied by CSRF policy.', 'whatworks_csrf_denied', 403);
   }
 
   return null;

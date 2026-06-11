@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { getAppUrl } from 'lib/auth/runtime-env';
+import { checkMutationOrigin } from 'lib/auth/csrf';
 import { ensureContributionsAdmin } from 'lib/contributions/policy';
 import { insertContributionsAudit } from 'lib/contributions/repository';
 import { reportError } from 'lib/observability/report';
@@ -42,25 +42,16 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
     );
   }
 
-  const appUrl = getAppUrl();
-  const origin = request.headers.get('origin');
-  // Fail open when the app URL or the Origin header is absent — this matches the established
-  // repo convention (see app/api/foundation/_lib.ts). Non-browser clients (the mobile app) do
-  // not always send Origin; the required x-ctf-csrf header above is what blocks browser CSRF.
-  if (!appUrl || !origin) {
-    return null;
-  }
-
-  try {
-    if (new URL(appUrl).host !== new URL(origin).host) {
-      return NextResponse.json(
-        { ok: false, code: 'contributions_csrf_denied', message: 'Cross-origin mutation denied by CSRF policy.' },
-        { status: 403 },
-      );
-    }
-  } catch {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
     return NextResponse.json(
       { ok: false, code: 'contributions_csrf_denied', message: 'Invalid request origin metadata.' },
+      { status: 403 },
+    );
+  }
+  if (originCheck === 'cross_origin') {
+    return NextResponse.json(
+      { ok: false, code: 'contributions_csrf_denied', message: 'Cross-origin mutation denied by CSRF policy.' },
       { status: 403 },
     );
   }

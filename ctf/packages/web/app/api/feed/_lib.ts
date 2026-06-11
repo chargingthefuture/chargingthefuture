@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 import { ensureFeedAdmin } from 'lib/feed/policy';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
-import { getAppUrl } from 'lib/auth/runtime-env';
+import { checkMutationOrigin } from 'lib/auth/csrf';
 
 export type FeedApiGate =
   | {
@@ -69,19 +69,8 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
     );
   }
 
-  const appUrl = getAppUrl();
-  const origin = request.headers.get('origin');
-
-  if (!appUrl || !origin) {
-    return null;
-  }
-
-  let appHost = '';
-  let originHost = '';
-  try {
-    appHost = new URL(appUrl).host;
-    originHost = new URL(origin).host;
-  } catch {
+  const originCheck = checkMutationOrigin(request);
+  if (originCheck === 'invalid_origin') {
     return NextResponse.json(
       {
         ok: false,
@@ -92,7 +81,7 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
     );
   }
 
-  if (appHost !== originHost) {
+  if (originCheck === 'cross_origin') {
     return NextResponse.json(
       {
         ok: false,
