@@ -35,6 +35,10 @@ const METRICS = [
   // volume via currency_usd_rates in the GDP estimation layer. isEstimate = true so the UI can label
   // it an estimate. The value here is a deterministic placeholder the owner/recognition layer revises.
   { key: 'gdp_total_revenue', value: 12500, source: 'gdp', isEstimate: true },
+  // ServiceCredits-denominated recognized service activity (issue #121 follow-up): an exact SC count
+  // (not a USD estimate, never converted to fiat), shown alongside the USD GDP. The recognition job
+  // (pnpm gdp:recognize) revises this from real LevelUp trainer payouts; this seeds a demo value.
+  { key: 'gdp_recognized_volume_sc', value: 8400, source: 'gdp', isEstimate: false },
 ];
 
 function deterministicId(weekDate, metricKey, sourcePlugin) {

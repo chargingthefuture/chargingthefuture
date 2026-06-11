@@ -8,7 +8,9 @@
 import {
   GDP_ACTIVE_MEMBERS_METRIC_KEY,
   GDP_HEADLINE_METRIC_KEY,
+  GDP_RECOGNIZED_SC_METRIC_KEY,
   formatGdpCount,
+  formatGdpServiceCredits,
   formatGdpUsd,
   pickGdpMetricValue,
   type GdpMetricRow,
@@ -18,11 +20,13 @@ import { GdpWorldMap } from "./gdp-world-map";
 export function GdpMap({ metricRows }: { metricRows: GdpMetricRow[] }) {
   const gdpTotal = pickGdpMetricValue(metricRows, GDP_HEADLINE_METRIC_KEY);
   const activeMembers = pickGdpMetricValue(metricRows, GDP_ACTIVE_MEMBERS_METRIC_KEY);
-  const hasData = gdpTotal !== null || activeMembers !== null;
+  const serviceCredits = pickGdpMetricValue(metricRows, GDP_RECOGNIZED_SC_METRIC_KEY);
+  const hasData = gdpTotal !== null || activeMembers !== null || serviceCredits !== null;
   return (
     <GdpWorldMap
       headline={formatGdpUsd(gdpTotal)}
       membersLabel={activeMembers !== null ? formatGdpCount(activeMembers) : null}
+      serviceCreditsLabel={serviceCredits !== null ? formatGdpServiceCredits(serviceCredits) : null}
       hasData={hasData}
     />
   );

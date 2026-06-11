@@ -123,7 +123,7 @@ canonical_metrics:
 
   - id: gdp_recognized_volume_usd
     name: GDP Recognized Volume (USD estimate)
-    description: Actual recognized economic volume across applicable plugins (starting with TrustTransport completed-task earnings), each currency normalized to USD via the currency_usd_rates factors. A morale/transparency ESTIMATE that augments — does not replace — the projection target (issue #121). Only eligible settled spend is recognized; transfers and deletion/reclaim reallocations are excluded.
+    description: Actual recognized economic volume across applicable plugins (TrustTransport completed-task earnings), each fiat/crypto currency normalized to USD via the currency_usd_rates factors. EXCLUDES ServiceCredits, which is non-redeemable and reported separately in SC units (see gdp_recognized_volume_sc). A morale/transparency ESTIMATE that augments — does not replace — the projection target (issue #121). Only eligible settled spend is recognized; transfers and deletion/reclaim reallocations are excluded.
     owner: economics-team@chargingthefuture.org
     data_type: currency
     unit: USD
@@ -131,9 +131,11 @@ canonical_metrics:
       -- Aggregated server-side by ctf/packages/web/lib/gdp/recognition.ts (and scripts/recognizeGdp.mjs):
       -- for each registered source, SUM(eligible settled spend) grouped by currency, converted to USD
       -- via the latest currency_usd_rates factor per currency, then summed across all sources.
+      -- ServiceCredits ('SC') is skipped here and counted in gdp_recognized_volume_sc instead.
       SELECT SUM(amount * usd_rate) AS gdp_recognized_volume_usd
       FROM eligible_settled_spend
-      JOIN latest_currency_usd_rates USING (currency_code);
+      JOIN latest_currency_usd_rates USING (currency_code)
+      WHERE currency_code <> 'SC';
     inputs:
       - name: trusttransport_earnings_ledger.amount
         type: currency
@@ -146,6 +148,34 @@ canonical_metrics:
     example_values:
       - 12500
     last_updated: "2026-06-01T00:00:00Z"
+    update_cadence: weekly
+    retention: 120 months
+    allowed_thresholds:
+      min: 0
+
+  - id: gdp_recognized_volume_sc
+    name: GDP Recognized Volume (ServiceCredits)
+    description: Recognized economic volume denominated in ServiceCredits — community mutual-aid and service activity that settles in the platform's non-redeemable utility token. Reported in SC units and NEVER converted to USD (no fiat peg or redemption value); shown alongside the USD GDP so neither figure alone understates community self-sufficiency. First SC source is LevelUp trainer payouts for validated work (mint grants, reason 'levelup_trainer_split'). Exact count, not an estimate.
+    owner: economics-team@chargingthefuture.org
+    data_type: integer
+    unit: ServiceCredits
+    calculation: |
+      -- Aggregated server-side by ctf/packages/web/lib/gdp/recognition.ts (and scripts/recognizeGdp.mjs):
+      -- SUM(amount) of eligible ServiceCredits-denominated settled spend across registered sources. No
+      -- currency conversion is applied — ServiceCredits is never expressed in USD.
+      SELECT SUM(amount) AS gdp_recognized_volume_sc
+      FROM service_credits_governance_events
+      WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split';
+    inputs:
+      - name: service_credits_governance_events.amount
+        type: integer
+      - name: service_credits_governance_events.event_type
+        type: string
+      - name: service_credits_governance_events.reason
+        type: string
+    example_values:
+      - 8400
+    last_updated: "2026-06-11T00:00:00Z"
     update_cadence: weekly
     retention: 120 months
     allowed_thresholds:

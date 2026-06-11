@@ -6,8 +6,9 @@ import { Pool } from 'pg';
 // per currency_code with a later `as_of` becomes the active rate).
 //
 // LEGAL GUARDRAIL: these factors are used ONLY inside the aggregate, estimate-labeled GDP figure. They
-// are NEVER shown as a per-wallet or per-price "ServiceCredits = fiat" equivalence. The ServiceCredits
-// factor in particular is a non-binding morale-estimate input, NOT a redemption rate.
+// are NEVER shown as a per-wallet or per-price fiat equivalence. ServiceCredits is deliberately NOT in
+// this table — the non-redeemable utility token has no USD rate and is never converted to fiat; its
+// recognized volume is reported separately in SC units (metric gdp_recognized_volume_sc).
 const AS_OF = '2026-01-01';
 const SOURCE = 'owner-seed';
 
@@ -24,9 +25,9 @@ const RATES = [
   { code: 'INR', usdRate: 0.012 },
   { code: 'BRL', usdRate: 0.18 },
   { code: 'BTC', usdRate: 65000 },
-  // ServiceCredits: a non-binding morale-estimate factor for GDP only, never a redemption rate. The
-  // owner sets the real notional value; this placeholder simply lets the estimate include SC volume.
-  { code: 'SC', usdRate: 0.1 },
+  // ServiceCredits ('SC') is intentionally NOT given a USD rate. It is a non-redeemable utility token
+  // with no fiat peg or redemption value, so it is never converted to USD. Its recognized volume is
+  // reported separately in SC units (metric gdp_recognized_volume_sc) and shown alongside the USD GDP.
 ];
 
 function requireEnv(name) {

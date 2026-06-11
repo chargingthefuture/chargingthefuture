@@ -138,6 +138,9 @@ function GdpMainView({ report }: { report: GdpReport }) {
   // Real metric bindings — keys observed in web repository.ts getGdpShellStats()
   const totalRevenue = pickMetric(report.metrics, 'gdp_total_revenue');
   const weeklyActiveUsers = pickMetric(report.metrics, 'weekly_active_users');
+  // Recognized ServiceCredits activity — shown alongside the USD figure, always in SC units and never
+  // converted to dollars (ServiceCredits is a non-redeemable utility token with no fiat peg).
+  const serviceCreditsVolume = pickMetric(report.metrics, 'gdp_recognized_volume_sc');
   // The headline GDP figure shows the estimate treatment only when the published
   // data flags it a normalized USD estimate.
   const totalRevenueIsEstimate = pickMetricIsEstimate(report.metrics, 'gdp_total_revenue');
@@ -156,6 +159,14 @@ function GdpMainView({ report }: { report: GdpReport }) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return String(n);
+  }
+
+  // ServiceCredits, never a fiat symbol — the unit is "SC", not "$".
+  function fmtServiceCredits(n: number | null): string {
+    if (n === null) return '—';
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M SC`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K SC`;
+    return `${n.toLocaleString()} SC`;
   }
 
   return (
@@ -201,7 +212,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
           <GdpTrendTab totalRevenue={totalRevenue} fmtUsd={fmtUsd} />
         )}
         {activeNav === 'home' && (
-          <GdpHomeTab totalRevenue={totalRevenue} weeklyActiveUsers={weeklyActiveUsers} fmtUsd={fmtUsd} fmtCount={fmtCount} />
+          <GdpHomeTab totalRevenue={totalRevenue} weeklyActiveUsers={weeklyActiveUsers} serviceCreditsVolume={serviceCreditsVolume} fmtUsd={fmtUsd} fmtCount={fmtCount} fmtServiceCredits={fmtServiceCredits} />
         )}
       </ScrollView>
 
@@ -365,15 +376,19 @@ const MAP_REGIONS: { key: string; top: DimensionValue; left: DimensionValue; wid
 function GdpHomeTab({
   totalRevenue,
   weeklyActiveUsers,
+  serviceCreditsVolume,
   fmtUsd,
   fmtCount,
+  fmtServiceCredits,
 }: {
   totalRevenue: number | null;
   weeklyActiveUsers: number | null;
+  serviceCreditsVolume: number | null;
   fmtUsd: (_n: number | null) => string;
   fmtCount: (_n: number | null) => string;
+  fmtServiceCredits: (_n: number | null) => string;
 }) {
-  const hasData = totalRevenue !== null || weeklyActiveUsers !== null;
+  const hasData = totalRevenue !== null || weeklyActiveUsers !== null || serviceCreditsVolume !== null;
   return (
     <View>
       <View style={styles.mapHeaderRow}>
@@ -382,6 +397,11 @@ function GdpHomeTab({
       </View>
       {weeklyActiveUsers !== null && (
         <Text style={styles.mapMembers}>{fmtCount(weeklyActiveUsers)} active members</Text>
+      )}
+      {serviceCreditsVolume !== null && (
+        <Text style={styles.mapServiceCredits}>
+          {fmtServiceCredits(serviceCreditsVolume)} in community service activity
+        </Text>
       )}
       <View style={styles.mapCanvas}>
         {MAP_REGIONS.map((r) => (
@@ -765,6 +785,12 @@ const styles = StyleSheet.create({
   mapMembers: {
     fontSize: 12,
     color: TEXT_MUTED,
+    marginBottom: 4,
+  },
+  mapServiceCredits: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#A78BFA',
     marginBottom: 12,
   },
   mapCanvas: {

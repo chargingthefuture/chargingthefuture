@@ -60,12 +60,16 @@ const MARKERS: { id: string; cx: number; cy: number }[] = [
 export function GdpWorldMap({
   headline,
   membersLabel,
+  serviceCreditsLabel,
   hasData,
 }: {
   // Real aggregate USD estimate (already formatted), or a dash when absent.
   headline: string;
   // Real active-member count (already formatted), or null to hide the chip.
   membersLabel: string | null;
+  // Recognized ServiceCredits activity (already formatted, in SC units), or null to hide it. Shown
+  // alongside the USD figure; never converted to a dollar value (ServiceCredits has no fiat peg).
+  serviceCreditsLabel: string | null;
   // True when at least one real aggregate metric is present.
   hasData: boolean;
 }) {
@@ -180,12 +184,20 @@ export function GdpWorldMap({
           {membersLabel ? (
             <div style={{ fontSize: 12, color: "#9CA3AF" }}>{membersLabel} active members</div>
           ) : null}
+          {serviceCreditsLabel ? (
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#A78BFA", marginTop: 6 }}>
+              {serviceCreditsLabel}
+              <span style={{ fontSize: 11, fontWeight: 500, color: "#9CA3AF", marginLeft: 6 }}>
+                in community service activity
+              </span>
+            </div>
+          ) : null}
         </div>
       </div>
 
       <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>
         {hasData
-          ? "Regions show where the survivor economy is active. The figure above is the community-wide USD estimate — per-country breakdowns are not published yet, so regions are shown in a single neutral state."
+          ? "Regions show where the survivor economy is active. The USD figure is the community-wide estimate (per-country breakdowns are not published yet, so regions are shown in a single neutral state). ServiceCredits activity is counted on its own, in ServiceCredits — it is not converted to dollars, so both together show the full community economy."
           : "No published GDP report yet. The map activates once an aggregate figure is published."}
       </div>
     </div>

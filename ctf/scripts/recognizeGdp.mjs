@@ -30,7 +30,18 @@ const SOURCES = [
             WHERE entry_type IN ('credit', 'release')
             GROUP BY COALESCE(price_currency, currency)`,
   },
-  // Add more as approved, e.g. LightHouse paid rent, LevelUp disbursements. Keep eligible spend only.
+  {
+    // LevelUp trainer payouts: ServiceCredits paid to a trainer for validated mentorship work, recorded
+    // as governed mint grants (reason 'levelup_trainer_split'). Always ServiceCredits (code 'SC').
+    // Eligible service delivery only — excludes learner escrow returns, completion bonuses, stipends,
+    // and microgrants. Read from governance events, not the SC ledger (whose entries are tagged
+    // accounting_scope 'service_credits_non_gdp' by design).
+    pluginSlug: 'levelup',
+    sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
+            FROM service_credits_governance_events
+            WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split'`,
+  },
+  // Add more as approved. Keep eligible settled spend only.
 ];
 
 function currentWeekStartIso() {
@@ -57,40 +68,60 @@ async function run() {
     );
     const rates = new Map(ratesResult.rows.map((row) => [row.currency_code, Number(row.usd_rate)]));
 
+    // ServiceCredits ('SC') is a non-redeemable utility token and is NEVER converted to USD. Its
+    // recognized volume is summed separately in SC units and written as its own metric, shown alongside
+    // the USD figure. Convertible (fiat/crypto) volume is normalized to USD via the active rates.
+    const SERVICE_CREDITS_CODE = 'SC';
     let usdEstimate = 0;
+    let serviceCreditsVolume = 0;
     const unrated = new Set();
     for (const source of SOURCES) {
       const res = await client.query(source.sql);
       for (const row of res.rows) {
         const code = row.currency_code;
         if (!code) continue;
+        const amount = Number(row.total) || 0;
+        if (code === SERVICE_CREDITS_CODE) {
+          serviceCreditsVolume += amount;
+          continue;
+        }
         const rate = rates.get(code);
         if (rate === undefined) {
           unrated.add(code);
           continue;
         }
-        usdEstimate += Number(row.total) * rate;
+        usdEstimate += amount * rate;
       }
     }
 
-    const recognized = Math.round(usdEstimate);
-    const id = crypto
-      .createHash('sha256')
-      .update(`${WEEK_START}gdp_recognized_volume_usdgdp`)
-      .digest('hex')
-      .slice(0, 32);
+    const metricIdFor = (metricKey) =>
+      crypto.createHash('sha256').update(`${WEEK_START}${metricKey}gdp`).digest('hex').slice(0, 32);
+
+    const recognizedUsd = Math.round(usdEstimate);
     await client.query(
       `INSERT INTO gdp_metric_snapshots
          (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin, is_estimate)
        VALUES ($1, $2, 'gdp_recognized_volume_usd', $3, false, 'service-delivery', 'gdp', true)
        ON CONFLICT (id) DO UPDATE SET metric_value = EXCLUDED.metric_value, is_estimate = EXCLUDED.is_estimate`,
-      [id, WEEK_START, recognized],
+      [metricIdFor('gdp_recognized_volume_usd'), WEEK_START, recognizedUsd],
+    );
+
+    // ServiceCredits volume is an exact count of SC, not a normalized estimate → is_estimate = false.
+    const recognizedSc = Math.round(serviceCreditsVolume);
+    await client.query(
+      `INSERT INTO gdp_metric_snapshots
+         (id, week_start_date, metric_key, metric_value, dp_suppressed, lawful_basis, source_plugin, is_estimate)
+       VALUES ($1, $2, 'gdp_recognized_volume_sc', $3, false, 'service-delivery', 'gdp', false)
+       ON CONFLICT (id) DO UPDATE SET metric_value = EXCLUDED.metric_value, is_estimate = EXCLUDED.is_estimate`,
+      [metricIdFor('gdp_recognized_volume_sc'), WEEK_START, recognizedSc],
     );
 
     if (unrated.size > 0) {
       console.warn(`Excluded currencies with no active rate: ${[...unrated].join(', ')}`);
     }
-    console.log(`Recognized GDP volume (USD estimate) for week ${WEEK_START}: ${recognized}`);
+    console.log(
+      `Recognized for week ${WEEK_START}: USD estimate ${recognizedUsd}, ServiceCredits volume ${recognizedSc} SC`,
+    );
   } finally {
     client.release();
     await pool.end();

@@ -80,6 +80,12 @@ export type GdpTab = "dashboard" | "map";
 // world map. These are community-wide aggregates only — never per-user figures.
 export const GDP_ACTIVE_MEMBERS_METRIC_KEY = "weekly_active_users";
 
+// Recognized service activity denominated in ServiceCredits — the platform's
+// non-redeemable utility token. Shown alongside the USD GDP, always in SC units and
+// NEVER converted to a dollar value (no fiat peg). It reflects community mutual-aid
+// activity so the USD figure alone does not understate self-sufficiency.
+export const GDP_RECOGNIZED_SC_METRIC_KEY = "gdp_recognized_volume_sc";
+
 // Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
 // dash when the figure is absent so the map never invents a number.
 export function formatGdpUsd(value: number | null | undefined): string {
@@ -96,6 +102,15 @@ export function formatGdpCount(value: number | null | undefined): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(value);
+}
+
+// Format a ServiceCredits amount into compact M/K form with the "SC" unit. Returns a
+// dash when absent. Never prefixed with a currency symbol — ServiceCredits is not fiat.
+export function formatGdpServiceCredits(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M SC`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K SC`;
+  return `${value.toLocaleString()} SC`;
 }
 
 // Pull a single metric value out of the raw report metric rows. Returns null when
