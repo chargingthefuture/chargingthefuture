@@ -31,6 +31,8 @@ export type TrustTransportRequestInput = {
   dropoffCity: string | null;
   pickupGeoRedacted: string | null;
   dropoffGeoRedacted: string | null;
+  priceCurrency: string | null;
+  priceAmount: number | null;
 };
 
 export type TrustTransportRequest = {
@@ -44,9 +46,20 @@ export type TrustTransportRequest = {
   pickupGeoRedacted: string | null;
   dropoffGeoRedacted: string | null;
   status: TrustTransportRequestStatus;
+  priceCurrency: string | null;
+  priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
+
+// Plain label for how a ride is settled (issue #420). Mirrors web tt-shared.ttSettlementLabel: never the
+// bare "SC" code, never a fiat equivalent; Free/Barter render from their value types.
+export function ttSettlementLabel(priceCurrency: string | null, priceAmount: number | null): string {
+  if (!priceCurrency || priceCurrency === 'FREE') return 'Free';
+  if (priceCurrency === 'BARTER') return 'Barter';
+  if (priceCurrency === 'SC') return priceAmount != null ? `${priceAmount} ServiceCredits` : 'ServiceCredits';
+  return priceAmount != null ? `${priceAmount} ${priceCurrency}` : priceCurrency;
+}
 
 export type TrustTransportOffer = {
   id: string;
