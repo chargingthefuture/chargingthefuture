@@ -436,6 +436,8 @@ export function SocketRelay() {
         <TouchableOpacity
           style={styles.headerAddBtn}
           onPress={() => setActiveNav('post')}
+          accessibilityRole="button"
+          accessibilityLabel="Add request"
         >
           <Text style={styles.headerAddBtnText}>+</Text>
         </TouchableOpacity>

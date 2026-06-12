@@ -50,7 +50,7 @@ function TagEditor({
         {tags.map((tag) => (
           <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600 }}>
             {tag}
-            <X size={12} style={{ cursor: "pointer" }} onClick={() => onChange(tags.filter((t) => t !== tag))} />
+            <X size={12} aria-label="Remove tag" style={{ cursor: "pointer" }} onClick={() => onChange(tags.filter((t) => t !== tag))} />
           </span>
         ))}
       </div>

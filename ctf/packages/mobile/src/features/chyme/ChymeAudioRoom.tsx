@@ -177,7 +177,7 @@ const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void
             <Text style={styles.liveText}>Live</Text>
           </View>
           <Text style={styles.roomLabel}>Members Only 🔒</Text>
-          <TouchableOpacity style={styles.chatBtn} onPress={onOpenChat}>
+          <TouchableOpacity style={styles.chatBtn} onPress={onOpenChat} accessibilityRole="button" accessibilityLabel="Open chat">
             <Text style={styles.chatBtnIcon}>💬</Text>
           </TouchableOpacity>
         </View>

@@ -69,7 +69,7 @@ export function PeerProgrammingChatTab({
               disabled={submitting}
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: "#E8EAF0" }}
             />
-            <button type="button" onClick={onSend} disabled={!canSend} style={{ width: 32, height: 32, borderRadius: 8, background: canSend ? COLOR : "rgba(255,255,255,0.06)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSend ? "pointer" : "not-allowed" }}>
+            <button type="button" aria-label="Send" onClick={onSend} disabled={!canSend} style={{ width: 32, height: 32, borderRadius: 8, background: canSend ? COLOR : "rgba(255,255,255,0.06)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSend ? "pointer" : "not-allowed" }}>
               <Send size={14} style={{ color: canSend ? "#fff" : "#4B5563" }} />
             </button>
           </div>

@@ -231,10 +231,10 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
           <BookOpen size={20} style={{ color: t.ACCENT }} />
         </div>
         <div style={{ flex: 1 }} />
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
+        <button aria-label="Notifications" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
           <Bell size={18} />
         </button>
-        <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
+        <button aria-label="Settings" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
           <Settings size={18} />
         </button>
         <Avatar style={{ width: 36, height: 36, marginTop: 4 }}>
