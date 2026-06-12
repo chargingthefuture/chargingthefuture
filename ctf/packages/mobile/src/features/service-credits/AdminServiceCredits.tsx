@@ -151,7 +151,7 @@ export const AdminServiceCredits = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchTreasuryConfig(auth.userId);
+    const result = await fetchTreasuryConfig();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden && result.message) setError(result.message);
@@ -242,7 +242,7 @@ export const AdminServiceCredits = () => {
             void run(
               'fee',
               () =>
-                collectFee(auth.userId as string, {
+                collectFee({
                   sourceUserId: feeSource.trim(),
                   treasuryUserId: feeTreasury.trim(),
                   amount: feeValue,
@@ -278,7 +278,7 @@ export const AdminServiceCredits = () => {
             void run(
               'mint',
               () =>
-                mintGrant(auth.userId as string, {
+                mintGrant({
                   targetUserId: mintUser.trim(),
                   amount: mintValue,
                   grantReason: mintReason.trim(),
@@ -313,7 +313,7 @@ export const AdminServiceCredits = () => {
             void run(
               'burn',
               () =>
-                burnCredits(auth.userId as string, {
+                burnCredits({
                   targetUserId: burnUser.trim(),
                   amount: burnValue,
                   burnReason: burnReason.trim(),
@@ -352,7 +352,7 @@ export const AdminServiceCredits = () => {
             void run(
               'dispute',
               () =>
-                applyDisputeAdjustment(auth.userId as string, {
+                applyDisputeAdjustment({
                   disputeCaseId: dispCase.trim(),
                   sourceUserId: dispSource.trim(),
                   destinationUserId: dispDest.trim(),

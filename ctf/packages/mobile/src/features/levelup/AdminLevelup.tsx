@@ -46,7 +46,7 @@ export const AdminLevelup = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchAdminCohorts(auth.userId);
+    const result = await fetchAdminCohorts();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden) setError(result.message);
@@ -93,7 +93,7 @@ export const AdminLevelup = () => {
     setSubmitting(true);
     setError(null);
     setNotice(null);
-    const result = await adjustMemberCredits(auth.userId, {
+    const result = await adjustMemberCredits({
       targetUserId: targetUserId.trim(),
       amount: parsedAmount,
       reason: reason.trim(),

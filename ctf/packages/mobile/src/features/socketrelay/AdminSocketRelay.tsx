@@ -163,7 +163,7 @@ export const AdminSocketRelay = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchAdminOverview(auth.userId);
+    const result = await fetchAdminOverview();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden && result.message) setError(result.message);
@@ -190,7 +190,7 @@ export const AdminSocketRelay = () => {
       setDeletingId(id);
       setError(null);
       try {
-        await deleteAdminRequest(auth.userId, id);
+        await deleteAdminRequest(id);
         setRequests((prev) => prev.filter((r) => r.id !== id));
         setRequestsTotal((prev) => Math.max(0, prev - 1));
       } catch {

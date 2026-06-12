@@ -37,8 +37,8 @@ export const AdminLighthouse = () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
     const [statsResult, matchesResult] = await Promise.all([
-      fetchAdminStats(auth.userId),
-      fetchAdminMatches(auth.userId),
+      fetchAdminStats(),
+      fetchAdminMatches(),
     ]);
     if (statsResult.forbidden || matchesResult.forbidden) {
       setForbidden(true);
@@ -64,7 +64,7 @@ export const AdminLighthouse = () => {
       setError(null);
       setNotice(null);
       try {
-        await updateAdminMatchStatus(auth.userId, matchId, status);
+        await updateAdminMatchStatus(matchId, status);
         setNotice(`Match ${status === 'accepted' ? 'approved' : 'rejected'}.`);
         await load();
       } catch {

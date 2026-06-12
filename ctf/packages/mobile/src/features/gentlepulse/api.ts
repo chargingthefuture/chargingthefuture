@@ -1,14 +1,11 @@
 // GentlePulse API service for mobile — binds to real backend routes only.
 // CSRF header (x-ctf-csrf: 1) is required by the web routes for all mutations.
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
 
-import { Platform } from 'react-native';
+import { authedFetch } from '../../auth/authedFetch';
 
-const API_BASE =
-  Platform.OS === 'web'
-    ? '/api/gentlepulse'
-    : process.env.EXPO_PUBLIC_API_BASE
-      ? `${process.env.EXPO_PUBLIC_API_BASE}/api/gentlepulse`
-      : 'https://api.chargingthefuture.com/api/gentlepulse';
+const API_BASE = '/api/gentlepulse';
 
 // Shape returned by GET /api/gentlepulse/library → { ok, items }
 export interface GentlePulseSession {
@@ -21,7 +18,7 @@ export interface GentlePulseSession {
 }
 
 export async function fetchSessions(): Promise<GentlePulseSession[]> {
-  const res = await fetch(`${API_BASE}/library`);
+  const res = await authedFetch(`${API_BASE}/library`);
   if (!res.ok) throw new Error('Failed to fetch sessions');
   const data = await res.json();
   return (data.items ?? []) as GentlePulseSession[];
@@ -29,7 +26,7 @@ export async function fetchSessions(): Promise<GentlePulseSession[]> {
 
 // POST /api/gentlepulse/library/:itemId/play — requires CSRF header
 export async function recordPlay(itemId: string, completed = false): Promise<void> {
-  const res = await fetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/play`, {
+  const res = await authedFetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/play`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({ completed }),
@@ -39,7 +36,7 @@ export async function recordPlay(itemId: string, completed = false): Promise<voi
 
 // POST /api/gentlepulse/library/:itemId/favorite — requires CSRF header
 export async function addFavorite(itemId: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/favorite`, {
+  const res = await authedFetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/favorite`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
   });
@@ -48,7 +45,7 @@ export async function addFavorite(itemId: string): Promise<void> {
 
 // DELETE /api/gentlepulse/library/:itemId/favorite — requires CSRF header
 export async function removeFavorite(itemId: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/favorite`, {
+  const res = await authedFetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/favorite`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
   });

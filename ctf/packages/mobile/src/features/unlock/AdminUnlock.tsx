@@ -35,7 +35,7 @@ export const AdminUnlock = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchPendingSubmissions(auth.userId);
+    const result = await fetchPendingSubmissions();
     if (result.forbidden) {
       setForbidden(true);
       setLoading(false);
@@ -58,7 +58,7 @@ export const AdminUnlock = () => {
       setError(null);
       setNotice(null);
       try {
-        await reviewSubmission(auth.userId, submissionId, reviewStatus);
+        await reviewSubmission(submissionId, reviewStatus);
         setNotice(reviewStatus === 'approved' ? 'Submission approved.' : 'Submission rejected.');
         await load();
       } catch {

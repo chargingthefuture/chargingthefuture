@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { authedFetchJson } from '../../auth/authedFetch';
 
 export interface QuestionsStreamCredentials {
   apiKey: string;
@@ -7,23 +7,26 @@ export interface QuestionsStreamCredentials {
   chatChannelId: string;
 }
 
-// Fetches Stream chat credentials for the Feed "Questions" channel. React Native fetch has no page
-// origin, so a relative '/api/...' path never resolves — use the platform base URL (Android emulator
-// reaches the host at 10.0.2.2). The server returns the canonical stream* field names; map them to the
-// shape the Questions screen reads.
+type QuestionsStreamResponse = {
+  ok: boolean;
+  message?: string;
+  streamApiKey: string;
+  streamUserId: string;
+  streamToken: string;
+  streamChannelId: string;
+};
+
+// Stream chat credentials for the Feed "Questions" channel. Goes through authedFetch
+// so the Clerk bearer token is attached and the base URL comes from runtime config.
+// The server returns the canonical stream* field names; map them to the shape the
+// Questions screen reads.
 export async function fetchQuestionsStreamCredentials(): Promise<QuestionsStreamCredentials> {
-  const baseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/questions/stream`, { method: 'POST' });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let data: any;
-  try {
-    data = await res.json();
-  } catch {
-    const text = await res.text();
-    throw new Error(`Unable to parse response as JSON (status ${res.status}): ${text}`);
-  }
-  if (!data || !data.ok) {
-    throw new Error((data && data.message) || `Unable to load Questions chat credentials (status ${res.status})`);
+  const data = await authedFetchJson<QuestionsStreamResponse>('/api/questions/stream', {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
+  if (!data.ok) {
+    throw new Error(data.message || 'Unable to load Questions chat credentials');
   }
   return {
     apiKey: data.streamApiKey,

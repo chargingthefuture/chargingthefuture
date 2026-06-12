@@ -1,14 +1,13 @@
-import { Platform } from 'react-native';
-
 // Survivor Hub home channel (mobile). Mirrors the web routes under
 // ctf/packages/web/app/api/hub/messages: one blended, feed-backed `community` channel
 // interleaving admin announcements, AI Q&A answers, and peer-to-peer community posts.
 // Reads via GET /api/hub/messages; sending creates a peer-to-peer community post via
 // POST /api/hub/messages (CSRF-guarded with the x-ctf-csrf header, same as the feed client).
-export const HUB_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/hub'
-    : 'http://localhost:3000/api/hub';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
+
+export const HUB_API_BASE = '/api/hub';
 
 // One message in the blended Hub stream. Matches lib/hub/types HubMessage on the web side.
 // `displayName` is "Survivor Hub" for announcements and AI Q&A, "Community member" for peer posts.
@@ -29,7 +28,7 @@ export type HubMessagesResponse = {
 
 // The server returns the blended stream oldest-first (ready for a chat view).
 export async function fetchHubMessages(): Promise<HubMessagesResponse> {
-  const res = await fetch(`${HUB_API_BASE}/messages`);
+  const res = await authedFetch(`${HUB_API_BASE}/messages`);
   if (!res.ok) {
     throw new Error(`Hub messages request failed: ${res.status}`);
   }
@@ -46,7 +45,7 @@ export type HubSendResult = {
 // the x-ctf-csrf header is required, and the server normalizes the new post to the same public
 // author shape the polled copy uses so the optimistic send and the polled copy dedup cleanly.
 export async function sendHubMessage(text: string): Promise<HubSendResult> {
-  const res = await fetch(`${HUB_API_BASE}/messages`, {
+  const res = await authedFetch(`${HUB_API_BASE}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

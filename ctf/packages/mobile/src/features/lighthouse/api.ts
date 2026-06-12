@@ -1,24 +1,18 @@
-import { Platform } from 'react-native';
+// LightHouse mobile API client. Mirrors the web routes under
+// ctf/packages/web/app/api/lighthouse/*. All calls go through authedFetchJson so
+// the Clerk bearer token is attached and the base URL comes from runtime config
+// (APP_URL).
+import { authedFetchJson } from '../../auth/authedFetch';
 import type { PropertiesResponse, MatchesResponse } from './types';
 
-export const API_BASE_URL = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3000/api/lighthouse'
-  : 'http://localhost:3000/api/lighthouse';
+const API_BASE = '/api/lighthouse';
 
 export async function fetchProperties(page = 1, pageSize = 20): Promise<PropertiesResponse> {
-  const url = `${API_BASE_URL}/properties?page=${page}&pageSize=${pageSize}&onlyActive=true`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Properties fetch failed: ${res.status}`);
-  }
-  return (await res.json()) as PropertiesResponse;
+  return authedFetchJson<PropertiesResponse>(
+    `${API_BASE}/properties?page=${page}&pageSize=${pageSize}&onlyActive=true`,
+  );
 }
 
 export async function fetchMatches(): Promise<MatchesResponse> {
-  const url = `${API_BASE_URL}/matches`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Matches fetch failed: ${res.status}`);
-  }
-  return (await res.json()) as MatchesResponse;
+  return authedFetchJson<MatchesResponse>(`${API_BASE}/matches`);
 }

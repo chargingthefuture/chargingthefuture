@@ -83,11 +83,10 @@ export const AdminTrustTransport = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const token = auth.userId;
     const [incidentsResult, configResult, auditResult] = await Promise.all([
-      fetchAdminIncidents(token),
-      fetchAdminMarketConfig(token),
-      fetchAdminAuditEvents(token),
+      fetchAdminIncidents(),
+      fetchAdminMarketConfig(),
+      fetchAdminAuditEvents(),
     ]);
 
     if (incidentsResult.forbidden || configResult.forbidden || auditResult.forbidden) {
@@ -135,7 +134,7 @@ export const AdminTrustTransport = () => {
                 setError(null);
                 setNotice(null);
                 try {
-                  await resolveAdminIncident(auth.userId, incident.id, null);
+                  await resolveAdminIncident(incident.id, null);
                   setNotice('Incident resolved.');
                   await load();
                 } catch {
@@ -170,7 +169,7 @@ export const AdminTrustTransport = () => {
             setError(null);
             setNotice(null);
             try {
-              const saved = await updateAdminMarketConfig(auth.userId, {
+              const saved = await updateAdminMarketConfig({
                 maxConcurrentTrips: parsed,
                 requireProofOnDelivery,
                 emergencyFreezeEnabled,
@@ -210,7 +209,7 @@ export const AdminTrustTransport = () => {
             setError(null);
             setNotice(null);
             try {
-              await restrictAdminAccount(auth.userId, target, restrictReason.trim() || null);
+              await restrictAdminAccount(target, restrictReason.trim() || null);
               setNotice(`Account ${target} restricted.`);
               await load();
             } catch {
@@ -242,7 +241,7 @@ export const AdminTrustTransport = () => {
             setError(null);
             setNotice(null);
             try {
-              await restoreAdminAccount(auth.userId, target);
+              await restoreAdminAccount(target);
               setNotice(`Account ${target} restored.`);
               await load();
             } catch {

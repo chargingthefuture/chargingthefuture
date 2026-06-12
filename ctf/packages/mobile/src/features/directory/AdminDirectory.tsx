@@ -85,10 +85,9 @@ const EDIT_FIELDS: { label: string; key: keyof EditForm; placeholder: string }[]
 ];
 
 export const AdminDirectory = () => {
+  // Used only as a signed-in gate before loading; the API client attaches the
+  // live Clerk bearer token itself (see ../../auth/authedFetch).
   const { auth, loading: authLoading } = usePluginAuth('clerk');
-  // The mobile admin routes expect the Clerk user id as the bearer value, the
-  // same value every other mobile admin screen sends (see AdminPeerProgramming).
-  const authToken = auth?.userId ?? '';
 
   const [profiles, setProfiles] = useState<DirectoryListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,7 +109,7 @@ export const AdminDirectory = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAdminDirectoryProfiles(auth.userId, { pageSize: 100, includeInactive: true });
+      const data = await fetchAdminDirectoryProfiles({ pageSize: 100, includeInactive: true });
       setProfiles(data.items);
     } catch {
       setError('Admin access required, or profiles could not be loaded.');
@@ -149,7 +148,7 @@ export const AdminDirectory = () => {
     setDrawerError(null);
     setDrawerNotice(null);
     try {
-      const updated = await updateAdminDirectoryProfile(authToken, editing.id, {
+      const updated = await updateAdminDirectoryProfile(editing.id, {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim() || null,
         headline: form.headline.trim() || null,
@@ -177,7 +176,7 @@ export const AdminDirectory = () => {
     setDrawerError(null);
     setDrawerNotice(null);
     try {
-      const updated = await assignAdminDirectoryProfile(authToken, editing.id, target);
+      const updated = await assignAdminDirectoryProfile(editing.id, target);
       setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       setEditing(updated);
       setDrawerNotice('Profile attached to that account.');
@@ -192,7 +191,7 @@ export const AdminDirectory = () => {
   async function performDelete(p: DirectoryListItem) {
     setSaving(true);
     try {
-      await deleteAdminDirectoryProfile(authToken, p.id);
+      await deleteAdminDirectoryProfile(p.id);
       setProfiles((prev) => prev.filter((x) => x.id !== p.id));
       if (editing?.id === p.id) closeDrawer();
     } catch {
