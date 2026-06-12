@@ -27,6 +27,11 @@ export type SocketRelayRequest = {
   status: SocketRelayRequestStatus;
   reopenedCount: number;
   claimedFulfillmentId: string | null;
+  // How the request is settled (issue #420): the chosen value type code (e.g. 'FREE', 'SC', 'USD',
+  // 'BARTER'), with a positive amount for priced types only. Amount-less types (Free, Barter) carry a
+  // null amount; "Free" is never shown as $0.
+  priceCurrency: string | null;
+  priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -37,6 +42,8 @@ export type SocketRelayRequestInput = {
   category: string;
   city: string | null;
   isPublic: boolean;
+  priceCurrency: string | null;
+  priceAmount: number | null;
 };
 
 export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'cancelled';

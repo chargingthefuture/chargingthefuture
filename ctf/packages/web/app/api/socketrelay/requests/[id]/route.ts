@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
 import { SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
-import { getRequestById, updateRequest, validateRequestInput } from 'lib/socketrelay/repository';
+import { getRequestById, isValidRequestPrice, updateRequest, validateRequestInput } from 'lib/socketrelay/repository';
 import type { SocketRelayRequestInput } from 'lib/socketrelay/types';
 import { reportError } from 'lib/observability/report';
 
@@ -10,12 +10,20 @@ type RouteProps = {
 };
 
 function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
+  const priceCurrency =
+    typeof body.priceCurrency === 'string' && body.priceCurrency.trim().length > 0
+      ? body.priceCurrency.trim()
+      : null;
+  const rawAmount = typeof body.priceAmount === 'number' ? body.priceAmount : Number(body.priceAmount);
+  const priceAmount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : null;
   return {
     title: typeof body.title === 'string' ? body.title : '',
     details: typeof body.details === 'string' ? body.details : '',
     category: typeof body.category === 'string' ? body.category : '',
     city: typeof body.city === 'string' ? body.city : null,
     isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
+    priceCurrency,
+    priceAmount,
   };
 }
 
@@ -73,7 +81,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
   }
 
   const input = parseRequestInput(body);
-  if (!validateRequestInput(input)) {
+  if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
     return NextResponse.json(
       { ok: false, code: SOCKETRELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },
       { status: 400 },

@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socketrelay/_lib';
 import { SOCKETRELAY_DEFAULT_PAGE, SOCKETRELAY_DEFAULT_PAGE_SIZE, SOCKETRELAY_ERROR_CODE } from 'lib/socketrelay/constants';
-import { createRequest, listRequests, validateRequestInput } from 'lib/socketrelay/repository';
+import { createRequest, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/socketrelay/repository';
 import type { SocketRelayRequestInput } from 'lib/socketrelay/types';
 import { reportError } from 'lib/observability/report';
 
 function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
+  // Value type (issue #420): a non-empty currency code names how the request is settled; an absent/blank
+  // code means none was chosen. Amount is only kept as a positive finite number; anything else is null
+  // (so amount-less types like Free/Barter carry no amount).
+  const priceCurrency =
+    typeof body.priceCurrency === 'string' && body.priceCurrency.trim().length > 0
+      ? body.priceCurrency.trim()
+      : null;
+  const rawAmount = typeof body.priceAmount === 'number' ? body.priceAmount : Number(body.priceAmount);
+  const priceAmount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : null;
   return {
     title: typeof body.title === 'string' ? body.title : '',
     details: typeof body.details === 'string' ? body.details : '',
     category: typeof body.category === 'string' ? body.category : '',
     city: typeof body.city === 'string' ? body.city : null,
     isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
+    priceCurrency,
+    priceAmount,
   };
 }
 
@@ -55,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   const input = parseRequestInput(body);
-  if (!validateRequestInput(input)) {
+  if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
     return NextResponse.json(
       { ok: false, code: SOCKETRELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },
       { status: 400 },
