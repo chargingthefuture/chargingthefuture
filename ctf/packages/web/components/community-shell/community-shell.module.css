@@ -479,7 +479,28 @@
   flex-shrink: 0;
 }
 
+/* The suggestion chips sit in a single row that slides sideways instead of
+   wrapping onto several lines. On a phone, wrapping pushed the chat up and out
+   of view; a horizontal scroll keeps them to one line so more of the chat shows. */
+.chatChipRow {
+  padding: 0 20px 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.chatChipRow::-webkit-scrollbar {
+  display: none;
+}
+
 .chatChip {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 6px 14px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.04);

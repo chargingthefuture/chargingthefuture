@@ -277,7 +277,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         })}
       </div>
 
-      <div className={styles.chatSuggestions}>
+      <div className={styles.chatChipRow}>
         {SUGGESTIONS.map((suggestion) => (
           <button key={suggestion} type="button" className={styles.chatChip} onClick={() => selectSuggestion(suggestion)}>
             {suggestion}
