@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { COLOR, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
+import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
 
 export type PostDraft = {
@@ -22,14 +23,18 @@ export type PostDraft = {
   requiresAmount: boolean;
 };
 
+type FieldA11y = { id: string; "aria-describedby"?: string; "aria-invalid"?: true };
+
 function TagEditor({
   tags,
   onChange,
   suggest,
+  a11y,
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
   suggest: (prefix: string, exclude: string[]) => string[];
+  a11y: FieldA11y;
 }) {
   const [input, setInput] = useState("");
   const full = tags.length >= MAX_TAGS_PER_POST;
@@ -50,11 +55,14 @@ function TagEditor({
         {tags.map((tag) => (
           <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600 }}>
             {tag}
-            <X size={12} style={{ cursor: "pointer" }} onClick={() => onChange(tags.filter((t) => t !== tag))} />
+            <button type="button" aria-label={`Remove tag ${tag}`} onClick={() => onChange(tags.filter((t) => t !== tag))} style={{ display: "inline-flex", background: "transparent", border: "none", padding: 0, color: COLOR, cursor: "pointer" }}>
+              <X size={12} />
+            </button>
           </span>
         ))}
       </div>
       <input
+        {...a11y}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
@@ -114,41 +122,37 @@ export function SocketRelayPost({
     <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto" }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>{editing ? "Edit Your Request" : "Post a Request"}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 620 }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Title</div>
-          <input value={draft.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="A short summary of what you need or can offer" style={fieldStyle} />
-        </div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Details</div>
-          <textarea value={draft.details} onChange={(e) => onChange({ details: e.target.value })} placeholder="Be specific about what help you need or can give…" rows={3} style={{ ...fieldStyle, resize: "none" }} />
-        </div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Tags (up to {MAX_TAGS_PER_POST})</div>
-          <TagEditor tags={draft.tags} onChange={(tags) => onChange({ tags })} suggest={suggest} />
-        </div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>City (privacy-protected)</div>
-          <input value={draft.city} onChange={(e) => onChange({ city: e.target.value })} placeholder="City or neighborhood only — never exact address" style={fieldStyle} />
-        </div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>How will this be settled?</div>
-          <CurrencySelect value={draft.priceCurrency} onChange={onCurrencyChange} ariaLabel="How will this be settled?" className="" />
-          <div style={{ fontSize: 12, color: SUBTLE, marginTop: 6 }}>Most help here is free. You can also offer ServiceCredits, money, crypto, or a barter — pick what fits.</div>
-        </div>
+        <FormField label="Title">
+          {(a) => <input {...a} value={draft.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="A short summary of what you need or can offer" style={fieldStyle} />}
+        </FormField>
+        <FormField label="Details">
+          {(a) => <textarea {...a} value={draft.details} onChange={(e) => onChange({ details: e.target.value })} placeholder="Be specific about what help you need or can give…" rows={3} style={{ ...fieldStyle, resize: "none" }} />}
+        </FormField>
+        <FormField label={`Tags (up to ${MAX_TAGS_PER_POST})`}>
+          {(a) => <TagEditor tags={draft.tags} onChange={(tags) => onChange({ tags })} suggest={suggest} a11y={a} />}
+        </FormField>
+        <FormField label="City" optional hint="City or neighborhood only — never an exact address. Privacy-protected.">
+          {(a) => <input {...a} value={draft.city} onChange={(e) => onChange({ city: e.target.value })} placeholder="City or neighborhood" style={fieldStyle} />}
+        </FormField>
+        <FormField label="How will this be settled?" hint="Most help here is free. You can also offer ServiceCredits, money, crypto, or a barter — pick what fits.">
+          {(a) => <CurrencySelect value={draft.priceCurrency} onChange={onCurrencyChange} ariaLabel="How will this be settled?" className="" id={a.id} describedBy={a["aria-describedby"]} />}
+        </FormField>
         {draft.requiresAmount && (
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Amount</div>
-            <input
-              value={draft.priceAmount}
-              onChange={(e) => onChange({ priceAmount: e.target.value.replace(/[^0-9.]/g, "") })}
-              inputMode="decimal"
-              placeholder="e.g. 20"
-              style={fieldStyle}
-            />
-          </div>
+          <FormField label="Amount">
+            {(a) => (
+              <input
+                {...a}
+                value={draft.priceAmount}
+                onChange={(e) => onChange({ priceAmount: e.target.value.replace(/[^0-9.]/g, "") })}
+                inputMode="decimal"
+                placeholder="e.g. 20"
+                style={fieldStyle}
+              />
+            )}
+          </FormField>
         )}
-        {error && <div style={{ fontSize: 13, color: "#EF4444" }}>{error}</div>}
-        {success && <div style={{ fontSize: 13, color: "#22C55E" }}>{editing ? "Saved! View it in the feed." : "Posted successfully! View it in the feed."}</div>}
+        {error && <div role="alert" style={{ fontSize: 13, color: "#EF4444" }}>{error}</div>}
+        {success && <div role="status" style={{ fontSize: 13, color: "#22C55E" }}>{editing ? "Saved! View it in the feed." : "Posted successfully! View it in the feed."}</div>}
         <button onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: submitting ? `${COLOR}66` : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
           {submitting ? (editing ? "Saving…" : "Posting…") : editing ? "Save Changes" : "Post Request"}
         </button>
