@@ -24,6 +24,7 @@ type CommunityShellProps = {
   trust: TrustUserExtension;
   initialSection?: ShellSection;
   isAuthenticated?: boolean;
+  isAdmin?: boolean;
   signInUrl?: string;
 };
 
@@ -114,7 +115,7 @@ function sortPluginsForUi(
   });
 }
 
-export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, signInUrl = '/sign-in' }: CommunityShellProps) {
+export function CommunityShell({ initialPlugins, shellStats, currentUser, trust, initialSection = 'chat', isAuthenticated = false, isAdmin = false, signInUrl = '/sign-in' }: CommunityShellProps) {
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
@@ -293,7 +294,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
         </div>
       </header>
       <div className={styles.frame}>
-        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} />
+        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
         <ShellSidebar
           section={section}
           channels={channels}
