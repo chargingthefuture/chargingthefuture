@@ -28,8 +28,15 @@ function TrackingEmpty({ onBook }: { onBook: () => void }) {
 }
 
 function TrackingCard({ request, onChat }: { request: TripRequest; onChat: (r: TripRequest) => void }) {
-  const route = `${request.fromLocation ?? "—"} → ${request.toLocation ?? "—"}`;
+  const pickup = request.pickupCity ?? request.fromLocation ?? null;
+  const dropoff = request.dropoffCity ?? request.toLocation ?? null;
+  // Show the real pickup → drop-off; fall back to the request title (the API sends pickupCity /
+  // dropoffCity / title, never fromLocation / toLocation), so the route is no longer always "— → —".
+  const route = pickup || dropoff ? `${pickup ?? "—"} → ${dropoff ?? "—"}` : (request.title?.trim() || "Your trip");
   const status = request.status ?? "Pending";
+  // An open/pending request has no driver yet — nothing is being tracked. Only show the live-map
+  // placeholder once a driver is on the way; otherwise say plainly that we're waiting for a driver.
+  const awaitingDriver = /open|pending|request|search|form|wait/i.test(status);
   return (
     <div style={{ padding: "24px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}30`, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -39,11 +46,13 @@ function TrackingCard({ request, onChat }: { request: TripRequest; onChat: (r: T
         <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
         <Badge style={{ ...statusBadgeStyle(status), fontSize: 12, marginLeft: "auto" }}>{status}</Badge>
       </div>
-      <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center", color: "#4B5563", fontSize: 13, marginBottom: 16 }}>
-        Live map — tracking in progress
+      <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center", color: "#9CA3AF", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+        {awaitingDriver
+          ? "Waiting for a driver to accept. The live map appears once someone's on the way."
+          : "Live map — tracking in progress"}
       </div>
       <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        <MessageSquare size={14} /> Chat
+        <MessageSquare size={14} /> {awaitingDriver ? "Message (opens when matched)" : "Chat"}
       </button>
     </div>
   );
