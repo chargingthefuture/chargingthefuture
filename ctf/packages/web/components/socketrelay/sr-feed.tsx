@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
 import { COLOR, FAINT, SUBTLE, srHandle, timeAgo, type SrRequest } from "./sr-shared";
+import { CopyLink } from "@/components/shared/copy-link";
 
 function CardAction({ open, isOwn, submitting, onClaim }: { open: boolean; isOwn: boolean; submitting: boolean; onClaim: () => void }) {
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
@@ -42,10 +43,11 @@ function RequestCard({
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#F9FAFB", marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>
           {r.details && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
-          <div style={{ display: "flex", gap: 12, fontSize: 12, color: SUBTLE, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, fontSize: 12, color: SUBTLE, flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ color: COLOR, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
             {r.city && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {r.city}</span>}
             <span>· {timeAgo(r.createdAtIso)}</span>
+            <CopyLink url="/apps/socketrelay" label="Share" className="sr-share" />
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
