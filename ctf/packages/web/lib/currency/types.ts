@@ -2,7 +2,7 @@
 // ServiceCredits is the platform utility token. Its technical code is 'SC', but UI must always
 // render the label 'ServiceCredits' and must never show a ServiceCredits amount at a fiat equivalent.
 
-export type CurrencyKind = 'token' | 'fiat' | 'crypto' | 'barter';
+export type CurrencyKind = 'token' | 'fiat' | 'crypto' | 'barter' | 'free';
 
 export interface Currency {
   code: string;

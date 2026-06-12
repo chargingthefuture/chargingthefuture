@@ -2,8 +2,8 @@ import { queryDb } from 'lib/db/postgres';
 
 // Community Value Index recognition (issue #121). This module is the GDP plugin's "value layer": it
 // rolls all recognized economic activity across applicable plugins into ONE composite figure — the
-// Community Value Index — by weighting each value type (fiat, crypto, ServiceCredits, barter) with an
-// owner-curated, non-binding contribution weight.
+// Community Value Index — by weighting each value type (fiat, crypto, ServiceCredits, barter, free) with
+// an owner-curated, non-binding contribution weight.
 //
 // IMPORTANT — the index is NOT money. It is a relative, community-built measure for transparency, in the
 // spirit of GDP. The contribution weights (stored in currency_usd_rates, USD used only as the reference
@@ -16,10 +16,11 @@ export interface CurrencyVolume {
   currencyCode: string;
 }
 
-// Barter is a no-money exchange. It is a recognized value type (selectable as a payment kind), counted
-// in the index by the NUMBER of completed barter trades times its contribution weight — never by a
-// monetary amount, because a barter trade has none.
+// Barter (a no-money two-way exchange) and Free (one-way mutual aid at no charge) are recognized value
+// types selectable as payment kinds. Both are counted in the index by the NUMBER of completed exchanges
+// times their contribution weight — never by a monetary amount, because neither carries a price.
 export const BARTER_CODE = 'BARTER';
+export const FREE_CODE = 'FREE';
 
 /** The composite index plus the value types that had no contribution weight (surfaced, never silently dropped). */
 export interface CommunityValueResult {
@@ -135,8 +136,8 @@ export const levelUpTrainerPayoutSource: RecognitionSource = {
 /**
  * Registered recognition sources, one per plugin, owner-approved one at a time. Append other plugins'
  * eligible-value sources here (and document them in the GDP inventory) as the owner approves each one.
- * Barter trades register as a `BARTER`-coded source (counted by completed-trade count) once a plugin
- * settles barter on-platform via the shared payment selector (issue #420).
+ * Barter and free exchanges register as `BARTER`/`FREE`-coded sources (counted by completed-exchange
+ * count) once a plugin settles them on-platform via the shared payment selector (issue #420).
  */
 export const RECOGNITION_SOURCES: RecognitionSource[] = [trustTransportSource, levelUpTrainerPayoutSource];
 

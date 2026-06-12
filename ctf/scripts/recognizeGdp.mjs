@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import crypto from 'crypto';
 
 // Community Value Index rollup (issue #121). Recognizes ACTUAL economic activity across the applicable
-// plugins and folds every value type (fiat, crypto, ServiceCredits, barter) into ONE relative index via
+// plugins and folds every value type (fiat, crypto, ServiceCredits, barter, free) into ONE relative index via
 // owner-set contribution weights (currency_usd_rates; USD is the reference base = 1). Writes the
 // `gdp_value_index` metric for the week — ALONGSIDE the projection target, not replacing it. A
 // production scheduler runs this weekly.
@@ -69,7 +69,7 @@ async function run() {
     );
     const rates = new Map(ratesResult.rows.map((row) => [row.currency_code, Number(row.usd_rate)]));
 
-    // Community Value Index: fold EVERY value type (fiat, crypto, ServiceCredits, barter) into one
+    // Community Value Index: fold EVERY value type (fiat, crypto, ServiceCredits, barter, free) into one
     // relative figure via its owner-set contribution weight. The index is NOT money and carries no
     // currency symbol; the weights (here USD is the reference base = 1) are never a price or redemption
     // rate. A value type with no active weight is surfaced and excluded, never silently zeroed.
