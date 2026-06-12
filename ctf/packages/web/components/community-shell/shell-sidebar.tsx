@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { SlidersHorizontal } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo } from '../../lib/hub/types';
@@ -21,6 +23,9 @@ type ShellSidebarProps = {
   // is shown and `onNavigate` lets it close itself once a destination is picked.
   mobileOpen?: boolean;
   onNavigate?: () => void;
+  // Admins get an Admin link in the drawer footer. The desktop icon rail has its own
+  // Admin entry, but that rail is hidden on phones, so this is how admins reach /admin there.
+  isAdmin?: boolean;
 };
 
 export function ShellSidebar({
@@ -35,6 +40,7 @@ export function ShellSidebar({
   onQueryChange,
   mobileOpen = false,
   onNavigate,
+  isAdmin = false,
 }: ShellSidebarProps) {
   const { theme } = useTheme();
   return (
@@ -102,6 +108,12 @@ export function ShellSidebar({
       </div>
 
       <div className={styles.sidebarFooter}>
+        {isAdmin ? (
+          <Link href="/admin" className={styles.sidebarAdminLink} onClick={() => onNavigate?.()}>
+            <SlidersHorizontal size={16} aria-hidden="true" />
+            <span>Admin</span>
+          </Link>
+        ) : null}
         <p className={styles.sidebarFooterTitle}>Verified Community · Invite Only</p>
         <p className={styles.sidebarFooterMeta}>4.9M survivors worldwide</p>
       </div>
