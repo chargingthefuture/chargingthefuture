@@ -2,9 +2,10 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search } from "lucide-react";
-import { CATEGORIES, COLOR, FAINT, SUBTLE, TEXT } from "./sr-shared";
+import { COLOR, FAINT, SUBTLE, TEXT } from "./sr-shared";
 
 export function SocketRelaySidebar({
+  categories,
   category,
   onCategory,
   search,
@@ -13,6 +14,7 @@ export function SocketRelaySidebar({
   myRequestCount,
   fulfillmentCount,
 }: {
+  categories: string[];
   category: string;
   onCategory: (category: string) => void;
   search: string;
@@ -37,7 +39,7 @@ export function SocketRelaySidebar({
       </div>
       <ScrollArea style={{ flex: 1 }}>
         <div style={{ padding: "0 8px 16px" }}>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <div key={c} onClick={() => onCategory(c)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, cursor: "pointer", background: category === c ? `${COLOR}18` : "transparent", borderLeft: category === c ? `2px solid ${COLOR}` : "2px solid transparent", marginLeft: 2, marginBottom: 2 }}>
               <span style={{ fontSize: 13, color: category === c ? TEXT : "#9CA3AF", flex: 1 }}>{c}</span>
             </div>

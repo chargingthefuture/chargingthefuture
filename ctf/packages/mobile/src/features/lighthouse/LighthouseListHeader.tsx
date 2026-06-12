@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 const DARK = '#090B0F';
 
 interface Props {

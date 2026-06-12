@@ -10,7 +10,22 @@ export type FeedStreamCredentials = {
   streamChannelId: string;
 };
 
-export async function getFeedStreamCredentials(userId: string, displayName: string): Promise<FeedStreamCredentials | null> {
+// The Feed presents three channels (announcements, questions, community). They all share one Stream
+// user identity and token — only the channel they connect to differs. Callers pass the channel key;
+// announcements stays the default so the existing /api/feed/stream route is unchanged.
+export type FeedStreamChannelKey = 'announcements' | 'questions' | 'community';
+
+const FEED_STREAM_CHANNELS: Record<FeedStreamChannelKey, { id: string; name: string }> = {
+  announcements: { id: 'ctf-feed-announcements', name: 'CTF Feed Announcements' },
+  questions: { id: 'ctf-feed-questions', name: 'CTF Feed Questions' },
+  community: { id: 'ctf-feed-community', name: 'CTF Feed Community' },
+};
+
+export async function getFeedStreamCredentials(
+  userId: string,
+  displayName: string,
+  channelKey: FeedStreamChannelKey = 'announcements',
+): Promise<FeedStreamCredentials | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) return null;
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
@@ -18,10 +33,11 @@ export async function getFeedStreamCredentials(userId: string, displayName: stri
     const streamUserId = `feed-${userId}`;
     await streamClient.upsertUser({ id: streamUserId, name: displayName });
     const token = streamClient.createToken(streamUserId);
-    const channelId = 'ctf-feed-announcements';
+    const channelDef = FEED_STREAM_CHANNELS[channelKey];
+    const channelId = channelDef.id;
     const channel = streamClient.channel('messaging', channelId, {
       created_by_id: streamUserId,
-      name: 'CTF Feed Announcements',
+      name: channelDef.name,
     });
     try {
       await channel.create();

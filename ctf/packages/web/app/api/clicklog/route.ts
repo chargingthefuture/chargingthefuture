@@ -5,7 +5,7 @@ import { createIncident, getIncidentsByUser, getIncidentCount } from 'lib/clickl
 import { canCreateIncident } from 'lib/clicklog/policy';
 import { MAX_NOTES_LENGTH } from 'lib/clicklog/constants';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const identity = await resolveRequestIdentity();
   if (!identity.userId) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   let body;
   try {
     body = await req.json();
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
   if (!body.metadata) {

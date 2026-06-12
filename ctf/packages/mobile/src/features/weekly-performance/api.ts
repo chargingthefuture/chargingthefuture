@@ -1,9 +1,8 @@
-import { Platform } from 'react-native';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 
-const API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/weekly-performance'
-    : 'http://localhost:3000/api/weekly-performance';
+const BASE = '/api/weekly-performance';
 
 export interface WeekRow {
   weekStartDate: string;
@@ -35,23 +34,17 @@ export interface MetricsResponse {
 }
 
 export async function fetchWeeks(): Promise<WeeksResponse> {
-  const res = await fetch(`${API_BASE}/weeks`);
-  if (!res.ok) throw new Error('Failed to fetch weeks');
-  return res.json() as Promise<WeeksResponse>;
+  return authedFetchJson<WeeksResponse>(`${BASE}/weeks`);
 }
 
 export async function fetchCurrentWeek(): Promise<CurrentWeekResponse> {
-  const res = await fetch(`${API_BASE}/current-week`);
-  if (!res.ok) throw new Error('Failed to fetch current week');
-  return res.json() as Promise<CurrentWeekResponse>;
+  return authedFetchJson<CurrentWeekResponse>(`${BASE}/current-week`);
 }
 
 export async function fetchWeekMetrics(weekStartDate: string): Promise<MetricsResponse> {
-  const res = await fetch(
-    `${API_BASE}/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`,
+  return authedFetchJson<MetricsResponse>(
+    `${BASE}/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`,
   );
-  if (!res.ok) throw new Error('Failed to fetch metrics');
-  return res.json() as Promise<MetricsResponse>;
 }
 
 export interface WeekSelectionResponse {
@@ -63,7 +56,7 @@ export interface WeekSelectionResponse {
 // Admin-only: mark a week active. The server enforces the admin gate and the
 // CSRF confirmation header; this mirrors the web admin's PUT call.
 export async function selectActiveWeek(weekStartDate: string): Promise<WeekSelectionResponse> {
-  const res = await fetch(`${API_BASE}/admin/week-selection`, {
+  const res = await authedFetch(`${BASE}/admin/week-selection`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

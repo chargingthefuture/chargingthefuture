@@ -284,6 +284,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-06-12: Android API client (`ContributionsApi.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain dev-only fetch against hardcoded emulator/localhost URLs. No backend, schema, or contract change.
 - 2026-06-10: UI build + two owner-requested backend rules. Shipped the full Contributions UI on
   web and Android from the approved design mockups (issue #393): the member surfaces (signed-out
   public shell, loading, main drive/contribute/history, post-submit confirmation, empty history) at

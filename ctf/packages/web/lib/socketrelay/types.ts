@@ -22,6 +22,7 @@ export type SocketRelayRequest = {
   title: string;
   details: string;
   category: string;
+  tags: string[];
   city: string | null;
   isPublic: boolean;
   status: SocketRelayRequestStatus;
@@ -36,10 +37,12 @@ export type SocketRelayRequest = {
   updatedAtIso: string;
 };
 
+// `tags` carries 1-3 free-text tags. `category` mirrors the first tag so older
+// clients that still send/read a single category keep working unchanged.
 export type SocketRelayRequestInput = {
   title: string;
   details: string;
-  category: string;
+  tags: string[];
   city: string | null;
   isPublic: boolean;
   priceCurrency: string | null;
@@ -73,6 +76,7 @@ export type SocketRelayPublicRequest = {
   ownerUsername: string | null;
   title: string;
   category: string;
+  tags: string[];
   city: string | null;
   status: SocketRelayRequestStatus;
   priceCurrency: string | null;

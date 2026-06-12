@@ -1,9 +1,8 @@
-import { Platform } from 'react-native';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
 
-const API_BASE_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/peer-programming'
-    : 'http://localhost:3000/api/peer-programming';
+const BASE = '/api/peer-programming';
 
 export type PeerProgrammingTier = 'cohort_member' | 'authenticated_audience' | 'public_audience';
 
@@ -42,13 +41,8 @@ export type RoomData = {
   fallbackOpen: boolean;
 };
 
-export async function fetchRoom(authToken: string): Promise<RoomData> {
-  const res = await fetch(`${API_BASE_URL}/room`, {
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
+export async function fetchRoom(): Promise<RoomData> {
+  const res = await authedFetch(`${BASE}/room`);
   if (!res.ok) {
     throw new Error(`room_fetch_failed:${res.status}`);
   }
@@ -56,15 +50,13 @@ export async function fetchRoom(authToken: string): Promise<RoomData> {
 }
 
 export async function postMessage(
-  authToken: string,
   cohortId: string,
   body: string,
   tier: PeerProgrammingTier = 'cohort_member',
 ): Promise<PeerProgrammingMessage> {
-  const res = await fetch(`${API_BASE_URL}/messages`, {
+  const res = await authedFetch(`${BASE}/messages`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },

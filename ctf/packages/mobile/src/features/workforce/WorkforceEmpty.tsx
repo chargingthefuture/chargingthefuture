@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 
 // Design: MobileWorkforceEmpty — no skills/profile listed yet
 // "Add Skills" and "View Demand Map" CTAs have no mobile API backing → layout preserved, buttons inert
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 export function WorkforceEmpty() {
   return (

@@ -18,7 +18,7 @@ import {
 } from './admin-api';
 import type { PeerProgrammingTopic } from './api';
 
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
@@ -59,7 +59,7 @@ export const AdminPeerProgramming = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchAdminTopic(auth.userId);
+    const result = await fetchAdminTopic();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden && result.message) setError(result.message);
@@ -94,7 +94,7 @@ export const AdminPeerProgramming = () => {
     setError(null);
     setNotice(null);
     try {
-      const saved = await upsertAdminTopic(auth.userId, {
+      const saved = await upsertAdminTopic({
         weekStartDate: weekStartDate.trim(),
         title: title.trim(),
         guidance: guidance.trim(),
@@ -122,7 +122,7 @@ export const AdminPeerProgramming = () => {
           .filter((value) => value.length > 0)
       : [];
     try {
-      const result = await runAdminAssignment(auth.userId, {
+      const result = await runAdminAssignment({
         allowManualOverride: useOverride,
         activeUserIds,
       });

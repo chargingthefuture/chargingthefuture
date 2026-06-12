@@ -1,9 +1,9 @@
-import { Platform } from 'react-native';
+// Community reads from the feed routes (channel=community). All calls go through
+// authedFetch so the Clerk bearer token is attached and the base URL comes from
+// runtime config (APP_URL).
+import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 
-export const FEED_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/feed'
-    : 'http://localhost:3000/api/feed';
+const BASE = '/api/feed';
 
 export type CommunityItem = {
   id: string;
@@ -40,18 +40,17 @@ export async function fetchCommunityPosts(
   page = 1,
   pageSize = 20,
 ): Promise<CommunityResponse> {
-  const url = `${FEED_API_BASE}/items?channel=community&page=${page}&pageSize=${pageSize}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Community request failed: ${res.status}`);
-  }
-  const data = await res.json();
-  return data as CommunityResponse;
+  return authedFetchJson<CommunityResponse>(
+    `${BASE}/items?channel=community&page=${page}&pageSize=${pageSize}`,
+  );
 }
 
 export async function markCommunityItemRead(itemId: string): Promise<void> {
-  await fetch(`${FEED_API_BASE}/items/${itemId}/read`, {
+  const res = await authedFetch(`${BASE}/items/${itemId}/read`, {
     method: 'POST',
     headers: { 'x-ctf-csrf': '1' },
   });
+  if (!res.ok) {
+    throw new Error(`Failed to mark item read: ${res.status}`);
+  }
 }

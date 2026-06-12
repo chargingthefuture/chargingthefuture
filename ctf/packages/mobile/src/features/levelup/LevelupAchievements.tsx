@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fetchAchievements, type Achievement } from './api';
 
-const GREEN = '#10B981';
+const GREEN = '#22C55E';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const MUTED = '#4B5563';

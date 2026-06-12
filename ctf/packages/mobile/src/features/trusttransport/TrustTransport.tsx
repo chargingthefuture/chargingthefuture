@@ -15,9 +15,11 @@ import {
   listRequests,
   type ListRequestsResponse,
 } from './api';
-import type { TrustTransportMode, TrustTransportRequest } from './types';
+import { ttSettlementLabel, type TrustTransportMode, type TrustTransportRequest } from './types';
+import { CurrencySelect } from '../currency';
+import type { Currency } from '../currency';
 
-const COLOR = '#F97316';
+const COLOR = '#38BDF8';
 const BG = '#0F1117';
 const SURFACE = '#090B0F';
 const BORDER = 'rgba(255,255,255,0.06)';
@@ -92,15 +94,27 @@ interface BookTabProps {
 function BookTab({ mode, onSubmitted }: BookTabProps) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  // How the requester will settle the ride (issue #420): default Free; amount only for priced types.
+  const [priceCurrency, setPriceCurrency] = useState('FREE');
+  const [priceAmount, setPriceAmount] = useState('');
+  const [requiresAmount, setRequiresAmount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const modeName = mode === 'ride' ? 'Ride' : mode === 'package' ? 'Package' : 'Food';
 
+  // A priced value type (ServiceCredits, fiat, crypto) needs a positive amount; Free/Barter don't.
+  const parsedPriceAmount = Number(priceAmount);
+  const hasValidAmount = !requiresAmount || (Number.isFinite(parsedPriceAmount) && parsedPriceAmount > 0);
+
   async function handleSubmit() {
     if (!from.trim() || !to.trim()) {
       setError('Please enter pickup and destination.');
+      return;
+    }
+    if (!hasValidAmount) {
+      setError('Enter an amount greater than zero for this value type.');
       return;
     }
     setSubmitting(true);
@@ -115,6 +129,8 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
           dropoffCity: to.trim(),
           pickupGeoRedacted: null,
           dropoffGeoRedacted: null,
+          priceCurrency: priceCurrency || null,
+          priceAmount: requiresAmount ? parsedPriceAmount : null,
         },
         `${Date.now()}-${Math.random()}`,
       );
@@ -136,7 +152,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
         </Text>
         <TouchableOpacity
           style={styles.secondaryBtn}
-          onPress={() => { setDone(false); setFrom(''); setTo(''); }}
+          onPress={() => { setDone(false); setFrom(''); setTo(''); setPriceCurrency('FREE'); setPriceAmount(''); setRequiresAmount(false); }}
         >
           <Text style={styles.secondaryBtnText}>Book Another</Text>
         </TouchableOpacity>
@@ -176,11 +192,32 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
           />
         </View>
       </View>
+      <Text style={styles.settleLabel}>How will you settle this ride?</Text>
+      <CurrencySelect
+        value={priceCurrency}
+        onChange={(code, currency: Currency | null) => {
+          const needs = currency?.requiresAmount ?? false;
+          setPriceCurrency(code);
+          setRequiresAmount(needs);
+          if (!needs) setPriceAmount('');
+        }}
+      />
+      {requiresAmount ? (
+        <TextInput
+          value={priceAmount}
+          onChangeText={(t) => setPriceAmount(t.replace(/[^0-9.]/g, ''))}
+          placeholder="Amount (e.g. 20)"
+          placeholderTextColor={MUTED}
+          keyboardType="decimal-pad"
+          style={styles.input}
+          accessibilityLabel="Amount"
+        />
+      ) : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <TouchableOpacity
-        style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
+        style={[styles.primaryBtn, (submitting || !hasValidAmount) && styles.primaryBtnDisabled]}
         onPress={() => { void handleSubmit(); }}
-        disabled={submitting}
+        disabled={submitting || !hasValidAmount}
         accessibilityRole="button"
       >
         {submitting
@@ -251,6 +288,7 @@ function TrackTab({
             {req.dropoffCity ? (
               <Text style={styles.requestLocation}>To: {req.dropoffCity}</Text>
             ) : null}
+            <Text style={styles.requestSettle}>{ttSettlementLabel(req.priceCurrency, req.priceAmount)}</Text>
             <View style={styles.safetyRow}>
               <Text style={styles.safetyItem}>🛡️ Background checked</Text>
               <Text style={styles.safetyItem}>✅ ID verified</Text>
@@ -531,6 +569,8 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: { fontSize: 11, fontWeight: '600' },
   requestLocation: { fontSize: 13, color: SUBTLE, marginBottom: 2 },
+  requestSettle: { fontSize: 12, fontWeight: '700', color: '#22C55E', marginTop: 2, marginBottom: 2 },
+  settleLabel: { fontSize: 13, color: MUTED, marginTop: 10, marginBottom: 6 },
   safetyRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   safetyItem: { fontSize: 11, color: MUTED },
   publicContent: { padding: 20 },

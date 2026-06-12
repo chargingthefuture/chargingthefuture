@@ -6,6 +6,8 @@ import {
   SOCKETRELAY_MAX_DETAILS_LENGTH,
   SOCKETRELAY_MAX_MESSAGE_LENGTH,
   SOCKETRELAY_MAX_PAGE_SIZE,
+  SOCKETRELAY_MAX_TAG_LENGTH,
+  SOCKETRELAY_MAX_TAGS_PER_REQUEST,
   SOCKETRELAY_MAX_TITLE_LENGTH,
 } from './constants';
 import type {
@@ -47,6 +49,7 @@ type RequestRow = {
   title: string;
   details: string;
   category: string;
+  tags: string[];
   city: string | null;
   is_public: boolean;
   status: 'open' | 'claimed' | 'closed' | 'cancelled';
@@ -107,6 +110,28 @@ function normalizeNullableText(value: string | null | undefined): string | null 
   return normalized.length > 0 ? normalized : null;
 }
 
+// Tag hygiene: trim/collapse whitespace, drop blanks, fold case-insensitive duplicates
+// (first spelling wins). The per-post cap is enforced by validateRequestInput.
+export function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const tag of tags) {
+    const normalized = normalizeText(tag);
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+  }
+  return result;
+}
+
+// Legacy rows predate the tags column; fall back to the single category.
+function rowTags(row: RequestRow): string[] {
+  if (Array.isArray(row.tags) && row.tags.length > 0) return row.tags;
+  return row.category ? [row.category] : [];
+}
+
 function normalizeJsonObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -134,6 +159,7 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     title: row.title,
     details: row.details,
     category: row.category,
+    tags: rowTags(row),
     city: row.city,
     isPublic: row.is_public,
     status: row.status,
@@ -152,6 +178,7 @@ function mapPublicRequestRow(row: RequestRow): SocketRelayPublicRequest {
     ownerUsername: row.owner_username,
     title: row.title,
     category: row.category,
+    tags: rowTags(row),
     city: row.city,
     status: row.status,
     priceCurrency: row.price_currency,
@@ -201,7 +228,7 @@ export function validateProfileInput(input: SocketRelayProfileInput): boolean {
 export function validateRequestInput(input: SocketRelayRequestInput): boolean {
   const title = normalizeText(input.title);
   const details = normalizeText(input.details);
-  const category = normalizeText(input.category);
+  const tags = normalizeTags(input.tags);
 
   if (title.length === 0 || title.length > SOCKETRELAY_MAX_TITLE_LENGTH) {
     return false;
@@ -211,7 +238,11 @@ export function validateRequestInput(input: SocketRelayRequestInput): boolean {
     return false;
   }
 
-  if (category.length === 0 || category.length > 64) {
+  if (tags.length === 0 || tags.length > SOCKETRELAY_MAX_TAGS_PER_REQUEST) {
+    return false;
+  }
+
+  if (tags.some((tag) => tag.length > SOCKETRELAY_MAX_TAG_LENGTH)) {
     return false;
   }
 
@@ -333,7 +364,7 @@ export async function createRequest(actorUserId: string, actorUsername: string |
 
   return withDbTransaction(async (client) => {
     const existing = await client.query<RequestRow>(
-      `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+      `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
        FROM socketrelay_requests
        WHERE owner_user_id = $1 AND idempotency_key = $2
        LIMIT 1`,
@@ -344,17 +375,19 @@ export async function createRequest(actorUserId: string, actorUsername: string |
       return mapRequestRow(existing.rows[0]);
     }
 
+    const tags = normalizeTags(input.tags);
     const created = await client.query<RequestRow>(
       `INSERT INTO socketrelay_requests (
-         owner_user_id, owner_username, title, details, category, city, is_public, status, idempotency_key, price_amount, price_currency
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8, $9, $10)
-       RETURNING id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+         owner_user_id, owner_username, title, details, category, tags, city, is_public, status, idempotency_key, price_amount, price_currency
+       ) VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8, 'open', $9, $10, $11)
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
       [
         actorUserId,
         normalizeNullableText(actorUsername),
         normalizeText(input.title),
         normalizeText(input.details),
-        normalizeText(input.category),
+        tags[0],
+        tags,
         normalizeNullableText(input.city),
         input.isPublic,
         idempotencyKey,
@@ -397,7 +430,7 @@ export async function listRequests(options?: {
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
      FROM socketrelay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
        AND ($2::boolean = FALSE OR is_public = TRUE)
@@ -416,7 +449,7 @@ export async function listRequests(options?: {
 
 export async function getRequestById(requestId: string): Promise<SocketRelayRequest | null> {
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
      FROM socketrelay_requests
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -444,23 +477,26 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
     throw new Error('not_owner');
   }
 
+  const tags = normalizeTags(input.tags);
   const result = await queryDb<RequestRow>(
     `UPDATE socketrelay_requests
      SET title = $2,
          details = $3,
          category = $4,
-         city = $5,
-         is_public = $6,
-         price_amount = $7,
-         price_currency = $8,
+         tags = $5::text[],
+         city = $6,
+         is_public = $7,
+         price_amount = $8,
+         price_currency = $9,
          updated_at = NOW()
      WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
     [
       requestId,
       normalizeText(input.title),
       normalizeText(input.details),
-      normalizeText(input.category),
+      tags[0],
+      tags,
       normalizeNullableText(input.city),
       input.isPublic,
       input.priceAmount,
@@ -488,7 +524,7 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
          claimed_fulfillment_id = NULL,
          updated_at = NOW()
      WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
     [requestId],
   );
 
@@ -498,7 +534,7 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
 export async function claimRequest(requestId: string, actorUserId: string): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
   const created = await withDbTransaction(async (client) => {
     const requestResult = await client.query<RequestRow>(
-      `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+      `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
        FROM socketrelay_requests
        WHERE id = $1::uuid
        LIMIT 1
@@ -538,7 +574,7 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
       `UPDATE socketrelay_requests
        SET status = 'claimed', claimed_fulfillment_id = $2::uuid, updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
       [requestId, fulfillment.rows[0].id],
     );
 
@@ -696,7 +732,7 @@ export async function listPublicRequests(options?: { page?: number; pageSize?: n
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
      FROM socketrelay_requests
      WHERE is_public = TRUE AND status <> 'cancelled'
      ORDER BY created_at DESC
@@ -714,7 +750,7 @@ export async function listPublicRequests(options?: { page?: number; pageSize?: n
 
 export async function getPublicRequestById(requestId: string): Promise<SocketRelayPublicRequest | null> {
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
      FROM socketrelay_requests
      WHERE id = $1::uuid AND is_public = TRUE AND status <> 'cancelled'
      LIMIT 1`,
@@ -746,7 +782,7 @@ export async function adminDeleteRequest(requestId: string): Promise<void> {
   const result = await queryDb<RequestRow>(
     `DELETE FROM socketrelay_requests
      WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
     [requestId],
   );
 

@@ -1,14 +1,13 @@
-import { Platform } from 'react-native';
-
 // comic AI Assistant (@comic) client for mobile. Mirrors the web routes under
 // ctf/packages/web/app/api/comic/*. Postgres + polling, no third-party LLM egress.
 // Interim safety policy: EVERY answer routes through human review before it reaches the asker
 // (Rasa is not deployed) — there is no auto-publish path. The asker only ever sees an approved/
 // corrected answer or the "Reviewing for safety" pending card.
-export const COMIC_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/comic'
-    : 'http://localhost:3000/api/comic';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
+
+const BASE = '/api/comic';
 
 // Mirrors lib/comic/constants COMIC_MENTION_REGEX: a message mentions the assistant when it
 // contains @comic on a word boundary (case-insensitive). No @ → peer-to-peer, never the bot.
@@ -40,7 +39,7 @@ export type ComicConversationResponse = {
 
 // The asker-facing read powering the AI cards interleaved in the stream.
 export async function fetchComicConversation(): Promise<ComicStreamItem[]> {
-  const res = await fetch(`${COMIC_API_BASE}/conversation`);
+  const res = await authedFetch(`${BASE}/conversation`);
   if (!res.ok) {
     throw new Error(`AI Assistant conversation request failed: ${res.status}`);
   }
@@ -67,7 +66,7 @@ export async function sendComicMessage(
   consentGranted: boolean,
   conversationId?: string | null,
 ): Promise<ComicMessageResult> {
-  const res = await fetch(`${COMIC_API_BASE}/message`, {
+  const res = await authedFetch(`${BASE}/message`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -114,7 +113,7 @@ export type ComicRateResult = {
 // Rate an answered turn (helpful / not_helpful / flagged). One rating per (user, turn);
 // re-rating updates in place. Feeds the training loop.
 export async function rateComicAnswer(turnId: string, rating: ComicAnswerRating): Promise<ComicRateResult> {
-  const res = await fetch(`${COMIC_API_BASE}/answers/${turnId}/rate`, {
+  const res = await authedFetch(`${BASE}/answers/${turnId}/rate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -153,7 +152,7 @@ export type ComicReviewResponse = {
 
 // The review queue. Returns 403 for non-admins (the console then shows an access notice).
 export async function fetchComicReviewQueue(): Promise<{ items: ComicReviewItem[]; forbidden: boolean }> {
-  const res = await fetch(`${COMIC_API_BASE}/review`);
+  const res = await authedFetch(`${BASE}/review`);
   if (res.status === 401 || res.status === 403) {
     return { items: [], forbidden: true };
   }
@@ -181,7 +180,7 @@ export async function resolveComicReview(
   resolution: ComicReviewResolution,
   correctedBody?: string | null,
 ): Promise<ComicReviewResolveResult> {
-  const res = await fetch(`${COMIC_API_BASE}/review/${reviewId}/resolve`, {
+  const res = await authedFetch(`${BASE}/review/${reviewId}/resolve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

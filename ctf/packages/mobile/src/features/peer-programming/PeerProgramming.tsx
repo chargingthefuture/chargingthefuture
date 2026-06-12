@@ -8,7 +8,7 @@ import { PeerProgrammingEmpty } from './pp-empty';
 import { PeerProgrammingCohortTab } from './pp-cohort-tab';
 import { PeerProgrammingSessionTab } from './pp-session-tab';
 
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 
 type NavKey = 'home' | 'cohorts' | 'session' | 'global';
 
@@ -31,7 +31,7 @@ export const PeerProgramming = () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setLoading(true);
     setError(null);
-    fetchRoom(auth.userId)
+    fetchRoom()
       .then((data) => {
         setRoom(data);
         setLoading(false);

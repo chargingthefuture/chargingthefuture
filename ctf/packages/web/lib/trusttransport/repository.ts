@@ -1,4 +1,5 @@
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { getCurrency } from 'lib/currency/repository';
 import {
   TRUSTTRANSPORT_DEFAULT_PAGE,
   TRUSTTRANSPORT_DEFAULT_PAGE_SIZE,
@@ -36,6 +37,8 @@ type RequestRow = {
   pickup_geo_redacted: string | null;
   dropoff_geo_redacted: string | null;
   status: TrustTransportRequest['status'];
+  price_amount: string | number | null;
+  price_currency: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -158,6 +161,8 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     pickupGeoRedacted: row.pickup_geo_redacted,
     dropoffGeoRedacted: row.dropoff_geo_redacted,
     status: row.status,
+    priceCurrency: row.price_currency,
+    priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
   };
@@ -226,6 +231,23 @@ export function validateRequestInput(input: TrustTransportRequestInput): boolean
   return true;
 }
 
+// Validate the chosen settlement value type + amount against the currency catalog (issue #420). No value
+// type (both null) is allowed. Otherwise the code must be an active currency, with a positive amount for
+// priced types (requires_amount) and no amount for amount-less types (Free, Barter).
+export async function isValidRequestPrice(priceCurrency: string | null, priceAmount: number | null): Promise<boolean> {
+  if (priceCurrency === null) {
+    return priceAmount === null;
+  }
+  const currency = await getCurrency(priceCurrency);
+  if (!currency || !currency.isActive) {
+    return false;
+  }
+  if (currency.requiresAmount) {
+    return typeof priceAmount === 'number' && Number.isFinite(priceAmount) && priceAmount > 0;
+  }
+  return priceAmount === null;
+}
+
 export function validateTripProof(artifactType: string, artifactRedacted: string): boolean {
   if (!['photo', 'code', 'note'].includes(artifactType)) {
     return false;
@@ -275,11 +297,15 @@ export async function createRequest(
     throw new Error('invalid_payload');
   }
 
+  if (!(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
+    throw new Error('invalid_request_price');
+  }
+
   await ensureUserNotRestricted(actorUserId);
 
   return withDbTransaction(async (client) => {
     const existing = await client.query<RequestRow>(
-      `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at
+      `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
        FROM trusttransport_requests
        WHERE requester_user_id = $1 AND idempotency_key = $2
        LIMIT 1`,
@@ -301,9 +327,11 @@ export async function createRequest(
          pickup_geo_redacted,
          dropoff_geo_redacted,
          status,
-         idempotency_key
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9)
-       RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at`,
+         idempotency_key,
+         price_amount,
+         price_currency
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9, $10, $11)
+       RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at`,
       [
         actorUserId,
         input.mode,
@@ -314,6 +342,8 @@ export async function createRequest(
         normalizeNullableText(input.pickupGeoRedacted),
         normalizeNullableText(input.dropoffGeoRedacted),
         normalizeText(idempotencyKey),
+        input.priceAmount,
+        input.priceCurrency,
       ],
     );
 
@@ -329,7 +359,7 @@ export async function createRequest(
 
 export async function getRequestById(requestId: string): Promise<TrustTransportRequest | null> {
   const result = await queryDb<RequestRow>(
-    `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at
+    `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
      FROM trusttransport_requests
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -358,7 +388,7 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
-    `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at
+    `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
      FROM trusttransport_requests
      WHERE ($1::text IS NULL OR requester_user_id = $1)
      ORDER BY created_at DESC
@@ -426,7 +456,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
 
     if ((existingTrip.rowCount ?? 0) > 0) {
       const requestUpdate = await client.query<RequestRow>(
-        `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at
+        `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
          FROM trusttransport_requests
          WHERE id = $1::uuid
          LIMIT 1`,
@@ -458,7 +488,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
       `UPDATE trusttransport_requests
        SET status = 'accepted', updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at`,
+       RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at`,
       [requestId],
     );
 
@@ -587,7 +617,7 @@ export async function updateTripStatus(
       `UPDATE trusttransport_requests
        SET status = $2, updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, created_at, updated_at`,
+       RETURNING id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at`,
       [trip.request_id, nextRequestStatus],
     );
 

@@ -18,6 +18,14 @@ function parsePriceAmount(value: unknown): number | null {
   return null;
 }
 
+// Older clients send a single `category` string; newer ones send a `tags` array (1-3).
+function parseTags(body: Record<string, unknown>): string[] {
+  if (Array.isArray(body.tags)) {
+    return body.tags.filter((tag): tag is string => typeof tag === 'string');
+  }
+  return typeof body.category === 'string' && body.category.trim() ? [body.category] : [];
+}
+
 function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
   // Value type (issue #420): a non-empty currency code names how the request is settled; an absent/blank
   // code means none was chosen. Amount is only kept as a positive finite number; anything else is null
@@ -30,7 +38,7 @@ function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInp
   return {
     title: typeof body.title === 'string' ? body.title : '',
     details: typeof body.details === 'string' ? body.details : '',
-    category: typeof body.category === 'string' ? body.category : '',
+    tags: parseTags(body),
     city: typeof body.city === 'string' ? body.city : null,
     isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
     priceCurrency,
