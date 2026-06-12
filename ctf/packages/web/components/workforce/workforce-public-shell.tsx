@@ -7,8 +7,6 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 // Palette from the WorkforcePublic / MobileWorkforcePublic design mockups.
 const BG = '#0F1117';
 const COLOR = '#F97316';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
 
@@ -66,7 +64,7 @@ function DesktopWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 260 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live workforce snapshot</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {SNAPSHOT.map(({ label, color }) => (
+            {SNAPSHOT.map(({ label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 80, fontSize: 12, color: '#9CA3AF' }}>{label}</div>
                 <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
