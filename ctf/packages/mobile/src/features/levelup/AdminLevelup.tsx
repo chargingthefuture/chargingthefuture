@@ -17,7 +17,7 @@ import {
 import type { Cohort } from './api';
 
 // Brand tokens (from design/.../survivor-hub/MobileLevelUpAdmin.tsx).
-const COLOR = '#10B981';
+const COLOR = '#22C55E';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const SURFACE = '#161B27';
@@ -46,7 +46,7 @@ export const AdminLevelup = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchAdminCohorts(auth.userId);
+    const result = await fetchAdminCohorts();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden) setError(result.message);
@@ -93,7 +93,7 @@ export const AdminLevelup = () => {
     setSubmitting(true);
     setError(null);
     setNotice(null);
-    const result = await adjustMemberCredits(auth.userId, {
+    const result = await adjustMemberCredits({
       targetUserId: targetUserId.trim(),
       amount: parsedAmount,
       reason: reason.trim(),

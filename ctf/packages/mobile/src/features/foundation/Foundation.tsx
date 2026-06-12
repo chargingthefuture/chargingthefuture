@@ -19,7 +19,7 @@ const SURFACE_DARK = '#090B0F';
 const TEXT = '#F9FAFB';
 const TEXT_DIM = '#9CA3AF';
 const SUBTLE = '#6B7280';
-const COLOR = '#EF4444';
+const COLOR = '#F59E0B';
 
 type Tab = 'browse' | 'quotes';
 

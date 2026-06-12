@@ -1,15 +1,10 @@
-
-import Config from 'react-native-config';
-import { Platform } from 'react-native';
-
-const getApiBaseUrl = () => {
-  if (__DEV__) {
-    return Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-  }
-  return Config.API_BASE_URL || 'https://api.example.com';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+// Clicklog mobile API client. Mirrors the web routes:
+//   GET    /api/clicklog        → { incidents, count }
+//   POST   /api/clicklog        → log an incident
+//   DELETE /api/clicklog/:id    → delete an incident
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
 
 async function handleResponse(res: Response, fallbackMessage: string) {
   if (!res.ok) {
@@ -23,27 +18,17 @@ async function handleResponse(res: Response, fallbackMessage: string) {
   return res.json();
 }
 
-async function getAuthToken() {
-  // Replace with your actual auth token retrieval logic
-  // e.g., from SecureStore, AsyncStorage, or context
-  return '';
-}
-
 export async function fetchIncidents() {
-  const token = await getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/api/clicklog`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authedFetch('/api/clicklog');
   return handleResponse(res, 'Failed to fetch incidents');
 }
 
 export async function logIncident(metadata: { latitude?: number; longitude?: number; notes?: string }) {
-  const token = await getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/api/clicklog`, {
+  const res = await authedFetch('/api/clicklog', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'x-ctf-csrf': '1',
     },
     body: JSON.stringify({ metadata }),
   });
@@ -51,10 +36,9 @@ export async function logIncident(metadata: { latitude?: number; longitude?: num
 }
 
 export async function deleteIncident(id: string) {
-  const token = await getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/api/clicklog/${id}`, {
+  const res = await authedFetch(`/api/clicklog/${id}`, {
     method: 'DELETE',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { 'x-ctf-csrf': '1' },
   });
   return handleResponse(res, 'Failed to delete incident');
 }

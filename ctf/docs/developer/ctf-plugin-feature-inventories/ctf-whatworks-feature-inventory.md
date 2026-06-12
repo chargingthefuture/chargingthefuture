@@ -149,6 +149,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-06-12: The Android What Works API client (`packages/mobile/src/features/whatworks/api.ts`) now uses the shared authenticated fetch helper — every call carries the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against a hardcoded development URL with an empty token.
 - 2026-05-31: Initial implementation. Schema (`whatworks_problems`, `whatworks_products`,
   `whatworks_endorsements`), repository/policy/types, full `/api/whatworks/*` surface (public + user +
   admin), pixel pass of the four designed web states, functional admin curation/moderation, Android

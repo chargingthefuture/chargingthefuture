@@ -6,7 +6,7 @@ import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { UnlockReviewStatus } from "../../lib/unlock/types";
 
-export const BRAND = "#10B981";
+export const BRAND = "#C084FC";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
 export const BORDER = "#1E2A3A";

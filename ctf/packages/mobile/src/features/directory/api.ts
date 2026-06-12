@@ -1,13 +1,11 @@
 // Real API client for the Directory plugin (mobile).
 // Mirrors web routes under ctf/packages/web/app/api/directory/.
-// Authentication tokens must be passed from the host auth context.
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
 
-import { Platform } from 'react-native';
+import { authedFetch } from '../../auth/authedFetch';
 
-const API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/directory'
-    : 'http://localhost:3000/api/directory';
+const API_BASE = '/api/directory';
 
 export type DirectoryProfileSource = 'admin' | 'self' | 'community-generated';
 
@@ -61,7 +59,6 @@ export interface DirectorySector {
 }
 
 export async function fetchDirectoryList(
-  authToken: string,
   opts: { page?: number; pageSize?: number; q?: string; sectorId?: string } = {},
 ): Promise<DirectoryListResponse> {
   const params = new URLSearchParams();
@@ -72,19 +69,15 @@ export async function fetchDirectoryList(
   const qs = params.toString();
   const url = `${API_BASE}/list${qs ? `?${qs}` : ''}`;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
+  const res = await authedFetch(url);
   if (!res.ok) {
     throw new Error(`directory/list ${res.status}`);
   }
   return res.json() as Promise<DirectoryListResponse>;
 }
 
-export async function fetchDirectorySectors(authToken: string): Promise<DirectorySector[]> {
-  const res = await fetch(`${API_BASE}/sectors`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
+export async function fetchDirectorySectors(): Promise<DirectorySector[]> {
+  const res = await authedFetch(`${API_BASE}/sectors`);
   if (!res.ok) {
     throw new Error(`directory/sectors ${res.status}`);
   }
@@ -92,10 +85,30 @@ export async function fetchDirectorySectors(authToken: string): Promise<Director
   return data.items;
 }
 
+// Shape returned by GET /api/directory/announcements (web lib/directory/types
+// DirectoryAnnouncement, narrowed to the fields the mobile screen renders).
+export interface DirectoryAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  isActive: boolean;
+  publishedAtIso: string;
+  expiresAtIso: string | null;
+}
+
+export async function fetchDirectoryAnnouncements(): Promise<DirectoryAnnouncement[]> {
+  const res = await authedFetch(`${API_BASE}/announcements`);
+  if (!res.ok) {
+    throw new Error(`directory/announcements ${res.status}`);
+  }
+  const data = (await res.json()) as { items: DirectoryAnnouncement[] };
+  return data.items;
+}
+
 // ── Admin client ────────────────────────────────────────────────────────────
 // Mirrors the admin routes under ctf/packages/web/app/api/directory/admin/.
 // Every admin route is gated by requireDirectoryAdminAccess on the server, so a
-// non-admin token receives a 401/403 and these calls throw. Mutations send the
+// non-admin caller receives a 401/403 and these calls throw. Mutations send the
 // x-ctf-csrf header the web routes require.
 
 // Editable fields accepted by PUT /api/directory/admin/profiles/[id]. Mirrors
@@ -113,7 +126,6 @@ export interface AdminProfileEditInput {
 }
 
 export async function fetchAdminDirectoryProfiles(
-  authToken: string,
   opts: { page?: number; pageSize?: number; includeInactive?: boolean } = {},
 ): Promise<DirectoryListResponse> {
   const params = new URLSearchParams();
@@ -121,9 +133,7 @@ export async function fetchAdminDirectoryProfiles(
   if (opts.pageSize) params.set('pageSize', String(opts.pageSize));
   if (opts.includeInactive) params.set('includeInactive', 'true');
   const qs = params.toString();
-  const res = await fetch(`${API_BASE}/admin/profiles${qs ? `?${qs}` : ''}`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
+  const res = await authedFetch(`${API_BASE}/admin/profiles${qs ? `?${qs}` : ''}`);
   if (!res.ok) {
     throw new Error(`directory/admin/profiles ${res.status}`);
   }
@@ -131,14 +141,12 @@ export async function fetchAdminDirectoryProfiles(
 }
 
 export async function updateAdminDirectoryProfile(
-  authToken: string,
   profileId: string,
   input: AdminProfileEditInput,
 ): Promise<DirectoryListItem> {
-  const res = await fetch(`${API_BASE}/admin/profiles/${profileId}`, {
+  const res = await authedFetch(`${API_BASE}/admin/profiles/${profileId}`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
@@ -152,14 +160,12 @@ export async function updateAdminDirectoryProfile(
 }
 
 export async function assignAdminDirectoryProfile(
-  authToken: string,
   profileId: string,
   userId: string,
 ): Promise<DirectoryListItem> {
-  const res = await fetch(`${API_BASE}/admin/profiles/${profileId}/assign`, {
+  const res = await authedFetch(`${API_BASE}/admin/profiles/${profileId}/assign`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
@@ -172,15 +178,10 @@ export async function assignAdminDirectoryProfile(
   return data.profile;
 }
 
-export async function deleteAdminDirectoryProfile(
-  authToken: string,
-  profileId: string,
-): Promise<void> {
-  const res = await fetch(`${API_BASE}/admin/profiles/${profileId}`, {
+export async function deleteAdminDirectoryProfile(profileId: string): Promise<void> {
+  const res = await authedFetch(`${API_BASE}/admin/profiles/${profileId}`, {
     method: 'DELETE',
     headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
   });

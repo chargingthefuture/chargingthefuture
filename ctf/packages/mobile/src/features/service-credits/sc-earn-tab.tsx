@@ -7,8 +7,8 @@ import { COLOR, colors } from './sc-styles';
 // No user-specific balances or transactions are displayed.
 
 const EARN_WAYS = [
-  { title: 'Complete a GentlePulse session', credits: '+5 credits', color: '#8B5CF6' },
-  { title: 'Attend a LevelUp cohort', credits: '+15 credits', color: '#3B82F6' },
+  { title: 'Complete a GentlePulse session', credits: '+5 credits', color: '#34D399' },
+  { title: 'Attend a LevelUp cohort', credits: '+15 credits', color: '#22C55E' },
   { title: 'Refer a survivor', credits: '+50 credits', color: '#22C55E' },
 ] as const;
 

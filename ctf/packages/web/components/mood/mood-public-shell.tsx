@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the MoodPublic / MobileMoodPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#EC4899';
+const COLOR = '#4ADE80';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";

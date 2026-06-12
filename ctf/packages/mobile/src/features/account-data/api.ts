@@ -4,19 +4,20 @@
 // DELETE /api/account/full-account        → whole-account deletion
 //
 // Mutations send the same-origin CSRF header (`x-ctf-csrf: 1`) and JSON content type that the
-// account routes require.
+// account routes require. All calls go through authedFetch so the Clerk bearer token is
+// attached and the base URL comes from runtime config (APP_URL).
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+import { authedFetch } from '../../auth/authedFetch';
 
 // Bound every request so a stalled connection can't trap the screen in a loading or
 // submitting state forever. Aborts after the timeout and reports a clear "network_timeout".
 const REQUEST_TIMEOUT_MS = 15000;
 
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(path: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await authedFetch(path, { ...init, signal: controller.signal });
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('network_timeout');
@@ -42,7 +43,7 @@ export type AccountServicesResponse = {
 };
 
 export async function fetchAccountServices(): Promise<AccountServicesResponse> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/account/services`, { credentials: 'include' });
+  const res = await fetchWithTimeout('/api/account/services');
   if (!res.ok) {
     throw new Error(`account_services_fetch_failed:${res.status}`);
   }
@@ -50,9 +51,8 @@ export async function fetchAccountServices(): Promise<AccountServicesResponse> {
 }
 
 export async function deleteServiceData(slug: string): Promise<void> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/account/services/${encodeURIComponent(slug)}`, {
+  const res = await fetchWithTimeout(`/api/account/services/${encodeURIComponent(slug)}`, {
     method: 'DELETE',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
@@ -65,9 +65,8 @@ export async function deleteServiceData(slug: string): Promise<void> {
 }
 
 export async function deleteFullAccount(): Promise<void> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/account/full-account`, {
+  const res = await fetchWithTimeout('/api/account/full-account', {
     method: 'DELETE',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',

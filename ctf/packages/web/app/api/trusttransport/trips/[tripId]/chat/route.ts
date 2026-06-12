@@ -35,7 +35,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ tr
     if (!credentials) {
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, channelId, ...credentials });
+    // `streamChannelId` is returned (in addition to `channelId`) so the web chat tab connects to the
+    // real trip channel instead of falling back to the raw trip id. A trip is text chat only — there is
+    // deliberately no video room (the transport plugin does not do video).
+    return NextResponse.json({ ok: true, channelId, streamChannelId: channelId, ...credentials });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     reportError(e, { area: 'trusttransport', op: 'trips_tripid_chat' });

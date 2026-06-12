@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { authedFetch } from '../../auth/authedFetch';
 import type { Cohort } from './api';
 
 // Admin client for the LevelUp plugin. Mirrors the web admin route under
@@ -11,17 +11,11 @@ import type { Cohort } from './api';
 //
 // No admin KPI read endpoint exists yet, so the mobile screen shows the cohort
 // overview and the adjustment action only.
+//
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
 
-function getApiOrigin(): string {
-  const fromEnv =
-    typeof process !== 'undefined' && process.env
-      ? (process.env.EXPO_PUBLIC_API_ORIGIN ?? process.env.API_ORIGIN)
-      : undefined;
-  return fromEnv && fromEnv.length > 0 ? fromEnv.replace(/\/$/, '') : 'http://localhost:3000';
-}
-
-const LEVELUP_BASE =
-  Platform.OS === 'web' ? '/api/levelup' : `${getApiOrigin()}/api/levelup`;
+const LEVELUP_BASE = '/api/levelup';
 
 export type CohortsFetchResult =
   | { ok: true; forbidden: false; cohorts: Cohort[]; message: null }
@@ -29,12 +23,9 @@ export type CohortsFetchResult =
 
 // GET the cohort list. Read access only; non-admins can still see this list, so
 // admin gating for the screen relies on the auth result, not this call.
-export async function fetchAdminCohorts(authToken: string): Promise<CohortsFetchResult> {
-  const res = await fetch(`${LEVELUP_BASE}/cohorts`, {
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-    },
+export async function fetchAdminCohorts(): Promise<CohortsFetchResult> {
+  const res = await authedFetch(`${LEVELUP_BASE}/cohorts`, {
+    headers: { 'Content-Type': 'application/json' },
   });
   if (res.status === 401 || res.status === 403) {
     return { ok: false, forbidden: true, cohorts: [], message: 'Access is required.' };
@@ -62,14 +53,12 @@ export type AdjustCreditsResult =
 // requires (`x-ctf-csrf: '1'`). A positive amount grants credits to the member; a
 // negative amount removes credits from the member into the LevelUp treasury.
 export async function adjustMemberCredits(
-  authToken: string,
   input: AdjustCreditsInput,
 ): Promise<AdjustCreditsResult> {
   try {
-    const res = await fetch(`${LEVELUP_BASE}/admin/adjust-credits`, {
+    const res = await authedFetch(`${LEVELUP_BASE}/admin/adjust-credits`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${authToken}`,
         'Content-Type': 'application/json',
         'x-ctf-csrf': '1',
       },

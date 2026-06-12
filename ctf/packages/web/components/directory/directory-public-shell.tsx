@@ -6,8 +6,8 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the DirectoryPublic / MobileDirectoryPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#3B82F6';
-const HUNT_COLOR = '#D946EF';
+const COLOR = '#93C5FD';
+const HUNT_COLOR = '#FBBF24';
 const TEXT = '#F9FAFB';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";

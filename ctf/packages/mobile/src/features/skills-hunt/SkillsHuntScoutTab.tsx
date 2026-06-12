@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SkillsHuntApi, type Round } from './SkillsHuntApi';
 
-const COLOR = '#D946EF';
+const COLOR = '#FBBF24';
 const BIO_MAX = 280;
 
 // Taxonomy from the design spec (§2.1); sourced from skills_taxonomy_skills.

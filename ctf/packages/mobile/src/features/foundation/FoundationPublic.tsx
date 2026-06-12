@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 const BG = '#0F1117';
 const TEXT = '#F9FAFB';
 const TEXT_DIM = '#9CA3AF';
-const COLOR = '#EF4444';
+const COLOR = '#F59E0B';
 
 /**
  * Foundation public/unauthenticated state — mirrors MobileFoundationPublic.tsx mockup.

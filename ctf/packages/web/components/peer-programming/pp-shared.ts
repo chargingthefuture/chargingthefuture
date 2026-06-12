@@ -4,7 +4,7 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#8B5CF6";
+export const COLOR = "#6EE7B7";
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the Peer Programming shell. The shell paints its accent as the

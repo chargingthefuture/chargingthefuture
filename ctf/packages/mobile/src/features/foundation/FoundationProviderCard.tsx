@@ -4,7 +4,7 @@ import type { Provider } from './api';
 
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
-const COLOR = '#EF4444';
+const COLOR = '#F59E0B';
 const BORDER_COLOR = `${COLOR}15`;
 
 function initials(name: string): string {

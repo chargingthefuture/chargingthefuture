@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import type { PeerProgrammingCohort, PeerProgrammingTopic } from './api';
 
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 
 type Props = {
   cohort: PeerProgrammingCohort;

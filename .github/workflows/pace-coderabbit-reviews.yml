@@ -25,10 +25,14 @@ on:
   workflow_dispatch: {}
 
 # Least privilege: this job only needs to read PR check state and flip one PR's draft
-# flag. It never pushes code and never merges.
+# flag. It never pushes code and never merges. contents must still be WRITE, not read:
+# with an explicit permissions block, the "ready for review" call (GraphQL
+# markPullRequestReadyForReview, what `gh pr ready` uses) is refused as "Resource not
+# accessible by integration" unless the token also has contents: write.
+# See https://github.com/cli/cli/discussions/6924.
 permissions:
   pull-requests: write
-  contents: read
+  contents: write
   checks: read
 
 # If a manual run overlaps the scheduled one, let the latest win rather than double-promote.

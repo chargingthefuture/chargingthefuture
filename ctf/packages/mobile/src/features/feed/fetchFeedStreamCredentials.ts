@@ -1,5 +1,7 @@
-// Fetches Stream credentials for the Feed feature (mobile)
-import { Platform } from 'react-native';
+// Fetches Stream credentials for the Feed feature (mobile).
+// Goes through authedFetch so the Clerk bearer token is attached and the base
+// URL comes from runtime config (APP_URL). Mirrors POST /api/feed/stream.
+import { authedFetch } from '../../auth/authedFetch';
 
 export type FeedStreamCredentials = {
   streamApiKey: string;
@@ -9,9 +11,10 @@ export type FeedStreamCredentials = {
 };
 
 export async function fetchFeedStreamCredentials(): Promise<FeedStreamCredentials> {
-  // Use the correct base URL for Expo/React Native fetch
-  const baseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/feed/stream`, { method: 'POST' });
+  const res = await authedFetch('/api/feed/stream', {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any;
   try {

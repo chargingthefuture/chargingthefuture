@@ -1,7 +1,7 @@
 // Shared constants and types for the Skills Hunt admin/moderation shell.
 import type { SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
 
-export const COLOR = "#A855F7";
+export const COLOR = "#FBBF24";
 
 export const STATUS_OPTIONS: Array<{ key: SkillsHuntSubmissionStatus; label: string; color: string }> = [
   { key: "pending",  label: "Pending",  color: "#F59E0B" },

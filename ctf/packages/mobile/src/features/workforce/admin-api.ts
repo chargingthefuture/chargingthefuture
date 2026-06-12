@@ -1,11 +1,12 @@
-import { Platform } from 'react-native';
+import { authedFetch } from '../../auth/authedFetch';
 
 // Admin client for the Workforce plugin. Mirrors the web admin routes under
 // ctf/packages/web/app/api/workforce/admin/* (plus the read-only dashboard
 // endpoint). Admin access is enforced server-side; a 401/403 surfaces as a
 // "forbidden" notice in the screen.
-const API_ROOT =
-  Platform.OS === 'android' ? 'http://10.0.2.2:3000/api/workforce' : 'http://localhost:3000/api/workforce';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+const API_ROOT = '/api/workforce';
 
 export type WorkforceConfig = {
   exportsEnabled: boolean;
@@ -29,9 +30,8 @@ export type WorkforceOverviewResult = {
   message: string | null;
 };
 
-function authHeaders(authToken: string, withCsrf = false): Record<string, string> {
+function jsonHeaders(withCsrf = false): Record<string, string> {
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${authToken}`,
     'Content-Type': 'application/json',
   };
   if (withCsrf) headers['x-ctf-csrf'] = '1';
@@ -39,10 +39,10 @@ function authHeaders(authToken: string, withCsrf = false): Record<string, string
 }
 
 // GET admin config and the read-only dashboard counts in one pass.
-export async function fetchAdminOverview(authToken: string): Promise<WorkforceOverviewResult> {
+export async function fetchAdminOverview(): Promise<WorkforceOverviewResult> {
   const [configRes, dashboardRes] = await Promise.all([
-    fetch(`${API_ROOT}/admin/config`, { headers: authHeaders(authToken) }),
-    fetch(`${API_ROOT}/dashboard`, { headers: authHeaders(authToken) }),
+    authedFetch(`${API_ROOT}/admin/config`, { headers: jsonHeaders() }),
+    authedFetch(`${API_ROOT}/dashboard`, { headers: jsonHeaders() }),
   ]);
 
   if (configRes.status === 401 || configRes.status === 403) {
@@ -73,10 +73,10 @@ export async function fetchAdminOverview(authToken: string): Promise<WorkforceOv
 }
 
 // PUT updated config. Carries the CSRF confirmation header the API requires.
-export async function updateAdminConfig(authToken: string, config: WorkforceConfig): Promise<WorkforceConfig> {
-  const res = await fetch(`${API_ROOT}/admin/config`, {
+export async function updateAdminConfig(config: WorkforceConfig): Promise<WorkforceConfig> {
+  const res = await authedFetch(`${API_ROOT}/admin/config`, {
     method: 'PUT',
-    headers: authHeaders(authToken, true),
+    headers: jsonHeaders(true),
     body: JSON.stringify(config),
   });
   if (!res.ok) {
@@ -87,10 +87,10 @@ export async function updateAdminConfig(authToken: string, config: WorkforceConf
 }
 
 // POST run the incremental recruited sync. CSRF-confirmed mutation.
-export async function runAdminSync(authToken: string): Promise<void> {
-  const res = await fetch(`${API_ROOT}/admin/sync`, {
+export async function runAdminSync(): Promise<void> {
+  const res = await authedFetch(`${API_ROOT}/admin/sync`, {
     method: 'POST',
-    headers: authHeaders(authToken, true),
+    headers: jsonHeaders(true),
     body: JSON.stringify({}),
   });
   if (!res.ok) {
@@ -99,10 +99,10 @@ export async function runAdminSync(authToken: string): Promise<void> {
 }
 
 // POST enqueue a recruited-total recompute. CSRF-confirmed mutation.
-export async function runAdminRecompute(authToken: string): Promise<void> {
-  const res = await fetch(`${API_ROOT}/admin/recompute`, {
+export async function runAdminRecompute(): Promise<void> {
+  const res = await authedFetch(`${API_ROOT}/admin/recompute`, {
     method: 'POST',
-    headers: authHeaders(authToken, true),
+    headers: jsonHeaders(true),
     body: JSON.stringify({}),
   });
   if (!res.ok) {

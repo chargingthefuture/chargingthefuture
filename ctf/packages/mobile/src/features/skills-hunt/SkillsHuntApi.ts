@@ -1,22 +1,12 @@
 // Skills Hunt mobile API client.
 //
-// Targets the same /api/skills-hunt/* endpoints as the web shell. Auth is
-// handled by the platform wrapper (cookies on web, session token on native).
+// Targets the same /api/skills-hunt/* endpoints as the web shell. All calls go
+// through authedFetch so the Clerk bearer token is attached and the base URL
+// comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
 
-import { Platform } from 'react-native';
+import { authedFetchJson } from '../../auth/authedFetch';
 
-// Native builds resolve the API origin from a runtime config key
-// (process.env.EXPO_PUBLIC_API_ORIGIN — exposed via Expo's public-env
-// convention; falls back to localhost for dev). Document the key in the
-// mobile build configs alongside other EXPO_PUBLIC_* values.
-function getApiOrigin(): string {
-  const fromEnv = typeof process !== 'undefined' && process.env
-    ? (process.env.EXPO_PUBLIC_API_ORIGIN ?? process.env.API_ORIGIN)
-    : undefined;
-  return fromEnv && fromEnv.length > 0 ? fromEnv.replace(/\/$/, '') : 'http://localhost:3000';
-}
-
-const API_BASE = Platform.OS === 'web' ? '/api/skills-hunt' : `${getApiOrigin()}/api/skills-hunt`;
+const API_BASE = '/api/skills-hunt';
 
 export type Round = {
   id: string;
@@ -84,22 +74,15 @@ export type MissionWithProgress = {
 };
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
-  return res.json() as Promise<T>;
+  return authedFetchJson<T>(`${API_BASE}${path}`);
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  return authedFetchJson<T>(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: 'request failed' })) as { message?: string };
-    throw new Error(err.message ?? `POST ${path} failed`);
-  }
-  return res.json() as Promise<T>;
 }
 
 export const SkillsHuntApi = {

@@ -1,12 +1,9 @@
 // GDP API client for mobile — mirrors GET /api/gdp/report/current
 // Only real backend fields are consumed; no fabricated figures.
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
 
-import { Platform } from 'react-native';
-
-const API_BASE: string =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000';
+import { authedFetchJson } from '../../auth/authedFetch';
 
 export type GdpMetric = {
   metricKey: string;
@@ -39,16 +36,8 @@ type GdpCurrentResponse =
   | { ok: true; report: null }
   | { ok: false; code?: string; message?: string };
 
-export async function fetchGdpCurrentReport(authToken?: string): Promise<GdpReport | null> {
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-  const res = await fetch(`${API_BASE}/api/gdp/report/current`, { headers });
-  if (!res.ok) {
-    throw new Error(`GDP fetch failed: ${res.status}`);
-  }
-  const json: GdpCurrentResponse = await res.json();
+export async function fetchGdpCurrentReport(): Promise<GdpReport | null> {
+  const json = await authedFetchJson<GdpCurrentResponse>('/api/gdp/report/current');
   if (!json.ok || !json.report) {
     return null;
   }

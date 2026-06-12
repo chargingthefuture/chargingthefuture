@@ -6,7 +6,7 @@ const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
-const COLOR = '#EF4444';
+const COLOR = '#F59E0B';
 
 /**
  * Foundation empty state — mirrors MobileFoundationEmpty.tsx mockup.

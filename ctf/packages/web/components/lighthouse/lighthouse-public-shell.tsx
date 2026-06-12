@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the LightHousePublic / MobileLightHousePublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 const MUTED = '#6B7280';
