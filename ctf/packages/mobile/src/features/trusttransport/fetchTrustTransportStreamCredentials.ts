@@ -4,14 +4,13 @@ export interface TrustTransportStreamCredentials {
   apiKey: string;
   userId: string;
   userToken: string;
-  callId?: string;
-  chatChannelId?: string;
+  chatChannelId: string;
 }
 
-// Fetches Stream chat + video credentials for a TrustTransport trip. React Native fetch has no page
-// origin, so a relative '/api/...' path never resolves — use the platform base URL (Android emulator
-// reaches the host at 10.0.2.2). The server returns the canonical stream* field names plus the video
-// callId; map them to the shape the stream tab reads.
+// Fetches Stream chat credentials for a TrustTransport trip thread. A trip is text chat only — there
+// is no video. React Native fetch has no page origin, so a relative '/api/...' path never resolves —
+// use the platform base URL (Android emulator reaches the host at 10.0.2.2). The server returns the
+// canonical stream* field names; map them to the shape the chat tab reads.
 export async function fetchTrustTransportStreamCredentials(tripId: string): Promise<TrustTransportStreamCredentials> {
   const baseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
   const res = await fetch(`${baseUrl}/api/trusttransport/trips/${tripId}/chat`, {
@@ -33,7 +32,6 @@ export async function fetchTrustTransportStreamCredentials(tripId: string): Prom
     apiKey: data.streamApiKey,
     userId: data.streamUserId,
     userToken: data.streamToken,
-    callId: data.callId,
     chatChannelId: data.streamChannelId ?? data.channelId,
   };
 }
