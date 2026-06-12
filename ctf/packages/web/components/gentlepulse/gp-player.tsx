@@ -35,10 +35,10 @@ export function GentlePulsePlayer({
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 24 }}>
-            <button style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: SUBTLE }}>
+            <button aria-label="Volume" style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: SUBTLE }}>
               <Volume2 size={20} />
             </button>
-            <button onClick={onTogglePause} style={{ width: 72, height: 72, borderRadius: "50%", background: COLOR, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <button onClick={onTogglePause} aria-label={isPaused ? "Play" : "Pause"} style={{ width: 72, height: 72, borderRadius: "50%", background: COLOR, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               {isPaused ? <Play size={28} style={{ color: "#0A0F0E" }} /> : <Pause size={28} style={{ color: "#0A0F0E" }} />}
             </button>
             <button onClick={onClose} style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: SUBTLE, fontSize: 14 }}>
