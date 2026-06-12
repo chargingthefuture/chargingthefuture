@@ -45,14 +45,15 @@ async function main() {
     await client.query(
       `
         INSERT INTO socketrelay_requests
-          (id, owner_user_id, title, details, category, city, is_public, status, idempotency_key, reopened_count, claimed_fulfillment_id)
+          (id, owner_user_id, title, details, category, tags, city, is_public, status, idempotency_key, reopened_count, claimed_fulfillment_id)
         VALUES
-          ($1::uuid, 'seed-socketrelay-owner-01', 'Seed SocketRelay Request', 'Deterministic request fixture for SocketRelay API validation.', 'logistics', 'Austin', TRUE, 'claimed', 'seed-socketrelay-request-01', 0, $2::uuid)
+          ($1::uuid, 'seed-socketrelay-owner-01', 'Seed SocketRelay Request', 'Deterministic request fixture for SocketRelay API validation.', 'logistics', ARRAY['logistics', 'moving'], 'Austin', TRUE, 'claimed', 'seed-socketrelay-request-01', 0, $2::uuid)
         ON CONFLICT (id)
         DO UPDATE SET
           title = EXCLUDED.title,
           details = EXCLUDED.details,
           category = EXCLUDED.category,
+          tags = EXCLUDED.tags,
           city = EXCLUDED.city,
           is_public = EXCLUDED.is_public,
           status = EXCLUDED.status,

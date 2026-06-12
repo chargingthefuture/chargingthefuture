@@ -16,8 +16,14 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
 ### 1.1 Dashboard and Request Lifecycle
 
 1. Authenticated request dashboard with active and owned request views.
-2. Request create/update/repost flows with deterministic status semantics.
+2. Request create/update/repost flows with deterministic status semantics. Owners can edit their
+   own open requests from the feed (web); the edit reuses the post form and the existing
+   `PUT /api/socketrelay/requests/:id` route.
 3. Ownership-aware request visibility and action controls.
+4. Tagging: each request carries 1-3 free-text tags (max 64 chars each; server normalizes
+   whitespace and folds case-insensitive duplicates). Feed filter chips are derived from the tags
+   actually in use, most-used first, capped at 10. The post form suggests tags already in use so
+   vocabulary converges without a curated list (owner decision, 2026-06-12: guided free-form).
 
 ### 1.2 Profile Management
 
@@ -105,7 +111,10 @@ Admin routes:
 Tables owned by this plugin:
 
 1. `socketrelay_user_extension` — Per-user profile extension fields.
-2. `socketrelay_requests` — Request lifecycle rows (status, ownership, repost lineage). Includes a nullable `owner_username TEXT` column that captures the poster's chosen `@username` at request-creation time (denormalized from the Clerk session, exactly like `chyme_messages.username` and `feed_community_posts.author_username`), because v3 has no reliable server-side store of other users' usernames. This handle is surfaced in every view, including the not-signed-in / public projection — never "Anonymous" (owner decision, 2026-06-04).
+2. `socketrelay_requests` — Request lifecycle rows (status, ownership, repost lineage). Includes a
+   `tags TEXT[] NOT NULL DEFAULT '{}'` column holding 1-3 free-text tags; the legacy `category TEXT`
+   column is kept in sync with the first tag so older clients (and legacy rows, which read as
+   `[category]`) keep working. Also includes a nullable `owner_username TEXT` column that captures the poster's chosen `@username` at request-creation time (denormalized from the Clerk session, exactly like `chyme_messages.username` and `feed_community_posts.author_username`), because v3 has no reliable server-side store of other users' usernames. This handle is surfaced in every view, including the not-signed-in / public projection — never "Anonymous" (owner decision, 2026-06-04).
 3. `socketrelay_request_events` — Event log for request state transitions.
 4. `socketrelay_fulfillments` — Fulfillment claims and outcomes per request.
 5. `socketrelay_fulfillment_participants` — Participant access records for fulfillment chats.
@@ -148,7 +157,8 @@ Web admin mobile-responsive: confirmed. `app/admin/socketrelay/page.tsx` is a se
 
 ## 7) Seed Coverage Status
 
-`ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle, fulfillment outcomes, and announcement states for dev validation.
+`ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle (including the `tags` array
+alongside the legacy `category`), fulfillment outcomes, and announcement states for dev validation.
 
 ## 8) Gaps and Known Technical Debt
 
@@ -156,9 +166,11 @@ Web admin mobile-responsive: confirmed. `app/admin/socketrelay/page.tsx` is a se
 2. Audit retention policy for `socketrelay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
 3. The design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject moderation, but the backend exposes no approve/reject request endpoint — the only admin request-state mutation is `DELETE /api/socketrelay/admin/requests/:id`. The Android admin mirrors delete only; an approve/reject command/contract + route would be needed to back that mockup affordance.
 4. Mobile-created announcements cannot be targeted to the SocketRelay plugin: `POST /api/socketrelay/admin/announcements` does not accept a `targeting` field, and `listSocketRelayAdminAnnouncements` only returns announcements whose targeting includes `socketrelay`. The Android admin therefore reads announcements (`GET`) but does not offer a create form, since a created announcement would not appear in the plugin-scoped list.
+5. The Android app has no edit-own-request flow: the React Native client does not yet know the signed-in user's id (its fetches carry no session identity), so it cannot tell which feed cards belong to the viewer. Web (desktop and phone-width) has the edit flow; Android needs session/user wiring first.
 
 ## 9) Change Log
 
+- 2026-06-12 (second pass): Multi-tag model + edit flow + Android filter parity (owner decision: guided free-form tagging). Schema: added `tags TEXT[] NOT NULL DEFAULT '{}'` to `socketrelay_requests`; `category` stays in sync with the first tag for older clients, and legacy rows read as `[category]`. Server: `normalizeTags` (trim, collapse whitespace, fold case-insensitive duplicates), validation of 1-3 tags at 64 chars each; `POST /requests` and `PUT /requests/:id` accept a `tags` array or the legacy single `category` string. Contracts: `socketrelay.request.create` bumped to 1.1.0; new `socketrelay.request.update` entry. Seed script writes `tags`. Web shell: post form gained a chip-based tag editor (cap 3) with in-use suggestions; feed cards show all tags; owners get an Edit button that reuses the post form against the existing PUT route; tag filtering matches any tag, chips capped at the 10 most-used. Android: same tag editor (`SocketRelayTagInput.tsx` + `tags.ts` helpers), tag badges, and — new for parity — the search box and tag filter chips the web feed already had. Android edit-own-request deferred (no session identity on the RN client; see Gaps).
 - 2026-06-12: Tag system rework (owner request). Removed the hardcoded category chip list (and its "Mental Health" entry) from the web shell. Filter chips in the feed (phone layout) and sidebar (desktop) are now derived from the tags actually present in loaded requests, most-used first, via `deriveCategories` in `sr-shared.ts`; filtering is case-insensitive. The post form field is relabeled "Tag" with anything-goes placeholder copy on web and Android. The request `category` column and the API contract are unchanged (free text, 1–64 chars, still required). UI-only; no schema/API/contract change.
 - 2026-06-06: Android admin parity (design `MobileSocketRelayAdmin.tsx`). Added `packages/mobile/src/features/socketrelay/AdminSocketRelay.tsx` + `admin-api.ts`, registered as the `socketrelay-admin` feature in `App.tsx`. Mirrors the web admin (`app/admin/socketrelay/page.tsx`): four stat cards plus request, fulfillment, and announcement lists, binding the existing routes only — `GET /admin/requests`, `GET /admin/fulfillments`, `GET /admin/announcements`, and `DELETE /admin/requests/:id` (with `x-ctf-csrf: 1`). Server-side admin gate; 401/403 renders an "admins only" notice. Delete request requires a confirm dialog. Confirmed the web admin page is already mobile-responsive (responsive Tailwind grid, stacks at the 768px breakpoint) — no web change required. Omitted approve/reject (no backing endpoint) and announcement create (plugin targeting not accepted by the POST route); both noted in Gaps. No schema/API/contract change.
 - 2026-05-31: Android pixel pass (design `MobileSocketRelay.tsx`). Created `api.ts` bound to real web routes (GET requests, POST requests with CSRF, POST fulfill with CSRF). Rebuilt `SocketRelay.tsx` to mockup (`MobileSocketRelay.tsx`) in RN primitives; added `SocketRelayLoading.tsx`, `SocketRelayEmpty.tsx`, `SocketRelayPublic.tsx` sub-components. Mock file retired (was already empty). Omitted: need/offer type distinction, urgency badge, credits counter — not in `SocketRelayRequest` model. Delivery status: Android ✅.

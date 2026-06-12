@@ -10,6 +10,8 @@ import {
   BG,
   deriveCategories,
   getSocketRelayTokens,
+  requestTags,
+  suggestTags,
   type SrChatCredentials,
   type SrFulfillment,
   type SrFulfillmentsResponse,
@@ -25,7 +27,7 @@ import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { SocketRelayChat } from "./sr-chat";
 import { SocketRelayRightPanel } from "./sr-right-panel";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", category: "", city: "", isPublic: false };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", isPublic: false };
 
 async function getJson<T>(url: string): Promise<T | null> {
   const res = await fetch(url, { cache: "no-store" });
@@ -65,6 +67,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<PostDraft>(EMPTY_DRAFT);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [postError, setPostError] = useState<string | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
   const [selectedFulfillment, setSelectedFulfillment] = useState<SrFulfillment | null>(null);
@@ -92,35 +95,59 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
+  function startEdit(request: SrRequest) {
+    setDraft({
+      title: request.title,
+      details: request.details,
+      tags: requestTags(request),
+      city: request.city ?? "",
+      isPublic: request.isPublic,
+    });
+    setEditingId(request.id);
+    setPostError(null);
+    setPostSuccess(false);
+    setTab("post");
+  }
+
+  function cancelEdit() {
+    setDraft(EMPTY_DRAFT);
+    setEditingId(null);
+    setPostError(null);
+    setPostSuccess(false);
+    setTab("feed");
+  }
+
   async function handlePost() {
-    if (!draft.title.trim() || !draft.details.trim() || !draft.category.trim()) {
-      setPostError("Title, details, and a tag are required.");
+    if (!draft.title.trim() || !draft.details.trim() || draft.tags.length === 0) {
+      setPostError("Title, details, and at least one tag are required.");
       return;
     }
     setSubmitting(true);
     setPostError(null);
     setPostSuccess(false);
     try {
-      const res = await fetch("/api/socketrelay/requests", {
-        method: "POST",
+      const url = editingId ? `/api/socketrelay/requests/${editingId}` : "/api/socketrelay/requests";
+      const res = await fetch(url, {
+        method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
           title: draft.title.trim(),
           details: draft.details.trim(),
-          category: draft.category.trim(),
+          tags: draft.tags,
           city: draft.city.trim() ? draft.city.trim() : null,
           isPublic: draft.isPublic,
         }),
       });
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message ?? "Failed to create request.");
+        throw new Error(payload?.message ?? "Failed to save request.");
       }
       setDraft(EMPTY_DRAFT);
+      setEditingId(null);
       setPostSuccess(true);
       await fetchData(false);
     } catch (e) {
-      setPostError(e instanceof Error ? e.message : "Failed to create request.");
+      setPostError(e instanceof Error ? e.message : "Failed to save request.");
     } finally {
       setSubmitting(false);
     }
@@ -174,7 +201,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   const openCount = requests.filter((r) => r.status === "open").length;
   const categories = deriveCategories(requests, category);
   const visible = requests.filter((r) => {
-    if (category !== "All" && r.category.trim().toLowerCase() !== category.toLowerCase()) return false;
+    if (category !== "All" && !requestTags(r).some((tag) => tag.toLowerCase() === category.toLowerCase())) return false;
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       if (!`${r.title} ${r.details} ${r.city ?? ""}`.toLowerCase().includes(q)) return false;
@@ -191,16 +218,20 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
           submitting={submitting}
           onClaim={(id) => void handleClaim(id)}
           onPost={() => setTab("post")}
+          onEdit={startEdit}
         />
       )}
       {tab === "post" && (
         <SocketRelayPost
           draft={draft}
+          editing={editingId !== null}
           onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
           submitting={submitting}
           error={postError}
           success={postSuccess}
           onSubmit={() => void handlePost()}
+          onCancelEdit={cancelEdit}
+          suggest={(prefix, exclude) => suggestTags(requests, prefix, exclude)}
         />
       )}
       {tab === "chat" && (

@@ -14,6 +14,7 @@ export type SocketRelayRequest = {
   title: string;
   details: string;
   category: string;
+  tags: string[];
   city: string | null;
   isPublic: boolean;
   status: SocketRelayRequestStatus;
@@ -23,10 +24,12 @@ export type SocketRelayRequest = {
   updatedAtIso: string;
 };
 
+// `tags` carries 1-3 free-text tags; the server keeps the legacy single
+// `category` in sync with the first tag for older clients.
 export type SocketRelayRequestInput = {
   title: string;
   details: string;
-  category: string;
+  tags: string[];
   city: string | null;
   isPublic: boolean;
 };

@@ -33,6 +33,7 @@ export type SrRequest = {
   title: string;
   details: string;
   category: string;
+  tags: string[];
   city: string | null;
   isPublic: boolean;
   status: SrRequestStatus;
@@ -65,24 +66,49 @@ export type SrChatCredentials = {
   streamChannelId?: string;
 };
 
-// The request `category` is free text. Filter chips are derived from the tags people actually
-// use, most-used first, so the feed never forces a post into an ill-fitting bucket.
+export const MAX_TAGS_PER_POST = 3;
+const MAX_FILTER_CHIPS = 10;
+
+export function requestTags(r: Pick<SrRequest, "category" | "tags">): string[] {
+  if (r.tags && r.tags.length > 0) return r.tags;
+  return r.category.trim() ? [r.category.trim()] : [];
+}
+
+// Tags are free text. Filter chips are derived from the tags people actually use, most-used
+// first and capped at MAX_FILTER_CHIPS, so the feed never forces a post into an ill-fitting
+// bucket and the chip row cannot grow without bound.
 export function deriveCategories(requests: SrRequest[], selected: string): string[] {
   const counts = new Map<string, { label: string; count: number }>();
   for (const r of requests) {
-    const label = r.category.trim();
-    if (!label) continue;
-    const key = label.toLowerCase();
-    const entry = counts.get(key);
-    if (entry) entry.count += 1;
-    else counts.set(key, { label, count: 1 });
+    for (const tag of requestTags(r)) {
+      const label = tag.trim();
+      if (!label) continue;
+      const key = label.toLowerCase();
+      const entry = counts.get(key);
+      if (entry) entry.count += 1;
+      else counts.set(key, { label, count: 1 });
+    }
   }
   const tags = [...counts.values()]
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, MAX_FILTER_CHIPS)
     .map((e) => e.label);
-  // Keep the active filter visible even if no loaded request carries it anymore.
-  if (selected !== "All" && !counts.has(selected.toLowerCase())) tags.push(selected);
+  // Keep the active filter visible even if it fell outside the top chips.
+  if (selected !== "All" && !tags.some((t) => t.toLowerCase() === selected.toLowerCase())) {
+    tags.push(selected);
+  }
   return ["All", ...tags];
+}
+
+// Suggestions while typing a tag in the post form: known tags matching the prefix,
+// excluding ones already attached to the draft.
+export function suggestTags(requests: SrRequest[], prefix: string, exclude: string[]): string[] {
+  const q = prefix.trim().toLowerCase();
+  const excluded = new Set(exclude.map((t) => t.toLowerCase()));
+  return deriveCategories(requests, "All")
+    .slice(1)
+    .filter((t) => !excluded.has(t.toLowerCase()) && (q === "" || t.toLowerCase().startsWith(q)))
+    .slice(0, 6);
 }
 
 export function timeAgo(iso: string): string {

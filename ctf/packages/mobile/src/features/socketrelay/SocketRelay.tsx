@@ -16,13 +16,15 @@ import {
   socketRelayHandle,
   type SocketRelayRequest,
 } from './api';
+import { deriveTagChips, requestTags, suggestTags } from './tags';
+import { SocketRelayTagInput } from './SocketRelayTagInput';
 import { SocketRelayLoading } from './SocketRelayLoading';
 import { SocketRelayEmpty } from './SocketRelayEmpty';
 
 // Design color — from MobileSocketRelay.tsx mockup
 const COLOR = '#FB923C';
 // Note: need/offer distinction, urgency, and credits are not in the
-// SocketRelayRequest model (title/details/category/city/status only).
+// SocketRelayRequest model (title/details/tags/city/status only).
 // Those mockup UI elements are omitted per real-data-only policy.
 
 type NavKey = 'feed' | 'post';
@@ -34,11 +36,13 @@ export function SocketRelay() {
   const [error, setError] = useState<string | null>(null);
   const [helped, setHelped] = useState<string[]>([]);
   const [fulfilling, setFulfilling] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('All');
 
   // Post form state
   const [postTitle, setPostTitle] = useState('');
   const [postDetails, setPostDetails] = useState('');
-  const [postCategory, setPostCategory] = useState('');
+  const [postTags, setPostTags] = useState<string[]>([]);
   const [postCity, setPostCity] = useState('');
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
@@ -74,20 +78,20 @@ export function SocketRelay() {
   };
 
   const handlePost = async () => {
-    if (!postTitle.trim() || !postCategory.trim()) return;
+    if (!postTitle.trim() || postTags.length === 0) return;
     setPosting(true);
     setPostError(null);
     try {
       await createRequest({
         title: postTitle.trim().slice(0, 80),
         details: postDetails.trim(),
-        category: postCategory.trim(),
+        tags: postTags,
         city: postCity.trim() || null,
         isPublic: true,
       });
       setPostTitle('');
       setPostDetails('');
-      setPostCategory('');
+      setPostTags([]);
       setPostCity('');
       setActiveNav('feed');
     } catch {
@@ -119,17 +123,59 @@ export function SocketRelay() {
         />
       );
     }
+    const visible = requests.filter((r) => {
+      if (
+        tagFilter !== 'All' &&
+        !requestTags(r).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
+      ) {
+        return false;
+      }
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return `${r.title} ${r.details} ${r.city ?? ''}`.toLowerCase().includes(q);
+    });
     return (
       <ScrollView style={styles.feedScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.feedPad}>
-          {requests.map((r) => (
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search requests…"
+            placeholderTextColor="#4B5563"
+            value={search}
+            onChangeText={setSearch}
+          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tagChipRow}
+          >
+            {deriveTagChips(requests, tagFilter).map((tag) => {
+              const active = tag.toLowerCase() === tagFilter.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={tag}
+                  style={[styles.tagChip, active && styles.tagChipActive]}
+                  onPress={() => setTagFilter(tag)}
+                >
+                  <Text
+                    style={[styles.tagChipText, active && styles.tagChipTextActive]}
+                  >
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {visible.map((r) => (
             <React.Fragment key={r.id}>
               <View style={styles.card}>
-                {/* Category badge */}
+                {/* Tag badges */}
                 <View style={styles.cardBadgeRow}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{r.category}</Text>
-                  </View>
+                  {requestTags(r).map((tag) => (
+                    <View key={tag} style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>{tag}</Text>
+                    </View>
+                  ))}
                   {r.status !== 'open' && (
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusBadgeText}>{r.status}</Text>
@@ -218,12 +264,10 @@ export function SocketRelay() {
         multiline
         numberOfLines={3}
       />
-      <TextInput
-        style={styles.textInput}
-        placeholder="Tag (anything — Food, Mail, Legal, Pet Care…)"
-        placeholderTextColor="#4B5563"
-        value={postCategory}
-        onChangeText={setPostCategory}
+      <SocketRelayTagInput
+        tags={postTags}
+        onChange={setPostTags}
+        suggest={(prefix, exclude) => suggestTags(requests, prefix, exclude)}
       />
       <TextInput
         style={styles.textInput}
@@ -238,9 +282,9 @@ export function SocketRelay() {
       ) : null}
 
       <TouchableOpacity
-        style={[styles.postBtn, (!postTitle.trim() || !postCategory.trim()) && styles.postBtnDisabled]}
+        style={[styles.postBtn, (!postTitle.trim() || postTags.length === 0) && styles.postBtnDisabled]}
         onPress={handlePost}
-        disabled={posting || !postTitle.trim() || !postCategory.trim()}
+        disabled={posting || !postTitle.trim() || postTags.length === 0}
       >
         {posting ? (
           <ActivityIndicator size="small" color="#fff" />
@@ -359,6 +403,32 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   feedScroll: { flex: 1 },
   feedPad: { padding: 16 },
+  searchInput: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#E8EAF0',
+    marginBottom: 10,
+  },
+  tagChipRow: { marginBottom: 12, flexGrow: 0 },
+  tagChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginRight: 6,
+  },
+  tagChipActive: {
+    backgroundColor: `${COLOR}15`,
+    borderColor: `${COLOR}50`,
+  },
+  tagChipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
+  tagChipTextActive: { color: COLOR },
   card: {
     padding: 14,
     borderRadius: 14,
