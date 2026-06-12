@@ -1,13 +1,12 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bell, Heart, MessageSquare, Play, Settings } from "lucide-react";
+import { Bell, Heart, Play, Settings } from "lucide-react";
 import { COLOR, FAINT, type Tab } from "./gp-shared";
 
 const NAV: { icon: React.ElementType; key: Tab }[] = [
   { icon: Heart, key: "sessions" },
   { icon: Play, key: "playing" },
-  { icon: MessageSquare, key: "chat" },
 ];
 
 export function GentlePulseIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
