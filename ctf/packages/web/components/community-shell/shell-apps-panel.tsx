@@ -26,16 +26,20 @@ type ShellAppsPanelProps = {
   onAppSelect: (slug: string | null) => void;
   sortMode: PluginSortMode;
   onSortModeChange: (mode: PluginSortMode) => void;
+  // Search now lives here (it used to be in the nav drawer). The grid is the single
+  // place to browse apps, so the filter box belongs alongside it.
+  query: string;
+  onQueryChange: (q: string) => void;
 };
 
-export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSortModeChange }: ShellAppsPanelProps) {
+export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSortModeChange, query, onQueryChange }: ShellAppsPanelProps) {
   const { theme } = useTheme();
 
   return (
     <div className={styles.appsPanel}>
       <div className={styles.appsPanelHeader}>
         <div>
-          <h2 className={styles.appsPanelTitle}>All Plugins</h2>
+          <h2 className={styles.appsPanelTitle}>All Apps</h2>
           <p className={styles.appsPanelSub}>Your complete peer-to-peer marketplace — from survivor to thriver</p>
         </div>
         <div className={styles.appsSortWrap}>
@@ -52,6 +56,16 @@ export function ShellAppsPanel({ plugins, activeApp, onAppSelect, sortMode, onSo
           </select>
         </div>
       </div>
+
+      <label className={styles.visuallyHidden} htmlFor="apps-search">Search apps…</label>
+      <input
+        id="apps-search"
+        className={styles.appsSearchInput}
+        placeholder="Search apps…"
+        type="search"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+      />
 
       {plugins.length === 0 && (
         <p className={styles.appsEmpty}>No matching plugins. Try a different search.</p>

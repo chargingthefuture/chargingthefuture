@@ -11,7 +11,7 @@ function BalanceCard({ balance }: { balance: number }) {
       <div style={{ fontSize: 56, fontWeight: 900, color: "#F9FAFB", lineHeight: 1, marginBottom: 4 }}>
         {fmtCredits(balance)} <span style={{ fontSize: 20, color: COLOR, fontWeight: 700 }}>credits</span>
       </div>
-      <div style={{ fontSize: 14, color: "#6B7280" }}>usable across all mini-apps</div>
+      <div style={{ fontSize: 14, color: "#6B7280" }}>usable across all apps</div>
     </div>
   );
 }

@@ -296,15 +296,9 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
       <div className={styles.frame}>
         <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
         <ShellSidebar
-          section={section}
           channels={channels}
-          plugins={filteredPlugins}
           activeChannel={activeChannel}
           onChannelSelect={handleChannelSelect}
-          activeApp={activeApp}
-          onAppSelect={handleAppSelect}
-          query={query}
-          onQueryChange={setQuery}
           mobileOpen={mobileNavOpen}
           onNavigate={() => setMobileNavOpen(false)}
           isAdmin={isAdmin}
@@ -333,6 +327,8 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
               onAppSelect={handleAppSelect}
               sortMode={sortMode}
               onSortModeChange={handleSortModeChange}
+              query={query}
+              onQueryChange={setQuery}
             />
           )}
         </main>

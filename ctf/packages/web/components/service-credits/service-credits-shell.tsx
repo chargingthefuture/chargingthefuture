@@ -29,7 +29,7 @@ function ShellHeader({ balance, t }: { balance: number; t: ServiceCreditsTokens 
       <Coins size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>ServiceCredits — Utility Tokens</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Earn · Spend · Trade · Across all mini-apps</div>
+        <div style={{ fontSize: 12, color: t.MUTED }}>Earn · Spend · Trade · Across all apps</div>
       </div>
       <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
         {fmtCredits(balance)} credits
