@@ -5,14 +5,13 @@ import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronLeft, Search, MessageSquare, Users, Bell, Settings } from "lucide-react";
+import { BookOpen, ChevronLeft, Search, Bell, Settings } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { BG, getDirectoryTokens, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryProfileDetail } from "./directory-profile-detail";
 import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
 import { DirectoryBrowse } from "./directory-browse";
-import { DirectoryChatTab } from "./directory-chat-tab";
 import { DirectoryRightPanel } from "./directory-right-panel";
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
@@ -22,8 +21,6 @@ const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   ctaUrl: "/apps/skills-hunt?tab=scout",
   isActive: true,
 };
-
-type Tab = "browse" | "chat";
 
 // Shape of each entry in the GET /api/directory/list `items` array that the
 // browse view-model needs. The full profile carries more fields; only the
@@ -48,8 +45,6 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selected, setSelected] = useState<Member | null>(null);
-  const [tab, setTab] = useState<Tab>("browse");
-  const [chatInput, setChatInput] = useState("");
   const [rewardCard, setRewardCard] = useState<SkillsHuntRewardCard | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
@@ -137,11 +132,6 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
     return () => controller.abort();
   }, [activeFilter, debouncedQuery]);
 
-  const TABS: { icon: React.ElementType; key: Tab }[] = [
-    { icon: Users, key: "browse" },
-    { icon: MessageSquare, key: "chat" },
-  ];
-
   const sectorFilters = ["All", ...sectors.map((s) => s.name)];
   const isFiltered = activeFilter !== "All" || query.trim().length > 0;
 
@@ -193,7 +183,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
     );
   }
 
-  const content = tab === "browse" ? (
+  const content = (
     <DirectoryBrowse
       rewardCard={rewardCard}
       loadingMembers={loadingMembers}
@@ -202,12 +192,6 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
       filtered={isFiltered}
       onSelect={setSelected}
       onClearFilters={clearFilters}
-    />
-  ) : (
-    <DirectoryChatTab
-      chatInput={chatInput}
-      onChatInputChange={setChatInput}
-      onBrowse={() => setTab("browse")}
     />
   );
 
@@ -222,24 +206,17 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             <BookOpen size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Directory</span>
           </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
-            {TABS.map(({ key }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{key}</button>
-            ))}
-          </div>
-          {tab === "browse" && (
-            <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ position: "relative" }}>
-                <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
-              </div>
-              <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-                {sectorFilters.map((f) => (
-                  <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${t.ACCENT}14` : "transparent", border: `1px solid ${activeFilter === f ? t.ACCENT + "50" : t.BORDER_HI}`, color: activeFilter === f ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
-                ))}
-              </div>
+          <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ position: "relative" }}>
+              <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search providers…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
             </div>
-          )}
+            <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+              {sectorFilters.map((f) => (
+                <button key={f} onClick={() => setActiveFilter(f)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: activeFilter === f ? `${t.ACCENT}14` : "transparent", border: `1px solid ${activeFilter === f ? t.ACCENT + "50" : t.BORDER_HI}`, color: activeFilter === f ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{f}</button>
+              ))}
+            </div>
+          </div>
         </div>
         {content}
       </div>
@@ -253,11 +230,6 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
         <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
           <BookOpen size={20} style={{ color: t.ACCENT }} />
         </div>
-        {TABS.map(({ icon: Icon, key }) => (
-          <button key={key} onClick={() => setTab(key)} style={{ width: 44, height: 44, borderRadius: 12, background: tab === key ? `${t.ACCENT}20` : "transparent", border: tab === key ? `1px solid ${t.ACCENT}40` : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: tab === key ? t.ACCENT : t.MUTED }}>
-            <Icon size={20} />
-          </button>
-        ))}
         <div style={{ flex: 1 }} />
         <button style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
           <Bell size={18} />
