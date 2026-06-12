@@ -132,7 +132,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'levelup',
     name: 'LevelUp',
     kind: 'plugin',
-    summary: 'Goal tracking and progress milestones. Your journey, documented and celebrated.',
+    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
   },
   {
     id: 'clicklog',

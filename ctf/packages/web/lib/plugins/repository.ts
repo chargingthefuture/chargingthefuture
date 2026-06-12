@@ -158,7 +158,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'levelup',
     name: 'LevelUp',
-    summary: 'Goal tracking and progress milestones. Your journey, documented and celebrated.',
+    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
     availabilityState: 'implemented_shell',
     navRank: 170,
     isVisible: true,

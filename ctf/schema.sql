@@ -1719,7 +1719,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'Service Credits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Goal tracking and progress milestones. Your journey, documented and celebrated.','implemented_shell', 170, TRUE),
+  ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
