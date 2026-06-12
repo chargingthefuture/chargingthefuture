@@ -14,10 +14,13 @@ import {
   listRequests,
   fulfillRequest,
   socketRelayHandle,
+  settlementLabel,
   type SocketRelayRequest,
 } from './api';
 import { SocketRelayLoading } from './SocketRelayLoading';
 import { SocketRelayEmpty } from './SocketRelayEmpty';
+import { CurrencySelect } from '../currency';
+import type { Currency } from '../currency';
 
 // Design color — from MobileSocketRelay.tsx mockup
 const COLOR = '#FB923C';
@@ -40,6 +43,10 @@ export function SocketRelay() {
   const [postDetails, setPostDetails] = useState('');
   const [postCategory, setPostCategory] = useState('');
   const [postCity, setPostCity] = useState('');
+  // How the request is settled (issue #420): default Free (mutual aid); amount only for priced types.
+  const [postPriceCurrency, setPostPriceCurrency] = useState('FREE');
+  const [postPriceAmount, setPostPriceAmount] = useState('');
+  const [postRequiresAmount, setPostRequiresAmount] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
 
@@ -78,17 +85,23 @@ export function SocketRelay() {
     setPosting(true);
     setPostError(null);
     try {
+      const amount = Number(postPriceAmount);
       await createRequest({
         title: postTitle.trim().slice(0, 80),
         details: postDetails.trim(),
         category: postCategory.trim(),
         city: postCity.trim() || null,
         isPublic: true,
+        priceCurrency: postPriceCurrency || null,
+        priceAmount: postRequiresAmount && Number.isFinite(amount) && amount > 0 ? amount : null,
       });
       setPostTitle('');
       setPostDetails('');
       setPostCategory('');
       setPostCity('');
+      setPostPriceCurrency('FREE');
+      setPostPriceAmount('');
+      setPostRequiresAmount(false);
       setActiveNav('feed');
     } catch {
       setPostError('Failed to post request. Please try again.');
@@ -129,6 +142,9 @@ export function SocketRelay() {
                 <View style={styles.cardBadgeRow}>
                   <View style={styles.categoryBadge}>
                     <Text style={styles.categoryBadgeText}>{r.category}</Text>
+                  </View>
+                  <View style={styles.settleBadge}>
+                    <Text style={styles.settleBadgeText}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Text>
                   </View>
                   {r.status !== 'open' && (
                     <View style={styles.statusBadge}>
@@ -232,6 +248,27 @@ export function SocketRelay() {
         value={postCity}
         onChangeText={setPostCity}
       />
+
+      <Text style={styles.settleLabel}>How will this be settled?</Text>
+      <CurrencySelect
+        value={postPriceCurrency}
+        onChange={(code, currency: Currency | null) => {
+          const needsAmount = currency?.requiresAmount ?? false;
+          setPostPriceCurrency(code);
+          setPostRequiresAmount(needsAmount);
+          if (!needsAmount) setPostPriceAmount('');
+        }}
+      />
+      {postRequiresAmount ? (
+        <TextInput
+          style={styles.textInput}
+          placeholder="Amount (e.g. 20)"
+          placeholderTextColor="#4B5563"
+          value={postPriceAmount}
+          onChangeText={(t) => setPostPriceAmount(t.replace(/[^0-9.]/g, ''))}
+          keyboardType="decimal-pad"
+        />
+      ) : null}
 
       {postError ? (
         <Text style={styles.errorText}>{postError}</Text>
@@ -382,6 +419,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.06)',
   },
   categoryBadgeText: { fontSize: 10, color: '#6B7280' },
+  settleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(34,197,94,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.25)',
+  },
+  settleBadgeText: { fontSize: 10, color: '#22C55E' },
+  settleLabel: { fontSize: 12, color: '#9CA3AF', marginTop: 4, marginBottom: 6 },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,

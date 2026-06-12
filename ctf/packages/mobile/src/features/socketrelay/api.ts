@@ -19,6 +19,8 @@ export type SocketRelayRequest = {
   status: SocketRelayRequestStatus;
   reopenedCount: number;
   claimedFulfillmentId: string | null;
+  priceCurrency: string | null;
+  priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -29,7 +31,19 @@ export type SocketRelayRequestInput = {
   category: string;
   city: string | null;
   isPublic: boolean;
+  priceCurrency: string | null;
+  priceAmount: number | null;
 };
+
+// Plain label for how a request is settled (issue #420). Mirrors the web sr-shared.settlementLabel:
+// honors the ServiceCredits rule (never the bare "SC" code, never a fiat equivalent) and renders
+// Free/Barter from their value types; fiat/crypto show amount + code.
+export function settlementLabel(priceCurrency: string | null, priceAmount: number | null): string {
+  if (!priceCurrency || priceCurrency === 'FREE') return 'Free';
+  if (priceCurrency === 'BARTER') return 'Barter';
+  if (priceCurrency === 'SC') return priceAmount != null ? `${priceAmount} ServiceCredits` : 'ServiceCredits';
+  return priceAmount != null ? `${priceAmount} ${priceCurrency}` : priceCurrency;
+}
 
 // Poster handle: show the chosen @username (owner decision: shown publicly, never "Anonymous").
 // When no username was captured, fall back to a neutral short id — mirrors Chyme's chymeHandle.
