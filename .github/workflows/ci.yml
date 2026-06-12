@@ -7,6 +7,7 @@ on:
       - "ctf/**"
       - ".github/instructions/**"
       - ".github/workflows/**"
+      - "docs/**"
       # Root workspace files. Without these, a PR that only touches the root
       # lockfile never runs CI, and the required status checks stay "expected"
       # forever, so the PR can never merge.
@@ -19,6 +20,7 @@ on:
       - "ctf/**"
       - ".github/instructions/**"
       - ".github/workflows/**"
+      - "docs/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
