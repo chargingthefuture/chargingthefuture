@@ -2,7 +2,7 @@
 
 import type { WorkforceDashboard } from '../../lib/workforce/types';
 
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 interface WorkforceHeroStatsProps {
   dashboard: WorkforceDashboard;

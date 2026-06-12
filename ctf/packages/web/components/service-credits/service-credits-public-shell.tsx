@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the ServiceCreditsPublic / MobileServiceCreditsPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#F59E0B';
+const COLOR = '#A855F7';
 const EARN_GREEN = '#22C55E';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';

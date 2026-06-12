@@ -2,6 +2,8 @@
 
 import { CheckCircle } from "lucide-react";
 import { COLOR, rideTypeName, type RideType } from "./tt-shared";
+import { CurrencySelect } from "@/components/shared/currency-select";
+import type { Currency } from "lib/currency/types";
 
 interface BookTabProps {
   rideTypes: RideType[];
@@ -11,6 +13,11 @@ interface BookTabProps {
   to: string;
   onFrom: (v: string) => void;
   onTo: (v: string) => void;
+  priceCurrency: string;
+  priceAmount: string;
+  requiresAmount: boolean;
+  onPriceCurrency: (code: string, currency: Currency | null) => void;
+  onPriceAmount: (v: string) => void;
   bookingError: string | null;
   booked: boolean;
   submitting: boolean;
@@ -34,8 +41,11 @@ function BookedCard({ onReset }: { onReset: () => void }) {
 }
 
 export function TrustTransportBookTab(props: BookTabProps) {
-  const { rideTypes, rideType, onRideType, from, to, onFrom, onTo, bookingError, booked, submitting, onBook, onReset } = props;
+  const { rideTypes, rideType, onRideType, from, to, onFrom, onTo, priceCurrency, priceAmount, requiresAmount, onPriceCurrency, onPriceAmount, bookingError, booked, submitting, onBook, onReset } = props;
   const name = rideTypeName(rideTypes, rideType);
+  // A priced value type needs a positive amount before the ride can be booked; Free/Barter don't.
+  const parsedAmount = Number(priceAmount);
+  const hasValidAmount = !requiresAmount || (Number.isFinite(parsedAmount) && parsedAmount > 0);
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
@@ -67,6 +77,26 @@ export function TrustTransportBookTab(props: BookTabProps) {
             <div style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", width: 8, height: 8, borderRadius: "50%", background: COLOR }} />
             <input value={to} onChange={(e) => onTo(e.target.value)} aria-label="Destination" placeholder="Where to?" style={{ width: "100%", padding: "14px 16px 14px 36px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }} />
           </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>How will you settle this ride?</div>
+            <CurrencySelect
+              value={priceCurrency}
+              onChange={(code, currency: Currency | null) => onPriceCurrency(code, currency)}
+              ariaLabel="How will you settle this ride?"
+              className=""
+            />
+            <div style={{ fontSize: 12, color: "#6B7280", marginTop: 6 }}>Asking for a free ride is okay. You can also offer ServiceCredits, money, crypto, or a barter.</div>
+          </div>
+          {requiresAmount && (
+            <input
+              value={priceAmount}
+              onChange={(e) => onPriceAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+              inputMode="decimal"
+              aria-label="Amount"
+              placeholder="Amount (e.g. 20)"
+              style={{ width: "100%", padding: "14px 16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }}
+            />
+          )}
         </div>
 
         {bookingError && <div style={{ fontSize: 13, color: "#EF4444" }}>{bookingError}</div>}
@@ -74,7 +104,7 @@ export function TrustTransportBookTab(props: BookTabProps) {
         {booked ? (
           <BookedCard onReset={onReset} />
         ) : (
-          <button type="button" onClick={onBook} disabled={submitting} style={{ padding: "16px", borderRadius: 14, background: submitting ? "rgba(249,115,22,0.4)" : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
+          <button type="button" onClick={onBook} disabled={submitting || !hasValidAmount} style={{ padding: "16px", borderRadius: 14, background: (submitting || !hasValidAmount) ? "rgba(249,115,22,0.4)" : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: (submitting || !hasValidAmount) ? "not-allowed" : "pointer" }}>
             {submitting ? "Booking…" : `Book ${name}`}
           </button>
         )}

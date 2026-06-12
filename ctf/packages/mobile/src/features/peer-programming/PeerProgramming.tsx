@@ -8,7 +8,7 @@ import { PeerProgrammingEmpty } from './pp-empty';
 import { PeerProgrammingCohortTab } from './pp-cohort-tab';
 import { PeerProgrammingSessionTab } from './pp-session-tab';
 
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 
 type NavKey = 'home' | 'cohorts' | 'session' | 'global';
 

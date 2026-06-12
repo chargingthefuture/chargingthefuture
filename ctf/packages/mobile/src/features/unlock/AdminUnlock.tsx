@@ -15,7 +15,7 @@ import {
   type UnlockReviewDecision,
 } from './admin-api';
 
-const COLOR = '#F43F5E';
+const COLOR = '#C084FC';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';

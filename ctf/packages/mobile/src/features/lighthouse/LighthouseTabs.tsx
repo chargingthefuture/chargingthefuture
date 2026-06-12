@@ -5,7 +5,7 @@ import { LighthouseScreen } from './LighthouseScreen';
 import { LighthouseMatches } from './LighthouseMatches';
 import { LighthouseStreamTab } from './LighthouseStreamTab';
 
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 const DARK = '#090B0F';
 
 type TabKey = 'browse' | 'matches' | 'chat';

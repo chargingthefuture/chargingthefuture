@@ -20,8 +20,8 @@ import {
 import type { DirectoryListItem, DirectorySector } from './api';
 import { fetchDirectoryList, fetchDirectorySectors } from './api';
 
-const COLOR = '#3B82F6';
-const COMMUNITY_COLOR = '#D946EF';
+const COLOR = '#93C5FD';
+const COMMUNITY_COLOR = '#FBBF24';
 const BG = '#0F1117';
 const SURFACE = '#090B0F';
 const BORDER = 'rgba(255,255,255,0.06)';

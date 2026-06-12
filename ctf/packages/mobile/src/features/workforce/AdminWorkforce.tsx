@@ -10,7 +10,7 @@ import {
   type WorkforceDashboard,
 } from './admin-api';
 
-const COLOR = '#3B82F6';
+const COLOR = '#F97316';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';

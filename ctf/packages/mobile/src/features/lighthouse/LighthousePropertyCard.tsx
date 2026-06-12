@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { LighthouseProperty } from './types';
 
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 
 interface Props {
   property: LighthouseProperty;

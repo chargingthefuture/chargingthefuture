@@ -9,7 +9,7 @@ import {
   type LighthouseAdminStats,
 } from './admin-api';
 
-const COLOR = '#06B6D4';
+const COLOR = '#60A5FA';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';

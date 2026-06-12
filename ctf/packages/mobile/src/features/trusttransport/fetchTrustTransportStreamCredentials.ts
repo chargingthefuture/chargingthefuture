@@ -1,5 +1,5 @@
-// Stream chat credentials for a trip thread. The web route is
-// POST /api/trusttransport/trips/[tripId]/chat; it returns
+// Stream chat credentials for a trip thread. A trip is text chat only — there is no video.
+// The web route is POST /api/trusttransport/trips/[tripId]/chat; it returns
 // { ok, channelId, streamApiKey, streamUserId, streamToken }, mapped here to the
 // shape the Stream client components consume. Goes through authedFetch so the
 // Clerk bearer token is attached and the base URL comes from runtime config.
@@ -10,13 +10,14 @@ export interface TrustTransportStreamCredentials {
   apiKey: string;
   userId: string;
   userToken: string;
-  callId?: string;
-  chatChannelId?: string;
+  chatChannelId: string;
 }
 
 type TripChatResponse = {
   ok: boolean;
-  channelId: string;
+  message?: string;
+  channelId?: string;
+  streamChannelId?: string;
   streamApiKey: string;
   streamUserId: string;
   streamToken: string;
@@ -31,12 +32,17 @@ export async function fetchTrustTransportStreamCredentials(tripId: string): Prom
     },
     body: JSON.stringify({ platform: Platform.OS }),
   });
+  if (!data.ok) {
+    throw new Error(data.message || 'Unable to load TrustTransport chat credentials');
+  }
+  const chatChannelId = data.streamChannelId ?? data.channelId;
+  if (!chatChannelId) {
+    throw new Error('TrustTransport chat credentials response is missing the channel id');
+  }
   return {
     apiKey: data.streamApiKey,
     userId: data.streamUserId,
     userToken: data.streamToken,
-    chatChannelId: data.channelId,
-    // The chat route issues no video call id; video remains unsupported until a
-    // backing route exists.
+    chatChannelId,
   };
 }

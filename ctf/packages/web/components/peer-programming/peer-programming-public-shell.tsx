@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the PeerProgrammingPublic / MobilePeerProgrammingPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 const MUTED = '#6B7280';

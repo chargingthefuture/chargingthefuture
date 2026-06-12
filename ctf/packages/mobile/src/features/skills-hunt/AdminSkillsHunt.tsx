@@ -10,7 +10,7 @@ import {
   type SubmissionStatusFilter,
 } from './admin-api';
 
-const COLOR = '#A78BFA';
+const COLOR = '#FBBF24';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';

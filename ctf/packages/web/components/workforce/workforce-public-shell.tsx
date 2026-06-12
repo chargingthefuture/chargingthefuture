@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the WorkforcePublic / MobileWorkforcePublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';

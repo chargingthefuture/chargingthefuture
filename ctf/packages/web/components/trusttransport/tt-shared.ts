@@ -4,7 +4,7 @@ import { Car, Package, Utensils } from "lucide-react";
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#F97316";
+export const COLOR = "#38BDF8";
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the TrustTransport shell. The shell paints its accent both as
@@ -51,7 +51,18 @@ export interface TripRequest {
   fromLocation?: string;
   toLocation?: string;
   status?: string;
+  priceCurrency?: string | null;
+  priceAmount?: number | null;
   createdAt?: string;
+}
+
+// Plain label for how a ride is settled (issue #420). Honors the ServiceCredits rule (never the bare
+// "SC" code, never a fiat equivalent) and renders Free/Barter from their value types.
+export function ttSettlementLabel(priceCurrency: string | null | undefined, priceAmount: number | null | undefined): string {
+  if (!priceCurrency || priceCurrency === "FREE") return "Free";
+  if (priceCurrency === "BARTER") return "Barter";
+  if (priceCurrency === "SC") return priceAmount != null ? `${priceAmount} ServiceCredits` : "ServiceCredits";
+  return priceAmount != null ? `${priceAmount} ${priceCurrency}` : priceCurrency;
 }
 
 export interface ChatCreds {

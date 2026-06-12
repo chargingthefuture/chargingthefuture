@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#D946EF';
+const COLOR = '#FBBF24';
 const TEXT = '#F9FAFB';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 

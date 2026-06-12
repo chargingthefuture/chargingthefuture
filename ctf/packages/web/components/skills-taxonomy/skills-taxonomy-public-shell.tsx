@@ -5,7 +5,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the SkillsTaxonomyPublic / MobileSkillsTaxonomyPublic mockups.
-const BRAND = '#8B5CF6';
+const BRAND = '#818CF8';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

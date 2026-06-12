@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { fetchMoodCommunity, fetchMoodEligibility, submitMood, type CommunityPulse } from './api';
 
-const COLOR = '#EC4899';
+const COLOR = '#4ADE80';
 const BG = '#0F1117';
 const SURFACE = '#090B0F';
 

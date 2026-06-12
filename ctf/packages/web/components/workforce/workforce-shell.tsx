@@ -17,10 +17,10 @@ import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
 
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 // Theme-aware chrome tokens for the Workforce shell. Default keeps the shipped values (accent
-// stays #B45309); comic uses the shared comic surface tokens plus the Workforce comic-ink accent.
+// stays #F97316); comic uses the shared comic surface tokens plus the Workforce comic-ink accent.
 type WorkforceTokens = PluginShellTokens;
 
 function getWorkforceTokens(theme: ThemeName): WorkforceTokens {

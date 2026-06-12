@@ -15,7 +15,7 @@ import React from "react";
 import { ShieldCheck, Eye, CheckCircle2 } from "lucide-react";
 import type { TrustUserExtension, TrustEvidenceItem } from "../../lib/trust/types";
 
-const BRAND = "#0284C7";
+const BRAND = "#0EA5E9";
 const BRAND_DIM = "rgba(14,165,233,0.15)";
 const BRAND_BORDER = "rgba(14,165,233,0.25)";
 const CARD_BG = "rgba(14,165,233,0.06)";

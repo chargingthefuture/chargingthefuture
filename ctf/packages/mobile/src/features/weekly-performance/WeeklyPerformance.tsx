@@ -17,7 +17,7 @@ import {
 } from './api';
 
 // ── Brand tokens (from MobileWeeklyPerformance.tsx mockup) ──────────────────
-const BRAND = '#F59E0B';
+const BRAND = '#6366F1';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

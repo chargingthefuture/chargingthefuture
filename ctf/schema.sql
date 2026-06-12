@@ -1046,6 +1046,27 @@ CREATE TABLE IF NOT EXISTS trusttransport_requests (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- How the requester will settle the ride (issue #420): the chosen value type + an optional amount.
+-- "Free" (asking for a free ride — valid mutual aid) and "Barter" carry no amount; priced types
+-- (ServiceCredits, fiat, crypto) carry a positive amount. Both NULL means none was chosen.
+ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trusttransport_requests DROP CONSTRAINT IF EXISTS trusttransport_requests_price_consistency_check;
+DO $trusttransport_requests_price_consistency$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'trusttransport_requests_price_consistency_check'
+  ) THEN
+    ALTER TABLE trusttransport_requests
+      ADD CONSTRAINT trusttransport_requests_price_consistency_check
+      CHECK (
+        (price_amount IS NULL AND price_currency IS NULL) OR
+        (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
+      );
+  END IF;
+END
+$trusttransport_requests_price_consistency$;
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,

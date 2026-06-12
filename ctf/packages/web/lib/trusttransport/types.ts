@@ -33,6 +33,10 @@ export type TrustTransportRequestInput = {
   dropoffCity: string | null;
   pickupGeoRedacted: string | null;
   dropoffGeoRedacted: string | null;
+  // How the requester will settle the ride (issue #420): a value type code ('FREE', 'SC', 'USD',
+  // 'BARTER', …) with a positive amount for priced types only; amount-less types carry null.
+  priceCurrency: string | null;
+  priceAmount: number | null;
 };
 
 export type TrustTransportRequest = {
@@ -46,6 +50,8 @@ export type TrustTransportRequest = {
   pickupGeoRedacted: string | null;
   dropoffGeoRedacted: string | null;
   status: TrustTransportRequestStatus;
+  priceCurrency: string | null;
+  priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
 };

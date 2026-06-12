@@ -2,7 +2,7 @@ import type { FoundationQuoteState } from "@/lib/foundation/types";
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#EF4444";
+export const COLOR = "#F59E0B";
 export const FONT = "'Inter', system-ui, sans-serif";
 
 // Theme-aware color tokens for the Foundation shell chrome. The default theme keeps the exact

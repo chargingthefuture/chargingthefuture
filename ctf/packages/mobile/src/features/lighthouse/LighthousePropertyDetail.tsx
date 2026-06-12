@@ -9,7 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { LighthouseProperty } from './types';
 
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 const BG = '#0F1117';
 const DARK = '#090B0F';
 

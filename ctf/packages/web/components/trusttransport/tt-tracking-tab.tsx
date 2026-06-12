@@ -2,7 +2,7 @@
 
 import { Car, Navigation, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { COLOR, type TripRequest } from "./tt-shared";
+import { COLOR, ttSettlementLabel, type TripRequest } from "./tt-shared";
 
 function statusBadgeStyle(status: string) {
   const s = status.toLowerCase();
@@ -44,7 +44,8 @@ function TrackingCard({ request, onChat }: { request: TripRequest; onChat: (r: T
           <Car size={24} style={{ color: COLOR }} />
         </div>
         <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
-        <Badge style={{ ...statusBadgeStyle(status), fontSize: 12, marginLeft: "auto" }}>{status}</Badge>
+        <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 12, marginLeft: "auto" }}>{ttSettlementLabel(request.priceCurrency, request.priceAmount)}</Badge>
+        <Badge style={{ ...statusBadgeStyle(status), fontSize: 12 }}>{status}</Badge>
       </div>
       <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center", color: "#9CA3AF", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
         {awaitingDriver

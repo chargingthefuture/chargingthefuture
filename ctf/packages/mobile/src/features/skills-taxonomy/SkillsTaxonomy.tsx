@@ -26,7 +26,7 @@ import { SkillsTaxonomyApi, type TaxonomyHierarchySector, type TaxonomyHierarchy
 // Design tokens (from mockup)
 // ---------------------------------------------------------------------------
 
-const BRAND = '#8B5CF6';
+const BRAND = '#818CF8';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

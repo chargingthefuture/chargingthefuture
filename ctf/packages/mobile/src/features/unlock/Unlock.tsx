@@ -16,7 +16,7 @@ import {
 import { fetchUnlockStatus, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
 
-const BRAND = '#10B981';
+const BRAND = '#C084FC';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
