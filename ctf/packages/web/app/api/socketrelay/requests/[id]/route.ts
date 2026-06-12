@@ -9,13 +9,25 @@ type RouteProps = {
   params: Promise<{ id: string }>;
 };
 
+// Only a real number or a non-empty numeric string becomes an amount; booleans, arrays, objects, and
+// `null`/`undefined` never coerce to a price (so e.g. `true` is not read as 1).
+function parsePriceAmount(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  return null;
+}
+
 function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
   const priceCurrency =
     typeof body.priceCurrency === 'string' && body.priceCurrency.trim().length > 0
       ? body.priceCurrency.trim()
       : null;
-  const rawAmount = typeof body.priceAmount === 'number' ? body.priceAmount : Number(body.priceAmount);
-  const priceAmount = Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : null;
+  const priceAmount = parsePriceAmount(body.priceAmount);
   return {
     title: typeof body.title === 'string' ? body.title : '',
     details: typeof body.details === 'string' ? body.details : '',

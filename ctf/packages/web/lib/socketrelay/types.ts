@@ -75,6 +75,8 @@ export type SocketRelayPublicRequest = {
   category: string;
   city: string | null;
   status: SocketRelayRequestStatus;
+  priceCurrency: string | null;
+  priceAmount: number | null;
   createdAtIso: string;
 };
 

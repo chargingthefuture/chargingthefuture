@@ -80,12 +80,20 @@ export function SocketRelay() {
     }
   };
 
+  // A priced value type (ServiceCredits, fiat, crypto) needs a positive amount; Free/Barter don't.
+  const parsedPostPriceAmount = Number(postPriceAmount);
+  const hasValidPostAmount =
+    !postRequiresAmount || (Number.isFinite(parsedPostPriceAmount) && parsedPostPriceAmount > 0);
+
   const handlePost = async () => {
     if (!postTitle.trim() || !postCategory.trim()) return;
+    if (!hasValidPostAmount) {
+      setPostError('Enter an amount greater than zero for this value type.');
+      return;
+    }
     setPosting(true);
     setPostError(null);
     try {
-      const amount = Number(postPriceAmount);
       await createRequest({
         title: postTitle.trim().slice(0, 80),
         details: postDetails.trim(),
@@ -93,7 +101,7 @@ export function SocketRelay() {
         city: postCity.trim() || null,
         isPublic: true,
         priceCurrency: postPriceCurrency || null,
-        priceAmount: postRequiresAmount && Number.isFinite(amount) && amount > 0 ? amount : null,
+        priceAmount: postRequiresAmount ? parsedPostPriceAmount : null,
       });
       setPostTitle('');
       setPostDetails('');
@@ -275,9 +283,9 @@ export function SocketRelay() {
       ) : null}
 
       <TouchableOpacity
-        style={[styles.postBtn, (!postTitle.trim() || !postCategory.trim()) && styles.postBtnDisabled]}
+        style={[styles.postBtn, (!postTitle.trim() || !postCategory.trim() || !hasValidPostAmount) && styles.postBtnDisabled]}
         onPress={handlePost}
-        disabled={posting || !postTitle.trim() || !postCategory.trim()}
+        disabled={posting || !postTitle.trim() || !postCategory.trim() || !hasValidPostAmount}
       >
         {posting ? (
           <ActivityIndicator size="small" color="#fff" />

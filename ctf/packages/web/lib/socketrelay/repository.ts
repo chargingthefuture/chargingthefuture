@@ -154,6 +154,8 @@ function mapPublicRequestRow(row: RequestRow): SocketRelayPublicRequest {
     category: row.category,
     city: row.city,
     status: row.status,
+    priceCurrency: row.price_currency,
+    priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
     createdAtIso: toIso(row.created_at),
   };
 }
@@ -325,6 +327,10 @@ export async function deleteProfile(userId: string): Promise<void> {
 }
 
 export async function createRequest(actorUserId: string, actorUsername: string | null, input: SocketRelayRequestInput, idempotencyKey: string): Promise<SocketRelayRequest> {
+  if (!(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
+    throw new Error('invalid_request_price');
+  }
+
   return withDbTransaction(async (client) => {
     const existing = await client.query<RequestRow>(
       `SELECT id, owner_user_id, owner_username, title, details, category, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
@@ -425,6 +431,10 @@ export async function getRequestById(requestId: string): Promise<SocketRelayRequ
 }
 
 export async function updateRequest(requestId: string, actorUserId: string, isAdmin: boolean, input: SocketRelayRequestInput): Promise<SocketRelayRequest> {
+  if (!(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
+    throw new Error('invalid_request_price');
+  }
+
   const existing = await getRequestById(requestId);
   if (!existing) {
     throw new Error('request_not_found');

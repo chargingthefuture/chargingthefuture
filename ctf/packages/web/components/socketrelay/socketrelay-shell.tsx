@@ -25,7 +25,7 @@ import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { SocketRelayChat } from "./sr-chat";
 import { SocketRelayRightPanel } from "./sr-right-panel";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", category: "", city: "", isPublic: false, priceCurrency: "FREE", priceAmount: "" };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", category: "", city: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
 
 async function getJson<T>(url: string): Promise<T | null> {
   const res = await fetch(url, { cache: "no-store" });
