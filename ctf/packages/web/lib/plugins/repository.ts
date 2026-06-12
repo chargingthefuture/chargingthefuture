@@ -30,7 +30,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'chyme',
     name: 'Chyme',
-    summary: 'Room bootstrap, chat, join flow, and deletion behavior with policy/audit.',
+    summary: 'Live social audio rooms. Broadcast, listen, and connect in real time.',
     availabilityState: 'implemented_shell',
     navRank: 10,
     isVisible: true,
@@ -46,7 +46,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'directory',
     name: 'Directory',
-    summary: 'Unified user/admin profile surface with claimed/unclaimed policy controls.',
+    summary: 'Browse skills across the survivor community.',
     availabilityState: 'implemented_shell',
     navRank: 30,
     isVisible: true,
@@ -54,7 +54,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'workforce',
     name: 'Workforce',
-    summary: 'Dashboard reporting and recruited-state derivation from upstream data.',
+    summary: 'Real-time work and skills distribution amongst 5 million survivors globally.',
     availabilityState: 'implemented_shell',
     navRank: 50,
     isVisible: true,
@@ -62,7 +62,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'skills-hunt',
     name: 'Skills Hunt',
-    summary: 'Rounds, moderation, scoring, leaderboards, and governed profile generation.',
+    summary: 'Discover skills across the network.',
     availabilityState: 'alpha',
     navRank: 60,
     isVisible: true,
@@ -78,7 +78,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'foundation',
     name: 'Foundation',
-    summary: 'Provider search and quote lifecycle using read-only Directory projections.',
+    summary: 'Find talent, tools, repairs, and infrastructure support in real time.',
     availabilityState: 'implemented_shell',
     navRank: 70,
     isVisible: true,
@@ -86,7 +86,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'lighthouse',
     name: 'LightHouse',
-    summary: 'Profile/property/match parity scope with blocks lifecycle controls.',
+    summary: 'Verified survivor housing listings.',
     availabilityState: 'implemented_shell',
     navRank: 80,
     isVisible: true,
@@ -94,7 +94,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'socketrelay',
     name: 'SocketRelay',
-    summary: 'Request and fulfillment flows with privacy-minimized public projections.',
+    summary: 'Real-time resource sharing across the network.',
     availabilityState: 'implemented_shell',
     navRank: 90,
     isVisible: true,
@@ -102,7 +102,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'trusttransport',
     name: 'TrustTransport',
-    summary: 'Ride/package/food fulfillment with safety-first and dispute controls.',
+    summary: 'Vetted transportation for safe travel. Drivers screened by the community, for the community.',
     availabilityState: 'implemented_shell',
     navRank: 100,
     isVisible: true,
@@ -110,7 +110,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'peer-programming',
     name: 'Peer Programming',
-    summary: 'Weekly cohort assignments with deterministic fallback-open behavior.',
+    summary: 'Weekly global mastermind sessions.',
     availabilityState: 'implemented_shell',
     navRank: 110,
     isVisible: true,
@@ -118,7 +118,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'mood',
     name: 'Mood',
-    summary: 'Mood submissions with 7-day cooldown and anonymous clientId persistence.',
+    summary: 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',
     availabilityState: 'implemented_shell',
     navRank: 120,
     isVisible: true,
@@ -126,7 +126,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'gentlepulse',
     name: 'GentlePulse',
-    summary: 'Library listing/playback, ratings, favorites, and support route behavior.',
+    summary: 'Meditations: gentle, consistent, non-intrusive.',
     availabilityState: 'implemented_shell',
     navRank: 130,
     isVisible: true,
@@ -142,7 +142,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'gdp',
     name: 'GDP',
-    summary: 'Aggregate transparency and admin publish flows with compliance controls.',
+    summary: 'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',
     availabilityState: 'implemented_shell',
     navRank: 150,
     isVisible: true,
@@ -150,7 +150,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'service-credits',
     name: 'Service Credits',
-    summary: 'Wallet/transfers/escrow/disputes and treasury governance workflows.',
+    summary: 'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',
     availabilityState: 'implemented_shell',
     navRank: 160,
     isVisible: true,
@@ -158,7 +158,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'levelup',
     name: 'LevelUp',
-    summary: 'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.',
+    summary: 'Goal tracking and progress milestones. Your journey, documented and celebrated.',
     availabilityState: 'implemented_shell',
     navRank: 170,
     isVisible: true,
@@ -166,7 +166,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'clicklog',
     name: 'ClickLog',
-    summary: 'Incident counter and logging with optional location/notes, for user event tracking and history.',
+    summary: 'Safety check-in and incident logging — location optional. Log what happened, check in when you\'re safe.',
     availabilityState: 'implemented_shell',
     navRank: 180,
     isVisible: true,
@@ -174,7 +174,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'trust',
     name: 'Trust',
-    summary: 'Privacy-first verification status and evidence panels embedded into Directory profile surfaces.',
+    summary: 'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.',
     availabilityState: 'implemented_shell',
     navRank: 190,
     isVisible: false,
@@ -182,7 +182,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'whatworks',
     name: 'WhatWorks',
-    summary: 'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.',
+    summary: 'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.',
     availabilityState: 'implemented_shell',
     navRank: 200,
     isVisible: true,
