@@ -1719,7 +1719,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Aggregate transparency and admin publish flows with compliance controls.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'Service Credits',      'Wallet/transfers/escrow/disputes and treasury governance workflows.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE),
+  ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
