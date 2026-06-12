@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
-import { COLOR, FAINT, SUBTLE, requestTags, srHandle, timeAgo, type SrRequest } from "./sr-shared";
+import { COLOR, FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest } from "./sr-shared";
 import { CopyLink } from "@/components/shared/copy-link";
 
 function CardAction({ open, isOwn, submitting, onClaim, onEdit }: { open: boolean; isOwn: boolean; submitting: boolean; onClaim: () => void; onEdit: () => void }) {
@@ -51,6 +51,7 @@ function RequestCard({
             {requestTags(r).map((tag) => (
               <Badge key={tag} style={{ background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
             ))}
+            <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
             {!r.isPublic && <Badge style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 11 }}>Members only</Badge>}
             <Badge style={{ background: open ? "#22C55E20" : "rgba(255,255,255,0.04)", color: open ? "#22C55E" : SUBTLE, border: `1px solid ${open ? "#22C55E40" : "rgba(255,255,255,0.06)"}`, fontSize: 11, textTransform: "capitalize" }}>{r.status}</Badge>
           </div>

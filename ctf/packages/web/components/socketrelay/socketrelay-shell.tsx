@@ -27,7 +27,7 @@ import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { SocketRelayChat } from "./sr-chat";
 import { SocketRelayRightPanel } from "./sr-right-panel";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", isPublic: false };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
 
 async function getJson<T>(url: string): Promise<T | null> {
   const res = await fetch(url, { cache: "no-store" });
@@ -102,6 +102,9 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
       tags: requestTags(request),
       city: request.city ?? "",
       isPublic: request.isPublic,
+      priceCurrency: request.priceCurrency ?? "FREE",
+      priceAmount: request.priceAmount != null ? String(request.priceAmount) : "",
+      requiresAmount: request.priceAmount != null,
     });
     setEditingId(request.id);
     setPostError(null);
@@ -136,6 +139,13 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
           tags: draft.tags,
           city: draft.city.trim() ? draft.city.trim() : null,
           isPublic: draft.isPublic,
+          // The chosen value type (default 'FREE'); amount only for priced types (the form clears it
+          // for Free/Barter, so a blank amount becomes null).
+          priceCurrency: draft.priceCurrency || null,
+          priceAmount: (() => {
+            const n = Number(draft.priceAmount);
+            return Number.isFinite(n) && n > 0 ? n : null;
+          })(),
         }),
       });
       if (!res.ok) {

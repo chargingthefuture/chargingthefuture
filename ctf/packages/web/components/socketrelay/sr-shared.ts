@@ -39,6 +39,8 @@ export type SrRequest = {
   status: SrRequestStatus;
   reopenedCount: number;
   claimedFulfillmentId: string | null;
+  priceCurrency: string | null;
+  priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -126,4 +128,14 @@ export function timeAgo(iso: string): string {
 // When no username was captured, fall back to a neutral short id — mirrors Chyme's chymeHandle.
 export function srHandle(username: string | null, id: string): string {
   return username ? `@${username}` : `user-${id.slice(0, 8)}`;
+}
+
+// Plain label for how a request is settled (issue #420). Honors the ServiceCredits rule (never the bare
+// "SC" code, never a fiat equivalent) and renders Free/Barter from their value types. For fiat/crypto it
+// shows the amount + code (e.g. "20 USD") — the full catalog formatting lives in the create form.
+export function settlementLabel(priceCurrency: string | null, priceAmount: number | null): string {
+  if (!priceCurrency || priceCurrency === "FREE") return "Free";
+  if (priceCurrency === "BARTER") return "Barter";
+  if (priceCurrency === "SC") return priceAmount != null ? `${priceAmount} ServiceCredits` : "ServiceCredits";
+  return priceAmount != null ? `${priceAmount} ${priceCurrency}` : priceCurrency;
 }
