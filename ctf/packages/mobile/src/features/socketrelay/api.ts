@@ -62,6 +62,14 @@ export async function listRequests(
   return res.json() as Promise<ListRequestsResponse>;
 }
 
+// The signed-in user's own requests. The client never learns its own user id;
+// ownership is established by membership in this list.
+export async function listMyRequests(): Promise<ListRequestsResponse> {
+  const res = await fetch(`${API_BASE_URL}/my-requests`);
+  if (!res.ok) throw new Error('Failed to fetch my requests');
+  return res.json() as Promise<ListRequestsResponse>;
+}
+
 export async function createRequest(
   input: SocketRelayRequestInput,
 ): Promise<SocketRelayRequest> {
@@ -74,6 +82,23 @@ export async function createRequest(
     body: JSON.stringify(input),
   });
   if (!res.ok) throw new Error('Failed to create request');
+  const data = (await res.json()) as { ok: boolean; item: SocketRelayRequest };
+  return data.item;
+}
+
+export async function updateRequest(
+  requestId: string,
+  input: SocketRelayRequestInput,
+): Promise<SocketRelayRequest> {
+  const res = await fetch(`${API_BASE_URL}/requests/${requestId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error('Failed to update request');
   const data = (await res.json()) as { ok: boolean; item: SocketRelayRequest };
   return data.item;
 }

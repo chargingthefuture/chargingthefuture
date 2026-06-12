@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import {
   createRequest,
+  listMyRequests,
   listRequests,
   fulfillRequest,
   socketRelayHandle,
+  updateRequest,
   type SocketRelayRequest,
 } from './api';
 import { deriveTagChips, requestTags, suggestTags } from './tags';
@@ -32,6 +34,7 @@ type NavKey = 'feed' | 'post';
 export function SocketRelay() {
   const [activeNav, setActiveNav] = useState<NavKey>('feed');
   const [requests, setRequests] = useState<SocketRelayRequest[]>([]);
+  const [myRequestIds, setMyRequestIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [helped, setHelped] = useState<string[]>([]);
@@ -39,20 +42,28 @@ export function SocketRelay() {
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('All');
 
-  // Post form state
+  // Post form state (doubles as the edit form when editingId is set)
   const [postTitle, setPostTitle] = useState('');
   const [postDetails, setPostDetails] = useState('');
   const [postTags, setPostTags] = useState<string[]>([]);
   const [postCity, setPostCity] = useState('');
+  const [postIsPublic, setPostIsPublic] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
 
   const loadFeed = useCallback(() => {
     setLoading(true);
     setError(null);
-    listRequests()
-      .then((res) => {
-        setRequests(res.items);
+    Promise.all([
+      listRequests(),
+      // Ownership is derived from the my-requests list; ignore its failure so
+      // the public feed still renders.
+      listMyRequests().catch(() => null),
+    ])
+      .then(([feed, mine]) => {
+        setRequests(feed.items);
+        setMyRequestIds(mine ? mine.items.map((r) => r.id) : []);
       })
       .catch(() => setError('Failed to load requests.'))
       .finally(() => setLoading(false));
@@ -77,25 +88,53 @@ export function SocketRelay() {
     }
   };
 
+  const resetPostForm = () => {
+    setPostTitle('');
+    setPostDetails('');
+    setPostTags([]);
+    setPostCity('');
+    setPostIsPublic(true);
+    setEditingId(null);
+    setPostError(null);
+  };
+
+  const startEdit = (r: SocketRelayRequest) => {
+    setPostTitle(r.title);
+    setPostDetails(r.details);
+    setPostTags(requestTags(r));
+    setPostCity(r.city ?? '');
+    setPostIsPublic(r.isPublic);
+    setEditingId(r.id);
+    setPostError(null);
+    setActiveNav('post');
+  };
+
   const handlePost = async () => {
     if (!postTitle.trim() || postTags.length === 0) return;
     setPosting(true);
     setPostError(null);
     try {
-      await createRequest({
+      const input = {
         title: postTitle.trim().slice(0, 80),
         details: postDetails.trim(),
         tags: postTags,
         city: postCity.trim() || null,
-        isPublic: true,
-      });
-      setPostTitle('');
-      setPostDetails('');
-      setPostTags([]);
-      setPostCity('');
+        isPublic: postIsPublic,
+      };
+      if (editingId) {
+        await updateRequest(editingId, input);
+      } else {
+        await createRequest(input);
+      }
+      resetPostForm();
+      // Switching back to the feed re-runs loadFeed via the activeNav effect.
       setActiveNav('feed');
     } catch {
-      setPostError('Failed to post request. Please try again.');
+      setPostError(
+        editingId
+          ? 'Failed to save changes. Please try again.'
+          : 'Failed to post request. Please try again.',
+      );
     } finally {
       setPosting(false);
     }
@@ -201,35 +240,47 @@ export function SocketRelay() {
                   {new Date(r.createdAtIso).toLocaleDateString()}
                 </Text>
 
-                <TouchableOpacity
-                  style={[
-                    styles.helpBtn,
-                    helped.includes(r.id) && styles.helpBtnDone,
-                  ]}
-                  onPress={() => handleFulfill(r.id)}
-                  disabled={
-                    helped.includes(r.id) ||
-                    fulfilling === r.id ||
-                    r.status !== 'open'
-                  }
-                >
-                  {fulfilling === r.id ? (
-                    <ActivityIndicator size="small" color={COLOR} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.helpBtnText,
-                        helped.includes(r.id) && styles.helpBtnTextDone,
-                      ]}
-                    >
-                      {helped.includes(r.id)
-                        ? '✓ Fulfilled'
-                        : r.status === 'open'
-                          ? 'I Can Help'
-                          : 'Closed'}
+                {myRequestIds.includes(r.id) ? (
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => startEdit(r)}
+                    disabled={r.status !== 'open'}
+                  >
+                    <Text style={styles.editBtnText}>
+                      {r.status === 'open' ? 'Edit Your Request' : 'Your request'}
                     </Text>
-                  )}
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.helpBtn,
+                      helped.includes(r.id) && styles.helpBtnDone,
+                    ]}
+                    onPress={() => handleFulfill(r.id)}
+                    disabled={
+                      helped.includes(r.id) ||
+                      fulfilling === r.id ||
+                      r.status !== 'open'
+                    }
+                  >
+                    {fulfilling === r.id ? (
+                      <ActivityIndicator size="small" color={COLOR} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.helpBtnText,
+                          helped.includes(r.id) && styles.helpBtnTextDone,
+                        ]}
+                      >
+                        {helped.includes(r.id)
+                          ? '✓ Fulfilled'
+                          : r.status === 'open'
+                            ? 'I Can Help'
+                            : 'Closed'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </React.Fragment>
           ))}
@@ -245,7 +296,9 @@ export function SocketRelay() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.postHeading}>Post a Request or Offer</Text>
+      <Text style={styles.postHeading}>
+        {editingId ? 'Edit Your Request' : 'Post a Request or Offer'}
+      </Text>
 
       <TextInput
         style={styles.textArea}
@@ -289,9 +342,24 @@ export function SocketRelay() {
         {posting ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.postBtnText}>Post My Request</Text>
+          <Text style={styles.postBtnText}>
+            {editingId ? 'Save Changes' : 'Post My Request'}
+          </Text>
         )}
       </TouchableOpacity>
+
+      {editingId ? (
+        <TouchableOpacity
+          style={styles.cancelEditBtn}
+          onPress={() => {
+            resetPostForm();
+            setActiveNav('feed');
+          }}
+          disabled={posting}
+        >
+          <Text style={styles.cancelEditBtnText}>Cancel Edit</Text>
+        </TouchableOpacity>
+      ) : null}
 
       {/* Privacy notice — from mockup Shield element */}
       <View style={styles.privacyNotice}>
@@ -485,6 +553,24 @@ const styles = StyleSheet.create({
   },
   helpBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
   helpBtnTextDone: { color: '#22C55E' },
+  editBtn: {
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+  },
+  editBtnText: { fontSize: 12, fontWeight: '700', color: '#9CA3AF' },
+  cancelEditBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cancelEditBtnText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
   centeredMsg: {
     flex: 1,
     alignItems: 'center',
