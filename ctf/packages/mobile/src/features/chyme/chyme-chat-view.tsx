@@ -104,6 +104,8 @@ export const ChymeChatView: React.FC<Props> = ({
           style={[styles.sendBtn, input.trim() && styles.sendBtnActive]}
           onPress={onSend}
           disabled={!input.trim() || sending}
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
         >
           <Text style={styles.sendBtnIcon}>›</Text>
         </TouchableOpacity>
