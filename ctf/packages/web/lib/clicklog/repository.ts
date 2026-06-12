@@ -7,7 +7,7 @@ export async function getIncidentById(id: string): Promise<ClicklogIncident | nu
 }
 
 import { queryDb } from 'lib/db/postgres';
-import { ClicklogIncident, CreateIncidentInput, IncidentMetadata } from './types';
+import { ClicklogIncident, CreateIncidentInput } from './types';
 
 export async function createIncident(input: CreateIncidentInput): Promise<ClicklogIncident> {
   const { userId, metadata } = input;

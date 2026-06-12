@@ -5,7 +5,7 @@
   "scripts": {
     "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git config core.hooksPath ctf/.husky && chmod +x .husky/pre-commit .husky/pre-push || true",
     "build": "echo Build started && pnpm -r --if-present run clean && pnpm -r --if-present run build",
-    "lint": "pnpm -r --if-present --filter=!@ctf/web run lint",
+    "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "verify:web": "pnpm --filter @ctf/web run lint && pnpm --filter @ctf/web run typecheck && pnpm run lint && pnpm run typecheck",
     "verify:mobile": "pnpm --filter @ctf/mobile run lint && pnpm --filter @ctf/mobile run typecheck && pnpm --filter @ctf/mobile run build:android:ci && node ./scripts/check-web-android-parity.mjs",

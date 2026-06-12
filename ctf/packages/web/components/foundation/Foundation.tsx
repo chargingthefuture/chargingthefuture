@@ -77,9 +77,10 @@ export function Foundation() {
       } else {
         setConnectionStatus(data.message || 'Failed to create connection');
       }
-    } catch (e: any) {
-      setConnectionStatus(e.message || 'Error connecting');
-      setChatError(e.message || 'Error connecting');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error connecting';
+      setConnectionStatus(msg);
+      setChatError(msg);
     } finally {
       setConnecting(false);
       setChatLoading(false);
