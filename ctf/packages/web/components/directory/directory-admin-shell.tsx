@@ -370,7 +370,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               <div style={{ fontSize: 15, fontWeight: 700 }}>Edit Profile</div>
               <div style={{ fontSize: 11, color: SUBTLE }}>{p.claimedByUserId == null ? "Unclaimed" : "Claimed"} · {sourceBadge(p).label}</div>
             </div>
-            <button onClick={closeDrawer} style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <button onClick={closeDrawer} aria-label="Close" style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <X size={14} color={SUBTLE} />
             </button>
           </div>
@@ -448,7 +448,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
                         <Edit2 size={12} /> Edit profile
                       </button>
                       {p.claimedByUserId == null && (
-                        <button onClick={() => void handleDelete(p)} disabled={saving} style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <button onClick={() => void handleDelete(p)} disabled={saving} aria-label="Delete profile" style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Trash2 size={13} />
                         </button>
                       )}
@@ -556,7 +556,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
                       {isEditing ? <><X size={11} /> Close</> : <><Edit2 size={11} /> Edit</>}
                     </button>
                     {p.claimedByUserId == null && (
-                      <button onClick={() => void handleDelete(p)} disabled={saving} style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <button onClick={() => void handleDelete(p)} disabled={saving} aria-label="Delete profile" style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <Trash2 size={12} />
                       </button>
                     )}
@@ -577,7 +577,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               <div style={{ fontSize: 13, fontWeight: 700 }}>Edit Profile</div>
               <div style={{ fontSize: 11, color: SUBTLE }}>{editing.claimedByUserId == null ? "Unclaimed" : "Claimed"} · {sourceBadge(editing).label}</div>
             </div>
-            <button onClick={closeDrawer} style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: SUBTLE }}>
+            <button onClick={closeDrawer} aria-label="Close" style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: SUBTLE }}>
               <X size={12} />
             </button>
           </div>

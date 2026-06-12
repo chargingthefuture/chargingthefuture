@@ -230,7 +230,7 @@ export const AdminDirectory = () => {
               {isUnclaimed ? 'Unclaimed' : 'Claimed'} · {sourceLabel(p).label}
             </Text>
           </View>
-          <TouchableOpacity onPress={closeDrawer} style={styles.editHeaderClose}>
+          <TouchableOpacity onPress={closeDrawer} style={styles.editHeaderClose} accessibilityRole="button" accessibilityLabel="Close">
             <Text style={styles.editHeaderCloseText}>✕</Text>
           </TouchableOpacity>
         </View>

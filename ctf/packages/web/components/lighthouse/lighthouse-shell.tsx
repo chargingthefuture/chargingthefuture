@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { BG, getLighthouseTokens, type ChatCredentials, type Match, type Profile, type Property, type Tab } from "./shared";
+import { BG, getLighthouseTokens, type ChatCredentials, type Match, type Property, type Tab } from "./shared";
 import { LighthouseIconRail } from "./lighthouse-icon-rail";
 import { LighthouseFilterSidebar, type ListingFilter, filterProperties } from "./lighthouse-filter-sidebar";
 import { LighthouseRightPanel } from "./lighthouse-right-panel";
@@ -17,7 +17,6 @@ import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 
 export function LighthouseShell() {
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -39,16 +38,6 @@ export function LighthouseShell() {
       setLoading(true);
       setError(null);
       try {
-        const profileRes = await fetch("/api/lighthouse/profile");
-        if (profileRes.ok) {
-          const data = await profileRes.json();
-          setProfile(data.profile ?? null);
-        } else if (profileRes.status === 404) {
-          setProfile(null);
-        } else {
-          throw new Error("Failed to load profile");
-        }
-
         const propRes = await fetch("/api/lighthouse/my-properties");
         setProperties(propRes.ok ? (await propRes.json()).items ?? [] : []);
 
@@ -86,15 +75,6 @@ export function LighthouseShell() {
     return (
       <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#EF4444" }}>
         {error}
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 40, textAlign: "center" }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE }}>Welcome to LightHouse</div>
-        <div style={{ fontSize: 14, color: t.SUBTLE, maxWidth: 420, lineHeight: 1.6 }}>No profile found yet. Create your LightHouse profile to browse safe, verified housing and connect with hosts.</div>
       </div>
     );
   }
