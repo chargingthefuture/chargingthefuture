@@ -307,6 +307,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           onQueryChange={setQuery}
           mobileOpen={mobileNavOpen}
           onNavigate={() => setMobileNavOpen(false)}
+          isAdmin={isAdmin}
         />
         {mobileNavOpen ? (
           <button

@@ -24,6 +24,8 @@ export interface CurrencySelectProps {
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  /** Links helper/error text to the control via aria-describedby (e.g. from the shared FormField). */
+  describedBy?: string;
   /** Optional pre-fetched list; if omitted the component fetches the catalog itself. */
   currencies?: Currency[];
 }
@@ -35,6 +37,7 @@ export function CurrencySelect({
   disabled,
   className,
   ariaLabel,
+  describedBy,
   currencies: provided,
 }: CurrencySelectProps) {
   const [currencies, setCurrencies] = useState<Currency[]>(provided ?? []);
@@ -70,6 +73,7 @@ export function CurrencySelect({
       disabled={disabled || sorted.length === 0}
       value={value}
       aria-label={ariaLabel ?? "Currency"}
+      aria-describedby={describedBy}
       onChange={(event) => {
         const code = event.target.value;
         onChange(code, sorted.find((c) => c.code === code) ?? null);
