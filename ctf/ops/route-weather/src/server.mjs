@@ -6,6 +6,7 @@
 //        &heading=270&speed=58                     → also look ~1h down that bearing
 //   GET /weather?from=Denver,CO&to=Vail,CO       → multi-stop route, ETA-aligned
 //        &via=Frisco,CO&depart=06:00&mph=55
+//   GET /wind?lat=39.7&lon=-104.9                → just the current wind, one line
 //
 // Every reply starts with a VERDICT line (DRIVE / CAUTION / HOLD) and also sets
 // an `X-Weather-Verdict` response header, so a Shortcut can decide whether to
@@ -17,7 +18,7 @@
 // any committed file — set it as a Render/Infisical environment variable.
 
 import http from 'node:http';
-import { buildRouteReport, buildPointReport } from './report.mjs';
+import { buildRouteReport, buildPointReport, buildWindReport } from './report.mjs';
 
 const PORT = Number(process.env.PORT) || 3000;
 const TOKEN = process.env.ROUTE_WEATHER_TOKEN || '';
@@ -42,11 +43,17 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (url.pathname === '/health') return sendText(res, 200, 'ok');
-  if (url.pathname !== '/weather') return sendText(res, 404, 'not found');
+  if (url.pathname !== '/weather' && url.pathname !== '/wind') return sendText(res, 404, 'not found');
   if (!authorized(req, url)) return sendText(res, 401, 'unauthorized');
 
   try {
     const q = url.searchParams;
+    // Wind-only reading at a point: GET /wind?lat=..&lon=..
+    if (url.pathname === '/wind') {
+      if (!(q.has('lat') && q.has('lon'))) return sendText(res, 400, 'give lat+lon');
+      const { text } = await buildWindReport({ lat: q.get('lat'), lon: q.get('lon') });
+      return sendText(res, 200, text);
+    }
     let result;
     if (q.has('lat') && q.has('lon')) {
       result = await buildPointReport({
