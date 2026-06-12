@@ -43,6 +43,11 @@ export interface Mode {
 export interface TripRequest {
   id: string;
   mode?: string;
+  title?: string;
+  // The API returns pickup/dropoff cities and a title — not fromLocation/toLocation. Keep the older
+  // optional names too so nothing breaks, but the UI should read pickupCity/dropoffCity (or title).
+  pickupCity?: string | null;
+  dropoffCity?: string | null;
   fromLocation?: string;
   toLocation?: string;
   status?: string;
