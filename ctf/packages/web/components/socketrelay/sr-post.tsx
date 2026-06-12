@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { COLOR, SUBTLE } from "./sr-shared";
+import { CurrencySelect } from "@/components/shared/currency-select";
+import type { Currency } from "lib/currency/types";
 
 export type PostDraft = {
   title: string;
@@ -8,6 +11,11 @@ export type PostDraft = {
   category: string;
   city: string;
   isPublic: boolean;
+  // How the request is settled (issue #420): the chosen value type code (default 'FREE' for mutual
+  // aid). priceAmount is the entered amount as a string, used only for priced types; it is cleared for
+  // amount-less types (Free, Barter) and parsed to a number on submit.
+  priceCurrency: string;
+  priceAmount: string;
 };
 
 export function SocketRelayPost({
@@ -26,6 +34,14 @@ export function SocketRelayPost({
   onSubmit: () => void;
 }) {
   const fieldStyle = { width: "100%", padding: "10px 16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, fontSize: 14, color: "#E8EAF0", outline: "none", boxSizing: "border-box" as const };
+  // Whether the selected value type needs an amount. Default false: requests start as "Free" (mutual
+  // aid), which has no amount. Picking a priced type (ServiceCredits, fiat, crypto) reveals the amount.
+  const [requiresAmount, setRequiresAmount] = useState(false);
+  function onCurrencyChange(code: string, currency: Currency | null) {
+    const needsAmount = currency?.requiresAmount ?? false;
+    setRequiresAmount(needsAmount);
+    onChange(needsAmount ? { priceCurrency: code } : { priceCurrency: code, priceAmount: "" });
+  }
   return (
     <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto" }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>Post a Request</div>
@@ -46,6 +62,23 @@ export function SocketRelayPost({
           <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>City (privacy-protected)</div>
           <input value={draft.city} onChange={(e) => onChange({ city: e.target.value })} placeholder="City or neighborhood only — never exact address" style={fieldStyle} />
         </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>How will this be settled?</div>
+          <CurrencySelect value={draft.priceCurrency} onChange={onCurrencyChange} ariaLabel="How will this be settled?" className="" />
+          <div style={{ fontSize: 12, color: SUBTLE, marginTop: 6 }}>Most help here is free. You can also offer ServiceCredits, money, crypto, or a barter — pick what fits.</div>
+        </div>
+        {requiresAmount && (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Amount</div>
+            <input
+              value={draft.priceAmount}
+              onChange={(e) => onChange({ priceAmount: e.target.value.replace(/[^0-9.]/g, "") })}
+              inputMode="decimal"
+              placeholder="e.g. 20"
+              style={fieldStyle}
+            />
+          </div>
+        )}
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>
           <input type="checkbox" checked={draft.isPublic} onChange={(e) => onChange({ isPublic: e.target.checked })} />
           Make this request publicly visible (otherwise members-only)
