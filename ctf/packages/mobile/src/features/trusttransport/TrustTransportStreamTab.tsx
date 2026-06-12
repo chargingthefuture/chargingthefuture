@@ -3,53 +3,53 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchTrustTransportStreamCredentials } from './fetchTrustTransportStreamCredentials';
 import { StreamChat } from 'stream-chat';
 import { OverlayProvider, Chat, Channel, MessageList, MessageInput } from 'stream-chat-react-native';
-import { StreamVideo, StreamVideoClient, StreamCall, CallContent } from '@stream-io/video-react-native-sdk';
 
 interface TrustTransportStreamTabProps {
   tripId: string;
 }
 
+// Text chat for a trip thread. TrustTransport is chat only — there is deliberately no video room (the
+// transport plugin does not do video, and the web has no video either).
 export const TrustTransportStreamTab: React.FC<TrustTransportStreamTabProps> = ({ tripId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [credentials, setCredentials] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatClient, setChatClient] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [videoClient, setVideoClient] = useState<any>(null);
+  const [channelId, setChannelId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let chat: any = null;
+
     fetchTrustTransportStreamCredentials(tripId)
-      .then((creds) => {
+      .then(async (creds) => {
         if (!isMounted) return;
-        setCredentials(creds);
-        const chat = StreamChat.getInstance(creds.apiKey);
-        chat.connectUser({ id: creds.userId }, creds.userToken);
+        chat = StreamChat.getInstance(creds.apiKey);
+        await chat.connectUser({ id: creds.userId }, creds.userToken);
+        if (!isMounted) return;
         setChatClient(chat);
-        const video = new StreamVideoClient({ apiKey: creds.apiKey, user: { id: creds.userId }, token: creds.userToken });
-        setVideoClient(video);
+        setChannelId(creds.chatChannelId);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-    return () => { isMounted = false; chatClient?.disconnectUser(); videoClient?.disconnect(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch((e) => { if (isMounted) setError(e.message); })
+      .finally(() => { if (isMounted) setLoading(false); });
+
+    return () => {
+      isMounted = false;
+      (async () => {
+        try { await chat?.disconnectUser(); } catch { /* already disconnected */ }
+      })();
+    };
   }, [tripId]);
 
   if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#F97316" /></View>;
   if (error) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>;
-  if (!credentials || !chatClient || !videoClient) return null;
+  if (!chatClient || !channelId) return null;
 
   return (
     <OverlayProvider>
-      <StreamVideo client={videoClient}>
-        <StreamCall call={videoClient.call(credentials.callId)}>
-          <CallContent />
-        </StreamCall>
-      </StreamVideo>
       <Chat client={chatClient}>
-        <Channel channel={chatClient.channel('messaging', credentials.chatChannelId)}>
+        <Channel channel={chatClient.channel('messaging', channelId)}>
           <MessageList />
           <MessageInput />
         </Channel>
