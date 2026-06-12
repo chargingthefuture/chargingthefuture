@@ -107,7 +107,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_endorsements_unique ON whatworks
 CREATE TABLE IF NOT EXISTS currencies (
   code TEXT PRIMARY KEY,
   label TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('token','fiat','crypto','barter')),
+  kind TEXT NOT NULL CHECK (kind IN ('token','fiat','crypto','barter','free')),
   is_service_credits BOOLEAN NOT NULL DEFAULT FALSE,
   symbol TEXT,
   decimal_places INTEGER NOT NULL DEFAULT 2,
@@ -128,6 +128,10 @@ ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT 
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Widen the kind check to allow 'free' (one-way, no-charge mutual aid) on legacy DBs whose constraint
+-- predates it. Drop + re-add is idempotent and keeps fresh and legacy schemas identical.
+ALTER TABLE IF EXISTS currencies DROP CONSTRAINT IF EXISTS currencies_kind_check;
+ALTER TABLE IF EXISTS currencies ADD CONSTRAINT currencies_kind_check CHECK (kind IN ('token','fiat','crypto','barter','free'));
 CREATE INDEX IF NOT EXISTS idx_currencies_active_sort ON currencies(is_active, sort_order);
 
 -- Seed the owner-curated launch set (inline + idempotent, like ctf_plugin_registry). Owner updates
@@ -148,7 +152,11 @@ INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_p
   -- Barter: a no-money exchange (goods/services traded directly). requires_amount = FALSE because a
   -- barter trade has no monetary amount; it is selectable as a payment type and each completed barter
   -- trade contributes to the Community Value Index by count, never by a fiat amount.
-  ('BARTER', 'Barter (no money)',  'barter', FALSE, NULL,  0, FALSE, 120)
+  ('BARTER', 'Barter (no money)',  'barter', FALSE, NULL,  0, FALSE, 120),
+  -- Free: one-way mutual aid given at no charge (a meal, a ride, help). requires_amount = FALSE — there
+  -- is no price. Selectable as a payment type; each completed free exchange contributes to the Community
+  -- Value Index by count, never by a fiat amount, so mutual aid still counts toward the community economy.
+  ('FREE', 'Free (no charge)',     'free',   FALSE, NULL,  0, FALSE, 130)
 ON CONFLICT (code) DO UPDATE SET
   label              = EXCLUDED.label,
   kind               = EXCLUDED.kind,
