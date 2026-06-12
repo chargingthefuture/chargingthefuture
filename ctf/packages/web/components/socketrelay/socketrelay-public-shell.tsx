@@ -18,7 +18,7 @@ const ACCENT = '#7C3AED';
 const ACCENT_CYAN = '#0EA5E9';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-const CATEGORIES = ['All', 'Food', 'Transport', 'Legal', 'Employment', 'Childcare', 'Housing', 'Mental Health'];
+const CATEGORIES = ['All', 'Food', 'Transport', 'Legal', 'Employment', 'Childcare', 'Housing'];
 
 function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const COLOR = DESKTOP_COLOR;

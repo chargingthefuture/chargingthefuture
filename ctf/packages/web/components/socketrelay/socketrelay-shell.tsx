@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import {
   BG,
-  CATEGORIES,
+  deriveCategories,
   getSocketRelayTokens,
   type SrChatCredentials,
   type SrFulfillment,
@@ -94,7 +94,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
 
   async function handlePost() {
     if (!draft.title.trim() || !draft.details.trim() || !draft.category.trim()) {
-      setPostError("Title, details, and category are required.");
+      setPostError("Title, details, and a tag are required.");
       return;
     }
     setSubmitting(true);
@@ -172,8 +172,9 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   }
 
   const openCount = requests.filter((r) => r.status === "open").length;
+  const categories = deriveCategories(requests, category);
   const visible = requests.filter((r) => {
-    if (category !== "All" && r.category !== category) return false;
+    if (category !== "All" && r.category.trim().toLowerCase() !== category.toLowerCase()) return false;
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       if (!`${r.title} ${r.details} ${r.city ?? ""}`.toLowerCase().includes(q)) return false;
@@ -241,7 +242,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
             <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search requests…" style={{ width: "100%", padding: "8px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
               <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <button key={c} onClick={() => setCategory(c)} style={{ whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 14, background: category === c ? `${t.ACCENT}14` : "transparent", border: `1px solid ${category === c ? t.ACCENT + "50" : t.BORDER_HI}`, color: category === c ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>{c}</button>
                 ))}
               </div>
@@ -257,6 +258,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
     <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <SocketRelayIconRail tab={tab} onTab={setTab} />
       <SocketRelaySidebar
+        categories={categories}
         category={category}
         onCategory={setCategory}
         search={search}

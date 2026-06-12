@@ -220,7 +220,7 @@ export function SocketRelay() {
       />
       <TextInput
         style={styles.textInput}
-        placeholder="Category (Food, Transport, Legal…)"
+        placeholder="Tag (anything — Food, Mail, Legal, Pet Care…)"
         placeholderTextColor="#4B5563"
         value={postCategory}
         onChangeText={setPostCategory}

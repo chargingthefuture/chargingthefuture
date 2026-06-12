@@ -39,8 +39,8 @@ export function SocketRelayPost({
           <textarea value={draft.details} onChange={(e) => onChange({ details: e.target.value })} placeholder="Be specific about what help you need or can give…" rows={3} style={{ ...fieldStyle, resize: "none" }} />
         </div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Category</div>
-          <input value={draft.category} onChange={(e) => onChange({ category: e.target.value })} placeholder="Food, Transport, Legal, Employment…" style={fieldStyle} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>Tag</div>
+          <input value={draft.category} onChange={(e) => onChange({ category: e.target.value })} placeholder="One or two words, anything — Food, Mail, Legal, Pet Care…" style={fieldStyle} />
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF", marginBottom: 6 }}>City (privacy-protected)</div>

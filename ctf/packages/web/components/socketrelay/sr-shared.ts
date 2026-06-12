@@ -65,8 +65,25 @@ export type SrChatCredentials = {
   streamChannelId?: string;
 };
 
-// Category filter chips (the request `category` is free text; these scope the feed).
-export const CATEGORIES = ["All", "Food", "Transport", "Legal", "Employment", "Childcare", "Housing", "Mental Health"];
+// The request `category` is free text. Filter chips are derived from the tags people actually
+// use, most-used first, so the feed never forces a post into an ill-fitting bucket.
+export function deriveCategories(requests: SrRequest[], selected: string): string[] {
+  const counts = new Map<string, { label: string; count: number }>();
+  for (const r of requests) {
+    const label = r.category.trim();
+    if (!label) continue;
+    const key = label.toLowerCase();
+    const entry = counts.get(key);
+    if (entry) entry.count += 1;
+    else counts.set(key, { label, count: 1 });
+  }
+  const tags = [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .map((e) => e.label);
+  // Keep the active filter visible even if no loaded request carries it anymore.
+  if (selected !== "All" && !counts.has(selected.toLowerCase())) tags.push(selected);
+  return ["All", ...tags];
+}
 
 export function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
