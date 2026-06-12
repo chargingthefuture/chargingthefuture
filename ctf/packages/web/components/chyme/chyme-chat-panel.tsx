@@ -57,6 +57,7 @@ export function ChymeChatPanel({
           />
           <button
             onClick={onSend}
+            aria-label="Send"
             disabled={sending || !draft.trim()}
             style={{ width: 28, height: 28, borderRadius: 6, background: draft.trim() ? PRIMARY : 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: draft.trim() ? 'pointer' : 'not-allowed' }}
           >

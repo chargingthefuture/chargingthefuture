@@ -97,6 +97,7 @@ export function ContributionsAdminSettings({ t, config, saving, error, onSave, i
           </div>
           <button
             type="button"
+            aria-label="Toggle fundraiser banner"
             aria-pressed={bannerEnabled}
             onClick={() => setBannerEnabled((b) => !b)}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: bannerEnabled ? t.ACCENT : t.MUTED, display: 'flex' }}

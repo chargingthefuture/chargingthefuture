@@ -137,13 +137,13 @@ function PlayerView({
       <Text style={styles.playerTitle}>{session.title}</Text>
       <Text style={styles.playerDesc} numberOfLines={4}>{session.description}</Text>
       <View style={styles.playerControls}>
-        <TouchableOpacity onPress={onBack} style={styles.playerCtrlBtn}>
+        <TouchableOpacity onPress={onBack} style={styles.playerCtrlBtn} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.playerCtrlText}>←</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setIsPaused(!isPaused)} style={styles.playerPlayBtn}>
+        <TouchableOpacity onPress={() => setIsPaused(!isPaused)} style={styles.playerPlayBtn} accessibilityRole="button" accessibilityLabel={isPaused ? 'Play' : 'Pause'}>
           <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color={BG} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={onStop} style={styles.playerCtrlBtn}>
+        <TouchableOpacity onPress={onStop} style={styles.playerCtrlBtn} accessibilityRole="button" accessibilityLabel="Stop">
           <Text style={styles.playerCtrlText}>✕</Text>
         </TouchableOpacity>
       </View>
