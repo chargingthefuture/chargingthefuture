@@ -81,6 +81,7 @@ export default async function HomePage() {
       currentUser={currentUser}
       trust={trust}
       isAuthenticated={isAuthenticated}
+      isAdmin={isAdmin}
       signInUrl={signInUrl}
     />
   );
