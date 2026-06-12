@@ -34,6 +34,11 @@ const RATES = [
   // notional index contribution per trade (non-binding, owner-revisable). requires_amount is FALSE on
   // the currencies catalog row, so barter never carries a monetary amount.
   { code: 'BARTER', usdRate: 5 },
+  // Free: one-way mutual aid at no charge. Like barter, counted by the NUMBER of completed free
+  // exchanges; this weight is the notional index contribution per exchange (non-binding, owner-revisable).
+  // requires_amount is FALSE, so free never carries a monetary amount — mutual aid still counts toward
+  // the community economy without implying any price.
+  { code: 'FREE', usdRate: 3 },
 ];
 
 function requireEnv(name) {
