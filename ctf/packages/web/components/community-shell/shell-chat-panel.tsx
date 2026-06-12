@@ -12,14 +12,6 @@ import styles from './community-shell.module.css';
 
 const ECONOMY_TARGET_USD = 300_000_000_000;
 
-const SUGGESTIONS = [
-  'Show housing options near me',
-  'What is the GDP tracker showing this week?',
-  'Find local work opportunities',
-  'Open the provider directory',
-  'Check my Service Credits',
-];
-
 function formatScaledValue(value: number | null, prefix = ''): string {
   if (!value) return `${prefix}0`;
   if (value >= 1_000_000_000) return `${prefix}${(value / 1_000_000_000).toFixed(0)}B`;
@@ -136,19 +128,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Tapping a suggestion chip fills the composer, then brings it into view and focuses it with the
-  // caret at the end — so the fill is visible even when the composer sits below the fold on mobile.
-  const selectSuggestion = (suggestion: string) => {
-    setInput(suggestion);
-    requestAnimationFrame(() => {
-      const el = inputRef.current;
-      if (!el) return;
-      el.focus();
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      el.setSelectionRange(suggestion.length, suggestion.length);
-    });
-  };
-
   // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
   // epoch, then sort once so AI cards weave chronologically among community posts. `order` (source
   // index) is a stable tiebreaker for equal/absent timestamps. The asker's own questions show their
@@ -186,7 +165,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
       <div className={styles.heroBanner}>
         <div className={styles.heroBannerContent}>
           <p className={styles.heroBannerTag}>✦ From Survivor to Thriver</p>
-          <h1 className={styles.heroBannerTitle}>Good morning, {currentUser.displayName} — your network is active.</h1>
+          <h1 className={styles.heroBannerTitle}>Welcome back, {currentUser.displayName} — your network is active.</h1>
           <p className={styles.heroBannerSub}>{implementedCount} live plugins · one economy · {supportStatus}.</p>
         </div>
         <div className={styles.heroStats}>
@@ -277,13 +256,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         })}
       </div>
 
-      <div className={styles.chatChipRow}>
-        {SUGGESTIONS.map((suggestion) => (
-          <button key={suggestion} type="button" className={styles.chatChip} onClick={() => selectSuggestion(suggestion)}>
-            {suggestion}
-          </button>
-        ))}
-      </div>
+      {/* Suggestion chips are hidden for now: they read as AI/@comic questions, but tapping one
+          only fills the composer — it does not return an immediate answer, which confuses members.
+          Revisit as a proper one-tap @comic ask — tracked in issue #471. */}
 
       {/* @comic mention affordance + helper copy (per the locked design / naming rules). */}
       <div className={styles.comicComposerHelper}>
