@@ -1,13 +1,12 @@
-import { Platform } from 'react-native';
+import { authedFetch } from '../../auth/authedFetch';
 import type { Round, Submission } from './SkillsHuntApi';
 
 // Admin client for the Skills Hunt plugin. Mirrors the web admin routes under
 // ctf/packages/web/app/api/skills-hunt/admin/*. Admin/moderator access is
 // enforced server-side; a 401/403 surfaces as a "forbidden" notice in the screen.
-const ADMIN_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/skills-hunt/admin'
-    : 'http://localhost:3000/api/skills-hunt/admin';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+const ADMIN_API_BASE = '/api/skills-hunt/admin';
 
 export type SubmissionStatusFilter = 'pending' | 'accepted' | 'rejected' | 'flagged';
 export type ReviewAction = 'accept' | 'reject' | 'flag';
@@ -27,13 +26,8 @@ export type SubmissionsFetchResult = {
 };
 
 // GET the full round list. Returns forbidden:true for non-admins.
-export async function fetchAdminRounds(authToken: string): Promise<RoundsFetchResult> {
-  const res = await fetch(`${ADMIN_API_BASE}/rounds`, {
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
+export async function fetchAdminRounds(): Promise<RoundsFetchResult> {
+  const res = await authedFetch(`${ADMIN_API_BASE}/rounds`);
   if (res.status === 401 || res.status === 403) {
     return { ok: false, forbidden: true, rounds: [], message: 'Admin access is required.' };
   }
@@ -46,18 +40,11 @@ export async function fetchAdminRounds(authToken: string): Promise<RoundsFetchRe
 
 // GET submissions for a round, filtered by status. Moderator/admin gated.
 export async function fetchAdminSubmissions(
-  authToken: string,
   roundId: string,
   status: SubmissionStatusFilter,
 ): Promise<SubmissionsFetchResult> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ADMIN_API_BASE}/rounds/${roundId}/submissions?status=${status}&pageSize=100`,
-    {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-    },
   );
   if (res.status === 401 || res.status === 403) {
     return { ok: false, forbidden: true, items: [], message: 'Admin access is required.' };
@@ -72,15 +59,13 @@ export async function fetchAdminSubmissions(
 // POST a moderation decision for one submission. Carries the CSRF confirmation
 // header the API requires. notes is the rejection reason (or null otherwise).
 export async function reviewAdminSubmission(
-  authToken: string,
   submissionId: string,
   action: ReviewAction,
   notes: string | null,
 ): Promise<void> {
-  const res = await fetch(`${ADMIN_API_BASE}/submissions/${submissionId}/review`, {
+  const res = await authedFetch(`${ADMIN_API_BASE}/submissions/${submissionId}/review`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },

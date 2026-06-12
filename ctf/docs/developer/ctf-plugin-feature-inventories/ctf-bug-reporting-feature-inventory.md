@@ -125,6 +125,7 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. The request-timeout guard is kept. No backend, schema, or contract change.
 - 2026-06-10: Initial backend foundation — `bug_reports` table, submit route, redaction/risk
   gate, repository, create-issues script and (dispatch-only) workflow, plugin registration
   (hidden), and this inventory. UI deferred pending design.

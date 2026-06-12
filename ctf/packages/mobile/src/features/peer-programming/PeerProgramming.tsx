@@ -31,7 +31,7 @@ export const PeerProgramming = () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setLoading(true);
     setError(null);
-    fetchRoom(auth.userId)
+    fetchRoom()
       .then((data) => {
         setRoom(data);
         setLoading(false);

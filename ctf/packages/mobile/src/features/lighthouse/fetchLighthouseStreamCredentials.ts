@@ -1,4 +1,11 @@
-import { Platform } from 'react-native';
+// Resolves Stream chat credentials for the signed-in user's accepted LightHouse
+// match. The web route is POST /api/lighthouse/matches/:matchId/chat and needs a
+// real match id, so this first reads GET /api/lighthouse/matches and picks the
+// accepted one — the old hardcoded "active" path segment always 404'd.
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
+import type { MatchesResponse } from './types';
 
 export type LighthouseStreamCredentials = {
   streamApiKey: string;
@@ -8,14 +15,25 @@ export type LighthouseStreamCredentials = {
 };
 
 export async function fetchLighthouseStreamCredentials(): Promise<LighthouseStreamCredentials> {
-  const baseUrl = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/lighthouse/matches/active/chat`, { method: 'POST' });
+  const mine = await authedFetchJson<MatchesResponse>('/api/lighthouse/matches');
+  const accepted = (mine.items ?? []).find((match) => match.status === 'accepted');
+  if (!accepted) {
+    throw new Error('No accepted match — chat opens once a match is accepted.');
+  }
+
+  const res = await authedFetch(`/api/lighthouse/matches/${accepted.id}/chat`, {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
   const data = await res.json();
-  if (!data.ok) throw new Error(data.message || 'Unable to load Lighthouse chat credentials');
+  if (!res.ok || !data.ok) {
+    throw new Error(data?.message || 'Unable to load Lighthouse chat credentials');
+  }
   return {
     streamApiKey: data.streamApiKey,
     streamToken: data.streamToken,
     streamUserId: data.streamUserId,
-    streamChannelId: data.streamChannelId,
+    // The route returns the channel id as `channelId`.
+    streamChannelId: data.channelId,
   };
 }

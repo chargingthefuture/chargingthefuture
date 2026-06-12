@@ -1,13 +1,13 @@
-import { Platform } from 'react-native';
 import type { PeerProgrammingTopic } from './api';
 
 // Admin client for the Peer Programming plugin. Mirrors the web admin routes under
 // ctf/packages/web/app/api/peer-programming/admin/*. Admin access is enforced
 // server-side; a 401/403 surfaces as a "forbidden" notice in the screen.
-const ADMIN_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/peer-programming/admin'
-    : 'http://localhost:3000/api/peer-programming/admin';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
+
+const BASE = '/api/peer-programming/admin';
 
 export type AssignmentRunResult = {
   cohortsCreated: number;
@@ -22,13 +22,8 @@ export type TopicFetchResult = {
 };
 
 // GET the current published weekly topic. Returns forbidden:true for non-admins.
-export async function fetchAdminTopic(authToken: string): Promise<TopicFetchResult> {
-  const res = await fetch(`${ADMIN_API_BASE}/topics`, {
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
+export async function fetchAdminTopic(): Promise<TopicFetchResult> {
+  const res = await authedFetch(`${BASE}/topics`);
   if (res.status === 401 || res.status === 403) {
     return { ok: false, forbidden: true, topic: null, message: 'Admin access is required.' };
   }
@@ -53,14 +48,10 @@ export type TopicUpsertInput = {
 };
 
 // PUT (upsert) the weekly topic. Carries the CSRF confirmation header the API requires.
-export async function upsertAdminTopic(
-  authToken: string,
-  input: TopicUpsertInput,
-): Promise<PeerProgrammingTopic> {
-  const res = await fetch(`${ADMIN_API_BASE}/topics`, {
+export async function upsertAdminTopic(input: TopicUpsertInput): Promise<PeerProgrammingTopic> {
+  const res = await authedFetch(`${BASE}/topics`, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
@@ -76,13 +67,11 @@ export async function upsertAdminTopic(
 // POST run the weekly cohort assignment. With no override the server selects the
 // last-7-days active set; the manual override sends an explicit user-id list.
 export async function runAdminAssignment(
-  authToken: string,
   input: { allowManualOverride: boolean; activeUserIds: string[] },
 ): Promise<AssignmentRunResult> {
-  const res = await fetch(`${ADMIN_API_BASE}/assignments/run`, {
+  const res = await authedFetch(`${BASE}/assignments/run`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },

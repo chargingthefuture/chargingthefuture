@@ -424,6 +424,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-06-12: The Android @comic API client (`packages/mobile/src/features/comic/api.ts`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs. No schema, route, or contract change.
 - 2026-06-07: Aligned the **AI review console** (web + Android) to the newer `AIReviewConsole*` /
   `MobileAIReviewConsole*` mockups (design `353f8f3`) on `feat/comic-ai-review-console-align`. No
   backend change — binds only the existing `GET /api/comic/review` and
