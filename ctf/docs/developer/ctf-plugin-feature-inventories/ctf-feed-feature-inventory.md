@@ -155,6 +155,8 @@ User routes:
 - `POST /api/feed/answers/:answerId/rate`
 - `POST /api/feed/community/posts`
 - `POST /api/feed/community/posts/:postId/reply`
+- `POST /api/feed/stream` — mint Stream chat credentials for the announcements channel (`ctf-feed-announcements`)
+- `POST /api/questions/stream` — mint Stream chat credentials for the questions channel (`ctf-feed-questions`); used by the mobile Questions screen
 
 Admin routes:
 
@@ -272,6 +274,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-06-12: Wired the mobile Questions screen to real Stream chat credentials. It called `POST /api/questions/stream`, a route that did not exist, with a relative URL that never resolves in React Native — so the screen always errored. Added the route (reusing the Feed read-access gate and the shared Stream identity) and generalized `lib/feed/stream.ts` so it can mint credentials for any of the Feed's three channels; Questions now connects to a dedicated `ctf-feed-questions` channel. The mobile client now uses the platform base URL and maps the canonical `stream*` response fields. Note: this is a live group chat for the Questions channel, which is a parity divergence from the web Questions surface (an LLM-assisted Q&A list, not a chat); flagged for a later product reconciliation. No schema change.
 - 2026-06-01: Fixed a posting failure that broke both community messages and @comic questions. `feed_item_targets` used a primary key over `(item_id, target_role, target_plugin, target_region)`, but default targeting writes `NULL` for plugin/region to mean "any" — and primary-key columns are implicitly `NOT NULL`, so every default-targeted insert threw a not-null violation, rolling back the whole post transaction and returning a generic 503. Replaced the primary key with a `NULLS NOT DISTINCT` unique index and made the three target columns nullable (guarded DDL repairs legacy databases). No application code change needed; verified against Postgres 16.
 - 2026-05-31: Feed-Announcements web pixel pass — aligned `live-feed-announcements.tsx` to canonical design mockup: accent color `#84CC16`, lucide icons throughout, removed "GetStream ⚡" badge, empty state matches mockup. Decomposed 712-line monolith into 7 sub-files per rule-116. Omitted mockup-only mock data (trending hashtags by count, top-engaged-today users) per real-data-only rule. Updated Web px ✅ and Gates ✅ in production readiness table. Typecheck, build, ESLint, EOF all pass.
 - 2026-05-18: Replaced "Web and Android Delivery Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-parity-pending framing. Removed stale Gaps entries that listed Questions/Community/Android as pending — these surfaces are shipped (`/api/feed/questions/*`, `/api/feed/community/*`, mobile FeedStream). Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt". Updated seed coverage to reference shipping script.

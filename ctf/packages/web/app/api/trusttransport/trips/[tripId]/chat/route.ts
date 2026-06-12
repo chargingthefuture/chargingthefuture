@@ -35,7 +35,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ tr
     if (!credentials) {
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, channelId, ...credentials });
+    // A trip has both a text chat (Stream Chat channel) and a 1:1 video room (Stream Video call). They
+    // live in separate Stream namespaces, so they can safely share the same per-trip id. The video tab
+    // needs this callId to join the room; without it the server issued no call id and video never
+    // started. `streamChannelId` is also returned so the web chat tab connects to the real channel
+    // instead of falling back to the raw trip id.
+    const callId = `trusttransport-trip-${trip.id}`;
+    return NextResponse.json({ ok: true, channelId, streamChannelId: channelId, callId, ...credentials });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     reportError(e, { area: 'trusttransport', op: 'trips_tripid_chat' });

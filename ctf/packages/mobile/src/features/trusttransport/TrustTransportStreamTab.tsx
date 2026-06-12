@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { fetchTrustTransportStreamCredentials } from './fetchTrustTransportStreamCredentials';
 import { StreamChat } from 'stream-chat';
 import { OverlayProvider, Chat, Channel, MessageList, MessageInput } from 'stream-chat-react-native';
-import { StreamVideo, StreamVideoClient, StreamCall, CallContent } from '@stream-io/video-react-native-sdk';
+import { StreamVideo, StreamVideoClient, StreamCall, CallContent, Call } from '@stream-io/video-react-native-sdk';
 
 interface TrustTransportStreamTabProps {
   tripId: string;
@@ -13,43 +13,68 @@ export const TrustTransportStreamTab: React.FC<TrustTransportStreamTabProps> = (
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [credentials, setCredentials] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatClient, setChatClient] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [videoClient, setVideoClient] = useState<any>(null);
+  const [videoClient, setVideoClient] = useState<StreamVideoClient | null>(null);
+  const [channelId, setChannelId] = useState<string | null>(null);
+  // The joined video call. Stream Video needs a call type + id and an explicit join() before the room
+  // renders — passing an unjoined call (or a call with no id) shows nothing.
+  const [call, setCall] = useState<Call | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let chat: any = null;
+    let video: StreamVideoClient | null = null;
+    let joinedCall: Call | null = null;
+
     fetchTrustTransportStreamCredentials(tripId)
-      .then((creds) => {
+      .then(async (creds) => {
         if (!isMounted) return;
-        setCredentials(creds);
-        const chat = StreamChat.getInstance(creds.apiKey);
-        chat.connectUser({ id: creds.userId }, creds.userToken);
+        chat = StreamChat.getInstance(creds.apiKey);
+        await chat.connectUser({ id: creds.userId }, creds.userToken);
+        if (!isMounted) return;
         setChatClient(chat);
-        const video = new StreamVideoClient({ apiKey: creds.apiKey, user: { id: creds.userId }, token: creds.userToken });
+        setChannelId(creds.chatChannelId ?? null);
+
+        video = new StreamVideoClient({ apiKey: creds.apiKey, user: { id: creds.userId }, token: creds.userToken });
         setVideoClient(video);
+        if (creds.callId) {
+          const c = video.call('default', creds.callId);
+          await c.join({ create: true });
+          if (!isMounted) return;
+          joinedCall = c;
+          setCall(c);
+        }
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-    return () => { isMounted = false; chatClient?.disconnectUser(); videoClient?.disconnect(); };
+      .catch((e) => { if (isMounted) setError(e.message); })
+      .finally(() => { if (isMounted) setLoading(false); });
+
+    return () => {
+      isMounted = false;
+      (async () => {
+        try { await joinedCall?.leave(); } catch { /* already left */ }
+        try { await chat?.disconnectUser(); } catch { /* already disconnected */ }
+        try { await video?.disconnectUser(); } catch { /* already disconnected */ }
+      })();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
 
   if (loading) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#F97316" /></View>;
   if (error) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: 'red' }}>{error}</Text></View>;
-  if (!credentials || !chatClient || !videoClient) return null;
+  if (!chatClient || !channelId) return null;
 
   return (
     <OverlayProvider>
-      <StreamVideo client={videoClient}>
-        <StreamCall call={videoClient.call(credentials.callId)}>
-          <CallContent />
-        </StreamCall>
-      </StreamVideo>
+      {videoClient && call ? (
+        <StreamVideo client={videoClient}>
+          <StreamCall call={call}>
+            <CallContent />
+          </StreamCall>
+        </StreamVideo>
+      ) : null}
       <Chat client={chatClient}>
-        <Channel channel={chatClient.channel('messaging', credentials.chatChannelId)}>
+        <Channel channel={chatClient.channel('messaging', channelId)}>
           <MessageList />
           <MessageInput />
         </Channel>
