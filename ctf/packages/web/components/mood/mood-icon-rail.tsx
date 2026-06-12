@@ -19,7 +19,7 @@ export function MoodIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => vo
         <Smile size={20} style={{ color: t.ACCENT }} />
       </div>
       {NAV.map(({ icon: Icon, key }) => (
-        <button key={key} type="button" onClick={() => onTab(key)} style={{ width: 44, height: 44, borderRadius: 12, background: tab === key ? `${t.ACCENT}20` : "transparent", border: tab === key ? `1px solid ${t.ACCENT}40` : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: tab === key ? t.ACCENT : t.SUBTLE }}>
+        <button key={key} type="button" onClick={() => onTab(key)} aria-label={key === "checkin" ? "Check-in" : "Community Pulse"} style={{ width: 44, height: 44, borderRadius: 12, background: tab === key ? `${t.ACCENT}20` : "transparent", border: tab === key ? `1px solid ${t.ACCENT}40` : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: tab === key ? t.ACCENT : t.SUBTLE }}>
           <Icon size={20} />
         </button>
       ))}

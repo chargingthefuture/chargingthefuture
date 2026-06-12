@@ -12,7 +12,6 @@ import { GentlePulseIconRail } from "./gp-icon-rail";
 import { GentlePulseSidebar } from "./gp-sidebar";
 import { GentlePulseSessions } from "./gp-sessions";
 import { GentlePulsePlayer } from "./gp-player";
-import { GentlePulseChat } from "./gp-chat";
 import { GentlePulseRightPanel } from "./gp-right-panel";
 
 export function GentlePulseShell() {
@@ -25,7 +24,6 @@ export function GentlePulseShell() {
   const [playing, setPlaying] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [progress] = useState(40);
-  const [chatInput, setChatInput] = useState("");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const isMobile = useIsMobile();
@@ -121,17 +119,10 @@ export function GentlePulseShell() {
           onBrowse={() => setTab("sessions")}
         />
       )}
-      {tab === "chat" && (
-        <GentlePulseChat chatInput={chatInput} onChatInput={setChatInput} onBrowse={() => setTab("sessions")} />
-      )}
     </>
   );
 
   if (isMobile) {
-    const tabs: { key: Tab; label: string }[] = [
-      { key: "sessions", label: "Sessions" },
-      { key: "chat", label: "Chat" },
-    ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
@@ -141,12 +132,6 @@ export function GentlePulseShell() {
             </Link>
             <Heart size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GentlePulse</span>
-            <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>✓ Safe</Badge>
-          </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
-            {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
-            ))}
           </div>
           {tab === "sessions" && (
             <div style={{ display: "flex", gap: 6, padding: "0 12px 10px", overflowX: "auto" }}>
@@ -177,7 +162,7 @@ export function GentlePulseShell() {
           <Heart size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>💚 GentlePulse — Guided Meditation</div>
-            <div style={{ fontSize: 12, color: t.FAINT }}>Trauma-informed · Expert-designed · Safe sanctuary</div>
+            <div style={{ fontSize: 12, color: t.FAINT }}>Trauma-informed · Expert-designed</div>
           </div>
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
             ✓ Trauma-Informed

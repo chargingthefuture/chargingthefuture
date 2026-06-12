@@ -34,7 +34,7 @@ export function getGentlePulseTokens(theme: ThemeName): GentlePulseTokens {
   };
 }
 
-export type Tab = "sessions" | "playing" | "chat";
+export type Tab = "sessions" | "playing";
 
 export interface Session {
   id: string;

@@ -94,6 +94,8 @@ export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardP
           <Pressable
             style={[styles.flagBtn, rating === 'flagged' ? styles.flagBtnActive : null]}
             onPress={() => onRate(item.answerTurnId as string, 'flagged')}
+            accessibilityRole="button"
+            accessibilityLabel="Flag answer"
           >
             <Ionicons
               name={rating === 'flagged' ? 'flag' : 'flag-outline'}

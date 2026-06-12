@@ -1605,6 +1605,39 @@
  * Stack them full-width instead so each button has even padding and room.
  */
 @media (max-width: 767px) {
+  /* Compact the hero on phones so it doesn't dominate the screen and crowd out
+     the chat / AI Assistant area below it. */
+  .heroBanner {
+    margin: 12px 12px 0;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .heroBannerTitle {
+    font-size: 18px;
+  }
+
+  .heroBannerSub {
+    font-size: 12px;
+  }
+
+  .heroStats {
+    gap: 8px;
+  }
+
+  .heroStatBlock {
+    flex: 1;
+    padding: 8px 10px;
+  }
+
+  .heroStatValue {
+    font-size: 16px;
+  }
+
+  .heroStatLabel {
+    font-size: 10px;
+  }
+
   .comicConsentActions {
     flex-direction: column;
   }
