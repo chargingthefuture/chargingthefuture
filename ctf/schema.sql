@@ -2661,8 +2661,12 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at T
 -- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
--- Enforce the "Free = no price, never $0" rule at the DB level (issue #120 follow-up): a request either
--- has no price (both NULL) or a positive amount in a named currency. Guarded so it is added only once.
+-- Price/value-type consistency (issue #120 / #420): a request either names no value type (both NULL) or
+-- names a value type, with a positive amount for priced types and NO amount for amount-less types
+-- (Free, Barter — currencies.requires_amount = FALSE). "Free" therefore renders from price_currency =
+-- 'FREE' with a NULL amount, never as $0. Drop the older strict constraint (which forbade amount-less
+-- named types) so legacy DBs get the relaxed rule; the guarded block re-adds it under the same name.
+ALTER TABLE IF EXISTS socketrelay_requests DROP CONSTRAINT IF EXISTS socketrelay_requests_price_consistency_check;
 DO $socketrelay_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
@@ -2673,7 +2677,7 @@ BEGIN
       ADD CONSTRAINT socketrelay_requests_price_consistency_check
       CHECK (
         (price_amount IS NULL AND price_currency IS NULL) OR
-        (price_amount IS NOT NULL AND price_amount > 0 AND price_currency IS NOT NULL)
+        (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
       );
   END IF;
 END

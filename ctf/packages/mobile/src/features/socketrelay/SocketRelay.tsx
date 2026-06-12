@@ -15,6 +15,7 @@ import {
   listRequests,
   fulfillRequest,
   socketRelayHandle,
+  settlementLabel,
   updateRequest,
   type SocketRelayRequest,
 } from './api';
@@ -22,6 +23,8 @@ import { deriveTagChips, requestTags, suggestTags } from './tags';
 import { SocketRelayTagInput } from './SocketRelayTagInput';
 import { SocketRelayLoading } from './SocketRelayLoading';
 import { SocketRelayEmpty } from './SocketRelayEmpty';
+import { CurrencySelect } from '../currency';
+import type { Currency } from '../currency';
 
 // Design color — from MobileSocketRelay.tsx mockup
 const COLOR = '#FB923C';
@@ -47,6 +50,10 @@ export function SocketRelay() {
   const [postDetails, setPostDetails] = useState('');
   const [postTags, setPostTags] = useState<string[]>([]);
   const [postCity, setPostCity] = useState('');
+  // How the request is settled (issue #420): default Free (mutual aid); amount only for priced types.
+  const [postPriceCurrency, setPostPriceCurrency] = useState('FREE');
+  const [postPriceAmount, setPostPriceAmount] = useState('');
+  const [postRequiresAmount, setPostRequiresAmount] = useState(false);
   const [postIsPublic, setPostIsPublic] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -88,6 +95,11 @@ export function SocketRelay() {
     }
   };
 
+  // A priced value type (ServiceCredits, fiat, crypto) needs a positive amount; Free/Barter don't.
+  const parsedPostPriceAmount = Number(postPriceAmount);
+  const hasValidPostAmount =
+    !postRequiresAmount || (Number.isFinite(parsedPostPriceAmount) && parsedPostPriceAmount > 0);
+
   const resetPostForm = () => {
     setPostTitle('');
     setPostDetails('');
@@ -95,6 +107,9 @@ export function SocketRelay() {
     setPostCity('');
     setPostIsPublic(true);
     setEditingId(null);
+    setPostPriceCurrency('FREE');
+    setPostPriceAmount('');
+    setPostRequiresAmount(false);
     setPostError(null);
   };
 
@@ -105,12 +120,19 @@ export function SocketRelay() {
     setPostCity(r.city ?? '');
     setPostIsPublic(r.isPublic);
     setEditingId(r.id);
+    setPostPriceCurrency(r.priceCurrency ?? 'FREE');
+    setPostPriceAmount(r.priceAmount != null ? String(r.priceAmount) : '');
+    setPostRequiresAmount(r.priceAmount != null);
     setPostError(null);
     setActiveNav('post');
   };
 
   const handlePost = async () => {
     if (!postTitle.trim() || postTags.length === 0) return;
+    if (!hasValidPostAmount) {
+      setPostError('Enter an amount greater than zero for this value type.');
+      return;
+    }
     setPosting(true);
     setPostError(null);
     try {
@@ -120,6 +142,8 @@ export function SocketRelay() {
         tags: postTags,
         city: postCity.trim() || null,
         isPublic: postIsPublic,
+        priceCurrency: postPriceCurrency || null,
+        priceAmount: postRequiresAmount ? parsedPostPriceAmount : null,
       };
       if (editingId) {
         await updateRequest(editingId, input);
@@ -215,6 +239,9 @@ export function SocketRelay() {
                       <Text style={styles.categoryBadgeText}>{tag}</Text>
                     </View>
                   ))}
+                  <View style={styles.settleBadge}>
+                    <Text style={styles.settleBadgeText}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Text>
+                  </View>
                   {r.status !== 'open' && (
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusBadgeText}>{r.status}</Text>
@@ -330,14 +357,35 @@ export function SocketRelay() {
         onChangeText={setPostCity}
       />
 
+      <Text style={styles.settleLabel}>How will this be settled?</Text>
+      <CurrencySelect
+        value={postPriceCurrency}
+        onChange={(code, currency: Currency | null) => {
+          const needsAmount = currency?.requiresAmount ?? false;
+          setPostPriceCurrency(code);
+          setPostRequiresAmount(needsAmount);
+          if (!needsAmount) setPostPriceAmount('');
+        }}
+      />
+      {postRequiresAmount ? (
+        <TextInput
+          style={styles.textInput}
+          placeholder="Amount (e.g. 20)"
+          placeholderTextColor="#4B5563"
+          value={postPriceAmount}
+          onChangeText={(t) => setPostPriceAmount(t.replace(/[^0-9.]/g, ''))}
+          keyboardType="decimal-pad"
+        />
+      ) : null}
+
       {postError ? (
         <Text style={styles.errorText}>{postError}</Text>
       ) : null}
 
       <TouchableOpacity
-        style={[styles.postBtn, (!postTitle.trim() || postTags.length === 0) && styles.postBtnDisabled]}
+        style={[styles.postBtn, (!postTitle.trim() || postTags.length === 0 || !hasValidPostAmount) && styles.postBtnDisabled]}
         onPress={handlePost}
-        disabled={posting || !postTitle.trim() || postTags.length === 0}
+        disabled={posting || !postTitle.trim() || postTags.length === 0 || !hasValidPostAmount}
       >
         {posting ? (
           <ActivityIndicator size="small" color="#fff" />
@@ -520,6 +568,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.06)',
   },
   categoryBadgeText: { fontSize: 10, color: '#6B7280' },
+  settleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(34,197,94,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.25)',
+  },
+  settleBadgeText: { fontSize: 10, color: '#22C55E' },
+  settleLabel: { fontSize: 12, color: '#9CA3AF', marginTop: 4, marginBottom: 6 },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
