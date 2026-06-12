@@ -43,6 +43,9 @@ function BookedCard({ onReset }: { onReset: () => void }) {
 export function TrustTransportBookTab(props: BookTabProps) {
   const { rideTypes, rideType, onRideType, from, to, onFrom, onTo, priceCurrency, priceAmount, requiresAmount, onPriceCurrency, onPriceAmount, bookingError, booked, submitting, onBook, onReset } = props;
   const name = rideTypeName(rideTypes, rideType);
+  // A priced value type needs a positive amount before the ride can be booked; Free/Barter don't.
+  const parsedAmount = Number(priceAmount);
+  const hasValidAmount = !requiresAmount || (Number.isFinite(parsedAmount) && parsedAmount > 0);
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
@@ -101,7 +104,7 @@ export function TrustTransportBookTab(props: BookTabProps) {
         {booked ? (
           <BookedCard onReset={onReset} />
         ) : (
-          <button type="button" onClick={onBook} disabled={submitting} style={{ padding: "16px", borderRadius: 14, background: submitting ? "rgba(249,115,22,0.4)" : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
+          <button type="button" onClick={onBook} disabled={submitting || !hasValidAmount} style={{ padding: "16px", borderRadius: 14, background: (submitting || !hasValidAmount) ? "rgba(249,115,22,0.4)" : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: (submitting || !hasValidAmount) ? "not-allowed" : "pointer" }}>
             {submitting ? "Booking…" : `Book ${name}`}
           </button>
         )}
