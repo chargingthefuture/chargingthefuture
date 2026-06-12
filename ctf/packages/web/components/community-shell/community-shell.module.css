@@ -633,6 +633,25 @@
   margin-bottom: 16px;
 }
 
+/* Search box for the apps grid. It used to live in the nav drawer; now that the grid is
+   the only place apps are listed, the filter sits with it. */
+.appsSearchInput {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ctf-text-secondary);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.appsSearchInput::placeholder {
+  color: var(--ctf-text-muted);
+}
+
 .appsSortWrap {
   display: flex;
   flex-direction: column;
