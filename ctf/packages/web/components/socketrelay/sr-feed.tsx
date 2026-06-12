@@ -52,7 +52,6 @@ function RequestCard({
               <Badge key={tag} style={{ background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
             ))}
             <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
-            {!r.isPublic && <Badge style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 11 }}>Members only</Badge>}
             <Badge style={{ background: open ? "#22C55E20" : "rgba(255,255,255,0.04)", color: open ? "#22C55E" : SUBTLE, border: `1px solid ${open ? "#22C55E40" : "rgba(255,255,255,0.06)"}`, fontSize: 11, textTransform: "capitalize" }}>{r.status}</Badge>
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#F9FAFB", marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>

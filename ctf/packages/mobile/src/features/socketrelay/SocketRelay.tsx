@@ -54,7 +54,8 @@ export function SocketRelay() {
   const [postPriceCurrency, setPostPriceCurrency] = useState('FREE');
   const [postPriceAmount, setPostPriceAmount] = useState('');
   const [postRequiresAmount, setPostRequiresAmount] = useState(false);
-  const [postIsPublic, setPostIsPublic] = useState(true);
+  // SocketRelay is community-only — there is no "make public" option. Requests are members-only.
+  const [postIsPublic, setPostIsPublic] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
@@ -105,7 +106,7 @@ export function SocketRelay() {
     setPostDetails('');
     setPostTags([]);
     setPostCity('');
-    setPostIsPublic(true);
+    setPostIsPublic(false);
     setEditingId(null);
     setPostPriceCurrency('FREE');
     setPostPriceAmount('');

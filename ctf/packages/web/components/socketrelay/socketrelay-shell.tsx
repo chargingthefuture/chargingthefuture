@@ -121,8 +121,22 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   }
 
   async function handlePost() {
-    if (!draft.title.trim() || !draft.details.trim() || draft.tags.length === 0) {
-      setPostError("Title, details, and at least one tag are required.");
+    // Friendly, field-specific checks so a member is told exactly what to fix — never a raw
+    // "invalid payload" from the server.
+    if (!draft.title.trim()) {
+      setPostError("Add a short title for your request.");
+      return;
+    }
+    if (!draft.details.trim()) {
+      setPostError("Add a few details about what you need or can give.");
+      return;
+    }
+    if (draft.tags.length === 0) {
+      setPostError("Add at least one tag (for example Food or Transport).");
+      return;
+    }
+    if (draft.requiresAmount && !(Number(draft.priceAmount) > 0)) {
+      setPostError("Enter an amount for the payment type you chose, or switch it to Free.");
       return;
     }
     setSubmitting(true);
