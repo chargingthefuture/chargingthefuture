@@ -1,0 +1,105 @@
+name: Workflow Health Check
+
+# Surfaces failing workflows so they don't go unnoticed. Once a day (and on demand) it asks the
+# GitHub API for every active workflow's most recent run on `main`; any whose latest run failed or
+# timed out are collected into ONE always-current triage issue. When everything is green again the
+# issue closes itself. This is visibility only — it never edits code or reruns anything.
+
+on:
+  schedule:
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  issues: write
+  contents: read
+
+concurrency:
+  group: workflow-health-check
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Survey workflows and update the triage issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- workflow-health-check -->';
+            const label = 'ci-health';
+            const { owner, repo } = context.repo;
+            const branch = context.payload.repository?.default_branch || 'main';
+
+            const workflows = await github.paginate(github.rest.actions.listRepoWorkflows, {
+              owner, repo, per_page: 100,
+            });
+
+            const failing = [];
+            for (const wf of workflows) {
+              if (wf.state !== 'active') continue;
+              // Skip this workflow itself — its current run is in progress and would never be flagged,
+              // but excluding it keeps the survey unambiguous.
+              if (wf.path === '.github/workflows/workflow-health-check.yml') continue;
+              let latest;
+              try {
+                const res = await github.rest.actions.listWorkflowRuns({
+                  owner, repo, workflow_id: wf.id, branch, per_page: 1,
+                });
+                latest = res.data.workflow_runs[0];
+              } catch (e) {
+                // Dynamic / default-setup workflows (CodeQL default, Copilot) may not be queryable.
+                continue;
+              }
+              if (!latest || latest.status !== 'completed') continue;
+              if (latest.conclusion === 'failure' || latest.conclusion === 'timed_out') {
+                failing.push({
+                  name: wf.name,
+                  conclusion: latest.conclusion,
+                  url: latest.html_url,
+                  when: latest.run_started_at || latest.created_at,
+                });
+              }
+            }
+
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: label, per_page: 100,
+            });
+            const existing = open.find((i) => (i.body || '').includes(marker));
+
+            if (failing.length === 0) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: existing.number,
+                  body: 'All workflows are green again on `' + branch + '`. Closing automatically.',
+                });
+                await github.rest.issues.update({
+                  owner, repo, issue_number: existing.number, state: 'closed',
+                });
+              }
+              core.info('No failing workflows on ' + branch + '.');
+              return;
+            }
+
+            failing.sort((a, b) => a.name.localeCompare(b.name));
+            const lines = failing.map(
+              (f) => '- **' + f.name + '** — last run ' + f.conclusion + ' ([logs](' + f.url + ')), ' + f.when,
+            );
+            const body = [
+              marker,
+              'These workflows\' most recent run on `' + branch + '` did not pass. Updated automatically by the daily health check (' + new Date().toISOString() + ').',
+              '',
+              ...lines,
+              '',
+              'A workflow drops off this list once its next run on `' + branch + '` passes; this issue closes when all are green.',
+            ].join('\n');
+            const title = 'Workflow health: ' + failing.length + ' not passing on ' + branch;
+
+            if (existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, title, body });
+              core.info('Updated issue #' + existing.number + ' with ' + failing.length + ' failing.');
+            } else {
+              const created = await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
+              core.info('Opened issue #' + created.data.number + ' with ' + failing.length + ' failing.');
+            }
