@@ -1,13 +1,13 @@
 name: Workflow Health Check
 
-# Surfaces failing workflows so they don't go unnoticed. Once a day (and on demand) it asks the
+# Surfaces failing workflows so they don't go unnoticed. Every 8 hours (and on demand) it asks the
 # GitHub API for every active workflow's most recent run on `main`; any whose latest run failed or
 # timed out are collected into ONE always-current triage issue. When everything is green again the
 # issue closes itself. This is visibility only — it never edits code or reruns anything.
 
 on:
   schedule:
-    - cron: '0 13 * * *'
+    - cron: '0 5,13,21 * * *'
   workflow_dispatch:
 
 permissions:
@@ -88,7 +88,7 @@ jobs:
             );
             const body = [
               marker,
-              'These workflows\' most recent run on `' + branch + '` did not pass. Updated automatically by the daily health check (' + new Date().toISOString() + ').',
+              'These workflows\' most recent run on `' + branch + '` did not pass. Updated automatically by the health check that runs every 8 hours (' + new Date().toISOString() + ').',
               '',
               ...lines,
               '',
