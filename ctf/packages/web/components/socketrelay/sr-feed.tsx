@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Share2 } from "lucide-react";
 import { COLOR, FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest } from "./sr-shared";
-import { CopyLink } from "@/components/shared/copy-link";
+import { ShareLink } from "@/components/shared/share-link";
 
 function CardAction({ open, isOwn, submitting, onClaim, onEdit }: { open: boolean; isOwn: boolean; submitting: boolean; onClaim: () => void; onEdit: () => void }) {
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
@@ -60,7 +60,7 @@ function RequestCard({
             <span style={{ color: COLOR, fontWeight: 600 }}>{srHandle(r.ownerUsername, r.id)}</span>
             {r.city && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {r.city}</span>}
             <span>· {timeAgo(r.createdAtIso)}</span>
-            <CopyLink url="/apps/socketrelay" label="Share" className="sr-share" />
+            <ShareLink url={`/apps/socketrelay?request=${r.id}`} label="Share" title="Share this request" className="sr-share" />
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
