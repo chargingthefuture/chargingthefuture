@@ -19,7 +19,7 @@ import {
 } from './SkillsHuntApi';
 import { SkillsHuntScoutTab } from './SkillsHuntScoutTab';
 
-const COLOR = '#D946EF';
+const COLOR = '#FBBF24';
 
 type NavKey = 'scout' | 'leaderboard' | 'missions' | 'finds';
 

@@ -1,11 +1,9 @@
 // Contributions mobile API client.
 // Mirrors the web routes under /api/contributions/*. Mutations send the x-ctf-csrf header that
-// the web shells set (the server requires it on every mutation); the Origin header is absent for
-// the native app, which the CSRF check tolerates (fail-open on missing Origin).
+// the web shells set (the server requires it on every mutation). All calls go through authedFetch
+// so the Clerk bearer token is attached and the base URL comes from runtime config (APP_URL).
 
-import { Platform } from 'react-native';
-
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+import { authedFetch } from '../../auth/authedFetch';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
 
@@ -83,7 +81,7 @@ async function readError(res: Response): Promise<string> {
 // --- member ------------------------------------------------------------------------------------
 
 export async function fetchFundraiser(): Promise<FundraiserResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/contributions/fundraiser`, { cache: 'no-store' });
+  const res = await authedFetch('/api/contributions/fundraiser', { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(await readError(res));
   }
@@ -91,7 +89,7 @@ export async function fetchFundraiser(): Promise<FundraiserResponse> {
 }
 
 export async function fetchOwnSubmissions(): Promise<ContributionSubmission[]> {
-  const res = await fetch(`${API_BASE_URL}/api/contributions/submission`, { cache: 'no-store' });
+  const res = await authedFetch('/api/contributions/submission', { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(await readError(res));
   }
@@ -105,7 +103,7 @@ export type CreateSubmissionInput =
   | { kind: 'github_star'; githubProfileUrl?: string };
 
 export async function createSubmission(input: CreateSubmissionInput): Promise<ContributionSubmission> {
-  const res = await fetch(`${API_BASE_URL}/api/contributions/submission`, {
+  const res = await authedFetch('/api/contributions/submission', {
     method: 'POST',
     headers: CSRF_HEADERS,
     body: JSON.stringify(input),
@@ -118,14 +116,14 @@ export async function createSubmission(input: CreateSubmissionInput): Promise<Co
 }
 
 export async function dismissBanner(): Promise<void> {
-  await fetch(`${API_BASE_URL}/api/contributions/banner/dismiss`, { method: 'POST', headers: CSRF_HEADERS }).catch(() => undefined);
+  await authedFetch('/api/contributions/banner/dismiss', { method: 'POST', headers: CSRF_HEADERS }).catch(() => undefined);
 }
 
 // --- admin -------------------------------------------------------------------------------------
 
 export async function fetchAdminSubmissions(status?: ContributionStatus): Promise<ContributionSubmissionAdminView[]> {
   const query = status ? `?status=${status}` : '';
-  const res = await fetch(`${API_BASE_URL}/api/contributions/admin/submissions${query}`, { cache: 'no-store' });
+  const res = await authedFetch(`/api/contributions/admin/submissions${query}`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(await readError(res));
   }
@@ -137,7 +135,7 @@ export async function reviewSubmission(
   submissionId: string,
   body: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string },
 ): Promise<ContributionSubmissionAdminView> {
-  const res = await fetch(`${API_BASE_URL}/api/contributions/admin/submissions/${submissionId}/review`, {
+  const res = await authedFetch(`/api/contributions/admin/submissions/${submissionId}/review`, {
     method: 'POST',
     headers: CSRF_HEADERS,
     body: JSON.stringify(body),
@@ -150,7 +148,7 @@ export async function reviewSubmission(
 }
 
 export async function fetchAdminConfig(): Promise<ContributionsRuntimeConfig> {
-  const res = await fetch(`${API_BASE_URL}/api/contributions/admin/config`, { cache: 'no-store' });
+  const res = await authedFetch('/api/contributions/admin/config', { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(await readError(res));
   }

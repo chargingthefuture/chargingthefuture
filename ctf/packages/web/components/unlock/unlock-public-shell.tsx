@@ -5,7 +5,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the UnlockPublic / MobileUnlockPublic design mockups.
-const BRAND = '#10B981';
+const BRAND = '#C084FC';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

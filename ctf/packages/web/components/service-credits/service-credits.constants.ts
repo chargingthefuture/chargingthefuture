@@ -1,17 +1,17 @@
 export const EARN_METHODS = [
-  { title: "Complete a Skills Hunt Round", credits: "+200", difficulty: "Medium", color: "#A855F7" },
-  { title: "Facilitate a Peer Programming Session", credits: "+500", difficulty: "High", color: "#8B5CF6" },
-  { title: "Verify Your Provider Profile", credits: "+50", difficulty: "Easy", color: "#3B82F6" },
+  { title: "Complete a Skills Hunt Round", credits: "+200", difficulty: "Medium", color: "#FBBF24" },
+  { title: "Facilitate a Peer Programming Session", credits: "+500", difficulty: "High", color: "#6EE7B7" },
+  { title: "Verify Your Provider Profile", credits: "+50", difficulty: "Easy", color: "#93C5FD" },
   { title: "Refer a Survivor", credits: "+100/referral", difficulty: "Easy", color: "#22C55E" },
-  { title: "Complete GentlePulse Streak (30 days)", credits: "+150", difficulty: "Medium", color: "#14B8A6" },
+  { title: "Complete GentlePulse Streak (30 days)", credits: "+150", difficulty: "Medium", color: "#34D399" },
 ];
 
 export const SPEND_OPTIONS = [
-  { title: "Housing (LightHouse)", credits: "Varies", icon: "🏠", color: "#EAB308" },
-  { title: "Transport (TrustTransport)", credits: "10–50/ride", icon: "📦", color: "#F97316" },
-  { title: "Therapy Sessions (Directory)", credits: "100–300", icon: "📇", color: "#3B82F6" },
-  { title: "Trade Services (Foundation)", credits: "50–500", icon: "🪛", color: "#EF4444" },
-  { title: "Peer-to-peer (SocketRelay)", credits: "Any amount", icon: "🔂", color: "#F43F5E" },
+  { title: "Housing (LightHouse)", credits: "Varies", icon: "🏠", color: "#60A5FA" },
+  { title: "Transport (TrustTransport)", credits: "10–50/ride", icon: "📦", color: "#38BDF8" },
+  { title: "Therapy Sessions (Directory)", credits: "100–300", icon: "📇", color: "#93C5FD" },
+  { title: "Trade Services (Foundation)", credits: "50–500", icon: "🪛", color: "#F59E0B" },
+  { title: "Peer-to-peer (SocketRelay)", credits: "Any amount", icon: "🔂", color: "#FB923C" },
 ];
 
 export const INFO_MSGS = [

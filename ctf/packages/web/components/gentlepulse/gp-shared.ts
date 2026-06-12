@@ -4,7 +4,7 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#14B8A6";
+export const COLOR = "#34D399";
 export const BG = "#0A0F0E";
 export const RAIL_BG = "#060A09";
 export const PANEL_BG = "#080D0C";

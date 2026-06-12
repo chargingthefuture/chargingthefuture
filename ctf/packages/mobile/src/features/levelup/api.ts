@@ -2,26 +2,21 @@
 //
 // Binds to real backend routes only:
 //   GET /api/levelup/cohorts
+//   GET /api/levelup/trainers
+//   GET /api/levelup/achievements
+//   GET /api/levelup/wallet
 //   GET /api/service-credits/wallet
 //
 // No user-enrollment dashboard endpoint exists yet — active-enrollment banner
 // is omitted from the mobile screen until a GET route is added.
+//
+// All calls go through authedFetchJson so the Clerk bearer token is attached and
+// the base URL comes from runtime config (APP_URL).
 
-import { Platform } from 'react-native';
+import { authedFetchJson } from '../../auth/authedFetch';
 
-function getApiOrigin(): string {
-  const fromEnv =
-    typeof process !== 'undefined' && process.env
-      ? (process.env.EXPO_PUBLIC_API_ORIGIN ?? process.env.API_ORIGIN)
-      : undefined;
-  return fromEnv && fromEnv.length > 0 ? fromEnv.replace(/\/$/, '') : 'http://localhost:3000';
-}
-
-const LEVELUP_BASE =
-  Platform.OS === 'web' ? '/api/levelup' : `${getApiOrigin()}/api/levelup`;
-
-const SC_BASE =
-  Platform.OS === 'web' ? '/api/service-credits' : `${getApiOrigin()}/api/service-credits`;
+const LEVELUP_BASE = '/api/levelup';
+const SC_BASE = '/api/service-credits';
 
 // ---------------------------------------------------------------------------
 // Types — mirroring listCohorts() return shape from lib/levelup/repository.ts
@@ -119,16 +114,12 @@ export async function fetchCohorts(params?: {
   if (params?.track) qs.set('track', params.track);
   if (params?.status) qs.set('status', params.status);
   const endpoint = `${LEVELUP_BASE}/cohorts${qs.toString() ? `?${qs.toString()}` : ''}`;
-  const res = await fetch(endpoint);
-  if (!res.ok) throw new Error('Failed to fetch cohorts');
-  const data = (await res.json()) as CohortsResponse;
+  const data = await authedFetchJson<CohortsResponse>(endpoint);
   return data.cohorts ?? [];
 }
 
 export async function fetchWallet(): Promise<Wallet> {
-  const res = await fetch(`${SC_BASE}/wallet`);
-  if (!res.ok) throw new Error('Failed to fetch wallet');
-  const data = (await res.json()) as WalletResponse;
+  const data = await authedFetchJson<WalletResponse>(`${SC_BASE}/wallet`);
   return data.wallet;
 }
 
@@ -136,22 +127,18 @@ export async function fetchTrainers(params?: { track?: string }): Promise<Traine
   const qs = new URLSearchParams();
   if (params?.track) qs.set('track', params.track);
   const endpoint = `${LEVELUP_BASE}/trainers${qs.toString() ? `?${qs.toString()}` : ''}`;
-  const res = await fetch(endpoint);
-  if (!res.ok) throw new Error('Failed to fetch trainers');
-  const data = (await res.json()) as { ok: boolean; trainers?: Trainer[] };
+  const data = await authedFetchJson<{ ok: boolean; trainers?: Trainer[] }>(endpoint);
   return data.trainers ?? [];
 }
 
 export async function fetchAchievements(): Promise<Achievement[]> {
-  const res = await fetch(`${LEVELUP_BASE}/achievements`);
-  if (!res.ok) throw new Error('Failed to fetch achievements');
-  const data = (await res.json()) as { ok: boolean; achievements?: Achievement[] };
+  const data = await authedFetchJson<{ ok: boolean; achievements?: Achievement[] }>(
+    `${LEVELUP_BASE}/achievements`,
+  );
   return data.achievements ?? [];
 }
 
 export async function fetchWalletView(): Promise<WalletView> {
-  const res = await fetch(`${LEVELUP_BASE}/wallet`);
-  if (!res.ok) throw new Error('Failed to fetch wallet view');
-  const data = (await res.json()) as { ok: boolean; wallet: WalletView };
+  const data = await authedFetchJson<{ ok: boolean; wallet: WalletView }>(`${LEVELUP_BASE}/wallet`);
   return data.wallet;
 }

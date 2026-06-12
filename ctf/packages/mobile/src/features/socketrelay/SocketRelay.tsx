@@ -11,18 +11,22 @@ import {
 } from 'react-native';
 import {
   createRequest,
+  listMyRequests,
   listRequests,
   fulfillRequest,
   socketRelayHandle,
+  updateRequest,
   type SocketRelayRequest,
 } from './api';
+import { deriveTagChips, requestTags, suggestTags } from './tags';
+import { SocketRelayTagInput } from './SocketRelayTagInput';
 import { SocketRelayLoading } from './SocketRelayLoading';
 import { SocketRelayEmpty } from './SocketRelayEmpty';
 
 // Design color — from MobileSocketRelay.tsx mockup
 const COLOR = '#FB923C';
 // Note: need/offer distinction, urgency, and credits are not in the
-// SocketRelayRequest model (title/details/category/city/status only).
+// SocketRelayRequest model (title/details/tags/city/status only).
 // Those mockup UI elements are omitted per real-data-only policy.
 
 type NavKey = 'feed' | 'post';
@@ -30,25 +34,36 @@ type NavKey = 'feed' | 'post';
 export function SocketRelay() {
   const [activeNav, setActiveNav] = useState<NavKey>('feed');
   const [requests, setRequests] = useState<SocketRelayRequest[]>([]);
+  const [myRequestIds, setMyRequestIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [helped, setHelped] = useState<string[]>([]);
   const [fulfilling, setFulfilling] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('All');
 
-  // Post form state
+  // Post form state (doubles as the edit form when editingId is set)
   const [postTitle, setPostTitle] = useState('');
   const [postDetails, setPostDetails] = useState('');
-  const [postCategory, setPostCategory] = useState('');
+  const [postTags, setPostTags] = useState<string[]>([]);
   const [postCity, setPostCity] = useState('');
+  const [postIsPublic, setPostIsPublic] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
 
   const loadFeed = useCallback(() => {
     setLoading(true);
     setError(null);
-    listRequests()
-      .then((res) => {
-        setRequests(res.items);
+    Promise.all([
+      listRequests(),
+      // Ownership is derived from the my-requests list; ignore its failure so
+      // the public feed still renders.
+      listMyRequests().catch(() => null),
+    ])
+      .then(([feed, mine]) => {
+        setRequests(feed.items);
+        setMyRequestIds(mine ? mine.items.map((r) => r.id) : []);
       })
       .catch(() => setError('Failed to load requests.'))
       .finally(() => setLoading(false));
@@ -73,25 +88,53 @@ export function SocketRelay() {
     }
   };
 
+  const resetPostForm = () => {
+    setPostTitle('');
+    setPostDetails('');
+    setPostTags([]);
+    setPostCity('');
+    setPostIsPublic(true);
+    setEditingId(null);
+    setPostError(null);
+  };
+
+  const startEdit = (r: SocketRelayRequest) => {
+    setPostTitle(r.title);
+    setPostDetails(r.details);
+    setPostTags(requestTags(r));
+    setPostCity(r.city ?? '');
+    setPostIsPublic(r.isPublic);
+    setEditingId(r.id);
+    setPostError(null);
+    setActiveNav('post');
+  };
+
   const handlePost = async () => {
-    if (!postTitle.trim() || !postCategory.trim()) return;
+    if (!postTitle.trim() || postTags.length === 0) return;
     setPosting(true);
     setPostError(null);
     try {
-      await createRequest({
+      const input = {
         title: postTitle.trim().slice(0, 80),
         details: postDetails.trim(),
-        category: postCategory.trim(),
+        tags: postTags,
         city: postCity.trim() || null,
-        isPublic: true,
-      });
-      setPostTitle('');
-      setPostDetails('');
-      setPostCategory('');
-      setPostCity('');
+        isPublic: postIsPublic,
+      };
+      if (editingId) {
+        await updateRequest(editingId, input);
+      } else {
+        await createRequest(input);
+      }
+      resetPostForm();
+      // Switching back to the feed re-runs loadFeed via the activeNav effect.
       setActiveNav('feed');
     } catch {
-      setPostError('Failed to post request. Please try again.');
+      setPostError(
+        editingId
+          ? 'Failed to save changes. Please try again.'
+          : 'Failed to post request. Please try again.',
+      );
     } finally {
       setPosting(false);
     }
@@ -119,17 +162,59 @@ export function SocketRelay() {
         />
       );
     }
+    const visible = requests.filter((r) => {
+      if (
+        tagFilter !== 'All' &&
+        !requestTags(r).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
+      ) {
+        return false;
+      }
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return `${r.title} ${r.details} ${r.city ?? ''}`.toLowerCase().includes(q);
+    });
     return (
       <ScrollView style={styles.feedScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.feedPad}>
-          {requests.map((r) => (
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search requests…"
+            placeholderTextColor="#4B5563"
+            value={search}
+            onChangeText={setSearch}
+          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tagChipRow}
+          >
+            {deriveTagChips(requests, tagFilter).map((tag) => {
+              const active = tag.toLowerCase() === tagFilter.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={tag}
+                  style={[styles.tagChip, active && styles.tagChipActive]}
+                  onPress={() => setTagFilter(tag)}
+                >
+                  <Text
+                    style={[styles.tagChipText, active && styles.tagChipTextActive]}
+                  >
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {visible.map((r) => (
             <React.Fragment key={r.id}>
               <View style={styles.card}>
-                {/* Category badge */}
+                {/* Tag badges */}
                 <View style={styles.cardBadgeRow}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{r.category}</Text>
-                  </View>
+                  {requestTags(r).map((tag) => (
+                    <View key={tag} style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>{tag}</Text>
+                    </View>
+                  ))}
                   {r.status !== 'open' && (
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusBadgeText}>{r.status}</Text>
@@ -155,35 +240,47 @@ export function SocketRelay() {
                   {new Date(r.createdAtIso).toLocaleDateString()}
                 </Text>
 
-                <TouchableOpacity
-                  style={[
-                    styles.helpBtn,
-                    helped.includes(r.id) && styles.helpBtnDone,
-                  ]}
-                  onPress={() => handleFulfill(r.id)}
-                  disabled={
-                    helped.includes(r.id) ||
-                    fulfilling === r.id ||
-                    r.status !== 'open'
-                  }
-                >
-                  {fulfilling === r.id ? (
-                    <ActivityIndicator size="small" color={COLOR} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.helpBtnText,
-                        helped.includes(r.id) && styles.helpBtnTextDone,
-                      ]}
-                    >
-                      {helped.includes(r.id)
-                        ? '✓ Fulfilled'
-                        : r.status === 'open'
-                          ? 'I Can Help'
-                          : 'Closed'}
+                {myRequestIds.includes(r.id) ? (
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => startEdit(r)}
+                    disabled={r.status !== 'open'}
+                  >
+                    <Text style={styles.editBtnText}>
+                      {r.status === 'open' ? 'Edit Your Request' : 'Your request'}
                     </Text>
-                  )}
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.helpBtn,
+                      helped.includes(r.id) && styles.helpBtnDone,
+                    ]}
+                    onPress={() => handleFulfill(r.id)}
+                    disabled={
+                      helped.includes(r.id) ||
+                      fulfilling === r.id ||
+                      r.status !== 'open'
+                    }
+                  >
+                    {fulfilling === r.id ? (
+                      <ActivityIndicator size="small" color={COLOR} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.helpBtnText,
+                          helped.includes(r.id) && styles.helpBtnTextDone,
+                        ]}
+                      >
+                        {helped.includes(r.id)
+                          ? '✓ Fulfilled'
+                          : r.status === 'open'
+                            ? 'I Can Help'
+                            : 'Closed'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </React.Fragment>
           ))}
@@ -199,7 +296,9 @@ export function SocketRelay() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.postHeading}>Post a Request or Offer</Text>
+      <Text style={styles.postHeading}>
+        {editingId ? 'Edit Your Request' : 'Post a Request or Offer'}
+      </Text>
 
       <TextInput
         style={styles.textArea}
@@ -218,12 +317,10 @@ export function SocketRelay() {
         multiline
         numberOfLines={3}
       />
-      <TextInput
-        style={styles.textInput}
-        placeholder="Category (Food, Transport, Legal…)"
-        placeholderTextColor="#4B5563"
-        value={postCategory}
-        onChangeText={setPostCategory}
+      <SocketRelayTagInput
+        tags={postTags}
+        onChange={setPostTags}
+        suggest={(prefix, exclude) => suggestTags(requests, prefix, exclude)}
       />
       <TextInput
         style={styles.textInput}
@@ -238,16 +335,31 @@ export function SocketRelay() {
       ) : null}
 
       <TouchableOpacity
-        style={[styles.postBtn, (!postTitle.trim() || !postCategory.trim()) && styles.postBtnDisabled]}
+        style={[styles.postBtn, (!postTitle.trim() || postTags.length === 0) && styles.postBtnDisabled]}
         onPress={handlePost}
-        disabled={posting || !postTitle.trim() || !postCategory.trim()}
+        disabled={posting || !postTitle.trim() || postTags.length === 0}
       >
         {posting ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.postBtnText}>Post My Request</Text>
+          <Text style={styles.postBtnText}>
+            {editingId ? 'Save Changes' : 'Post My Request'}
+          </Text>
         )}
       </TouchableOpacity>
+
+      {editingId ? (
+        <TouchableOpacity
+          style={styles.cancelEditBtn}
+          onPress={() => {
+            resetPostForm();
+            setActiveNav('feed');
+          }}
+          disabled={posting}
+        >
+          <Text style={styles.cancelEditBtnText}>Cancel Edit</Text>
+        </TouchableOpacity>
+      ) : null}
 
       {/* Privacy notice — from mockup Shield element */}
       <View style={styles.privacyNotice}>
@@ -359,6 +471,32 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   feedScroll: { flex: 1 },
   feedPad: { padding: 16 },
+  searchInput: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#E8EAF0',
+    marginBottom: 10,
+  },
+  tagChipRow: { marginBottom: 12, flexGrow: 0 },
+  tagChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginRight: 6,
+  },
+  tagChipActive: {
+    backgroundColor: `${COLOR}15`,
+    borderColor: `${COLOR}50`,
+  },
+  tagChipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
+  tagChipTextActive: { color: COLOR },
   card: {
     padding: 14,
     borderRadius: 14,
@@ -415,6 +553,24 @@ const styles = StyleSheet.create({
   },
   helpBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
   helpBtnTextDone: { color: '#22C55E' },
+  editBtn: {
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+  },
+  editBtnText: { fontSize: 12, fontWeight: '700', color: '#9CA3AF' },
+  cancelEditBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cancelEditBtnText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
   centeredMsg: {
     flex: 1,
     alignItems: 'center',

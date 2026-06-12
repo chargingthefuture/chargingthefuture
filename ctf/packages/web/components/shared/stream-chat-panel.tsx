@@ -24,6 +24,9 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   channelType = 'messaging',
 }) => {
   const [client, setClient] = useState<StreamChat | null>(null);
+  // The Stream Channel type is generically parameterized and impractical to satisfy here; the value is
+  // only passed straight to <Channel channel={channel}>. TODO: type once stream-chat generics are pinned.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [channel, setChannel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +45,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
           setLoading(false);
         });
       })
-      .catch((err) => {
+      .catch(() => {
         if (!isMounted) return;
         setError('Failed to connect to chat.');
         setLoading(false);

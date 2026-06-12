@@ -1,9 +1,8 @@
-import { Platform } from 'react-native';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
+import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 
-export const FEED_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/feed'
-    : 'http://localhost:3000/api/feed';
+export const FEED_API_BASE = '/api/feed';
 
 export type FeedChannel = 'all' | 'announcements' | 'questions' | 'community';
 
@@ -37,18 +36,17 @@ export async function fetchFeedTimeline(
   page = 1,
   pageSize = 20,
 ): Promise<FeedTimelineResponse> {
-  const url = `${FEED_API_BASE}/items?channel=${channel}&page=${page}&pageSize=${pageSize}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Feed request failed: ${res.status}`);
-  }
-  const data: FeedTimelineResponse = await res.json();
-  return data;
+  return authedFetchJson<FeedTimelineResponse>(
+    `${FEED_API_BASE}/items?channel=${channel}&page=${page}&pageSize=${pageSize}`,
+  );
 }
 
 export async function markFeedItemRead(itemId: string): Promise<void> {
-  await fetch(`${FEED_API_BASE}/items/${itemId}/read`, {
+  const res = await authedFetch(`${FEED_API_BASE}/items/${itemId}/read`, {
     method: 'POST',
     headers: { 'x-ctf-csrf': '1' },
   });
+  if (!res.ok) {
+    throw new Error(`Feed read receipt failed: ${res.status}`);
+  }
 }

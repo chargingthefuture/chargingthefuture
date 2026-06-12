@@ -1,10 +1,10 @@
-import { Platform } from 'react-native';
+// ServiceCredits mobile API client. Mirrors the web routes under
+// ctf/packages/web/app/api/service-credits/*. All calls go through authedFetch so
+// the Clerk bearer token is attached and the base URL comes from runtime config
+// (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
 
-// Android emulator routes to host via 10.0.2.2; on-device use EXPO_PUBLIC_API_URL
-const API_BASE_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/service-credits'
-    : 'http://localhost:3000/api/service-credits';
+const API_BASE = '/api/service-credits';
 
 export type Wallet = {
   userId: string;
@@ -37,7 +37,7 @@ type TransferApiResponse = {
  * Returns availableBalance and escrowBalance from the real backend.
  */
 export async function fetchWallet(): Promise<Wallet> {
-  const res = await fetch(`${API_BASE_URL}/wallet`);
+  const res = await authedFetch(`${API_BASE}/wallet`);
   if (!res.ok) {
     throw new Error(`service_credits_wallet_fetch_failed:${res.status}`);
   }
@@ -54,7 +54,7 @@ export async function sendTransfer(input: {
   amount: number;
   idempotencyKey: string;
 }): Promise<Transfer> {
-  const res = await fetch(`${API_BASE_URL}/transfers`, {
+  const res = await authedFetch(`${API_BASE}/transfers`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

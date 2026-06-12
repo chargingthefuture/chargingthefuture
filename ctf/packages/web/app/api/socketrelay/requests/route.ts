@@ -5,11 +5,19 @@ import { createRequest, listRequests, validateRequestInput } from 'lib/socketrel
 import type { SocketRelayRequestInput } from 'lib/socketrelay/types';
 import { reportError } from 'lib/observability/report';
 
+// Older clients send a single `category` string; newer ones send a `tags` array (1-3).
+function parseTags(body: Record<string, unknown>): string[] {
+  if (Array.isArray(body.tags)) {
+    return body.tags.filter((tag): tag is string => typeof tag === 'string');
+  }
+  return typeof body.category === 'string' && body.category.trim() ? [body.category] : [];
+}
+
 function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
   return {
     title: typeof body.title === 'string' ? body.title : '',
     details: typeof body.details === 'string' ? body.details : '',
-    category: typeof body.category === 'string' ? body.category : '',
+    tags: parseTags(body),
     city: typeof body.city === 'string' ? body.city : null,
     isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
   };

@@ -40,6 +40,11 @@ export function TrustTransportShell() {
   const [rideType, setRideType] = useState("ride");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // How the requester will settle the ride (issue #420): default Free (a free ride is valid mutual aid);
+  // amount only for priced types.
+  const [priceCurrency, setPriceCurrency] = useState("FREE");
+  const [priceAmount, setPriceAmount] = useState("");
+  const [requiresAmount, setRequiresAmount] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<TripRequest | null>(null);
@@ -90,6 +95,12 @@ export function TrustTransportShell() {
 
   async function handleBook() {
     if (!from.trim() || !to.trim()) { setBookingError("Please enter pickup and destination."); return; }
+    // A priced value type (ServiceCredits, fiat, crypto) needs a positive amount; Free/Barter don't.
+    const parsedAmount = Number(priceAmount);
+    if (requiresAmount && !(Number.isFinite(parsedAmount) && parsedAmount > 0)) {
+      setBookingError("Enter an amount greater than zero for this value type.");
+      return;
+    }
     setSubmitting(true);
     setBookingError(null);
     try {
@@ -108,6 +119,12 @@ export function TrustTransportShell() {
           details: `Pickup: ${pickup}\nDrop-off: ${dropoff}`,
           pickupCity: pickup,
           dropoffCity: dropoff,
+          // Chosen settlement (default Free); amount only for priced types (cleared for Free/Barter).
+          priceCurrency: priceCurrency || null,
+          priceAmount: (() => {
+            const n = Number(priceAmount);
+            return Number.isFinite(n) && n > 0 ? n : null;
+          })(),
         }),
       });
       if (!res.ok) throw new Error("Failed to create request");
@@ -168,11 +185,21 @@ export function TrustTransportShell() {
           to={to}
           onFrom={setFrom}
           onTo={setTo}
+          priceCurrency={priceCurrency}
+          priceAmount={priceAmount}
+          requiresAmount={requiresAmount}
+          onPriceCurrency={(code, currency) => {
+            const needs = currency?.requiresAmount ?? false;
+            setPriceCurrency(code);
+            setRequiresAmount(needs);
+            if (!needs) setPriceAmount("");
+          }}
+          onPriceAmount={setPriceAmount}
           bookingError={bookingError}
           booked={booked}
           submitting={submitting}
           onBook={() => void handleBook()}
-          onReset={() => { setBooked(false); setFrom(""); setTo(""); }}
+          onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); }}
         />
       )}
       {tab === "tracking" && (

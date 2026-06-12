@@ -10,7 +10,7 @@ import {
   type WorkforceDashboard,
 } from './admin-api';
 
-const COLOR = '#3B82F6';
+const COLOR = '#F97316';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
@@ -31,7 +31,7 @@ export const AdminWorkforce = () => {
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchAdminOverview(auth.userId);
+    const result = await fetchAdminOverview();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden && result.message) setError(result.message);
@@ -55,7 +55,7 @@ export const AdminWorkforce = () => {
       setError(null);
       setNotice(null);
       try {
-        const saved = await updateAdminConfig(auth.userId, next);
+        const saved = await updateAdminConfig(next);
         setConfig(saved);
         setNotice('Config saved.');
       } catch {
@@ -109,7 +109,7 @@ export const AdminWorkforce = () => {
           setError(null);
           setNotice(null);
           try {
-            await runAdminSync(auth.userId);
+            await runAdminSync();
             setNotice('Incremental sync started.');
             await load();
           } catch {
@@ -133,7 +133,7 @@ export const AdminWorkforce = () => {
           setError(null);
           setNotice(null);
           try {
-            await runAdminRecompute(auth.userId);
+            await runAdminRecompute();
             setNotice('Recompute enqueued.');
           } catch {
             setError('Could not enqueue the recompute. Try again.');

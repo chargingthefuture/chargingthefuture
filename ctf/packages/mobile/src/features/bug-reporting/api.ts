@@ -5,8 +5,10 @@
 // type the route requires (see web app/api/bug-reports/_lib.ts → ensureMutationCsrf).
 // The status code maps to one of the screen's result states: 201 success, 429
 // rate-limited, anything else a generic error that preserves the typed text.
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+import { authedFetch } from '../../auth/authedFetch';
 
 // Bound every request so a stalled connection can't trap the screen in a submitting
 // state forever. A timeout is treated like any other failure: the text is kept.
@@ -50,11 +52,11 @@ function readStatus(body: unknown): BugReportStatus {
   return 'new';
 }
 
-async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(path: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await authedFetch(path, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -74,9 +76,8 @@ export async function submitBugReport(
 
   let response: Response;
   try {
-    response = await fetchWithTimeout(`${API_BASE}/api/bug-reports`, {
+    response = await fetchWithTimeout('/api/bug-reports', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'x-ctf-csrf': '1',

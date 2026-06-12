@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the GentlePulsePublic / MobileGentlePulsePublic design mockups.
 const BG = '#0A0F0E';
-const COLOR = '#14B8A6';
+const COLOR = '#34D399';
 const TEXT = '#F9FAFB';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";

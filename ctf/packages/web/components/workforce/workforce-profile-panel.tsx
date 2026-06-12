@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { WorkforceProfile } from '../../lib/workforce/types';
 
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 interface WorkforceProfilePanelProps {
   profile: WorkforceProfile | null;

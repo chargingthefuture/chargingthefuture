@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { authedFetch } from '../../auth/authedFetch';
 
 // Admin client for the SocketRelay plugin. Binds only to the real web admin routes
 // under ctf/packages/web/app/api/socketrelay/admin/*. Admin access is enforced
@@ -11,10 +11,9 @@ import { Platform } from 'react-native';
 //   GET    /api/socketrelay/admin/announcements        (plugin-targeted announcements)
 //
 // Mutations carry the x-ctf-csrf:'1' confirmation header the API requires.
-const ADMIN_API_BASE =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/socketrelay/admin'
-    : 'http://localhost:3000/api/socketrelay/admin';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+const ADMIN_API_BASE = '/api/socketrelay/admin';
 
 // ---------------------------------------------------------------------------
 // Types — mirroring the web repository return shapes (SocketRelayFulfillment,
@@ -84,16 +83,11 @@ type RequestsResponse = {
 type FulfillmentsResponse = { ok: boolean; items: AdminFulfillment[] };
 type AnnouncementsResponse = { ok: boolean; items: AdminAnnouncement[] };
 
-function authHeaders(authToken: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${authToken}`,
-    'Content-Type': 'application/json',
-  };
-}
+const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
 // Loads the same three datasets the web admin page reads (requests, fulfillments,
 // announcements). A 401/403 on any read means the caller is not an admin.
-export async function fetchAdminOverview(authToken: string): Promise<AdminFetchResult> {
+export async function fetchAdminOverview(): Promise<AdminFetchResult> {
   const empty: AdminFetchResult = {
     ok: false,
     forbidden: false,
@@ -104,12 +98,10 @@ export async function fetchAdminOverview(authToken: string): Promise<AdminFetchR
     announcements: [],
   };
 
-  const headers = authHeaders(authToken);
-
   const [requestsRes, fulfillmentsRes, announcementsRes] = await Promise.all([
-    fetch(`${ADMIN_API_BASE}/requests?page=1&pageSize=100`, { headers }),
-    fetch(`${ADMIN_API_BASE}/fulfillments`, { headers }),
-    fetch(`${ADMIN_API_BASE}/announcements`, { headers }),
+    authedFetch(`${ADMIN_API_BASE}/requests?page=1&pageSize=100`, { headers: JSON_HEADERS }),
+    authedFetch(`${ADMIN_API_BASE}/fulfillments`, { headers: JSON_HEADERS }),
+    authedFetch(`${ADMIN_API_BASE}/announcements`, { headers: JSON_HEADERS }),
   ]);
 
   if (
@@ -144,11 +136,11 @@ export async function fetchAdminOverview(authToken: string): Promise<AdminFetchR
 
 // DELETE a request. Destructive — the screen requires a confirm gesture before
 // calling this. Carries the CSRF confirmation header the API requires.
-export async function deleteAdminRequest(authToken: string, requestId: string): Promise<void> {
-  const res = await fetch(`${ADMIN_API_BASE}/requests/${requestId}`, {
+export async function deleteAdminRequest(requestId: string): Promise<void> {
+  const res = await authedFetch(`${ADMIN_API_BASE}/requests/${requestId}`, {
     method: 'DELETE',
     headers: {
-      ...authHeaders(authToken),
+      ...JSON_HEADERS,
       'x-ctf-csrf': '1',
     },
   });

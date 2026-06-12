@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchMatches } from './api';
 import type { LighthouseMatch } from './types';
 
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 const BG = '#0F1117';
 
 const STATUS_COLORS: Record<string, string> = {
