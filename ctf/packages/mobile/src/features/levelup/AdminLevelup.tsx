@@ -17,7 +17,7 @@ import {
 import type { Cohort } from './api';
 
 // Brand tokens (from design/.../survivor-hub/MobileLevelUpAdmin.tsx).
-const COLOR = '#10B981';
+const COLOR = '#22C55E';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const SURFACE = '#161B27';

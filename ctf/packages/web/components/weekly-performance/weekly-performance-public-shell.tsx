@@ -5,7 +5,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the WeeklyPerformancePublic / MobileWeeklyPerformancePublic design mockups.
-const BRAND = '#F59E0B';
+const BRAND = '#6366F1';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

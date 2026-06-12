@@ -4,6 +4,7 @@ import {
   Share2, Search, Shield, ShieldCheck, Lock, LogIn, UserPlus, Heart, Plus,
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { getAppAccent } from '@/lib/theme/theme-tokens';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the SocketRelayPublic / MobileSocketRelayPublic mockups.
@@ -12,8 +13,11 @@ const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
-const DESKTOP_COLOR = '#FB923C';
-const MOBILE_COLOR = '#F43F5E';
+// The plugin accent is the single source of truth in the per-plugin registry, so the signed-out
+// public shell matches the signed-in in-app shell on every device and in every auth state. The mobile
+// mockup had used a divergent red (#F43F5E); that drift is corrected by reading the registry value
+// (#FB923C) for both layouts.
+const SR_ACCENT = getAppAccent('socketrelay', 'default');
 const ACCENT = '#7C3AED';
 const ACCENT_CYAN = '#0EA5E9';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
@@ -21,7 +25,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 const CATEGORIES = ['All', 'Food', 'Transport', 'Legal', 'Employment', 'Childcare', 'Housing', 'Mental Health'];
 
 function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const COLOR = DESKTOP_COLOR;
+  const COLOR = SR_ACCENT;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT }}>
       {/* Marketing banner */}
@@ -169,7 +173,7 @@ function DesktopSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string;
 }
 
 function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
-  const COLOR = MOBILE_COLOR;
+  const COLOR = SR_ACCENT;
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>

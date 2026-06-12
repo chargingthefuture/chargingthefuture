@@ -18,7 +18,7 @@ import {
 } from './admin-api';
 import type { PeerProgrammingTopic } from './api';
 
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';

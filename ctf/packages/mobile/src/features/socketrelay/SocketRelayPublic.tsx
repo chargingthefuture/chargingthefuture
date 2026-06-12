@@ -12,7 +12,7 @@ import {
 // The blurred preview items use no real data (no unauthenticated list endpoint)
 // so they are omitted per real-data-only policy; the lock overlay is retained.
 
-const COLOR = '#F43F5E';
+const COLOR = '#FB923C';
 const BG = '#0F1117';
 const SUBTLE = '#6B7280';
 

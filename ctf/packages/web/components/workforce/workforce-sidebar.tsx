@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { WorkforceDashboard, WorkforceGroupedReportItem } from '../../lib/workforce/types';
 
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 type SidebarView = 'overview' | 'sector' | 'skill-level';
 

@@ -19,7 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { fetchIncidents, logIncident, deleteIncident } from './api';
 
 // ── Design tokens (from MobileClickLog.tsx) ──────────────────────────────────
-const BRAND = '#E91E8C';
+const BRAND = '#EC4899';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

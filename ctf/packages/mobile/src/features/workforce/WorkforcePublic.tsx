@@ -5,7 +5,7 @@ import { View, Text, StyleSheet } from 'react-native';
 // Live snapshot bars in the mockup have hardcoded pct values (37/25/20/18) with no real API
 // → omitted per real-data-only rule; structural layout preserved.
 // "Join the Hub" and "Sign in" buttons are navigation concerns owned by the auth shell → rendered inert.
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 function PublicStatBar({ label, color }: { label: string; color: string }) {
   return (
