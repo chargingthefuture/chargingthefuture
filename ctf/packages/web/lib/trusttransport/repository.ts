@@ -297,6 +297,10 @@ export async function createRequest(
     throw new Error('invalid_payload');
   }
 
+  if (!(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
+    throw new Error('invalid_request_price');
+  }
+
   await ensureUserNotRestricted(actorUserId);
 
   return withDbTransaction(async (client) => {

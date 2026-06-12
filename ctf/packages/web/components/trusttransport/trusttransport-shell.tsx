@@ -95,6 +95,12 @@ export function TrustTransportShell() {
 
   async function handleBook() {
     if (!from.trim() || !to.trim()) { setBookingError("Please enter pickup and destination."); return; }
+    // A priced value type (ServiceCredits, fiat, crypto) needs a positive amount; Free/Barter don't.
+    const parsedAmount = Number(priceAmount);
+    if (requiresAmount && !(Number.isFinite(parsedAmount) && parsedAmount > 0)) {
+      setBookingError("Enter an amount greater than zero for this value type.");
+      return;
+    }
     setSubmitting(true);
     setBookingError(null);
     try {

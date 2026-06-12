@@ -104,15 +104,22 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
 
   const modeName = mode === 'ride' ? 'Ride' : mode === 'package' ? 'Package' : 'Food';
 
+  // A priced value type (ServiceCredits, fiat, crypto) needs a positive amount; Free/Barter don't.
+  const parsedPriceAmount = Number(priceAmount);
+  const hasValidAmount = !requiresAmount || (Number.isFinite(parsedPriceAmount) && parsedPriceAmount > 0);
+
   async function handleSubmit() {
     if (!from.trim() || !to.trim()) {
       setError('Please enter pickup and destination.');
       return;
     }
+    if (!hasValidAmount) {
+      setError('Enter an amount greater than zero for this value type.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const amount = Number(priceAmount);
       await createRequest(
         {
           mode,
@@ -123,7 +130,7 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
           pickupGeoRedacted: null,
           dropoffGeoRedacted: null,
           priceCurrency: priceCurrency || null,
-          priceAmount: requiresAmount && Number.isFinite(amount) && amount > 0 ? amount : null,
+          priceAmount: requiresAmount ? parsedPriceAmount : null,
         },
         `${Date.now()}-${Math.random()}`,
       );
@@ -208,9 +215,9 @@ function BookTab({ mode, onSubmitted }: BookTabProps) {
       ) : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
       <TouchableOpacity
-        style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
+        style={[styles.primaryBtn, (submitting || !hasValidAmount) && styles.primaryBtnDisabled]}
         onPress={() => { void handleSubmit(); }}
-        disabled={submitting}
+        disabled={submitting || !hasValidAmount}
         accessibilityRole="button"
       >
         {submitting
