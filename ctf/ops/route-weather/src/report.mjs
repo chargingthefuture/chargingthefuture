@@ -116,6 +116,30 @@ function verdictTag(hz) {
   return hz.reasons.length ? `${hz.level} (${hz.reasons.join(', ')}).` : `${hz.level}.`;
 }
 
+// Just the wind, no leading "wind" word, for the wind-only report. Reads "calm"
+// when the wind is effectively zero rather than "north 0".
+function windOnly(s) {
+  const nums = String(s.windText || '').match(/\d+/g);
+  const speed = nums ? Math.max(...nums.map(Number)) : null;
+  const gust = s.gust ? parseInt(s.gust, 10) : null;
+  if (speed == null || speed === 0) return gust ? `calm, gusting ${gust}` : 'calm';
+  const dir = s.windDir ? (COMPASS_WORDS[s.windDir] || s.windDir.toLowerCase()) : '';
+  const parts = [];
+  if (dir) parts.push(dir);
+  parts.push(s.windText);
+  let out = parts.join(' ');
+  if (gust) out += ` gusting ${gust}`;
+  return out;
+}
+
+// " near Aurora, Colorado" / " in Colorado" / "" — a spoken place suffix.
+function locationSuffix(place) {
+  if (place?.city && place?.region) return ` near ${place.city}, ${place.region}`;
+  if (place?.region) return ` in ${place.region}`;
+  if (place?.city) return ` near ${place.city}`;
+  return '';
+}
+
 // Build the multi-stop route report from origin, optional waypoints, destination.
 export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   if (!from || !to) throw new Error('need both a "from" and a "to" place');
@@ -194,6 +218,18 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   return { text: lines.join('\n'), verdict: overall };
 }
 
+// Build the wind-only report: just the current wind at the point, named, in one
+// short line — for feeling out how different winds drive.
+export async function buildWindReport({ lat, lon }) {
+  const point = { lat: Number(lat), lon: Number(lon) };
+  if (Number.isNaN(point.lat) || Number.isNaN(point.lon)) throw new Error('need numeric lat and lon');
+  const [sample, place] = await Promise.all([
+    sampleAt(point, Date.now()),
+    reverseGeocode(point.lat, point.lon),
+  ]);
+  return { text: `Wind${locationSuffix(place)}: ${windOnly(sample)}.` };
+}
+
 // Build the single-point report: current conditions + the next few hours, and an
 // optional look-ahead one hour down the road when heading (and speed) are given.
 export async function buildPointReport({ lat, lon, heading, speed }) {
@@ -221,11 +257,7 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
   const tz = samples[0].timeZone;
 
   // Name where this is, so it's clear aloud (e.g. "near Aurora, Colorado").
-  let where = '';
-  if (place?.city && place?.region) where = ` near ${place.city}, ${place.region}`;
-  else if (place?.region) where = ` in ${place.region}`;
-  else if (place?.city) where = ` near ${place.city}`;
-  const lines = [`Road weather${where}.`];
+  const lines = [`Road weather${locationSuffix(place)}.`];
   if (overall === 'DRIVE') lines.push('VERDICT: DRIVE. Clear nearby.', '');
   else {
     const idx = assessments.findIndex((a) => a.level === overall);

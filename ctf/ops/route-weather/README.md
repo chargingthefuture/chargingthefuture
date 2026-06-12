@@ -76,8 +76,14 @@ GET /health
 GET /weather?lat=39.74&lon=-104.99
 GET /weather?lat=39.74&lon=-104.99&heading=270&speed=58
 GET /weather?from=Denver,CO&to=Salt Lake City,UT&via=Vail,CO&via=Grand Junction,CO&depart=06:00&mph=55
+GET /wind?lat=39.74&lon=-104.99
 ```
 
+- `/wind?lat=…&lon=…` → just the current wind at that point, one short line,
+  e.g. "Wind near Aurora, Colorado: northwest 18 gusting 29." (or "calm").
+  Make a second Apple Shortcut named **Wind** that calls this — same setup as the
+  weather one, only the address ends in `/wind` instead of `/weather` — and say
+  "Siri, wind" to hear just the wind while driving.
 - `lat`+`lon` → current conditions plus the next three hours at that point. It
   names the place it's reporting for (city + state, via a keyless reverse-geocode
   lookup; silently omitted if that lookup fails). Add `heading` (compass degrees)
