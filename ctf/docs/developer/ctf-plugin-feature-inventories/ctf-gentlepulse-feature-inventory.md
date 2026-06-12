@@ -131,6 +131,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. No backend, schema, or contract change.
 - 2026-05-31: Android pixel pass. Rebuilt `GentlePulse.tsx` real screen from `MobileGentlePulse.tsx` design + Empty/Loading/Public variants. Retired `MockGentlepulse.tsx`. Updated `api.ts` with typed interface and active mutation helpers (`recordPlay`, `addFavorite`, `removeFavorite`) with CSRF headers. Bound to real fields: `id`, `title`, `description`. Omitted non-backed fields: `emoji`, `duration`, `category`, play-count, streak.
 - 2026-05-29: Web UI circle-back (design `c5d83c0`). Aligned the gentlepulse shell to the `GentlePulse.tsx` mockup + Loading/Empty states; restored the 💚 header glyphs; decomposed the oversized shell into modular sub-components within rule-116 limits; removed the dead duplicate `components/gentle-pulse/` directory. Real `/api/gentlepulse/library*` wiring unchanged.
 - 2026-05-18: Renamed "Web and Android Parity Plan" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.

@@ -20,15 +20,11 @@ import {
 import type { DirectoryListItem, DirectorySector } from './api';
 import { fetchDirectoryList, fetchDirectorySectors } from './api';
 
-const COLOR = '#3B82F6';
-const COMMUNITY_COLOR = '#D946EF';
+const COLOR = '#93C5FD';
+const COMMUNITY_COLOR = '#FBBF24';
 const BG = '#0F1117';
 const SURFACE = '#090B0F';
 const BORDER = 'rgba(255,255,255,0.06)';
-
-// Placeholder auth token — in production this comes from the shared auth context.
-// TODO: wire to real Clerk token once mobile auth is plumbed.
-const AUTH_TOKEN = '';
 
 function initials(name: string): string {
   return name
@@ -249,12 +245,12 @@ export const DirectoryList = () => {
     setError(null);
     try {
       const [listData, sectorData] = await Promise.all([
-        fetchDirectoryList(AUTH_TOKEN, {
+        fetchDirectoryList({
           q: query || undefined,
           sectorId: activeSectorId ?? undefined,
           pageSize: 50,
         }),
-        fetchDirectorySectors(AUTH_TOKEN),
+        fetchDirectorySectors(),
       ]);
       setProfiles(listData.items);
       setSectors(sectorData);

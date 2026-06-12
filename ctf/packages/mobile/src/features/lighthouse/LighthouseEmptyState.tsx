@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const COLOR = '#EAB308';
+const COLOR = '#60A5FA';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

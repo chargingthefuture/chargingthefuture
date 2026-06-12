@@ -8,11 +8,11 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#F59E0B";
+export const COLOR = "#A855F7";
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the ServiceCredits shell. Default keeps the shipped values (accent
-// stays #F59E0B); comic uses the shared comic surface tokens plus the ServiceCredits comic-ink accent.
+// stays #A855F7); comic uses the shared comic surface tokens plus the ServiceCredits comic-ink accent.
 export type ServiceCreditsTokens = PluginShellTokens;
 
 export function getServiceCreditsTokens(theme: ThemeName): ServiceCreditsTokens {

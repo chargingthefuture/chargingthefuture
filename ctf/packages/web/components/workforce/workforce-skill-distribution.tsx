@@ -50,7 +50,7 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    background: '#B45309',
+                    background: '#F97316',
                     height: `${pct}%`,
                     borderRadius: '8px 8px 0 0',
                     opacity: 0.85,
@@ -82,7 +82,7 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
               >
                 {item.bucket}
               </div>
-              <div style={{ fontSize: 13, color: '#B45309', fontWeight: 700 }}>
+              <div style={{ fontSize: 13, color: '#F97316', fontWeight: 700 }}>
                 {item.recruitedTotal.toLocaleString()}
               </div>
             </div>

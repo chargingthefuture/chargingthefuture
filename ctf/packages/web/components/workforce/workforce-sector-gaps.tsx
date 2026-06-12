@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Target } from 'lucide-react';
 import type { WorkforceGroupedReportItem } from '../../lib/workforce/types';
 
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 interface WorkforceSectorGapsProps {
   sectorItems: WorkforceGroupedReportItem[];

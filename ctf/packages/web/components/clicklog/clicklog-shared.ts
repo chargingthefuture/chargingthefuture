@@ -5,7 +5,7 @@ import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type { ClicklogIncident } from "../../lib/clicklog/types";
 
-export const BRAND = "#E91E8C";
+export const BRAND = "#EC4899";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
 export const BORDER = "#1E2A3A";

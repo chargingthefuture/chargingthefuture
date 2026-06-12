@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the TrustTransportPublic / MobileTrustTransportPublic mockups.
 const BG = '#0F1117';
-const COLOR = '#F97316';
+const COLOR = '#38BDF8';
 const TEXT = '#F9FAFB';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 

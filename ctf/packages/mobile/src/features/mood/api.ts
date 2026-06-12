@@ -2,8 +2,10 @@
 // GET  /api/mood/eligibility?clientId=   → EligibilityResponse
 // POST /api/mood/submissions             → SubmitResponse
 // GET  /api/mood/community               → CommunityResponse (aggregate only)
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'https://api.chargingthefuture.com';
+import { authedFetch } from '../../auth/authedFetch';
 
 export type EligibilityResponse = {
   ok: boolean;
@@ -41,8 +43,7 @@ export type SubmitResponse = {
 };
 
 export async function fetchMoodEligibility(clientId: string): Promise<EligibilityResponse> {
-  const url = `${API_BASE}/api/mood/eligibility?clientId=${encodeURIComponent(clientId)}`;
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await authedFetch(`/api/mood/eligibility?clientId=${encodeURIComponent(clientId)}`);
   if (!res.ok) {
     throw new Error(`eligibility_fetch_failed:${res.status}`);
   }
@@ -50,8 +51,7 @@ export async function fetchMoodEligibility(clientId: string): Promise<Eligibilit
 }
 
 export async function fetchMoodCommunity(): Promise<CommunityResponse> {
-  const url = `${API_BASE}/api/mood/community`;
-  const res = await fetch(url, { credentials: 'include' });
+  const res = await authedFetch('/api/mood/community');
   if (!res.ok) {
     throw new Error(`community_fetch_failed:${res.status}`);
   }
@@ -67,10 +67,8 @@ export async function submitMood(
   moodValue: number,
   note: string | null,
 ): Promise<SubmitResponse> {
-  const url = `${API_BASE}/api/mood/submissions`;
-  const res = await fetch(url, {
+  const res = await authedFetch('/api/mood/submissions', {
     method: 'POST',
-    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',

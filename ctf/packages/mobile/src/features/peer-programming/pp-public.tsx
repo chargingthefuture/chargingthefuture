@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const COLOR = '#8B5CF6';
+const COLOR = '#6EE7B7';
 
 export const PeerProgrammingPublic = () => (
   <View style={styles.root}>

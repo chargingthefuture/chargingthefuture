@@ -10,7 +10,7 @@ import {
   type SubmissionStatusFilter,
 } from './admin-api';
 
-const COLOR = '#A78BFA';
+const COLOR = '#FBBF24';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const BORDER = 'rgba(255,255,255,0.08)';
@@ -41,7 +41,7 @@ export const AdminSkillsHunt = () => {
   const loadRounds = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchAdminRounds(auth.userId);
+    const result = await fetchAdminRounds();
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden && result.message) setError(result.message);
@@ -60,7 +60,7 @@ export const AdminSkillsHunt = () => {
       return;
     }
     setError(null);
-    const result = await fetchAdminSubmissions(auth.userId, activeRoundId, statusFilter);
+    const result = await fetchAdminSubmissions(activeRoundId, statusFilter);
     if (!result.ok) {
       setForbidden(result.forbidden);
       if (!result.forbidden && result.message) setError(result.message);
@@ -85,7 +85,7 @@ export const AdminSkillsHunt = () => {
       setError(null);
       setNotice(null);
       try {
-        await reviewAdminSubmission(auth.userId, submissionId, action, notes);
+        await reviewAdminSubmission(submissionId, action, notes);
         setNotice(`Submission ${action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'flagged'}.`);
         await loadSubmissions();
       } catch {

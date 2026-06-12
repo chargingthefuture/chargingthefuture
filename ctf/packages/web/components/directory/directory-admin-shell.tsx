@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
-const COLOR = "#3B82F6";
+const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
 const BG = "#0F1117";
 const BORDER = "#1E2A3A";

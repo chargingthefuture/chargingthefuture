@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the FoundationPublic / MobileFoundationPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#EF4444';
+const COLOR = '#F59E0B';
 const TEXT = '#F9FAFB';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";

@@ -1,13 +1,10 @@
 // Unlock mobile API client.
 // Mirrors web routes: GET /api/unlock/status, POST /api/unlock/submission.
 // No CSRF header needed — the web unlock shell does not set x-ctf-csrf.
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
 
-import { Platform } from 'react-native';
-
-const API_BASE_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000';
+import { authedFetch } from '../../auth/authedFetch';
 
 export type UnlockReviewStatus = 'pending' | 'approved' | 'rejected' | 'spam';
 export type UnlockAccessTier = 'pending_readonly' | 'locked_support_only' | 'approved_full';
@@ -23,7 +20,7 @@ export type UnlockStatus = {
 };
 
 export async function fetchUnlockStatus(): Promise<UnlockStatus> {
-  const res = await fetch(`${API_BASE_URL}/api/unlock/status`, {
+  const res = await authedFetch('/api/unlock/status', {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Unlock status unavailable.');
@@ -32,7 +29,7 @@ export async function fetchUnlockStatus(): Promise<UnlockStatus> {
 }
 
 export async function submitUnlockUrl(quoraProfileUrl: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/unlock/submission`, {
+  const res = await authedFetch('/api/unlock/submission', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quoraProfileUrl }),

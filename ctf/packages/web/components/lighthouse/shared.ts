@@ -4,13 +4,13 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#EAB308";
+export const COLOR = "#60A5FA";
 // App surface background as rendered by the mockup (the mockup's `BG`
 // constant is dead code; every rendered surface uses #0F1117).
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the LightHouse shell. Default keeps the shipped values (accent
-// stays #EAB308); comic uses the shared comic surface tokens plus the LightHouse comic-ink accent.
+// stays #60A5FA); comic uses the shared comic surface tokens plus the LightHouse comic-ink accent.
 export type LighthouseTokens = PluginShellTokens;
 
 export function getLighthouseTokens(theme: ThemeName): LighthouseTokens {

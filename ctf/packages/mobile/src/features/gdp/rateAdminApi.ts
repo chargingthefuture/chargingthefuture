@@ -3,12 +3,11 @@
 // multi-currency volume into the single USD-denominated GDP estimate — never a
 // per-wallet or redemption "ServiceCredits = fiat" value.
 
-import { Platform } from 'react-native';
+// All calls go through authedFetch so the Clerk bearer token is attached and the
+// base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
 
-const API_BASE: string =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000/api/gdp/admin/currency-rates'
-    : 'http://localhost:3000/api/gdp/admin/currency-rates';
+const BASE = '/api/gdp/admin/currency-rates';
 
 export type CurrencyRateFactor = { usdRate: number; asOf: string; source: string };
 
@@ -38,7 +37,7 @@ type ReviseResponse = {
 };
 
 export async function fetchCurrencyRates(): Promise<CurrencyRateEntry[]> {
-  const res = await fetch(API_BASE, { headers: { 'Content-Type': 'application/json' } });
+  const res = await authedFetch(BASE);
   if (!res.ok) {
     throw new Error(`gdp_currency_rates_fetch_failed:${res.status}`);
   }
@@ -54,7 +53,7 @@ export async function reviseCurrencyRate(input: {
   usdRate: number;
   source: string;
 }): Promise<void> {
-  const res = await fetch(API_BASE, {
+  const res = await authedFetch(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify(input),

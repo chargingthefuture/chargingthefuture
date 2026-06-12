@@ -1,8 +1,9 @@
-import { Platform } from 'react-native';
+// Workforce mobile API client. Mirrors the web routes under
+// ctf/packages/web/app/api/workforce/*. All calls go through authedFetch so the
+// Clerk bearer token is attached and the base URL comes from runtime config (APP_URL).
+import { authedFetch } from '../../auth/authedFetch';
 
-export const WORKFORCE_API_BASE = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3000/api/workforce'
-  : 'http://localhost:3000/api/workforce';
+const WORKFORCE_BASE = '/api/workforce';
 
 export interface WorkforceDashboardData {
   workforceTotal: number;
@@ -24,14 +25,14 @@ export interface WorkforceProfileData {
 }
 
 export async function fetchWorkforceDashboard(): Promise<WorkforceDashboardData> {
-  const res = await fetch(`${WORKFORCE_API_BASE}/dashboard`);
+  const res = await authedFetch(`${WORKFORCE_BASE}/dashboard`);
   if (!res.ok) throw new Error('Failed to fetch workforce dashboard');
   const json = await res.json() as { dashboard: WorkforceDashboardData };
   return json.dashboard;
 }
 
 export async function fetchWorkforceProfile(): Promise<WorkforceProfileData | null> {
-  const res = await fetch(`${WORKFORCE_API_BASE}/profile`);
+  const res = await authedFetch(`${WORKFORCE_BASE}/profile`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error('Failed to fetch workforce profile');
   const json = await res.json() as { profile: WorkforceProfileData };
