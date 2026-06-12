@@ -135,6 +135,8 @@ export function ComicComposer({ onAsked }: ComicComposerProps) {
             style={[styles.sendBtn, isAsk && input.trim() ? styles.sendBtnActive : null]}
             onPress={handleSend}
             disabled={!input.trim() || sending}
+            accessibilityRole="button"
+            accessibilityLabel="Send"
           >
             {sending ? (
               <ActivityIndicator size="small" color="#fff" />

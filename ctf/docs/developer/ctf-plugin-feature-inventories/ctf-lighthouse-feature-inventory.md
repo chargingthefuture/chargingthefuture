@@ -14,23 +14,29 @@
 ### 1.1 Dashboard and Role-Based Entry
 
 1. Route parity target for LightHouse home dashboard (`/apps/lighthouse`).
-2. No-profile onboarding CTA is preserved.
+2. **No profile is required to use LightHouse** (owner decision, 2026-06-12). Opening LightHouse goes
+   straight to the browse screen — there is no "create a LightHouse profile" gate and no no-profile
+   splash. (V3 uses one canonical identity with optional per-plugin extension data, not a standalone
+   per-plugin profile you must create first; see rule 114.)
 3. Role-adapted quick actions are preserved:
    - Seeker: browse properties, view matches.
    - Host: manage properties, view matches.
 4. Announcements banner integration remains in user dashboard scope.
 
-### 1.2 Profile Create/Edit/Delete (Seeker + Host)
+### 1.2 Profile Preferences (optional — never a gate)
 
-1. Authenticated profile create/read/update/delete parity is required.
-2. Shared profile fields parity:
-   - bio, phone number, signal URL, active status.
-3. Seeker profile fields parity:
-   - housing needs, desired move-in date, budget min/max, desired country.
-4. Host profile fields parity:
-   - `hasProperty` indicator.
-5. Profile type lock behavior parity (non-admin users cannot arbitrarily change profile type).
-6. Verification rendering parity and first-name display behavior are retained.
+Owner decision (2026-06-12): the standalone LightHouse profile **requirement is dropped**. A member is
+never blocked from LightHouse for not having a profile. The seeker/host preference fields below are
+**optional** extension data (housing needs, host status) a member may set later; they never gate
+access, and nothing prompts a "create your profile" step on entry. The `lighthouse_profiles` table and
+`/api/lighthouse/profile` route are retained for that optional data and for admin views, but are no
+longer a precondition for browsing, hosting, or matching.
+
+1. Optional shared preference fields: bio, phone number, signal URL, active status.
+2. Optional seeker preference fields: housing needs, desired move-in date, budget min/max, desired
+   country.
+3. Optional host preference fields: `hasProperty` indicator.
+4. Verification rendering and first-name display behavior are retained where a profile exists.
 
 ### 1.3 Property Browse and Detail
 
@@ -58,7 +64,9 @@
    - photos,
    - Airbnb profile URL,
    - active status.
-5. Property creation flow requires host profile presence.
+5. Property creation does not require a pre-existing host profile (owner decision, 2026-06-12). A
+   member can list a property without first creating a LightHouse profile; any host preference data is
+   captured as optional extension data, not a precondition.
 
 ### 1.5 Matches Workflow
 
@@ -229,6 +237,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-06-12: Dropped the LightHouse standalone-profile requirement (owner decision). Opening LightHouse showed a dead-end "Welcome to LightHouse — No profile found yet" splash that blocked the whole plugin with no way to create a profile; the browse/matches/chat screens never used the profile. The web shell's profile fetch, state, and gate were removed (PR #456) so LightHouse opens straight to browse. This inventory was updated to match: a profile is never required (§1.1, §1.2), and property creation no longer requires a host profile (§1.4). Per the single-profile architecture (rule 114), LightHouse uses the canonical identity; the `lighthouse_profiles` table and `/api/lighthouse/profile` route are retained only as optional seeker/host preference data and for admin views — never as an access gate. (Removing that table/route entirely would be a larger schema change affecting property/match flows; deferred, since it is no longer a gate.)
 - 2026-06-12: Android API clients (`api.ts`, `admin-api.ts`, `fetchLighthouseStreamCredentials.ts`) now call the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain dev-only fetch against hardcoded emulator/localhost URLs. The admin functions no longer take a token argument (the wrapper supplies the live token); `AdminLighthouse.tsx` call sites updated. The chat-credentials fetcher now looks up the member's accepted match first and posts to `/api/lighthouse/matches/{matchId}/chat` with the real id (the old hardcoded `active` path segment always returned 404), and reads the channel id from the route's `channelId` field. No backend, schema, or contract change.
 - 2026-06-06: Android admin parity. Added `AdminLighthouse.tsx` + `admin-api.ts` and registered the `lighthouse-admin` screen in `App.tsx`. Mirrors the web admin page (`/admin/lighthouse`) against existing endpoints only: `GET /admin/stats` (the five counts), `GET /admin/matches`, and `PUT /admin/matches/:matchId` (approve/reject, confirm-gated, `x-ctf-csrf: '1'`). No backend added. Web admin page was already mobile-responsive (no layout change). Property/announcement admin mutations remain web-only for now.
 - 2026-06-02: v2 to v3 schema rebuild. The live v2 database has an old LightHouse schema with `varchar` ids and `varchar` foreign keys (and a v2-only `lighthouse_announcements` table). The v3 canonical `schema.sql` declares these tables with `uuid` ids, and a `uuid` foreign key cannot reference a `varchar` key, so applying `schema.sql` against a v2 database aborted at the first such foreign key (`lighthouse_matches.property_id`) and left every table defined later in the file — including the comic plugin's tables — uncreated. Owner reviewed the small amount of v2 LightHouse data and chose to discard it (the single property is being recreated by hand and affected users contacted before launch). Added a guarded, idempotent pre-schema migration (`ctf/db/migrations/pre/0001_lighthouse_v2_to_v3_rebuild.sql`) that drops the drifted `lighthouse_profiles` / `lighthouse_properties` / `lighthouse_matches` (so `schema.sql` recreates them as `uuid`) and drops the v2-only `lighthouse_announcements` (not recreated). The migration only fires when the drift is present (`lighthouse_properties.id` is not `uuid`), so it is a no-op on a rebuilt or fresh database. The "Update Neon DB" workflow now applies `pre/` migrations, then `schema.sql`, then `post/` migrations; see `ctf/db/migrations/README.md`.
