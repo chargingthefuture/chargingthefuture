@@ -147,10 +147,6 @@ export function SocketRelayPost({
             />
           </div>
         )}
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#9CA3AF", cursor: "pointer" }}>
-          <input type="checkbox" checked={draft.isPublic} onChange={(e) => onChange({ isPublic: e.target.checked })} />
-          Make this request publicly visible (otherwise members-only)
-        </label>
         {error && <div style={{ fontSize: 13, color: "#EF4444" }}>{error}</div>}
         {success && <div style={{ fontSize: 13, color: "#22C55E" }}>{editing ? "Saved! View it in the feed." : "Posted successfully! View it in the feed."}</div>}
         <button onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: submitting ? `${COLOR}66` : COLOR, border: "none", color: "#fff", fontSize: 15, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer" }}>
