@@ -6,7 +6,7 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const BRAND = "#F59E0B";
+export const BRAND = "#6366F1";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
 export const BORDER = "#1E2A3A";

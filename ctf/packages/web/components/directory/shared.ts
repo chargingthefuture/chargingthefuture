@@ -4,14 +4,14 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const COLOR = "#3B82F6";
-export const SKILLS_HUNT_COLOR = "#A855F7";
+export const COLOR = "#93C5FD";
+export const SKILLS_HUNT_COLOR = "#FBBF24";
 // App surface background as rendered by the mockup (the mockup's `BG`
 // constant is dead code; every rendered surface uses #0F1117).
 export const BG = "#0F1117";
 
 // Theme-aware chrome tokens for the Directory shell. Default keeps the shipped values (accent
-// stays #3B82F6); comic uses the shared comic surface tokens plus the Directory comic-ink accent.
+// stays #93C5FD); comic uses the shared comic surface tokens plus the Directory comic-ink accent.
 export type DirectoryTokens = PluginShellTokens;
 
 export function getDirectoryTokens(theme: ThemeName): DirectoryTokens {

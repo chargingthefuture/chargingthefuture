@@ -19,7 +19,7 @@ import {
   type AdminResult,
 } from './admin-api';
 
-const COLOR = '#F59E0B';
+const COLOR = '#A855F7';
 const DANGER = '#EF4444';
 const BG = '#0F1117';
 const PANEL = '#161B27';

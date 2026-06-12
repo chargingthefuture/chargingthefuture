@@ -21,7 +21,7 @@ import {
   type GentlePulseSession,
 } from './api';
 
-const COLOR = '#14B8A6';
+const COLOR = '#34D399';
 const BG = '#0A0F0E';
 const SURFACE = '#060A09';
 const WIDTH = Dimensions.get('window').width;

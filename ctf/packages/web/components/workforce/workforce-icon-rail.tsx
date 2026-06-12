@@ -3,7 +3,7 @@
 import { BarChart2, Bell, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 type Tab = 'dashboard';
 

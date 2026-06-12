@@ -8,7 +8,7 @@ interface ProfileCardProps {
 
 // Design: profile section — shows real profile fields (occupationName, skillLevel, region, recruitedState)
 // Pathways match % has no API backing → omitted per real-data-only rule
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 export function WorkforceProfileCard({ profile }: ProfileCardProps) {
   return (

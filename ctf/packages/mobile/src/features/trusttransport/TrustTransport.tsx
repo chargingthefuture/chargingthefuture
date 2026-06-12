@@ -19,7 +19,7 @@ import { ttSettlementLabel, type TrustTransportMode, type TrustTransportRequest 
 import { CurrencySelect } from '../currency';
 import type { Currency } from '../currency';
 
-const COLOR = '#F97316';
+const COLOR = '#38BDF8';
 const BG = '#0F1117';
 const SURFACE = '#090B0F';
 const BORDER = 'rgba(255,255,255,0.06)';

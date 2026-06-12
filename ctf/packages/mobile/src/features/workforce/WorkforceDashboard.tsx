@@ -10,7 +10,7 @@ import type { WorkforceDashboardData, WorkforceProfileData } from './api';
 // Design: MobileWorkforce — main authenticated dashboard
 // Binds to GET /api/workforce/dashboard and GET /api/workforce/profile (real routes only)
 // Omitted from mockup (no API backing): Status Distribution bars, Critical Skill Gaps, Recommended Pathways
-const COLOR = '#B45309';
+const COLOR = '#F97316';
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';

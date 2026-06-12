@@ -23,7 +23,7 @@ import {
 // chart are omitted (no backing API field). Tabs: Metrics, History.
 // Actions: set the active week (PUT /api/weekly-performance/admin/week-selection).
 
-const BRAND = '#F59E0B';
+const BRAND = '#6366F1';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
