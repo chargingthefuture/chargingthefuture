@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const cohorts = await getMyCohort(authResult.userId ?? '');
     return NextResponse.json(cohorts, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Failed to load cohorts' }, { status: 500 });
   }
 }
