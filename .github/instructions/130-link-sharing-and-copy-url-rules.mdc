@@ -1,0 +1,55 @@
+# Link Sharing and Copy-URL Rules
+
+## Status
+
+**Decided by the owner. This is settled — do not relitigate.** The owner has repeatedly asked for one
+shared way to share/copy any link, app-wide. Build against it. There is no excuse for a hand-rolled
+copy button or a bare "copy" icon anywhere.
+
+## Why this exists
+
+Members are non-technical. When they share something, they need to (1) see exactly what link they're
+about to share, (2) open it to check it, and (3) copy it — with clear confirmation that the copy
+worked. A naked copy icon that silently writes something to the clipboard, or a "Share" that links to
+the app homepage instead of the thing being shared, fails them. This was shipped wrong more than once,
+so it is now a hard rule.
+
+## The one shared control (mandatory)
+
+Every share / copy-link affordance MUST use the shared control — never a custom button, a raw
+`navigator.clipboard.writeText`, or a raw `window.open` / `Linking.openURL` for sharing:
+
+- **Web:** `ShareLink` — `ctf/packages/web/components/shared/share-link.tsx`.
+- **Mobile (React Native):** `ShareLink` — `ctf/packages/mobile/src/components/shared/ShareLink.tsx`.
+
+### What the control must always do
+
+1. **Open a popup**, not copy-on-click-with-no-context. The popup shows:
+   - the **full, absolute URL** as selectable text (so the member sees exactly what they'll share);
+   - **Open in new tab** (web) / **Open link** (mobile) — opens the URL;
+   - **Copy link** — on web, copies the absolute URL and shows clear "Copied!" feedback; on mobile,
+     hands off to the OS share sheet (React Native `Share`), which includes Copy plus share-to-app, so
+     no extra clipboard dependency is needed.
+2. **Share an absolute URL.** A relative path (e.g. `/apps/socketrelay`) is resolved against the
+   current origin before sharing — never share or copy a bare relative path.
+3. **Point at the specific resource**, never the app homepage. A "share this post" link must carry the
+   post's id (e.g. `/apps/socketrelay?request=<id>`), not `/apps/socketrelay`. If the resource has no
+   deep-linkable destination yet, build the destination (or the deep-link param) — do not fall back to
+   the homepage.
+4. **Be accessible** (see `ctf/docs/developer/ACCESSIBLE_FORMS_STANDARD.md`): the trigger announces it
+   opens a popup (`aria-haspopup`/`aria-expanded`); the popup is a labelled dialog; focus moves into
+   the URL field on open and returns to the trigger on Escape/outside-click; copy feedback is
+   announced (`aria-live`). On mobile the equivalent accessibility roles/labels apply.
+5. **Never silently no-op.** On web, if the async clipboard API is unavailable, fall back to a hidden
+   `textarea` + `execCommand` so the copy still works. On mobile, the OS share sheet is the copy/share
+   path, so there is nothing to silently fail.
+
+## For agents
+
+- Adding any "Share", "Copy link", or link-out affordance? Use `ShareLink`. If a needed capability is
+  missing, extend `ShareLink` — do not fork a one-off.
+- Reviewing a diff that adds a copy/share button, a `clipboard.writeText`, or a `window.open`/
+  `Linking.openURL` for a user-facing share? That's a defect unless it goes through `ShareLink`.
+- A share link that resolves to the app homepage is always wrong — it must target the specific resource.
+- Deprecated: the old copy-only `CopyLink` (`ctf/packages/web/components/shared/copy-link.tsx`). Do not
+  add new usages; convert any remaining ones to `ShareLink`.

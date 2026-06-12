@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
-import { MessageSquare, Zap, Shield } from 'lucide-react';
+import { MessageSquare, Zap, Shield, SlidersHorizontal } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import { HelpControl } from '../bug-reports/help-control';
 import styles from './community-shell.module.css';
@@ -12,9 +12,10 @@ type IconRailProps = {
   onSectionChange: (s: ShellSection) => void;
   initial?: string;
   isAuthenticated?: boolean;
+  isAdmin?: boolean;
 };
 
-export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false }: IconRailProps) {
+export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false, isAdmin = false }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
       <div className={styles.iconRailLogo} aria-hidden="true">SH</div>
@@ -40,6 +41,20 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
       </button>
 
       <div className={styles.iconRailSpacer} aria-hidden="true" />
+
+      {/* Admin entry: only rendered for users whose Clerk role is "admin". This is the one
+          in-app way to reach the admin directory at /admin; the route itself is still
+          server-role-gated, so showing the link to a non-admin would only hit a denial page. */}
+      {isAdmin ? (
+        <Link
+          href="/admin"
+          className={styles.iconRailBtn}
+          aria-label="Admin"
+          title="Admin — manage plugins and review queues"
+        >
+          <SlidersHorizontal size={18} />
+        </Link>
+      ) : null}
 
       <Link
         href="/account/data"

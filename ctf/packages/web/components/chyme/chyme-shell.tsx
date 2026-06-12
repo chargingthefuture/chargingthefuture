@@ -61,6 +61,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
         {/* Back button */}
         <Link
           href="/apps"
+          aria-label="Back to apps"
           style={{
             width: 44,
             height: 44,
