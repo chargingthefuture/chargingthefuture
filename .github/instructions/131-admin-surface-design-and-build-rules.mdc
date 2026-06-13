@@ -1,0 +1,76 @@
+# Admin Surface Design and Build Rules
+
+## Status
+
+**Decided by the owner (2026-06-13). This is settled — do not relitigate.** These rules exist so a new
+session does not re-ask the same questions about admin pages and their designs. Read this before
+auditing, designing, or building any `/admin` surface.
+
+## The admin model (what admin is, and is not)
+
+1. The app's admin model is: a **thin `/admin` landing** — a directory of cards that link to each
+   plugin's admin page — then **one dedicated admin page per plugin**, plus the **AI Review Console**
+   at `/admin/comic` (approve / edit / reject AI Assistant answers).
+2. There is **no "Admin Hub" / owner command-centre / everything-at-a-glance dashboard**, on desktop or
+   mobile. The owner rejected it. Do not build one, and do not re-introduce the `MobileAdminHub` family
+   or an "AI queue" tile. Platform-health numbers live in the **Weekly Performance** admin; AI answer
+   approvals live in the **AI Review Console**. Nowhere else.
+3. Admins reach admin pages from the app via the **Admin** entry in the Hub icon rail (desktop) and the
+   Hub nav-drawer footer (mobile), both pointing at `/admin`. The entry is shown only to users whose
+   role is `admin`. Every `/admin/*` route is server-role-gated regardless of what the nav shows.
+
+## Where designs live (and why "missing" can mean "unpushed")
+
+1. The single source of truth for designs is the **`chargingthefuture/design`** GitHub repo, consumed
+   by the app as the `design` git submodule. The app builds against whatever commit the submodule pins.
+2. The Vercel design deck (`design-ctf-app.vercel.app`) is wired to that same GitHub repo. If the deck
+   shows a design the app's submodule does not contain, that design is **unpushed** — it must be
+   committed and pushed to the design repo `main` (with a matching `sync-manifest.json` entry) before
+   the app can build to it. "I can see it on the deck" does not mean the app can see it.
+3. Before claiming a design is missing, verify against the design repo's **latest** commit (e.g.
+   `git ls-remote https://github.com/chargingthefuture/design main`), not just the locally pinned
+   submodule, which may lag.
+
+## Current admin design coverage (as of design commit `b72c216`, 2026-06-11)
+
+- **Mobile** admin mockups exist for ~every plugin.
+- **Desktop** admin mockups exist for only **Contributions, Directory, GDP Rate, SkillsHunt**, plus the
+  **AI Review Console** (desktop + mobile).
+- The **`/admin` landing** and the **Feed + Announcements** admin have **no mockup** (mobile or desktop).
+- The gap (missing desktop admin mockups + the admin landing + Feed admin) is tracked in GitHub issue
+  **#473**.
+
+## Owner directive: build admin pages now from the mobile mockups
+
+The owner has authorized building the bare admin pages **now** from the available **mobile** admin
+mockups, applying the designed admin look responsively, rather than waiting for desktop mockups. This is
+an **owner-issued bypass of the design-pass gate (rule 127) for admin pages** — admin pages are internal
+operator tooling, not a public, design-gated product surface. Do not announce `DESIGN PASS REQUIRED` for
+an admin page that has a mobile mockup; build it.
+
+## Build rule — style real data, never the mockup's placeholders (critical)
+
+Admin mockups carry **illustrative / placeholder** content that often does **not** match the real
+backend. Examples found in the deck: the Unlock mobile admin mockup shows invented "access gates" and
+per-resource grants, but the real Unlock backend is a Quora-profile-URL **verification queue**
+(submissions → approve/reject/spam, access tiers).
+
+Therefore, when building an admin page from a mockup:
+
+1. Implement the admin **visual design** — the header with icon + `ADMIN` badge, snapshot/stat blocks,
+   tabs, status-pill cards, and action buttons — bound to that plugin's **real data and real
+   endpoints**.
+2. **Never fabricate data and never invent a backend** to match a mockup. "Design only what the backend
+   supports." If the mockup shows a feature the backend does not have, build the real feature the
+   backend does have, in the mockup's visual language, and note the divergence in the plugin's inventory
+   change log.
+3. Wire real admin actions to the existing endpoints (send the `x-ctf-csrf: '1'` header on mutations).
+   The verification/decision call should not be failed by a best-effort follow-up (e.g. an incentive
+   mint or a feature-flag grant) — wrap those so a provider outage cannot break the core admin action.
+
+## Admin design tokens
+
+Dark admin palette: bg `#0F1117`, panel `#0D0F14`, far rail `#090B0F`, surface `#161B27`, border
+`#1E2A3A`, text `#F9FAFB`, subtle `#6B7280`. Per-app accents come from the "App accent colors" table in
+`DESIGN_GUIDE.md`. Use neutral `#6366F1` for cross-cutting admin chrome (the `ADMIN` badge, etc.). Admin
+surfaces have Loading / Empty / Populated states and no public/anonymous state.
