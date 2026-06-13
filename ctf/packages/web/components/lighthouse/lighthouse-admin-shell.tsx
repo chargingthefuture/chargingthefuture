@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Home } from 'lucide-react';
-import type { LighthouseMatch, LighthouseProperty } from 'lib/lighthouse/types';
+import { useRouter } from 'next/navigation';
+import { Home, EyeOff, Eye } from 'lucide-react';
+import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } from 'lib/lighthouse/types';
 
 // Admin design tokens (shared admin look). LightHouse accent is cyan.
 const COLOR = '#06B6D4';
@@ -52,6 +53,30 @@ function formatRent(amount: number | null): string | null {
   return `$${amount.toLocaleString()}/mo`;
 }
 
+// The admin property endpoint takes a full LighthousePropertyInput (it validates the whole
+// record), so to hide/unhide we resend the property with isActive flipped.
+function propertyToInput(p: LighthouseProperty, isActive: boolean): LighthousePropertyInput {
+  return {
+    title: p.title,
+    description: p.description,
+    propertyType: p.propertyType,
+    addressLine: p.addressLine,
+    city: p.city,
+    state: p.state,
+    country: p.country,
+    zipCode: p.zipCode,
+    bedrooms: p.bedrooms,
+    bathrooms: p.bathrooms,
+    monthlyRent: p.monthlyRent,
+    availableFromIso: p.availableFromIso,
+    amenities: p.amenities,
+    houseRules: p.houseRules,
+    photos: p.photos,
+    airbnbProfileUrl: p.airbnbProfileUrl,
+    isActive,
+  };
+}
+
 export function LighthouseAdminShell({
   stats,
   properties,
@@ -61,7 +86,36 @@ export function LighthouseAdminShell({
   properties: LighthouseProperty[];
   matches: LighthouseMatch[];
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('properties');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function togglePropertyActive(p: LighthouseProperty) {
+    if (busyId) return;
+    setBusyId(p.id);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/lighthouse/admin/properties/${p.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify(propertyToInput(p, !p.isActive)),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { message?: string; reason?: string } | null;
+        setError(data?.message ?? data?.reason ?? `Update failed (${res.status}).`);
+        return;
+      }
+      setMessage(p.isActive ? 'Listing hidden.' : 'Listing restored.');
+      router.refresh();
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
@@ -103,6 +157,9 @@ export function LighthouseAdminShell({
           ))}
         </div>
 
+        {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}
+        {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: COLOR }}>{message}</div> : null}
+
         {tab === 'properties' ? (
           properties.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No properties yet.</div>
@@ -121,7 +178,15 @@ export function LighthouseAdminShell({
                   <div style={{ fontSize: 12, color: SUBTLE }}>
                     {[location || null, p.propertyType, rent].filter(Boolean).join(' · ')}
                   </div>
-                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4 }}>Host: {p.hostUserId}</div>
+                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4, marginBottom: 10 }}>Host: {p.hostUserId}</div>
+                  <button
+                    type="button"
+                    disabled={busyId === p.id}
+                    onClick={() => void togglePropertyActive(p)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: p.isActive ? 'rgba(107,114,128,0.12)' : 'rgba(34,197,94,0.12)', border: `1px solid ${p.isActive ? 'rgba(107,114,128,0.3)' : 'rgba(34,197,94,0.3)'}`, color: p.isActive ? '#9CA3AF' : '#22C55E', fontSize: 13, fontWeight: 600, cursor: busyId === p.id ? 'not-allowed' : 'pointer', opacity: busyId === p.id ? 0.6 : 1 }}
+                  >
+                    {p.isActive ? <><EyeOff size={13} /> Hide listing</> : <><Eye size={13} /> Restore listing</>}
+                  </button>
                 </div>
               );
             })
