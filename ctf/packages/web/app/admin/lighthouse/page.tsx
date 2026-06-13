@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import {
   getLighthouseAdminStats,
+  listLighthouseAdminAnnouncements,
   listLighthouseMatchesAdmin,
   listLighthousePropertiesAdmin,
 } from 'lib/lighthouse/repository';
@@ -15,11 +16,12 @@ export default async function LighthouseAdminPage() {
     redirect('/apps/lighthouse');
   }
 
-  const [stats, properties, matches] = await Promise.all([
+  const [stats, properties, matches, announcements] = await Promise.all([
     getLighthouseAdminStats(),
     listLighthousePropertiesAdmin(),
     listLighthouseMatchesAdmin(),
+    listLighthouseAdminAnnouncements(),
   ]);
 
-  return <LighthouseAdminShell stats={stats} properties={properties} matches={matches} />;
+  return <LighthouseAdminShell stats={stats} properties={properties} matches={matches} announcements={announcements} />;
 }

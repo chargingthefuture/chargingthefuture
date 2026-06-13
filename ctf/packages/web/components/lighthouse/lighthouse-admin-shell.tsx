@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Home, EyeOff, Eye } from 'lucide-react';
+import { Home, EyeOff, Eye, XCircle } from 'lucide-react';
 import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } from 'lib/lighthouse/types';
+import type { Announcement } from 'lib/feed/types';
+import { LighthouseAdminAnnouncements } from './lighthouse-admin-announcements';
 
 // Admin design tokens (shared admin look). LightHouse accent is cyan.
 const COLOR = '#06B6D4';
@@ -23,7 +25,10 @@ type LighthouseAdminStats = {
   generatedAtIso: string;
 };
 
-type Tab = 'properties' | 'matches';
+type Tab = 'properties' | 'matches' | 'announcements';
+
+// Statuses an admin can force a match into (e.g. to shut down a problematic match).
+const MATCH_CANCELLABLE = new Set(['pending', 'accepted']);
 
 const MATCH_STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {
   pending: { bg: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: 'rgba(245,158,11,0.3)' },
@@ -81,10 +86,12 @@ export function LighthouseAdminShell({
   stats,
   properties,
   matches,
+  announcements,
 }: {
   stats: LighthouseAdminStats;
   properties: LighthouseProperty[];
   matches: LighthouseMatch[];
+  announcements: Announcement[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('properties');
@@ -109,6 +116,31 @@ export function LighthouseAdminShell({
         return;
       }
       setMessage(p.isActive ? 'Listing hidden.' : 'Listing restored.');
+      router.refresh();
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function cancelMatch(m: LighthouseMatch) {
+    if (busyId) return;
+    setBusyId(m.id);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/lighthouse/admin/matches/${m.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ status: 'cancelled', hostResponse: null }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { message?: string; reason?: string } | null;
+        setError(data?.message ?? data?.reason ?? `Update failed (${res.status}).`);
+        return;
+      }
+      setMessage('Match cancelled.');
       router.refresh();
     } catch {
       setError('Network error. Try again.');
@@ -144,7 +176,7 @@ export function LighthouseAdminShell({
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['properties', 'matches'] as const).map((t) => (
+          {(['properties', 'matches', 'announcements'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -191,22 +223,31 @@ export function LighthouseAdminShell({
               );
             })
           )
-        ) : matches.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No matches yet.</div>
-        ) : (
-          matches.map((m) => {
-            const s = MATCH_STATUS_STYLE[m.status] ?? MATCH_STATUS_STYLE.pending;
-            return (
-              <div key={m.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>Match on property {m.propertyId}</span>
-                  <Pill label={m.status} bg={s.bg} color={s.color} border={s.border} />
+        ) : tab === 'matches' ? (
+          matches.length === 0 ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No matches yet.</div>
+          ) : (
+            matches.map((m) => {
+              const s = MATCH_STATUS_STYLE[m.status] ?? MATCH_STATUS_STYLE.pending;
+              return (
+                <div key={m.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>Match on property {m.propertyId}</span>
+                    <Pill label={m.status} bg={s.bg} color={s.color} border={s.border} />
+                  </div>
+                  <div style={{ fontSize: 12, color: SUBTLE }}>Seeker {m.seekerUserId} → Host {m.hostUserId}</div>
+                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4, marginBottom: MATCH_CANCELLABLE.has(m.status) ? 10 : 0 }}>Created {new Date(m.createdAtIso).toLocaleDateString()}</div>
+                  {MATCH_CANCELLABLE.has(m.status) ? (
+                    <button type="button" disabled={busyId === m.id} onClick={() => void cancelMatch(m)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busyId === m.id ? 'not-allowed' : 'pointer', opacity: busyId === m.id ? 0.6 : 1 }}>
+                      <XCircle size={13} /> Cancel match
+                    </button>
+                  ) : null}
                 </div>
-                <div style={{ fontSize: 12, color: SUBTLE }}>Seeker {m.seekerUserId} → Host {m.hostUserId}</div>
-                <div style={{ fontSize: 12, color: SUBTLE, marginTop: 4 }}>Created {new Date(m.createdAtIso).toLocaleDateString()}</div>
-              </div>
-            );
-          })
+              );
+            })
+          )
+        ) : (
+          <LighthouseAdminAnnouncements announcements={announcements} />
         )}
       </div>
     </div>
