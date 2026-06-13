@@ -70,6 +70,7 @@ export type ChymeAuditEvent = {
     | 'chyme.messages.list'
     | 'chyme.message.send'
     | 'chyme.call.join'
+    | 'chyme.call.leave'
     | 'chyme.profile.delete.service'
     | 'account.profile.delete.full';
   actorId: string;

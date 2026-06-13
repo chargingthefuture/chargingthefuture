@@ -37,6 +37,7 @@ import {
   CHYME_MAIN_ROOM_KEY,
   CHYME_MAIN_ROOM_NAME,
   CHYME_MAX_MESSAGE_LENGTH,
+  CHYME_PRESENCE_TTL_SECONDS,
 } from './constants';
 import type {
   ChymeDeletionResponse,
@@ -258,6 +259,9 @@ async function upsertMember(client: PoolClient, roomId: string, identity: Identi
 }
 
 async function listRoomParticipants(client: PoolClient, roomId: string): Promise<ChymeParticipant[]> {
+  // Only members seen within the presence window count as "in the call". A member who left
+  // (row deleted) or disconnected (heartbeat stopped, last_seen_at goes stale) drops off
+  // automatically — there is no realtime socket, so freshness is how presence expires.
   const result = await client.query<ParticipantRow>(
     `
       SELECT
@@ -269,9 +273,10 @@ async function listRoomParticipants(client: PoolClient, roomId: string): Promise
         last_seen_at
       FROM chyme_room_members
       WHERE room_id = $1
+        AND last_seen_at > NOW() - ($2 || ' seconds')::interval
       ORDER BY joined_at ASC
     `,
-    [roomId],
+    [roomId, String(CHYME_PRESENCE_TTL_SECONDS)],
   );
 
   return result.rows.map(mapParticipant);
@@ -281,14 +286,17 @@ export async function getRoomState(identity: IdentityInput): Promise<ChymeRoomRe
   return withDbTransaction(async (client) => {
     const room = await ensureMainRoom(client);
     await ensureServiceProfile(client, identity);
-    await upsertMember(client, room.id, identity);
+    // Viewing the room does NOT make you a participant — only joining the call does (see
+    // markRoomCallJoined). Otherwise merely opening Chyme would list you on stage forever.
     const participants = await listRoomParticipants(client, room.id);
 
     return {
       roomId: room.id,
       roomName: room.room_name,
       roomKey: room.room_key,
-      callActive: room.call_active,
+      // "Live" reflects whether anyone is actually in the call right now (fresh presence),
+      // not a stored flag that nothing turns off.
+      callActive: participants.length > 0,
       participants,
     };
   });
@@ -298,7 +306,6 @@ export async function listRoomMessages(identity: IdentityInput, limit = CHYME_DE
   return withDbTransaction(async (client) => {
     const room = await ensureMainRoom(client);
     await ensureServiceProfile(client, identity);
-    await upsertMember(client, room.id, identity);
 
     const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
     const result = await client.query<MessageRow>(
@@ -337,7 +344,6 @@ export async function sendRoomMessage(identity: IdentityInput, text: string): Pr
   return withDbTransaction(async (client) => {
     const room = await ensureMainRoom(client);
     await ensureServiceProfile(client, identity);
-    await upsertMember(client, room.id, identity);
     await sendChymeStreamMessage({
       userId: identity.userId,
       name: chymeHandle(identity.username, identity.userId),
@@ -384,9 +390,30 @@ export async function markRoomCallJoined(
       roomId: activeRoom.id,
       roomName: activeRoom.room_name,
       roomKey: activeRoom.room_key,
-      callActive: activeRoom.call_active,
+      callActive: participants.length > 0,
       participants,
     };
+  });
+}
+
+// Heartbeat from the audio room while a member is in the call: refreshes last_seen_at so the
+// member keeps counting as present (see listRoomParticipants' freshness window).
+export async function touchRoomPresence(identity: IdentityInput): Promise<void> {
+  await withDbTransaction(async (client) => {
+    const room = await ensureMainRoom(client);
+    await upsertMember(client, room.id, identity);
+  });
+}
+
+// Explicit leave: remove the member row so the member stops being counted immediately
+// (rather than waiting for the presence window to lapse). Called when a member taps Leave.
+export async function leaveRoom(identity: IdentityInput): Promise<void> {
+  await withDbTransaction(async (client) => {
+    const room = await ensureMainRoom(client);
+    await client.query(
+      `DELETE FROM chyme_room_members WHERE room_id = $1 AND user_id = $2`,
+      [room.id, identity.userId],
+    );
   });
 }
 
