@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, CheckCircle } from 'lucide-react';
 import type { TrustTransportIncident, TrustTransportMarketConfig } from 'lib/trusttransport/types';
+import { TrustTransportAdminAccounts } from './trusttransport-admin-accounts';
 
 // Admin design tokens (shared admin look). TrustTransport accent is sky blue.
 const COLOR = '#38BDF8';
@@ -25,7 +26,7 @@ type AuditEvent = {
   createdAtIso: string;
 };
 
-type Tab = 'incidents' | 'market' | 'audit';
+type Tab = 'incidents' | 'market' | 'audit' | 'accounts';
 
 const SEVERITY_COLOR: Record<string, string> = {
   low: '#6B7280',
@@ -174,7 +175,7 @@ export function TrustTransportAdminShell({
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          {(['incidents', 'market', 'audit'] as const).map((t) => (
+          {(['incidents', 'market', 'audit', 'accounts'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -229,18 +230,22 @@ export function TrustTransportAdminShell({
               {busy ? 'Saving…' : 'Save market controls'}
             </button>
           </div>
-        ) : auditEvents.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No audit events.</div>
-        ) : (
-          auditEvents.map((e) => (
-            <div key={e.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{e.command}</span>
-                <Pill label={e.policyStatus} color={e.policyStatus === 'allow' ? '#22C55E' : '#EF4444'} />
+        ) : tab === 'audit' ? (
+          auditEvents.length === 0 ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No audit events.</div>
+          ) : (
+            auditEvents.map((e) => (
+              <div key={e.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{e.command}</span>
+                  <Pill label={e.policyStatus} color={e.policyStatus === 'allow' ? '#22C55E' : '#EF4444'} />
+                </div>
+                <div style={{ fontSize: 11, color: SUBTLE }}>{e.targetType} {e.targetId} · {new Date(e.createdAtIso).toLocaleString()}</div>
               </div>
-              <div style={{ fontSize: 11, color: SUBTLE }}>{e.targetType} {e.targetId} · {new Date(e.createdAtIso).toLocaleString()}</div>
-            </div>
-          ))
+            ))
+          )
+        ) : (
+          <TrustTransportAdminAccounts />
         )}
       </div>
     </div>
