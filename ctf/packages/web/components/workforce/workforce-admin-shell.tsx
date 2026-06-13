@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Briefcase, RefreshCw, Download } from 'lucide-react';
-import type { WorkforceConfig } from 'lib/workforce/types';
+import type { WorkforceAnnouncement, WorkforceConfig, WorkforceOccupation } from 'lib/workforce/types';
+import { WorkforceAdminOccupations } from './workforce-admin-occupations';
+import { WorkforceAdminAnnouncements } from './workforce-admin-announcements';
 
 // Admin design tokens (shared admin look). Workforce accent is orange.
 const COLOR = '#F97316';
@@ -73,14 +75,21 @@ async function adminMutate(url: string, method: 'POST' | 'PUT', body?: unknown):
   }
 }
 
+type Tab = 'overview' | 'occupations' | 'announcements';
+
 export function WorkforceAdminShell({
   dashboard,
   config: initialConfig,
+  occupations,
+  announcements,
 }: {
   dashboard: WorkforceAdminDashboard;
   config: WorkforceConfig;
+  occupations: WorkforceOccupation[];
+  announcements: WorkforceAnnouncement[];
 }) {
   const router = useRouter();
+  const [tab, setTab] = useState<Tab>('overview');
   const [config, setConfig] = useState({
     exportsEnabled: initialConfig.exportsEnabled,
     killSwitchEnabled: initialConfig.killSwitchEnabled,
@@ -136,6 +145,27 @@ export function WorkforceAdminShell({
           <StatBlock label="Active announcements" value={dashboard.activeAnnouncementsTotal} />
         </div>
 
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          {(['overview', 'occupations', 'announcements'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              aria-pressed={tab === t}
+              style={{ padding: '6px 16px', borderRadius: 8, textTransform: 'capitalize', background: tab === t ? COLOR : SURFACE, border: `1px solid ${tab === t ? COLOR : BORDER}`, color: tab === t ? '#3a1d05' : SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'occupations' ? (
+          <WorkforceAdminOccupations occupations={occupations} />
+        ) : tab === 'announcements' ? (
+          <WorkforceAdminAnnouncements announcements={announcements} />
+        ) : (
+        <>
         {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}
         {message ? <div role="status" style={{ marginBottom: 12, fontSize: 13, color: COLOR }}>{message}</div> : null}
 
@@ -176,6 +206,8 @@ export function WorkforceAdminShell({
             </button>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
