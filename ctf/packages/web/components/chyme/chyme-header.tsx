@@ -1,7 +1,21 @@
 'use client';
 
 import { Radio, RefreshCw } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { BORDER, PRIMARY } from './chyme-shared';
+
+const refreshButtonStyle = {
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.07)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  color: '#6B7280',
+} as const;
 
 export function ChymeHeader({
   participantCount,
@@ -12,6 +26,21 @@ export function ChymeHeader({
   isLive: boolean;
   onRefresh: () => void;
 }) {
+  const isMobile = useIsMobile();
+
+  // On phones the brand, Live badge, and participant count duplicate the page's
+  // top nav and the room card just below, so this row collapses to only the
+  // refresh control the owner asked to keep.
+  if (isMobile) {
+    return (
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '8px 16px', borderBottom: `1px solid ${BORDER}`, background: '#030d05', flexShrink: 0 }}>
+        <button onClick={onRefresh} style={refreshButtonStyle} aria-label="Refresh messages" title="Refresh messages">
+          <RefreshCw size={16} />
+        </button>
+      </header>
+    );
+  }
+
   return (
     <header style={{ height: 60, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, background: '#030d05', flexShrink: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
