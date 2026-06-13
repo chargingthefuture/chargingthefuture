@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -98,6 +98,21 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
     };
   }, [joinInfo.streamApiKey, joinInfo.streamToken, joinInfo.streamUserId, joinInfo.streamChannelId, currentUser.username, currentUser.userId]);
 
+  // While joined, ping the presence heartbeat so this member keeps counting as in the call.
+  // If the tab closes or disconnects, the pings stop and the server's freshness window drops
+  // the member automatically.
+  useEffect(() => {
+    if (status !== 'joined') return;
+    const ping = () => {
+      void fetch('/api/chyme/heartbeat', { method: 'POST' }).catch(() => {
+        /* best-effort keepalive */
+      });
+    };
+    ping();
+    const intervalId = window.setInterval(ping, 20000);
+    return () => window.clearInterval(intervalId);
+  }, [status]);
+
   if (status !== 'joined' || !client || !call) {
     return (
       <ChymeAudioFrame
@@ -176,21 +191,34 @@ function ChymeAudioRoomLive({
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
 
+  // One tile per user. A member with a lingering/extra Stream session would otherwise show
+  // up twice on stage; collapse to a single tile per userId, preferring the local session.
+  const uniqueParticipants = useMemo(() => {
+    const byUser = new Map<string, StreamVideoParticipant>();
+    for (const participant of participants) {
+      const existing = byUser.get(participant.userId);
+      if (!existing || (participant.isLocalParticipant && !existing.isLocalParticipant)) {
+        byUser.set(participant.userId, participant);
+      }
+    }
+    return Array.from(byUser.values());
+  }, [participants]);
+
   const stage = (
     <>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#4B5563', textTransform: 'uppercase', marginBottom: 16 }}>
-        On Stage · {participants.length} {participants.length === 1 ? 'Participant' : 'Participants'}
+        On Stage · {uniqueParticipants.length} {uniqueParticipants.length === 1 ? 'Participant' : 'Participants'}
       </div>
-      {participants.length === 0 ? (
+      {uniqueParticipants.length === 0 ? (
         <div style={{ color: '#4B5563', fontSize: 14 }}>No participants yet.</div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
-          {participants.map((participant) => (
-            <ChymeSpeakerTile key={participant.sessionId} participant={participant} />
+          {uniqueParticipants.map((participant) => (
+            <ChymeSpeakerTile key={participant.userId} participant={participant} />
           ))}
         </div>
       )}
-      {/* Plays every participant's audio track. Headless — renders only <audio> elements. */}
+      {/* Plays every participant's audio track (all sessions). Headless — renders only <audio>. */}
       <ParticipantsAudio participants={participants} />
     </>
   );

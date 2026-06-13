@@ -83,6 +83,24 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
     }
   }
 
+  async function handleLeave(): Promise<void> {
+    // Unmount the Stream client immediately, then drop server-side presence so the member
+    // stops being counted right away, and refresh the room so the count reflects the leave.
+    setJoinState('idle');
+    setJoinInfo(null);
+    try {
+      await requestJson('/api/chyme/leave', { method: 'POST' });
+    } catch {
+      // Best-effort: the presence window will lapse the member anyway.
+    }
+    try {
+      const refreshedRoom = await requestJson<ChymeRoomResponse>('/api/chyme/room');
+      setRoom(refreshedRoom);
+    } catch {
+      // Ignore a transient refresh failure.
+    }
+  }
+
   async function handleJoin(): Promise<void> {
     setJoinState('joining');
     setError(null);
@@ -147,7 +165,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
               onSend={() => void handleSend()}
               sending={sending}
               messagesEndRef={messagesEndRef}
-              onLeave={() => { setJoinState('idle'); setJoinInfo(null); }}
+              onLeave={() => void handleLeave()}
             />
           )}
         </div>
