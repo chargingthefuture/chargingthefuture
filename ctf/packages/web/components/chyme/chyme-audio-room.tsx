@@ -98,19 +98,31 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
     };
   }, [joinInfo.streamApiKey, joinInfo.streamToken, joinInfo.streamUserId, joinInfo.streamChannelId, currentUser.username, currentUser.userId]);
 
-  // While joined, ping the presence heartbeat so this member keeps counting as in the call.
-  // If the tab closes or disconnects, the pings stop and the server's freshness window drops
-  // the member automatically.
+  // While joined AND the tab is visible, ping the presence heartbeat so this member keeps
+  // counting as in the call. A backgrounded/forgotten tab stops pinging, so it stops writing
+  // to the DB and drops out of presence after the server's freshness window — which also lets
+  // the database compute go idle instead of being pinned awake by an open tab.
   useEffect(() => {
     if (status !== 'joined') return;
     const ping = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       void fetch('/api/chyme/heartbeat', { method: 'POST' }).catch(() => {
         /* best-effort keepalive */
       });
     };
     ping();
-    const intervalId = window.setInterval(ping, 20000);
-    return () => window.clearInterval(intervalId);
+    // 35s keeps a visible member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS)
+    // while cutting the write rate vs the old 20s.
+    const intervalId = window.setInterval(ping, 35000);
+    // Ping immediately when the member returns to the tab, so they re-appear without waiting.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') ping();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [status]);
 
   if (status !== 'joined' || !client || !call) {
