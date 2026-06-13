@@ -113,6 +113,7 @@ and hides meaning.
 - [128-design-sync-workflow-rules.mdc](128-design-sync-workflow-rules.mdc)
 - [129-bug-reporting-and-triage-rules.mdc](129-bug-reporting-and-triage-rules.mdc)
 - [130-link-sharing-and-copy-url-rules.mdc](130-link-sharing-and-copy-url-rules.mdc)
+- [131-admin-surface-design-and-build-rules.mdc](131-admin-surface-design-and-build-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](202-plugin-access-policy-schema-template.mdc)
