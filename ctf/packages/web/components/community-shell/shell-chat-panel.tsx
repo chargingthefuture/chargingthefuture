@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useRef } from 'react';
 import { AtSign } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
@@ -127,6 +128,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
   // epoch, then sort once so AI cards weave chronologically among community posts. `order` (source
@@ -260,14 +262,24 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           only fills the composer — it does not return an immediate answer, which confuses members.
           Revisit as a proper one-tap @comic ask — tracked in issue #471. */}
 
-      {/* @comic mention affordance + helper copy (per the locked design / naming rules). */}
+      {/* @comic mention affordance + helper copy (per the locked design / naming rules). On phones
+          the standalone "@comic" chip duplicated the "@comic" in the helper text, so the chip is
+          dropped and the line is relabeled to name the assistant and its human-in-the-loop review. */}
       <div className={styles.comicComposerHelper}>
-        <span className={composerMentionsComic ? `${styles.comicMentionChip} ${styles.comicMentionChipActive}` : styles.comicMentionChip}>
-          <AtSign size={12} /> comic
-        </span>
-        <span className={styles.comicComposerHelperText}>
-          Type <span className={styles.comicComposerHelperToken}>@comic</span> to ask the AI Assistant
-        </span>
+        {isMobile ? (
+          <span className={styles.comicComposerHelperText}>
+            AI Assistant (human in the loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
+          </span>
+        ) : (
+          <>
+            <span className={composerMentionsComic ? `${styles.comicMentionChip} ${styles.comicMentionChipActive}` : styles.comicMentionChip}>
+              <AtSign size={12} /> comic
+            </span>
+            <span className={styles.comicComposerHelperText}>
+              Type <span className={styles.comicComposerHelperToken}>@comic</span> to ask the AI Assistant
+            </span>
+          </>
+        )}
       </div>
 
       <div className={styles.chatInputWrap}>
