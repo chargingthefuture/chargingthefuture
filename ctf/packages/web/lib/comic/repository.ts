@@ -344,6 +344,16 @@ export async function routeComicMessage(
     ? await parseComicIntent(questionBody)
     : { intent: null, confidence: null };
 
+  // Generate the AI draft OUTSIDE the DB transaction (mirrors the Rasa call above). Awaiting a slow
+  // Ollama call inside an open transaction risks Neon aborting it (idle-in-transaction timeout),
+  // which would roll back the captured question so it never reaches the review queue. Safety-flagged
+  // questions are human-first and skip the draft. generateComicDraft never throws (it falls back to a
+  // template), so the question is always captured and queued regardless of the AI's availability.
+  const draft = safety.flagged ? null : await generateComicDraft(questionBody);
+  if (draft) {
+    await logComicInference({ actorId, draft });
+  }
+
   return withDbTransaction(async (client) => {
     const conversationId = await resolveConversation(client, actorId, channel, input.conversationId ?? null);
 
@@ -356,24 +366,24 @@ export async function routeComicMessage(
       engine: 'human',
     });
 
-    // Safety-flagged → human-first: no draft generated, queue the user turn for a human.
-    if (safety.flagged) {
-      const reviewId = await enqueueReview(client, userTurnId, `safety:${safety.category}`);
+    // Safety-flagged (or, defensively, no draft) → human-first: queue the user turn for a human to
+    // answer directly. The question always reaches the review queue regardless of the AI.
+    if (safety.flagged || !draft) {
+      const reason = safety.flagged ? `safety:${safety.category}` : 'interim_human_review';
+      const reviewId = await enqueueReview(client, userTurnId, reason);
       return {
-        outcome: 'human_first',
+        outcome: safety.flagged ? 'human_first' : 'review_pending',
         conversationId,
         userTurnId,
         draftTurnId: null,
         reviewId,
-        safetyCategory: safety.category,
-        holdingResponse: COMIC_SAFETY_HOLDING_RESPONSE,
+        safetyCategory: safety.flagged ? safety.category : null,
+        holdingResponse: safety.flagged ? COMIC_SAFETY_HOLDING_RESPONSE : COMIC_HOLDING_RESPONSE,
       };
     }
 
-    // Not safety-flagged: draft via Ollama, capture as a bot turn, enqueue for review.
-    // `forceHumanReview()` is unconditionally true (no confidence-based auto-publish), so nothing
-    // is ever auto-published — Rasa only supplied the user turn's intent/confidence label above.
-    const draft = await generateComicDraft(questionBody);
+    // Not safety-flagged: capture the AI draft (generated above) as a bot turn and enqueue it for
+    // review. `forceHumanReview()` is unconditionally true, so nothing is ever auto-published.
     const draftTurnId = await insertTurn(client, {
       conversationId,
       role: 'bot',
@@ -382,8 +392,6 @@ export async function routeComicMessage(
       nluConfidence: null,
       engine: draft.engine,
     });
-
-    await logComicInference({ actorId, draft });
 
     const mustReview = forceHumanReview();
     const reviewId = mustReview ? await enqueueReview(client, draftTurnId, 'interim_human_review') : null;
