@@ -234,7 +234,7 @@ export async function createTransfer(input: {
       await writeAdapterOutbox(client, {
         commandName: 'transfer.create',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           transferId,
           senderUserId: input.senderUserId,
@@ -243,7 +243,9 @@ export async function createTransfer(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -356,7 +358,7 @@ export async function createEscrowHold(input: {
       await writeAdapterOutbox(client, {
         commandName: 'escrow.hold.create',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           escrowId,
           sourceUserId: input.sourceUserId,
@@ -364,7 +366,9 @@ export async function createEscrowHold(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -477,7 +481,7 @@ export async function releaseEscrow(input: {
       await writeAdapterOutbox(client, {
         commandName: 'escrow.release',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           escrowId: input.escrowId,
           sourceUserId,
@@ -486,7 +490,9 @@ export async function releaseEscrow(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -600,7 +606,7 @@ export async function refundEscrow(input: {
       await writeAdapterOutbox(client, {
         commandName: 'escrow.refund',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           escrowId: input.escrowId,
           sourceUserId,
@@ -608,7 +614,9 @@ export async function refundEscrow(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -695,7 +703,7 @@ export async function mintGrant(input: {
       await writeAdapterOutbox(client, {
         commandName: 'governance.mint.grant',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           targetUserId: input.targetUserId,
           amount: input.amount,
@@ -703,7 +711,9 @@ export async function mintGrant(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -803,7 +813,7 @@ export async function burnCredits(input: {
       await writeAdapterOutbox(client, {
         commandName: 'governance.burn',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           targetUserId: input.targetUserId,
           amount: input.amount,
@@ -811,7 +821,9 @@ export async function burnCredits(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -915,15 +927,18 @@ export async function collectTreasuryFee(input: {
       await writeAdapterOutbox(client, {
         commandName: 'treasury.fee.collect',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           sourceUserId: input.sourceUserId,
           treasuryUserId: input.treasuryUserId,
           amount: input.amount,
+          originPlugin: input.originPlugin,
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -1046,7 +1061,7 @@ export async function applyDisputeAdjustment(input: {
       await writeAdapterOutbox(client, {
         commandName: 'dispute.adjustment.apply',
         idempotencyKey: input.idempotencyKey,
-        status: 'failed',
+        status: 'queued',
         payload: {
           disputeCaseId: input.disputeCaseId,
           sourceUserId: input.sourceUserId,
@@ -1055,7 +1070,9 @@ export async function applyDisputeAdjustment(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      throw error;
+      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
+      // the member's credits are correct locally and the external mirror catches up later.
     }
 
     await client.query(
@@ -1201,7 +1218,7 @@ export async function executeDeletionReclaim(input: {
         await writeAdapterOutbox(client, {
           commandName: 'account.deletion.reclaim.execute',
           idempotencyKey: input.idempotencyKey,
-          status: 'failed',
+          status: 'queued',
           payload: {
             accountId: input.accountId,
             treasuryUserId: input.treasuryUserId,
@@ -1210,7 +1227,8 @@ export async function executeDeletionReclaim(input: {
           },
           lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
         });
-        throw error;
+        // Formance unavailable — keep the authoritative local ledger write and leave a durable
+        // 'queued' outbox row for the reconciliation worker. Do not roll back.
       }
     }
 
