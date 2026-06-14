@@ -26,6 +26,9 @@ const BANNED = [
   /\bfeel free\b/i,
   /\b(?:warm|best|kind)(?:est)? regards\b/i,
   /\blooking forward\b/i,
+  // Jargon — plain-language rule. "flywheel" is a buzzword; say the plain thing instead
+  // (e.g. "a loop where each answer improves the next").
+  /\bflywheel\b/i,
 ];
 
 function readStdin() {
