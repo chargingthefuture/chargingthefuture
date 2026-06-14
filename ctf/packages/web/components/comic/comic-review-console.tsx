@@ -16,6 +16,25 @@ type ReviewListResponse = {
 
 type LoadState = 'loading' | 'ready' | 'error';
 
+type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null };
+type AiStatusResponse = { ok: true; ollama: ServiceStatus & { model: string } };
+
+function statusLabel(s: ServiceStatus): { text: string; color: string } {
+  if (!s.configured) return { text: 'not configured', color: '#6B7280' };
+  if (!s.reachable) return { text: 'unreachable', color: '#EF4444' };
+  return { text: `reachable${s.latencyMs !== null ? ` · ${s.latencyMs}ms` : ''}`, color: '#22C55E' };
+}
+
+function ServiceStatusBadge({ name, status }: { name: string; status: ServiceStatus }) {
+  const { text, color } = statusLabel(status);
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9CA3AF' }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} aria-hidden="true" />
+      <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>{name}</strong> {text}
+    </span>
+  );
+}
+
 type ConfidenceBand = {
   label: string;
   className: string;
@@ -73,6 +92,7 @@ export function ComicReviewConsole() {
   // Whether the detail is in edit mode (Edit & approve) vs the default approve/reject view.
   const [editing, setEditing] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [aiStatus, setAiStatus] = useState<AiStatusResponse | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -106,6 +126,22 @@ export function ComicReviewConsole() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Live status of the Ollama drafting backend (a RunPod endpoint or a native Ollama host).
+  // Best-effort: a failure just leaves the badge hidden, never blocks the review queue.
+  useEffect(() => {
+    let cancelled = false;
+    void requestJson<AiStatusResponse>('/api/comic/admin/ai-status')
+      .then((payload) => {
+        if (!cancelled) setAiStatus(payload);
+      })
+      .catch(() => {
+        /* status badge is best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selected = useMemo(
     () => items.find((item) => item.reviewId === selectedId) ?? null,
@@ -196,6 +232,11 @@ export function ComicReviewConsole() {
         <div className={styles.queueHeader}>
           <div className={styles.queueKicker}>Review Queue</div>
           <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
+          {aiStatus ? (
+            <div style={{ margin: '8px 0 4px' }}>
+              <ServiceStatusBadge name="Ollama" status={aiStatus.ollama} />
+            </div>
+          ) : null}
           {pendingCount > 0 ? (
             <span className={styles.queuePendingBadge}>{pendingCount} pending</span>
           ) : (
