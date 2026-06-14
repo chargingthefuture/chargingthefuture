@@ -124,7 +124,7 @@ export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) 
           <span className={styles.comicPendingDot} />
         </span>
         <span className={styles.comicPendingText}>
-          AI Assistant is preparing an answer — a teammate is reviewing it for safety before it&apos;s posted.
+          Preparing your answer — a teammate is writing a verified response. Answers typically arrive within 72 hours.
         </span>
       </div>
     </article>

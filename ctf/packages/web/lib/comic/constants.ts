@@ -59,7 +59,7 @@ export const COMIC_SAFETY_CATEGORIES: Record<string, RegExp> = {
 // Pre-approved, non-speculative holding response shown to the asker while a human reviews the
 // draft. Brand-voice review of the final copy is a deliberate later pass (inventory Future Notes).
 export const COMIC_HOLDING_RESPONSE =
-  'AI Assistant is preparing an answer — a teammate is reviewing it to make sure it is safe and accurate. You will see the response here shortly.';
+  'Preparing your answer — a teammate is writing a verified, survivor-safe response. Answers typically arrive within 72 hours.';
 
 export const COMIC_SAFETY_HOLDING_RESPONSE =
   'AI Assistant has flagged this message for a teammate to help with directly. If you are in immediate danger, contact local emergency services right away.';
