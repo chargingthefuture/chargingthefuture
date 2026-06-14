@@ -65,14 +65,17 @@ reviews.
 A RunPod Serverless **queue** endpoint speaks RunPod's job API, not Ollama's native
 API. Two pieces make it work:
 
-1. The worker image — `ctf/ops/runpod-ollama/Dockerfile`. It runs Ollama plus a
-   small Python handler (`runpod.serverless.start`) that forwards each job to
-   Ollama's `/api/chat` and returns `{ content, model }`. Point the endpoint's
-   GitHub build at this Dockerfile path. Set the model with the `OLLAMA_MODEL`
-   build argument (default `qwen2.5:32b`).
-   - To avoid rebuilding this large (~20 GB) image on every push to `main`, set the
-     endpoint's build to manual in RunPod, or host the worker Dockerfile in a small
-     dedicated repo and point the endpoint there.
+1. The worker image — a single `Dockerfile` that lives in the dedicated RunPod
+   worker repo (`ctf/Runpod`), not in this monorepo. It runs Ollama plus a small
+   Python handler (`runpod.serverless.start`) that forwards each job to Ollama's
+   `/api/chat` and returns `{ content, model }`. Point the endpoint's GitHub build
+   at that repo. Set the model with the `OLLAMA_MODEL` build argument (default
+   `qwen2.5:32b`).
+   - It lives in its own repo on purpose: pushes to this monorepo's `main` then
+     never trigger a rebuild of the large (~20 GB) image — the endpoint only
+     rebuilds when the worker repo changes, which is rare. The handler is inlined
+     in the Dockerfile (no separate file), so the worker repo needs just the one
+     `Dockerfile`.
 2. The client adapter — `lib/chatbot/ollama.ts` detects a RunPod endpoint (when
    `OLLAMA_BASE_URL`'s host is `api.runpod.ai`) and submits a job to `/run`, then
    polls `/status/<id>` until it finishes, within the same 30s budget as the native

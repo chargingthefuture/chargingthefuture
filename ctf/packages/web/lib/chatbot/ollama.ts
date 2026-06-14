@@ -113,8 +113,8 @@ export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaR
 }
 
 // Shape of RunPod's job-status payload (only the fields we read). The worker
-// handler (ctf/ops/runpod-ollama/handler.py or the equivalent in the worker repo)
-// returns { content, model } as the job output.
+// handler — in the dedicated RunPod worker repo (ctf/Runpod), see
+// ctf/docs/developer/OLLAMA.md — returns { content, model } as the job output.
 type RunpodJobResponse = {
   id?: string;
   status?: string;
