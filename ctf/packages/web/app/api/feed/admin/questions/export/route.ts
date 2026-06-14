@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { requireFeedAdminAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
-import { exportQuestionsForRasa } from 'lib/feed/repository';
+import { exportQuestionsByCategory } from 'lib/feed/repository';
 import type { FeedQuestionCategory } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
 
-function escapeRasaExample(text: string): string {
+function escapeExample(text: string): string {
   return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&').replace(/\n/g, ' ').trim();
 }
 
-function buildRasaNluYaml(grouped: Record<FeedQuestionCategory, string[]>): string {
+function buildCategoryYaml(grouped: Record<FeedQuestionCategory, string[]>): string {
   const categories: FeedQuestionCategory[] = ['housing', 'services', 'safety', 'benefits', 'general'];
   const lines: string[] = ['version: "3.1"', 'nlu:'];
 
@@ -22,7 +22,7 @@ function buildRasaNluYaml(grouped: Record<FeedQuestionCategory, string[]>): stri
     lines.push(`- intent: ${category}`);
     lines.push('  examples: |');
     for (const example of examples) {
-      lines.push(`    - ${escapeRasaExample(example)}`);
+      lines.push(`    - ${escapeExample(example)}`);
     }
   }
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   const format = searchParams.get('format') ?? 'yaml';
 
   try {
-    const grouped = await exportQuestionsForRasa();
+    const grouped = await exportQuestionsByCategory();
 
     const totalQuestions = Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0);
 
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const yaml = buildRasaNluYaml(grouped);
+    const yaml = buildCategoryYaml(grouped);
     return new Response(yaml, {
       status: 200,
       headers: {

@@ -50,12 +50,11 @@ export function evaluateComicSafety(text: string): ComicSafetyEvaluation {
 }
 
 // Operating mode: EVERY @comic answer goes to human review — full stop. There is deliberately NO
-// confidence-based auto-publish bypass. Standing up the Rasa NLU service (which now supplies a real
-// intent + confidence for the reviewer's display and for training labels) does NOT change this:
-// raising the auto-respond threshold / enabling any auto-publish is a separate, deliberate later
-// step taken only once the owner trusts the bot. Until then this returns true unconditionally so
-// nothing unreviewed is ever surfaced to the asker. (Safety-flagged turns are handled human-first
-// with no draft generated, upstream in routeComicMessage.)
+// confidence-based auto-publish bypass. Raising the auto-respond threshold / enabling any
+// auto-publish is a separate, deliberate later step taken only once the owner trusts the bot. Until
+// then this returns true unconditionally so nothing unreviewed is ever surfaced to the asker.
+// (Safety-flagged turns are handled human-first with no draft generated, upstream in
+// routeComicMessage.)
 export function forceHumanReview(): boolean {
   return true;
 }

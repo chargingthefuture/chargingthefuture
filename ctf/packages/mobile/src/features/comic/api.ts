@@ -1,8 +1,8 @@
 // comic AI Assistant (@comic) client for mobile. Mirrors the web routes under
 // ctf/packages/web/app/api/comic/*. Postgres + polling, no third-party LLM egress.
-// Interim safety policy: EVERY answer routes through human review before it reaches the asker
-// (Rasa is not deployed) — there is no auto-publish path. The asker only ever sees an approved/
-// corrected answer or the "Reviewing for safety" pending card.
+// Safety policy: EVERY answer routes through human review before it reaches the asker — there is no
+// auto-publish path. The asker only ever sees an approved/corrected answer or the "Reviewing for
+// safety" pending card.
 // All calls go through authedFetch so the Clerk bearer token is attached and the
 // base URL comes from runtime config (APP_URL).
 import { authedFetch } from '../../auth/authedFetch';
@@ -138,6 +138,8 @@ export type ComicReviewItem = {
   draftBody: string;
   intent: string | null;
   nluConfidence: number | null;
+  // 'rasa' is a historical value only (the Rasa NLU integration was removed 2026-06-14); no new
+  // turn is written with it. Mirrors the web ComicTurnEngine type.
   engine: 'rasa' | 'ollama' | 'template' | 'human';
   status: 'pending' | 'approved' | 'corrected' | 'rejected';
   safetyCategory: string | null;

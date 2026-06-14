@@ -58,7 +58,7 @@ fields.
 - Table/entity: `comic_training_examples`
   - Contains personal data? yes (derived from asker question text)
   - Retention period: long-lived under training policy
-  - Legal/compliance note: curated training data exported to Rasa; redact before export if needed
+  - Legal/compliance note: curated training data available via the training-example export; redact identifying details before export or any model training
 - Table/entity: `comic_answer_ratings`
   - Contains personal data? yes (`user_id` ownership of the rating)
   - Retention period: medium-lived (quality signal)

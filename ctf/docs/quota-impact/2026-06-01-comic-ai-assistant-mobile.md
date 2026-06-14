@@ -24,8 +24,8 @@
 - Activity Feed API calls estimate: no change to GetStream. Comic polls `/api/comic/*` (Postgres), not
   a GetStream feed.
 - Video participant-minutes estimate: no change.
-- AI Moderation credits estimate: no change. Answers route through human review (Rasa is not deployed);
-  generation is server-side, with no Stream AI-moderation credits consumed.
+- AI Moderation credits estimate: no change. Answers route through human review; generation is
+  server-side via Ollama, with no Stream AI-moderation credits consumed.
 
 ## Budget Threshold Risk
 

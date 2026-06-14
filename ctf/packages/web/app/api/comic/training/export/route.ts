@@ -4,11 +4,14 @@ import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { exportComicTrainingExamples } from 'lib/comic/repository';
 import { reportError } from 'lib/observability/report';
 
-function escapeRasaExample(text: string): string {
+// Exports the accumulated @comic training examples (asker questions grouped by the owner-assigned
+// label from corrections). The Rasa NLU service was removed 2026-06-14; this YAML shape is kept as
+// a portable training-data export for whatever model is trained on these examples later.
+function escapeTrainingExample(text: string): string {
   return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&').replace(/\n/g, ' ').trim();
 }
 
-function buildRasaNluYaml(grouped: Record<string, string[]>): string {
+function buildTrainingNluYaml(grouped: Record<string, string[]>): string {
   const lines: string[] = ['version: "3.1"', 'nlu:'];
 
   for (const intent of Object.keys(grouped).sort()) {
@@ -20,7 +23,7 @@ function buildRasaNluYaml(grouped: Record<string, string[]>): string {
     lines.push(`- intent: ${intent}`);
     lines.push('  examples: |');
     for (const example of examples) {
-      lines.push(`    - ${escapeRasaExample(example)}`);
+      lines.push(`    - ${escapeTrainingExample(example)}`);
     }
   }
 
@@ -44,7 +47,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: true, totalExamples, byIntent: grouped }, { status: 200 });
     }
 
-    const yaml = buildRasaNluYaml(grouped);
+    const yaml = buildTrainingNluYaml(grouped);
     return new Response(yaml, {
       status: 200,
       headers: {

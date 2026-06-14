@@ -2,6 +2,8 @@ export type ComicChannel = 'hub' | 'feed';
 
 export type ComicTurnRole = 'user' | 'bot' | 'human';
 
+// 'rasa' is retained as a historical value only (the Rasa NLU integration was removed 2026-06-14);
+// no new turn is written with it. New AI drafts use 'ollama'.
 export type ComicTurnEngine = 'rasa' | 'ollama' | 'template' | 'human';
 
 export type ComicReviewStatus = 'pending' | 'approved' | 'corrected' | 'rejected';
@@ -17,9 +19,9 @@ export type ComicMessageInput = {
   consentGranted: boolean;
 };
 
-// Outcome of routing an inbound chat message. While Rasa is undeployed, `outcome` is always
-// `review_pending` (draft enqueued, not surfaced) or `human_first` (safety-flagged, no draft);
-// `not_mentioned` short-circuits before any assistant work happens.
+// Outcome of routing an inbound chat message. `outcome` is always `review_pending` (draft enqueued,
+// not surfaced) or `human_first` (safety-flagged, no draft); `not_mentioned` short-circuits before
+// any assistant work happens.
 export type ComicMessageRouteOutcome = 'review_pending' | 'human_first' | 'not_mentioned';
 
 export type ComicMessageRouteResult = {
