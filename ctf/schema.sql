@@ -3586,6 +3586,11 @@ CREATE TABLE IF NOT EXISTS comic_review_queue (
   -- NULL while pending/rejected (no answer is ever surfaced). SET NULL so deleting that turn does not
   -- drop the review row.
   answer_turn_id UUID NULL REFERENCES comic_turns(id) ON DELETE SET NULL,
+  -- The AI draft bot turn generated in the background after the question is queued. turn_id always
+  -- stays pointed at the asker's question turn (so the question is inferred stably); the reviewer
+  -- reads the draft from here. NULL = human-first (no AI draft). SET NULL so deleting the draft turn
+  -- does not drop the review row.
+  draft_turn_id UUID NULL REFERENCES comic_turns(id) ON DELETE SET NULL,
   reason TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   decided_at TIMESTAMPTZ NULL
@@ -3596,6 +3601,7 @@ ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS status TEXT NO
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reviewer_user_id TEXT NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS corrected_body TEXT NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS answer_turn_id UUID NULL;
+ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS draft_turn_id UUID NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS reason TEXT NULL;
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_review_queue ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ NULL;
