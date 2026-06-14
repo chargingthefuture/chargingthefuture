@@ -38,13 +38,18 @@ RUN printf '%s\n' \
     'MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:32b")' \
     '' \
     '# Start Ollama once per worker (on cold start), then wait until it answers.' \
+    '# If it never becomes healthy, raise so the worker fails fast and RunPod can' \
+    '# restart it cleanly instead of accepting jobs that would all fail.' \
     'subprocess.Popen(["ollama", "serve"])' \
     'for _ in range(120):' \
     '    try:' \
-    '        requests.get(f"{OLLAMA_HOST}/api/tags", timeout=2)' \
+    '        ready = requests.get(f"{OLLAMA_HOST}/api/tags", timeout=2)' \
+    '        ready.raise_for_status()' \
     '        break' \
     '    except Exception:' \
     '        time.sleep(1)' \
+    'else:' \
+    '    raise RuntimeError("Ollama did not become ready in time")' \
     '' \
     '' \
     'def handler(job):' \

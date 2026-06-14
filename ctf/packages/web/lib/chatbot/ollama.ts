@@ -143,7 +143,10 @@ async function callRunpodChat(messages: OllamaMessage[]): Promise<OllamaResult> 
       headers: ollamaHeaders(),
       body: JSON.stringify({
         input: {
-          model: OLLAMA_MODEL,
+          // Only pin the model when the deployment explicitly set OLLAMA_MODEL. Otherwise let the
+          // RunPod worker use its own baked default (e.g. qwen2.5:32b) rather than forcing the
+          // web-side fallback (llama3.2), which the worker may not have.
+          ...(process.env.OLLAMA_MODEL ? { model: process.env.OLLAMA_MODEL } : {}),
           messages,
           options: {
             temperature: 0.4,
