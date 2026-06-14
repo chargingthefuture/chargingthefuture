@@ -41,6 +41,29 @@ async function getFormanceConfig() {
   };
 }
 
+// Non-throwing config report for the admin status panel. getFormanceConfig() throws when unset,
+// which is correct for the write path but not for a status read. Mirrors the same demo-vs-prod
+// ledger choice so the panel reflects what the write path would actually use.
+export async function getFormanceConfigStatus(): Promise<{
+  configured: boolean;
+  apiUrlSet: boolean;
+  ledger: string | null;
+  asset: string;
+  demoMode: boolean;
+}> {
+  const apiUrl = process.env.FORMANCE_API_URL?.trim() ?? '';
+  const demoMode = await isDemoMode();
+  const ledger = (demoMode ? process.env.FORMANCE_LEDGER_STAGING?.trim() : process.env.FORMANCE_LEDGER?.trim()) ?? '';
+  const asset = process.env.FORMANCE_ASSET?.trim() || 'SERVICE_CREDITS';
+  return {
+    configured: apiUrl.length > 0 && ledger.length > 0,
+    apiUrlSet: apiUrl.length > 0,
+    ledger: ledger.length > 0 ? ledger : null,
+    asset,
+    demoMode,
+  };
+}
+
 function toMinorUnits(amount: number): number {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('invalid_payload');

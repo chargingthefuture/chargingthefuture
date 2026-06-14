@@ -55,6 +55,28 @@ export function isOllamaConfigured(): boolean {
   return OLLAMA_BASE_URL.length > 0;
 }
 
+// Lightweight liveness probe for the admin status panel. No inference, short timeout, never throws.
+// A RunPod serverless endpoint answers `GET /health`; a native Ollama host answers `GET /api/tags`.
+// Reuses ollamaHeaders() so the RunPod bearer (OLLAMA_API_KEY) is attached when needed.
+export async function pingOllama(): Promise<{ configured: boolean; reachable: boolean; latencyMs: number | null; model: string }> {
+  if (!isOllamaConfigured()) {
+    return { configured: false, reachable: false, latencyMs: null, model: OLLAMA_MODEL };
+  }
+  const base = OLLAMA_BASE_URL.replace(/\/$/, '');
+  const url = ollamaProviderIsRunpod() ? `${base}/health` : `${base}/api/tags`;
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const response = await fetch(url, { headers: ollamaHeaders(), signal: controller.signal });
+    return { configured: true, reachable: response.ok, latencyMs: Date.now() - startedAt, model: OLLAMA_MODEL };
+  } catch {
+    return { configured: true, reachable: false, latencyMs: null, model: OLLAMA_MODEL };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaResult> {
   if (!isOllamaConfigured()) {
     throw new Error('ollama_not_configured');
