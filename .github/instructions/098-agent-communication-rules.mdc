@@ -47,7 +47,4 @@ Fixed 3 errors in schema.sql:
 ## Excluded Vocabulary
 Owner-maintained list of words and phrases agents must not use when communicating in this repo (chat responses, commit messages, PR text, and created/edited files). Use the plain replacement instead. This list is continuously updated; treat every entry as mandatory.
 
-| Do not use | Use instead | Reason |
-|---|---|---|
-| punch list | list | Jargon; unclear meaning. |
-| stale | deprecated | "Stale" is consistently misused; "deprecated" is the intended meaning. |
+The single running list now lives in `.claude/hooks/check-no-pleasantries.mjs` (the `VOCABULARY` array), so it is documented and enforced by the Stop hook in one place — no second copy to drift. Each entry pairs the banned term with its plain replacement. Add or edit banned vocabulary there; do not re-create a table here.
