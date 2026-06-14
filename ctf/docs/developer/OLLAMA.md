@@ -5,8 +5,8 @@ How the self-hosted Ollama service works and how to change its model. Ollama is 
 (see the comic feature inventory). A third-party API is not used for survivor question text, so
 the model stays self-hosted.
 
-There are two ways to host it. The current setup runs a small model on a CPU box. The upgrade
-moves a stronger model to a GPU host. Both are documented below.
+It runs on a RunPod Serverless GPU endpoint (documented below). The earlier Render CPU service was
+removed on 2026-06-14 — see "Retired: the Render CPU image".
 
 ## Why upgrade to a GPU host
 
@@ -90,51 +90,18 @@ low-volume chat; serverless only bills while a worker is actually running.
 - `OLLAMA_API_KEY` → the RunPod API key (sent as the bearer token).
 - `OLLAMA_MODEL` → the model baked into the worker (e.g. `qwen2.5:32b`).
 
-## Current setup (Render CPU image — the fallback)
+## Retired: the Render CPU image
 
-`ctf-ollama` is a **private** Render service (no public domain), reachable only by the web service
-over Render's internal network at `http://ctf-ollama:11434`. Defined in `render.yaml`
-(`dockerfilePath: ctf/ops/ollama/Dockerfile`). Render has no persistent volumes, so the model is
-**baked into the image at build time** — present on startup, no runtime pull.
-
-### Changing the model on the Render CPU image
-
-1. Edit the `ARG` in `ctf/ops/ollama/Dockerfile`:
-   ```dockerfile
-   ARG OLLAMA_MODEL=llama3.2
-   ```
-   Use any model from the [Ollama library](https://ollama.com/library). Commit and push — Render
-   rebuilds the image automatically.
-2. After the deploy completes, set `OLLAMA_MODEL` on the web service to match the new name exactly
-   (including any tag, e.g. `llama3.2:1b`).
-
-| Model | Approx. image size |
-|---|---|
-| `llama3.2:1b` | ~1.3 GB |
-| `llama3.2` | ~2.0 GB |
-| `qwen2.5:3b` | ~1.9 GB |
-| `phi3` | ~2.2 GB |
-| `mistral` | ~4.1 GB |
-
-On the CPU image, prefer 1B–3B models to keep build times within the platform limit and responses
-under the timeout. Larger models belong on the GPU host above.
-
-### How the Dockerfile bakes the model
-
-```dockerfile
-RUN ollama serve & \
-    until ollama list >/dev/null 2>&1; do sleep 2; done && \
-    ollama pull ${OLLAMA_MODEL}
-```
-
-Ollama must be running to pull. This `RUN` step starts the server in the background, polls until
-ready, then pulls the model. When the layer finishes the server process exits, but the model files
-written to `/root/.ollama/models/` persist in the image layer. The container then starts fresh with
-`ollama serve` and finds the model already on disk.
+There used to be a `ctf-ollama` Render service (a small `llama3.2` model baked into a CPU image at
+`ctf/ops/ollama/Dockerfile`). It was removed on 2026-06-14: drafting moved to the RunPod Serverless
+GPU endpoint above, and a CPU model was too weak/slow to be worth its fixed monthly cost. The
+service block, its image build job, and the Dockerfile are gone. If the RunPod endpoint is
+unconfigured or unreachable, `@comic` simply falls back to the template draft and the question stays
+human-first — no Render Ollama is needed as a fallback.
 
 ## Web service configuration
 
-- `OLLAMA_BASE_URL` — `http://ctf-ollama:11434` (Render CPU image) or the GPU host URL.
+- `OLLAMA_BASE_URL` — the RunPod endpoint URL (`https://api.runpod.ai/v2/<id>`) or any Ollama host URL.
 - `OLLAMA_MODEL` — must exactly match the model name available on the host.
 - `OLLAMA_API_KEY` — optional bearer token for an external host behind a proxy; unset otherwise.
 
