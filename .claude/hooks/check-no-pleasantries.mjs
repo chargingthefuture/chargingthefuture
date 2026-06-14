@@ -26,9 +26,16 @@ const BANNED = [
   /\bfeel free\b/i,
   /\b(?:warm|best|kind)(?:est)? regards\b/i,
   /\blooking forward\b/i,
-  // Jargon — plain-language rule. "flywheel" is a buzzword; say the plain thing instead
-  // (e.g. "a loop where each answer improves the next").
-  /\bflywheel\b/i,
+];
+
+// Owner-maintained excluded vocabulary — the single canonical list of jargon / misused words
+// agents must not use in this repo. .github/instructions/098-agent-communication-rules.mdc points
+// here instead of keeping a second copy that drifts. Each entry pairs the banned term with its
+// plain replacement so the block message can name what to use instead.
+const VOCABULARY = [
+  { re: /\bflywheel\b/i, use: 'a plain description of the loop (e.g. "each answer improves the next")' },
+  { re: /\bpunch list\b/i, use: 'list' },
+  { re: /\bstale\b/i, use: 'deprecated' },
 ];
 
 function readStdin() {
@@ -67,15 +74,29 @@ try {
   const input = JSON.parse(readStdin() || '{}');
   if (input.stop_hook_active) process.exit(0); // already retrying; do not loop
   const text = input.transcript_path ? lastAssistantText(input.transcript_path) : '';
-  const match = BANNED.map((re) => text.match(re)).find(Boolean);
-  if (match) {
+  const pleasantry = BANNED.map((re) => text.match(re)).find(Boolean);
+  const vocab = VOCABULARY.map((entry) => {
+    const m = text.match(entry.re);
+    return m ? { term: m[0], use: entry.use } : null;
+  }).find(Boolean);
+
+  if (pleasantry) {
     process.stdout.write(
       JSON.stringify({
         decision: 'block',
         reason:
-          `The reply contains a banned pleasantry/feeling/sign-off ("${match[0]}"). ` +
+          `The reply contains a banned pleasantry/feeling/sign-off ("${pleasantry[0]}"). ` +
           'Restate the result in plain, factual language — no thanks, apologies, well-wishes, ' +
           'sign-offs, jargon, or first-person feeling words — then stop.',
+      }),
+    );
+  } else if (vocab) {
+    process.stdout.write(
+      JSON.stringify({
+        decision: 'block',
+        reason:
+          `The reply uses a banned word ("${vocab.term}"). Use instead: ${vocab.use}. ` +
+          'Restate in plain language, then stop.',
       }),
     );
   }
