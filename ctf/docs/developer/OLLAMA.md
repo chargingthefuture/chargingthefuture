@@ -53,6 +53,40 @@ does them:
 Once `OLLAMA_BASE_URL` points at the GPU host, the Render `ctf-ollama` service can be removed from
 `render.yaml` and suspended in Render — it is no longer in the path.
 
+## RunPod Serverless (pay-per-use GPU)
+
+RunPod Serverless is the chosen GPU host: it bills per second a worker actively
+runs a request and scales to zero when idle, so a low-traffic, human-reviewed chat
+costs little. Cold starts (a worker loading the model from zero) can take tens of
+seconds to minutes; that is acceptable here because the worst case is one draft
+hitting the 30s timeout and falling back to the template, which a person still
+reviews.
+
+A RunPod Serverless **queue** endpoint speaks RunPod's job API, not Ollama's native
+API. Two pieces make it work:
+
+1. The worker image — `ctf/ops/runpod-ollama/Dockerfile`. It runs Ollama plus a
+   small Python handler (`runpod.serverless.start`) that forwards each job to
+   Ollama's `/api/chat` and returns `{ content, model }`. Point the endpoint's
+   GitHub build at this Dockerfile path. Set the model with the `OLLAMA_MODEL`
+   build argument (default `qwen2.5:32b`).
+   - To avoid rebuilding this large (~20 GB) image on every push to `main`, set the
+     endpoint's build to manual in RunPod, or host the worker Dockerfile in a small
+     dedicated repo and point the endpoint there.
+2. The client adapter — `lib/chatbot/ollama.ts` detects a RunPod endpoint (when
+   `OLLAMA_BASE_URL`'s host is `api.runpod.ai`) and submits a job to `/run`, then
+   polls `/status/<id>` until it finishes, within the same 30s budget as the native
+   path. No native-API change.
+
+Recommended GPU: 24 GB (fits `qwen2.5:32b`). Max workers 1–2 is plenty for a
+low-volume chat; serverless only bills while a worker is actually running.
+
+### Web service settings for RunPod
+
+- `OLLAMA_BASE_URL` → the endpoint URL, `https://api.runpod.ai/v2/<endpoint-id>`.
+- `OLLAMA_API_KEY` → the RunPod API key (sent as the bearer token).
+- `OLLAMA_MODEL` → the model baked into the worker (e.g. `qwen2.5:32b`).
+
 ## Current setup (Render CPU image — the fallback)
 
 `ctf-ollama` is a **private** Render service (no public domain), reachable only by the web service
