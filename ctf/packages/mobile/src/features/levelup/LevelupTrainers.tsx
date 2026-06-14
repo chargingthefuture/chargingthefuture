@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fetchTrainers, type Trainer } from './api';
 
-const GREEN = '#22C55E';
+const GREEN = '#10B981';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const MUTED = '#4B5563';

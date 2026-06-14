@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Briefcase } from 'lucide-react';
 import type { FoundationCapacityPolicy } from 'lib/foundation/types';
 
-// Admin design tokens (shared admin look). Foundation accent is green.
-const COLOR = '#22C55E';
+// Admin design tokens (shared admin look). Foundation accent is amber.
+const COLOR = '#F59E0B';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const SURFACE = '#161B27';

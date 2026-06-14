@@ -14,7 +14,7 @@ export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
 
 // Theme-aware chrome tokens for the ClickLog shell. Default keeps the shipped values (accent stays
-// #E91E8C); comic uses the shared comic surface tokens plus the ClickLog comic-ink accent. The shell
+// #EC4899); comic uses the shared comic surface tokens plus the ClickLog comic-ink accent. The shell
 // paints a solid #1E2A3A chrome border that is distinct from the shared white-alpha border, so it is
 // carried as its own BORDER_SOLID token (default #1E2A3A, comic comic-border-faint).
 export type ClicklogTokens = PluginShellTokens & { BORDER_SOLID: string };

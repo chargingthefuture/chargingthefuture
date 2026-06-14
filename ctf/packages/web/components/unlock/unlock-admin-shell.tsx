@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Unlock, Key, CheckCircle, XCircle, Ban } from 'lucide-react';
 import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
 
-// Admin design tokens (shared admin look from the design system).
-const COLOR = '#F43F5E';
+// Admin design tokens (shared admin look from the design system). Unlock accent is purple.
+const COLOR = '#C084FC';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const SURFACE = '#161B27';

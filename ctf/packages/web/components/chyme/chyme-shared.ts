@@ -5,7 +5,7 @@ import { getAppAccent, type ThemeName } from '@/lib/theme/theme-tokens';
 import { getPluginShellTokens, type PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 
 export const PRIMARY = '#22C55E';
-export const DARK_BG = '#021006';
+export const DARK_BG = '#04160A';
 export const CARD_BG = '#041a0b';
 export const BORDER = '#052e16';
 // The chrome panel/header/rail surface the shells paint (darker than DARK_BG).

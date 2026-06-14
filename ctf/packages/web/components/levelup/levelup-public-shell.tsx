@@ -6,7 +6,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 
 // Palette from the LevelUpPublic / MobileLevelUpPublic design mockups.
 const BG = '#0F1117';
-const COLOR = '#22C55E';
+const COLOR = '#10B981';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";

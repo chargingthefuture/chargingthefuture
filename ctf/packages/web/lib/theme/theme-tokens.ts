@@ -46,7 +46,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   mood: { standard: '#4ADE80', comic: '#1A5C2A' },
   socketrelay: { standard: '#FB923C', comic: '#7A3A0C' },
   'skills-hunt': { standard: '#FBBF24', comic: '#7A5A05' },
-  levelup: { standard: '#22C55E', comic: '#1A5C30' },
+  levelup: { standard: '#10B981', comic: '#1A5C30' },
   whatworks: { standard: '#84CC16', comic: '#4A6B10' },
   'what-works': { standard: '#84CC16', comic: '#4A6B10' },
   trust: { standard: '#0EA5E9', comic: '#0C5278' },
@@ -57,7 +57,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   // AI Assistant (the @comic plugin) deliberately uses inkDim in comic theme — no blue.
   comic: { standard: '#38BDF8', comic: '#7A6A50' },
   // Account & Data uses comic-danger for its destructive zone.
-  'account-data': { standard: '#E91E8C', comic: '#B91C1C' },
+  'account-data': { standard: '#D946EF', comic: '#B91C1C' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };
