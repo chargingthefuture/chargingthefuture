@@ -35,7 +35,7 @@ const BANNED = [
 const VOCABULARY = [
   { re: /\bflywheel\b/i, use: 'a plain description of the loop (e.g. "each answer improves the next")' },
   { re: /\bpunch list\b/i, use: 'list' },
-  { re: /\bstale\b/i, use: 'deprecated' },
+  { re: /\bstale\b/i, use: 'drop it — it usually adds no value; if you mean something specific, name it (out-of-date, superseded, no longer current)' },
 ];
 
 function readStdin() {
