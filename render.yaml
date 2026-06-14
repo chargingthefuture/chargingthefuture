@@ -110,25 +110,11 @@ services:
         sync: false
 
   # ── Ollama ────────────────────────────────────────────────────────
-  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-ollama:latest
-  # Private service — reachable by other Render services via internal URL.
-  # Model (llama3.2) is baked into the image at build time. Image only rebuilt
-  # when ctf/ops/ollama/Dockerfile changes (path-filtered in build-images.yml).
-  # Render has no GPUs, so this runs a small model on CPU. To run a stronger model
-  # (issue #502) move Ollama to an external GPU host and point the web service's
-  # OLLAMA_BASE_URL/OLLAMA_MODEL (and OLLAMA_API_KEY if the host is behind a proxy)
-  # at it — see ctf/docs/developer/OLLAMA.md — then remove this block. Until then
-  # this stays as-is so production keeps a working (if weak) model.
-  - type: pserv
-    name: ctf-ollama
-    runtime: image
-    image:
-      url: ghcr.io/chargingthefuture/ctf-ollama:latest
-    region: ohio
-    plan: standard
-    envVars:
-      - key: OLLAMA_MODEL
-        value: llama3.2
+  # The Render CPU Ollama service (ctf-ollama, pserv standard) was removed on
+  # 2026-06-14. @comic drafting moved to a RunPod Serverless GPU endpoint (issue
+  # #502): the web service points OLLAMA_BASE_URL at the RunPod endpoint and sends
+  # OLLAMA_API_KEY as the bearer (see ctf/docs/developer/OLLAMA.md). The worker
+  # image lives in the dedicated ctf/Runpod repo, not here. Nothing to run on Render.
 
   # ── Infisical (secrets management) AND Unleash (feature flags) ───
   # BOTH stay on Railway — re-confirmed June 2026 after re-examining a move to Render.
