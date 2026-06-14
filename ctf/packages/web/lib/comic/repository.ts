@@ -17,7 +17,6 @@ import {
 } from './constants';
 import {
   evaluateComicSafety,
-  forceHumanReview,
   mentionsComic,
   passesComicModeration,
   stripComicMention,
@@ -333,72 +332,87 @@ export async function routeComicMessage(
     throw new Error('rate_limit_exceeded');
   }
 
-  // No NLU label is attached to the user turn. The intent/confidence columns stay null (they remain
-  // in the schema for historical data only). Every answer still goes to human review regardless.
-  const nlu = { intent: null, confidence: null };
-
-  // Generate the AI draft OUTSIDE the DB transaction. Awaiting a slow
-  // Ollama call inside an open transaction risks Neon aborting it (idle-in-transaction timeout),
-  // which would roll back the captured question so it never reaches the review queue. Safety-flagged
-  // questions are human-first and skip the draft. generateComicDraft never throws (it falls back to a
-  // template), so the question is always captured and queued regardless of the AI's availability.
-  const draft = safety.flagged ? null : await generateComicDraft(questionBody);
-  if (draft) {
-    await logComicInference({ actorId, draft });
-  }
-
-  return withDbTransaction(async (client) => {
-    const conversationId = await resolveConversation(client, actorId, channel, input.conversationId ?? null);
-
-    const userTurnId = await insertTurn(client, {
-      conversationId,
+  // Capture the question and enqueue it for human review IMMEDIATELY — before any AI draft work, in
+  // one short transaction. This guarantees every question reaches the review queue and lets the
+  // asker's submit return without waiting on the model. A slow model call (a serverless GPU cold
+  // start can take tens of seconds) no longer blocks the request. No NLU label is attached; the
+  // intent/confidence columns stay null (kept for historical data only). Every answer still goes to
+  // human review — see #504 for the future confidence-gated auto-publish.
+  const reason = safety.flagged ? `safety:${safety.category}` : 'interim_human_review';
+  const { conversationId, userTurnId, reviewId } = await withDbTransaction(async (client) => {
+    const resolvedConversationId = await resolveConversation(client, actorId, channel, input.conversationId ?? null);
+    const insertedUserTurnId = await insertTurn(client, {
+      conversationId: resolvedConversationId,
       role: 'user',
       body: questionBody,
-      intent: nlu.intent,
-      nluConfidence: nlu.confidence,
-      engine: 'human',
-    });
-
-    // Safety-flagged (or, defensively, no draft) → human-first: queue the user turn for a human to
-    // answer directly. The question always reaches the review queue regardless of the AI.
-    if (safety.flagged || !draft) {
-      const reason = safety.flagged ? `safety:${safety.category}` : 'interim_human_review';
-      const reviewId = await enqueueReview(client, userTurnId, reason);
-      return {
-        outcome: safety.flagged ? 'human_first' : 'review_pending',
-        conversationId,
-        userTurnId,
-        draftTurnId: null,
-        reviewId,
-        safetyCategory: safety.flagged ? safety.category : null,
-        holdingResponse: safety.flagged ? COMIC_SAFETY_HOLDING_RESPONSE : COMIC_HOLDING_RESPONSE,
-      };
-    }
-
-    // Not safety-flagged: capture the AI draft (generated above) as a bot turn and enqueue it for
-    // review. `forceHumanReview()` is unconditionally true, so nothing is ever auto-published.
-    const draftTurnId = await insertTurn(client, {
-      conversationId,
-      role: 'bot',
-      body: draft.body,
       intent: null,
       nluConfidence: null,
-      engine: draft.engine,
+      engine: 'human',
     });
-
-    const mustReview = forceHumanReview();
-    const reviewId = mustReview ? await enqueueReview(client, draftTurnId, 'interim_human_review') : null;
-
-    return {
-      outcome: 'review_pending',
-      conversationId,
-      userTurnId,
-      draftTurnId,
-      reviewId,
-      safetyCategory: null,
-      holdingResponse: COMIC_HOLDING_RESPONSE,
-    };
+    const insertedReviewId = await enqueueReview(client, insertedUserTurnId, reason);
+    return { conversationId: resolvedConversationId, userTurnId: insertedUserTurnId, reviewId: insertedReviewId };
   });
+
+  // For non-safety-flagged questions, generate the AI draft in the BACKGROUND and attach it to the
+  // review row just created. Detached on purpose (`void`): the asker's submit must not wait on the
+  // model. On the persistent Node server this promise runs after the response is sent; if it never
+  // finishes (process restart, model down) the question simply stays a human-answered review, so the
+  // human-review guarantee is unaffected. Safety-flagged questions skip the draft (human-first).
+  if (!safety.flagged && isOllamaConfigured()) {
+    void generateAndAttachDraft({ actorId, conversationId, reviewId, questionBody });
+  }
+
+  return {
+    outcome: safety.flagged ? 'human_first' : 'review_pending',
+    conversationId,
+    userTurnId,
+    draftTurnId: null,
+    reviewId,
+    safetyCategory: safety.flagged ? safety.category : null,
+    holdingResponse: safety.flagged ? COMIC_SAFETY_HOLDING_RESPONSE : COMIC_HOLDING_RESPONSE,
+  };
+}
+
+// Background draft generation. Called detached (not awaited) from routeComicMessage after the
+// question is already queued for review. Generates the AI draft, then — only if the reviewer has
+// not already resolved the question — inserts it as a bot turn and repoints the review row at that
+// draft so the reviewer sees an AI draft to approve or correct. The asker's question is still
+// resolved as the most recent user turn at/before the queued turn, so repointing is safe. Never
+// throws: any failure leaves the question as a human-answered review.
+async function generateAndAttachDraft(input: {
+  actorId: string;
+  conversationId: string;
+  reviewId: string;
+  questionBody: string;
+}): Promise<void> {
+  try {
+    const draft = await generateComicDraft(input.questionBody);
+    await logComicInference({ actorId: input.actorId, draft });
+    await withDbTransaction(async (client) => {
+      const pending = await client.query<{ id: string }>(
+        `SELECT id FROM comic_review_queue WHERE id = $1::uuid AND status = 'pending' FOR UPDATE`,
+        [input.reviewId],
+      );
+      if (pending.rows.length === 0) {
+        // Resolved by a reviewer (or removed) while the draft was generating — leave it alone.
+        return;
+      }
+      const draftTurnId = await insertTurn(client, {
+        conversationId: input.conversationId,
+        role: 'bot',
+        body: draft.body,
+        intent: null,
+        nluConfidence: null,
+        engine: draft.engine,
+      });
+      await client.query(
+        `UPDATE comic_review_queue SET turn_id = $2::uuid WHERE id = $1::uuid AND status = 'pending'`,
+        [input.reviewId, draftTurnId],
+      );
+    });
+  } catch (err) {
+    console.error('[comic/repository] background draft generation/attach failed', err);
+  }
 }
 
 function clampPage(value: number | undefined): number {
