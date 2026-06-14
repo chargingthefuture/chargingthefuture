@@ -104,7 +104,7 @@ export function ServiceCreditsShell() {
           </div>
         </div>
         {content}
-        <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />
+        <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} isMobile />
       </div>
     );
   }
