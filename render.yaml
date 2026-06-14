@@ -114,6 +114,11 @@ services:
   # Private service — reachable by other Render services via internal URL.
   # Model (llama3.2) is baked into the image at build time. Image only rebuilt
   # when ctf/ops/ollama/Dockerfile changes (path-filtered in build-images.yml).
+  # Render has no GPUs, so this runs a small model on CPU. To run a stronger model
+  # (issue #502) move Ollama to an external GPU host and point the web service's
+  # OLLAMA_BASE_URL/OLLAMA_MODEL (and OLLAMA_API_KEY if the host is behind a proxy)
+  # at it — see ctf/docs/developer/OLLAMA.md — then remove this block. Until then
+  # this stays as-is so production keeps a working (if weak) model.
   - type: pserv
     name: ctf-ollama
     runtime: image

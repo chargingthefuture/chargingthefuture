@@ -2,6 +2,22 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? '';
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2';
 const OLLAMA_TIMEOUT_MS = 30_000;
 
+// Optional bearer token for reaching the Ollama host. Empty when the host is the
+// private-network Render service (ctf-ollama), which needs no auth. When Ollama is
+// moved to an external GPU host reachable over the internet, that host must sit
+// behind a gateway/proxy that checks this token — Ollama itself has no auth — and
+// OLLAMA_API_KEY is set on the web service so every request carries it. Backward
+// compatible: unset → no Authorization header → today's behavior, unchanged.
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY ?? '';
+
+function ollamaHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (OLLAMA_API_KEY.length > 0) {
+    headers.Authorization = `Bearer ${OLLAMA_API_KEY}`;
+  }
+  return headers;
+}
+
 export type OllamaMessage = {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -39,7 +55,7 @@ export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaR
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify({
         model: OLLAMA_MODEL,
         messages,
