@@ -51,6 +51,30 @@ export function isRasaConfigured(): boolean {
   return RASA_BASE_URL.trim().length > 0;
 }
 
+// Lightweight liveness probe for admin status panels. Hits the same `POST /model/parse` the app
+// uses (with a trivial text), so "reachable" reflects the real path. Short timeout; never throws.
+export async function pingRasa(): Promise<{ configured: boolean; reachable: boolean; latencyMs: number | null }> {
+  if (!isRasaConfigured()) {
+    return { configured: false, reachable: false, latencyMs: null };
+  }
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const response = await fetch(`${RASA_BASE_URL.replace(/\/$/, '')}/model/parse`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'ping' }),
+      signal: controller.signal,
+    });
+    return { configured: true, reachable: response.ok, latencyMs: Date.now() - startedAt };
+  } catch {
+    return { configured: true, reachable: false, latencyMs: null };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function toFiniteNumberOrNull(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

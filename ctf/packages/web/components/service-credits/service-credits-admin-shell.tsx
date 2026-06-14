@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { ServiceCreditsGovernancePanel } from './sca-governance-panel';
 import { ServiceCreditsTreasuryPanel } from './sca-treasury-panel';
 import { ServiceCreditsDisputesPanel } from './sca-disputes-panel';
+import { ServiceCreditsLedgerStatus } from './sca-ledger-status';
 
 export function ServiceCreditsAdminShell() {
   const isMobile = useIsMobile();
@@ -29,6 +30,7 @@ export function ServiceCreditsAdminShell() {
         </p>
       </header>
 
+      <ServiceCreditsLedgerStatus />
       <ServiceCreditsTreasuryPanel />
       <ServiceCreditsGovernancePanel />
       <ServiceCreditsDisputesPanel />

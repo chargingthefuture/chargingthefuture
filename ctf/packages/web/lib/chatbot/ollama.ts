@@ -25,6 +25,25 @@ export function isOllamaConfigured(): boolean {
   return OLLAMA_BASE_URL.length > 0;
 }
 
+// Lightweight liveness probe for admin status panels. Hits Ollama's GET /api/tags (lists models —
+// no inference, so it is fast and free) with a short timeout. Never throws.
+export async function pingOllama(): Promise<{ configured: boolean; reachable: boolean; latencyMs: number | null; model: string }> {
+  if (!isOllamaConfigured()) {
+    return { configured: false, reachable: false, latencyMs: null, model: OLLAMA_MODEL };
+  }
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL.replace(/\/$/, '')}/api/tags`, { signal: controller.signal });
+    return { configured: true, reachable: response.ok, latencyMs: Date.now() - startedAt, model: OLLAMA_MODEL };
+  } catch {
+    return { configured: true, reachable: false, latencyMs: null, model: OLLAMA_MODEL };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaResult> {
   if (!isOllamaConfigured()) {
     throw new Error('ollama_not_configured');
