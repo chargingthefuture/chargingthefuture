@@ -1640,14 +1640,15 @@ export async function relabelQuestionCategory(
   });
 }
 
-type RasaExportRow = {
+type QuestionExportRow = {
   id: string;
   body: string;
   category: FeedQuestionCategory;
 };
 
-export async function exportQuestionsForRasa(): Promise<Record<FeedQuestionCategory, string[]>> {
-  const result = await queryDb<RasaExportRow>(
+// Group every feed question by category. Used by the admin training export.
+export async function exportQuestionsByCategory(): Promise<Record<FeedQuestionCategory, string[]>> {
+  const result = await queryDb<QuestionExportRow>(
     `
       SELECT id, body, category
       FROM feed_questions

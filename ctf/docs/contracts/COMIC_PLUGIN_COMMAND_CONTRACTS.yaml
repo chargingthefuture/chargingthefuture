@@ -39,7 +39,7 @@ contracts:
   - pluginId: comic
     command: comic.reply.generate
     version: 1.0.0
-    description: Generate an AI Assistant draft reply for a captured @comic turn via the self-hosted Ollama backend. While Rasa is undeployed the draft is enqueued for human review and never surfaced to the asker.
+    description: Generate an AI Assistant draft reply for a captured @comic turn via the self-hosted Ollama backend. Every draft is enqueued for human review and never surfaced to the asker.
     inputSchema:
       turnId:
         type: string
@@ -86,7 +86,7 @@ contracts:
   - pluginId: comic
     command: comic.review.resolve
     version: 1.0.0
-    description: Owner resolution of a pending AI Assistant draft — approve, correct (edit), or reject. A corrected resolution persists the asker's question as a training example for the Rasa export.
+    description: Owner resolution of a pending AI Assistant draft — approve, correct (edit), or reject. A corrected resolution persists the asker's question as a training example for the training-data export.
     inputSchema:
       reviewId:
         type: string
@@ -180,7 +180,7 @@ contracts:
   - pluginId: comic
     command: comic.training.export
     version: 1.0.0
-    description: Export accumulated AI Assistant training examples (asker questions plus owner-assigned intent labels from corrections) as Rasa NLU YAML. Supersedes the feed category-only export by sourcing real turns and corrections.
+    description: Export accumulated AI Assistant training examples (asker questions plus owner-assigned intent labels from corrections) as NLU-style training YAML (or JSON). Supersedes the feed category-only export by sourcing real turns and corrections.
     inputSchema:
       format:
         type: string

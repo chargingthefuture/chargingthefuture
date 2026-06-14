@@ -22,8 +22,8 @@ type ConfidenceBand = {
   pct: number | null;
 };
 
-// Map the real (possibly null) NLU confidence to a band. Rasa is not deployed yet, so confidence
-// is typically null — surfaced honestly as "Not yet scored" rather than a fabricated percentage.
+// Map the (possibly null) NLU confidence to a band. Confidence is no longer populated, so it is
+// typically null — surfaced honestly as "Not yet scored" rather than a fabricated percentage.
 function confidenceBand(confidence: number | null): ConfidenceBand {
   if (confidence === null) {
     return { label: 'Not yet scored', className: styles.confNone, pct: null };
@@ -373,7 +373,7 @@ export function ComicReviewConsole() {
                       </div>
                     )}
                     <div className={styles.provenanceRow}>
-                      <FileText size={13} color="#0EA5E9" /> Intent: {selected.intent ?? 'not classified (Rasa pending)'}
+                      <FileText size={13} color="#0EA5E9" /> Intent: {selected.intent ?? 'not classified'}
                     </div>
                     {selected.safetyCategory ? (
                       <div className={styles.provenanceRow}>

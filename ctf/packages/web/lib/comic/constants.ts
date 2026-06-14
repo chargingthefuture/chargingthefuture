@@ -35,6 +35,8 @@ export const COMIC_MESSAGE_RATE_WINDOW_MINUTES = 60;
 
 export const COMIC_CHANNELS = ['hub', 'feed'] as const;
 export const COMIC_TURN_ROLES = ['user', 'bot', 'human'] as const;
+// 'rasa' is retained as a historical engine value only (the Rasa NLU integration was removed
+// 2026-06-14); no new turn is written with it. Mirrors the schema engine CHECK constraint.
 export const COMIC_TURN_ENGINES = ['rasa', 'ollama', 'template', 'human'] as const;
 export const COMIC_REVIEW_STATUSES = ['pending', 'approved', 'corrected', 'rejected'] as const;
 export const COMIC_REVIEW_RESOLUTIONS = ['approve', 'correct', 'reject'] as const;

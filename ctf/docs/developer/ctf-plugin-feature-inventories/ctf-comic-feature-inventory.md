@@ -1,5 +1,22 @@
 # comic AI Assistant Feature Inventory (CTF v3)
 
+> UPDATE 2026-06-14 — Rasa removed; this supersedes the Rasa parts below.
+> The self-hosted Rasa NLU service (`ctf-rasa`) and its backend client (`lib/comic/rasa.ts`) were
+> removed. Rasa only attached an intent + confidence label to each turn for the reviewer; it never
+> generated answers and never gated auto-publish. Wherever this document describes a "target
+> architecture" of Rasa + Ollama, Rasa orchestration, a Rasa training/retrain loop, a Rasa SQL
+> tracker store, or Rasa-backed routing, treat it as cancelled history, not the plan.
+>
+> Current and intended direction: generation is Ollama only; every `@comic` answer still goes
+> through human review (`policy.forceHumanReview()` is unconditionally `true`). The `engine` enum
+> still lists `rasa` and the `intent`/`nlu_confidence` columns remain, but only for historical rows
+> — nothing writes them now. The training-example export (`GET /api/comic/training/export`) is kept
+> as a portable dataset of asker questions + owner-labelled corrections for whatever model is
+> trained later. The path to scale is: upgrade the self-hosted Ollama model on a GPU host (issue
+> #502), then build retrieval and a confidence/safety gate, and later fine-tune an open model on the
+> exported, de-identified dataset. A third-party API (e.g. Claude) is off the table for survivor
+> question text on privacy grounds.
+
 > **What this is.** `@comic` is the AI chat assistant inside the unified Hub/Feed chat —
 > one of the feed's three interleaved content types (**admin-only announcements**,
 > **AI Q&A via `@comic`**, **peer-to-peer community posts**) rendered in a single UI.
@@ -64,6 +81,32 @@ are intentionally left for a later tuning pass — see "Future Notes."
    - **Naming = `comic_*` (confirmed 2026-05-31).** Matches the dominant `<domain>_*`
      convention used by all ~156 domain tables (`feed_*`, `chyme_*`, …); the `ctf_` prefix
      stays reserved for the one global table (`ctf_plugin_registry`).
+
+## Owner-Locked Decisions (2026-06-14) — supersede #2, #4, #5 above
+
+These replace the Rasa-based decisions and are settled; do not relitigate.
+
+1. No third-party AI service for survivor question text. `@comic` questions can carry location,
+   identity, and abuse details, so the text must not leave our infrastructure. A hosted API
+   (e.g. Claude) is therefore off the table for drafting `@comic` answers. Generation stays
+   self-hosted.
+2. Rasa is removed (see the note at the top of this file). It only produced reviewer-side intent
+   labels, never generated answers, and never gated auto-publish — not worth its hosting cost. The
+   `engine` enum's `rasa` value and the `intent`/`nlu_confidence` columns remain for historical
+   rows only.
+3. Generation is self-hosted Ollama, to be upgraded. Near term, move `ctf-ollama` from the weak
+   CPU `llama3.2` to a stronger open model on a GPU host (issue #502). The deterministic template
+   fallback stays for when Ollama is unreachable.
+4. The human-in-the-loop work is the dataset. Every captured turn plus the owner's approve/correct
+   decision and the `helpful/not_helpful/flagged` rating is the training set. It lives in the
+   `comic_*` tables and is exportable via `GET /api/comic/training/export`. The owner answering
+   questions now is building this dataset, not just clearing a queue.
+5. Path to scale (no model-training shortcut). The model does not learn from answers automatically.
+   Order: (a) capture the dataset cleanly now; (b) build a retrieval layer so new drafts are
+   grounded in the owner's approved answers; (c) once there is volume, fine-tune an open model on
+   the exported, de-identified dataset and serve it self-hosted. Strategy tracked in its own issue.
+6. Human review stays at 100% (`policy.forceHumanReview()` unconditionally `true`) until a
+   confidence/safety gate is built and tested. No confidence-based auto-publish exists yet.
 
 ## Existing Precursors (verified in code, 2026-05-31)
 
@@ -181,25 +224,22 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   (user, turn), re-rating updates in place. Mirrors the feed answer-rating pattern; feeds the CDD
   flywheel.
 
-Engine reality: **Ollama is deployed; the Rasa NLU service is now scaffolded** (image + Render
-pserv + CI) and **integrated** for intent/confidence. `lib/comic/rasa.ts` `isRasaConfigured()` is
-true iff `RASA_BASE_URL` is set; `parseComicIntent` POSTs to `${RASA_BASE_URL}/model/parse` with a
-timeout + try/catch, returning `{ intent, confidence }` (null on any failure). When configured,
-`routeComicMessage` attaches the **real** intent + `nlu_confidence` to the user turn; when not, the
-turn keeps the prior null/null (no Rasa call — byte-for-byte unchanged). **Critically,
-`policy.forceHumanReview()` now returns `true` unconditionally** (decoupled from Rasa config), so
-**every** `@comic` answer still goes to human review — Rasa supplies labels only, never an
-auto-publish bypass. Generation still happens in the app via Ollama (`generateComicDraft`), not via
-Rasa. See `ctf/ops/rasa/` + `ctf/docs/developer/RASA.md`.
+Engine reality (2026-06-14): Ollama is the only AI engine. The Rasa NLU service and
+`lib/comic/rasa.ts` were removed. `routeComicMessage` no longer calls any NLU service, so the user
+turn's `intent` + `nlu_confidence` are left null. `policy.forceHumanReview()` returns `true`
+unconditionally, so **every** `@comic` answer still goes to human review. Generation happens in the
+app via Ollama (`generateComicDraft`), with a deterministic template fallback when Ollama is
+unconfigured or unreachable.
 
 ### Target (`@comic`)
 - Mention routing also to ride the Hub message path (`POST /api/hub/messages`) once that stub
   is wired; today the dedicated `POST /api/comic/message` is the server entry point.
-- Auto-reply branch (above-threshold) is **deliberately deferred** — even though Rasa now supplies
-  a real, calibratable confidence, `forceHumanReview()` stays unconditionally true until the owner
-  chooses to raise the auto-respond threshold. No confidence-based auto-publish exists yet.
-- Rasa/Ollama are reached **server-side only**; no third-party LLM egress (parity with the
-  Hub's stance — and Ollama is self-hosted, so it is not third-party).
+- Auto-reply branch (above-threshold) is **deferred**. There is no model-derived confidence now
+  (Rasa removed), so `forceHumanReview()` stays unconditionally true. A confidence/safety gate is
+  future work, after an Ollama model upgrade (issue #502) and a retrieval layer.
+- Ollama is reached **server-side only**; no third-party LLM egress. Ollama is self-hosted, so
+  survivor question text never leaves our infrastructure — the privacy reason a third-party API is
+  not used here.
 
 ## Data Model and Storage Contracts
 
@@ -424,6 +464,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-06-14: Removed the Rasa NLU integration; Ollama is now the only @comic AI engine. Deleted the `ctf-rasa` private Render service block (`render.yaml`), its image build job and path filter (`build-images.yml`), the ops project (`ctf/ops/rasa/`), the backend client (`lib/comic/rasa.ts`), the deploy runbook (`ctf/docs/developer/RASA.md`), and the Rasa status badge on the AI review console (web + Android) and the `ai-status` route (now returns `{ ok, ollama }`). `routeComicMessage` no longer calls any NLU service, so `intent`/`nlu_confidence` on the user turn stay null. Non-destructive on data: the `engine` CHECK still lists `rasa` and the `intent`/`nlu_confidence` columns remain for historical rows; nothing writes them now (noted in `schema.sql`/`schema.demo.sql`). The training-example export route was kept and de-Rasa-named (`buildTrainingNluYaml`) as a portable dataset for a future model. Reason: Rasa only produced reviewer-side intent labels at ~$25/mo, never generated answers, and never gated auto-publish — low value for the cost. Direction instead: upgrade the self-hosted Ollama model on a GPU host (issue #502), then retrieval + a confidence/safety gate, then fine-tune an open model on the exported, de-identified dataset; a third-party API stays off the table for survivor question text on privacy grounds. Contracts and this inventory updated; the Rasa-based "target architecture" sections below are superseded (see the note at the top of this file).
 - 2026-06-13: Made @comic question capture reliable and fixed the asker copy. The Ollama draft was generated **inside** the question-capture DB transaction; a slow Ollama (up to the 30s timeout) held the transaction open, which Neon could abort (idle-in-transaction) and roll back the captured question — so it never reached the admin review queue. `routeComicMessage` now generates the draft (and logs inference) **outside** the transaction, mirroring the existing Rasa call, so the user turn + a `pending` review row always commit fast and reach `/admin/comic` regardless of the AI's speed/availability. Added a defensive human-first fallback when no draft is produced. Asker pending copy changed from "AI Assistant is preparing an answer…" to "Preparing your answer — a teammate is writing a verified response. Answers typically arrive within 72 hours." (sets honest expectations; the owner answers every question). No schema or contract change.
 - 2026-06-12: The Android @comic API client (`packages/mobile/src/features/comic/api.ts`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs. No schema, route, or contract change.
 - 2026-06-07: Aligned the **AI review console** (web + Android) to the newer `AIReviewConsole*` /

@@ -22,7 +22,6 @@ import {
   passesComicModeration,
   stripComicMention,
 } from './policy';
-import { isRasaConfigured, parseComicIntent } from './rasa';
 import type {
   ComicAnswerRatingValue,
   ComicAskerStreamItem,
@@ -114,8 +113,7 @@ function toNumberOrNull(value: string | null): number | null {
 }
 
 // `general` is the safe default intent bucket; the safety category (when present) is the most
-// useful coarse training label, otherwise everything goes to `general` until Rasa supplies real
-// intents.
+// useful coarse training label, otherwise everything goes to `general`.
 function deriveIntentLabel(safetyCategory: string | null): string {
   return safetyCategory ?? 'general';
 }
@@ -327,24 +325,19 @@ export async function routeComicMessage(
   const channel = normalizeChannel(input.channel);
   const safety = evaluateComicSafety(questionBody);
 
-  // Gate on the rate limit FIRST (its own short, read-only transaction) so a throttled user never
-  // triggers a (slow) Rasa call. The check is just a COUNT of recent turns, so running it separately
-  // from the insert below is safe — the tiny concurrency window is acceptable for a soft throttle.
+  // Gate on the rate limit FIRST (its own short, read-only transaction). The check is just a COUNT
+  // of recent turns, so running it separately from the insert below is safe — the tiny concurrency
+  // window is acceptable for a soft throttle.
   const allowed = await withDbTransaction((client) => evaluateComicRateLimit(client, actorId));
   if (!allowed) {
     throw new Error('rate_limit_exceeded');
   }
 
-  // Real NLU label for the user turn when Rasa is configured — only reached for allowed messages;
-  // otherwise the unchanged null/null default (no Rasa call). `parseComicIntent` never throws and
-  // returns nulls on any failure, so a Rasa outage degrades gracefully. This is label-only: it does
-  // NOT affect human-review routing (every answer is still reviewed) — it improves the reviewer's
-  // display and training data.
-  const nlu = isRasaConfigured()
-    ? await parseComicIntent(questionBody)
-    : { intent: null, confidence: null };
+  // No NLU label is attached to the user turn. The intent/confidence columns stay null (they remain
+  // in the schema for historical data only). Every answer still goes to human review regardless.
+  const nlu = { intent: null, confidence: null };
 
-  // Generate the AI draft OUTSIDE the DB transaction (mirrors the Rasa call above). Awaiting a slow
+  // Generate the AI draft OUTSIDE the DB transaction. Awaiting a slow
   // Ollama call inside an open transaction risks Neon aborting it (idle-in-transaction timeout),
   // which would roll back the captured question so it never reaches the review queue. Safety-flagged
   // questions are human-first and skip the draft. generateComicDraft never throws (it falls back to a
@@ -623,7 +616,7 @@ export async function resolveComicReview(
 
     if (resolution === 'correct' && correctedBody) {
       // A correction is a supervised training signal: persist the asker's question text under a
-      // coarse intent label so the export feeds Rasa NLU. (Approvals/rejections are not training
+      // coarse intent label for the training export. (Approvals/rejections are not training
       // examples — only owner-authored corrections are.)
       const trainingInsert = await client.query<{ id: string }>(
         `

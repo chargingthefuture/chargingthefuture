@@ -3529,10 +3529,12 @@ ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS pro
 ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === comic AI Assistant (@comic) — conversation + supervision + training layer ===
--- The @comic assistant captures every turn, drafts via Ollama, and (while Rasa is not
--- deployed) routes every draft to human review before the asker ever sees it. These tables
--- back conversation capture, the owner review/correction queue, and the Rasa training export.
--- Guarded DDL (CREATE TABLE IF NOT EXISTS + per-column ALTER ... ADD COLUMN IF NOT EXISTS)
+-- The @comic assistant captures every turn, drafts via Ollama, and routes every draft to human
+-- review before the asker ever sees it. These tables back conversation capture, the owner
+-- review/correction queue, and the training-example export.
+-- The 'rasa' value in the engine CHECK below and the intent/nlu_confidence columns are retained
+-- for historical rows only; the Rasa NLU integration was removed 2026-06-14 and no longer writes
+-- them. Guarded DDL (CREATE TABLE IF NOT EXISTS + per-column ALTER ... ADD COLUMN IF NOT EXISTS)
 -- per the migration rules so fresh and legacy DBs converge.
 
 CREATE TABLE IF NOT EXISTS comic_conversations (

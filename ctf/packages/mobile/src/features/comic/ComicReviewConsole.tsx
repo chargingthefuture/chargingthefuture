@@ -48,8 +48,8 @@ function confidenceLabel(value: number | null): string {
 
 type ConfidenceBand = { label: string; color: string; pct: number | null; low: boolean };
 
-// Map the real (possibly null) NLU confidence to a band, mirroring the web console. Rasa is not
-// deployed yet, so confidence is typically null — surfaced honestly rather than a fabricated number.
+// Map the (possibly null) NLU confidence to a band, mirroring the web console. Confidence is no
+// longer populated, so it is typically null — surfaced honestly rather than a fabricated number.
 function confidenceBand(value: number | null): ConfidenceBand {
   if (value === null) return { label: 'Not yet scored', color: ACCENT_LIGHT, pct: null, low: false };
   const pct = Math.round(value * 100);

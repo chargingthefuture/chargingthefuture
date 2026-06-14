@@ -46,7 +46,7 @@ and hides meaning.
   it before you rely on it" over "validate end-to-end"; "make sure" over "ensure idempotency"; "the
   background service" over "the daemon/pserv"). Write so a non-specialist can follow.
 - **If a technical term is genuinely necessary, define it in plain words on first use** — one short
-  parenthetical is enough (e.g. "Rasa (the tool that works out what a question is asking)"). Don't
+  parenthetical is enough (e.g. "Ollama (the self-hosted tool that writes a draft answer)"). Don't
   assume the reader knows acronyms; spell them out the first time.
 - **Explain, don't just name.** Say what something does and why it matters, not only its label.
 - **Exempt:** real code identifiers, file paths, command names, and established proper nouns (service
