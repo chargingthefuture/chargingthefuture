@@ -195,7 +195,7 @@ export const ChymeRoom: React.FC = () => {
 
 function makeStyles(t: ThemeTokens) {
   // Default theme keeps the deep-green Chyme chrome; comic theme uses the ink palette.
-  const bg = t.isComic ? t.bg : '#021006';
+  const bg = t.isComic ? t.bg : '#04160A';
   return StyleSheet.create({
     errorContainer: {
       flex: 1,

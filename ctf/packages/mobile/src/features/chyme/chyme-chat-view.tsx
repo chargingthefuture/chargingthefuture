@@ -115,7 +115,7 @@ export const ChymeChatView: React.FC<Props> = ({
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#021006' },
+  container: { flex: 1, backgroundColor: '#04160A' },
   statusBar: {
     height: 44,
     backgroundColor: '#030d05',

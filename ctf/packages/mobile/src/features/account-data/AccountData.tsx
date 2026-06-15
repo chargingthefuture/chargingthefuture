@@ -50,7 +50,7 @@ function glyph(slug: string): string {
 // The Account & Data accent is the destructive-zone colour: comic-danger in comic theme,
 // the existing pink brand in default theme. Everything else is driven from the theme tokens.
 function accentFor(t: ThemeTokens): string {
-  return t.isComic ? '#B91C1C' : '#E91E8C';
+  return t.isComic ? '#B91C1C' : '#D946EF';
 }
 
 type Tab = 'data' | 'danger';

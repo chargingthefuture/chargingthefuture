@@ -7,8 +7,8 @@ import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } fro
 import type { Announcement } from 'lib/feed/types';
 import { LighthouseAdminAnnouncements } from './lighthouse-admin-announcements';
 
-// Admin design tokens (shared admin look). LightHouse accent is cyan.
-const COLOR = '#06B6D4';
+// Admin design tokens (shared admin look). LightHouse accent is blue.
+const COLOR = '#60A5FA';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const SURFACE = '#161B27';

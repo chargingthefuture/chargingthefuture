@@ -18,7 +18,7 @@
   color-scheme: dark;
 
   /* Root document chrome (globals html/body). */
-  --ctf-root-bg: #0b1020;
+  --ctf-root-bg: #0E061A;
   --ctf-root-text: #e5e7eb;
 
   /* Shared surface palette (community shell, account & data, plugin chrome). */
