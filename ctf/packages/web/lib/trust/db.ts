@@ -46,16 +46,44 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 // nothing is fabricated, and a member with no upstream rows simply yields zeroes (and therefore no
 // evidence — see buildTrustEvidence).
 //
-// Signals used in the `cross_plugin_engagement_v2` model:
-//   - login_events             → how often / how recently the member logs in
-//   - socketrelay_fulfillments → completed (closed) SocketRelay trades the member took part in
-//   - socketrelay_requests     → how many SocketRelay asks the member opened
-//   - service_credits_transfers→ completed transfers received + distinct members who paid them
-//   - service_credits_disputes → disputes against their received transfers (withholds clean-record)
-// Only coarse COUNTs are read from ServiceCredits — never amounts or balances — so no money figure
-// crosses into Trust, and no numeric score is produced.
+// Signals used in the `cross_plugin_engagement_v3` model:
+//   - login_events             → how often / how recently the member logs in (the universal "seen" signal)
+//   - socketrelay_*            → completed SocketRelay trades + requests opened
+//   - service_credits_*        → completed transfers received + distinct payers; disputes withhold clean-record
+//   - lighthouse_matches       → accepted/completed LightHouse matches
+//   - trusttransport_trips     → completed TrustTransport trips
+//   - skills_hunt_submissions  → accepted Skills Hunt submissions
+//   - levelup_enrollments      → completed LevelUp cohorts
+//   - chyme_room_members       → Chyme rooms joined
+//   - directory_profiles       → claimed Directory profile
+//   - whatworks_endorsements   → WhatWorks endorsements
+//   - peer_programming_cohort_members → Peer Programming cohorts joined
+//   - contributions_submissions→ confirmed contributions
+// Only coarse COUNTs are read — never amounts, balances, or sensitive per-row detail — and no numeric
+// score is produced. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood,
+// GentlePulse, Unlock) are deliberately excluded so Trust never exposes what a member is going through;
+// their activity is still reflected by the login signal. Foundation is deferred pending status semantics.
+function countOf(result: { rows: { count: string }[] }): number {
+  return Number(result.rows[0]?.count ?? 0);
+}
+
 export async function computeTrustSignalMetrics(userId: string): Promise<TrustSignalMetrics> {
-  const [loginAgg, completedTrades, requestsOpened, scReceived, scDisputes] = await Promise.all([
+  const [
+    loginAgg,
+    completedTrades,
+    requestsOpened,
+    scReceived,
+    scDisputes,
+    lighthouse,
+    trustTransport,
+    skillsHunt,
+    levelup,
+    chyme,
+    directory,
+    whatWorks,
+    peerProgramming,
+    contributions,
+  ] = await Promise.all([
     queryDb<{ login_days: string; login_events: string; last_login_at: Date | null }>(
       `SELECT
          COUNT(DISTINCT date_trunc('day', created_at)) AS login_days,
@@ -98,6 +126,46 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
        WHERE t.recipient_user_id = $1`,
       [userId]
     ),
+    // Per-plugin participation — one coarse COUNT each, completed/accepted/claimed states only. No
+    // sensitive per-row detail; sensitive personal-wellbeing/verification plugins are excluded by design.
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM lighthouse_matches
+       WHERE (seeker_user_id = $1 OR host_user_id = $1) AND status IN ('accepted', 'completed')`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM trusttransport_trips
+       WHERE (requester_user_id = $1 OR provider_user_id = $1) AND status = 'completed'`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM skills_hunt_submissions WHERE submitter_user_id = $1 AND status = 'accepted'`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM levelup_enrollments WHERE user_id = $1 AND status = 'completed'`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM chyme_room_members WHERE user_id = $1`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM directory_profiles WHERE claimed_by_user_id = $1`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM whatworks_endorsements WHERE user_id = $1`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM peer_programming_cohort_members WHERE user_id = $1`,
+      [userId]
+    ),
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM contributions_submissions WHERE user_id = $1 AND status = 'confirmed'`,
+      [userId]
+    ),
   ]);
 
   const loginRow = loginAgg.rows[0];
@@ -110,6 +178,15 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     serviceCreditsDistinctPayers: Number(scReceived.rows[0]?.payers ?? 0),
     serviceCreditsCompletedReceived: Number(scReceived.rows[0]?.completed ?? 0),
     serviceCreditsDisputesAgainst: Number(scDisputes.rows[0]?.disputes ?? 0),
+    lighthouseMatchesAccepted: countOf(lighthouse),
+    trustTransportTripsCompleted: countOf(trustTransport),
+    skillsHuntSubmissionsAccepted: countOf(skillsHunt),
+    levelupCohortsCompleted: countOf(levelup),
+    chymeRoomsJoined: countOf(chyme),
+    directoryProfilesClaimed: countOf(directory),
+    whatWorksEndorsements: countOf(whatWorks),
+    peerProgrammingCohortsJoined: countOf(peerProgramming),
+    contributionsConfirmed: countOf(contributions),
   };
 }
 
@@ -172,6 +249,30 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
       createdAt: nowIso,
       createdBy: 'trust-signal',
     });
+  }
+
+  // Per-plugin participation signals. Data-driven so the set can grow without raising the function's
+  // complexity; each emits one categorical "verb N noun" item only when the real count is > 0.
+  const participationSignals: { count: number; type: string; verb: string; singular: string; plural: string }[] = [
+    { count: metrics.lighthouseMatchesAccepted, type: 'engagement-lighthouse-matches', verb: 'Accepted', singular: 'LightHouse match', plural: 'LightHouse matches' },
+    { count: metrics.trustTransportTripsCompleted, type: 'engagement-trusttransport-trips', verb: 'Completed', singular: 'TrustTransport trip', plural: 'TrustTransport trips' },
+    { count: metrics.skillsHuntSubmissionsAccepted, type: 'engagement-skillshunt-submissions', verb: 'Accepted', singular: 'Skills Hunt submission', plural: 'Skills Hunt submissions' },
+    { count: metrics.levelupCohortsCompleted, type: 'engagement-levelup-cohorts', verb: 'Completed', singular: 'LevelUp cohort', plural: 'LevelUp cohorts' },
+    { count: metrics.chymeRoomsJoined, type: 'engagement-chyme-rooms', verb: 'Joined', singular: 'Chyme room', plural: 'Chyme rooms' },
+    { count: metrics.directoryProfilesClaimed, type: 'engagement-directory-profile', verb: 'Claimed', singular: 'Directory profile', plural: 'Directory profiles' },
+    { count: metrics.whatWorksEndorsements, type: 'engagement-whatworks-endorsements', verb: 'Endorsed', singular: 'WhatWorks product', plural: 'WhatWorks products' },
+    { count: metrics.peerProgrammingCohortsJoined, type: 'engagement-peerprogramming-cohorts', verb: 'Joined', singular: 'Peer Programming cohort', plural: 'Peer Programming cohorts' },
+    { count: metrics.contributionsConfirmed, type: 'engagement-contributions', verb: 'Confirmed', singular: 'contribution', plural: 'contributions' },
+  ];
+  for (const signal of participationSignals) {
+    if (signal.count > 0) {
+      evidence.push({
+        type: signal.type,
+        summary: `${signal.verb} ${signal.count} ${signal.count === 1 ? signal.singular : signal.plural}`,
+        createdAt: nowIso,
+        createdBy: 'trust-signal',
+      });
+    }
   }
 
   return evidence;

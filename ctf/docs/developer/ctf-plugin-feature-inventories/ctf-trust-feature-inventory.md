@@ -37,9 +37,9 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 
 - `trust_user_extension` — Per-user extension: `user_id`, `trust_status` (default `unverified`), `trust_evidence` (JSONB array, default `[]`), `trust_visibility` (default `public`), `updated_at`. No numeric trust-score column exists; the qualitative signal is derived from cross-plugin engagement, not stored as a number. `trust_evidence` is rewritten by the snapshot route (derived items) and appended-to by the admin verification route (one admin item).
 - `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the visibility, snapshot, and admin-verification routes.
-- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — `loginDays`, `loginEvents`, `lastLoginAt`, `socketRelayCompletedTrades`, `socketRelayRequestsOpened`), `snapshot_type` (model version, default `cross_plugin_engagement_v1`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
+- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login*, socketRelay*, serviceCredits*, and the v3 per-plugin participation counts), `snapshot_type` (model version, default `cross_plugin_engagement_v3`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
 
-## Trust Signal Model (`cross_plugin_engagement_v2`)
+## Trust Signal Model (`cross_plugin_engagement_v3`)
 
 Trust derives a **qualitative, non-numeric** signal by counting **real rows** in already-seeded
 upstream plugins — it fabricates nothing. The snapshot route (`POST /api/trust/signal/snapshot`)
@@ -65,10 +65,30 @@ human-readable evidence items on `trust_user_extension`. Real signals that feed 
   producing a negative badge or a deduction — signal over noise, with dignity. The dispute count is
   kept in the snapshot metrics for the member's own and admin transparency, never surfaced publicly.
 
-Only coarse ServiceCredits COUNTs are read (never amounts or balances), so no money figure crosses into
-Trust. Real-data-only rule: any signal whose backing rows are absent (count of 0 / no login) produces
-**no** evidence item, so the panel never claims activity that did not happen. No numeric score is ever
-computed or stored. The snapshot route never changes `trust_status` (that is admin-controlled).
+- **Per-plugin participation (v3)** — one coarse COUNT each, completed/accepted/claimed states only, so a
+  member active in only one plugin is still seen (with less social proof than an all-plugins member, not the
+  same). Each emits one categorical "verb N noun" evidence item:
+  - LightHouse — `lighthouse_matches` accepted/completed → "Accepted N LightHouse matches"
+  - TrustTransport — `trusttransport_trips` completed → "Completed N TrustTransport trips"
+  - Skills Hunt — `skills_hunt_submissions` accepted → "Accepted N Skills Hunt submissions"
+  - LevelUp — `levelup_enrollments` completed → "Completed N LevelUp cohorts"
+  - Chyme — `chyme_room_members` → "Joined N Chyme rooms"
+  - Directory — `directory_profiles` (`claimed_by_user_id`) → "Claimed N Directory profiles"
+  - WhatWorks — `whatworks_endorsements` → "Endorsed N WhatWorks products"
+  - Peer Programming — `peer_programming_cohort_members` → "Joined N Peer Programming cohorts"
+  - Contributions — `contributions_submissions` confirmed → "Confirmed N contributions"
+
+**Privacy exclusions (by design):** sensitive personal-wellbeing/verification plugins are **not** surfaced
+as public trust evidence — **ClickLog** (safety incidents), **Mood** (mental-health check-ins),
+**GentlePulse** (wellness), and **Unlock** (survivor-verification approval). Surfacing those would expose
+what a member is going through; their activity is still reflected by the universal login signal. Plugins
+with no per-member participation (Workforce, Weekly Performance, Feed/Announcements, Skills Taxonomy, GDP)
+and Comic (fuzzy completion) are not applicable. **Foundation** is deferred pending status-enum confirmation.
+
+Only coarse COUNTs are read (never amounts, balances, or sensitive per-row detail), so no money figure or
+private detail crosses into Trust. Real-data-only rule: any signal whose backing rows are absent (count of
+0 / no login) produces **no** evidence item, so the panel never claims activity that did not happen. No
+numeric score is ever computed or stored. The snapshot route never changes `trust_status` (admin-controlled).
 
 ## Security, Privacy, and Compliance Controls
 
@@ -110,6 +130,7 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 
 ## Change Log
 
+- 2026-06-15: Platform-wide coverage — every applicable plugin now contributes a categorical Trust signal (#538), model `cross_plugin_engagement_v3`. Added 9 per-plugin participation signals (LightHouse, TrustTransport, Skills Hunt, LevelUp, Chyme, Directory, WhatWorks, Peer Programming, Contributions), each a coarse COUNT of completed/accepted/claimed rows emitting one categorical evidence item; the evidence builder is data-driven so the set can grow without complexity. A member active in only one plugin is now represented (with less social proof than an all-plugins member, never the same). Privacy exclusions by design: ClickLog/Mood/GentlePulse/Unlock are not surfaced (sensitive personal-wellbeing/verification — covered by login instead). Foundation deferred (status enum). No numeric score. Bumped `TRUST_SNAPSHOT_MODEL` to v3; extended `TrustSignalMetrics`; updated the command contract (`trust.signal.snapshot.refresh` v1.2.0 + 9 tables added to dataAccess), the deletion contract, and the signal-model section. Added rule `132-trust-signal-coverage-rules.mdc` and a New Plugin Lifecycle Checklist item. No schema change. Web typecheck clean.
 - 2026-06-15: Added ServiceCredits contribution signals to the model (`cross_plugin_engagement_v2`). The snapshot now also reads coarse COUNTs from `service_credits_transfers` (completed transfers received + distinct paying members) and `service_credits_disputes` (disputes against received transfers). Two new categorical evidence items: "Received ServiceCredits from N community members" (breadth) and "N completed ServiceCredits transfers, none disputed" (clean record). The clean-record signal is **withheld** when a dispute exists rather than producing a negative badge — signal over noise, with dignity. No amounts/balances are read and no numeric score is produced (reconciles the platform's no-credit/social-score commitment). Bumped `TRUST_SNAPSHOT_MODEL` to `cross_plugin_engagement_v2`; extended `TrustSignalMetrics`; updated command contract (`trust.signal.snapshot.refresh` v1.1.0, added `service_credits_transfers`/`service_credits_disputes` to dataAccess), the deletion contract metric bundle, and the signal-model section. No schema change (the snapshot JSONB absorbs the new fields). Web typecheck clean.
 
 - 2026-06-12: The Android Trust API client (`packages/mobile/src/features/trust/api.ts`) now uses the shared authenticated fetch helper — the call to `GET /api/trust/user/self` carries the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against a hardcoded development URL.
