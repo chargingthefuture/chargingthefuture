@@ -354,12 +354,12 @@ const tileStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#021006' },
+  container: { flex: 1, backgroundColor: '#04160A' },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#021006',
+    backgroundColor: '#04160A',
     paddingHorizontal: 24,
   },
   connectingText: { color: '#4B5563', fontSize: 14, marginTop: 16 },

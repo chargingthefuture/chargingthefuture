@@ -5,7 +5,7 @@
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
-export const GREEN = "#22C55E";
+export const GREEN = "#10B981";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
 export const BORDER = "#1E2A3A";
@@ -14,7 +14,7 @@ export const TEXT = "#E2E8F0";
 export const SUBTLE = "#94A3B8";
 
 // Theme-aware chrome tokens for the LevelUp shell. Default keeps the shipped values (accent stays the
-// green #22C55E, painted as solid and as rgba(34,197,94,…) tints); comic uses the shared comic surface
+// green #10B981, painted as solid and as rgba(16,185,129,…) tints); comic uses the shared comic surface
 // tokens plus the LevelUp comic-ink accent. LevelUp uses its own body/secondary text tones (#E2E8F0,
 // #94A3B8) and a solid #1E2A3A chrome border, distinct from the shared defaults, so each is carried as
 // its own token to keep the default theme byte-for-byte identical.
@@ -45,9 +45,9 @@ export function getLevelupTokens(theme: ThemeName): LevelupTokens {
     BORDER_SOLID: "#1E2A3A",
     TEXT_BODY: "#E2E8F0",
     TEXT_SUBTLE: "#94A3B8",
-    ACCENT_TINT_BG: "rgba(34,197,94,0.12)",
-    ACCENT_TINT_BORDER: "rgba(34,197,94,0.3)",
-    ACCENT_NAV_BORDER: "rgba(34,197,94,0.4)",
+    ACCENT_TINT_BG: "rgba(16,185,129,0.12)",
+    ACCENT_TINT_BORDER: "rgba(16,185,129,0.3)",
+    ACCENT_NAV_BORDER: "rgba(16,185,129,0.4)",
   };
 }
 

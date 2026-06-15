@@ -134,7 +134,7 @@ export const ChymeRoomList: React.FC<Props> = ({
 };
 
 function makeStyles(t: ThemeTokens, accent: string) {
-  const bg = t.isComic ? t.bg : '#021006';
+  const bg = t.isComic ? t.bg : '#04160A';
   const chrome = t.isComic ? t.surfaceAlt : '#030d05';
   const divider = t.isComic ? t.border : '#052e16';
   const r = t.radius;

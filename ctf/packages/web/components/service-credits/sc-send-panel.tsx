@@ -62,9 +62,9 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
   );
 }
 
-export function ServiceCreditsSendPanel({ wallet, onSent }: { wallet: WalletData | null; onSent: () => Promise<void> }) {
+export function ServiceCreditsSendPanel({ wallet, onSent, isMobile = false }: { wallet: WalletData | null; onSent: () => Promise<void>; isMobile?: boolean }) {
   return (
-    <aside style={{ width: 280, borderLeft: "1px solid rgba(255,255,255,0.06)", background: "#0D0F14", padding: "20px 16px", flexShrink: 0 }}>
+    <aside style={{ width: isMobile ? "100%" : 280, borderLeft: isMobile ? "none" : "1px solid rgba(255,255,255,0.06)", borderTop: isMobile ? "1px solid rgba(255,255,255,0.06)" : "none", background: "#0D0F14", padding: "20px 16px", flexShrink: 0, boxSizing: "border-box" }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#4B5563", textTransform: "uppercase", marginBottom: 12 }}>Send Credits</div>
       <SendForm wallet={wallet} onSent={onSent} />
 

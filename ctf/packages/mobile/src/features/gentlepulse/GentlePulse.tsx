@@ -22,7 +22,7 @@ import {
 } from './api';
 
 const COLOR = '#34D399';
-const BG = '#0A0F0E';
+const BG = '#061711';
 const SURFACE = '#060A09';
 const WIDTH = Dimensions.get('window').width;
 
