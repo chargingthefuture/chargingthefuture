@@ -49,14 +49,33 @@ gh_post() {
 
 # ── 1. Fetch Render logs ──────────────────────────────────────────────────────
 
-echo "==> Fetching logs for Render service ${RENDER_SERVICE_ID}..."
-LOG_RESP=$(curl -s "${RENDER_API}/services/${RENDER_SERVICE_ID}/logs?limit=200" \
+echo "==> Resolving owner for Render service ${RENDER_SERVICE_ID}..."
+# Render's Logs API requires the owner id. Read it from the service object.
+SERVICE_RESP=$(curl -s "${RENDER_API}/services/${RENDER_SERVICE_ID}" \
   -H "Authorization: Bearer ${RENDER_API_KEY}")
+OWNER_ID=$(echo "$SERVICE_RESP" | jq -r '.ownerId // .service.ownerId // empty' 2>/dev/null || true)
 
-LOGS=$(echo "$LOG_RESP" | jq -r '.[].message // empty' 2>/dev/null || true)
+if [[ -z "$OWNER_ID" ]]; then
+  echo "==> Could not resolve ownerId for ${RENDER_SERVICE_ID}. The service id may be wrong"
+  echo "    or the API key lacks access. Service API response was:"
+  echo "$SERVICE_RESP" | head -c 500
+  exit 0
+fi
+
+echo "==> Fetching logs for Render service ${RENDER_SERVICE_ID} (owner ${OWNER_ID})..."
+# Render has no per-service /services/{id}/logs endpoint; the Logs API is a
+# top-level GET /v1/logs filtered by ownerId + resource. Response: { "logs": [ { message, ... } ] }.
+LOG_RESP=$(curl -s -G "${RENDER_API}/logs" \
+  -H "Authorization: Bearer ${RENDER_API_KEY}" \
+  --data-urlencode "ownerId=${OWNER_ID}" \
+  --data-urlencode "resource=${RENDER_SERVICE_ID}" \
+  --data-urlencode "limit=200")
+
+LOGS=$(echo "$LOG_RESP" | jq -r '.logs[]?.message // empty' 2>/dev/null || true)
 
 if [[ -z "$LOGS" ]]; then
-  echo "==> No logs returned (service may not exist or key lacks access). Exiting."
+  echo "==> No logs returned. Logs API response was:"
+  echo "$LOG_RESP" | head -c 500
   exit 0
 fi
 
