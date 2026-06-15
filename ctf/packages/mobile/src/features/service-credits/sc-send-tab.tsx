@@ -19,9 +19,12 @@ function generateIdempotencyKey(): string {
   return `mobile-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+type Rail = 'balance' | 'mutual_credit';
+
 export function SendTab({ onSent }: Props) {
   const [recipientId, setRecipientId] = useState('');
   const [amountText, setAmountText] = useState('');
+  const [rail, setRail] = useState<Rail>('balance');
   const [sending, setSending] = useState(false);
 
   const handleSend = useCallback(async () => {
@@ -43,22 +46,26 @@ export function SendTab({ onSent }: Props) {
         recipientUserId: recipient,
         amount,
         idempotencyKey: generateIdempotencyKey(),
+        rail,
       });
       setRecipientId('');
       setAmountText('');
-      Alert.alert('Sent', `${amount} credits sent.`);
+      setRail('balance');
+      Alert.alert('Sent', `${amount} ServiceCredits sent.`);
       onSent();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Transfer failed.';
-      if (msg.includes('insufficient_balance')) {
-        Alert.alert('Insufficient balance', 'You do not have enough credits.');
+      // On the balance rail, surface the friendly insufficient-balance notice.
+      // On the mutual-credit rail there is no balance check — show the server message.
+      if (rail === 'balance' && msg.includes('insufficient_balance')) {
+        Alert.alert('Insufficient balance', 'You do not have enough ServiceCredits.');
       } else {
         Alert.alert('Transfer failed', msg);
       }
     } finally {
       setSending(false);
     }
-  }, [recipientId, amountText, onSent]);
+  }, [recipientId, amountText, rail, onSent]);
 
   return (
     <View>
@@ -84,6 +91,35 @@ export function SendTab({ onSent }: Props) {
           keyboardType="numeric"
           accessibilityLabel="Amount in credits"
         />
+
+        <View style={s.railRow}>
+          <TouchableOpacity
+            style={[s.railBtn, rail === 'balance' && s.railBtnActive]}
+            onPress={() => setRail('balance')}
+            accessibilityRole="button"
+            accessibilityLabel="Pay from your ServiceCredits balance"
+            accessibilityState={{ selected: rail === 'balance' }}
+          >
+            <Text style={[s.railBtnText, rail === 'balance' && s.railBtnTextActive]}>
+              ServiceCredits
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.railBtn, rail === 'mutual_credit' && s.railBtnActive]}
+            onPress={() => setRail('mutual_credit')}
+            accessibilityRole="button"
+            accessibilityLabel="Pay on community credit"
+            accessibilityState={{ selected: rail === 'mutual_credit' }}
+          >
+            <Text style={[s.railBtnText, rail === 'mutual_credit' && s.railBtnTextActive]}>
+              ServiceCredits — Mutual Credit
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {rail === 'mutual_credit' && (
+          <Text style={s.railHelper}>Pay now on community credit, repay as you earn.</Text>
+        )}
 
         <TouchableOpacity
           style={[s.sendBtn, sending && s.sendBtnDisabled]}
@@ -120,6 +156,34 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   form: { gap: 10 },
+  railRow: { flexDirection: 'row', gap: 8 },
+  railBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  railBtnActive: {
+    backgroundColor: `${COLOR}18`,
+    borderColor: `${COLOR}40`,
+  },
+  railBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSubtle,
+    textAlign: 'center',
+  },
+  railBtnTextActive: { color: COLOR },
+  railHelper: {
+    fontSize: 11,
+    color: colors.textDim,
+    lineHeight: 16,
+  },
   input: {
     paddingVertical: 12,
     paddingHorizontal: 14,

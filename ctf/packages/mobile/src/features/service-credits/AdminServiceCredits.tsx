@@ -14,9 +14,15 @@ import {
   applyDisputeAdjustment,
   burnCredits,
   collectFee,
+  fetchAdminCirculation,
+  fetchCreditLimit,
   fetchTreasuryConfig,
   mintGrant,
+  setCreditLimit,
+  setWalletStatus,
+  type AdminCirculationMetrics,
   type AdminResult,
+  type CreditLimit,
 } from './admin-api';
 
 const COLOR = '#A855F7';
@@ -27,7 +33,49 @@ const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
-type ActionKey = 'mint' | 'burn' | 'fee' | 'dispute';
+type ActionKey =
+  | 'mint'
+  | 'burn'
+  | 'fee'
+  | 'dispute'
+  | 'circulation'
+  | 'lookupLimit'
+  | 'setLimit'
+  | 'freeze'
+  | 'unfreeze';
+
+// Single-step button for read-only loads (GET). These do not move money, so they
+// skip the two-step arm/confirm flow the mutation buttons use.
+function ConfirmButtonless({
+  label,
+  busy,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  busy: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[styles.primaryBtn, { backgroundColor: COLOR }, disabled || busy ? styles.btnDisabled : null]}
+      disabled={disabled || busy}
+      onPress={onPress}
+    >
+      {busy ? <ActivityIndicator size="small" color="#000" /> : <Text style={styles.primaryBtnText}>{label}</Text>}
+    </Pressable>
+  );
+}
+
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricTile}>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
 
 function LabeledInput({
   label,
@@ -147,6 +195,18 @@ export const AdminServiceCredits = () => {
   const [dispDest, setDispDest] = useState('');
   const [dispAmount, setDispAmount] = useState('');
   const [dispReason, setDispReason] = useState('');
+
+  // Circulation (admin view)
+  const [circulation, setCirculation] = useState<AdminCirculationMetrics | null>(null);
+
+  // Credit limits
+  const [limitUser, setLimitUser] = useState('');
+  const [limitLookup, setLimitLookup] = useState<CreditLimit | null>(null);
+  const [limitValue, setLimitValue] = useState('');
+
+  // Wallet freeze
+  const [freezeUser, setFreezeUser] = useState('');
+  const [freezeReason, setFreezeReason] = useState('');
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -371,6 +431,154 @@ export const AdminServiceCredits = () => {
           }
         />
       </View>
+
+      {/* Circulation (read-only metrics) */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Circulation</Text>
+        <Text style={styles.cardMeta}>
+          A read-only snapshot of the ServiceCredits economy and the issuance levers.
+        </Text>
+        <ConfirmButtonless
+          label="Load circulation"
+          busy={busy === 'circulation'}
+          onPress={() =>
+            void run('circulation', fetchAdminCirculation, (data) => {
+              setCirculation(data?.metrics ?? null);
+              return 'Circulation loaded.';
+            })
+          }
+        />
+        {circulation !== null ? (
+          <View style={styles.metricGrid}>
+            <MetricTile label="In circulation" value={circulation.inCirculation.toLocaleString()} />
+            <MetricTile label="Total issued" value={circulation.totalIssued.toLocaleString()} />
+            <MetricTile label="Total burned" value={circulation.totalBurned.toLocaleString()} />
+            <MetricTile
+              label="Held in treasury"
+              value={circulation.treasuryBalance === null ? '—' : circulation.treasuryBalance.toLocaleString()}
+            />
+            <MetricTile
+              label="On community credit"
+              value={circulation.outstandingMutualCreditDebt.toLocaleString()}
+            />
+            <MetricTile label="Moving (30-day velocity)" value={circulation.velocity.toFixed(2)} />
+            <MetricTile label="Sent in last 30 days" value={circulation.transferVolume30d.toLocaleString()} />
+            <MetricTile
+              label="Mint budget remaining"
+              value={circulation.mintBudgetRemaining === null ? 'Not enforced' : circulation.mintBudgetRemaining.toLocaleString()}
+            />
+            <MetricTile
+              label="Mint budget ceiling"
+              value={circulation.mintBudgetCeiling === null ? '—' : circulation.mintBudgetCeiling.toLocaleString()}
+            />
+            <MetricTile label="Minted this period" value={circulation.mintedThisPeriod.toLocaleString()} />
+            <MetricTile label="Issuance enforced" value={circulation.issuanceEnforced ? 'Yes' : 'No'} />
+            <MetricTile label="Issuance period (days)" value={circulation.issuancePeriodDays.toLocaleString()} />
+            <MetricTile
+              label="Top-5 concentration"
+              value={`${(circulation.concentrationTop5Share * 100).toFixed(1)}%`}
+            />
+            <MetricTile label="Open disputes" value={circulation.openDisputes.toLocaleString()} />
+            <MetricTile label="Treasury configured" value={circulation.treasuryUserIdConfigured ? 'Yes' : 'No'} />
+          </View>
+        ) : null}
+        {circulation !== null && !circulation.treasuryUserIdConfigured ? (
+          <Text style={styles.cardMeta}>Set policy.treasuryUserId to track the treasury balance.</Text>
+        ) : null}
+      </View>
+
+      {/* Credit limits */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Credit limits</Text>
+        <Text style={styles.cardMeta}>
+          Every member gets the same flat limit by default. Override per account only when needed; set
+          to 0 to revoke.
+        </Text>
+        <LabeledInput label="Member user ID" value={limitUser} onChange={setLimitUser} placeholder="user_…" />
+        <ConfirmButtonless
+          label="Look up"
+          busy={busy === 'lookupLimit'}
+          disabled={!limitUser.trim()}
+          onPress={() =>
+            void run('lookupLimit', () => fetchCreditLimit(limitUser.trim()), (data) => {
+              setLimitLookup(data?.creditLimit ?? null);
+              return 'Credit limit loaded.';
+            })
+          }
+        />
+        {limitLookup !== null ? (
+          <View style={styles.metricGrid}>
+            <MetricTile label="Credit limit" value={limitLookup.creditLimit.toLocaleString()} />
+            <MetricTile label="Source" value={limitLookup.isDefault ? 'Policy default' : 'Per-account'} />
+            <MetricTile label="Frozen" value={limitLookup.frozen ? 'Yes' : 'No'} />
+          </View>
+        ) : null}
+        <LabeledInput label="New credit limit (ServiceCredits)" value={limitValue} onChange={setLimitValue} placeholder="0" numeric />
+        <ConfirmButton
+          label="Set limit"
+          busy={busy === 'setLimit'}
+          disabled={!limitUser.trim() || limitValue.trim() === '' || !Number.isFinite(Number(limitValue)) || Number(limitValue) < 0}
+          summary={`Set ${limitUser.trim() || '—'}'s mutual-credit limit to ${limitValue.trim() === '' ? '0' : Number(limitValue)} ServiceCredits.`}
+          onConfirm={() =>
+            void run(
+              'setLimit',
+              () => setCreditLimit({ targetUserId: limitUser.trim(), creditLimit: Number(limitValue) }),
+              () => {
+                setLimitValue('');
+                setLimitLookup(null);
+                return 'Credit limit updated.';
+              },
+            )
+          }
+        />
+      </View>
+
+      {/* Wallet freeze */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Wallet freeze</Text>
+        <Text style={styles.cardMeta}>
+          Freezing blocks all spending; use for a risk-flagged account. Unfreeze to restore.
+        </Text>
+        <LabeledInput label="Member user ID" value={freezeUser} onChange={setFreezeUser} placeholder="user_…" />
+        <LabeledInput label="Reason (optional)" value={freezeReason} onChange={setFreezeReason} placeholder="Why this freeze" />
+        <ConfirmButton
+          label="Freeze wallet"
+          danger
+          busy={busy === 'freeze'}
+          disabled={!freezeUser.trim()}
+          summary={`Freeze ${freezeUser.trim() || '—'}'s wallet — they will not be able to spend ServiceCredits.`}
+          onConfirm={() =>
+            void run(
+              'freeze',
+              () =>
+                setWalletStatus({
+                  targetUserId: freezeUser.trim(),
+                  frozen: true,
+                  ...(freezeReason.trim() ? { reason: freezeReason.trim() } : {}),
+                }),
+              () => 'Wallet frozen.',
+            )
+          }
+        />
+        <ConfirmButton
+          label="Unfreeze wallet"
+          busy={busy === 'unfreeze'}
+          disabled={!freezeUser.trim()}
+          summary={`Unfreeze ${freezeUser.trim() || '—'}'s wallet.`}
+          onConfirm={() =>
+            void run(
+              'unfreeze',
+              () =>
+                setWalletStatus({
+                  targetUserId: freezeUser.trim(),
+                  frozen: false,
+                  ...(freezeReason.trim() ? { reason: freezeReason.trim() } : {}),
+                }),
+              () => 'Wallet unfrozen.',
+            )
+          }
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -449,4 +657,16 @@ const styles = StyleSheet.create({
   },
   confirmText: { fontSize: 13, color: '#FCD34D', lineHeight: 19 },
   confirmRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  metricTile: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  metricValue: { fontSize: 18, fontWeight: '800', color: TEXT, marginBottom: 2 },
+  metricLabel: { fontSize: 11, color: SUBTLE },
 });
