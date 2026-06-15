@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { UNLOCK_REWARD_SLA_HOURS } from '@ctf/shared';
+import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   fetchPendingSubmissions,

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Unlock, Key, CheckCircle, XCircle, Ban } from 'lucide-react';
-import { UNLOCK_REWARD_SLA_HOURS } from '@ctf/shared';
+import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
 import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
 
 // Admin design tokens (shared admin look from the design system). Unlock accent is purple.

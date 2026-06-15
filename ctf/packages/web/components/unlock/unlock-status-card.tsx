@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, RefreshCw } from "lucide-react";
-import { UNLOCK_REWARD_SLA_HOURS } from "@ctf/shared";
+import { UNLOCK_REWARD_SLA_HOURS } from "lib/unlock/constants";
 import { BG, BORDER, BRAND, STATUS_CONFIG, SUBTLE, SURFACE, TEXT, type DisplayStatus } from "./unlock-shared";
 
 const SUBTEXT: Record<DisplayStatus, string> = {

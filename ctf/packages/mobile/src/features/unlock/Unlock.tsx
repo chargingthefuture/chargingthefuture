@@ -13,7 +13,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { UNLOCK_REWARD_SLA_HOURS } from '@ctf/shared';
+import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { fetchUnlockStatus, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
 
