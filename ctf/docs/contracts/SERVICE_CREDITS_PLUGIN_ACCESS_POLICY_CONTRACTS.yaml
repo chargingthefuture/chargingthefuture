@@ -75,6 +75,8 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - insufficient_balance
+      - credit_limit_exceeded
+      - mutual_credit_disabled
       - invalid_origin_plugin
       - cross_plugin_path_missing
       - disallowed_cross_plugin_path
@@ -315,4 +317,52 @@ policies:
       - reclaim_window_not_elapsed
       - duplicate_reclaim_request
       - cross_workspace_access
+      - insufficient_role
+
+  - pluginId: service-credits
+    command: circulation.metrics.get
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+      - system
+    attributePolicies:
+      tenancy: same_workspace
+      aggregateNonIdentifying: true
+      adminLeversRequireAdmin: true
+    consentRequirements:
+      scopes:
+        - service_credits_circulation_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: service-credits
+    command: credit-limit.set
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminOnly: true
+    consentRequirements:
+      scopes:
+        - service_credits_governance
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - credit_limit_above_max
       - insufficient_role

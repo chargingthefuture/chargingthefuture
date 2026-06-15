@@ -184,6 +184,18 @@ If user returns after plugin-scoped deletion:
 - [ ] Observability added (without sensitive payloads)
 - [ ] Web and Android parity confirmed
 
+## 12) Mutual-Credit Default at Deletion
+
+- A member who used the mutual-credit rail may hold a negative balance (they paid past zero, down to their
+  per-account credit limit, and had not yet earned back to zero).
+- At full-account deletion finalization, a negative final balance is a **mutual-credit default**: the
+  treasury (the community) absorbs the shortfall. The reclaim path debits the treasury wallet by the
+  shortfall and records an immutable `mutual_credit_default` ledger entry referencing the deleted account.
+- Exposure is bounded by small per-account credit limits (default 0 — new accounts cannot go negative at
+  all) and is treasury-reserve accounting, excluded from GDP recognition like other reclaim outcomes.
+- No external withdrawal or fiat path is involved.
+
 ## Change Log
 
+- 2026-06-15: Added the mutual-credit default rule (§12): a negative balance at full-account deletion is a treasury-absorbed `mutual_credit_default`, bounded by small per-account credit limits.
 - 2026-02-25: Created initial Service Credits profile/deletion contract with plugin-scoped deletion, full-account pending-deletion + reclaim window rules, escrow-blocked retry semantics, treasury-return finalization, and tombstone/audit requirements.
