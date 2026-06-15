@@ -94,8 +94,8 @@ contracts:
 
   - pluginId: trust
     command: trust.signal.snapshot.refresh
-    version: 1.1.0
-    description: Recompute the CALLER's trust signal from real cross-plugin engagement (login frequency, completed SocketRelay trades, and ServiceCredits received — distinct payers and undisputed completed transfers), persist a snapshot row, and refresh derived evidence. Reads only coarse COUNTs from ServiceCredits (never amounts or balances) and produces no numeric score. Never changes trustStatus. Implemented by POST /api/trust/signal/snapshot.
+    version: 1.2.0
+    description: Recompute the CALLER's trust signal from real cross-plugin engagement across every applicable plugin (login frequency; SocketRelay trades/requests; ServiceCredits received; accepted/completed/claimed participation in LightHouse, TrustTransport, Skills Hunt, LevelUp, Chyme, Directory, WhatWorks, Peer Programming, and Contributions; and Foundation connections where the member is the provider — provider side only), persist a snapshot row, and refresh derived evidence. Reads only coarse COUNTs (never amounts, balances, or sensitive per-row detail) and produces no numeric score. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood, GentlePulse, Unlock) and the Foundation seeker side are excluded by design. Never changes trustStatus. Implemented by POST /api/trust/signal/snapshot.
     inputSchema: {}
     outputSchema:
       snapshotId:
@@ -104,7 +104,7 @@ contracts:
         type: string
       metrics:
         type: object
-        description: Real counts derived from upstream plugins (loginDays, loginEvents, lastLoginAt, socketRelayCompletedTrades, socketRelayRequestsOpened, serviceCreditsDistinctPayers, serviceCreditsCompletedReceived, serviceCreditsDisputesAgainst).
+        description: Real counts derived from upstream plugins (login*, socketRelay*, serviceCredits*, lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelupCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed).
       trustEvidence:
         type: array
       trustStatus:
@@ -120,6 +120,16 @@ contracts:
       - socketrelay_requests
       - service_credits_transfers
       - service_credits_disputes
+      - lighthouse_matches
+      - trusttransport_trips
+      - skills_hunt_submissions
+      - levelup_enrollments
+      - chyme_room_members
+      - directory_profiles
+      - whatworks_endorsements
+      - peer_programming_cohort_members
+      - contributions_submissions
+      - foundation_connection_threads
     purpose: trust_signal_aggregation
     retentionClass: derived_short_lived
     idempotency: true

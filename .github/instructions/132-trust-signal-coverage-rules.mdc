@@ -1,0 +1,64 @@
+# Trust Signal Coverage Rules
+
+## Status
+
+Decided by the owner (2026-06-15, issue #538). Settled — do not relitigate. Read this before adding a new
+plugin or changing the Trust signal model.
+
+## Intent
+
+Every user-facing plugin that represents genuine member participation must contribute **at least one
+categorical Trust signal**, so a member who is active in only one plugin is still *seen* in Trust —
+represented, not invisible. Representation is **not equal**: a member who honestly uses many plugins accrues
+more social proof than one who uses one. But a single-plugin member must show up, not read as a blank.
+
+## Hard constraints (never relaxed)
+
+- **No numeric social or credit score.** Categorical evidence items only ("Completed N X"), as the Trust
+  plugin already does. No ranking, no percentile, no weighted aggregate.
+- **Real-data-only.** A signal whose backing rows are absent produces no evidence item.
+- **Coarse COUNTs only.** Never sensitive per-row detail, never money amounts/balances.
+- **Signal over noise, with dignity.** A negative fact (e.g. a dispute) withholds a positive signal rather
+  than branding anyone.
+
+## Privacy exclusion (mandatory)
+
+Trust evidence is shown to other members, so a signal must **not** expose sensitive personal data. Do **not**
+surface participation in personal-wellbeing, safety-logging, or verification plugins as public evidence —
+e.g. **ClickLog** (safety incidents), **Mood** (mental-health check-ins), **GentlePulse** (wellness), and
+**Unlock** (survivor-verification approval). Those members are still represented by the universal **login**
+signal, without exposing what they are going through. When in doubt about whether a signal is sensitive,
+exclude it and note the reason.
+
+## What counts as "applicable"
+
+A plugin is applicable when it has a real member-participation row in a completed/accepted/claimed/published
+state (interaction with others, contribution, or marketplace activity). Not applicable: admin-only or
+read-only/aggregation plugins (e.g. Workforce, Weekly Performance, Feed/Announcements, Skills Taxonomy, GDP),
+plugins with only fuzzy/unclear completion (e.g. Comic), and the privacy-excluded set above.
+
+## Implementation pattern
+
+All in `ctf/packages/web/lib/trust/`:
+
+1. **Metric** — add one field to `TrustSignalMetrics` (`types.ts`).
+2. **Query** — add one coarse `COUNT` to the `Promise.all` in `computeTrustSignalMetrics` (`db.ts`),
+   filtering for the completed/accepted/claimed state (not draft/pending). Verify the table's member-id
+   column and status enum against `ctf/schema.sql` first — these are raw SQL strings, not type-checked.
+3. **Evidence** — add an entry to the data-driven `participationSignals` array in `buildTrustEvidence`
+   (`db.ts`); it emits one categorical "verb N noun" item only when count > 0.
+4. **Model version** — bump `TRUST_SNAPSHOT_MODEL` in `constants.ts` when the signal set changes.
+5. **Contract** — add the table to `trust.signal.snapshot.refresh` `dataAccess` and bump its version in
+   `ctf/docs/contracts/TRUST_PLUGIN_COMMAND_CONTRACTS.yaml`; update the deletion contract metric bundle.
+6. **Inventory** — list the signal in the Trust feature inventory's Signal Model section.
+
+## Canonical signal set
+
+The current set lives in `ctf/packages/web/lib/trust/db.ts` (`computeTrustSignalMetrics` /
+`buildTrustEvidence`) and is documented in `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md`.
+That inventory is the source of truth for which plugins are covered, excluded, or deferred.
+
+## Deprecation
+
+If a plugin is removed, delete its signal from `computeTrustSignalMetrics` and `buildTrustEvidence` in the
+same change, bump the model version, and update the contract and inventory.

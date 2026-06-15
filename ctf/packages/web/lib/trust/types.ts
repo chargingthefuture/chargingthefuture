@@ -31,6 +31,23 @@ export interface TrustSignalMetrics {
   // Disputes opened against this member's received transfers (from service_credits_disputes). Used
   // only to withhold the clean-record signal — never surfaced as a negative badge or a deduction.
   serviceCreditsDisputesAgainst: number;
+  // Per-plugin participation counts (coarse COUNTs of completed/accepted/claimed real rows). Each is a
+  // categorical "did they take part" signal so a member active in only one plugin is still seen. Privacy:
+  // sensitive personal-wellbeing/verification plugins (ClickLog, Mood, GentlePulse, Unlock) are excluded
+  // by design — their activity is covered by login without exposing what a member is going through.
+  lighthouseMatchesAccepted: number;
+  trustTransportTripsCompleted: number;
+  skillsHuntSubmissionsAccepted: number;
+  levelupCohortsCompleted: number;
+  chymeRoomsJoined: number;
+  directoryProfilesClaimed: number;
+  whatWorksEndorsements: number;
+  peerProgrammingCohortsJoined: number;
+  contributionsConfirmed: number;
+  // Foundation connection threads where this member is the provider — survivors chose to connect with
+  // them. Provider-side only (clean social proof); the seeker side is never surfaced (help-seeking is
+  // sensitive). Counts threads (one per survivor↔provider pair), so it reads as "connected with N members".
+  foundationConnectionsAsProvider: number;
 }
 
 export interface TrustEvidenceItem {
