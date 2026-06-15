@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   fetchPendingSubmissions,
@@ -110,7 +111,9 @@ export const AdminUnlock = () => {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Unlock Admin</Text>
       <Text style={styles.subtitle}>
-        Verification queue. Approve or reject pending Quora profile submissions.
+        Verification queue. Approve or reject pending Quora profile submissions. Rewards are issued
+        automatically and arrive within {UNLOCK_REWARD_SLA_HOURS} hours — if a reward is still pending it
+        will be retried in the background.
       </Text>
 
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
@@ -127,6 +130,23 @@ export const AdminUnlock = () => {
                 <Text style={styles.cardTitle}>Submission #{submission.id}</Text>
                 <Text style={[styles.cardStatus, { color: '#F59E0B' }]}>{submission.reviewStatus}</Text>
               </View>
+              {submission.reviewStatus === 'approved' ? (
+                <View
+                  style={[
+                    styles.rewardPill,
+                    submission.incentiveGrantedAt ? styles.rewardPillGranted : styles.rewardPillPending,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.rewardPillText,
+                      submission.incentiveGrantedAt ? styles.rewardPillTextGranted : styles.rewardPillTextPending,
+                    ]}
+                  >
+                    {submission.incentiveGrantedAt ? 'Reward granted' : 'Reward pending'}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={styles.cardMeta}>User: {submission.userId}</Text>
               <Text style={styles.cardUrl} numberOfLines={2}>
                 {submission.quoraProfileUrl}
@@ -199,6 +219,12 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 14, fontWeight: '700', color: TEXT },
   cardStatus: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
+  rewardPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, marginTop: 2 },
+  rewardPillGranted: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.3)' },
+  rewardPillPending: { backgroundColor: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.3)' },
+  rewardPillText: { fontSize: 11, fontWeight: '700' },
+  rewardPillTextGranted: { color: '#22C55E' },
+  rewardPillTextPending: { color: '#F59E0B' },
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   cardUrl: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 6 },

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight, RefreshCw } from "lucide-react";
+import { UNLOCK_REWARD_SLA_HOURS } from "lib/unlock/constants";
 import { BG, BORDER, BRAND, STATUS_CONFIG, SUBTLE, SURFACE, TEXT, type DisplayStatus } from "./unlock-shared";
 
 const SUBTEXT: Record<DisplayStatus, string> = {
@@ -46,6 +47,9 @@ export function UnlockStatusCard({
             <div style={{ fontSize: 28 }}>🎉</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: BRAND, marginTop: 6 }}>Welcome to the Survivor Hub!</div>
             <div style={{ fontSize: 13, color: SUBTLE, marginTop: 4 }}>Your profile has been verified. All features are now unlocked.</div>
+            <div style={{ fontSize: 12, color: SUBTLE, marginTop: 10, lineHeight: 1.5 }}>
+              Your ServiceCredits reward is issued automatically and arrives within {UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.
+            </div>
             <a href="/apps" style={{ marginTop: 12, padding: "10px 24px", borderRadius: 10, background: BRAND, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
               Continue to Hub <ChevronRight size={14} />
             </a>

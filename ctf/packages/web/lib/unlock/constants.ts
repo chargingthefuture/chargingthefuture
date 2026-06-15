@@ -1,0 +1,5 @@
+// How long a ServiceCredits verification reward may take to arrive after an Unlock approval. The reward
+// is minted on approval; if that mint fails, the background reconciliation job issues it within this
+// window. Used in member- and admin-facing copy so a definite arrival window can be stated. Mirrored in
+// the mobile feature (packages/mobile/src/features/unlock/constants.ts) — keep the two in sync.
+export const UNLOCK_REWARD_SLA_HOURS = 24;

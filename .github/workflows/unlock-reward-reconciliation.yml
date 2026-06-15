@@ -1,0 +1,49 @@
+name: Unlock reward reconciliation
+
+# Self-heals missed Unlock approval rewards. The approval handler mints the 100-credit ServiceCredits
+# reward as a best-effort follow-up; if that mint fails, the approval still stands but the reward never
+# lands. Every hour this asks production to mint the reward for any approved verification whose reward is
+# still pending. The mint is idempotent, so this can never double-grant.
+#
+# Configure under Settings → Secrets and variables → Actions:
+#   Variable: APP_BASE_URL (your production base URL, e.g. https://app.example.com)
+#   Secret:   CRON_SECRET  (the same value the app reads as CRON_SECRET)
+# If APP_BASE_URL is unset the scheduled run is skipped; manual runs still execute so you can test.
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unlock-reward-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Trigger reconciliation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || vars.APP_BASE_URL != ''
+    steps:
+      - name: Call the reconciliation route
+        env:
+          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_BASE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "APP_BASE_URL or CRON_SECRET not configured; skipping."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/reconcile.json -w '%{http_code}' -X POST \
+            "${APP_BASE_URL%/}/api/internal/unlock/reconcile-rewards" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP ${code}"
+          cat /tmp/reconcile.json
+          echo
+          test "${code}" = "200"

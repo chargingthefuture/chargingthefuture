@@ -13,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { fetchUnlockStatus, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
 
@@ -212,6 +213,11 @@ function StatusView({ status, onResubmitted }: { status: UnlockStatus; onResubmi
             <Text style={{ fontSize: 26, textAlign: 'center' }}>🎉</Text>
             <Text style={[s.approvedTitle, { color: BRAND }]}>Welcome to the Survivor Hub!</Text>
             <Text style={[s.bodyText, { textAlign: 'center' }]}>All features are now unlocked.</Text>
+            <Text style={[s.bodyText, { textAlign: 'center', marginTop: 8 }]}>
+              {status.incentiveGrantedAt
+                ? 'Your ServiceCredits reward has been granted.'
+                : `Your ServiceCredits reward is issued automatically and arrives within ${UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.`}
+            </Text>
           </View>
         )}
         {display === 'rejected' && (
