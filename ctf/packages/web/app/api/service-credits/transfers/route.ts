@@ -9,6 +9,7 @@ type TransferBody = {
   idempotencyKey?: string;
   originPlugin?: string;
   reasonCode?: string;
+  rail?: 'balance' | 'mutual_credit';
 };
 
 export async function POST(request: Request) {
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'recipientUserId, amount and idempotencyKey are required.' }, { status: 400 });
   }
 
+  if (body.rail !== undefined && body.rail !== 'balance' && body.rail !== 'mutual_credit') {
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'rail must be "balance" or "mutual_credit".' }, { status: 400 });
+  }
+
   try {
     const transfer = await createTransfer({
       senderUserId: gate.auth.userId,
@@ -41,6 +46,7 @@ export async function POST(request: Request) {
       idempotencyKey: body.idempotencyKey,
       originPlugin: typeof body.originPlugin === 'string' ? body.originPlugin : undefined,
       reasonCode: typeof body.reasonCode === 'string' ? body.reasonCode : undefined,
+      rail: body.rail === 'mutual_credit' ? 'mutual_credit' : undefined,
     });
 
     await insertServiceCreditsAudit({

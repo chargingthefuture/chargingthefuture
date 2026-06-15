@@ -10,6 +10,9 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { ServiceCreditsGovernancePanel } from './sca-governance-panel';
 import { ServiceCreditsTreasuryPanel } from './sca-treasury-panel';
 import { ServiceCreditsDisputesPanel } from './sca-disputes-panel';
+import { ServiceCreditsCirculationPanel } from './sca-circulation-panel';
+import { ServiceCreditsCreditLimitsPanel } from './sca-credit-limits-panel';
+import { ServiceCreditsWalletStatusPanel } from './sca-wallet-status-panel';
 import { ServiceCreditsLedgerStatus } from './sca-ledger-status';
 
 export function ServiceCreditsAdminShell() {
@@ -31,8 +34,11 @@ export function ServiceCreditsAdminShell() {
       </header>
 
       <ServiceCreditsLedgerStatus />
+      <ServiceCreditsCirculationPanel />
       <ServiceCreditsTreasuryPanel />
       <ServiceCreditsGovernancePanel />
+      <ServiceCreditsCreditLimitsPanel />
+      <ServiceCreditsWalletStatusPanel />
       <ServiceCreditsDisputesPanel />
     </main>
   );

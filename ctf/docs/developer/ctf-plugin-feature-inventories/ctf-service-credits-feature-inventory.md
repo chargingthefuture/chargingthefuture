@@ -118,6 +118,10 @@ Command groups:
 9. `service-credits.treasury.fee.collect`
 10. `service-credits.dispute.adjustment.apply`
 11. `service-credits.account.deletion.reclaim.execute`
+12. `service-credits.circulation.metrics.get`
+13. `service-credits.credit-limit.set`
+14. `service-credits.credit-limit.get`
+15. `service-credits.wallet-status.set`
 
 ### 3.2 HTTP Projection Routes
 
@@ -125,7 +129,8 @@ User routes:
 
 - `POST /api/service-credits/wallets`
 - `GET /api/service-credits/wallets/:walletId/balance`
-- `POST /api/service-credits/transfers`
+- `POST /api/service-credits/transfers` — body now accepts an optional `rail` (`'balance'` default, or `'mutual_credit'` to pay past zero down to the member's credit limit)
+- `GET /api/service-credits/circulation` → `{ ok, metrics }` — public, aggregate, non-identifying circulation numbers (in circulation, total issued/burned, treasury balance, velocity, outstanding mutual-credit debt). No fiat figure.
 - `POST /api/service-credits/escrows`
 - `POST /api/service-credits/escrows/:escrowId/release`
 - `POST /api/service-credits/escrows/:escrowId/refund`
@@ -138,8 +143,12 @@ Admin routes (every mutation requires the `x-ctf-csrf: '1'` header and admin acc
 - `POST /api/service-credits/admin/governance/mint-grants` ← `{ targetUserId, amount, grantReason, governanceTicketId, idempotencyKey }` → `{ ok, grant: { governanceEventId, mintStatus, mintedAt, externalLedgerTransactionId } }`
 - `POST /api/service-credits/admin/governance/burns` ← `{ targetUserId, amount, burnReason, governanceTicketId, idempotencyKey }` → `{ ok, burn: { governanceEventId, … } }`
 - `POST /api/service-credits/admin/disputes/adjustments` ← `{ disputeCaseId, sourceUserId, destinationUserId, amount, adjustmentReason, idempotencyKey }` → `{ ok, adjustment: { adjustmentId, transferId, … } }`
+- `GET /api/service-credits/admin/circulation` → `{ ok, metrics }` — the public circulation numbers plus the operator levers: mint budget remaining/ceiling/minted-this-period, whether issuance enforcement is on, top-5 concentration share, open-dispute count, and whether a treasury wallet is configured.
+- `POST /api/service-credits/admin/credit-limits` ← `{ targetUserId, creditLimit }` → `{ ok, creditLimit: { targetUserId, creditLimit } }` — grant or revoke a member's mutual-credit limit, capped by the policy `mutualCredit.maxLimit`.
+- `GET /api/service-credits/admin/credit-limits?targetUserId=<id>` → `{ ok, creditLimit: { targetUserId, creditLimit, isDefault, frozen } }` — read a member's mutual-credit limit (the flat policy default or a per-account override) and freeze state. No behavioural score is computed or returned.
+- `POST /api/service-credits/admin/wallet-status` ← `{ targetUserId, frozen, reason? }` → `{ ok, walletStatus: { targetUserId, frozen } }` — freeze or unfreeze a wallet. A frozen wallet cannot spend on either rail.
 
-Endpoint/contract gap: a prior route map line referenced `GET /api/service-credits/admin/audit-events`; no such route exists in code (it was never built). It has been removed from this list. There is also **no list/queue endpoint for open disputes** and **no admin read endpoint for circulation/issuance totals**, so the admin UIs are operator-driven forms keyed on known IDs rather than queues or dashboards.
+Endpoint/contract gap: a prior route map line referenced `GET /api/service-credits/admin/audit-events`; no such route exists in code (it was never built). It has been removed from this list. There is still **no list/queue endpoint for open disputes** (the admin dispute UI is an operator-driven form keyed on a known case ID). The prior gap "no admin read endpoint for circulation/issuance totals" is now **closed** by the public and admin circulation endpoints above.
 
 Internal routes:
 
@@ -188,6 +197,9 @@ Domain tables:
 8. `service_credits_adapter_outbox`
 9. `service_credits_account_deletion_reclaims`
 10. `service_credits_wallet_tombstones`
+11. `service_credits_credit_limits` — per-account mutual-credit limit (`user_id` PK, `credit_limit` NUMERIC default 0, `updated_by_user_id`, `updated_at`). The most negative a wallet's `available_balance` may reach is `-credit_limit`; absent a row the limit is the treasury policy `mutualCredit.defaultLimit` (0 by default, so new accounts cannot go negative).
+
+`service_credits_wallets` also gains freeze columns: `is_frozen` (BOOLEAN default FALSE), `frozen_reason`, `frozen_by_user_id`, `frozen_at`. A frozen wallet cannot spend on either rail.
 
 ### 4.3 Lifecycle and Storage Constraints
 
@@ -214,6 +226,10 @@ Domain tables:
 7. No external withdrawal path is permitted for deletion reclaim outcomes.
 8. Deletion reclaim commands are denied until escrow-hold resolution checks pass.
 9. Deletion reclaim event records are immutable and tamper-evident in audit storage.
+10. Per-period mint budget (the keystone monetary-policy rule): treasury-rail minting is bounded per rolling window when `issuance.enforce` is on, denied with `mint_budget_exceeded` over budget. Off by default so a live earn reward is never silently frozen; mutual-credit issuance is bounded separately and does not draw on this budget. See the ServiceCredits monetary policy spec.
+11. Mutual-credit abuse defense: new accounts have a credit limit of 0 (cannot go negative), so a bad actor cannot draw an unsecured line on signup. A limit is granted only by an admin, capped by policy `mutualCredit.maxLimit`, and revocable instantly (set to 0). A negative balance at account deletion is a treasury-absorbed `mutual_credit_default`, kept minor by small limits. Total system exposure is bounded by the sum of granted limits.
+12. No credit or social score: the mutual-credit limit is flat and equal — every member gets the same line (`mutualCredit.defaultLimit`), not a number computed from behavior. A per-account override exists for two deliberate human decisions only (raise for a known partner, or set to 0 to revoke). Abuse is bounded by small caps, the wallet freeze, and disputes — never by ranking people. This preserves the platform's standing commitment (including the Trust plugin) that no credit/social score exists.
+13. Wallet freeze: an admin can freeze a wallet (`is_frozen` on `service_credits_wallets`); a frozen wallet is rejected with `wallet_frozen` before any balance/rail check, on both rails. This is the trust & safety lever for a risk-flagged account, distinct from the credit limit.
 
 ---
 
@@ -224,6 +240,8 @@ Domain tables:
 Web pixel pass complete: the shell (`service-credits-shell.tsx` + `sc-*` sub-components) is aligned to `design/.../survivor-hub/ServiceCredits.tsx` and decomposed within rule-116 limits. Per brand rules, balances render as "credits" only (never a fiat equivalent); per the real-data-only rule the design's hardcoded platform stats (issued/circulating/avg balance) and per-row "Start"/"chat" actions are omitted.
 
 Admin surface now a real UI on both platforms (2026-06-06). Web `/admin/service-credits` was a stub showing only a treasury-policy-key count; it is now a real operator console (`service-credits-admin-shell.tsx` + `sca-treasury-panel.tsx` + `sca-governance-panel.tsx` + `sca-disputes-panel.tsx` + `sca-fields.tsx` + `sca-shared.ts`), `useIsMobile()`-responsive, admin-gated server-side by `evaluatePluginAccess({ requireApprovedUserOrAdmin: true })` + `isAdmin`. Android adds `AdminServiceCredits.tsx` + `admin-api.ts` (registered in `App.tsx`), admin-gated by the server (401/403 → admin-only notice). Both wire the treasury policy view/edit (GET/PUT), treasury fee collection, governance mint/burn, and dispute adjustment. Every state-changing action is gated behind an explicit confirm step that restates exactly what will change; no credits→fiat equivalence is shown anywhere. Omitted from the design mockups for lack of a backing endpoint: the summary tiles ("in circulation", "issued this week", "disputes open/resolved"), the disputes queue, and the per-row resolve/deny buttons (no list/read endpoints exist).
+
+Monetary-policy UI (2026-06-15, web): the Send panel (`sc-send-panel.tsx`) gained a "Pay with" rail selector — "ServiceCredits" (from balance, default) and "ServiceCredits — Mutual Credit" (pay past zero down to the member's limit); only the balance rail keeps the client-side insufficient-balance guard. A public "Economy" tab (`sc-circulation-tab.tsx`, wired into `service-credits-shell.tsx` + `sc-icon-rail.tsx`) renders the aggregate circulation numbers. The admin console adds a circulation tiles panel (`sca-circulation-panel.tsx`, including the mint-budget levers and concentration) and a credit-limits panel (`sca-credit-limits-panel.tsx`, two-step confirm). No surface shows a fiat equivalent. Android parity for these surfaces is not yet built (deferred follow-up).
 
 Android pixel pass complete (2026-05-31): `MockServiceCredits.tsx` retired. Real feature built as `ServiceCredits.tsx` + `sc-wallet-tab.tsx` + `sc-earn-tab.tsx` + `sc-send-tab.tsx` + `sc-styles.ts` + `api.ts` decomposed within rule-116 limits. Binds to `GET /api/service-credits/wallet` (availableBalance, escrowBalance) and `POST /api/service-credits/transfers` (with `x-ctf-csrf: 1` header). Omitted per real-data-only policy: earned-total/spent-total/this-month/network-rank stats (no ledger-entries read endpoint), recent-transactions list (same). Earn tab renders static platform documentation (credit award rates) — not user-specific data. Loading, error, and unauthenticated states implemented matching `MobileServiceCreditsLoading.tsx`, `MobileServiceCreditsEmpty.tsx`, and `MobileServiceCreditsPublic.tsx` designs.
 
@@ -246,6 +264,8 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 
 ## 10) Change Log
 
+- 2026-06-15: Flat-equal credit limit (no score), wallet freeze, and GDP boundary. The mutual-credit limit is flat and equal — every member gets the same `mutualCredit.defaultLimit`, with a per-account override for deliberate human decisions only; there is no behavioural/earned score (reconciles the platform's no-credit/social-score commitment). Added a wallet freeze (`is_frozen` on `service_credits_wallets`, rejected with `wallet_frozen` on both rails) with `POST /api/service-credits/admin/wallet-status`; and `GET /api/service-credits/admin/credit-limits?targetUserId=` returning the member's limit, whether it is the policy default, and freeze state. Admin UI: a look-up summary in the credit-limits panel and a new freeze/unfreeze panel. Documented the clean GDP↔circulation boundary in the monetary policy spec (circulation is credits-only; GDP touches SC only via the LevelUp trainer-split governance events; all new SC ledger entries stay `service_credits_non_gdp`). Web typecheck clean.
+- 2026-06-15: Monetary policy and mutual-credit rail. Added the canonical monetary policy spec (`ctf/docs/developer/specs/service-credits-monetary-policy-spec.md`): one credit unit with two payment rails, a per-period mint budget as the rate cap, earn-first issuance with a deliberate genesis seed, balanced sources/sinks, and a two-tier circulation dashboard. Code: a per-period mint budget enforced in `mintGrant` (off until the operator configures it, so the live earn reward is not frozen); a `mutual_credit` rail on `createTransfer` letting members pay past zero down to a per-account limit; a new `service_credits_credit_limits` table (default limit 0 — new accounts cannot go negative); an admin credit-limit setter (`POST /api/service-credits/admin/credit-limits`, capped by policy `mutualCredit.maxLimit`); public `GET /api/service-credits/circulation` and admin `GET /api/service-credits/admin/circulation` metrics; and treasury absorption of a negative balance at deletion as a `mutual_credit_default`. Closes the prior "no circulation/issuance read endpoint" gap. Web typecheck clean.
 - 2026-06-14: Added an external-ledger (Formance) status card to the `/admin/service-credits` page. New admin-only read endpoint `GET /api/service-credits/admin/ledger-status` returns the non-throwing config report (`getFormanceConfigStatus` in `formance-ledger.ts`): `{ configured, apiUrlSet, ledger, asset, demoMode }`. The shell renders an "External ledger (Formance)" card (`sca-ledger-status.tsx`) showing Configured/Not configured with the ledger + asset, and — when not configured — a note that balances stay authoritative in the app DB and operations queue for reconciliation (per the 2026-06-13 decouple). Read-only; best-effort. No schema or contract change.
 - 2026-06-13: Decoupled the Formance mirror from the ledger write path so a Formance outage no longer loses credits or fails operations (step 1 of 2). Previously every ledger operation (mint, burn, transfer/escrow hold, escrow release/refund, treasury fee, dispute adjustment, deletion reclaim) called Formance **inline** and, on failure, wrote a `failed` outbox row and **re-threw — rolling back the whole transaction**, including the authoritative local Postgres write. So if Formance was down, the member got no credits locally and nothing retried (the `failed` outbox row rolled back too; no worker drains it). Now each of those 9 sites, on a Formance failure, writes a durable **`queued`** outbox row (with the full replay payload) and **does not re-throw** — the local Postgres ledger write (which is the source of truth and is balance-checked under `FOR UPDATE`) commits, so credits are correct immediately and `external_ledger_transaction_id` is left null until reconciled. The treasury-fee queued payload now also carries `originPlugin` for replay. Idempotency is unchanged (`readCommandIdempotency` short-circuits a retry; the outbox upserts on `(command_name, idempotency_key)`). Step 2 (a reconciliation worker + `CRON_SECRET`-guarded route that replays `queued` rows to Formance) follows in a separate PR; until it lands, queued mirrors accumulate but local balances are correct. No schema or contract change.
 - 2026-06-12: Android API clients (`api.ts`, `admin-api.ts`) now call the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain dev-only fetch against hardcoded emulator/localhost URLs. The admin functions no longer take a token argument (the wrapper supplies the live token); `AdminServiceCredits.tsx` call sites updated. No backend, schema, or contract change.
