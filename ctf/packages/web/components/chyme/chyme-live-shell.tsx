@@ -130,6 +130,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
           room={room}
           joinState={joinState}
           onJoin={() => void handleJoin()}
+          onRefresh={() => void refreshMessages()}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden' }}>
