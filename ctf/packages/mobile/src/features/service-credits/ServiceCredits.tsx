@@ -11,6 +11,7 @@ import { fetchWallet, type Wallet } from './api';
 import { WalletTab } from './sc-wallet-tab';
 import { EarnTab } from './sc-earn-tab';
 import { SendTab } from './sc-send-tab';
+import { EconomyTab } from './sc-economy-tab';
 import { styles, colors, COLOR } from './sc-styles';
 
 // Design canonical: design/artifacts/mockup-sandbox/src/components/mockups/
@@ -27,12 +28,13 @@ import { styles, colors, COLOR } from './sc-styles';
 //   earned total, spent total, this-month delta, network rank — no ledger-entries read endpoint
 //   recent transactions list — no ledger-entries read endpoint
 
-type NavKey = 'wallet' | 'earn' | 'send';
+type NavKey = 'wallet' | 'earn' | 'send' | 'economy';
 
 const NAV: { label: string; key: NavKey }[] = [
   { label: 'Wallet', key: 'wallet' },
   { label: 'Earn', key: 'earn' },
   { label: 'Send', key: 'send' },
+  { label: 'Economy', key: 'economy' },
 ];
 
 function LoadingScreen() {
@@ -140,6 +142,7 @@ export function ServiceCredits() {
         {activeNav === 'send' && (
           <SendTab onSent={() => { void loadWallet(); setActiveNav('wallet'); }} />
         )}
+        {activeNav === 'economy' && <EconomyTab />}
       </ScrollView>
 
       {/* Bottom nav */}
@@ -157,7 +160,7 @@ export function ServiceCredits() {
             >
               <View style={[styles.navBtnIcon, active && styles.navBtnIconActive]}>
                 <Text style={{ fontSize: 16, color: active ? COLOR : colors.textDim }}>
-                  {key === 'wallet' ? '💰' : key === 'earn' ? '⚡' : '↑'}
+                  {key === 'wallet' ? '💰' : key === 'earn' ? '⚡' : key === 'send' ? '↑' : '📊'}
                 </Text>
               </View>
               <Text style={[styles.navBtnLabel, active && styles.navBtnLabelActive]}>
