@@ -74,6 +74,52 @@ export type TreasuryFeeResponse = {
   };
 };
 
+// Admin circulation view: the public aggregates plus the operator levers. No fiat equivalent.
+export type AdminCirculationMetrics = {
+  inCirculation: number;
+  totalIssued: number;
+  totalBurned: number;
+  treasuryBalance: number | null;
+  outstandingMutualCreditDebt: number;
+  transferVolume30d: number;
+  velocity: number;
+  issuanceEnforced: boolean;
+  issuancePeriodDays: number;
+  mintBudgetCeiling: number | null;
+  mintedThisPeriod: number;
+  mintBudgetRemaining: number | null;
+  concentrationTop5Share: number;
+  openDisputes: number;
+  treasuryUserIdConfigured: boolean;
+};
+
+export type AdminCirculationResponse = { ok: boolean; metrics?: AdminCirculationMetrics };
+
+export type CreditLimitResponse = {
+  ok: boolean;
+  creditLimit?: { targetUserId: string; creditLimit: number; [key: string]: unknown };
+};
+
+// Look-up view of a member's mutual-credit limit (the flat policy default or a per-account override)
+// and freeze state. No behavioural score — there is no credit/social score on this platform.
+export type CreditLimitLookup = {
+  targetUserId: string;
+  creditLimit: number;
+  isDefault: boolean;
+  frozen: boolean;
+};
+
+export type CreditLimitLookupResponse = {
+  ok: boolean;
+  creditLimit?: CreditLimitLookup;
+};
+
+// Wallet status: a frozen wallet cannot spend ServiceCredits on either rail.
+export type WalletStatusResponse = {
+  ok: boolean;
+  walletStatus?: { targetUserId: string; frozen: boolean; [key: string]: unknown };
+};
+
 export type DisputeAdjustmentResponse = {
   ok: boolean;
   adjustment?: {

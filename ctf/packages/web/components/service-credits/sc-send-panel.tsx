@@ -10,9 +10,40 @@ const inputField: React.CSSProperties = {
 };
 const inputLabel: React.CSSProperties = { fontSize: 12, color: "#9CA3AF", marginBottom: 6, display: "block" };
 
+type Rail = "balance" | "mutual_credit";
+
+function RailSelector({ rail, onChange }: { rail: Rail; onChange: (next: Rail) => void }) {
+  const options: { value: Rail; label: string }[] = [
+    { value: "balance", label: "ServiceCredits" },
+    { value: "mutual_credit", label: "ServiceCredits — Mutual Credit" },
+  ];
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label htmlFor="sc-rail" style={inputLabel}>Pay with</label>
+      <select
+        id="sc-rail"
+        value={rail}
+        onChange={(e) => onChange(e.target.value as Rail)}
+        aria-label="Payment method"
+        style={{ ...inputField, marginBottom: 0, appearance: "auto" }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value} style={{ color: "#0F1117" }}>{o.label}</option>
+        ))}
+      </select>
+      {rail === "mutual_credit" && (
+        <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, lineHeight: 1.5 }}>
+          Pay now on community credit, repay as you earn.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () => Promise<void> }) {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
+  const [rail, setRail] = useState<Rail>("balance");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -25,11 +56,18 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
     setError(null);
     setSuccess(false);
     try {
-      if (numeric > (wallet?.availableBalance ?? 0)) throw new Error("Insufficient balance");
+      // The balance rail keeps the client-side guard. The mutual-credit rail is allowed to go
+      // negative up to the member's limit, so we do not block here — the server decides.
+      if (rail === "balance" && numeric > (wallet?.availableBalance ?? 0)) throw new Error("Insufficient balance");
       const res = await fetch("/api/service-credits/transfers", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ recipientUserId: recipient.trim(), amount: numeric, idempotencyKey: idempotencyKey() }),
+        body: JSON.stringify({
+          recipientUserId: recipient.trim(),
+          amount: numeric,
+          idempotencyKey: idempotencyKey(),
+          ...(rail === "mutual_credit" ? { rail } : {}),
+        }),
       });
       if (!res.ok) {
         const d = (await res.json()) as { message?: string };
@@ -39,6 +77,7 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
       setSuccess(true);
       setRecipient("");
       setAmount("");
+      setRail("balance");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create transfer.");
     } finally {
@@ -50,6 +89,7 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
     <div style={{ padding: "16px", borderRadius: 14, marginBottom: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
       <label htmlFor="sc-recipient" style={inputLabel}>Recipient</label>
       <input id="sc-recipient" value={recipient} onChange={(e) => setRecipient(e.target.value)} aria-label="Recipient username or ID" placeholder="Survivor username or ID…" style={inputField} />
+      <RailSelector rail={rail} onChange={setRail} />
       <label htmlFor="sc-amount" style={inputLabel}>Amount</label>
       <input id="sc-amount" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" aria-label="Amount in credits" placeholder="Amount (e.g. 50)" style={inputField} />
       {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
