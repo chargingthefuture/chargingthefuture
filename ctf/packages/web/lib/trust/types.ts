@@ -44,6 +44,10 @@ export interface TrustSignalMetrics {
   whatWorksEndorsements: number;
   peerProgrammingCohortsJoined: number;
   contributionsConfirmed: number;
+  // Foundation connection threads where this member is the provider — survivors chose to connect with
+  // them. Provider-side only (clean social proof); the seeker side is never surfaced (help-seeking is
+  // sensitive). Counts threads (one per survivor↔provider pair), so it reads as "connected with N members".
+  foundationConnectionsAsProvider: number;
 }
 
 export interface TrustEvidenceItem {

@@ -77,13 +77,14 @@ human-readable evidence items on `trust_user_extension`. Real signals that feed 
   - WhatWorks — `whatworks_endorsements` → "Endorsed N WhatWorks products"
   - Peer Programming — `peer_programming_cohort_members` → "Joined N Peer Programming cohorts"
   - Contributions — `contributions_submissions` confirmed → "Confirmed N contributions"
+  - Foundation (provider side only) — `foundation_connection_threads` where `provider_user_id` = the member → "Connected with N members as a Foundation provider". The **seeker** side (requesting services) is never counted — help-seeking is sensitive.
 
 **Privacy exclusions (by design):** sensitive personal-wellbeing/verification plugins are **not** surfaced
 as public trust evidence — **ClickLog** (safety incidents), **Mood** (mental-health check-ins),
 **GentlePulse** (wellness), and **Unlock** (survivor-verification approval). Surfacing those would expose
 what a member is going through; their activity is still reflected by the universal login signal. Plugins
 with no per-member participation (Workforce, Weekly Performance, Feed/Announcements, Skills Taxonomy, GDP)
-and Comic (fuzzy completion) are not applicable. **Foundation** is deferred pending status-enum confirmation.
+and Comic (fuzzy completion) are not applicable. **Foundation** surfaces the provider side only (seeker-side help-seeking is excluded for privacy).
 
 Only coarse COUNTs are read (never amounts, balances, or sensitive per-row detail), so no money figure or
 private detail crosses into Trust. Real-data-only rule: any signal whose backing rows are absent (count of

@@ -95,7 +95,7 @@ contracts:
   - pluginId: trust
     command: trust.signal.snapshot.refresh
     version: 1.2.0
-    description: Recompute the CALLER's trust signal from real cross-plugin engagement across every applicable plugin (login frequency; SocketRelay trades/requests; ServiceCredits received; and accepted/completed/claimed participation in LightHouse, TrustTransport, Skills Hunt, LevelUp, Chyme, Directory, WhatWorks, Peer Programming, and Contributions), persist a snapshot row, and refresh derived evidence. Reads only coarse COUNTs (never amounts, balances, or sensitive per-row detail) and produces no numeric score. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood, GentlePulse, Unlock) are excluded by design. Never changes trustStatus. Implemented by POST /api/trust/signal/snapshot.
+    description: Recompute the CALLER's trust signal from real cross-plugin engagement across every applicable plugin (login frequency; SocketRelay trades/requests; ServiceCredits received; accepted/completed/claimed participation in LightHouse, TrustTransport, Skills Hunt, LevelUp, Chyme, Directory, WhatWorks, Peer Programming, and Contributions; and Foundation connections where the member is the provider — provider side only), persist a snapshot row, and refresh derived evidence. Reads only coarse COUNTs (never amounts, balances, or sensitive per-row detail) and produces no numeric score. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood, GentlePulse, Unlock) and the Foundation seeker side are excluded by design. Never changes trustStatus. Implemented by POST /api/trust/signal/snapshot.
     inputSchema: {}
     outputSchema:
       snapshotId:
@@ -129,6 +129,7 @@ contracts:
       - whatworks_endorsements
       - peer_programming_cohort_members
       - contributions_submissions
+      - foundation_connection_threads
     purpose: trust_signal_aggregation
     retentionClass: derived_short_lived
     idempotency: true

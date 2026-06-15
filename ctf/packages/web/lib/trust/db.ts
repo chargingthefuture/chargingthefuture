@@ -59,10 +59,12 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 //   - whatworks_endorsements   → WhatWorks endorsements
 //   - peer_programming_cohort_members → Peer Programming cohorts joined
 //   - contributions_submissions→ confirmed contributions
+//   - foundation_connection_threads → connections where the member is the PROVIDER (provider side only)
 // Only coarse COUNTs are read — never amounts, balances, or sensitive per-row detail — and no numeric
 // score is produced. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood,
 // GentlePulse, Unlock) are deliberately excluded so Trust never exposes what a member is going through;
-// their activity is still reflected by the login signal. Foundation is deferred pending status semantics.
+// their activity is still reflected by the login signal. Foundation surfaces the provider side only —
+// the seeker side (requesting services) is help-seeking and is never counted.
 function countOf(result: { rows: { count: string }[] }): number {
   return Number(result.rows[0]?.count ?? 0);
 }
@@ -83,6 +85,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     whatWorks,
     peerProgramming,
     contributions,
+    foundation,
   ] = await Promise.all([
     queryDb<{ login_days: string; login_events: string; last_login_at: Date | null }>(
       `SELECT
@@ -166,6 +169,12 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
       `SELECT COUNT(*) AS count FROM contributions_submissions WHERE user_id = $1 AND status = 'confirmed'`,
       [userId]
     ),
+    // Provider side only: connection threads where the member is the provider (a survivor connected with
+    // them). The seeker side is never counted — help-seeking is sensitive.
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM foundation_connection_threads WHERE provider_user_id = $1`,
+      [userId]
+    ),
   ]);
 
   const loginRow = loginAgg.rows[0];
@@ -187,6 +196,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     whatWorksEndorsements: countOf(whatWorks),
     peerProgrammingCohortsJoined: countOf(peerProgramming),
     contributionsConfirmed: countOf(contributions),
+    foundationConnectionsAsProvider: countOf(foundation),
   };
 }
 
@@ -263,6 +273,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
     { count: metrics.whatWorksEndorsements, type: 'engagement-whatworks-endorsements', verb: 'Endorsed', singular: 'WhatWorks product', plural: 'WhatWorks products' },
     { count: metrics.peerProgrammingCohortsJoined, type: 'engagement-peerprogramming-cohorts', verb: 'Joined', singular: 'Peer Programming cohort', plural: 'Peer Programming cohorts' },
     { count: metrics.contributionsConfirmed, type: 'engagement-contributions', verb: 'Confirmed', singular: 'contribution', plural: 'contributions' },
+    { count: metrics.foundationConnectionsAsProvider, type: 'engagement-foundation-provider', verb: 'Connected with', singular: 'member as a Foundation provider', plural: 'members as a Foundation provider' },
   ];
   for (const signal of participationSignals) {
     if (signal.count > 0) {
