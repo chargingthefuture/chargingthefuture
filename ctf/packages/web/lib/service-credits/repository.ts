@@ -50,10 +50,6 @@ type MutualCreditPolicy = {
   enabled: boolean;
   defaultLimit: number;
   maxLimit: number;
-  enforceEarnedCap: boolean;
-  earnedDistinctSendersPerStep: number;
-  earnedStepSize: number;
-  earnedMaxLimit: number;
 };
 
 function readIssuancePolicy(policy: Record<string, unknown>): IssuancePolicy {
@@ -72,55 +68,11 @@ function readIssuancePolicy(policy: Record<string, unknown>): IssuancePolicy {
 
 function readMutualCreditPolicy(policy: Record<string, unknown>): MutualCreditPolicy {
   const raw = (policy.mutualCredit ?? {}) as Record<string, unknown>;
-  const earned = (raw.earned ?? {}) as Record<string, unknown>;
   return {
     enabled: raw.enabled === true,
     defaultLimit: typeof raw.defaultLimit === 'number' && raw.defaultLimit >= 0 ? raw.defaultLimit : 0,
     maxLimit: typeof raw.maxLimit === 'number' && raw.maxLimit >= 0 ? raw.maxLimit : 0,
-    enforceEarnedCap: earned.enforceEarnedCap === true,
-    earnedDistinctSendersPerStep:
-      typeof earned.distinctSendersPerStep === 'number' && earned.distinctSendersPerStep > 0
-        ? earned.distinctSendersPerStep
-        : 3,
-    earnedStepSize: typeof earned.stepSize === 'number' && earned.stepSize >= 0 ? earned.stepSize : 0,
-    earnedMaxLimit: typeof earned.maxLimit === 'number' && earned.maxLimit >= 0 ? earned.maxLimit : 0,
   };
-}
-
-// The earned mutual-credit limit: a member earns a line by demonstrating value — credits received from
-// distinct senders via completed, undisputed transfers — minus a penalty per dispute opened against
-// their received transfers. Zero until the operator configures a positive earnedStepSize.
-function earnedLimitFromCounts(policy: MutualCreditPolicy, distinctCleanSenders: number, disputesAgainst: number): number {
-  if (policy.earnedStepSize <= 0) {
-    return 0;
-  }
-  const steps = Math.max(0, Math.floor(distinctCleanSenders / policy.earnedDistinctSendersPerStep) - disputesAgainst);
-  const cap = policy.earnedMaxLimit > 0 ? policy.earnedMaxLimit : policy.maxLimit;
-  const earned = policy.earnedStepSize * steps;
-  return cap > 0 ? Math.min(earned, cap) : earned;
-}
-
-async function countCleanInboundSenders(client: PoolClient, userId: string): Promise<number> {
-  const result = await client.query<{ senders: string }>(
-    `SELECT COUNT(DISTINCT t.sender_user_id)::text AS senders
-     FROM service_credits_transfers t
-     WHERE t.recipient_user_id = $1
-       AND t.status = 'completed'
-       AND NOT EXISTS (SELECT 1 FROM service_credits_disputes d WHERE d.transfer_id = t.id)`,
-    [userId],
-  );
-  return Number(result.rows[0]?.senders ?? '0');
-}
-
-async function countDisputesAgainst(client: PoolClient, userId: string): Promise<number> {
-  const result = await client.query<{ total: string }>(
-    `SELECT COUNT(*)::text AS total
-     FROM service_credits_disputes d
-     JOIN service_credits_transfers t ON t.id = d.transfer_id
-     WHERE t.recipient_user_id = $1`,
-    [userId],
-  );
-  return Number(result.rows[0]?.total ?? '0');
 }
 
 function readTreasuryUserId(policy: Record<string, unknown>): string | null {
@@ -305,18 +257,10 @@ export async function createTransfer(input: {
       if (!mutualCredit.enabled) {
         throw new Error('mutual_credit_disabled');
       }
-      let limit = await readCreditLimit(client, input.senderUserId, mutualCredit.defaultLimit);
-      // When the earned cap is on, a member can never use more than they have earned, regardless of
-      // any admin-granted limit — structurally bounding abuse.
-      if (mutualCredit.enforceEarnedCap) {
-        const earned = earnedLimitFromCounts(
-          mutualCredit,
-          await countCleanInboundSenders(client, input.senderUserId),
-          await countDisputesAgainst(client, input.senderUserId),
-        );
-        limit = Math.min(limit, earned);
-      }
-      creditFloor = -limit;
+      // Flat, equal line: every member's limit is the same policy defaultLimit unless an admin has set a
+      // per-account override. No behavioural score gates spending — there is no credit or social score on
+      // this platform; abuse is handled by small caps, the wallet freeze, and disputes, not by ranking.
+      creditFloor = -(await readCreditLimit(client, input.senderUserId, mutualCredit.defaultLimit));
     }
     if (senderBalance - input.amount < creditFloor) {
       throw new Error(rail === 'mutual_credit' ? 'credit_limit_exceeded' : 'insufficient_balance');
@@ -1687,9 +1631,8 @@ export async function setCreditLimit(input: { actorId: string; targetUserId: str
   return { targetUserId: input.targetUserId, creditLimit: input.creditLimit };
 }
 
-// Admin-only: read a member's granted, earned, and effective mutual-credit limits, plus freeze state.
-// effective = enforceEarnedCap ? min(granted, earned) : granted. Lets the operator grant in line with
-// what a member has actually earned.
+// Admin-only: read a member's mutual-credit limit (the flat policy default, or a per-account override)
+// and freeze state. No behavioural score is computed or returned — there is no credit/social score.
 export async function getCreditLimitInfo(userId: string) {
   const policy = readMutualCreditPolicy(await getTreasuryConfig());
 
@@ -1697,36 +1640,15 @@ export async function getCreditLimitInfo(userId: string) {
     `SELECT credit_limit::text FROM service_credits_credit_limits WHERE user_id = $1 LIMIT 1`,
     [userId],
   );
-  const grantedLimit = granted.rows[0] ? Number(granted.rows[0].credit_limit) : policy.defaultLimit;
-
-  const senders = await queryDb<{ senders: string }>(
-    `SELECT COUNT(DISTINCT t.sender_user_id)::text AS senders
-     FROM service_credits_transfers t
-     WHERE t.recipient_user_id = $1
-       AND t.status = 'completed'
-       AND NOT EXISTS (SELECT 1 FROM service_credits_disputes d WHERE d.transfer_id = t.id)`,
-    [userId],
-  );
-  const disputes = await queryDb<{ total: string }>(
-    `SELECT COUNT(*)::text AS total
-     FROM service_credits_disputes d
-     JOIN service_credits_transfers t ON t.id = d.transfer_id
-     WHERE t.recipient_user_id = $1`,
-    [userId],
-  );
   const frozen = await queryDb<{ is_frozen: boolean }>(
     `SELECT is_frozen FROM service_credits_wallets WHERE user_id = $1 LIMIT 1`,
     [userId],
   );
 
-  const earnedLimit = earnedLimitFromCounts(policy, Number(senders.rows[0]?.senders ?? '0'), Number(disputes.rows[0]?.total ?? '0'));
-
   return {
     targetUserId: userId,
-    grantedLimit,
-    earnedLimit,
-    effectiveLimit: policy.enforceEarnedCap ? Math.min(grantedLimit, earnedLimit) : grantedLimit,
-    enforceEarnedCap: policy.enforceEarnedCap,
+    creditLimit: granted.rows[0] ? Number(granted.rows[0].credit_limit) : policy.defaultLimit,
+    isDefault: !granted.rows[0],
     frozen: frozen.rows[0]?.is_frozen ?? false,
   };
 }

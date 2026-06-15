@@ -1,9 +1,9 @@
 'use client';
 
-// Credit-limits panel: grant or revoke a member's mutual-credit limit — the only way a member
-// gains the ability to go negative. New accounts default to 0. State-changing money operation,
-// so the commit is gated behind an explicit confirm step. Also offers a read-only look-up so the
-// operator can grant in line with what a member has earned. Wired to:
+// Credit-limits panel: set a member's mutual-credit limit. The line is flat and equal by default
+// (the policy default applies to everyone); a per-account override is used only when needed — set to
+// 0 to revoke. No behavioural score. State-changing money operation, so the commit is gated behind an
+// explicit confirm step. Also offers a read-only look-up. Wired to:
 //   GET  /api/service-credits/admin/credit-limits?targetUserId=<id>
 //   POST /api/service-credits/admin/credit-limits  <- { targetUserId, creditLimit }
 import { useState } from 'react';
@@ -95,16 +95,12 @@ export function ServiceCreditsCreditLimitsPanel() {
         {lookup ? (
           <dl className="grid gap-x-6 gap-y-1 rounded-md border bg-background p-3 text-sm sm:grid-cols-2">
             <div className="flex justify-between sm:block">
-              <dt className="text-muted-foreground">Granted limit</dt>
-              <dd className="font-semibold">{lookup.grantedLimit}</dd>
+              <dt className="text-muted-foreground">Mutual-credit limit</dt>
+              <dd className="font-semibold">{lookup.creditLimit}</dd>
             </div>
             <div className="flex justify-between sm:block">
-              <dt className="text-muted-foreground">Earned limit</dt>
-              <dd className="font-semibold">{lookup.earnedLimit}</dd>
-            </div>
-            <div className="flex justify-between sm:block">
-              <dt className="text-muted-foreground">Effective limit</dt>
-              <dd className="font-semibold">{lookup.effectiveLimit}</dd>
+              <dt className="text-muted-foreground">Source</dt>
+              <dd className="font-semibold">{lookup.isDefault ? 'Policy default' : 'Per-account'}</dd>
             </div>
             <div className="flex justify-between sm:block">
               <dt className="text-muted-foreground">Frozen</dt>
@@ -113,7 +109,7 @@ export function ServiceCreditsCreditLimitsPanel() {
           </dl>
         ) : null}
         <p className="text-xs text-muted-foreground">
-          Earned rises as a member receives credits from distinct senders without disputes.
+          Every member gets the same flat limit by default. Override per account only when needed; set to 0 to revoke.
         </p>
       </div>
 

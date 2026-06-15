@@ -139,34 +139,41 @@ anchor is **internal only**; it is never expressed as a fiat equivalence and nev
 
 ---
 
-### 3.6 The earned limit (how a member's line grows)
+### 3.6 How much credit one member can use — a flat, equal line (no credit or social score)
 
-A member's mutual-credit limit should be *earned*, not handed out — the defense against a bad actor
-joining to take from victims without contributing. The earned limit is computed from demonstrated value:
-
-- `earnedSteps = floor(distinctCleanInboundSenders / earned.distinctSendersPerStep) − disputesAgainst`
-- `earnedLimit = clamp(earned.stepSize × earnedSteps, 0, earned.maxLimit or mutualCredit.maxLimit)`
-
-where `distinctCleanInboundSenders` is the number of *distinct* members who have paid this member via a
-completed, undisputed transfer (so collusion by one buddy paying repeatedly does not inflate it), and
-`disputesAgainst` is the number of disputes opened against this member's received transfers (each one
-removes a step). It is `0` until the operator sets a positive `earned.stepSize`. Policy:
+This platform does not have, and will never have, a credit score or a social score — including the Trust
+plugin, which is explicitly *not* a score. The mutual-credit limit must honor that. So the limit is **flat
+and equal**: every member gets the same line, set by one policy number, regardless of their history.
 
 ```json
-{ "mutualCredit": { "enabled": true, "defaultLimit": 0, "maxLimit": 0,
-  "earned": { "enforceEarnedCap": false, "distinctSendersPerStep": 3, "stepSize": 0, "maxLimit": 0 } } }
+{ "mutualCredit": { "enabled": true, "defaultLimit": 0, "maxLimit": 0 } }
 ```
 
-Two ways to use it:
+- `defaultLimit` — the line every member has. Equal for everyone. `0` until the operator sets it (safe
+  default). Recommended starting value: enough for one or two typical transactions, no more.
+- `maxLimit` — the ceiling on any per-account override (below), as a guard against a fat-finger grant.
 
-- **Guidance (default).** The admin reads a member's granted/earned/effective limits before granting, so
-  grants stay in line with what's been earned. `enforceEarnedCap: false`.
-- **Hard cap.** With `enforceEarnedCap: true`, the usable limit is `min(grantedLimit, earnedLimit)` — a
-  member can never spend past what they've earned, regardless of any admin grant. Recommended once there
-  is real transaction history; structurally bounds abuse.
+The bound on abuse does **not** come from judging people. It comes from three things that are not scores:
+1. the line is **small**, so the most the community can lose to any one account is small;
+2. an admin can **freeze** a wallet (§3.7) — a binary safety action for a demonstrated bad actor, the way
+   moderation works, not a creditworthiness rating;
+3. the **dispute** system unwinds bad transfers.
 
-So the answer to "how much credit can one member use" is: **0 on day one; a small, capped amount that
-grows only with clean, distinct-sender contribution and shrinks on disputes; revocable instantly.**
+A per-account override (`service_credits_credit_limits`) exists for two deliberate, human decisions only —
+raise a line for a known partner, or set it to `0` to revoke for a flagged account. It is set by a person,
+not computed from behavior, and it is never shown to members as a rank. There is no behavioral
+"earned" number anywhere in the spend path or the member experience.
+
+So the answer to "how much credit can one member use" is: **the same small, equal amount as everyone else
+— granted by membership, not earned point by point — bounded by a small cap, the freeze, and disputes.**
+This is also the dignified answer for a community where most members (the owner included) are destitute:
+trust is extended to every survivor equally from day one, not rationed by a score they must climb.
+
+#### Why this still resists the "perpetrator takes from victims" attack
+
+A flat line does not weaken the defense, because the loss per account is capped small, the account had to
+pass membership/verification to exist, the wallet freeze stops a flagged actor immediately, and total
+community exposure is bounded by `defaultLimit × members`. No scoring is required to make it safe.
 
 ### 3.7 Wallet freeze (trust & safety)
 

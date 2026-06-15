@@ -100,14 +100,12 @@ export type CreditLimitResponse = {
   creditLimit?: { targetUserId: string; creditLimit: number; [key: string]: unknown };
 };
 
-// Look-up view of a member's credit limit: what they were granted, what they have earned
-// from clean inbound transfers, and the effective limit the ledger enforces.
+// Look-up view of a member's mutual-credit limit (the flat policy default or a per-account override)
+// and freeze state. No behavioural score — there is no credit/social score on this platform.
 export type CreditLimitLookup = {
   targetUserId: string;
-  grantedLimit: number;
-  earnedLimit: number;
-  effectiveLimit: number;
-  enforceEarnedCap: boolean;
+  creditLimit: number;
+  isDefault: boolean;
   frozen: boolean;
 };
 
