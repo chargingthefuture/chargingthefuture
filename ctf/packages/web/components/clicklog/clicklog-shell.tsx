@@ -25,6 +25,7 @@ export function ClicklogShell() {
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
   const [geo, setGeo] = useState<Geo>({});
+  const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "error">("idle");
   const [logged, setLogged] = useState(false);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -55,10 +56,21 @@ export function ClicklogShell() {
   }
 
   function addLocation(): void {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setGeoStatus("error");
+      return;
+    }
+    setGeoStatus("locating");
     navigator.geolocation.getCurrentPosition(
-      (pos) => setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => setGeo({}),
+      (pos) => {
+        setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setGeoStatus("idle");
+      },
+      () => {
+        setGeo({});
+        setGeoStatus("error");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   }
 
@@ -75,6 +87,7 @@ export function ClicklogShell() {
       setShowForm(false);
       setNote("");
       setGeo({});
+      setGeoStatus("idle");
       flashLogged();
       await fetchIncidents();
     } catch (e) {
@@ -121,11 +134,12 @@ export function ClicklogShell() {
         note={note}
         submitting={busy}
         locationAdded={typeof geo.latitude === "number"}
+        geoStatus={geoStatus}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); }}
+        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); }}
       />
 
       {incidents.length > 0 && (

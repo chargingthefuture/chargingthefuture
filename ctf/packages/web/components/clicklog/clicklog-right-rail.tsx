@@ -33,7 +33,7 @@ export function ClicklogRightRail({
       <div style={{ padding: "14px", borderRadius: 12, background: "rgba(233,30,140,0.05)", border: "1px solid rgba(233,30,140,0.15)", marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: BRAND, marginBottom: 6 }}>Safety reminder</div>
         <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.6 }}>
-          ClickLog is for personal tracking only. In an emergency, always contact local emergency services first.
+          ClickLog is for personal tracking only.
         </div>
       </div>
       <button

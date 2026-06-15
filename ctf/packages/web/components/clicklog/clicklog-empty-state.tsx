@@ -2,7 +2,7 @@
 
 // STATE: Authenticated, no incidents logged yet. Ported from
 // design/.../survivor-hub/ClickLogEmpty.tsx.
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { BG, BORDER, BRAND, SUBTLE, SURFACE, TEXT } from "./clicklog-shared";
 
 const STEPS = [
@@ -47,11 +47,6 @@ export function ClicklogEmptyState({ onLog }: { onLog: () => void }) {
                 <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.5 }}>{item.desc}</div>
               </div>
             ))}
-          </div>
-
-          <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(233,30,140,0.05)", border: "1px solid rgba(233,30,140,0.15)", display: "flex", alignItems: "center", gap: 10 }}>
-            <ShieldCheck size={16} color={BRAND} />
-            <span style={{ fontSize: 12, color: SUBTLE }}>In an emergency, always contact local emergency services first.</span>
           </div>
         </div>
       </div>
