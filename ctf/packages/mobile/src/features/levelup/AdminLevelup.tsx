@@ -17,7 +17,7 @@ import {
 import type { Cohort } from './api';
 
 // Brand tokens (from design/.../survivor-hub/MobileLevelUpAdmin.tsx).
-const COLOR = '#22C55E';
+const COLOR = '#10B981';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
 const SURFACE = '#161B27';
@@ -299,9 +299,9 @@ const styles = StyleSheet.create({
   noticeBanner: {
     fontSize: 13,
     color: '#86EFAC',
-    backgroundColor: 'rgba(34,197,94,0.1)',
+    backgroundColor: 'rgba(16,185,129,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.3)',
+    borderColor: 'rgba(16,185,129,0.3)',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,

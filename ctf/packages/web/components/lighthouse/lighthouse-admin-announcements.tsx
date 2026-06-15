@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import type { Announcement } from 'lib/feed/types';
 
-// Admin design tokens (shared admin look). LightHouse accent is cyan.
-const COLOR = '#06B6D4';
+// Admin design tokens (shared admin look). LightHouse accent is blue.
+const COLOR = '#60A5FA';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';

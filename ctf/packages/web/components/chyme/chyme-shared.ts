@@ -5,7 +5,7 @@ import { getAppAccent, type ThemeName } from '@/lib/theme/theme-tokens';
 import { getPluginShellTokens, type PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 
 export const PRIMARY = '#22C55E';
-export const DARK_BG = '#021006';
+export const DARK_BG = '#04160A';
 export const CARD_BG = '#041a0b';
 export const BORDER = '#052e16';
 // The chrome panel/header/rail surface the shells paint (darker than DARK_BG).
@@ -14,7 +14,7 @@ export const PANEL_BG = '#030d05';
 export const TITLE = '#F0FDF4';
 
 // Chyme ships its own deep-green chrome surfaces — a near-black green page background
-// (#021006), a deepest-chrome panel/header/rail (#030d05), a green-ink divider (#052e16),
+// (#04160A), a deepest-chrome panel/header/rail (#030d05), a green-ink divider (#052e16),
 // and a mint-white title (#F0FDF4). Those values differ from the shared default surfaces, so
 // the default branch overrides exactly those token slots and leaves the rest of the shared
 // default values (text tones, white-alpha inactive borders, input surface) untouched — so the

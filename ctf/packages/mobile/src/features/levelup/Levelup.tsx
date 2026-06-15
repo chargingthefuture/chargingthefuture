@@ -28,7 +28,7 @@ const TABS: { key: LevelupTab; label: string }[] = [
 // ---------------------------------------------------------------------------
 // Design tokens (from MobileLevelUp.tsx design-sync)
 // ---------------------------------------------------------------------------
-const GREEN = '#22C55E';
+const GREEN = '#10B981';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';

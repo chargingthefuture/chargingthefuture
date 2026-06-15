@@ -5,7 +5,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
 // Palette from the GentlePulsePublic / MobileGentlePulsePublic design mockups.
-const BG = '#0A0F0E';
+const BG = '#061711';
 const COLOR = '#34D399';
 const TEXT = '#F9FAFB';
 
