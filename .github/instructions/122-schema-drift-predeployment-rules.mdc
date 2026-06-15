@@ -42,6 +42,13 @@ Prevent schema and contract drift from reaching any deployment target.
 - Deployment workflows must not bypass drift gates on branch, preview, staging, or production targets.
 - Required checks must execute in GitHub Actions; local-only verification is insufficient.
 
+## How the Gate Decides a Change Is DB-Impacting (`ctf/scripts/check-schema-drift.sh`)
+- A change to `ctf/schema.sql` always counts as DB-impacting (and is the accompanying edit the gate asks for).
+- A file whose path name contains `schema`, `migration`, `drizzle`, or `sql` (outside docs/scripts/web/mobile) counts as DB-impacting on its name alone.
+- For files under `ctf/server/` or `ctf/packages/shared/`, the gate is **content-aware**: a changed file counts as DB-impacting only when it actually contains database/SQL code — tokens such as `queryDb`, `withDbTransaction`, `CREATE TABLE` / `ALTER TABLE`, `INSERT INTO` / `DELETE FROM`, `CREATE INDEX`, `drizzle`, or `lib/db/postgres`. A pure constant, type, or copy module under `shared/` with none of those tokens is **not** forced to touch `ctf/schema.sql`. This removes a class of false positives (for example, adding a shared constant) while still catching real schema-touching code.
+- Pure auth-logic files under `shared/.../auth/` (token decode/verify only — they never touch the database) and docs/test files are excluded.
+- **Trade-off to know:** a type-only change that mirrors a brand-new DB column will not be auto-flagged, because the type file carries no SQL token. Pair such a change with the matching `ctf/schema.sql` edit; that edit satisfies the gate on its own, so the contract still holds in practice.
+
 ## PR Evidence Contract
 - When schema/contract changes are present, PR description must include:
   - `Schema Drift` section with drift class impact summary,
