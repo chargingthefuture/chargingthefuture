@@ -11,6 +11,7 @@ export function ClicklogLogPanel({
   submitting,
   locationAdded,
   geoStatus,
+  geoError,
   onToggleForm,
   onNoteChange,
   onAddLocation,
@@ -23,6 +24,7 @@ export function ClicklogLogPanel({
   submitting: boolean;
   locationAdded: boolean;
   geoStatus: "idle" | "locating" | "error";
+  geoError: string | null;
   onToggleForm: () => void;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
@@ -68,7 +70,7 @@ export function ClicklogLogPanel({
           </div>
           {geoStatus === "error" && (
             <div style={{ marginTop: 8, fontSize: 11, color: SUBTLE, lineHeight: 1.5 }}>
-              Couldn&apos;t get your location — check location permissions and try again.
+              {geoError ?? "Couldn't get your location — check location permissions and try again."}
             </div>
           )}
         </div>
