@@ -26,6 +26,7 @@ export function ClicklogShell() {
   const [note, setNote] = useState("");
   const [geo, setGeo] = useState<Geo>({});
   const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "error">("idle");
+  const [geoError, setGeoError] = useState<string | null>(null);
   const [logged, setLogged] = useState(false);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -57,20 +58,35 @@ export function ClicklogShell() {
 
   function addLocation(): void {
     if (!navigator.geolocation) {
+      setGeoError("This browser can't access location.");
       setGeoStatus("error");
       return;
     }
     setGeoStatus("locating");
+    setGeoError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGeo({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         setGeoStatus("idle");
+        setGeoError(null);
       },
-      () => {
+      (err) => {
         setGeo({});
+        // Surface the specific reason. On iPhone, location commonly fails even when
+        // Safari's per-site toggle says Allow — the OS-level Location Services for
+        // Safari must also be on — so name that path for a denied permission.
+        const message =
+          err.code === err.PERMISSION_DENIED
+            ? "Location is blocked. On iPhone: Settings → Privacy & Security → Location Services → turn it on and set Safari Websites to “While Using the App”, then reload and try again."
+            : err.code === err.TIMEOUT
+              ? "Location timed out — try again."
+              : "Your location is unavailable right now — try again, ideally with Wi-Fi on.";
+        setGeoError(message);
         setGeoStatus("error");
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      // High accuracy (GPS) is slow and flaky on mobile and an incident log does not
+      // need pinpoint precision, so prefer the faster network fix; keep a 10s timeout.
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
     );
   }
 
@@ -88,6 +104,7 @@ export function ClicklogShell() {
       setNote("");
       setGeo({});
       setGeoStatus("idle");
+      setGeoError(null);
       flashLogged();
       await fetchIncidents();
     } catch (e) {
@@ -135,11 +152,12 @@ export function ClicklogShell() {
         submitting={busy}
         locationAdded={typeof geo.latitude === "number"}
         geoStatus={geoStatus}
+        geoError={geoError}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); }}
+        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); }}
       />
 
       {incidents.length > 0 && (
