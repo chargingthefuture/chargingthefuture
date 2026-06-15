@@ -381,6 +381,10 @@ When creating a new plugin from scratch, ALL of the following must be completed 
 8. **Plugin Registry**
    - Add entry to `ctf/packages/web/lib/plugins/repository.ts` with slug, name, summary, availability state, nav rank
 
+9. **Trust Signal (if the plugin has real member participation)**
+   - If members complete/accept/claim/publish real rows in this plugin, add one categorical Trust signal so a member active only here is still seen — per [132-trust-signal-coverage-rules.mdc](132-trust-signal-coverage-rules.mdc). Add a metric to `TrustSignalMetrics`, a coarse `COUNT` to `computeTrustSignalMetrics`, an entry to the `participationSignals` array in `buildTrustEvidence` (all in `ctf/packages/web/lib/trust/`), bump `TRUST_SNAPSHOT_MODEL`, and add the table to the `trust.signal.snapshot.refresh` contract `dataAccess`.
+   - **Never** surface sensitive personal-wellbeing/safety/verification participation as public evidence (no numeric score, ever). If the plugin is admin-only, read-only, or sensitive, record it as not-applicable in the Trust inventory with the reason.
+
 ### Enforcement
 
 **PR Review Gate**: 
