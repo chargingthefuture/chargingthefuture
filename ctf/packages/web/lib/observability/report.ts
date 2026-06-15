@@ -18,6 +18,17 @@ type ReportContext = {
 // this in those catch blocks so the underlying error, tagged and annotated, shows
 // up in Sentry. Works on both the server and the client (@sentry/nextjs).
 export function reportError(error: unknown, context: ReportContext): void {
+  // Always log to stdout as well, so caught errors are visible in the platform's
+  // runtime logs (e.g. Render) even when Sentry is unconfigured or its DSN is
+  // missing. Without this, a route that catches its own error and returns a
+  // friendly 5xx leaves no readable trace anywhere. ReportContext forbids
+  // secrets, so logging the tags/extra is safe.
+  console.error(
+    `[reportError] area=${context.area} op=${context.op}`,
+    error instanceof Error ? (error.stack ?? error.message) : error,
+    context.extra ? JSON.stringify(context.extra) : '',
+  );
+
   Sentry.captureException(error, {
     tags: { area: context.area, op: context.op },
     ...(context.extra ? { extra: context.extra } : {}),
