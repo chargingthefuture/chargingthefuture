@@ -17,7 +17,7 @@ function buildCards(m: CirculationMetrics): Card[] {
     { label: "In circulation", value: fmtCredits(m.inCirculation) },
     { label: "Total issued", value: fmtCredits(m.totalIssued) },
     { label: "Total burned", value: fmtCredits(m.totalBurned) },
-    { label: "Held by the community", value: fmtOrDash(m.treasuryBalance) },
+    { label: "Held in treasury", value: fmtOrDash(m.treasuryBalance) },
     { label: "On community credit", value: fmtCredits(m.outstandingMutualCreditDebt) },
     { label: "Moving (30-day velocity)", value: m.velocity.toFixed(2) },
     { label: "Sent in last 30 days", value: fmtCredits(m.transferVolume30d) },

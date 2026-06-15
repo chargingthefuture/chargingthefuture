@@ -229,6 +229,22 @@ export async function createTransfer(input: {
   const rail = input.rail === 'mutual_credit' ? 'mutual_credit' : 'balance';
 
   return withDbTransaction(async (client) => {
+    // Dedup before any freeze/balance/limit check, so a valid retry returns the original transfer (with
+    // its original rail) instead of re-validating wallet state that may have changed since the first call.
+    const replay = await readCommandIdempotency<{
+      id: string;
+      senderUserId: string;
+      recipientUserId: string;
+      amount: number;
+      status: 'pending' | 'completed' | 'cancelled' | 'disputed';
+      escrowHoldId: string | null;
+      externalLedgerTransactionId: string | null;
+      rail: 'balance' | 'mutual_credit';
+    }>(client, input.senderUserId, 'transfer.create', input.idempotencyKey);
+    if (replay) {
+      return replay;
+    }
+
     await client.query(
       `INSERT INTO service_credits_wallets (user_id)
        VALUES ($1), ($2)
@@ -801,6 +817,9 @@ export async function mintGrant(input: {
     const treasuryPolicy = await readTreasuryPolicy(client);
     const issuance = readIssuancePolicy(treasuryPolicy);
     if (issuance.enforce) {
+      // Serialize concurrent budget checks so two mints can't both pass the ceiling and commit above it.
+      // Transaction-scoped, so it releases on commit/rollback; mints are rare so contention is negligible.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext('service_credits.mint_budget'))`);
       const circulating = await sumCirculating(client, readTreasuryUserId(treasuryPolicy));
       const ceiling = resolveMintCeiling(issuance, circulating);
       if (ceiling !== null) {
@@ -1633,8 +1652,11 @@ export async function setCreditLimit(input: { actorId: string; targetUserId: str
     throw new Error('invalid_payload');
   }
 
+  // maxLimit is a hard ceiling on any per-account override, enforced even at its default of 0 — so an
+  // override above an unset ceiling is blocked (the operator must set mutualCredit.maxLimit first).
+  // Setting the limit to 0 (revoke) always passes.
   const mutualCredit = readMutualCreditPolicy(await getTreasuryConfig());
-  if (mutualCredit.maxLimit > 0 && input.creditLimit > mutualCredit.maxLimit) {
+  if (input.creditLimit > mutualCredit.maxLimit) {
     throw new Error('credit_limit_above_max');
   }
 

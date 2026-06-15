@@ -1397,13 +1397,26 @@ CREATE TABLE IF NOT EXISTS service_credits_disputes (
 -- -credit_limit. Absent a row, the member's limit is the treasury policy mutualCredit.defaultLimit.
 CREATE TABLE IF NOT EXISTS service_credits_credit_limits (
   user_id TEXT PRIMARY KEY,
-  credit_limit NUMERIC NOT NULL DEFAULT 0,
+  credit_limit NUMERIC NOT NULL DEFAULT 0 CHECK (credit_limit >= 0),
   updated_by_user_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS credit_limit NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Enforce non-negative limits on legacy tables too (idempotent; the constraint inverts floor behaviour if negative).
+DO $service_credits_credit_limits_non_negative$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'service_credits_credit_limits_credit_limit_check'
+  ) THEN
+    ALTER TABLE service_credits_credit_limits
+      ADD CONSTRAINT service_credits_credit_limits_credit_limit_check
+      CHECK (credit_limit >= 0);
+  END IF;
+END
+$service_credits_credit_limits_non_negative$;
 
 -- === lighthouse-core ===
 CREATE TABLE IF NOT EXISTS lighthouse_user_extension (

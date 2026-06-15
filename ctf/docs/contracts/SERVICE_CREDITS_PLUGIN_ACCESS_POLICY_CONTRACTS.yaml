@@ -53,7 +53,7 @@ policies:
 
   - pluginId: service-credits
     command: transfer.create
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
       - service
@@ -178,7 +178,7 @@ policies:
 
   - pluginId: service-credits
     command: governance.mint.grant
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - admin
       - treasury_governor

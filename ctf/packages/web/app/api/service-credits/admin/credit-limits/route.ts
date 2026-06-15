@@ -50,8 +50,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  if (!body.targetUserId || typeof body.creditLimit !== 'number') {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'targetUserId and creditLimit are required.' }, { status: 400 });
+  if (!body.targetUserId || typeof body.creditLimit !== 'number' || !Number.isFinite(body.creditLimit) || body.creditLimit < 0) {
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'targetUserId and a non-negative finite creditLimit are required.' }, { status: 400 });
   }
 
   try {

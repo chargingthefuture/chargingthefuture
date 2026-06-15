@@ -118,6 +118,10 @@ Command groups:
 9. `service-credits.treasury.fee.collect`
 10. `service-credits.dispute.adjustment.apply`
 11. `service-credits.account.deletion.reclaim.execute`
+12. `service-credits.circulation.metrics.get`
+13. `service-credits.credit-limit.set`
+14. `service-credits.credit-limit.get`
+15. `service-credits.wallet-status.set`
 
 ### 3.2 HTTP Projection Routes
 

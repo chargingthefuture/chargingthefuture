@@ -461,6 +461,30 @@ contracts:
         type: number
       velocity:
         type: number
+      issuanceEnforced:
+        type: boolean
+        description: Admin projection only.
+      issuancePeriodDays:
+        type: number
+        description: Admin projection only.
+      mintBudgetCeiling:
+        type: number
+        description: Admin projection only. Null when minting is not budget-constrained.
+      mintedThisPeriod:
+        type: number
+        description: Admin projection only.
+      mintBudgetRemaining:
+        type: number
+        description: Admin projection only. Null when minting is not budget-constrained.
+      concentrationTop5Share:
+        type: number
+        description: Admin projection only.
+      openDisputes:
+        type: number
+        description: Admin projection only.
+      treasuryUserIdConfigured:
+        type: boolean
+        description: Admin projection only.
     dataAccess:
       - service_credits_wallets
       - service_credits_governance_events
@@ -469,7 +493,7 @@ contracts:
       - service_credits_treasury_config
     purpose: circulation_reporting
     retentionClass: transactional_long_lived
-    idempotency: false
+    idempotency: true
 
   - pluginId: service-credits
     command: credit-limit.set
@@ -518,12 +542,12 @@ contracts:
       - service_credits_treasury_config
     purpose: governance_monetary_control
     retentionClass: transactional_long_lived
-    idempotency: false
+    idempotency: true
 
   - pluginId: service-credits
     command: wallet-status.set
     version: 1.0.0
-    description: Admin-only. Freeze or unfreeze a member's wallet. A frozen wallet cannot spend on either rail (trust & safety lever for a risk-flagged account); rejected with wallet_frozen before any balance or rail check.
+    description: Admin-only. Freeze or unfreeze a member's wallet. While frozen, the wallet cannot spend ServiceCredits on either rail. Trust & safety lever for a risk-flagged account.
     inputSchema:
       targetUserId:
         type: string

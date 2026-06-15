@@ -151,7 +151,9 @@ and equal**: every member gets the same line, set by one policy number, regardle
 
 - `defaultLimit` — the line every member has. Equal for everyone. `0` until the operator sets it (safe
   default). Recommended starting value: enough for one or two typical transactions, no more.
-- `maxLimit` — the ceiling on any per-account override (below), as a guard against a fat-finger grant.
+- `maxLimit` — a hard ceiling on any per-account override (below), enforced even at its default of `0`. So
+  with the default an admin cannot set a positive per-account limit until a ceiling is configured; revoking
+  (setting an override to `0`) always works.
 
 The bound on abuse does **not** come from judging people. It comes from three things that are not scores:
 1. the line is **small**, so the most the community can lose to any one account is small;
@@ -303,7 +305,7 @@ sender lacks the funds) or `'mutual_credit'`.
 On the `mutual_credit` rail the sender may go negative, but only down to `-(credit_limit)`. The check, run
 under the existing `FOR UPDATE` lock:
 
-```
+```text
 effectiveFloor = rail === 'mutual_credit' ? -creditLimit : 0
 if (senderBalanceAfter < effectiveFloor) reject 'credit_limit_exceeded'
 ```
@@ -368,8 +370,9 @@ This must be reflected in `SERVICE_CREDITS_PROFILE_AND_DELETION_CONTRACT.md`.
 
 ## 10. Acceptance criteria
 
-- The per-period mint budget is enforced in the mint path; mints over budget are denied and audited; the
-  default budget of 0 blocks accidental printing before a policy is set.
+- The per-period mint budget is enforced in the mint path only when the operator turns enforcement on
+  (`issuance.enforce: true`); with the default (`enforce: false`) minting is unrestricted so the live earn
+  reward is never frozen. When enforcement is on, mints over the ceiling are denied and audited.
 - The mutual-credit rail lets a member pay to `-(credit_limit)` and no further; issuance nets to zero;
   default limit of 0 keeps the rail safe until raised.
 - `GET /api/service-credits/circulation` returns aggregate, non-identifying numbers; the admin endpoint adds
@@ -378,5 +381,3 @@ This must be reflected in `SERVICE_CREDITS_PROFILE_AND_DELETION_CONTRACT.md`.
   recorded immutably.
 - Contracts, deletion contract, and the feature inventory match the code; schema-drift gate green; build
   clean.
-</content>
-</invoke>

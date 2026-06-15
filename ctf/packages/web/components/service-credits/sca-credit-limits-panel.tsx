@@ -8,7 +8,7 @@
 //   POST /api/service-credits/admin/credit-limits  <- { targetUserId, creditLimit }
 import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
-import { scAdminMutate, type CreditLimitResponse, type CreditLimitLookup } from './sca-shared';
+import { scAdminMutate, type CreditLimitResponse, type CreditLimitLookup, type CreditLimitLookupResponse } from './sca-shared';
 
 export function ServiceCreditsCreditLimitsPanel() {
   const [targetUserId, setTargetUserId] = useState('');
@@ -33,15 +33,12 @@ export function ServiceCreditsCreditLimitsPanel() {
       const res = await fetch(
         `/api/service-credits/admin/credit-limits?targetUserId=${encodeURIComponent(id)}`,
       );
-      const data = (await res.json().catch(() => null)) as CreditLimitResponse & {
-        creditLimit?: CreditLimitLookup;
-        message?: string;
-      };
+      const data = (await res.json().catch(() => null)) as (CreditLimitLookupResponse & { message?: string }) | null;
       if (!res.ok || !data?.ok || !data.creditLimit) {
         setError(data?.message ?? 'Could not look up this member.');
         return;
       }
-      setLookup(data.creditLimit as CreditLimitLookup);
+      setLookup(data.creditLimit);
     } catch {
       setError('Network error. Try again.');
     } finally {
