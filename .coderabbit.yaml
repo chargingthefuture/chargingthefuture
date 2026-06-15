@@ -16,6 +16,16 @@ reviews:
   review_status: false
   # Skip the whimsical poem at the end of the walkthrough comment.
   poem: false
+  pre_merge_checks:
+    # Turn off the "Docstring Coverage" warning. It compares doc-comment coverage
+    # of the changed files against CodeRabbit's generic 80% default and complains
+    # when fewer functions carry a JSDoc block (e.g. 23.53% on a small PR). It is a
+    # non-blocking warning — it never fails our CI — and an 80% doc-comment target
+    # is a number this repo never chose and does not want: our coding rules favour
+    # plain, self-explanatory code over blanket JSDoc on every helper. Measured per
+    # diff, the percentage also swings wildly and carries no useful signal.
+    docstrings:
+      mode: "off"
   auto_review:
     enabled: true
     # Never spend review credits on draft PRs.

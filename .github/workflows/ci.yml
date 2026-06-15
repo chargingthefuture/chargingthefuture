@@ -2,18 +2,14 @@ name: CI
 
 on:
   pull_request:
+    # No paths filter on purpose: CI must run on EVERY PR to main so its required
+    # status checks always report. With a paths filter, a PR that only touches an
+    # unlisted file (e.g. .coderabbit.yaml, .claude/**) never triggers CI, so the
+    # required checks stay "expected" forever and the PR can never merge. Instead,
+    # the heavy jobs (modularity-governance, quality-gates) skip fast for non-code
+    # changes via the `changes` job below — and a skipped required job counts as a
+    # pass — so config/docs-only PRs stay green and merge quickly.
     branches: [main]
-    paths:
-      - "ctf/**"
-      - ".github/instructions/**"
-      - ".github/workflows/**"
-      - "docs/**"
-      # Root workspace files. Without these, a PR that only touches the root
-      # lockfile never runs CI, and the required status checks stay "expected"
-      # forever, so the PR can never merge.
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
   push:
     branches: [main]
     paths:
@@ -30,6 +26,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect whether app/build code changed
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - "ctf/**"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "pnpm-workspace.yaml"
+
   rules-integrity:
     name: Rules Integrity
     runs-on: ubuntu-latest
@@ -159,7 +175,10 @@ jobs:
   modularity-governance:
     name: Modularity and Complexity Governance
     runs-on: ubuntu-latest
-    needs: rules-integrity
+    needs: [rules-integrity, changes]
+    # Only run the heavy install+scan when app/build code changed. For config/docs-only
+    # PRs this job is skipped, and a skipped required job counts as a pass downstream.
+    if: needs.changes.outputs.code == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -347,6 +366,7 @@ jobs:
     name: Quality Gates
     runs-on: ubuntu-latest
     needs:
+      - changes
       - plugin-contract-templates
       - rules-link-coverage
       - formatting-eof
@@ -356,12 +376,16 @@ jobs:
       - stream-quota-impact-note
       - schema-drift-gate
       - pr-parity-status
+    # Run the expensive build/lint/typecheck gate only when app/build code changed.
+    # For config/docs-only PRs this job is skipped (which counts as a pass downstream),
+    # so those PRs stay green and merge quickly without waiting on a full install+build.
     if: |
       always() &&
+      needs.changes.outputs.code == 'true' &&
       needs.plugin-contract-templates.result == 'success' &&
       needs.rules-link-coverage.result == 'success' &&
       needs.formatting-eof.result == 'success' &&
-      needs.modularity-governance.result == 'success' &&
+      (needs.modularity-governance.result == 'success' || needs.modularity-governance.result == 'skipped') &&
       needs.prompt-leak-guard.result == 'success' &&
       needs.stream-quota-policy.result == 'success' &&
       (needs.stream-quota-impact-note.result == 'success' || needs.stream-quota-impact-note.result == 'skipped') &&
