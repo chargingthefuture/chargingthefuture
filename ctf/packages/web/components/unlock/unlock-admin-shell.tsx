@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Unlock, Key, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { UNLOCK_REWARD_SLA_HOURS } from '@ctf/shared';
 import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
 
 // Admin design tokens (shared admin look from the design system). Unlock accent is purple.
@@ -29,6 +30,24 @@ function StatusPill({ status }: { status: string }) {
   return (
     <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
       {s.label}
+    </span>
+  );
+}
+
+// Reward-status pill for an approved submission. Green when the 100-ServiceCredits reward has
+// landed (incentiveGrantedAt set); muted amber while it is still pending the background retry.
+function RewardPill({ grantedAt }: { grantedAt: string | null }) {
+  const granted = grantedAt !== null;
+  const style = granted
+    ? { bg: 'rgba(34,197,94,0.12)', color: '#22C55E', border: 'rgba(34,197,94,0.3)' }
+    : { bg: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: 'rgba(245,158,11,0.3)' };
+  const label = granted ? 'Reward granted' : 'Reward pending';
+  return (
+    <span
+      title={granted ? `Granted ${new Date(grantedAt as string).toLocaleDateString()}` : undefined}
+      style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: style.bg, color: style.color, border: `1px solid ${style.border}` }}
+    >
+      {label}
     </span>
   );
 }
@@ -139,6 +158,7 @@ export function UnlockAdminShell({
                     {s.quoraProfileUrl}
                   </a>
                   <StatusPill status={s.reviewStatus} />
+                  {s.reviewStatus === 'approved' ? <RewardPill grantedAt={s.incentiveGrantedAt} /> : null}
                 </div>
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 4 }}>User: {s.userId}</div>
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 10 }}>
@@ -163,7 +183,7 @@ export function UnlockAdminShell({
         )}
 
         <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginTop: 16 }}>
-          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access.
+          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued automatically and arrive within {UNLOCK_REWARD_SLA_HOURS} hours — if a reward is still pending it will be retried in the background.
         </p>
       </div>
     </div>

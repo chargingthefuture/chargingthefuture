@@ -241,6 +241,36 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
   return result.rows.map(mapUnlockSubmission);
 }
 
+// Approved submissions whose ServiceCredits reward never landed (the gap a failed mint leaves behind).
+// Used by the background reconciliation job to self-heal missed rewards.
+export async function listApprovedUnincentivizedSubmissions(limit = 100): Promise<UnlockSubmission[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 500);
+  const result = await queryDb<UnlockSubmissionRow>(
+    `SELECT
+       id,
+       user_id,
+       quora_profile_url,
+       quora_profile_url_normalized,
+       review_status,
+       access_tier,
+       unlock_window_expires_at,
+       reminder_stage,
+       reviewed_by_user_id,
+       reviewed_at,
+       review_note,
+       incentive_granted_at,
+       created_at,
+       updated_at
+     FROM unlock_verification_submissions
+     WHERE review_status = 'approved' AND incentive_granted_at IS NULL
+     ORDER BY reviewed_at ASC NULLS FIRST
+     LIMIT $1`,
+    [safeLimit],
+  );
+
+  return result.rows.map(mapUnlockSubmission);
+}
+
 export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput): Promise<UnlockSubmission | null> {
   const accessTier = input.reviewStatus === 'approved' ? 'approved_full' : 'locked_support_only';
 

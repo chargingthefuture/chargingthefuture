@@ -1,4 +1,5 @@
 export * from './auth/genericPluginAuth';
 export * from './feature-flags';
 export * from './mood';
+export * from './unlock';
 export const healthStatus = 'ok';
