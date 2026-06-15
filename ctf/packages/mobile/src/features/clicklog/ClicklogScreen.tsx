@@ -216,13 +216,6 @@ function ClicklogEmpty({ onLog }: { onLog: () => void }) {
             </React.Fragment>
           ))}
         </View>
-
-        <View style={styles.safetyNote}>
-          <Ionicons name="shield-checkmark-outline" size={14} color={BRAND} style={styles.safetyIcon} />
-          <Text style={styles.safetyText}>
-            In an emergency, contact local emergency services first.
-          </Text>
-        </View>
       </View>
 
       <View style={styles.bottomNav}>
