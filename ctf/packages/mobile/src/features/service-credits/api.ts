@@ -33,6 +33,26 @@ type TransferApiResponse = {
 };
 
 /**
+ * Public circulation metrics from GET /api/service-credits/circulation.
+ * All values are bare ServiceCredits quantities — never a fiat equivalent.
+ * treasuryBalance is null when the treasury wallet is not configured.
+ */
+export type CirculationMetrics = {
+  inCirculation: number;
+  totalIssued: number;
+  totalBurned: number;
+  treasuryBalance: number | null;
+  outstandingMutualCreditDebt: number;
+  transferVolume30d: number;
+  velocity: number;
+};
+
+type CirculationApiResponse = {
+  ok: true;
+  metrics: CirculationMetrics;
+};
+
+/**
  * Fetch the authenticated user's Service Credits wallet.
  * Returns availableBalance and escrowBalance from the real backend.
  */
@@ -53,18 +73,30 @@ export async function sendTransfer(input: {
   recipientUserId: string;
   amount: number;
   idempotencyKey: string;
+  rail?: 'balance' | 'mutual_credit';
 }): Promise<Transfer> {
+  const body: {
+    recipientUserId: string;
+    amount: number;
+    idempotencyKey: string;
+    rail?: 'mutual_credit';
+  } = {
+    recipientUserId: input.recipientUserId,
+    amount: input.amount,
+    idempotencyKey: input.idempotencyKey,
+  };
+  // Only send the rail field when paying on community credit; the default
+  // balance rail is implied by its absence.
+  if (input.rail === 'mutual_credit') {
+    body.rail = 'mutual_credit';
+  }
   const res = await authedFetch(`${API_BASE}/transfers`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
-    body: JSON.stringify({
-      recipientUserId: input.recipientUserId,
-      amount: input.amount,
-      idempotencyKey: input.idempotencyKey,
-    }),
+    body: JSON.stringify(body),
   });
   const data = (await res.json()) as TransferApiResponse;
   if (!res.ok) {
@@ -72,4 +104,17 @@ export async function sendTransfer(input: {
     throw new Error(err.message ?? 'service_credits_transfer_failed');
   }
   return data.transfer;
+}
+
+/**
+ * Fetch the public ServiceCredits circulation metrics.
+ * Returns bare credit quantities only; never a fiat figure.
+ */
+export async function fetchCirculation(): Promise<CirculationMetrics> {
+  const res = await authedFetch(`${API_BASE}/circulation`);
+  if (!res.ok) {
+    throw new Error(`service_credits_circulation_fetch_failed:${res.status}`);
+  }
+  const data = (await res.json()) as CirculationApiResponse;
+  return data.metrics;
 }

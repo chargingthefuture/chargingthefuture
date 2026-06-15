@@ -21,6 +21,31 @@ function idempotencyKey(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+async function adminGet<T>(path: string): Promise<AdminResult<T>> {
+  try {
+    const res = await authedFetch(`${ADMIN_API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, forbidden: true, data: null, message: 'Admin access is required.' };
+    }
+    const data = (await res.json().catch(() => null)) as
+      | ({ ok?: boolean; message?: string; reason?: string; code?: string } & Record<string, unknown>)
+      | null;
+    if (!res.ok) {
+      return {
+        ok: false,
+        forbidden: false,
+        data: null,
+        message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).`,
+      };
+    }
+    return { ok: true, forbidden: false, data: (data as T) ?? null, message: null };
+  } catch {
+    return { ok: false, forbidden: false, data: null, message: 'Network error. Try again.' };
+  }
+}
+
 async function adminPost<T>(path: string, body: Record<string, unknown>): Promise<AdminResult<T>> {
   try {
     const res = await authedFetch(`${ADMIN_API_BASE}${path}`, {
@@ -96,4 +121,50 @@ export function applyDisputeAdjustment(
   input: { disputeCaseId: string; sourceUserId: string; destinationUserId: string; amount: number; adjustmentReason: string },
 ): Promise<AdminResult<{ adjustment: DisputeAdjustment }>> {
   return adminPost('/disputes/adjustments', { ...input, idempotencyKey: idempotencyKey('dispute') });
+}
+
+// Admin circulation metrics: the public fields plus operator-only issuance levers.
+// All values are bare ServiceCredits quantities; no fiat equivalence is ever derived.
+export type AdminCirculationMetrics = {
+  inCirculation: number;
+  totalIssued: number;
+  totalBurned: number;
+  treasuryBalance: number | null;
+  outstandingMutualCreditDebt: number;
+  transferVolume30d: number;
+  velocity: number;
+  issuanceEnforced: boolean;
+  issuancePeriodDays: number;
+  mintBudgetCeiling: number | null;
+  mintedThisPeriod: number;
+  mintBudgetRemaining: number | null;
+  concentrationTop5Share: number;
+  openDisputes: number;
+  treasuryUserIdConfigured: boolean;
+};
+export function fetchAdminCirculation(): Promise<AdminResult<{ metrics: AdminCirculationMetrics }>> {
+  return adminGet('/circulation');
+}
+
+export type CreditLimit = {
+  targetUserId: string;
+  creditLimit: number;
+  isDefault: boolean;
+  frozen: boolean;
+};
+export function fetchCreditLimit(targetUserId: string): Promise<AdminResult<{ creditLimit: CreditLimit }>> {
+  return adminGet(`/credit-limits?targetUserId=${encodeURIComponent(targetUserId)}`);
+}
+
+export function setCreditLimit(
+  input: { targetUserId: string; creditLimit: number },
+): Promise<AdminResult<{ creditLimit: { targetUserId: string; creditLimit: number } }>> {
+  return adminPost('/credit-limits', input);
+}
+
+export type WalletStatus = { targetUserId: string; frozen: boolean };
+export function setWalletStatus(
+  input: { targetUserId: string; frozen: boolean; reason?: string },
+): Promise<AdminResult<{ walletStatus: WalletStatus }>> {
+  return adminPost('/wallet-status', input);
 }
