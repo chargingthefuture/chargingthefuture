@@ -10,6 +10,7 @@ export function ClicklogLogPanel({
   note,
   submitting,
   locationAdded,
+  geoStatus,
   onToggleForm,
   onNoteChange,
   onAddLocation,
@@ -21,6 +22,7 @@ export function ClicklogLogPanel({
   note: string;
   submitting: boolean;
   locationAdded: boolean;
+  geoStatus: "idle" | "locating" | "error";
   onToggleForm: () => void;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
@@ -55,14 +57,20 @@ export function ClicklogLogPanel({
           <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
             <button
               onClick={onAddLocation}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", borderRadius: 8, background: locationAdded ? `${BRAND}18` : "rgba(255,255,255,0.04)", border: `1px solid ${locationAdded ? BRAND + "40" : BORDER}`, color: locationAdded ? BRAND : SUBTLE, fontSize: 12, cursor: "pointer" }}
+              disabled={geoStatus === "locating"}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", borderRadius: 8, background: locationAdded ? `${BRAND}18` : "rgba(255,255,255,0.04)", border: `1px solid ${locationAdded ? BRAND + "40" : BORDER}`, color: locationAdded ? BRAND : SUBTLE, fontSize: 12, cursor: geoStatus === "locating" ? "not-allowed" : "pointer", opacity: geoStatus === "locating" ? 0.7 : 1 }}
             >
-              <MapPin size={12} /> {locationAdded ? "Location added" : "Add location"}
+              <MapPin size={12} /> {locationAdded ? "Location added" : geoStatus === "locating" ? "Locating…" : "Add location"}
             </button>
             <div style={{ flex: 1 }} />
             <button onClick={onCancel} style={{ padding: "7px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 12, cursor: "pointer" }}>Cancel</button>
             <button onClick={onSubmit} disabled={submitting} style={{ padding: "7px 18px", borderRadius: 8, background: BRAND, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>Submit</button>
           </div>
+          {geoStatus === "error" && (
+            <div style={{ marginTop: 8, fontSize: 11, color: SUBTLE, lineHeight: 1.5 }}>
+              Couldn&apos;t get your location — check location permissions and try again.
+            </div>
+          )}
         </div>
       )}
     </div>
