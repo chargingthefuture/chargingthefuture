@@ -1506,13 +1506,12 @@ export async function getTreasuryConfig() {
   return result.rows[0]?.policy ?? {};
 }
 
-// Circulation metrics for the two-tier dashboard. Without `includeAdmin` it returns only the public,
-// non-identifying aggregates; with it, the operator levers are added. No figure is ever a fiat amount.
-export async function getCirculationMetrics(options?: { includeAdmin?: boolean }) {
-  const policy = await getTreasuryConfig();
-  const treasuryUserId = readTreasuryUserId(policy);
-  const issuance = readIssuancePolicy(policy);
+function numFromRow(row: Record<string, string> | undefined, key: string): number {
+  return Number(row?.[key] ?? '0');
+}
 
+// The public, non-identifying aggregates. Split out so the main metrics function stays simple.
+async function computePublicCirculationMetrics(treasuryUserId: string | null) {
   const totals = await queryDb<{ issued: string; burned: string }>(
     `SELECT
        COALESCE(SUM(amount) FILTER (WHERE event_type = 'mint_grant'), 0)::text AS issued,
@@ -1542,24 +1541,28 @@ export async function getCirculationMetrics(options?: { includeAdmin?: boolean }
      FROM service_credits_transfers WHERE created_at > NOW() - make_interval(days => 30)`,
   );
 
-  const inCirculation = Number(circulation.rows[0]?.in_circulation ?? '0');
-  const transferVolume30d = Number(volume.rows[0]?.total ?? '0');
+  const inCirculation = numFromRow(circulation.rows[0], 'in_circulation');
+  const transferVolume30d = numFromRow(volume.rows[0], 'total');
 
-  const publicMetrics = {
+  return {
     inCirculation,
-    totalIssued: Number(totals.rows[0]?.issued ?? '0'),
-    totalBurned: Number(totals.rows[0]?.burned ?? '0'),
-    treasuryBalance: treasury ? Number(treasury.rows[0]?.balance ?? '0') : null,
-    outstandingMutualCreditDebt: Number(circulation.rows[0]?.debt ?? '0'),
-    transferVolume30d,
-    velocity: inCirculation > 0 ? transferVolume30d / inCirculation : 0,
+    publicMetrics: {
+      inCirculation,
+      totalIssued: numFromRow(totals.rows[0], 'issued'),
+      totalBurned: numFromRow(totals.rows[0], 'burned'),
+      treasuryBalance: treasury ? numFromRow(treasury.rows[0], 'balance') : null,
+      outstandingMutualCreditDebt: numFromRow(circulation.rows[0], 'debt'),
+      transferVolume30d,
+      velocity: inCirculation > 0 ? transferVolume30d / inCirculation : 0,
+    },
   };
+}
 
-  if (!options?.includeAdmin) {
-    return publicMetrics;
-  }
-
+// The admin-only operator levers (mint budget, concentration, open disputes). Split out so the main
+// metrics function stays simple.
+async function computeAdminCirculationLevers(issuance: IssuancePolicy, treasuryUserId: string | null, inCirculation: number) {
   const ceiling = resolveMintCeiling(issuance, inCirculation);
+
   let mintedThisPeriod = 0;
   if (issuance.enforce) {
     const minted = await queryDb<{ total: string }>(
@@ -1586,7 +1589,6 @@ export async function getCirculationMetrics(options?: { includeAdmin?: boolean }
   );
 
   return {
-    ...publicMetrics,
     issuanceEnforced: issuance.enforce,
     issuancePeriodDays: issuance.periodDays,
     mintBudgetCeiling: ceiling,
@@ -1596,6 +1598,22 @@ export async function getCirculationMetrics(options?: { includeAdmin?: boolean }
     openDisputes: Number(disputes.rows[0]?.total ?? '0'),
     treasuryUserIdConfigured: treasuryUserId !== null,
   };
+}
+
+// Circulation metrics for the two-tier dashboard. Without `includeAdmin` it returns only the public,
+// non-identifying aggregates; with it, the operator levers are added. No figure is ever a fiat amount.
+export async function getCirculationMetrics(options?: { includeAdmin?: boolean }) {
+  const policy = await getTreasuryConfig();
+  const treasuryUserId = readTreasuryUserId(policy);
+
+  const { inCirculation, publicMetrics } = await computePublicCirculationMetrics(treasuryUserId);
+
+  if (!options?.includeAdmin) {
+    return publicMetrics;
+  }
+
+  const levers = await computeAdminCirculationLevers(readIssuancePolicy(policy), treasuryUserId, inCirculation);
+  return { ...publicMetrics, ...levers };
 }
 
 export async function updateTreasuryConfig(input: { actorId: string; policy: Record<string, unknown> }) {
