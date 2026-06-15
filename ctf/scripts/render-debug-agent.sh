@@ -81,6 +81,14 @@ fi
 
 echo "==> $(echo "$LOGS" | wc -l) log lines fetched. Scanning for errors..."
 
+# Surface our own structured error lines so caught errors (which return a friendly
+# 5xx and would otherwise be invisible) are diagnosable here. These come from
+# lib/observability/report.ts reportError, whose contract forbids secrets/PII — so
+# they are safe to print in the (public) Actions log, unlike raw app log lines.
+echo "==> Structured [reportError] lines (safe — no secrets/PII by contract):"
+echo "$LOGS" | grep -F '[reportError]' | tail -50 || true
+echo "==> (end reportError lines)"
+
 # ── 2. Detect known error patterns ───────────────────────────────────────────
 
 FIXES=()
