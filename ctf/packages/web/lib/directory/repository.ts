@@ -116,7 +116,10 @@ async function loadProfileSkills(client: PoolClient, profileId: string): Promise
       SELECT sk.id, sk.name, dps.display_order
       FROM directory_profile_skills dps
       JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id
-      WHERE dps.profile_id = $1
+      -- Compare ids as text: directory_profiles.id carried over from v2 as varchar,
+      -- so a direct uuid (dps.profile_id) = varchar comparison fails to plan. Cast
+      -- both to text. Proper id-type reconciliation is tracked in the #520 cleanup.
+      WHERE dps.profile_id::text = $1
       ORDER BY dps.display_order ASC, sk.name ASC
     `,
     [profileId],
@@ -479,7 +482,7 @@ export async function listDirectoryForMember(
             $3::uuid IS NULL
             OR EXISTS (
               SELECT 1 FROM directory_profile_skills dps
-              WHERE dps.profile_id = p.id AND dps.skill_id = $3::uuid
+              WHERE dps.profile_id::text = p.id::text AND dps.skill_id = $3::uuid
             )
           )
           AND (
@@ -524,7 +527,7 @@ export async function listDirectoryForMember(
             $3::uuid IS NULL
             OR EXISTS (
               SELECT 1 FROM directory_profile_skills dps
-              WHERE dps.profile_id = p.id AND dps.skill_id = $3::uuid
+              WHERE dps.profile_id::text = p.id::text AND dps.skill_id = $3::uuid
             )
           )
           AND (
