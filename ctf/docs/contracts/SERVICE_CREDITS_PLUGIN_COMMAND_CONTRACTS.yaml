@@ -68,8 +68,8 @@ contracts:
 
   - pluginId: service-credits
     command: transfer.create
-    version: 1.0.0
-    description: Create a credit transfer between source and destination wallets under plugin-path constraints.
+    version: 1.1.0
+    description: Create a credit transfer between source and destination wallets under plugin-path constraints. The optional rail selects whether the sender pays from balance or on mutual credit (going negative down to their credit limit).
     inputSchema:
       sourceWalletId:
         type: string
@@ -86,6 +86,13 @@ contracts:
       originPlugin:
         type: string
         required: true
+      rail:
+        type: string
+        required: false
+        enum:
+          - balance
+          - mutual_credit
+        description: Defaults to balance. mutual_credit lets the sender pay past zero down to -(credit limit); requires mutualCredit.enabled in treasury policy. Denied with credit_limit_exceeded over the limit.
       idempotencyKey:
         type: string
         required: true
@@ -96,11 +103,15 @@ contracts:
         type: string
       ledgerReference:
         type: string
+      rail:
+        type: string
       createdAt:
         type: string
     dataAccess:
       - service_credits_wallets
       - service_credits_transfers
+      - service_credits_credit_limits
+      - service_credits_treasury_config
       - service_credits_command_idempotency
       - service_credits_adapter_outbox
     purpose: value_transfer
@@ -223,8 +234,8 @@ contracts:
 
   - pluginId: service-credits
     command: governance.mint.grant
-    version: 1.0.0
-    description: Grant newly issued service credits under governance policy controls.
+    version: 1.1.0
+    description: Grant newly issued service credits under governance policy controls. When issuance enforcement is on, the grant is denied with mint_budget_exceeded if it would push minting over the per-period budget configured in treasury policy.
     inputSchema:
       targetWalletId:
         type: string
@@ -251,6 +262,7 @@ contracts:
     dataAccess:
       - service_credits_wallets
       - service_credits_governance_events
+      - service_credits_treasury_config
       - service_credits_command_idempotency
       - service_credits_adapter_outbox
     purpose: governance_monetary_control
@@ -426,3 +438,134 @@ contracts:
     retentionClass: audit_long_lived
     idempotency: true
     idempotencyNotes: idempotencyKey must be composed as accountId + deletionRequestId.
+
+  - pluginId: service-credits
+    command: circulation.metrics.get
+    version: 1.0.0
+    description: Read aggregate circulation metrics. The public projection returns only non-identifying totals; the admin projection adds the operator levers (mint budget remaining, concentration, open disputes). No figure is a fiat amount.
+    inputSchema:
+      includeAdmin:
+        type: boolean
+        required: false
+        description: Admin-only. When true (admin endpoint), adds operator levers to the public totals.
+    outputSchema:
+      inCirculation:
+        type: number
+      totalIssued:
+        type: number
+      totalBurned:
+        type: number
+      treasuryBalance:
+        type: number
+      outstandingMutualCreditDebt:
+        type: number
+      velocity:
+        type: number
+      issuanceEnforced:
+        type: boolean
+        description: Admin projection only.
+      issuancePeriodDays:
+        type: number
+        description: Admin projection only.
+      mintBudgetCeiling:
+        type: number
+        description: Admin projection only. Null when minting is not budget-constrained.
+      mintedThisPeriod:
+        type: number
+        description: Admin projection only.
+      mintBudgetRemaining:
+        type: number
+        description: Admin projection only. Null when minting is not budget-constrained.
+      concentrationTop5Share:
+        type: number
+        description: Admin projection only.
+      openDisputes:
+        type: number
+        description: Admin projection only.
+      treasuryUserIdConfigured:
+        type: boolean
+        description: Admin projection only.
+    dataAccess:
+      - service_credits_wallets
+      - service_credits_governance_events
+      - service_credits_transfers
+      - service_credits_disputes
+      - service_credits_treasury_config
+    purpose: circulation_reporting
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: service-credits
+    command: credit-limit.set
+    version: 1.0.0
+    description: Admin-only. Grant or revoke a member's mutual-credit limit (the most negative their balance may go). New accounts default to 0; capped by treasury policy mutualCredit.maxLimit; set to 0 to revoke.
+    inputSchema:
+      targetUserId:
+        type: string
+        required: true
+      creditLimit:
+        type: number
+        required: true
+    outputSchema:
+      targetUserId:
+        type: string
+      creditLimit:
+        type: number
+    dataAccess:
+      - service_credits_credit_limits
+      - service_credits_treasury_config
+      - service_credits_admin_audit_trail
+    purpose: governance_monetary_control
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: service-credits
+    command: credit-limit.get
+    version: 1.0.0
+    description: Admin-only read of a member's mutual-credit limit (the flat policy default, or a per-account override) and freeze state. No behavioural score is computed or returned — there is no credit or social score on this platform.
+    inputSchema:
+      targetUserId:
+        type: string
+        required: true
+    outputSchema:
+      targetUserId:
+        type: string
+      creditLimit:
+        type: number
+      isDefault:
+        type: boolean
+      frozen:
+        type: boolean
+    dataAccess:
+      - service_credits_credit_limits
+      - service_credits_wallets
+      - service_credits_treasury_config
+    purpose: governance_monetary_control
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: service-credits
+    command: wallet-status.set
+    version: 1.0.0
+    description: Admin-only. Freeze or unfreeze a member's wallet. While frozen, the wallet cannot spend ServiceCredits on either rail. Trust & safety lever for a risk-flagged account.
+    inputSchema:
+      targetUserId:
+        type: string
+        required: true
+      frozen:
+        type: boolean
+        required: true
+      reason:
+        type: string
+        required: false
+    outputSchema:
+      targetUserId:
+        type: string
+      frozen:
+        type: boolean
+    dataAccess:
+      - service_credits_wallets
+      - service_credits_admin_audit_trail
+    purpose: trust_and_safety
+    retentionClass: audit_long_lived
+    idempotency: false
