@@ -1,6 +1,11 @@
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
 import {
+  getAccountRestrictionStatus,
+  restrictAccount as setSharedRestriction,
+  unrestrictAccount as clearSharedRestriction,
+} from 'lib/auth/account-restrictions';
+import {
   TRUSTTRANSPORT_DEFAULT_PAGE,
   TRUSTTRANSPORT_DEFAULT_PAGE_SIZE,
   TRUSTTRANSPORT_MAX_DETAILS_LENGTH,
@@ -267,19 +272,9 @@ export function validateRatingInput(input: TrustTransportRatingInput): boolean {
 }
 
 async function ensureUserNotRestricted(userId: string): Promise<void> {
-  const result = await queryDb<{ account_restricted: boolean }>(
-    `SELECT account_restricted
-     FROM trusttransport_user_extension
-     WHERE user_id = $1
-     LIMIT 1`,
-    [userId],
-  );
-
-  if ((result.rowCount ?? 0) === 0) {
-    return;
-  }
-
-  if (result.rows[0].account_restricted) {
+  // Reads the platform-wide restriction signal ('trading' scope), not the retired per-plugin column.
+  const restriction = await getAccountRestrictionStatus(userId, 'trading');
+  if (restriction.isRestricted) {
     throw new Error('account_restricted');
   }
 }
@@ -861,30 +856,9 @@ export async function updateMarketConfig(actorUserId: string, input: TrustTransp
 }
 
 export async function restrictAccount(targetUserId: string, actorUserId: string, reason: string | null): Promise<void> {
-  await queryDb(
-    `INSERT INTO trusttransport_user_extension (
-       user_id,
-       mode_preferences,
-       safety_settings,
-       payout_preferences,
-       provider_eligible,
-       account_restricted,
-       restriction_reason,
-       restricted_at,
-       restricted_by_user_id,
-       service_deleted_at,
-       created_at,
-       updated_at
-     ) VALUES ($1, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, FALSE, TRUE, $2, NOW(), $3, NULL, NOW(), NOW())
-     ON CONFLICT (user_id)
-     DO UPDATE SET
-       account_restricted = TRUE,
-       restriction_reason = EXCLUDED.restriction_reason,
-       restricted_at = NOW(),
-       restricted_by_user_id = EXCLUDED.restricted_by_user_id,
-       updated_at = NOW()`,
-    [targetUserId, normalizeNullableText(reason), actorUserId],
-  );
+  // Write the platform-wide restriction ('trading' scope) instead of the retired per-plugin column,
+  // then keep the TrustTransport-specific risk-signal evidence row.
+  await setSharedRestriction({ targetUserId, actorId: actorUserId, reason: normalizeNullableText(reason), scope: 'trading' });
 
   await queryDb(
     `INSERT INTO trusttransport_risk_signals (request_id, trip_id, actor_user_id, target_user_id, signal_type, severity, notes)
@@ -894,16 +868,7 @@ export async function restrictAccount(targetUserId: string, actorUserId: string,
 }
 
 export async function restoreAccount(targetUserId: string, actorUserId: string): Promise<void> {
-  await queryDb(
-    `UPDATE trusttransport_user_extension
-     SET account_restricted = FALSE,
-         restriction_reason = NULL,
-         restricted_at = NULL,
-         restricted_by_user_id = NULL,
-         updated_at = NOW()
-     WHERE user_id = $1`,
-    [targetUserId],
-  );
+  await clearSharedRestriction({ targetUserId, actorId: actorUserId });
 
   await queryDb(
     `INSERT INTO trusttransport_risk_signals (request_id, trip_id, actor_user_id, target_user_id, signal_type, severity, notes, is_resolved, resolved_by_user_id, resolved_at)

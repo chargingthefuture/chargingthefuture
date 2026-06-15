@@ -55,6 +55,7 @@ const SERVICE_CREDITS_ERROR_RESPONSES: Record<string, { code: string; message: s
   mint_budget_exceeded: { code: 'service_credits_mint_budget_exceeded', message: 'This mint would exceed the issuance budget for the current period.', status: 409 },
   credit_limit_above_max: { code: 'service_credits_credit_limit_above_max', message: 'That credit limit is above the maximum allowed by policy.', status: 409 },
   wallet_frozen: { code: 'service_credits_wallet_frozen', message: 'This wallet is frozen and cannot spend.', status: 403 },
+  account_restricted: { code: 'service_credits_account_restricted', message: 'This account is restricted and cannot spend.', status: 403 },
 };
 
 export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: string): NextResponse {
