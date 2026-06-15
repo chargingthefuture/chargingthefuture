@@ -46,12 +46,16 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 // nothing is fabricated, and a member with no upstream rows simply yields zeroes (and therefore no
 // evidence — see buildTrustEvidence).
 //
-// Signals used in the `cross_plugin_engagement_v1` model:
-//   - login_events            → how often / how recently the member logs in
-//   - socketrelay_fulfillments→ completed (closed) SocketRelay trades the member took part in
-//   - socketrelay_requests    → how many SocketRelay asks the member opened
+// Signals used in the `cross_plugin_engagement_v2` model:
+//   - login_events             → how often / how recently the member logs in
+//   - socketrelay_fulfillments → completed (closed) SocketRelay trades the member took part in
+//   - socketrelay_requests     → how many SocketRelay asks the member opened
+//   - service_credits_transfers→ completed transfers received + distinct members who paid them
+//   - service_credits_disputes → disputes against their received transfers (withholds clean-record)
+// Only coarse COUNTs are read from ServiceCredits — never amounts or balances — so no money figure
+// crosses into Trust, and no numeric score is produced.
 export async function computeTrustSignalMetrics(userId: string): Promise<TrustSignalMetrics> {
-  const [loginAgg, completedTrades, requestsOpened] = await Promise.all([
+  const [loginAgg, completedTrades, requestsOpened, scReceived, scDisputes] = await Promise.all([
     queryDb<{ login_days: string; login_events: string; last_login_at: Date | null }>(
       `SELECT
          COUNT(DISTINCT date_trunc('day', created_at)) AS login_days,
@@ -77,6 +81,23 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
        WHERE owner_user_id = $1`,
       [userId]
     ),
+    // Completed ServiceCredits transfers the member received, plus the count of distinct senders.
+    // Receiving a credit means another member chose to pay them — a breadth-of-trust signal.
+    queryDb<{ completed: string; payers: string }>(
+      `SELECT COUNT(*) AS completed, COUNT(DISTINCT sender_user_id) AS payers
+       FROM service_credits_transfers
+       WHERE recipient_user_id = $1 AND status = 'completed'`,
+      [userId]
+    ),
+    // Disputes opened against the member's received transfers. Used only to withhold the
+    // clean-record signal — never turned into a negative badge.
+    queryDb<{ disputes: string }>(
+      `SELECT COUNT(*) AS disputes
+       FROM service_credits_disputes d
+       JOIN service_credits_transfers t ON t.id = d.transfer_id
+       WHERE t.recipient_user_id = $1`,
+      [userId]
+    ),
   ]);
 
   const loginRow = loginAgg.rows[0];
@@ -86,6 +107,9 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     lastLoginAt: loginRow?.last_login_at ? loginRow.last_login_at.toISOString() : null,
     socketRelayCompletedTrades: Number(completedTrades.rows[0]?.completed ?? 0),
     socketRelayRequestsOpened: Number(requestsOpened.rows[0]?.opened ?? 0),
+    serviceCreditsDistinctPayers: Number(scReceived.rows[0]?.payers ?? 0),
+    serviceCreditsCompletedReceived: Number(scReceived.rows[0]?.completed ?? 0),
+    serviceCreditsDisputesAgainst: Number(scDisputes.rows[0]?.disputes ?? 0),
   };
 }
 
@@ -110,6 +134,30 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
     evidence.push({
       type: 'engagement-socketrelay-requests',
       summary: `Opened ${n} SocketRelay ${n === 1 ? 'request' : 'requests'}`,
+      createdAt: nowIso,
+      createdBy: 'trust-signal',
+    });
+  }
+
+  // Breadth signal: distinct members chose to pay this member in ServiceCredits.
+  if (metrics.serviceCreditsDistinctPayers > 0) {
+    const n = metrics.serviceCreditsDistinctPayers;
+    evidence.push({
+      type: 'engagement-service-credits-payers',
+      summary: `Received ServiceCredits from ${n} community ${n === 1 ? 'member' : 'members'}`,
+      createdAt: nowIso,
+      createdBy: 'trust-signal',
+    });
+  }
+
+  // Clean-record signal: only shown when there are completed received transfers and none have been
+  // disputed. A dispute withholds this positive signal rather than producing a negative badge —
+  // signal over noise, with dignity. No number is ranked; this is a categorical "clean / not shown".
+  if (metrics.serviceCreditsCompletedReceived > 0 && metrics.serviceCreditsDisputesAgainst === 0) {
+    const n = metrics.serviceCreditsCompletedReceived;
+    evidence.push({
+      type: 'engagement-service-credits-clean',
+      summary: `${n} completed ServiceCredits ${n === 1 ? 'transfer' : 'transfers'}, none disputed`,
       createdAt: nowIso,
       createdBy: 'trust-signal',
     });
