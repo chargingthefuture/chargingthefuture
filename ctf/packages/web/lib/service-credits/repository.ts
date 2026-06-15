@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { getAccountRestrictionStatus, restrictAccount, unrestrictAccount } from 'lib/auth/account-restrictions';
 import {
   postBurnToFormance,
   postDeletionReclaimToFormance,
@@ -252,14 +253,19 @@ export async function createTransfer(input: {
       [input.senderUserId, input.recipientUserId],
     );
 
-    const balanceResult = await client.query<{ available_balance: string; is_frozen: boolean }>(
-      `SELECT available_balance::text, is_frozen FROM service_credits_wallets WHERE user_id = $1 FOR UPDATE`,
+    const balanceResult = await client.query<{ available_balance: string }>(
+      `SELECT available_balance::text FROM service_credits_wallets WHERE user_id = $1 FOR UPDATE`,
       [input.senderUserId],
     );
 
-    // A frozen wallet cannot spend on either rail (trust & safety).
-    if (balanceResult.rows[0]?.is_frozen) {
-      throw new Error('wallet_frozen');
+    // A platform restriction at 'all' or 'trading' scope blocks spending on either rail (trust & safety).
+    const restriction = await client.query<{ is_restricted: boolean; restriction_scope: string }>(
+      `SELECT is_restricted, restriction_scope FROM account_restrictions WHERE user_id = $1 LIMIT 1`,
+      [input.senderUserId],
+    );
+    const restrictionRow = restriction.rows[0];
+    if (restrictionRow?.is_restricted && (restrictionRow.restriction_scope === 'all' || restrictionRow.restriction_scope === 'trading')) {
+      throw new Error('account_restricted');
     }
 
     const senderBalance = Number(balanceResult.rows[0]?.available_balance ?? '0');
@@ -1680,29 +1686,24 @@ export async function getCreditLimitInfo(userId: string) {
     `SELECT credit_limit::text FROM service_credits_credit_limits WHERE user_id = $1 LIMIT 1`,
     [userId],
   );
-  const frozen = await queryDb<{ is_frozen: boolean }>(
-    `SELECT is_frozen FROM service_credits_wallets WHERE user_id = $1 LIMIT 1`,
-    [userId],
-  );
+  const restriction = await getAccountRestrictionStatus(userId, 'trading');
 
   return {
     targetUserId: userId,
     creditLimit: granted.rows[0] ? Number(granted.rows[0].credit_limit) : policy.defaultLimit,
     isDefault: !granted.rows[0],
-    frozen: frozen.rows[0]?.is_frozen ?? false,
+    frozen: restriction.isRestricted,
   };
 }
 
-// Admin-only: freeze or unfreeze a wallet. A frozen wallet cannot spend on either rail.
+// Admin-only: freeze or unfreeze a wallet. Backed by the platform-wide restriction signal at 'trading'
+// scope, so a freeze blocks spending here and is visible to any other plugin that honours the signal.
 export async function setWalletFrozen(input: { actorId: string; targetUserId: string; frozen: boolean; reason?: string }) {
-  await queryDb(
-    `INSERT INTO service_credits_wallets (user_id, is_frozen, frozen_reason, frozen_by_user_id, frozen_at)
-     VALUES ($1, $2, $3, $4, CASE WHEN $2 THEN NOW() ELSE NULL END)
-     ON CONFLICT (user_id)
-     DO UPDATE SET is_frozen = EXCLUDED.is_frozen, frozen_reason = EXCLUDED.frozen_reason,
-       frozen_by_user_id = EXCLUDED.frozen_by_user_id, frozen_at = EXCLUDED.frozen_at, updated_at = NOW()`,
-    [input.targetUserId, input.frozen, input.frozen ? (input.reason ?? null) : null, input.frozen ? input.actorId : null],
-  );
+  if (input.frozen) {
+    await restrictAccount({ targetUserId: input.targetUserId, actorId: input.actorId, reason: input.reason ?? null, scope: 'trading' });
+  } else {
+    await unrestrictAccount({ targetUserId: input.targetUserId, actorId: input.actorId });
+  }
 
   return { targetUserId: input.targetUserId, frozen: input.frozen };
 }

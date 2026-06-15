@@ -4100,3 +4100,51 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
   SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
   FROM skills_taxonomy_consumer_bindings
   GROUP BY target_type, target_id;
+
+-- === account_restrictions (platform-wide trust & safety signal) ===
+-- One canonical record of whether a member is restricted, and at what scope. The auth gate blocks an
+-- 'all'-scope restriction on every product route; value-movement and contact points additionally
+-- honour 'trading'/'contact' scopes. Supersedes the per-plugin flags
+-- (trusttransport_user_extension.account_restricted, service_credits_wallets.is_frozen), which are
+-- retired in code and backfilled below. Defined at the END so the tables it backfills from already exist.
+CREATE TABLE IF NOT EXISTS account_restrictions (
+  user_id TEXT PRIMARY KEY,
+  is_restricted BOOLEAN NOT NULL DEFAULT FALSE,
+  restriction_scope TEXT NOT NULL DEFAULT 'all' CHECK (restriction_scope IN ('all', 'trading', 'contact')),
+  restricted_at TIMESTAMPTZ,
+  restricted_by_user_id TEXT,
+  restriction_reason TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS is_restricted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restriction_scope TEXT NOT NULL DEFAULT 'all';
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restricted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restricted_by_user_id TEXT;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restriction_reason TEXT;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS account_restrictions_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('restrict', 'unrestrict')),
+  target_user_id TEXT NOT NULL,
+  scope TEXT,
+  reason TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_account_restrictions_audit_created ON account_restrictions_audit(created_at DESC);
+
+-- One-time backfill from the retired per-plugin flags. ON CONFLICT DO NOTHING so it never
+-- re-restricts a member whose canonical row already exists (e.g. after an operator unrestricts).
+INSERT INTO account_restrictions (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason)
+SELECT user_id, TRUE, 'trading', COALESCE(restricted_at, NOW()), restricted_by_user_id, restriction_reason
+FROM trusttransport_user_extension
+WHERE account_restricted = TRUE
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO account_restrictions (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason)
+SELECT user_id, TRUE, 'trading', COALESCE(frozen_at, NOW()), frozen_by_user_id, frozen_reason
+FROM service_credits_wallets
+WHERE is_frozen = TRUE
+ON CONFLICT (user_id) DO NOTHING;

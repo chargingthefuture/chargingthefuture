@@ -1,6 +1,7 @@
 import { resolveRequestIdentity } from './request-identity';
 import { pluginAuthDeny, type PluginDenyResponse } from './deny-taxonomy';
 import { getUnlockAccessTier } from 'lib/unlock/access';
+import { getAccountRestrictionStatus } from './account-restrictions';
 
 export type AllowDecision = {
   allowed: true;
@@ -93,6 +94,17 @@ export async function evaluatePluginAccess(
         : tier === 'approved_full';
     if (!allowed) {
       return pluginAuthDeny.forbiddenPolicy('unlock_required');
+    }
+  }
+
+  // Platform-wide account restriction — a full-account ('all'-scope) restriction blocks every product
+  // route. Skipped for admins and for 'any_authenticated' routes (account/profile/deletion, unlock
+  // status), so a restricted member can still see their status and manage or delete their own data.
+  // Narrower 'trading'/'contact' restrictions are enforced at the value-movement/contact points, not here.
+  if (normalizedRole !== 'admin' && minUnlockTier !== 'any_authenticated') {
+    const restriction = await getAccountRestrictionStatus(identity.userId, 'all');
+    if (restriction.isRestricted) {
+      return pluginAuthDeny.forbiddenPolicy('account_restricted');
     }
   }
 
