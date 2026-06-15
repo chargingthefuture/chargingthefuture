@@ -55,5 +55,21 @@ export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: str
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'Invalid request payload.' }, { status: 400 });
   }
 
+  if (error instanceof Error && error.message === 'credit_limit_exceeded') {
+    return NextResponse.json({ ok: false, code: 'service_credits_credit_limit_exceeded', message: 'This payment would exceed your mutual-credit limit.' }, { status: 409 });
+  }
+
+  if (error instanceof Error && error.message === 'mutual_credit_disabled') {
+    return NextResponse.json({ ok: false, code: 'service_credits_mutual_credit_disabled', message: 'Mutual credit is not enabled.' }, { status: 409 });
+  }
+
+  if (error instanceof Error && error.message === 'mint_budget_exceeded') {
+    return NextResponse.json({ ok: false, code: 'service_credits_mint_budget_exceeded', message: 'This mint would exceed the issuance budget for the current period.' }, { status: 409 });
+  }
+
+  if (error instanceof Error && error.message === 'credit_limit_above_max') {
+    return NextResponse.json({ ok: false, code: 'service_credits_credit_limit_above_max', message: 'That credit limit is above the maximum allowed by policy.' }, { status: 409 });
+  }
+
   return NextResponse.json({ ok: false, code: 'service_credits_error', message: fallbackMessage }, { status: 500 });
 }

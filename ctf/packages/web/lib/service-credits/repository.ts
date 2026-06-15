@@ -34,6 +34,106 @@ function ensurePositiveAmount(amount: number) {
   }
 }
 
+// --- Monetary policy helpers (per the ServiceCredits monetary policy spec) ---
+// Treasury policy is the single tunable store: the per-period mint budget and the mutual-credit
+// limits both live in service_credits_treasury_config.policy so the operator can adjust them
+// without a schema change.
+
+type IssuancePolicy = {
+  periodDays: number;
+  maxMintPerPeriod: number | null;
+  maxNetGrowthPctOfCirculation: number | null;
+  enforce: boolean;
+};
+
+type MutualCreditPolicy = {
+  enabled: boolean;
+  defaultLimit: number;
+  maxLimit: number;
+};
+
+function readIssuancePolicy(policy: Record<string, unknown>): IssuancePolicy {
+  const raw = (policy.issuance ?? {}) as Record<string, unknown>;
+  return {
+    periodDays: typeof raw.periodDays === 'number' && raw.periodDays > 0 ? raw.periodDays : 7,
+    maxMintPerPeriod:
+      typeof raw.maxMintPerPeriod === 'number' && raw.maxMintPerPeriod >= 0 ? raw.maxMintPerPeriod : null,
+    maxNetGrowthPctOfCirculation:
+      typeof raw.maxNetGrowthPctOfCirculation === 'number' && raw.maxNetGrowthPctOfCirculation >= 0
+        ? raw.maxNetGrowthPctOfCirculation
+        : null,
+    enforce: raw.enforce === true,
+  };
+}
+
+function readMutualCreditPolicy(policy: Record<string, unknown>): MutualCreditPolicy {
+  const raw = (policy.mutualCredit ?? {}) as Record<string, unknown>;
+  return {
+    enabled: raw.enabled === true,
+    defaultLimit: typeof raw.defaultLimit === 'number' && raw.defaultLimit >= 0 ? raw.defaultLimit : 0,
+    maxLimit: typeof raw.maxLimit === 'number' && raw.maxLimit >= 0 ? raw.maxLimit : 0,
+  };
+}
+
+function readTreasuryUserId(policy: Record<string, unknown>): string | null {
+  return typeof policy.treasuryUserId === 'string' && policy.treasuryUserId.length > 0
+    ? policy.treasuryUserId
+    : null;
+}
+
+async function readTreasuryPolicy(client: PoolClient): Promise<Record<string, unknown>> {
+  const result = await client.query<{ policy: Record<string, unknown> }>(
+    `SELECT policy FROM service_credits_treasury_config WHERE id = TRUE LIMIT 1`,
+  );
+  return result.rows[0]?.policy ?? {};
+}
+
+async function readCreditLimit(client: PoolClient, userId: string, defaultLimit: number): Promise<number> {
+  const result = await client.query<{ credit_limit: string }>(
+    `SELECT credit_limit::text FROM service_credits_credit_limits WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return result.rows[0] ? Number(result.rows[0].credit_limit) : defaultLimit;
+}
+
+async function sumCirculating(client: PoolClient, treasuryUserId: string | null): Promise<number> {
+  const result = await client.query<{ total: string }>(
+    `SELECT COALESCE(SUM(available_balance + escrow_balance), 0)::text AS total
+     FROM service_credits_wallets
+     WHERE (available_balance + escrow_balance) > 0
+       AND ($1::text IS NULL OR user_id <> $1)`,
+    [treasuryUserId],
+  );
+  return Number(result.rows[0]?.total ?? '0');
+}
+
+async function sumMintedInPeriod(client: PoolClient, periodDays: number): Promise<number> {
+  const result = await client.query<{ total: string }>(
+    `SELECT COALESCE(SUM(amount), 0)::text AS total
+     FROM service_credits_governance_events
+     WHERE event_type = 'mint_grant' AND created_at > NOW() - make_interval(days => $1::int)`,
+    [periodDays],
+  );
+  return Number(result.rows[0]?.total ?? '0');
+}
+
+// The active per-period mint ceiling, or null when minting is not budget-constrained. Enforcement is
+// off unless the operator sets issuance.enforce = true. When enforcement is on but no positive budget
+// is configured, the ceiling is 0 (an explicit operator choice to freeze treasury minting).
+function resolveMintCeiling(policy: IssuancePolicy, circulating: number): number | null {
+  if (!policy.enforce) {
+    return null;
+  }
+  const limits: number[] = [];
+  if (policy.maxMintPerPeriod !== null) {
+    limits.push(policy.maxMintPerPeriod);
+  }
+  if (policy.maxNetGrowthPctOfCirculation !== null) {
+    limits.push((policy.maxNetGrowthPctOfCirculation / 100) * circulating);
+  }
+  return limits.length === 0 ? 0 : Math.min(...limits);
+}
+
 async function readCommandIdempotency<T>(
   client: PoolClient,
   actorId: string,
@@ -122,8 +222,11 @@ export async function createTransfer(input: {
   idempotencyKey: string;
   originPlugin?: string;
   reasonCode?: string;
+  rail?: 'balance' | 'mutual_credit';
 }) {
   ensurePositiveAmount(input.amount);
+
+  const rail = input.rail === 'mutual_credit' ? 'mutual_credit' : 'balance';
 
   return withDbTransaction(async (client) => {
     await client.query(
@@ -139,8 +242,20 @@ export async function createTransfer(input: {
     );
 
     const senderBalance = Number(balanceResult.rows[0]?.available_balance ?? '0');
-    if (senderBalance < input.amount) {
-      throw new Error('insufficient_balance');
+
+    // On the mutual-credit rail the sender may go negative, but only down to -(credit limit). On the
+    // balance rail the floor is 0 (the prior behaviour). The buyer going negative and the seller going
+    // positive net to zero, so mutual-credit issuance never inflates total supply.
+    let creditFloor = 0;
+    if (rail === 'mutual_credit') {
+      const mutualCredit = readMutualCreditPolicy(await readTreasuryPolicy(client));
+      if (!mutualCredit.enabled) {
+        throw new Error('mutual_credit_disabled');
+      }
+      creditFloor = -(await readCreditLimit(client, input.senderUserId, mutualCredit.defaultLimit));
+    }
+    if (senderBalance - input.amount < creditFloor) {
+      throw new Error(rail === 'mutual_credit' ? 'credit_limit_exceeded' : 'insufficient_balance');
     }
 
     const transferId = randomUUID();
@@ -202,6 +317,7 @@ export async function createTransfer(input: {
         status: existingTransfer.rows[0].status,
         escrowHoldId: existingEscrow.rows[0]?.id ?? null,
         externalLedgerTransactionId: existingOutbox.rows[0]?.provider_transaction_id ?? null,
+        rail,
       };
     }
 
@@ -269,7 +385,7 @@ export async function createTransfer(input: {
         input.senderUserId,
         escrowHoldId,
         input.amount,
-        JSON.stringify({ externalLedger: 'formance', externalLedgerTransactionId }),
+        JSON.stringify({ externalLedger: 'formance', externalLedgerTransactionId, rail }),
       ],
     );
 
@@ -281,6 +397,7 @@ export async function createTransfer(input: {
       status: 'pending' as const,
       escrowHoldId,
       externalLedgerTransactionId,
+      rail,
     };
 
     await writeCommandIdempotency(client, input.senderUserId, 'transfer.create', input.idempotencyKey, response);
@@ -669,6 +786,21 @@ export async function mintGrant(input: {
     }>(client, input.actorId, 'governance.mint.grant', input.idempotencyKey);
     if (existing) {
       return existing;
+    }
+
+    // Per-period mint budget (the keystone rule). Off unless the operator turns it on; mutual-credit
+    // issuance is bounded separately and does not draw on this budget.
+    const treasuryPolicy = await readTreasuryPolicy(client);
+    const issuance = readIssuancePolicy(treasuryPolicy);
+    if (issuance.enforce) {
+      const circulating = await sumCirculating(client, readTreasuryUserId(treasuryPolicy));
+      const ceiling = resolveMintCeiling(issuance, circulating);
+      if (ceiling !== null) {
+        const mintedThisPeriod = await sumMintedInPeriod(client, issuance.periodDays);
+        if (mintedThisPeriod + input.amount > ceiling) {
+          throw new Error('mint_budget_exceeded');
+        }
+      }
     }
 
     await client.query(
@@ -1248,6 +1380,30 @@ export async function executeDeletionReclaim(input: {
       );
     }
 
+    // A negative balance at deletion is a mutual-credit default: the treasury (the community) absorbs
+    // the shortfall. Bounded by small per-account credit limits so a single default stays minor.
+    const mutualCreditDefault = availableBalance < 0 ? -availableBalance : 0;
+    if (mutualCreditDefault > 0) {
+      await client.query(
+        `UPDATE service_credits_wallets
+         SET available_balance = available_balance - $2, updated_at = NOW()
+         WHERE user_id = $1`,
+        [input.treasuryUserId, mutualCreditDefault],
+      );
+
+      await client.query(
+        `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
+         VALUES ($1, $2, 'debit', $3, 'mutual_credit_default', $4, 'service_credits_non_gdp', $5::jsonb)`,
+        [
+          randomUUID(),
+          input.treasuryUserId,
+          mutualCreditDefault,
+          input.accountId,
+          JSON.stringify({ defaultedBy: input.accountId, deletionRequestId: input.deletionRequestId }),
+        ],
+      );
+    }
+
     const transferId = amountTransferred > 0 ? randomUUID() : null;
     if (transferId) {
       await client.query(
@@ -1342,6 +1498,98 @@ export async function getTreasuryConfig() {
   return result.rows[0]?.policy ?? {};
 }
 
+// Circulation metrics for the two-tier dashboard. Without `includeAdmin` it returns only the public,
+// non-identifying aggregates; with it, the operator levers are added. No figure is ever a fiat amount.
+export async function getCirculationMetrics(options?: { includeAdmin?: boolean }) {
+  const policy = await getTreasuryConfig();
+  const treasuryUserId = readTreasuryUserId(policy);
+  const issuance = readIssuancePolicy(policy);
+
+  const totals = await queryDb<{ issued: string; burned: string }>(
+    `SELECT
+       COALESCE(SUM(amount) FILTER (WHERE event_type = 'mint_grant'), 0)::text AS issued,
+       COALESCE(SUM(amount) FILTER (WHERE event_type = 'burn'), 0)::text AS burned
+     FROM service_credits_governance_events`,
+  );
+
+  const circulation = await queryDb<{ in_circulation: string; debt: string }>(
+    `SELECT
+       COALESCE(SUM(available_balance + escrow_balance)
+         FILTER (WHERE (available_balance + escrow_balance) > 0 AND ($1::text IS NULL OR user_id <> $1)), 0)::text AS in_circulation,
+       COALESCE(SUM(-available_balance) FILTER (WHERE available_balance < 0), 0)::text AS debt
+     FROM service_credits_wallets`,
+    [treasuryUserId],
+  );
+
+  const treasury = treasuryUserId
+    ? await queryDb<{ balance: string }>(
+        `SELECT COALESCE(available_balance + escrow_balance, 0)::text AS balance
+         FROM service_credits_wallets WHERE user_id = $1 LIMIT 1`,
+        [treasuryUserId],
+      )
+    : null;
+
+  const volume = await queryDb<{ total: string }>(
+    `SELECT COALESCE(SUM(amount), 0)::text AS total
+     FROM service_credits_transfers WHERE created_at > NOW() - make_interval(days => 30)`,
+  );
+
+  const inCirculation = Number(circulation.rows[0]?.in_circulation ?? '0');
+  const transferVolume30d = Number(volume.rows[0]?.total ?? '0');
+
+  const publicMetrics = {
+    inCirculation,
+    totalIssued: Number(totals.rows[0]?.issued ?? '0'),
+    totalBurned: Number(totals.rows[0]?.burned ?? '0'),
+    treasuryBalance: treasury ? Number(treasury.rows[0]?.balance ?? '0') : null,
+    outstandingMutualCreditDebt: Number(circulation.rows[0]?.debt ?? '0'),
+    transferVolume30d,
+    velocity: inCirculation > 0 ? transferVolume30d / inCirculation : 0,
+  };
+
+  if (!options?.includeAdmin) {
+    return publicMetrics;
+  }
+
+  const ceiling = resolveMintCeiling(issuance, inCirculation);
+  let mintedThisPeriod = 0;
+  if (issuance.enforce) {
+    const minted = await queryDb<{ total: string }>(
+      `SELECT COALESCE(SUM(amount), 0)::text AS total
+       FROM service_credits_governance_events
+       WHERE event_type = 'mint_grant' AND created_at > NOW() - make_interval(days => $1::int)`,
+      [issuance.periodDays],
+    );
+    mintedThisPeriod = Number(minted.rows[0]?.total ?? '0');
+  }
+
+  const concentration = await queryDb<{ top: string }>(
+    `SELECT COALESCE(SUM(bal), 0)::text AS top FROM (
+       SELECT (available_balance + escrow_balance) AS bal
+       FROM service_credits_wallets
+       WHERE (available_balance + escrow_balance) > 0 AND ($1::text IS NULL OR user_id <> $1)
+       ORDER BY bal DESC LIMIT 5
+     ) top_wallets`,
+    [treasuryUserId],
+  );
+
+  const disputes = await queryDb<{ total: string }>(
+    `SELECT COUNT(*)::text AS total FROM service_credits_disputes`,
+  );
+
+  return {
+    ...publicMetrics,
+    issuanceEnforced: issuance.enforce,
+    issuancePeriodDays: issuance.periodDays,
+    mintBudgetCeiling: ceiling,
+    mintedThisPeriod,
+    mintBudgetRemaining: ceiling === null ? null : Math.max(0, ceiling - mintedThisPeriod),
+    concentrationTop5Share: inCirculation > 0 ? Number(concentration.rows[0]?.top ?? '0') / inCirculation : 0,
+    openDisputes: Number(disputes.rows[0]?.total ?? '0'),
+    treasuryUserIdConfigured: treasuryUserId !== null,
+  };
+}
+
 export async function updateTreasuryConfig(input: { actorId: string; policy: Record<string, unknown> }) {
   await queryDb(
     `UPDATE service_credits_treasury_config
@@ -1349,6 +1597,30 @@ export async function updateTreasuryConfig(input: { actorId: string; policy: Rec
      WHERE id = TRUE`,
     [JSON.stringify(input.policy), input.actorId],
   );
+}
+
+// Admin-only: grant or revoke a member's mutual-credit limit. The abuse defense is that new accounts
+// start at 0 (no credit line until earned), the operator raises a limit only for trusted members, and
+// the policy maxLimit caps how high any single line can go. Set to 0 to revoke instantly.
+export async function setCreditLimit(input: { actorId: string; targetUserId: string; creditLimit: number }) {
+  if (!Number.isFinite(input.creditLimit) || input.creditLimit < 0) {
+    throw new Error('invalid_payload');
+  }
+
+  const mutualCredit = readMutualCreditPolicy(await getTreasuryConfig());
+  if (mutualCredit.maxLimit > 0 && input.creditLimit > mutualCredit.maxLimit) {
+    throw new Error('credit_limit_above_max');
+  }
+
+  await queryDb(
+    `INSERT INTO service_credits_credit_limits (user_id, credit_limit, updated_by_user_id, updated_at)
+     VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (user_id)
+     DO UPDATE SET credit_limit = EXCLUDED.credit_limit, updated_by_user_id = EXCLUDED.updated_by_user_id, updated_at = NOW()`,
+    [input.targetUserId, input.creditLimit, input.actorId],
+  );
+
+  return { targetUserId: input.targetUserId, creditLimit: input.creditLimit };
 }
 
 export async function insertServiceCreditsAudit(input: {

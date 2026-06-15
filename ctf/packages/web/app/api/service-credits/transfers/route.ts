@@ -9,6 +9,7 @@ type TransferBody = {
   idempotencyKey?: string;
   originPlugin?: string;
   reasonCode?: string;
+  rail?: 'balance' | 'mutual_credit';
 };
 
 export async function POST(request: Request) {
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
       idempotencyKey: body.idempotencyKey,
       originPlugin: typeof body.originPlugin === 'string' ? body.originPlugin : undefined,
       reasonCode: typeof body.reasonCode === 'string' ? body.reasonCode : undefined,
+      rail: body.rail === 'mutual_credit' ? 'mutual_credit' : undefined,
     });
 
     await insertServiceCreditsAudit({

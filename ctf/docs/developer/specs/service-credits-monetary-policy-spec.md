@@ -96,24 +96,26 @@ separately) is capped per rolling window. The budget is stored in the existing
 {
   "issuance": {
     "periodDays": 7,
-    "maxMintPerPeriod": 0,
+    "maxMintPerPeriod": null,
     "maxNetGrowthPctOfCirculation": null,
-    "enforce": true
+    "enforce": false
   }
 }
 ```
 
-- `maxMintPerPeriod` — hard ceiling on credits minted in the rolling window. `0` means "no minting until the
-  operator sets a budget" (safe default: the economy cannot accidentally print before a policy is chosen).
+- `enforce` — the master switch. Defaults to **off**, so a live economy keeps minting (the earn reward and
+  admin grants) exactly as before until the operator deliberately turns the budget on. Measure first with the
+  dashboard, then enforce when a sensible budget is known. This avoids silently freezing the live reward.
+- `maxMintPerPeriod` — hard ceiling on credits minted in the rolling window. `null` = no per-amount ceiling.
 - `maxNetGrowthPctOfCirculation` — optional alternative ceiling expressed as a percent of current
-  circulation (the steady, pre-announced small-growth rule). When set, the effective ceiling is the lower of
-  the two. `null` disables it.
-- `enforce` — when `false`, the budget is measured and surfaced but not blocked (observation mode for early
-  bootstrapping). Defaults to `true`.
+  circulation (the steady, pre-announced small-growth rule). `null` disables it. When both are set, the
+  effective ceiling is the lower of the two.
+- With `enforce: true` but neither limit set, the ceiling is `0` — an explicit operator choice to freeze
+  treasury minting.
 
-Enforcement (server-side, in the mint path): before a mint commits, sum `mint_grant` amounts in the current
-window from `service_credits_governance_events`; if `current + requested > ceiling`, deny with
-`mint_budget_exceeded` and audit the denial. Mutual-credit issuance does not draw on this budget.
+Enforcement (server-side, in the mint path): when `enforce` is on, before a mint commits, sum `mint_grant`
+amounts in the current window from `service_credits_governance_events`; if `current + requested > ceiling`,
+deny with `mint_budget_exceeded` and surface it. Mutual-credit issuance does not draw on this budget.
 
 ### 3.4 Per-account credit limit (mutual-credit bound)
 
