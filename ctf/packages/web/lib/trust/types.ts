@@ -22,6 +22,15 @@ export interface TrustSignalMetrics {
   socketRelayCompletedTrades: number;
   // Distinct SocketRelay requests the member opened (any status).
   socketRelayRequestsOpened: number;
+  // Distinct members who paid this member via a completed ServiceCredits transfer (from
+  // service_credits_transfers). Breadth signal: other people chose to transact with them. Distinct
+  // senders (not total) so one repeat payer can't inflate it.
+  serviceCreditsDistinctPayers: number;
+  // Completed ServiceCredits transfers this member received (from service_credits_transfers).
+  serviceCreditsCompletedReceived: number;
+  // Disputes opened against this member's received transfers (from service_credits_disputes). Used
+  // only to withhold the clean-record signal — never surfaced as a negative badge or a deduction.
+  serviceCreditsDisputesAgainst: number;
 }
 
 export interface TrustEvidenceItem {
