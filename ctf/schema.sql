@@ -1289,6 +1289,12 @@ CREATE TABLE IF NOT EXISTS service_credits_wallets (
   escrow_balance NUMERIC NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Wallet freeze (trust & safety): a frozen wallet cannot spend on either rail. Distinct from the
+-- mutual-credit limit, which only bounds going negative.
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_reason TEXT;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_by_user_id TEXT;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMPTZ;
 CREATE TABLE IF NOT EXISTS service_credits_transfers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_user_id TEXT NOT NULL,

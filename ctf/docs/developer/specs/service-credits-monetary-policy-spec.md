@@ -139,6 +139,44 @@ anchor is **internal only**; it is never expressed as a fiat equivalence and nev
 
 ---
 
+### 3.6 The earned limit (how a member's line grows)
+
+A member's mutual-credit limit should be *earned*, not handed out — the defense against a bad actor
+joining to take from victims without contributing. The earned limit is computed from demonstrated value:
+
+- `earnedSteps = floor(distinctCleanInboundSenders / earned.distinctSendersPerStep) − disputesAgainst`
+- `earnedLimit = clamp(earned.stepSize × earnedSteps, 0, earned.maxLimit or mutualCredit.maxLimit)`
+
+where `distinctCleanInboundSenders` is the number of *distinct* members who have paid this member via a
+completed, undisputed transfer (so collusion by one buddy paying repeatedly does not inflate it), and
+`disputesAgainst` is the number of disputes opened against this member's received transfers (each one
+removes a step). It is `0` until the operator sets a positive `earned.stepSize`. Policy:
+
+```json
+{ "mutualCredit": { "enabled": true, "defaultLimit": 0, "maxLimit": 0,
+  "earned": { "enforceEarnedCap": false, "distinctSendersPerStep": 3, "stepSize": 0, "maxLimit": 0 } } }
+```
+
+Two ways to use it:
+
+- **Guidance (default).** The admin reads a member's granted/earned/effective limits before granting, so
+  grants stay in line with what's been earned. `enforceEarnedCap: false`.
+- **Hard cap.** With `enforceEarnedCap: true`, the usable limit is `min(grantedLimit, earnedLimit)` — a
+  member can never spend past what they've earned, regardless of any admin grant. Recommended once there
+  is real transaction history; structurally bounds abuse.
+
+So the answer to "how much credit can one member use" is: **0 on day one; a small, capped amount that
+grows only with clean, distinct-sender contribution and shrinks on disputes; revocable instantly.**
+
+### 3.7 Wallet freeze (trust & safety)
+
+Separate from the credit limit (which only bounds going negative), an admin can **freeze** a wallet:
+a frozen wallet cannot spend on *either* rail. This is the lever for a risk-flagged account. Stored as
+`is_frozen` (+ reason/actor/time) on `service_credits_wallets`; the transfer path rejects a frozen
+sender with `wallet_frozen`. Unfreeze restores. (Note: there is no platform-wide account-restriction
+signal today — TrustTransport keeps its own `account_restricted` flag — so this freeze is the
+ServiceCredits-owned control; unifying restriction signals platform-wide is a separate follow-up.)
+
 ## 4. Metrics and the two-tier dashboard
 
 ### 4.1 Metrics (computed server-side)
@@ -177,6 +215,30 @@ Both are read-only and best-effort. Neither renders a fiat figure.
 
 ---
 
+### 4.4 Clean distinction from GDP (they do not cross)
+
+The Economy/circulation dashboard and the GDP model measure different things and must never share a
+number:
+
+- **GDP** measures economic *activity/output* across the whole platform — fiat, crypto, ServiceCredits,
+  barter, free — folded into one relative **Community Value Index** via owner-set contribution weights
+  (`currency_usd_rates`, USD only as a reference base of 1). It is an index, not dollars, and it never
+  expresses a per-wallet ServiceCredits-to-fiat value.
+- **Circulation (this dashboard)** measures the ServiceCredits *money itself* — supply in circulation,
+  total issued/burned, treasury, velocity, mutual-credit debt — always in **credits**, never in dollars.
+
+They touch at exactly one point, and only as an input: ServiceCredits *transaction activity*. Even there
+the code keeps them apart — GDP recognizes only the LevelUp trainer-payout slice of validated work, read
+from `service_credits_governance_events` where `reason = 'levelup_trainer_split'`; every other
+ServiceCredits ledger entry is written with `accounting_scope = 'service_credits_non_gdp'`, which is the
+exclusion marker the GDP recognition layer honors (it reads governance events, not the SC ledger, by
+design). The new code in this spec keeps that boundary: the mutual-credit transfer entry and the
+`mutual_credit_default` entry both use `service_credits_non_gdp`, and the circulation endpoints emit
+only credit quantities — no fiat figure. One cross-effect to keep in mind: the §3.3 mint budget governs
+*all* `mint_grant` issuance, including the GDP-recognized LevelUp trainer split, so a too-tight budget
+could throttle those payouts — a non-issue while enforcement is off, but worth setting the budget above
+expected trainer-split volume when it is turned on.
+
 ## 5. Data model changes
 
 All additive, using the `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`
@@ -197,11 +259,21 @@ The most negative `service_credits_wallets.available_balance` may reach is `-cre
 member's limit is the policy `defaultLimit`. A member with no limit row and a `defaultLimit` of 0 cannot go
 negative.
 
-### 5.2 No new columns on `service_credits_wallets`
+### 5.2 `service_credits_wallets` — negative balances and freeze
 
 `available_balance` already permits negative values (`NUMERIC`, no non-negative constraint). The mutual-credit
 rail is enforced in application code against the credit limit, not by a column constraint, so the existing
-balance-check under `FOR UPDATE` stays the single guard.
+balance-check under `FOR UPDATE` stays the guard for going negative. New freeze columns support §3.7:
+
+```sql
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_reason TEXT;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_by_user_id TEXT;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMPTZ;
+```
+
+The transfer path reads `is_frozen` under the same `FOR UPDATE` lock and rejects a frozen sender with
+`wallet_frozen` before any balance or rail check.
 
 ### 5.3 Ledger reference types (no schema change)
 

@@ -100,6 +100,28 @@ export type CreditLimitResponse = {
   creditLimit?: { targetUserId: string; creditLimit: number; [key: string]: unknown };
 };
 
+// Look-up view of a member's credit limit: what they were granted, what they have earned
+// from clean inbound transfers, and the effective limit the ledger enforces.
+export type CreditLimitLookup = {
+  targetUserId: string;
+  grantedLimit: number;
+  earnedLimit: number;
+  effectiveLimit: number;
+  enforceEarnedCap: boolean;
+  frozen: boolean;
+};
+
+export type CreditLimitLookupResponse = {
+  ok: boolean;
+  creditLimit?: CreditLimitLookup;
+};
+
+// Wallet status: a frozen wallet cannot spend ServiceCredits on either rail.
+export type WalletStatusResponse = {
+  ok: boolean;
+  walletStatus?: { targetUserId: string; frozen: boolean; [key: string]: unknown };
+};
+
 export type DisputeAdjustmentResponse = {
   ok: boolean;
   adjustment?: {

@@ -71,5 +71,9 @@ export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: str
     return NextResponse.json({ ok: false, code: 'service_credits_credit_limit_above_max', message: 'That credit limit is above the maximum allowed by policy.' }, { status: 409 });
   }
 
+  if (error instanceof Error && error.message === 'wallet_frozen') {
+    return NextResponse.json({ ok: false, code: 'service_credits_wallet_frozen', message: 'This wallet is frozen and cannot spend.' }, { status: 403 });
+  }
+
   return NextResponse.json({ ok: false, code: 'service_credits_error', message: fallbackMessage }, { status: 500 });
 }

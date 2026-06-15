@@ -77,6 +77,7 @@ policies:
       - insufficient_balance
       - credit_limit_exceeded
       - mutual_credit_disabled
+      - wallet_frozen
       - invalid_origin_plugin
       - cross_plugin_path_missing
       - disallowed_cross_plugin_path
@@ -365,4 +366,48 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - credit_limit_above_max
+      - insufficient_role
+
+  - pluginId: service-credits
+    command: credit-limit.get
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminOnly: true
+    consentRequirements:
+      scopes:
+        - service_credits_governance
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: service-credits
+    command: wallet-status.set
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminOnly: true
+    consentRequirements:
+      scopes:
+        - service_credits_trust_safety
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
       - insufficient_role

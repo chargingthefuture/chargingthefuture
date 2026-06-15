@@ -2,11 +2,13 @@
 
 // Credit-limits panel: grant or revoke a member's mutual-credit limit — the only way a member
 // gains the ability to go negative. New accounts default to 0. State-changing money operation,
-// so the commit is gated behind an explicit confirm step. Wired to:
+// so the commit is gated behind an explicit confirm step. Also offers a read-only look-up so the
+// operator can grant in line with what a member has earned. Wired to:
+//   GET  /api/service-credits/admin/credit-limits?targetUserId=<id>
 //   POST /api/service-credits/admin/credit-limits  <- { targetUserId, creditLimit }
 import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
-import { scAdminMutate, type CreditLimitResponse } from './sca-shared';
+import { scAdminMutate, type CreditLimitResponse, type CreditLimitLookup } from './sca-shared';
 
 export function ServiceCreditsCreditLimitsPanel() {
   const [targetUserId, setTargetUserId] = useState('');
@@ -14,9 +16,38 @@ export function ServiceCreditsCreditLimitsPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookup, setLookup] = useState<CreditLimitLookup | null>(null);
 
   const limit = Number(creditLimit);
   const ready = targetUserId.trim() && creditLimit.length > 0 && Number.isFinite(limit) && limit >= 0;
+
+  async function lookUp() {
+    const id = targetUserId.trim();
+    if (!id) return;
+    setLookingUp(true);
+    setError(null);
+    setNotice(null);
+    setLookup(null);
+    try {
+      const res = await fetch(
+        `/api/service-credits/admin/credit-limits?targetUserId=${encodeURIComponent(id)}`,
+      );
+      const data = (await res.json().catch(() => null)) as CreditLimitResponse & {
+        creditLimit?: CreditLimitLookup;
+        message?: string;
+      };
+      if (!res.ok || !data?.ok || !data.creditLimit) {
+        setError(data?.message ?? 'Could not look up this member.');
+        return;
+      }
+      setLookup(data.creditLimit as CreditLimitLookup);
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setLookingUp(false);
+    }
+  }
 
   async function submit() {
     setBusy(true);
@@ -32,7 +63,7 @@ export function ServiceCreditsCreditLimitsPanel() {
       return;
     }
     setNotice(`Set ${targetUserId.trim()}'s mutual-credit limit to ${limit} ServiceCredits.`);
-    setTargetUserId('');
+    setLookup(null);
     setCreditLimit('');
   }
 
@@ -50,6 +81,40 @@ export function ServiceCreditsCreditLimitsPanel() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Member user ID" value={targetUserId} onChange={setTargetUserId} placeholder="user_…" />
         <Field label="Credit limit (ServiceCredits)" type="number" value={creditLimit} onChange={setCreditLimit} placeholder="0" />
+      </div>
+
+      <div className="space-y-2">
+        <button
+          type="button"
+          disabled={!targetUserId.trim() || lookingUp}
+          onClick={() => void lookUp()}
+          className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {lookingUp ? 'Looking up…' : 'Look up'}
+        </button>
+        {lookup ? (
+          <dl className="grid gap-x-6 gap-y-1 rounded-md border bg-background p-3 text-sm sm:grid-cols-2">
+            <div className="flex justify-between sm:block">
+              <dt className="text-muted-foreground">Granted limit</dt>
+              <dd className="font-semibold">{lookup.grantedLimit}</dd>
+            </div>
+            <div className="flex justify-between sm:block">
+              <dt className="text-muted-foreground">Earned limit</dt>
+              <dd className="font-semibold">{lookup.earnedLimit}</dd>
+            </div>
+            <div className="flex justify-between sm:block">
+              <dt className="text-muted-foreground">Effective limit</dt>
+              <dd className="font-semibold">{lookup.effectiveLimit}</dd>
+            </div>
+            <div className="flex justify-between sm:block">
+              <dt className="text-muted-foreground">Frozen</dt>
+              <dd className="font-semibold">{lookup.frozen ? 'Yes' : 'No'}</dd>
+            </div>
+          </dl>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Earned rises as a member receives credits from distinct senders without disputes.
+        </p>
       </div>
 
       <ConfirmAction

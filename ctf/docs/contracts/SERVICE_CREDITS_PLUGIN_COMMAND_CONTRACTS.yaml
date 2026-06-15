@@ -494,3 +494,60 @@ contracts:
     purpose: governance_monetary_control
     retentionClass: audit_long_lived
     idempotency: false
+
+  - pluginId: service-credits
+    command: credit-limit.get
+    version: 1.0.0
+    description: Admin-only read of a member's granted, earned, and effective mutual-credit limits and freeze state. Earned grows with distinct undisputed inbound transfers; effective = enforceEarnedCap ? min(granted, earned) : granted.
+    inputSchema:
+      targetUserId:
+        type: string
+        required: true
+    outputSchema:
+      targetUserId:
+        type: string
+      grantedLimit:
+        type: number
+      earnedLimit:
+        type: number
+      effectiveLimit:
+        type: number
+      enforceEarnedCap:
+        type: boolean
+      frozen:
+        type: boolean
+    dataAccess:
+      - service_credits_credit_limits
+      - service_credits_transfers
+      - service_credits_disputes
+      - service_credits_wallets
+      - service_credits_treasury_config
+    purpose: governance_monetary_control
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: service-credits
+    command: wallet-status.set
+    version: 1.0.0
+    description: Admin-only. Freeze or unfreeze a member's wallet. A frozen wallet cannot spend on either rail (trust & safety lever for a risk-flagged account); rejected with wallet_frozen before any balance or rail check.
+    inputSchema:
+      targetUserId:
+        type: string
+        required: true
+      frozen:
+        type: boolean
+        required: true
+      reason:
+        type: string
+        required: false
+    outputSchema:
+      targetUserId:
+        type: string
+      frozen:
+        type: boolean
+    dataAccess:
+      - service_credits_wallets
+      - service_credits_admin_audit_trail
+    purpose: trust_and_safety
+    retentionClass: audit_long_lived
+    idempotency: false
