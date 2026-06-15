@@ -1,12 +1,13 @@
 "use client";
 
-import { Coins, TrendingUp, MessageSquare, Bell, Settings } from "lucide-react";
+import { Coins, TrendingUp, BarChart3, MessageSquare, Bell, Settings } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { COLOR, type Tab } from "./sc-shared";
 
 const TABS: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Coins, key: "wallet", label: "Wallet" },
   { icon: TrendingUp, key: "earn", label: "Earn" },
+  { icon: BarChart3, key: "economy", label: "Economy" },
   { icon: MessageSquare, key: "info", label: "Info" },
 ];
 

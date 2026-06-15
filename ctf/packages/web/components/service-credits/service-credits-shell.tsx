@@ -12,6 +12,7 @@ import { ServiceCreditsIconRail } from "./sc-icon-rail";
 import { ServiceCreditsSidebar } from "./sc-sidebar";
 import { ServiceCreditsWalletTab } from "./sc-wallet-tab";
 import { ServiceCreditsEarnTab } from "./sc-earn-tab";
+import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
 import { ServiceCreditsInfoTab } from "./sc-info-tab";
 import { ServiceCreditsSendPanel } from "./sc-send-panel";
 
@@ -76,6 +77,7 @@ export function ServiceCreditsShell() {
     <>
       {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} />}
       {tab === "earn" && <ServiceCreditsEarnTab />}
+      {tab === "economy" && <ServiceCreditsCirculationTab />}
       {tab === "info" && <ServiceCreditsInfoTab />}
     </>
   );
@@ -84,6 +86,7 @@ export function ServiceCreditsShell() {
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },
       { key: "earn", label: "Earn" },
+      { key: "economy", label: "Economy" },
       { key: "info", label: "Info" },
     ];
     return (

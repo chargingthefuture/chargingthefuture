@@ -74,6 +74,32 @@ export type TreasuryFeeResponse = {
   };
 };
 
+// Admin circulation view: the public aggregates plus the operator levers. No fiat equivalent.
+export type AdminCirculationMetrics = {
+  inCirculation: number;
+  totalIssued: number;
+  totalBurned: number;
+  treasuryBalance: number | null;
+  outstandingMutualCreditDebt: number;
+  transferVolume30d: number;
+  velocity: number;
+  issuanceEnforced: boolean;
+  issuancePeriodDays: number;
+  mintBudgetCeiling: number | null;
+  mintedThisPeriod: number;
+  mintBudgetRemaining: number | null;
+  concentrationTop5Share: number;
+  openDisputes: number;
+  treasuryUserIdConfigured: boolean;
+};
+
+export type AdminCirculationResponse = { ok: boolean; metrics?: AdminCirculationMetrics };
+
+export type CreditLimitResponse = {
+  ok: boolean;
+  creditLimit?: { targetUserId: string; creditLimit: number; [key: string]: unknown };
+};
+
 export type DisputeAdjustmentResponse = {
   ok: boolean;
   adjustment?: {
