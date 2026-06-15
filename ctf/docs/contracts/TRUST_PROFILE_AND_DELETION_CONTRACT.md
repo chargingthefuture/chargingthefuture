@@ -72,7 +72,7 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
   - field name: `snapshot`
     - type: jsonb
     - nullable/default: non-null, default `{}`
-    - purpose: the derived metric bundle computed from real upstream rows (loginDays, loginEvents, lastLoginAt, socketRelayCompletedTrades, socketRelayRequestsOpened). No numeric trust score is stored.
+    - purpose: the derived metric bundle computed from real upstream rows (loginDays, loginEvents, lastLoginAt, socketRelayCompletedTrades, socketRelayRequestsOpened, serviceCreditsDistinctPayers, serviceCreditsCompletedReceived, serviceCreditsDisputesAgainst). Only coarse ServiceCredits COUNTs are read (never amounts or balances). No numeric trust score is stored.
   - field name: `snapshot_type`
     - type: text
     - nullable/default: non-null, default `cross_plugin_engagement_v1`

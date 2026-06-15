@@ -30,7 +30,7 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 - `GET /api/trust/user/self` — Implemented. Current user's trust panel data (status, evidence, visibility) from `trust_user_extension`; gated by server-side plugin authz (`evaluatePluginAccess`).
 - `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel, gated by authentication AND the target's `trust_visibility`: `public` is readable by any authenticated, unlocked member; `private` and `restricted` are readable only by the owner (self) or an admin. A blocked viewer receives `403`. A target with no extension row defaults to `public`.
 - `POST /api/trust/visibility` — Implemented. Updates the caller's own visibility (`public` | `private` | `restricted`); rejects any other value with `400`; CSRF-guarded; writes a `trust_admin_audit_trail` row. Self-scope only.
-- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal from real cross-plugin engagement (login frequency/recency from `login_events`, completed SocketRelay trades from `socketrelay_fulfillments`, requests opened from `socketrelay_requests`), persists a `trust_signal_snapshot` row, and refreshes the caller's derived evidence. Never changes `trust_status`. CSRF-guarded; writes an audit row.
+- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal from real cross-plugin engagement (login frequency/recency from `login_events`, completed SocketRelay trades from `socketrelay_fulfillments`, requests opened from `socketrelay_requests`, and ServiceCredits received — distinct payers and undisputed completed transfers from `service_credits_transfers`/`service_credits_disputes`, coarse COUNTs only), persists a `trust_signal_snapshot` row, and refreshes the caller's derived evidence. Never changes `trust_status`. CSRF-guarded; writes an audit row.
 - `POST /api/trust/admin/verification` — Implemented. Admin-only (`evaluatePluginAccess({ requiredRoles: ['admin'] })`). Sets a target user's `trust_status` to `verified` or `flagged`, appends an admin evidence item, and writes an audit row. Validates `targetUserId` and `trustStatus` (`400` on bad input). CSRF-guarded.
 
 ## Data Model and Storage Contracts
@@ -39,7 +39,7 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 - `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the visibility, snapshot, and admin-verification routes.
 - `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — `loginDays`, `loginEvents`, `lastLoginAt`, `socketRelayCompletedTrades`, `socketRelayRequestsOpened`), `snapshot_type` (model version, default `cross_plugin_engagement_v1`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
 
-## Trust Signal Model (`cross_plugin_engagement_v1`)
+## Trust Signal Model (`cross_plugin_engagement_v2`)
 
 Trust derives a **qualitative, non-numeric** signal by counting **real rows** in already-seeded
 upstream plugins — it fabricates nothing. The snapshot route (`POST /api/trust/signal/snapshot`)
@@ -54,9 +54,20 @@ human-readable evidence items on `trust_user_extension`. Real signals that feed 
   "Completed N SocketRelay trades".
 - **SocketRelay requests opened** — from `socketrelay_requests`: count of requests the member owns
   (`socketRelayRequestsOpened`). Evidence: "Opened N SocketRelay requests".
+- **Paid by the community (ServiceCredits)** — from `service_credits_transfers`: distinct members who
+  paid this member via a completed transfer (`serviceCreditsDistinctPayers`, counting distinct senders
+  so one repeat payer can't inflate it) and the total completed transfers received
+  (`serviceCreditsCompletedReceived`). Evidence: "Received ServiceCredits from N community members".
+- **Clean ServiceCredits record** — from `service_credits_disputes`: disputes opened against the
+  member's received transfers (`serviceCreditsDisputesAgainst`). The clean-record evidence
+  ("N completed ServiceCredits transfers, none disputed") is shown only when there are completed
+  received transfers and **zero** disputes. A dispute **withholds** this positive signal rather than
+  producing a negative badge or a deduction — signal over noise, with dignity. The dispute count is
+  kept in the snapshot metrics for the member's own and admin transparency, never surfaced publicly.
 
-Real-data-only rule: any signal whose backing rows are absent (count of 0 / no login) produces **no**
-evidence item, so the panel never claims activity that did not happen. No numeric score is ever
+Only coarse ServiceCredits COUNTs are read (never amounts or balances), so no money figure crosses into
+Trust. Real-data-only rule: any signal whose backing rows are absent (count of 0 / no login) produces
+**no** evidence item, so the panel never claims activity that did not happen. No numeric score is ever
 computed or stored. The snapshot route never changes `trust_status` (that is admin-controlled).
 
 ## Security, Privacy, and Compliance Controls
@@ -98,6 +109,8 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 7. The model counts engagement but does not yet expose a `member_since` or active-plugin-count signal; those design fields remain omitted per real-data-only until a backing source is wired.
 
 ## Change Log
+
+- 2026-06-15: Added ServiceCredits contribution signals to the model (`cross_plugin_engagement_v2`). The snapshot now also reads coarse COUNTs from `service_credits_transfers` (completed transfers received + distinct paying members) and `service_credits_disputes` (disputes against received transfers). Two new categorical evidence items: "Received ServiceCredits from N community members" (breadth) and "N completed ServiceCredits transfers, none disputed" (clean record). The clean-record signal is **withheld** when a dispute exists rather than producing a negative badge — signal over noise, with dignity. No amounts/balances are read and no numeric score is produced (reconciles the platform's no-credit/social-score commitment). Bumped `TRUST_SNAPSHOT_MODEL` to `cross_plugin_engagement_v2`; extended `TrustSignalMetrics`; updated command contract (`trust.signal.snapshot.refresh` v1.1.0, added `service_credits_transfers`/`service_credits_disputes` to dataAccess), the deletion contract metric bundle, and the signal-model section. No schema change (the snapshot JSONB absorbs the new fields). Web typecheck clean.
 
 - 2026-06-12: The Android Trust API client (`packages/mobile/src/features/trust/api.ts`) now uses the shared authenticated fetch helper — the call to `GET /api/trust/user/self` carries the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against a hardcoded development URL.
 - 2026-06-08: Implemented the trust backend (no stubs). `POST /api/trust/signal/snapshot` now computes the caller's signal from real cross-plugin engagement (login frequency/recency from `login_events`, completed SocketRelay trades from `socketrelay_fulfillments`, requests opened from `socketrelay_requests`), persists a `trust_signal_snapshot` row, and rewrites the caller's derived evidence — without changing `trust_status`. `POST /api/trust/visibility` validates against the visibility enum and persists the caller's setting. `POST /api/trust/admin/verification` is admin-only and sets a target's status to `verified`/`flagged` with an appended admin evidence note. `GET /api/trust/user/[userId]` now requires authentication and enforces `trust_visibility` (public open to members; private/restricted owner-or-admin). All mutations are CSRF-guarded and write `trust_admin_audit_trail` rows. Added `trust_signal_snapshot` table (real schema, IF NOT EXISTS pattern) and registered it as a user-scoped delete in the account deletion registry. Reconciled the command/access/audit/deletion contracts to the shipped surface (renamed `trust_signal_snapshots` → `trust_signal_snapshot`; replaced draft bucket fields/roles). Real-data-only: any signal with no backing rows yields no evidence; no numeric score is ever produced.
