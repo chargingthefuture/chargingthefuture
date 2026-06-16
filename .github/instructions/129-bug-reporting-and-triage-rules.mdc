@@ -131,6 +131,12 @@ title (`fix:`, `feat:`, …). This is an explicit owner instruction (2026-06-10)
   and relabels it `built`. Uses the external Claude Code GitHub Action — pin its version and confirm
   its inputs on first run. Manual-dispatch only on purpose (the owner kicks each build until the
   pipeline is trusted).
+- **Admin review surface**: `/admin/bug-reports` (page `app/admin/bug-reports/`, shell
+  `components/bug-reports/bug-reports-admin-shell.tsx`, admin API `app/api/bug-reports/admin/`). Lists
+  all reports with held ones first, showing **redacted** text + the risk flags that explain the hold
+  (never raw text). An admin can **release** a held report (sets it back to `new`, so the create-issues
+  job publishes the redacted copy to triage on its next run) or **reject** it. Reachable from the
+  `/admin` landing. This is the surface the owner uses to clear the `held_for_review` queue.
 
 **Label flow in the triage repo** (create these in `chargingthefuture/bug-reports`):
 `user-report` → `needs-triage` → (triage) `triaged` + `awaiting-owner-approval` → (owner adds)
@@ -141,6 +147,7 @@ title (`fix:`, `feat:`, …). This is an explicit owner instruction (2026-06-10)
 - The in-app "Report a problem" form is a net-new surface and is **design-gated** (rule 127). Build it
   only once a design lands in the `design/` submodule. `DESIGN PASS REQUIRED` was announced on
   2026-06-10 and a design-prompt issue was filed for the Replit design agent.
-- The private in-app admin view for `held_for_review` reports is not built yet.
+- ~~The private in-app admin view for `held_for_review` reports is not built yet.~~ Built: see the
+  "Admin review surface" entry above (`/admin/bug-reports`).
 - All three workflows are manual-dispatch until the triage repo's labels exist, `GH_PAT` can read+write
   it, and `ANTHROPIC_API_KEY` / `DATABASE_URL` are available; then uncomment the schedules.
