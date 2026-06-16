@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, CheckCircle, ChevronRight, MessageSquare, Search } from "lucide-react";
+import { ArrowUpRight, CheckCircle, ChevronRight, Search } from "lucide-react";
 import { COLOR, SKILLS_HUNT_COLOR, initials, type Member, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryEmptyState } from "./directory-empty-state";
 
@@ -82,14 +82,9 @@ export function DirectoryBrowse({
                     ))}
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ flex: 1, padding: "8px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                    View Profile <ChevronRight size={12} />
-                  </button>
-                  <button aria-label="Message" style={{ padding: "8px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9CA3AF", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                    <MessageSquare size={12} />
-                  </button>
-                </div>
+                <button style={{ width: "100%", padding: "8px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  View Profile <ChevronRight size={12} />
+                </button>
               </div>
             ))}
           </div>
