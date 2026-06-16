@@ -1,6 +1,11 @@
 import { createHash } from 'crypto';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
+  WORKFORCE_SKILL_LEVELS,
+  deriveWorkforceSkillLevel,
+  type WorkforceSkillLevel,
+} from './skill-level';
+import {
   WORKFORCE_DEFAULT_PAGE,
   WORKFORCE_DEFAULT_PAGE_SIZE,
   WORKFORCE_DEFAULT_TIMEZONE,
@@ -699,10 +704,37 @@ export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
 }
 
 export async function fetchSkillLevelReport(): Promise<WorkforceGroupedReportItem[]> {
-  // Skill level is not a field on the source of truth (directory_profiles), so there is no
-  // honest live breakdown to show. Return empty; the shell hides the skill-distribution panel
-  // when there are no items. (Retired with the workforce_profiles copy — see change log.)
-  return [];
+  // Skill level is derived live from each active directory profile's Skills Taxonomy job-title
+  // name, using V2's keyword rule (see lib/workforce/skill-level.ts) — Foundational / Intermediate
+  // / Advanced. No stored column, no seed; the breakdown lives on the source of truth. Recruited =
+  // claimed. Aggregated in code over the (small) active-profile set so the keyword lists stay in
+  // one place, shared with the drill-down.
+  const result = await queryDb<{ job_title_name: string | null; claimed: boolean }>(
+    `
+      SELECT jt.name AS job_title_name, (dp.claimed_by_user_id IS NOT NULL) AS claimed
+      FROM directory_profiles dp
+      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
+      WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL
+    `,
+  );
+
+  const buckets = new Map<WorkforceSkillLevel, { workforceTotal: number; recruitedTotal: number }>();
+  for (const level of WORKFORCE_SKILL_LEVELS) {
+    buckets.set(level, { workforceTotal: 0, recruitedTotal: 0 });
+  }
+  for (const row of result.rows) {
+    const bucket = buckets.get(deriveWorkforceSkillLevel(row.job_title_name))!;
+    bucket.workforceTotal += 1;
+    if (row.claimed) {
+      bucket.recruitedTotal += 1;
+    }
+  }
+
+  // Foundational → Intermediate → Advanced; include only levels that have people so the shell's
+  // panel shows the buckets that actually exist.
+  return WORKFORCE_SKILL_LEVELS
+    .map((level) => ({ bucket: level, ...buckets.get(level)! }))
+    .filter((item) => item.workforceTotal > 0);
 }
 
 export async function fetchSectorReport(): Promise<WorkforceGroupedReportItem[]> {
