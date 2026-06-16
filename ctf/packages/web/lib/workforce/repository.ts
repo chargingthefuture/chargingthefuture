@@ -280,9 +280,13 @@ async function ensureOccupationExists(occupationId: string | null): Promise<void
 }
 
 export async function getDashboard(): Promise<WorkforceDashboard> {
+  // Directory (+ Skills Taxonomy) is the single source of truth: the workforce population IS the
+  // active directory profiles, and "recruited" means a profile that has been claimed by a user.
+  // We read directory_profiles live rather than keeping a synced workforce_profiles copy, so the
+  // numbers can never drift and there is no sync job to fail.
   const [workforceCount, recruitedCount, occupationCount, activeAnnouncementCount] = await Promise.all([
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_profiles'),
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_profiles WHERE recruited_state = true'),
+    queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL"),
+    queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL AND claimed_by_user_id IS NOT NULL"),
     queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_occupations WHERE is_active = true'),
     queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_announcements WHERE is_active = true AND (expires_at IS NULL OR expires_at > NOW())'),
   ]);
@@ -676,12 +680,14 @@ export async function updateWorkforceConfig(actorId: string, input: WorkforceCon
 }
 
 export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
+  // Live from Directory (see getDashboard): total = active profiles, recruited = claimed.
   const result = await queryDb<WorkforceReportRow>(
     `
       SELECT
         COUNT(*)::int AS workforce_total,
-        COUNT(*) FILTER (WHERE recruited_state = true)::int AS recruited_total
-      FROM workforce_profiles
+        COUNT(*) FILTER (WHERE claimed_by_user_id IS NOT NULL)::int AS recruited_total
+      FROM directory_profiles
+      WHERE is_active = TRUE AND deleted_at IS NULL
     `,
   );
 
@@ -693,35 +699,24 @@ export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
 }
 
 export async function fetchSkillLevelReport(): Promise<WorkforceGroupedReportItem[]> {
-  const result = await queryDb<WorkforceGroupedRow>(
-    `
-      SELECT
-        skill_level AS bucket,
-        COUNT(*)::text AS workforce_total,
-        COUNT(*) FILTER (WHERE recruited_state = true)::text AS recruited_total
-      FROM workforce_profiles
-      GROUP BY skill_level
-      ORDER BY skill_level ASC
-    `,
-  );
-
-  return result.rows.map((row) => ({
-    bucket: row.bucket,
-    workforceTotal: Number.parseInt(row.workforce_total, 10),
-    recruitedTotal: Number.parseInt(row.recruited_total, 10),
-  }));
+  // Skill level is not a field on the source of truth (directory_profiles), so there is no
+  // honest live breakdown to show. Return empty; the shell hides the skill-distribution panel
+  // when there are no items. (Retired with the workforce_profiles copy — see change log.)
+  return [];
 }
 
 export async function fetchSectorReport(): Promise<WorkforceGroupedReportItem[]> {
+  // Group the active directory profiles by their Skills Taxonomy sector; recruited = claimed.
   const result = await queryDb<WorkforceGroupedRow>(
     `
       SELECT
-        COALESCE(o.sector, 'unassigned') AS bucket,
+        COALESCE(s.name, 'Unassigned') AS bucket,
         COUNT(*)::text AS workforce_total,
-        COUNT(*) FILTER (WHERE p.recruited_state = true)::text AS recruited_total
-      FROM workforce_profiles p
-      LEFT JOIN workforce_occupations o ON o.id = p.occupation_id
-      GROUP BY COALESCE(o.sector, 'unassigned')
+        COUNT(*) FILTER (WHERE dp.claimed_by_user_id IS NOT NULL)::text AS recruited_total
+      FROM directory_profiles dp
+      LEFT JOIN skills_taxonomy_sectors s ON s.id = dp.sector_id
+      WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL
+      GROUP BY COALESCE(s.name, 'Unassigned')
       ORDER BY bucket ASC
     `,
   );
