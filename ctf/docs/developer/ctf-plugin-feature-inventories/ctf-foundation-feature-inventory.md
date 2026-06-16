@@ -67,6 +67,7 @@ Foundation-owned domain entities (canonical in `ctf/schema.sql`):
 10. `foundation_capacity_policies` — Admin-configured capacity limits and thresholds.
 11. `foundation_admin_audit_trail` — Admin action audit log.
 12. `foundation_provider_accepted_currencies` — join (`user_id`, `currency_code` FK → `currencies.code`) for the currencies a provider accepts.
+13. `foundation_provider_skills` — join (`user_id`, `skill_id` → `skills_taxonomy_skills.id`) of the skills a provider has opted in to be contacted about. This is the "willing to offer SAID skill" signal that distinguishes Foundation from the Directory: provider search only surfaces members with at least one row here, and `skill_id` is constrained (in the repository) to skills the member lists on their own claimed Directory profile.
 
 Multi-currency (issue #120): a provider can list a service rate on their profile — `foundation_user_extension`
 gains `rate_amount` + `rate_currency` (FK → `currencies.code`). The quote process stays free-text/manual this
@@ -99,7 +100,9 @@ Cross-plugin read dependencies (read-only):
 
 Android pixel pass delivered 2026-05-31. Mobile feature (`ctf/packages/mobile/src/features/foundation/`) rewritten to match the `MobileFoundation*.tsx` mockup. Real backend bindings mirror the merged web shell (PR #182):
 
-- `GET /api/foundation/providers/search` — provider list with `profileId`, `providerUserId`, `displayName`, `headline`, `bio`.
+- `GET /api/foundation/providers/search` — provider list with `profileId`, `providerUserId`, `displayName`, `headline`, `bio`, and `offeredSkills` (`[{ id, name }]`). Only providers who have opted in to offer at least one skill (`foundation_provider_skills`) are returned. Optional `skillId` query param restricts to providers offering that exact skill.
+- `GET /api/foundation/provider/skills` — the signed-in member's own Directory skills, each flagged `offered` (whether they have opted in to be contacted about it).
+- `PUT /api/foundation/provider/skills { skillIds }` (`x-ctf-csrf: 1`) — replace the member's offered-skills set; only skills on their own claimed Directory profile are accepted. Returns the accepted `offeredSkillIds`.
 - `GET /api/foundation/quotes/history` — quote history items with `id`, `providerId`, `providerName`, `status`, `createdAt`.
 - Quote creation flow: `POST /api/foundation/connections/threads { providerId }` → `POST /api/foundation/quotes { threadId, serviceType }`, both with `x-ctf-csrf: 1` header.
 
@@ -125,6 +128,7 @@ Seeded content (deterministic):
 
 ## Change Log
 
+- 2026-06-16: Provider offered-skills opt-in (backend). Foundation now expresses "I'm skilled **and** willing to be contacted to offer it," which the Directory does not. Added `foundation_provider_skills` (`user_id`, `skill_id`); provider search (`GET /api/foundation/providers/search`) now returns only members with at least one offered skill, supports an optional `skillId` filter, and includes each provider's `offeredSkills`. New member-owned routes `GET`/`PUT /api/foundation/provider/skills` list and replace the offered set (only skills on the member's own claimed Directory profile are accepted). Added the table to the deletion registry (hard delete by `user_id`). Schema + API + repository only; the provider skills picker, the search skill filter, and the provider-card skill chips are the design-gated UI follow-up.
 - 2026-06-13: Web admin design pass. Replaced the bare diagnostic `/admin/foundation` page with `components/foundation/foundation-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, capacity-policy panel). Bound to the real backend — `getFoundationDashboard` counts and the editable `getCapacityPolicy`. The policy panel edits quota state, the kill switch, and the five rate-limit numbers, saving via the existing `PUT /api/foundation/admin/capacity-policy` (with `x-ctf-csrf: '1'`). The mobile mockup (`MobileFoundationAdmin.tsx`) depicts a "gig moderation" queue that does not match Foundation's real admin surface (capacity/rate-limit governance), so per the admin build rule the real data/controls were styled instead — no fabricated gig queue. No new endpoint, schema, or contract.
 - 2026-06-12: The Android Foundation API client (`packages/mobile/src/features/foundation/api.ts`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs. No schema, route, or contract change.
 - 2026-06-10: Brought `seedFoundation.mjs` back in line with the current `directory_profiles` shape. The provider profile insert still wrote the retired `display_name` column and the dropped `is_public` column (removed by `post/0001` on 2026-06-02), so a fresh seed against the migrated schema would fail. The insert now writes `first_name`/`last_name` ('Seed'/'Provider') and no longer references `is_public`, with the `ON CONFLICT` update list matched. No schema or behaviour change — seed data only.

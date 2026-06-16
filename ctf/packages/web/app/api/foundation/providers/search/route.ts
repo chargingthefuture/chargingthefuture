@@ -15,8 +15,14 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q') ?? '';
     const page = Number.parseInt(searchParams.get('page') ?? '1', 10);
     const pageSize = Number.parseInt(searchParams.get('pageSize') ?? '20', 10);
+    // Optional filter: only providers who have opted in to offer this specific skill. Must be a
+    // UUID; anything else is ignored so a malformed value can't reach the ::uuid cast and 503.
+    const skillIdRaw = searchParams.get('skillId');
+    const skillId = skillIdRaw && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(skillIdRaw)
+      ? skillIdRaw
+      : null;
 
-    const providers = await searchProviders({ query, page, pageSize });
+    const providers = await searchProviders({ query, skillId, page, pageSize });
 
     await insertFoundationAudit({
       actorId: gate.auth.userId,
