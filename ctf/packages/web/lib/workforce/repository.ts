@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   WORKFORCE_SKILL_LEVELS,
@@ -14,7 +13,6 @@ import {
   WORKFORCE_MAX_ANNOUNCEMENT_TITLE_LENGTH,
   WORKFORCE_MAX_OCCUPATION_NAME_LENGTH,
   WORKFORCE_MAX_PAGE_SIZE,
-  WORKFORCE_MAX_REGION_LENGTH,
 } from './constants';
 import type {
   WorkforceAnnouncement,
@@ -28,25 +26,10 @@ import type {
   WorkforceOccupationInput,
   WorkforcePagination,
   WorkforceProfile,
-  WorkforceProfileInput,
   WorkforceSummaryReport,
 } from './types';
 
 type CountRow = { total: string };
-
-type WorkforceProfileRow = {
-  user_id: string;
-  occupation_id: string | null;
-  occupation_name: string | null;
-  skill_level: string;
-  region: string | null;
-  recruited_state: boolean;
-  recruited_resolved_at: Date | null;
-  availability_preferences: Record<string, unknown>;
-  work_preferences: Record<string, unknown>;
-  service_deleted_at: Date | null;
-  updated_at: Date;
-};
 
 type WorkforceOccupationRow = {
   id: string;
@@ -133,22 +116,6 @@ function isValidIsoDatetime(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
 }
 
-function mapWorkforceProfile(row: WorkforceProfileRow): WorkforceProfile {
-  return {
-    userId: row.user_id,
-    occupationId: row.occupation_id,
-    occupationName: row.occupation_name,
-    skillLevel: row.skill_level,
-    region: row.region,
-    recruitedState: row.recruited_state,
-    recruitedResolvedAtIso: row.recruited_resolved_at ? toIso(row.recruited_resolved_at) : null,
-    availabilityPreferences: normalizeJsonObject(row.availability_preferences),
-    workPreferences: normalizeJsonObject(row.work_preferences),
-    serviceDeletedAtIso: row.service_deleted_at ? toIso(row.service_deleted_at) : null,
-    updatedAtIso: toIso(row.updated_at),
-  };
-}
-
 function mapOccupation(row: WorkforceOccupationRow): WorkforceOccupation {
   return {
     id: row.id,
@@ -188,19 +155,6 @@ function mapConfig(row: WorkforceConfigRow): WorkforceConfig {
   };
 }
 
-function normalizeSkillLevel(value: string | null | undefined): string {
-  if (!value) {
-    return 'unknown';
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized.length === 0) {
-    return 'unknown';
-  }
-
-  return normalized;
-}
-
 export function parsePaginationParams(url: string): { page: number; pageSize: number } {
   const params = new URL(url).searchParams;
   const pageRaw = Number.parseInt(params.get('page') ?? '', 10);
@@ -211,19 +165,6 @@ export function parsePaginationParams(url: string): { page: number; pageSize: nu
   const pageSize = Math.min(pageSizeBase, WORKFORCE_MAX_PAGE_SIZE);
 
   return { page, pageSize };
-}
-
-export function validateProfileInput(input: WorkforceProfileInput): boolean {
-  const region = normalizeNullableText(input.region);
-  const skillLevel = normalizeSkillLevel(input.skillLevel);
-
-  const checks = [
-    !region || region.length <= WORKFORCE_MAX_REGION_LENGTH,
-    skillLevel.length > 0 && skillLevel.length <= 40,
-    input.occupationId === null || typeof input.occupationId === 'string',
-  ];
-
-  return checks.every(Boolean);
 }
 
 export function validateOccupationInput(input: WorkforceOccupationInput): boolean {
@@ -259,21 +200,6 @@ export function validateConfigInput(input: WorkforceConfigInput): boolean {
     && input.reportWeekStartDow <= 6;
 }
 
-async function ensureOccupationExists(occupationId: string | null): Promise<void> {
-  if (!occupationId) {
-    return;
-  }
-
-  const result = await queryDb<{ id: string }>(
-    'SELECT id FROM workforce_occupations WHERE id = $1::uuid AND is_active = true LIMIT 1',
-    [occupationId],
-  );
-
-  if (result.rows.length === 0) {
-    throw new Error('workforce_occupation_not_found');
-  }
-}
-
 export async function getDashboard(): Promise<WorkforceDashboard> {
   // Directory (+ Skills Taxonomy) is the single source of truth: the workforce population IS the
   // active directory profiles, and "recruited" means a profile that has been claimed by a user.
@@ -296,145 +222,40 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
 }
 
 export async function getOwnProfile(userId: string): Promise<WorkforceProfile | null> {
-  const result = await queryDb<WorkforceProfileRow>(
+  // Read-only: a member's workforce profile is a live view of their own claimed Directory profile.
+  // Occupation = their Skills Taxonomy job title; skill level is derived from it; recruited = true
+  // (a claimed profile is, by definition, a recruited member). Workforce no longer stores or edits
+  // its own profile rows — Directory + Skills Taxonomy are the single source of truth.
+  const result = await queryDb<{ job_title_id: string | null; job_title_name: string | null; updated_at: Date }>(
     `
-      SELECT
-        p.user_id,
-        p.occupation_id,
-        o.name AS occupation_name,
-        p.skill_level,
-        p.region,
-        p.recruited_state,
-        p.recruited_resolved_at,
-        COALESCE(ue.availability_preferences, '{}'::jsonb) AS availability_preferences,
-        COALESCE(ue.work_preferences, '{}'::jsonb) AS work_preferences,
-        ue.service_deleted_at,
-        GREATEST(p.updated_at, COALESCE(ue.updated_at, p.updated_at)) AS updated_at
-      FROM workforce_profiles p
-      LEFT JOIN workforce_user_extension ue ON ue.user_id = p.user_id
-      LEFT JOIN workforce_occupations o ON o.id = p.occupation_id
-      WHERE p.user_id = $1
+      SELECT dp.job_title_id::text AS job_title_id, jt.name AS job_title_name, dp.updated_at
+      FROM directory_profiles dp
+      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
+      WHERE dp.claimed_by_user_id = $1 AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+      ORDER BY dp.updated_at DESC
       LIMIT 1
     `,
     [userId],
   );
 
-  if (result.rows.length === 0) {
+  const row = result.rows[0];
+  if (!row) {
     return null;
   }
 
-  return mapWorkforceProfile(result.rows[0]);
-}
-
-export async function upsertOwnProfile(userId: string, input: WorkforceProfileInput): Promise<WorkforceProfile> {
-  await ensureOccupationExists(input.occupationId);
-
-  return withDbTransaction(async (client) => {
-    const region = normalizeNullableText(input.region);
-    const skillLevel = normalizeSkillLevel(input.skillLevel);
-    const availabilityPreferences = normalizeJsonObject(input.availabilityPreferences ?? {});
-    const workPreferences = normalizeJsonObject(input.workPreferences ?? {});
-
-    await client.query(
-      `
-        INSERT INTO workforce_profiles (user_id, occupation_id, skill_level, region, recruited_state, recruited_resolved_at)
-        VALUES ($1, $2::uuid, $3, $4, false, NULL)
-        ON CONFLICT (user_id)
-        DO UPDATE SET
-          occupation_id = EXCLUDED.occupation_id,
-          skill_level = EXCLUDED.skill_level,
-          region = EXCLUDED.region,
-          updated_at = NOW()
-      `,
-      [userId, input.occupationId, skillLevel, region],
-    );
-
-    await client.query(
-      `
-        INSERT INTO workforce_user_extension (user_id, availability_preferences, work_preferences, service_deleted_at)
-        VALUES ($1, $2::jsonb, $3::jsonb, NULL)
-        ON CONFLICT (user_id)
-        DO UPDATE SET
-          availability_preferences = EXCLUDED.availability_preferences,
-          work_preferences = EXCLUDED.work_preferences,
-          service_deleted_at = NULL,
-          updated_at = NOW()
-      `,
-      [userId, JSON.stringify(availabilityPreferences), JSON.stringify(workPreferences)],
-    );
-
-    const refreshed = await client.query<WorkforceProfileRow>(
-      `
-        SELECT
-          p.user_id,
-          p.occupation_id,
-          o.name AS occupation_name,
-          p.skill_level,
-          p.region,
-          p.recruited_state,
-          p.recruited_resolved_at,
-          COALESCE(ue.availability_preferences, '{}'::jsonb) AS availability_preferences,
-          COALESCE(ue.work_preferences, '{}'::jsonb) AS work_preferences,
-          ue.service_deleted_at,
-          GREATEST(p.updated_at, COALESCE(ue.updated_at, p.updated_at)) AS updated_at
-        FROM workforce_profiles p
-        LEFT JOIN workforce_user_extension ue ON ue.user_id = p.user_id
-        LEFT JOIN workforce_occupations o ON o.id = p.occupation_id
-        WHERE p.user_id = $1
-        LIMIT 1
-      `,
-      [userId],
-    );
-
-    return mapWorkforceProfile(refreshed.rows[0]);
-  });
-}
-
-export async function deleteOwnWorkforceProfile(userId: string): Promise<{ requestedAtIso: string }> {
-  return withDbTransaction(async (client) => {
-    await client.query(
-      `
-        INSERT INTO workforce_user_extension (user_id, availability_preferences, work_preferences, service_deleted_at)
-        VALUES ($1, '{}'::jsonb, '{}'::jsonb, NOW())
-        ON CONFLICT (user_id)
-        DO UPDATE SET
-          availability_preferences = '{}'::jsonb,
-          work_preferences = '{}'::jsonb,
-          service_deleted_at = NOW(),
-          updated_at = NOW()
-      `,
-      [userId],
-    );
-
-    await client.query(
-      `
-        UPDATE workforce_profiles
-        SET
-          occupation_id = NULL,
-          region = NULL,
-          updated_at = NOW()
-        WHERE user_id = $1
-      `,
-      [userId],
-    );
-
-    const result = await client.query<{ requested_at: Date }>(
-      `
-        INSERT INTO workforce_recruited_events
-          (user_id, directory_profile_id, source_event, inference_dedupe_key, resolved_recruited, resolved_at, metadata)
-        VALUES
-          ($1, 'service-delete', 'workforce_profile_service_delete', $2, false, NOW(), '{"scope":"service"}'::jsonb)
-        ON CONFLICT (inference_dedupe_key)
-        DO UPDATE SET created_at = workforce_recruited_events.created_at
-        RETURNING created_at AS requested_at
-      `,
-      [userId, createHash('sha256').update(`service-delete:${userId}`).digest('hex')],
-    );
-
-    return {
-      requestedAtIso: toIso(result.rows[0].requested_at),
-    };
-  });
+  return {
+    userId,
+    occupationId: row.job_title_id,
+    occupationName: row.job_title_name,
+    skillLevel: deriveWorkforceSkillLevel(row.job_title_name),
+    region: null,
+    recruitedState: true,
+    recruitedResolvedAtIso: null,
+    availabilityPreferences: {},
+    workPreferences: {},
+    serviceDeletedAtIso: null,
+    updatedAtIso: toIso(row.updated_at),
+  };
 }
 
 export async function listOccupations(

@@ -105,10 +105,7 @@ All command contracts must conform to:
 Command groups:
 
 1. `workforce.dashboard.fetch`
-2. `workforce.profile.fetch`
-3. `workforce.profile.create`
-4. `workforce.profile.update`
-5. `workforce.profile.delete`
+2. `workforce.profile.fetch` (read-only; the create/update/delete commands were removed — the workforce profile is a read-only Directory view)
 6. `workforce.occupations.list`
 7. `workforce.occupations.detail.fetch`
 8. `workforce.occupations.admin.create`
@@ -136,10 +133,7 @@ Command groups:
 User routes:
 
 - `GET /api/workforce/dashboard`
-- `GET /api/workforce/profile`
-- `POST /api/workforce/profile`
-- `PUT /api/workforce/profile`
-- `DELETE /api/workforce/profile`
+- `GET /api/workforce/profile` — read-only; a live view of the member's own claimed Directory profile (occupation = job title, skill level derived, recruited = claimed). There is no create/update/delete: Workforce stores no profile of its own.
 - `GET /api/workforce/occupations`
 - `GET /api/workforce/occupations/:id`
 - `GET /api/workforce/announcements`
@@ -441,6 +435,7 @@ Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added 
 
 ### Change Log
 
+- 2026-06-16: Read-only Workforce profile. `getOwnProfile` now derives the member's profile live from their own claimed Directory profile (occupation = Skills Taxonomy job title, skill level derived via `lib/workforce/skill-level.ts`, recruited = claimed), instead of reading `workforce_profiles`. Removed the profile editor path: `upsertOwnProfile` / `deleteOwnWorkforceProfile` and the `POST` / `PUT` / `DELETE /api/workforce/profile` handlers (the route is now `GET`-only), plus the now-orphaned `validateProfileInput` / `normalizeSkillLevel` / `ensureOccupationExists` / `mapWorkforceProfile` helpers. The web profile panel and the mobile `WorkforceProfileCard` were already display-only, so no UI change. `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` are now written by nothing; they are still listed in the deletion registry (purged on deletion) and dropped from the schema in the immediate follow-up PR. The `workforce.profile.create/update/delete` commands are retired.
 - 2026-06-16: Removed the dead recruited-state sync and recompute. Now that the dashboard/reports derive recruited live from Directory (claimed profiles), the sync that copied Directory into `workforce_profiles` served no read path — and it had no scheduled job, so it never ran. Deleted `runIncrementalRecruitedSync` and `enqueueRecruitedRecompute` from the repository, the routes `POST /api/workforce/admin/sync`, `POST /api/workforce/internal/sync`, and `POST /api/workforce/admin/recompute`, and the Recompute/Sync buttons from the admin shell (Save config stays). Step toward the owner-approved read-only Workforce model (2026-06-16). Still to do (next PR): make the user profile a read-only Directory-derived view (remove the editor + `upsertOwnProfile`/`deleteOwnWorkforceProfile`) and drop the now-unused `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables via the schema process.
 - 2026-06-16: Workforce reads now derive live from Directory (the single source of truth), not a synced `workforce_profiles` copy. `getDashboard`, `fetchSummaryReport`, and `fetchSectorReport` query `directory_profiles` directly — total = active profiles, recruited = claimed (`claimed_by_user_id IS NOT NULL`), sector grouping via `skills_taxonomy_sectors`. This fixes the dashboard showing 0 while ~62–67 directory profiles exist: the recruited-state sync (`runIncrementalRecruitedSync`) had no scheduled job and never populated the copy. The skill-level breakdown (`fetchSkillLevelReport`) keeps full V2 parity: V2 derived skill level algorithmically from the job-title name (case-insensitive keyword match → Foundational / Intermediate / Advanced), not from a stored field. That rule is ported verbatim to `lib/workforce/skill-level.ts` and applied live to each active directory profile's Skills Taxonomy job title — no stored column, no seed, no drift. Follow-up (separate PR): the now-vestigial `workforce_profiles` write path, the recruited sync routes, and the per-sector/per-skill detail report endpoints should be removed or likewise re-pointed at Directory (the skill-level drill-down should reuse `deriveWorkforceSkillLevel`). No schema or contract change in this PR; response shapes are unchanged.
 - 2026-02-24: Created initial Workforce rewrite checklist with phase gates for legacy section review, canonical metric lock, schema drift evidence, and non-regression controls preventing accidental legacy event artifacts.

@@ -246,9 +246,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'workforce',
     name: 'Workforce',
-    dataSummary: 'Your workforce profile, recruitment history, and extension record.',
+    dataSummary: 'Your workforce extension record, plus any leftover rows from the legacy workforce profile/recruitment tables (now unused — the workforce view is read-only over your Directory profile).',
     serviceScopeSupported: true,
     tables: [
+      // These two tables are no longer written (the workforce profile is a read-only Directory view
+      // and recruited state is derived live), but they are still purged here until they are dropped
+      // from the schema in the follow-up so no leftover rows survive an account deletion.
       del('workforce_recruited_events', 'user_id', 'Your recruitment history.'),
       del('workforce_profiles', 'user_id', 'Your workforce profile.'),
       soft('workforce_user_extension', 'user_id', 'service_deleted_at', 'Your workforce plugin extension record.'),
