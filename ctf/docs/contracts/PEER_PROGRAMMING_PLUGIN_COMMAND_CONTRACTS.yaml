@@ -374,6 +374,32 @@ contracts:
     idempotency: true
 
   - pluginId: peer-programming
+    command: session.join
+    version: 1.0.0
+    description: Mint live video session credentials for the caller's own cohort. The cohort is resolved server-side from the signed-in member, so only a cohort member can obtain a call token and the call is always scoped to that member's cohort.
+    inputSchema: {}
+    outputSchema:
+      cohortId:
+        type: string
+      displayName:
+        type: string
+      streamApiKey:
+        type: string
+      streamCallId:
+        type: string
+      streamUserId:
+        type: string
+      streamToken:
+        type: string
+    dataAccess:
+      - peer_programming_cohorts
+      - peer_programming_cohort_members
+      - canonical_user_profile
+    purpose: live_session
+    retentionClass: transactional_short_lived
+    idempotency: false
+
+  - pluginId: peer-programming
     command: admin.topic-guidance.get
     version: 1.0.0
     description: Retrieve admin-defined weekly topic guidance and revision metadata.

@@ -32,6 +32,10 @@ export async function POST(request: Request) {
     ? (body.activeUserIds ?? [])
     : await getActiveUserIdsLastDays(7);
 
+  const membersSelected = new Set(
+    activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0),
+  ).size;
+
   try {
     const result = await runWeeklyAssignment({ actorId: gate.auth.userId, activeUserIds });
 
@@ -42,10 +46,10 @@ export async function POST(request: Request) {
       reason: 'ok',
       targetType: 'cohort_assignment',
       targetId: gate.auth.userId,
-      metadata: { ...result, source: useManualOverride ? 'manual_override' : 'server_login_activity' },
+      metadata: { ...result, membersSelected, source: useManualOverride ? 'manual_override' : 'server_login_activity' },
     });
 
-    return NextResponse.json({ ok: true, ...result }, { status: 200 });
+    return NextResponse.json({ ok: true, ...result, membersSelected }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'admin_assignments_run' });
     return peerProgrammingErrorResponse(error, 'Weekly cohort assignment unavailable.');

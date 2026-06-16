@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createMessage, insertPeerProgrammingAudit } from 'lib/peer-programming/repository';
+import { createMessage, insertPeerProgrammingAudit, isCohortMember } from 'lib/peer-programming/repository';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { reportError } from 'lib/observability/report';
 
@@ -33,6 +33,24 @@ export async function POST(request: Request, context: { params: Promise<{ messag
   }
 
   const { messageId } = await context.params;
+
+  // Only a member of the cohort may reply in it (see the post route for the same rule).
+  const isMember = await isCohortMember(body.cohortId, gate.auth.userId);
+  if (!isMember) {
+    await insertPeerProgrammingAudit({
+      actorId: gate.auth.userId,
+      command: 'peer-programming.thread.reply.create',
+      policyStatus: 'deny',
+      reason: 'not_cohort_member',
+      targetType: 'cohort',
+      targetId: body.cohortId,
+      metadata: { parentMessageId: messageId },
+    });
+    return NextResponse.json(
+      { ok: false, code: 'peer_programming_policy_denied', message: 'Only cohort members can reply in this cohort.' },
+      { status: 403 },
+    );
+  }
 
   try {
     const reply = await createMessage({

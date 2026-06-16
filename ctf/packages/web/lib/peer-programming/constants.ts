@@ -4,6 +4,7 @@ export const PEER_PROGRAMMING_ERROR_CODE = {
   notFound: 'peer_programming_not_found',
   csrfDenied: 'peer_programming_csrf_denied',
   persistenceUnavailable: 'peer_programming_persistence_unavailable',
+  streamUnavailable: 'peer_programming_stream_unavailable',
 } as const;
 
 export const PEER_PROGRAMMING_MAX_MESSAGE_LENGTH = 2000;
