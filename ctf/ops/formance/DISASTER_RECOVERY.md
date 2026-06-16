@@ -7,10 +7,12 @@ able to recover or clone the ledger in an automated, repeatable way.
 
 ## What the ledger is made of
 
-- **Service**: a stateless container — `ops/formance/Dockerfile.ledger` on Render
-  (`ctf-formance-ledger`). It runs `ledger serve`; `AUTO_UPGRADE=true` brings the
-  Formance **system schema** up to date in Postgres on start.
-- **State**: an external **Neon Postgres** database (`FORMANCE_POSTGRES_URI` /
+- **Service**: a stateless container — `ops/formance/Dockerfile.ledger` on **Railway**
+  (`ctf-formance-ledger`, deployed from the GHCR image). It runs `ledger serve`;
+  `AUTO_UPGRADE=true` brings the Formance **system schema** up to date in Postgres on
+  start. (See `ctf/docs/developer/FORMANCE.md` → "Where it runs" for why Railway, not
+  Render.)
+- **State**: a **Railway-managed Postgres** database (`FORMANCE_POSTGRES_URI` /
   `FORMANCE_DATABASE_URL`). All balances and transactions live here.
 - **Named ledger books**: `ctf-main` (production, `FORMANCE_LEDGER`) and `ctf-demo`
   (demo mode, `FORMANCE_LEDGER_STAGING`). These are created **via the API**, not by
@@ -32,38 +34,34 @@ able to recover or clone the ledger in an automated, repeatable way.
 - The custom-format dump is a complete, restorable snapshot (schema + every ledger
   book + all transactions).
 
-## Recommended: also enable Neon's native backups (primary safety net)
+## Recommended: also enable Railway Postgres backups (primary safety net)
 
 For production financial data, use **defense in depth**:
 
-1. **Neon Point-in-Time Restore (PITR) — primary.** Neon continuously retains WAL, so
-   you can restore the Formance project to *any* instant within the retention window
-   (not just last night's 03:00 dump). Enable the longest retention your Neon plan
-   allows on the Formance project. This is the strongest protection against
-   "we corrupted/dropped data at 14:32 today."
-2. **Neon branching — fastest clone.** `neonctl branches create` (or the console)
-   makes an instant copy-on-write branch of the prod Formance DB with all ledger data.
-   Point a new `ctf-formance-ledger` service at the branch's connection string and you
-   have a full environment in seconds — no dump/restore needed, ledgers already exist.
-3. **`pg_dump` → Supabase — portable offsite secondary (already in place).** Keep it:
-   it is provider-independent (restore to *any* Postgres, not just Neon) and survives a
-   Neon-account-level incident.
+1. **Railway Postgres backups/snapshots — primary.** Enable Railway's managed Postgres
+   backups on the Formance database and keep the longest retention the plan allows.
+   Restoring a snapshot is the fastest way back from "we corrupted/dropped data at
+   14:32 today." (Railway's point-in-time/snapshot capabilities depend on the plan —
+   confirm what's available and set retention accordingly.)
+2. **`pg_dump` → Supabase — portable offsite secondary (already in place).** Keep it:
+   it is provider-independent (restore to *any* Postgres, not just Railway) and
+   survives a Railway-account-level incident. This is the cross-provider escape hatch.
 
-Keep both 1–2 (Neon) and 3 (pg_dump). Neon PITR/branching is the day-to-day recovery
-and cloning tool; the Supabase dump is the offsite escape hatch.
+Keep both 1 (Railway snapshots) and 2 (pg_dump). Railway snapshots are the day-to-day
+recovery tool; the Supabase dump is the offsite escape hatch.
 
 ## Spin up a new environment (automated, pick one path)
 
-### Path A — Clone prod via Neon branch (fastest; ledgers + data included)
+### Path A — Clone prod via a Railway Postgres snapshot (fastest; ledgers + data included)
 
-1. `neonctl branches create --project-id <formance-project> --name <env>` (or console).
-2. Set the new `ctf-formance-ledger` service's `FORMANCE_POSTGRES_URI` to the branch URL.
+1. Restore/branch the Formance Postgres from a Railway snapshot into a new database.
+2. Set the new `ctf-formance-ledger` service's `FORMANCE_POSTGRES_URI` to the new DB URL.
 3. Deploy the ledger image. `AUTO_UPGRADE` reconciles the schema; the named ledgers and
-   data are already present from the branch. Done.
+   data are already present from the snapshot. Done.
 
 ### Path B — Restore from the Supabase dump (cross-provider DR)
 
-1. Provision a fresh Postgres (new Neon project/branch) and set `FORMANCE_DATABASE_URL`
+1. Provision a fresh Postgres (new Railway Postgres) and set `FORMANCE_DATABASE_URL`
    to it.
 2. `FORMANCE_RESTORE_CONFIRM=1 pnpm --filter <root> formance:restore`
    (`scripts/restoreFormanceFromSupabase.mjs` — downloads the latest dump, or a specific
@@ -75,7 +73,7 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
    (Actions → "Restore Formance from Supabase" → Run workflow). It restores into the
    `FORMANCE_RESTORE_TARGET_DATABASE_URL` **secret** — distinct from the prod
    `FORMANCE_DATABASE_URL`, so it can never overwrite production — and sets the confirm flag
-   for you. Set that secret to the new environment's Neon URL before running; the optional
+   for you. Set that secret to the new environment's Railway Postgres URL before running; the optional
    `backup_file` input pins a specific dump (blank = latest).
 3. Deploy the ledger image pointed at that DB.
 
@@ -83,7 +81,7 @@ and cloning tool; the Supabase dump is the offsite escape hatch.
 
 1. Provision a fresh Postgres; set `FORMANCE_POSTGRES_URI` on a new ledger service.
 2. Set `FORMANCE_API_TOKEN`, `FORMANCE_LEDGER` (e.g. `ctf-main`), and
-   `FORMANCE_LEDGER_STAGING` (e.g. `ctf-demo`) on the **ledger service** (Infisical → Render Sync).
+   `FORMANCE_LEDGER_STAGING` (e.g. `ctf-demo`) on the **Railway ledger service** (set directly in Railway, or via Infisical → Railway sync).
 3. Deploy the ledger image. `AUTO_UPGRADE` creates the system schema, and the image's
    **entrypoint (`formance-entrypoint.sh`) auto-creates the named ledger books idempotently** once
    the API is healthy — no manual SSH/bootstrap step (issue #106). If the env vars above are missing
