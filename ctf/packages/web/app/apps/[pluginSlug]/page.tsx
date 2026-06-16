@@ -1,4 +1,4 @@
-// ...existing code...
+import type { ReactNode } from 'react';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { canonicalizePluginSlug, getPluginBySlug } from 'lib/plugins/repository';
@@ -21,6 +21,7 @@ import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-p
 import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
 import { WhatWorksShell } from '@/components/whatworks/whatworks-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
+import { AppMobileBackBar } from '@/components/plugins/app-mobile-back-bar';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -185,14 +186,8 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     );
   }
 
-  if (selectedPlugin.slug === 'clicklog') {
-    return <ClicklogShell />;
-  }
-
-  if (selectedPlugin.slug === 'whatworks') {
-    return <WhatWorksShell />;
-  }
-
+  // Chyme renders its own phone header with a back chevron, so it is returned
+  // directly — wrapping it again would stack two back bars.
   if (selectedPlugin.slug === 'chyme') {
     return (
       <ChymeShell
@@ -204,73 +199,61 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     );
   }
 
-  if (selectedPlugin.slug === 'directory') {
-    return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'workforce') {
-    return <WorkforceShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'skills-hunt') {
-    return <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
-  }
-
-  if (selectedPlugin.slug === 'skills-taxonomy') {
-    return <SkillsTaxonomyShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'foundation') {
-    return <FoundationShell />;
-  }
-
-  if (selectedPlugin.slug === 'lighthouse') {
-    return <LighthouseShell />;
-  }
-
-  if (selectedPlugin.slug === 'socketrelay') {
-    return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
-  }
-
-  if (selectedPlugin.slug === 'trusttransport') {
-    return <TrustTransportShell />;
-  }
-
-  if (selectedPlugin.slug === 'peer-programming') {
-    return <PeerProgrammingShell />;
-  }
-
-  if (selectedPlugin.slug === 'mood') {
-    return <MoodShell />;
-  }
-
-  if (selectedPlugin.slug === 'gentlepulse') {
-    return <GentlePulseShell />;
-  }
-
-  if (selectedPlugin.slug === 'weekly-performance') {
-    return <WeeklyPerformanceShell isAdmin={decision.isAdmin} />;
-  }
-
-  if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell />;
-  }
-
-  if (selectedPlugin.slug === 'service-credits') {
-    return <ServiceCreditsShell />;
-  }
-
-  if (selectedPlugin.slug === 'levelup') {
-    return <LevelupShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
-  }
+  // Every other plugin shell is wrapped once below with the shared mobile back
+  // bar, so each app gets the same way back to the launcher on small screens.
+  const shell: ReactNode = (() => {
+    switch (selectedPlugin.slug) {
+      case 'clicklog':
+        return <ClicklogShell />;
+      case 'whatworks':
+        return <WhatWorksShell />;
+      case 'directory':
+        return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+      case 'workforce':
+        return <WorkforceShell isAdmin={decision.isAdmin} />;
+      case 'skills-hunt':
+        return <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
+      case 'skills-taxonomy':
+        return <SkillsTaxonomyShell isAdmin={decision.isAdmin} />;
+      case 'foundation':
+        return <FoundationShell />;
+      case 'lighthouse':
+        return <LighthouseShell />;
+      case 'socketrelay':
+        return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
+      case 'trusttransport':
+        return <TrustTransportShell />;
+      case 'peer-programming':
+        return <PeerProgrammingShell />;
+      case 'mood':
+        return <MoodShell />;
+      case 'gentlepulse':
+        return <GentlePulseShell />;
+      case 'weekly-performance':
+        return <WeeklyPerformanceShell isAdmin={decision.isAdmin} />;
+      case 'gdp':
+        return <GdpShell />;
+      case 'service-credits':
+        return <ServiceCreditsShell />;
+      case 'levelup':
+        return <LevelupShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
+      default:
+        return (
+          <GenericPluginView
+            userId={decision.userId}
+            username={decision.username}
+            selectedPluginSlug={selectedPlugin.slug}
+            selectedPluginName={selectedPlugin.name}
+            availabilityState={selectedPlugin.availabilityState}
+          />
+        );
+    }
+  })();
 
   return (
-    <GenericPluginView
-      userId={decision.userId}
-      username={decision.username}
-      selectedPluginSlug={selectedPlugin.slug}
-      selectedPluginName={selectedPlugin.name}
-      availabilityState={selectedPlugin.availabilityState}
-    />
+    <>
+      <AppMobileBackBar pluginName={selectedPlugin.name} />
+      {shell}
+    </>
   );
 }
