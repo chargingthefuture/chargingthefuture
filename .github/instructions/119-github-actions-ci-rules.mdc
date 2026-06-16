@@ -3,6 +3,12 @@
 ## Intent
 Define mandatory CI enforcement using GitHub Actions for the rewrite product.
 
+## Workflow Index (read this first)
+For a plain-language list of every workflow — its name, when it runs, and what it does —
+see [`.github/workflows/README.md`](../workflows/README.md). It also explains how the
+"Build and push Docker images" and "Render deploy" workflows relate. Keep that index in
+sync whenever you add, remove, or rename a workflow.
+
 ## Mandatory (MVP Exemption)
 **NOTE: During MVP only (temporary), automated test gates and contract validation are disabled per product decision. Lint and type-check remain required. These gates will be restored for post-MVP hardening.**
 
