@@ -31,10 +31,29 @@ function mapMetric(row: MetricRow) {
   };
 }
 
+// The current week is always shown, even before any metrics have been recorded
+// for it, so the dashboard renders with zero/empty values instead of a bare
+// "no weeks tracked" page. When the table has no row for the current week we
+// synthesize an open week from DATE_TRUNC('week', NOW()) at read time; it is
+// persisted only when an admin sets it active (see selectWeek).
 export async function listWeeks() {
   const result = await queryDb<WeekRow>(
-    `SELECT week_start_date::text, (week_start_date + INTERVAL '6 days')::date::text AS week_end_date, status
-     FROM weekly_performance_weeks
+    `WITH current_week AS (
+       SELECT DATE_TRUNC('week', NOW())::date AS week_start_date
+     ),
+     combined AS (
+       SELECT week_start_date, status FROM weekly_performance_weeks
+       UNION
+       SELECT cw.week_start_date, 'open' AS status
+       FROM current_week cw
+       WHERE NOT EXISTS (
+         SELECT 1 FROM weekly_performance_weeks w WHERE w.week_start_date = cw.week_start_date
+       )
+     )
+     SELECT week_start_date::text,
+            (week_start_date + INTERVAL '6 days')::date::text AS week_end_date,
+            status
+     FROM combined
      ORDER BY week_start_date DESC
      LIMIT 52`,
   );
@@ -43,7 +62,7 @@ export async function listWeeks() {
 }
 
 export async function selectWeek(input: { actorId: string; weekStartDate: string }) {
-  const result = await queryDb<WeekRow>(
+  const updated = await queryDb<WeekRow>(
     `UPDATE weekly_performance_weeks
      SET selected_by_user_id = $1, selected_at = NOW(), updated_at = NOW()
      WHERE week_start_date = $2
@@ -51,18 +70,37 @@ export async function selectWeek(input: { actorId: string; weekStartDate: string
     [input.actorId, input.weekStartDate],
   );
 
-  if (!result.rows[0]) {
+  if (updated.rows[0]) {
+    return mapWeek(updated.rows[0]);
+  }
+
+  // The week is not tracked yet (e.g. the synthesized current week). Persist it
+  // on first activation so it has a real row going forward.
+  const inserted = await queryDb<WeekRow>(
+    `INSERT INTO weekly_performance_weeks
+       (id, week_start_date, status, selected_by_user_id, selected_at, created_at, updated_at)
+     VALUES (gen_random_uuid(), $2, 'open', $1, NOW(), NOW(), NOW())
+     RETURNING week_start_date::text, (week_start_date + INTERVAL '6 days')::date::text AS week_end_date, status`,
+    [input.actorId, input.weekStartDate],
+  );
+
+  if (!inserted.rows[0]) {
     throw new Error('not_found');
   }
 
-  return mapWeek(result.rows[0]);
+  return mapWeek(inserted.rows[0]);
 }
 
 export async function getCurrentWeek() {
   const result = await queryDb<WeekRow>(
-    `SELECT week_start_date::text, (week_start_date + INTERVAL '6 days')::date::text AS week_end_date, status
-     FROM weekly_performance_weeks
-     WHERE week_start_date = DATE_TRUNC('week', NOW())::date
+    `WITH current_week AS (
+       SELECT DATE_TRUNC('week', NOW())::date AS week_start_date
+     )
+     SELECT cw.week_start_date::text,
+            (cw.week_start_date + INTERVAL '6 days')::date::text AS week_end_date,
+            COALESCE(w.status, 'open') AS status
+     FROM current_week cw
+     LEFT JOIN weekly_performance_weeks w ON w.week_start_date = cw.week_start_date
      LIMIT 1`,
   );
 
