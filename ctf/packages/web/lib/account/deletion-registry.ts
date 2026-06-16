@@ -138,6 +138,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('foundation_call_sessions', 'created_by_user_id', 'Call sessions you started.'),
       del('foundation_thread_participants', 'user_id', 'Your participation in connection threads.'),
       del('foundation_connection_threads', 'created_by_user_id', 'Connection threads you started.'),
+      del('foundation_provider_skills', 'user_id', 'The skills you opted in to offer.'),
       soft('foundation_user_extension', 'user_id', 'service_deleted_at', 'Your Foundation plugin extension record.'),
       retain('foundation_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
@@ -246,9 +247,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'workforce',
     name: 'Workforce',
-    dataSummary: 'Your workforce profile, recruitment history, and extension record.',
+    dataSummary: 'Your workforce extension record, plus any leftover rows from the legacy workforce profile/recruitment tables (now unused — the workforce view is read-only over your Directory profile).',
     serviceScopeSupported: true,
     tables: [
+      // These two tables are no longer written (the workforce profile is a read-only Directory view
+      // and recruited state is derived live), but they are still purged here until they are dropped
+      // from the schema in the follow-up so no leftover rows survive an account deletion.
       del('workforce_recruited_events', 'user_id', 'Your recruitment history.'),
       del('workforce_profiles', 'user_id', 'Your workforce profile.'),
       soft('workforce_user_extension', 'user_id', 'service_deleted_at', 'Your workforce plugin extension record.'),

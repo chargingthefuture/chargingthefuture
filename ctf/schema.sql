@@ -2592,6 +2592,43 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated
 -- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+
+-- A Foundation provider opts in to being contacted to offer specific skills. This is the
+-- "willing to offer SAID skill" signal that distinguishes Foundation from the Directory (where a
+-- profile merely lists a skill): a survivor searching Foundation only sees providers who chose to
+-- be contactable for that skill. Each row is one offered skill for one provider; the skill_id must
+-- be one the provider already lists on their claimed Directory profile (enforced in the repository).
+-- A provider with zero rows here is not surfaced as a Foundation provider at all.
+CREATE TABLE IF NOT EXISTS foundation_provider_skills (
+  user_id TEXT NOT NULL,
+  skill_id UUID NOT NULL REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, skill_id)
+);
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS skill_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- skill_id must point at a real taxonomy skill; CASCADE so removing a skill clears the offers.
+-- No FK on user_id: an offer doesn't require a foundation_user_extension row and there's no
+-- canonical users table to reference; the repository constrains skill_id to the member's own
+-- Directory skills on write, so the app can't create orphans. Guarded so a legacy table without
+-- the constraint converges and a fresh table doesn't double-add it.
+DO $foundation_provider_skills_skill_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey'
+      AND table_name = 'foundation_provider_skills'
+      AND constraint_type = 'FOREIGN KEY'
+  ) THEN
+    ALTER TABLE foundation_provider_skills
+      ADD CONSTRAINT foundation_provider_skills_skill_id_fkey
+      FOREIGN KEY (skill_id) REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE;
+  END IF;
+END
+$foundation_provider_skills_skill_fk$;
+CREATE INDEX IF NOT EXISTS idx_foundation_provider_skills_skill ON foundation_provider_skills (skill_id);
+
 CREATE TABLE IF NOT EXISTS foundation_provider_accepted_currencies (
   user_id TEXT NOT NULL REFERENCES foundation_user_extension(user_id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
