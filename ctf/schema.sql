@@ -274,7 +274,8 @@ CREATE TABLE IF NOT EXISTS peer_programming_weekly_topics (
   published_by_user_id TEXT,
   published_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (week_start_date)
 );
 
 -- Add columns with guarded DDL for legacy DBs
@@ -289,6 +290,10 @@ ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS pu
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One topic row per week. The admin topic upsert relies on this for ON CONFLICT (week_start_date);
+-- without it, every "set the weekly topic" call fails. Guarded so legacy DBs gain the constraint too.
+CREATE UNIQUE INDEX IF NOT EXISTS peer_programming_weekly_topics_week_start_date_key
+  ON peer_programming_weekly_topics(week_start_date);
 
 -- === canonical-username-handle-baseline ===
 -- === users table: ensure prod compatibility ===
@@ -2978,6 +2983,12 @@ ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NUL
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
+-- At most one row per member per UTC day. This makes the "record a sign-in once per day"
+-- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
+-- concurrent requests for the same member on the same UTC day cannot both write a row. The day
+-- is computed in UTC explicitly so the dedupe does not depend on the database session timezone.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
+  ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
 -- === PEER PROGRAMMING MODULE ===
 CREATE TABLE IF NOT EXISTS peer_programming_cohorts (

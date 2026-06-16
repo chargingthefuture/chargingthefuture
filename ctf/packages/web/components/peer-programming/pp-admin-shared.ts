@@ -7,6 +7,7 @@ export type { PeerProgrammingTopic };
 export type AssignmentRunResult = {
   cohortsCreated: number;
   notificationsCreated: number;
+  membersSelected: number;
 };
 
 export type AdminMutationResult<T = unknown> =

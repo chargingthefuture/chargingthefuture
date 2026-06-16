@@ -77,9 +77,10 @@ The plugin:
 ### User Routes
 
 - `GET /api/peer-programming/room` — Resolve the caller's current cohort, topic guidance, and tier.
-- `POST /api/peer-programming/messages` — Create a new top-level message in the caller's cohort.
-- `POST /api/peer-programming/messages/[messageId]/replies` — Reply to a message thread.
+- `POST /api/peer-programming/messages` — Create a new top-level message. The caller must be a member of the target cohort; non-members are denied and the tier is set server-side (never trusted from the request body).
+- `POST /api/peer-programming/messages/[messageId]/replies` — Reply to a message thread. Same cohort-membership check as the post route.
 - `POST /api/peer-programming/feedback` — Submit structured feedback for the iteration loop.
+- `POST /api/peer-programming/session/join` — Mint live video session credentials (GetStream) for the caller's own cohort. The cohort is resolved server-side from the signed-in member, so only a cohort member gets a call token and the call is always scoped to that member's cohort. Returns 404 when the caller has no cohort and 503 when Stream is not configured.
 
 ### Admin Routes
 
@@ -96,6 +97,17 @@ These admin routes are now surfaced by a real admin UI on both web and Android (
 1. Canonical user profile identity is reused; no duplicate profile table.
 2. Plugin extension state is linked by `user_id` (Clerk subject) and cohort id.
 3. Participation tier resolution derives from auth state + cohort membership.
+
+### Shared Data Dependency: active-member signal (`login_events`)
+
+Weekly cohort assignment selects "active members" from the shared `login_events` table
+(`lib/engagement/login-activity.ts`), which is the single dedicated sign-in table also
+read by the Weekly Performance review — this plugin does not own it and must not create a
+duplicate. The table is now populated by `recordLoginEvent`, called from the shared access
+gate (`evaluatePluginAccess`) for every signed-in member, deduplicated to one row per
+member per UTC day. Before this writer existed the table was always empty, so the default
+assignment run found zero active members and could never form a cohort; an admin can still
+form a cohort immediately with the manual user-id override.
 
 ### Tables Owned by This Plugin
 
@@ -116,14 +128,16 @@ These admin routes are now surfaced by a real admin UI on both web and Android (
 ## Security, Privacy, and Compliance Controls
 
 1. Deny-by-default authorization on all commands via `requirePeerProgrammingReadAccess` / `requirePeerProgrammingAdminAccess`.
-2. Tier enforcement for cohort member vs authenticated audience vs unauthenticated audience.
+2. Tier enforcement for cohort member vs authenticated audience vs unauthenticated audience. **Writes are membership-gated server-side:** `POST /messages` and `POST /messages/[messageId]/replies` verify the caller is a member of the target cohort (`isCohortMember`) and set the message tier to `cohort_member` themselves; the client-supplied tier is ignored, so an authenticated non-member cannot post or self-label as a cohort member. `POST /session/join` resolves the cohort from the signed-in member, so live video is members-only and cohort-scoped.
 3. CSRF confirmation header required on all mutations (`x-ctf-csrf: 1`) plus origin match.
-4. Audit capture for allow/deny policy decisions and mutation results.
+4. Audit capture for allow/deny policy decisions and mutation results, including `not_cohort_member` denials on write and `no_cohort` / `stream_not_configured` denials on session join.
 5. Data minimization for room rendering and feedback metadata.
 
 ## Web and Android Delivery Status
 
 `web+android complete` (pixel-pass delivered). The web surface lives under `/apps/peer-programming` and the Android surface lives under `packages/mobile/src/features/peer-programming`.
+
+**Live video (2026-06-16):** the Session tab's video call is wired on web (including mobile-responsive web, which is how phones/iOS are served) via `POST /api/peer-programming/session/join` + `pp-session-call.tsx` (GetStream, per-cohort call). The Android React Native Session tab still shows the placeholder; its live-video parity is deferred (see Gaps and the Change Log parity note).
 
 **Admin surface (2026-06-06):** the admin page at `/admin/peer-programming` is now a real, mobile-responsive admin UI — it replaced the former plain-text stub. The web admin shell (`components/peer-programming/pp-admin-shell.tsx` + `pp-admin-topic-form.tsx` + `pp-admin-assignments.tsx` + `pp-admin-shared.ts`) is consistent with the other `/admin/{plugin}` screens (generic admin aesthetic; matches the whatworks / skills-hunt admin layout, filter/action conventions, and CSRF mutation helper). It uses `hooks/use-is-mobile.ts` so it is usable on a phone. Two actions are wired, both backed by existing endpoints: (1) set/publish the weekly topic via `PUT /api/peer-programming/admin/topics` (with the current published topic loaded via `GET`), and (2) run the weekly cohort assignment via `POST /api/peer-programming/admin/assignments/run` (with an optional manual user-id override). The Android admin screen lives at `packages/mobile/src/features/peer-programming/AdminPeerProgramming.tsx` (+ `admin-api.ts`), is registered in `App.tsx`, binds the same three endpoints, and is admin-gated server-side (a non-admin sees an access notice). No new admin actions or commands were invented — only the existing endpoints are surfaced.
 
@@ -136,10 +150,13 @@ Deterministic Peer Programming seed script: `ctf/scripts/seedPeerProgramming.mjs
 ## Gaps and Known Technical Debt
 
 1. Heuristic for partially-filled cohorts when active-user count is not divisible by 5 is implemented as best-effort packing; product sign-off on edge cases is pending.
-2. Definition of "show" for fallback-open detection currently relies on cohort membership presence; a stronger activity signal is a known follow-up.
+2. Fallback-open is now derived from the live cohort roster: the room reports a cohort as open when it has fewer than 2 members, not only from the flag snapshotted at assignment time. A richer per-session presence signal (who is actually in the room right now) is still a possible future refinement but is no longer required for the basic "too small to be a group" rule.
+3. Weekly cohort assignment runs only when an admin triggers it; there is no automatic weekly scheduler yet. Tracked in issue #554 (owner decision 2026-06-16: keep manual now, schedule later).
+4. Android (React Native) live video for the Session tab is not yet built — the web (including mobile-responsive web) surface has it. Tracked for parity in issue #555.
 
 ## Change Log
 
+- 2026-06-16: Cohort-start fix, write-path hardening, and live video. (1) **Active-member writer:** added `recordLoginEvent` (`lib/engagement/login-activity.ts`), called from the shared access gate (`evaluatePluginAccess`), which records each signed-in member into the existing `login_events` table once per UTC day. Nothing wrote that table before, so the default weekly assignment always selected zero members and no cohort could form; both this plugin and the Weekly Performance review read the same table, so neither needs a duplicate. (2) **Topic upsert fix:** added a unique constraint/index on `peer_programming_weekly_topics(week_start_date)` in `schema.sql`; the admin "set weekly topic" upsert uses `ON CONFLICT (week_start_date)`, which previously failed with "Topic upsert unavailable" because no such constraint existed. (3) **Write membership enforcement:** `POST /messages` and `/replies` now verify cohort membership (`isCohortMember`) and set the tier server-side; non-members are denied with an audit row. (4) **Fallback-open** now reflects the live roster (open when fewer than 2 members), not only the assignment-time flag. (5) **Live video:** new `POST /api/peer-programming/session/join` + `lib/peer-programming/stream.ts` mint GetStream video credentials scoped to the caller's cohort; the web Session tab ("Join Session") now joins a real per-cohort video call (`pp-session-call.tsx`) instead of a static placeholder. (6) **Web data binding fix:** the web shell now reads the cohort/messages from the real `/room` shape and posts messages/feedback with the correct body and CSRF header (it previously read `room.cohortId` off the wrong shape, GET a non-existent `/messages`, and posted mismatched bodies, so the cohort never resolved client-side). Added the `session.join` command/access/audit contracts. Android live video is deferred (see Gaps). Web typecheck + eslint + build clean.
 - 2026-06-12: The Android Peer Programming API clients (`api.ts`, `admin-api.ts`) now use the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs; the hand-passed token parameter (which the screens filled with the user id, not a real token) was removed from every function and call site. No schema, route, or contract change.
 - 2026-06-06: Admin UI reconciliation. Replaced the plain-text `/admin/peer-programming` stub with a real, mobile-responsive admin surface: new web components `pp-admin-shell.tsx`, `pp-admin-topic-form.tsx`, `pp-admin-assignments.tsx`, `pp-admin-shared.ts` (under `components/peer-programming/`), aligned to the existing `/admin/{plugin}` aesthetic (whatworks / skills-hunt) and within rule-116 file-size limits; uses `hooks/use-is-mobile.ts` for phone usability. Wired two actions, both backed by existing endpoints only: set/publish the weekly topic (`GET`/`PUT /api/peer-programming/admin/topics`) and run weekly cohort assignment (`POST /api/peer-programming/admin/assignments/run`, with an optional manual user-id override). Added the Android admin screen `AdminPeerProgramming.tsx` + `admin-api.ts`, registered in `App.tsx`, binding the same three endpoints and admin-gated server-side (non-admin sees an access notice). Page admin gate unchanged from the stub (`evaluatePluginAccess({ requireApprovedUserOrAdmin: true })` then redirect when not `isAdmin`). No new commands invented; noted the pre-existing audit-vs-contract command-name spelling nuance for a later reconciliation. Web typecheck + eslint clean; mobile tsc (TypeScript 5.9.3) + eslint clean; no `key` on a class-based RN host component; EOF format check passes.
 - 2026-05-31: Android pixel pass — rewrote `PeerProgramming.tsx` to match `design/.../survivor-hub/MobilePeerProgramming.tsx`. Updated `api.ts` to call real `GET /api/peer-programming/room` endpoint (replaces fabricated `fetchCohorts` stub). Retired `MockPeerProgramming.tsx` import. Decomposed into `pp-loading.tsx`, `pp-public.tsx`, `pp-empty.tsx`, `pp-cohort-tab.tsx`, `pp-session-tab.tsx` within rule-116 limits. Color/spacing/type/nav match design canonical (#8B5CF6, dark background, bottom nav bar). Omitted design's fabricated cohort list and global stats (no real backing field); real data binding via cohort room endpoint only. TypeScript clean, EOF format clean, parity check passes.

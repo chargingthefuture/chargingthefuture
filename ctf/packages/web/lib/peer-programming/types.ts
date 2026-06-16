@@ -15,6 +15,7 @@ export type PeerProgrammingCohort = {
   cohortLabel: string;
   fallbackOpen: boolean;
   topicId: string | null;
+  memberCount: number;
 };
 
 export type PeerProgrammingMessage = {

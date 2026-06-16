@@ -69,10 +69,18 @@ export function PeerProgrammingAdminAssignments({
       </button>
 
       {lastResult ? (
-        <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
-          Done. Cohorts created or updated: {lastResult.cohortsCreated}. Notifications recorded:{' '}
-          {lastResult.notificationsCreated}.
-        </p>
+        lastResult.membersSelected === 0 ? (
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
+            No active members were found for this week, so no cohort was formed. Members are counted
+            as active once they have signed in within the last 7 days. Use the manual user-id list
+            above to form a cohort right now.
+          </p>
+        ) : (
+          <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
+            Done. Active members selected: {lastResult.membersSelected}. Cohorts created or updated:{' '}
+            {lastResult.cohortsCreated}. Notifications recorded: {lastResult.notificationsCreated}.
+          </p>
+        )
       ) : null}
     </div>
   );
