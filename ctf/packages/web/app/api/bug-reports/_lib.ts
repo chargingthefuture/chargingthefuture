@@ -22,6 +22,20 @@ export async function requireReporterAccess(): Promise<BugReportApiGate> {
   return { allowed: true, auth: decision };
 }
 
+// The admin review surface (/admin/bug-reports and its API) is restricted to admins. Every
+// admin route gates on this regardless of what the nav shows (see rule 131).
+export async function requireBugReportAdminAccess(): Promise<BugReportApiGate> {
+  const decision = await evaluatePluginAccess({ requiredRoles: ['admin'] });
+  if (!decision.allowed) {
+    return {
+      allowed: false,
+      response: NextResponse.json(decision, { status: decision.status }),
+    };
+  }
+
+  return { allowed: true, auth: decision };
+}
+
 export function ensureMutationCsrf(request: Request): NextResponse | null {
   if (request.method === 'GET' || request.method === 'HEAD') {
     return null;
