@@ -1,4 +1,4 @@
-import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { queryDb } from 'lib/db/postgres';
 import {
   WORKFORCE_SKILL_LEVELS,
   deriveWorkforceSkillLevel,
