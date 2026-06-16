@@ -53,6 +53,10 @@ contract_changed=false
 versioning_note_changed=false
 contract_schema_failed=false
 
+# Tokens that mark a file as actually touching the database layer. Used to decide whether a changed
+# shared/server file is DB-impacting (content-aware) instead of treating the whole package as such.
+DB_CONTENT_RE='queryDb|withDbTransaction|CREATE TABLE|ALTER TABLE|INSERT INTO|DELETE FROM|CREATE INDEX|drizzle|lib/db/postgres'
+
 validate_contract_file() {
   local file="$1"
 
@@ -119,16 +123,20 @@ for file in "${files[@]}"; do
   fi
 
   if [[ "$file" =~ ^ctf/server/ ]] || [[ "$file" =~ ^ctf/packages/shared/ ]]; then
-    # Shared/server changes are DB-impacting by default, EXCEPT:
-    #  - docs/tests (never schema), and
-    #  - pure auth-logic files under shared/src/auth/** (and their compiled
-    #    shared/dist/**/auth/** outputs). Those hold token decode/verify helpers
-    #    only — no schema, SQL, migrations, or DB access — so a change there must
-    #    not force an accompanying ctf/schema.sql edit (false positive).
+    # Shared/server are where the DB layer lives, so a change here is DB-impacting WHEN the file
+    # actually contains DB/SQL code (content-aware — see DB_CONTENT_RE). A pure constant/type/copy
+    # module with no DB/SQL tokens is NOT forced to touch ctf/schema.sql. This removes a class of
+    # false positives (e.g. adding a shared constant) while still catching real schema-touching code.
+    # Trade-off: a TYPE-ONLY change that mirrors a new DB column (no SQL token in the file) is not
+    # auto-flagged — pair such changes with the matching ctf/schema.sql edit, which passes the gate
+    # anyway. Path-named schema|migration|sql files are still caught by the keyword rule above.
+    # Still EXCEPT docs/tests and pure auth-logic files (token decode/verify only — never DB).
     if [[ ! "$file" =~ (^|/)(docs?|tests?|__tests__|testing)(/|$) ]] \
       && [[ ! "$file" =~ ^ctf/packages/shared/src/auth/ ]] \
       && [[ ! "$file" =~ ^ctf/packages/shared/dist/.*/auth/ ]] \
-      && [[ ! "$file" =~ ^ctf/packages/shared/dist/auth/ ]]; then
+      && [[ ! "$file" =~ ^ctf/packages/shared/dist/auth/ ]] \
+      && [[ -f "$file" ]] \
+      && grep -Eq "$DB_CONTENT_RE" -- "$file"; then
       db_impacting_changed=true
     fi
   fi
