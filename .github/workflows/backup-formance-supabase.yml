@@ -36,9 +36,9 @@ jobs:
 
       - name: Install PostgreSQL client 17
         # The runner's bundled pg_dump may be missing or older than the
-        # Formance/Neon server (Postgres 16/17). pg_dump refuses to dump a
-        # server newer than itself, which fails the job in seconds. Install the
-        # client matching the newest server from the official PostgreSQL apt
+        # Formance Postgres server on Railway (Postgres 16/17). pg_dump refuses to
+        # dump a server newer than itself, which fails the job in seconds. Install
+        # the client matching the newest server from the official PostgreSQL apt
         # repository and put it first on PATH. A newer client dumps older
         # servers fine.
         run: |

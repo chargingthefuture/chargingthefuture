@@ -6,8 +6,8 @@ name: Restore Formance from Supabase
 #
 # Safety: it restores into FORMANCE_RESTORE_TARGET_DATABASE_URL — a DISTINCT
 # secret from the backup's FORMANCE_DATABASE_URL — so a misconfiguration can never
-# overwrite the production ledger. Point that secret at the NEW environment's Neon
-# connection string before running. See ctf/ops/formance/DISASTER_RECOVERY.md.
+# overwrite the production ledger. Point that secret at the NEW environment's Railway
+# Postgres connection string before running. See ctf/ops/formance/DISASTER_RECOVERY.md.
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ jobs:
       - name: Guard — require an explicit target database
         run: |
           if [ -z "${FORMANCE_DATABASE_URL}" ]; then
-            echo "FORMANCE_RESTORE_TARGET_DATABASE_URL is not set. Set it to the NEW environment's Neon connection string before running. Refusing to restore." >&2
+            echo "FORMANCE_RESTORE_TARGET_DATABASE_URL is not set. Set it to the NEW environment's Railway Postgres connection string before running. Refusing to restore." >&2
             exit 1
           fi
 
