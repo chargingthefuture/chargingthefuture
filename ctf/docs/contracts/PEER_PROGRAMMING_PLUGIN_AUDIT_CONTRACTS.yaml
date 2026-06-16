@@ -263,3 +263,26 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: peer-programming
+    command: session.join
+    commandVersion: 1.0.0
+    purpose: live_session
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - room_membership_authorization
+      - live_session_credential
+    targetContext:
+      workspaceId: workspace_identifier
+      cohortId: cohort_identifier
+      streamCallId: stream_call_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
