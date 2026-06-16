@@ -123,6 +123,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       comparison={comparison}
       isAdmin={isAdmin}
       onExport={exportSelected}
+      isMobile={isMobile}
     />
   );
 

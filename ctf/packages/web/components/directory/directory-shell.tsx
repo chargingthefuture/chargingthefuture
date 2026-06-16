@@ -190,6 +190,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
       members={members}
       categories={sectors.map((s) => s.name)}
       filtered={isFiltered}
+      isMobile={isMobile}
       onSelect={setSelected}
       onClearFilters={clearFilters}
     />
