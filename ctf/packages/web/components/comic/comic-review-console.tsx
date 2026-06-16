@@ -127,6 +127,20 @@ export function ComicReviewConsole() {
     void refresh();
   }, [refresh]);
 
+  // Keep the queue fresh so a question a survivor just sent to @comic shows up
+  // without a manual page reload. Poll only while the reviewer is idle — no item
+  // open, not editing, no action in flight — so a background refresh can never
+  // wipe an in-progress correction or steal the current selection.
+  useEffect(() => {
+    if (selectedId !== null || editing || resolving) {
+      return;
+    }
+    const intervalId = window.setInterval(() => {
+      void refresh();
+    }, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [refresh, selectedId, editing, resolving]);
+
   // Live status of the Ollama drafting backend (a RunPod endpoint or a native Ollama host).
   // Best-effort: a failure just leaves the badge hidden, never blocks the review queue.
   useEffect(() => {
