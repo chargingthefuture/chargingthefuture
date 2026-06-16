@@ -2,6 +2,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { canonicalizePluginSlug, getPluginBySlug } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
+import { PublicShellFrame } from '@/components/plugins/public-shell-frame';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
@@ -165,12 +166,14 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
       // normal sign-in / sign-up CTAs.
       const verifyUrl = decision.reason === 'unlock_required' ? '/plugin/unlock' : undefined;
       return (
-        <PublicVisitorShell
-          pluginSlug={selectedPlugin.slug}
-          pluginName={selectedPlugin.name}
-          signInUrl={signInUrl}
-          verifyUrl={verifyUrl}
-        />
+        <PublicShellFrame>
+          <PublicVisitorShell
+            pluginSlug={selectedPlugin.slug}
+            pluginName={selectedPlugin.name}
+            signInUrl={signInUrl}
+            verifyUrl={verifyUrl}
+          />
+        </PublicShellFrame>
       );
     }
 
