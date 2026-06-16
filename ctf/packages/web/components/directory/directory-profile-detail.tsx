@@ -59,79 +59,61 @@ export function DirectoryProfileDetail({
               <div style={{ fontSize: 15, color: "#9CA3AF", marginBottom: 8 }}>{p.jobTitle}</div>
               <Badge style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 12 }}>{p.sector}</Badge>
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button style={{ padding: "10px 20px", borderRadius: 10, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Book Session</button>
-              <button style={{ padding: "10px 20px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Message</button>
-            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Specializations</div>
-              {p.skills.length > 0 ? (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
-                  {p.skills.map((s) => (
-                    <Badge key={s} style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: 13, color: "#4B5563", marginBottom: 24 }}>No skills listed yet.</div>
-              )}
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Endorsements</div>
-              <div style={{ padding: "20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#4B5563", fontSize: 13, textAlign: "center" }}>
-                No endorsements yet.
-              </div>
-            </div>
-            <div>
-              <div style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#9CA3AF", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>Availability</div>
-                {["Mon – Fri", "By appointment", "Accepts Service Credits ✓"].map((line) => (
-                  <div key={line} style={{ fontSize: 13, color: "#E8EAF0", marginBottom: 6 }}>{line}</div>
+          <div style={{ maxWidth: 640 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Specializations</div>
+            {p.skills.length > 0 ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+                {p.skills.map((s) => (
+                  <Badge key={s} style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
                 ))}
               </div>
-              <div style={{ padding: "20px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 8 }}>Direct Chat</div>
-                <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>All messages are trauma-informed by design.</div>
-              </div>
-              {showAttach && (
-                <div style={{ marginTop: 16, padding: "20px", borderRadius: 16, background: `${COLOR}0A`, border: `1px solid ${COLOR}30` }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attach to account</div>
-                  <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, marginBottom: 12 }}>This profile is unclaimed. Attach it to a user account by their Clerk user ID.</div>
-                  <input
-                    value={attachInput}
-                    onChange={(e) => { setAttachInput(e.target.value); setAttachError(null); }}
-                    placeholder="Clerk user ID"
-                    disabled={attaching}
-                    style={{ width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.04)", border: `1px solid ${COLOR}30`, borderRadius: 8, fontSize: 13, color: "#E8EAF0", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
-                  />
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            ) : (
+              <div style={{ fontSize: 13, color: "#4B5563", marginBottom: 24 }}>No skills listed yet.</div>
+            )}
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Endorsements</div>
+            <div style={{ padding: "20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#4B5563", fontSize: 13, textAlign: "center" }}>
+              No endorsements yet.
+            </div>
+            {showAttach && (
+              <div style={{ marginTop: 16, padding: "20px", borderRadius: 16, background: `${COLOR}0A`, border: `1px solid ${COLOR}30` }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attach to account</div>
+                <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, marginBottom: 12 }}>This profile is unclaimed. Attach it to a user account by their Clerk user ID.</div>
+                <input
+                  value={attachInput}
+                  onChange={(e) => { setAttachInput(e.target.value); setAttachError(null); }}
+                  placeholder="Clerk user ID"
+                  disabled={attaching}
+                  style={{ width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.04)", border: `1px solid ${COLOR}30`, borderRadius: 8, fontSize: 13, color: "#E8EAF0", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+                />
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={handleAttach}
+                    disabled={attaching || attachInput.trim().length === 0}
+                    style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: attaching || attachInput.trim().length === 0 ? "not-allowed" : "pointer", opacity: attaching || attachInput.trim().length === 0 ? 0.5 : 1 }}
+                  >
+                    {attaching ? "Attaching…" : "Attach"}
+                  </button>
+                  {currentUserId && (
                     <button
                       type="button"
-                      onClick={handleAttach}
-                      disabled={attaching || attachInput.trim().length === 0}
-                      style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: attaching || attachInput.trim().length === 0 ? "not-allowed" : "pointer", opacity: attaching || attachInput.trim().length === 0 ? 0.5 : 1 }}
+                      onClick={() => { setAttachInput(currentUserId); setAttachError(null); }}
+                      disabled={attaching}
+                      style={{ padding: "9px 14px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 12, cursor: attaching ? "not-allowed" : "pointer" }}
                     >
-                      {attaching ? "Attaching…" : "Attach"}
+                      Use my account
                     </button>
-                    {currentUserId && (
-                      <button
-                        type="button"
-                        onClick={() => { setAttachInput(currentUserId); setAttachError(null); }}
-                        disabled={attaching}
-                        style={{ padding: "9px 14px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 12, cursor: attaching ? "not-allowed" : "pointer" }}
-                      >
-                        Use my account
-                      </button>
-                    )}
-                  </div>
-                  {attachSuccess && (
-                    <div style={{ marginTop: 10, fontSize: 12, color: COLOR }}>Attached.</div>
-                  )}
-                  {attachError && (
-                    <div style={{ marginTop: 10, fontSize: 12, color: "#EF4444" }}>{attachError}</div>
                   )}
                 </div>
-              )}
-            </div>
+                {attachSuccess && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: COLOR }}>Attached.</div>
+                )}
+                {attachError && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: "#EF4444" }}>{attachError}</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
