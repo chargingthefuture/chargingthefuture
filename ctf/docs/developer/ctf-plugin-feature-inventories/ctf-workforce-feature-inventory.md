@@ -161,10 +161,7 @@ Admin routes:
 - `POST /api/workforce/admin/announcements`
 - `PUT /api/workforce/admin/announcements/:id`
 - `DELETE /api/workforce/admin/announcements/:id`
-- `POST /api/workforce/admin/recompute`
 - `GET /api/workforce/admin/audit-events`
-- `POST /api/workforce/admin/sync` — incremental recruited-state sync (backs the scheduled cron).
-- `POST /api/workforce/internal/sync` — internal sync trigger for the recruited-state cursor.
 
 ## 4) Data Model and Storage Contracts
 
@@ -444,6 +441,7 @@ Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added 
 
 ### Change Log
 
+- 2026-06-16: Removed the dead recruited-state sync and recompute. Now that the dashboard/reports derive recruited live from Directory (claimed profiles), the sync that copied Directory into `workforce_profiles` served no read path — and it had no scheduled job, so it never ran. Deleted `runIncrementalRecruitedSync` and `enqueueRecruitedRecompute` from the repository, the routes `POST /api/workforce/admin/sync`, `POST /api/workforce/internal/sync`, and `POST /api/workforce/admin/recompute`, and the Recompute/Sync buttons from the admin shell (Save config stays). Step toward the owner-approved read-only Workforce model (2026-06-16). Still to do (next PR): make the user profile a read-only Directory-derived view (remove the editor + `upsertOwnProfile`/`deleteOwnWorkforceProfile`) and drop the now-unused `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables via the schema process.
 - 2026-06-16: Workforce reads now derive live from Directory (the single source of truth), not a synced `workforce_profiles` copy. `getDashboard`, `fetchSummaryReport`, and `fetchSectorReport` query `directory_profiles` directly — total = active profiles, recruited = claimed (`claimed_by_user_id IS NOT NULL`), sector grouping via `skills_taxonomy_sectors`. This fixes the dashboard showing 0 while ~62–67 directory profiles exist: the recruited-state sync (`runIncrementalRecruitedSync`) had no scheduled job and never populated the copy. The skill-level breakdown (`fetchSkillLevelReport`) keeps full V2 parity: V2 derived skill level algorithmically from the job-title name (case-insensitive keyword match → Foundational / Intermediate / Advanced), not from a stored field. That rule is ported verbatim to `lib/workforce/skill-level.ts` and applied live to each active directory profile's Skills Taxonomy job title — no stored column, no seed, no drift. Follow-up (separate PR): the now-vestigial `workforce_profiles` write path, the recruited sync routes, and the per-sector/per-skill detail report endpoints should be removed or likewise re-pointed at Directory (the skill-level drill-down should reuse `deriveWorkforceSkillLevel`). No schema or contract change in this PR; response shapes are unchanged.
 - 2026-02-24: Created initial Workforce rewrite checklist with phase gates for legacy section review, canonical metric lock, schema drift evidence, and non-regression controls preventing accidental legacy event artifacts.
 - 2026-03-03: Phase-1 implementation initiated with workforce migration, API/admin route baseline, canonical metric alignment update, and schema drift gate validation evidence.
