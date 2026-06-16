@@ -4,6 +4,7 @@
 // suggestion is reviewed before it joins the shared list, so the submit + success copy is
 // review-honest (the mockup's "added" framing assumes immediate publish).
 import { useState, type CSSProperties, type ReactNode } from 'react';
+import Link from 'next/link';
 import { ListChecks, Plus, ExternalLink, Send, CheckCircle, Tag, ChevronDown, ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { BG, BRAND, BORDER, SUBTLE, TEXT, type SuggestDraft, type WhatWorksProblemOption } from './ww-shared';
@@ -86,7 +87,10 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: BG, fontFamily: "'Inter',system-ui", color: TEXT, overflow: 'hidden' }}>
-      <div style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 12, background: '#0D0F14', flexShrink: 0 }}>
+      <div style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: '#0D0F14', flexShrink: 0 }}>
+        <Link href="/apps" aria-label="Back to apps" style={{ width: 36, height: 36, borderRadius: 9, background: `${BRAND}14`, border: `1px solid ${BRAND}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND, textDecoration: 'none', flexShrink: 0 }}>
+          <ChevronLeft size={18} />
+        </Link>
         <ListChecks size={18} color={BRAND} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>What Works</div>
