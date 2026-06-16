@@ -112,6 +112,7 @@ export function PeerProgrammingAdminShell() {
         setLastRun({
           cohortsCreated: result.data.cohortsCreated ?? 0,
           notificationsCreated: result.data.notificationsCreated ?? 0,
+          membersSelected: result.data.membersSelected ?? 0,
         });
         setNotice('Weekly assignment complete.');
       }

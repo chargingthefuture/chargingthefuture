@@ -14,17 +14,35 @@ import { PeerProgrammingSessionTab } from "./pp-session-tab";
 import { PeerProgrammingChatTab } from "./pp-chat-tab";
 import { PeerProgrammingRightPanel } from "./pp-right-panel";
 
+// Shape returned by GET /api/peer-programming/room. The shell's view models (Room,
+// Message) differ from the API, so map explicitly here rather than casting.
+type RoomApiTopic = { title: string } | null;
+type RoomApiCohort = { id: string; cohortLabel: string; memberCount: number; fallbackOpen: boolean } | null;
+type RoomApiMessage = { id: string; authorUserId: string; body: string; createdAtIso: string; parentMessageId: string | null };
+type RoomApiResponse = { ok: boolean; topic: RoomApiTopic; cohort: RoomApiCohort; messages: RoomApiMessage[] };
+
+function mapMessages(rows: RoomApiMessage[]): Message[] {
+  return rows.map((row) => ({
+    id: row.id,
+    authorId: row.authorUserId,
+    content: row.body,
+    timestamp: row.createdAtIso,
+    metadata: row.parentMessageId ? { parentMessageId: row.parentMessageId } : undefined,
+  }));
+}
+
 async function fetchRoomData(signal: AbortSignal): Promise<{ room: Room; messages: Message[] }> {
   const res = await fetch("/api/peer-programming/room", { signal });
   if (!res.ok) throw new Error("Failed to load room");
-  const room = (await res.json()) as Room;
-  let messages: Message[] = [];
-  if (room?.cohortId) {
-    const msgRes = await fetch("/api/peer-programming/messages", { signal });
-    if (!msgRes.ok) throw new Error("Failed to load messages");
-    messages = (await msgRes.json()) as Message[];
-  }
-  return { room, messages };
+  const data = (await res.json()) as RoomApiResponse;
+  const room: Room = {
+    id: data.cohort?.id ?? "peer-programming-room",
+    cohortId: data.cohort?.id,
+    name: data.cohort?.cohortLabel,
+    topic: data.topic?.title,
+    participants: [],
+  };
+  return { room, messages: mapMessages(data.messages ?? []) };
 }
 
 function ShellHeader({ active, t }: { active: boolean; t: PeerProgrammingTokens }) {
@@ -82,18 +100,23 @@ export function PeerProgrammingShell() {
 
   async function handlePostMessage() {
     if (!messageInput.trim()) return;
+    if (!room?.cohortId) { setError("You are not in a cohort yet."); return; }
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch("/api/peer-programming/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: messageInput }),
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ cohortId: room.cohortId, body: messageInput }),
       });
       if (!res.ok) throw new Error("Failed to post message");
       setMessageInput("");
-      const msgRes = await fetch("/api/peer-programming/messages");
-      if (msgRes.ok) setMessages((await msgRes.json()) as Message[]);
+      // The room endpoint is the source of truth for the cohort's messages.
+      const roomRes = await fetch("/api/peer-programming/room");
+      if (roomRes.ok) {
+        const data = (await roomRes.json()) as RoomApiResponse;
+        setMessages(mapMessages(data.messages ?? []));
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to post message.");
     } finally {
@@ -110,8 +133,14 @@ export function PeerProgrammingShell() {
     try {
       const res = await fetch("/api/peer-programming/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: feedbackInput }),
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({
+          cohortId: room?.cohortId ?? null,
+          issueType: "general",
+          suggestionCategory: "general",
+          releaseSurface: "web",
+          note: feedbackInput,
+        }),
       });
       if (!res.ok) throw new Error("Failed to submit feedback");
       setFeedbackSuccess(true);

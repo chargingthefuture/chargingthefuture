@@ -50,22 +50,31 @@ type CohortRow = {
   cohort_label: string;
   fallback_open: boolean;
   topic_id: string | null;
+  member_count: string;
 };
 
 function mapCohortRow(row: CohortRow): PeerProgrammingCohort {
+  const memberCount = Number.parseInt(row.member_count, 10) || 0;
   return {
     id: row.id,
     weekStartDate: row.week_start_date,
     cohortLabel: row.cohort_label,
-    fallbackOpen: row.fallback_open,
+    // Fallback-open means the cohort is too small to be a real group, so it opens to a
+    // wider audience. Honor the assignment-time flag, but also reflect the live roster:
+    // if the cohort currently has fewer than 2 members it is open regardless of the
+    // stored flag. This is the "fewer than 2 members present" rule from the intent,
+    // measured from the actual roster rather than only the snapshot taken at assignment.
+    fallbackOpen: row.fallback_open || memberCount < 2,
     topicId: row.topic_id,
+    memberCount,
   };
 }
 
 export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort | null> {
   const weekStartDate = getWeekStartDate();
   const result = await queryDb<CohortRow>(
-    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text
+    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
+            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
      FROM peer_programming_cohorts c
      INNER JOIN peer_programming_cohort_members m ON m.cohort_id = c.id
      WHERE c.week_start_date = $1
@@ -75,6 +84,18 @@ export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort
   );
 
   return result.rows[0] ? mapCohortRow(result.rows[0]) : null;
+}
+
+export async function isCohortMember(cohortId: string, userId: string): Promise<boolean> {
+  const result = await queryDb<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM peer_programming_cohort_members
+       WHERE cohort_id = $1 AND user_id = $2
+     ) AS exists`,
+    [cohortId, userId],
+  );
+
+  return result.rows[0]?.exists === true;
 }
 
 type MessageRow = {

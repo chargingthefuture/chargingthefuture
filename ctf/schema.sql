@@ -274,7 +274,8 @@ CREATE TABLE IF NOT EXISTS peer_programming_weekly_topics (
   published_by_user_id TEXT,
   published_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (week_start_date)
 );
 
 -- Add columns with guarded DDL for legacy DBs
@@ -289,6 +290,10 @@ ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS pu
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One topic row per week. The admin topic upsert relies on this for ON CONFLICT (week_start_date);
+-- without it, every "set the weekly topic" call fails. Guarded so legacy DBs gain the constraint too.
+CREATE UNIQUE INDEX IF NOT EXISTS peer_programming_weekly_topics_week_start_date_key
+  ON peer_programming_weekly_topics(week_start_date);
 
 -- === canonical-username-handle-baseline ===
 -- === users table: ensure prod compatibility ===
