@@ -22,6 +22,7 @@ const CALL_TYPE = 'default';
 
 export type PeerProgrammingSessionCredentials = {
   cohortId: string;
+  displayName: string;
   streamApiKey: string;
   streamCallId: string;
   streamUserId: string;

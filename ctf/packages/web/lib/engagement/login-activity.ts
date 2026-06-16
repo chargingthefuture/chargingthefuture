@@ -32,13 +32,14 @@ export function recordLoginEvent(userId: string): void {
   }
   recordedToday.set(trimmed, today);
 
+  // ON CONFLICT against the (user_id, UTC-day) unique index makes the once-per-day dedupe
+  // atomic at the database level, so concurrent requests/instances cannot write two rows for
+  // the same member on the same UTC day. The in-memory marker above just spares the database
+  // from repeated no-op inserts; correctness does not depend on it.
   void queryDb(
-    `INSERT INTO login_events (user_id)
-     SELECT $1
-     WHERE NOT EXISTS (
-       SELECT 1 FROM login_events
-       WHERE user_id = $1 AND created_at >= date_trunc('day', NOW())
-     )`,
+    `INSERT INTO login_events (user_id, created_at)
+     VALUES ($1, NOW())
+     ON CONFLICT (user_id, ((created_at AT TIME ZONE 'UTC')::date)) DO NOTHING`,
     [trimmed],
   ).catch(() => {
     // Let a later request try again rather than silently never recording this member.

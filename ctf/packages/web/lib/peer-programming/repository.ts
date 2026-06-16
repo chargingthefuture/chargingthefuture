@@ -210,7 +210,9 @@ export async function upsertWeeklyTopic(input: {
 
 export async function runWeeklyAssignment(input: { actorId: string; activeUserIds: string[] }): Promise<{ cohortsCreated: number; notificationsCreated: number }> {
   const weekStartDate = getWeekStartDate();
-  const uniqueUsers = Array.from(new Set(input.activeUserIds.filter((value) => value.trim().length > 0)));
+  const uniqueUsers = Array.from(
+    new Set(input.activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0)),
+  );
   if (uniqueUsers.length === 0) {
     return { cohortsCreated: 0, notificationsCreated: 0 };
   }

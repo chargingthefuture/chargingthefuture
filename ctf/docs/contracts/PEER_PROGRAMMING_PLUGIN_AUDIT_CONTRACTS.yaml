@@ -278,6 +278,7 @@ auditEvents:
       - room_membership_authorization
       - live_session_credential
     targetContext:
+      workspaceId: workspace_identifier
       cohortId: cohort_identifier
       streamCallId: stream_call_identifier
     requestId: request_identifier

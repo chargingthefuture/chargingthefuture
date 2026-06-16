@@ -28,6 +28,7 @@ export function PeerProgrammingSessionTab({ room, participants }: { room: Room |
       }
       setCredentials({
         cohortId: data.cohortId ?? room?.cohortId ?? "",
+        displayName: data.displayName ?? "Member",
         streamApiKey: data.streamApiKey,
         streamCallId: data.streamCallId,
         streamUserId: data.streamUserId,
@@ -50,7 +51,7 @@ export function PeerProgrammingSessionTab({ room, participants }: { room: Room |
       {credentials ? (
         <PeerProgrammingSessionCall
           credentials={credentials}
-          displayName="You"
+          displayName={credentials.displayName}
           onLeave={() => setCredentials(null)}
         />
       ) : (

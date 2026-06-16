@@ -381,6 +381,8 @@ contracts:
     outputSchema:
       cohortId:
         type: string
+      displayName:
+        type: string
       streamApiKey:
         type: string
       streamCallId:

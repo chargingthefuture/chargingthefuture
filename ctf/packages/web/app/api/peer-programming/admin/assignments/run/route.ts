@@ -32,9 +32,9 @@ export async function POST(request: Request) {
     ? (body.activeUserIds ?? [])
     : await getActiveUserIdsLastDays(7);
 
-  const membersSelected = Array.from(
-    new Set(activeUserIds.filter((value) => value.trim().length > 0)),
-  ).length;
+  const membersSelected = new Set(
+    activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0),
+  ).size;
 
   try {
     const result = await runWeeklyAssignment({ actorId: gate.auth.userId, activeUserIds });

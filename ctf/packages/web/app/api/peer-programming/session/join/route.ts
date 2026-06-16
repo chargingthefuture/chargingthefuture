@@ -37,9 +37,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const displayName = buildIdentityDisplayName(gate.auth.username, gate.auth.userId);
     const credentials = await createPeerProgrammingVideoCredentials({
       userId: gate.auth.userId,
-      name: buildIdentityDisplayName(gate.auth.username, gate.auth.userId),
+      name: displayName,
       cohortId: cohort.id,
     });
 
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       metadata: { streamCallId: credentials.streamCallId },
     });
 
-    return NextResponse.json({ ok: true, cohortId: cohort.id, ...credentials }, { status: 200 });
+    return NextResponse.json({ ok: true, cohortId: cohort.id, displayName, ...credentials }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'session_join' });
     return peerProgrammingErrorResponse(error, 'Live session unavailable.');

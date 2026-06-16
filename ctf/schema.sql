@@ -2983,6 +2983,12 @@ ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NUL
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
+-- At most one row per member per UTC day. This makes the "record a sign-in once per day"
+-- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
+-- concurrent requests for the same member on the same UTC day cannot both write a row. The day
+-- is computed in UTC explicitly so the dedupe does not depend on the database session timezone.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
+  ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
 -- === PEER PROGRAMMING MODULE ===
 CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
