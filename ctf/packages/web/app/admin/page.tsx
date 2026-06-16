@@ -25,6 +25,7 @@ const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
   { href: '/admin/gdp', name: 'GDP', description: 'Manage GDP figures.' },
   { href: '/admin/gdp/rates', name: 'GDP Rates', description: 'Manage GDP exchange and conversion rates.' },
   { href: '/admin/feed-announcements', name: 'Feed Announcements', description: 'Post and manage announcements in the community feed.' },
+  { href: '/admin/bug-reports', name: 'Bug Reports', description: 'Review reports flagged for a human and track ones sent to triage.' },
 ];
 
 export default async function AdminPage() {

@@ -112,6 +112,71 @@ export async function listReportsReadyForIssue(limit: number): Promise<BugReport
   return result.rows;
 }
 
+// What an admin sees for one report. Deliberately omits raw_message / raw_context: the
+// raw user text never leaves the database (rule 129), so even the admin review surface
+// shows only the redacted copy plus the risk flags that explain why a report was held.
+export type BugReportAdminRow = {
+  id: string;
+  status: BugReportStatus;
+  redacted_message: string | null;
+  redacted_context: string | null;
+  risk_flags: BugReportRiskFlag[];
+  risk_level: BugReportRiskLevel;
+  page_url: string | null;
+  plugin_slug: string | null;
+  app_version: string | null;
+  triage_repo: string | null;
+  issue_number: number | null;
+  issue_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Admin list of reports for the /admin/bug-reports review page. Held reports surface
+// first (they are the ones waiting on a human), then the rest, newest within each group.
+// Redacted fields only — never the raw text.
+export async function listReportsForAdmin(limit = 200): Promise<BugReportAdminRow[]> {
+  const result = await queryDb<BugReportAdminRow>(
+    `SELECT id, status, redacted_message, redacted_context, risk_flags, risk_level,
+            page_url, plugin_slug, app_version, triage_repo, issue_number, issue_url,
+            created_at, updated_at
+       FROM bug_reports
+      ORDER BY (status = 'held_for_review') DESC, created_at DESC
+      LIMIT $1`,
+    [limit],
+  );
+
+  return result.rows;
+}
+
+// Release a held report back into the `new` state so the create-issues job picks it up on
+// its next run and publishes the redacted copy to the triage repo. Only a held report can
+// be released; the guard keeps a double-click from disturbing an already-published row.
+// Returns true when a row actually changed.
+export async function releaseHeldReport(id: string): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE bug_reports
+        SET status = 'new', updated_at = NOW()
+      WHERE id = $1 AND status = 'held_for_review'`,
+    [id],
+  );
+
+  return (result.rowCount ?? 0) > 0;
+}
+
+// Reject a report so it never reaches the triage repo. Allowed from `held_for_review` or
+// `new` (a clean report an admin decides not to forward). Returns true when a row changed.
+export async function rejectReport(id: string): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE bug_reports
+        SET status = 'rejected', updated_at = NOW()
+      WHERE id = $1 AND status IN ('held_for_review', 'new')`,
+    [id],
+  );
+
+  return (result.rowCount ?? 0) > 0;
+}
+
 // Mark a report as published into the triage repo.
 export async function markReportIssueCreated(
   id: string,
