@@ -17,6 +17,21 @@ export type PluginRegistrySummary = {
   planned: number;
 };
 
+// Operator-only surfaces: real plugins that should not appear in the user app launcher and
+// whose /apps/<slug> route is gated to admins. Admins still see and use them; everyone else
+// neither sees the tile nor can open the route. Kept in code (not the DB registry) so it holds
+// whether the registry is served from the database or the in-code fallback.
+export const ADMIN_ONLY_PLUGIN_SLUGS = new Set<string>(['weekly-performance']);
+
+export function isAdminOnlyPlugin(slug: string): boolean {
+  return ADMIN_ONLY_PLUGIN_SLUGS.has(slug);
+}
+
+// Drop operator-only plugins for non-admin viewers; admins see the full list.
+export function filterPluginsForViewer<T extends { slug: string }>(plugins: T[], isAdmin: boolean): T[] {
+  return isAdmin ? plugins : plugins.filter((plugin) => !ADMIN_ONLY_PLUGIN_SLUGS.has(plugin.slug));
+}
+
 type PluginRegistryRow = {
   plugin_slug: string;
   display_name: string;
