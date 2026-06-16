@@ -2,16 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-
-type BugReportStatus = 'new' | 'held_for_review' | 'issue_created' | 'rejected' | 'resolved';
+import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
+import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 
 type AdminBugReport = {
   id: string;
   status: BugReportStatus;
   redactedMessage: string | null;
   redactedContext: string | null;
-  riskFlags: string[];
-  riskLevel: 'clean' | 'flagged' | 'unknown';
+  riskFlags: BugReportRiskFlag[];
+  riskLevel: BugReportRiskLevel;
   pageUrl: string | null;
   pluginSlug: string | null;
   appVersion: string | null;
@@ -160,7 +160,11 @@ export function BugReportsAdminShell() {
 
       <ul className="space-y-3">
         {items.map((report) => {
-          const canResolve = report.status === 'held_for_review' || report.status === 'new';
+          // A held report can be released to triage; a new one is already queued for the drain,
+          // so it only offers reject. Release on a new report would 409 (the update only matches
+          // held_for_review), so the button is hidden there.
+          const canRelease = report.status === 'held_for_review';
+          const canReject = report.status === 'held_for_review' || report.status === 'new';
           return (
             <li key={report.id} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -207,24 +211,28 @@ export function BugReportsAdminShell() {
                 ) : null}
               </div>
 
-              {canResolve ? (
+              {canRelease || canReject ? (
                 <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => void resolve(report.id, 'release')}
-                    disabled={busyId === report.id}
-                    className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
-                  >
-                    {report.status === 'held_for_review' ? 'Release to triage' : 'Send to triage now'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void resolve(report.id, 'reject')}
-                    disabled={busyId === report.id}
-                    className="rounded-md border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  {canRelease ? (
+                    <button
+                      type="button"
+                      onClick={() => void resolve(report.id, 'release')}
+                      disabled={busyId === report.id}
+                      className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                    >
+                      Release to triage
+                    </button>
+                  ) : null}
+                  {canReject ? (
+                    <button
+                      type="button"
+                      onClick={() => void resolve(report.id, 'reject')}
+                      disabled={busyId === report.id}
+                      className="rounded-md border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </li>
