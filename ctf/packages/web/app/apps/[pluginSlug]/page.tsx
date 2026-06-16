@@ -201,54 +201,55 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
 
   // Every other plugin shell is wrapped once below with the shared mobile back
   // bar, so each app gets the same way back to the launcher on small screens.
-  const shell: ReactNode = (() => {
-    switch (selectedPlugin.slug) {
-      case 'clicklog':
-        return <ClicklogShell />;
-      case 'whatworks':
-        return <WhatWorksShell />;
-      case 'directory':
-        return <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
-      case 'workforce':
-        return <WorkforceShell isAdmin={decision.isAdmin} />;
-      case 'skills-hunt':
-        return <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
-      case 'skills-taxonomy':
-        return <SkillsTaxonomyShell isAdmin={decision.isAdmin} />;
-      case 'foundation':
-        return <FoundationShell />;
-      case 'lighthouse':
-        return <LighthouseShell />;
-      case 'socketrelay':
-        return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
-      case 'trusttransport':
-        return <TrustTransportShell />;
-      case 'peer-programming':
-        return <PeerProgrammingShell />;
-      case 'mood':
-        return <MoodShell />;
-      case 'gentlepulse':
-        return <GentlePulseShell />;
-      case 'weekly-performance':
-        return <WeeklyPerformanceShell isAdmin={decision.isAdmin} />;
-      case 'gdp':
-        return <GdpShell />;
-      case 'service-credits':
-        return <ServiceCreditsShell />;
-      case 'levelup':
-        return <LevelupShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
-      default:
-        return (
-          <GenericPluginView
-            userId={decision.userId}
-            username={decision.username}
-            selectedPluginSlug={selectedPlugin.slug}
-            selectedPluginName={selectedPlugin.name}
-            availabilityState={selectedPlugin.availabilityState}
-          />
-        );
-    }
-  })();
+  // These stay as explicit `selectedPlugin.slug === '<slug>'` checks (not a
+  // switch) because the web/Android parity gate, check-web-android-parity.mjs,
+  // detects each plugin's web shell by matching exactly that token.
+  let shell: ReactNode;
+  if (selectedPlugin.slug === 'clicklog') {
+    shell = <ClicklogShell />;
+  } else if (selectedPlugin.slug === 'whatworks') {
+    shell = <WhatWorksShell />;
+  } else if (selectedPlugin.slug === 'directory') {
+    shell = <DirectoryShell userId={decision.userId} isAdmin={decision.isAdmin} />;
+  } else if (selectedPlugin.slug === 'workforce') {
+    shell = <WorkforceShell isAdmin={decision.isAdmin} />;
+  } else if (selectedPlugin.slug === 'skills-hunt') {
+    shell = <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
+  } else if (selectedPlugin.slug === 'skills-taxonomy') {
+    shell = <SkillsTaxonomyShell isAdmin={decision.isAdmin} />;
+  } else if (selectedPlugin.slug === 'foundation') {
+    shell = <FoundationShell />;
+  } else if (selectedPlugin.slug === 'lighthouse') {
+    shell = <LighthouseShell />;
+  } else if (selectedPlugin.slug === 'socketrelay') {
+    shell = <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
+  } else if (selectedPlugin.slug === 'trusttransport') {
+    shell = <TrustTransportShell />;
+  } else if (selectedPlugin.slug === 'peer-programming') {
+    shell = <PeerProgrammingShell />;
+  } else if (selectedPlugin.slug === 'mood') {
+    shell = <MoodShell />;
+  } else if (selectedPlugin.slug === 'gentlepulse') {
+    shell = <GentlePulseShell />;
+  } else if (selectedPlugin.slug === 'weekly-performance') {
+    shell = <WeeklyPerformanceShell isAdmin={decision.isAdmin} />;
+  } else if (selectedPlugin.slug === 'gdp') {
+    shell = <GdpShell />;
+  } else if (selectedPlugin.slug === 'service-credits') {
+    shell = <ServiceCreditsShell />;
+  } else if (selectedPlugin.slug === 'levelup') {
+    shell = <LevelupShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
+  } else {
+    shell = (
+      <GenericPluginView
+        userId={decision.userId}
+        username={decision.username}
+        selectedPluginSlug={selectedPlugin.slug}
+        selectedPluginName={selectedPlugin.name}
+        availabilityState={selectedPlugin.availabilityState}
+      />
+    );
+  }
 
   return (
     <>
