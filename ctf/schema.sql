@@ -2601,13 +2601,32 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_cu
 -- A provider with zero rows here is not surfaced as a Foundation provider at all.
 CREATE TABLE IF NOT EXISTS foundation_provider_skills (
   user_id TEXT NOT NULL,
-  skill_id UUID NOT NULL,
+  skill_id UUID NOT NULL REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, skill_id)
 );
 ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS skill_id UUID NOT NULL DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- skill_id must point at a real taxonomy skill; CASCADE so removing a skill clears the offers.
+-- No FK on user_id: an offer doesn't require a foundation_user_extension row and there's no
+-- canonical users table to reference; the repository constrains skill_id to the member's own
+-- Directory skills on write, so the app can't create orphans. Guarded so a legacy table without
+-- the constraint converges and a fresh table doesn't double-add it.
+DO $foundation_provider_skills_skill_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey'
+      AND table_name = 'foundation_provider_skills'
+      AND constraint_type = 'FOREIGN KEY'
+  ) THEN
+    ALTER TABLE foundation_provider_skills
+      ADD CONSTRAINT foundation_provider_skills_skill_id_fkey
+      FOREIGN KEY (skill_id) REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE;
+  END IF;
+END
+$foundation_provider_skills_skill_fk$;
 CREATE INDEX IF NOT EXISTS idx_foundation_provider_skills_skill ON foundation_provider_skills (skill_id);
 
 CREATE TABLE IF NOT EXISTS foundation_provider_accepted_currencies (

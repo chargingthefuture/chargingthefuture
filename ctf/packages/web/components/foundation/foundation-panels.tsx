@@ -21,17 +21,20 @@ const EMPTY_STEPS = [
 ];
 
 export function BrowsePanel({
-  providers, onSelect, activeSkillId = null, onSkillFilter,
+  providers, onSelect, activeSkillId = null, activeSkillName = null, onSkillFilter,
 }: {
   providers: ProviderView[];
   onSelect: (p: ProviderView) => void;
   activeSkillId?: string | null;
-  onSkillFilter?: (skillId: string | null) => void;
+  activeSkillName?: string | null;
+  onSkillFilter?: (skillId: string | null, skillName?: string | null) => void;
 }) {
-  // The active skill name (if any) is taken from whichever card still shows it.
-  const activeSkillName = activeSkillId
-    ? providers.flatMap((p) => p.offeredSkills).find((s) => s.id === activeSkillId)?.name ?? null
-    : null;
+  // Prefer the name passed from the shell (the chip the member tapped) so the banner label survives
+  // even when the filter returns zero providers; fall back to whichever card still shows it.
+  const bannerSkillName = activeSkillName
+    ?? (activeSkillId
+      ? providers.flatMap((p) => p.offeredSkills).find((s) => s.id === activeSkillId)?.name ?? null
+      : null);
 
   return (
     <ScrollArea style={{ flex: 1 }}>
@@ -42,7 +45,7 @@ export function BrowsePanel({
         </div>
         {activeSkillId ? (
           <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: `${COLOR}12`, border: `1px solid ${COLOR}30` }}>
-            <span style={{ fontSize: 13, color: "#F9FAFB" }}>Offering: <strong style={{ color: COLOR }}>{activeSkillName ?? "selected skill"}</strong></span>
+            <span style={{ fontSize: 13, color: "#F9FAFB" }}>Offering: <strong style={{ color: COLOR }}>{bannerSkillName ?? "selected skill"}</strong></span>
             <button onClick={() => onSkillFilter?.(null)} style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 7, background: "transparent", border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Clear</button>
           </div>
         ) : null}
@@ -74,8 +77,8 @@ export function BrowsePanel({
                             key={s.id}
                             role="button"
                             tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); onSkillFilter?.(active ? null : s.id); }}
-                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSkillFilter?.(active ? null : s.id); } }}
+                            onClick={(e) => { e.stopPropagation(); onSkillFilter?.(active ? null : s.id, active ? null : s.name); }}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSkillFilter?.(active ? null : s.id, active ? null : s.name); } }}
                             style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer", background: active ? COLOR : `${COLOR}12`, color: active ? "#1a1205" : COLOR, border: `1px solid ${active ? COLOR : COLOR + "30"}` }}
                           >
                             {s.name}

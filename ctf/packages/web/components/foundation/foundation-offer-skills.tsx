@@ -51,6 +51,12 @@ export function OfferSkillsPanel() {
         body: JSON.stringify({ skillIds: offeredIds }),
       });
       if (!res.ok) throw new Error("Could not save. Please try again.");
+      // Reconcile with what the server actually accepted — it drops any skill not on the member's
+      // own Directory profile, so a blind optimistic update could leave a skill toggled on that the
+      // backend never saved.
+      const data = (await res.json().catch(() => ({}))) as { offeredSkillIds?: string[] };
+      const accepted = new Set(data.offeredSkillIds ?? offeredIds);
+      setSkills((curr) => curr.map((item) => ({ ...item, offered: accepted.has(item.id) })));
     } catch (caught) {
       setSkills(skills);
       setError(caught instanceof Error ? caught.message : "Could not save. Please try again.");

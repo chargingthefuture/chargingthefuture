@@ -31,6 +31,7 @@ export function FoundationShell() {
   const [trade, setTrade] = useState("All Trades");
   const [query, setQuery] = useState("");
   const [skillId, setSkillId] = useState<string | null>(null);
+  const [skillName, setSkillName] = useState<string | null>(null);
   const [selected, setSelected] = useState<ProviderView | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -139,7 +140,7 @@ export function FoundationShell() {
 
   const content = (
     <>
-      {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} activeSkillId={skillId} onSkillFilter={setSkillId} />}
+      {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
       {tab === "offer" && <OfferSkillsPanel />}
       {tab === "quotes" && <QuotesPanel quotes={quotes} onBrowse={() => setTab("browse")} />}
       {tab === "chat" && (
