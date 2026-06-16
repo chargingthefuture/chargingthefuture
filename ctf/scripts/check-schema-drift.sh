@@ -55,7 +55,9 @@ contract_schema_failed=false
 
 # Tokens that mark a file as actually touching the database layer. Used to decide whether a changed
 # shared/server file is DB-impacting (content-aware) instead of treating the whole package as such.
-DB_CONTENT_RE='queryDb|withDbTransaction|CREATE TABLE|ALTER TABLE|INSERT INTO|DELETE FROM|CREATE INDEX|drizzle|lib/db/postgres'
+# SQL keywords are matched case-insensitively (grep -Ei below) and tolerate any run of whitespace
+# between words, so variants like "create table" and "CREATE   TABLE" are still caught.
+DB_CONTENT_RE='queryDb|withDbTransaction|CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|INSERT[[:space:]]+INTO|DELETE[[:space:]]+FROM|CREATE[[:space:]]+INDEX|drizzle|lib/db/postgres'
 
 validate_contract_file() {
   local file="$1"
@@ -136,7 +138,7 @@ for file in "${files[@]}"; do
       && [[ ! "$file" =~ ^ctf/packages/shared/dist/.*/auth/ ]] \
       && [[ ! "$file" =~ ^ctf/packages/shared/dist/auth/ ]] \
       && [[ -f "$file" ]] \
-      && grep -Eq "$DB_CONTENT_RE" -- "$file"; then
+      && grep -Eiq "$DB_CONTENT_RE" -- "$file"; then
       db_impacting_changed=true
     fi
   fi
