@@ -71,10 +71,6 @@ export function DirectoryProfileDetail({
             ) : (
               <div style={{ fontSize: 13, color: "#4B5563", marginBottom: 24 }}>No skills listed yet.</div>
             )}
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Endorsements</div>
-            <div style={{ padding: "20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "#4B5563", fontSize: 13, textAlign: "center" }}>
-              No endorsements yet.
-            </div>
             {showAttach && (
               <div style={{ marginTop: 16, padding: "20px", borderRadius: 16, background: `${COLOR}0A`, border: `1px solid ${COLOR}30` }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attach to account</div>
