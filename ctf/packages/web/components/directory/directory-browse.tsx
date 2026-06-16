@@ -13,6 +13,7 @@ export function DirectoryBrowse({
   members,
   categories,
   filtered,
+  isMobile = false,
   onSelect,
   onClearFilters,
 }: {
@@ -21,6 +22,7 @@ export function DirectoryBrowse({
   members: Member[];
   categories: string[];
   filtered: boolean;
+  isMobile?: boolean;
   onSelect: (member: Member) => void;
   onClearFilters: () => void;
 }) {
@@ -30,18 +32,20 @@ export function DirectoryBrowse({
 
   return (
     <ScrollArea style={{ flex: 1 }}>
-      <div style={{ padding: "24px" }}>
+      <div style={{ padding: isMobile ? "16px" : "24px" }}>
         {rewardCard && rewardCard.isActive && (
           <a href={rewardCard.ctaUrl} style={{ display: "block", marginBottom: 16, padding: "18px 22px", borderRadius: 14, background: `${SKILLS_HUNT_COLOR}10`, border: `1px solid ${SKILLS_HUNT_COLOR}30`, textDecoration: "none", color: "inherit" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${SKILLS_HUNT_COLOR}25`, border: `1px solid ${SKILLS_HUNT_COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Search size={20} style={{ color: SKILLS_HUNT_COLOR }} />
+            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: isMobile ? 12 : 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: isMobile ? undefined : 1 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: `${SKILLS_HUNT_COLOR}25`, border: `1px solid ${SKILLS_HUNT_COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Search size={20} style={{ color: SKILLS_HUNT_COLOR }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: SKILLS_HUNT_COLOR, marginBottom: 2 }}>{rewardCard.title}</div>
+                  <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>{rewardCard.description}</div>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: SKILLS_HUNT_COLOR, marginBottom: 2 }}>{rewardCard.title}</div>
-                <div style={{ fontSize: 12, color: "#9CA3AF", lineHeight: 1.5 }}>{rewardCard.description}</div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: SKILLS_HUNT_COLOR, color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 14px", borderRadius: 10, background: SKILLS_HUNT_COLOR, color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
                 {rewardCard.ctaLabel} <ArrowUpRight size={14} />
               </div>
             </div>
@@ -55,7 +59,7 @@ export function DirectoryBrowse({
         {loadingMembers ? (
           <div style={{ padding: "48px", textAlign: "center", color: "#6B7280", fontSize: 14 }}>Loading providers…</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 14 }}>
             {members.map((p) => (
               <div key={p.id} onClick={() => onSelect(p)} style={{ padding: "20px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}20`, cursor: "pointer" }}>
                 <div style={{ display: "flex", gap: 14, marginBottom: 14, alignItems: "flex-start" }}>
