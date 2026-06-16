@@ -9,6 +9,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
 import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
 import { BrowsePanel, QuotesPanel, ChatPanel } from "./foundation-panels";
+import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
@@ -29,6 +30,8 @@ export function FoundationShell() {
   const [tab, setTab] = useState<FoundationTab>("browse");
   const [trade, setTrade] = useState("All Trades");
   const [query, setQuery] = useState("");
+  const [skillId, setSkillId] = useState<string | null>(null);
+  const [skillName, setSkillName] = useState<string | null>(null);
   const [selected, setSelected] = useState<ProviderView | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -55,9 +58,11 @@ export function FoundationShell() {
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams(searchTerm ? { q: searchTerm } : {});
+        const params = new URLSearchParams();
+        if (searchTerm) params.set("q", searchTerm);
+        if (skillId) params.set("skillId", skillId);
         const [searchRes] = await Promise.all([
-          fetch(`/api/foundation/providers/search?${params}`),
+          fetch(`/api/foundation/providers/search?${params.toString()}`),
           loadQuotes(),
         ]);
         if (!active) return;
@@ -75,7 +80,7 @@ export function FoundationShell() {
     return () => {
       active = false;
     };
-  }, [searchTerm, loadQuotes]);
+  }, [searchTerm, skillId, loadQuotes]);
 
   // Real quote creation is two steps: open a connection thread, then request a quote on it.
   const requestQuote = useCallback(async (provider: ProviderView) => {
@@ -135,7 +140,8 @@ export function FoundationShell() {
 
   const content = (
     <>
-      {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} />}
+      {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
+      {tab === "offer" && <OfferSkillsPanel />}
       {tab === "quotes" && <QuotesPanel quotes={quotes} onBrowse={() => setTab("browse")} />}
       {tab === "chat" && (
         <ChatPanel
@@ -151,6 +157,7 @@ export function FoundationShell() {
   if (isMobile) {
     const tabs: { key: FoundationTab; label: string }[] = [
       { key: "browse", label: "Browse" },
+      { key: "offer", label: "Offer" },
       { key: "quotes", label: "Quotes" },
       { key: "chat", label: "Chat" },
     ];

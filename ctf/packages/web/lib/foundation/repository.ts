@@ -73,6 +73,7 @@ type FoundationProviderRow = {
   headline: string | null;
   bio: string | null;
   score: number;
+  offered_skills: { id: string; name: string }[] | null;
 };
 
 function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchItem {
@@ -83,11 +84,13 @@ function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchIte
     headline: row.headline,
     bio: row.bio,
     score: Number(row.score),
+    offeredSkills: Array.isArray(row.offered_skills) ? row.offered_skills : [],
   };
 }
 
 export async function searchProviders(input: {
   query: string;
+  skillId?: string | null;
   page?: number;
   pageSize?: number;
 }): Promise<{ items: FoundationProviderSearchItem[]; total: number; pagination: { page: number; pageSize: number } }> {
@@ -95,7 +98,12 @@ export async function searchProviders(input: {
   const searchValue = input.query.trim();
 
   const searchPattern = searchValue.length > 0 ? `%${searchValue}%` : '%';
+  const skillId = input.skillId && input.skillId.trim().length > 0 ? input.skillId.trim() : null;
 
+  // A Foundation provider is a claimed directory profile that has opted in to offer at least one
+  // skill (a row in foundation_provider_skills). When a skill is given, restrict to providers who
+  // offer that exact skill. Unlike the Directory (which lists skills), this only surfaces people who
+  // chose to be contacted — so a survivor is not reaching out into the void.
   const [countResult, itemsResult] = await Promise.all([
     queryDb<{ total: string }>(
       `
@@ -103,6 +111,11 @@ export async function searchProviders(input: {
         FROM directory_profiles dp
         WHERE dp.is_active = TRUE
           AND dp.claimed_by_user_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
+          AND ($2::uuid IS NULL OR EXISTS (
+            SELECT 1 FROM foundation_provider_skills fps2
+            WHERE fps2.user_id = dp.claimed_by_user_id AND fps2.skill_id = $2::uuid
+          ))
           AND (
             $1::text = '%'
             OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
@@ -110,7 +123,7 @@ export async function searchProviders(input: {
             OR COALESCE(dp.bio, '') ILIKE $1
           )
       `,
-      [searchPattern],
+      [searchPattern, skillId],
     ),
     queryDb<FoundationProviderRow>(
       `
@@ -124,10 +137,21 @@ export async function searchProviders(input: {
             CASE WHEN TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1 THEN 6 ELSE 0 END +
             CASE WHEN COALESCE(dp.headline, '') ILIKE $1 THEN 3 ELSE 0 END +
             CASE WHEN COALESCE(dp.bio, '') ILIKE $1 THEN 2 ELSE 0 END
-          ) AS score
+          ) AS score,
+          COALESCE((
+            SELECT jsonb_agg(jsonb_build_object('id', s.id::text, 'name', s.name) ORDER BY s.name)
+            FROM foundation_provider_skills fps
+            JOIN skills_taxonomy_skills s ON s.id = fps.skill_id
+            WHERE fps.user_id = dp.claimed_by_user_id
+          ), '[]'::jsonb) AS offered_skills
         FROM directory_profiles dp
         WHERE dp.is_active = TRUE
           AND dp.claimed_by_user_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
+          AND ($4::uuid IS NULL OR EXISTS (
+            SELECT 1 FROM foundation_provider_skills fps2
+            WHERE fps2.user_id = dp.claimed_by_user_id AND fps2.skill_id = $4::uuid
+          ))
           AND (
             $1::text = '%'
             OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
@@ -137,7 +161,7 @@ export async function searchProviders(input: {
         ORDER BY score DESC, dp.updated_at DESC
         LIMIT $2 OFFSET $3
       `,
-      [searchPattern, paging.pageSize, paging.offset],
+      [searchPattern, paging.pageSize, paging.offset, skillId],
     ),
   ]);
 
@@ -149,6 +173,63 @@ export async function searchProviders(input: {
       pageSize: paging.pageSize,
     },
   };
+}
+
+// The skills a member could offer through Foundation: the skills on their own claimed Directory
+// profile, each marked whether they have currently opted in to be contacted about it. The picker
+// uses this so a provider can only offer skills they actually list in the Directory.
+export async function listOwnOfferableSkills(
+  userId: string,
+): Promise<Array<{ id: string; name: string; offered: boolean }>> {
+  const result = await queryDb<{ id: string; name: string; offered: boolean }>(
+    `
+      SELECT s.id::text AS id, s.name AS name,
+             (fps.user_id IS NOT NULL) AS offered
+      FROM directory_profiles dp
+      JOIN directory_profile_skills dps ON dps.profile_id::text = dp.id::text
+      JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      LEFT JOIN foundation_provider_skills fps
+        ON fps.user_id = dp.claimed_by_user_id AND fps.skill_id = s.id
+      WHERE dp.claimed_by_user_id = $1 AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+      ORDER BY s.name ASC
+    `,
+    [userId],
+  );
+
+  return result.rows.map((row) => ({ id: row.id, name: row.name, offered: row.offered }));
+}
+
+// Replace the member's set of offered skills. Only skills they actually list on their own claimed,
+// active Directory profile are accepted — anything else is silently dropped, so a member can never
+// advertise a Foundation offer for a skill they do not list in the Directory (the source of truth).
+export async function setOwnOfferedSkills(userId: string, skillIds: string[]): Promise<string[]> {
+  const unique = Array.from(new Set(skillIds.filter((id) => typeof id === 'string' && id.trim().length > 0)));
+
+  return withDbTransaction(async (client) => {
+    const eligible = await client.query<{ id: string }>(
+      `
+        SELECT s.id::text AS id
+        FROM directory_profiles dp
+        JOIN directory_profile_skills dps ON dps.profile_id::text = dp.id::text
+        JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+        WHERE dp.claimed_by_user_id = $1 AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+      `,
+      [userId],
+    );
+    const eligibleIds = new Set(eligible.rows.map((row) => row.id));
+    const accepted = unique.filter((id) => eligibleIds.has(id));
+
+    await client.query('DELETE FROM foundation_provider_skills WHERE user_id = $1', [userId]);
+    for (const skillId of accepted) {
+      await client.query(
+        `INSERT INTO foundation_provider_skills (user_id, skill_id) VALUES ($1, $2::uuid)
+         ON CONFLICT (user_id, skill_id) DO NOTHING`,
+        [userId, skillId],
+      );
+    }
+
+    return accepted;
+  });
 }
 
 type FoundationThreadRow = {

@@ -103,6 +103,7 @@ When user deletes Foundation plugin usage only:
 
 - Delete immediately:
   - `foundation_user_extension` row for requesting user
+  - `foundation_provider_skills` rows for the requester (the skills they opted in to offer)
   - participant links and plugin-owned thread linkage rows for the requester
   - plugin-scoped notification preference and pending delivery records owned by requester
 - Anonymize/pseudonymize:

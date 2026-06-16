@@ -138,6 +138,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('foundation_call_sessions', 'created_by_user_id', 'Call sessions you started.'),
       del('foundation_thread_participants', 'user_id', 'Your participation in connection threads.'),
       del('foundation_connection_threads', 'created_by_user_id', 'Connection threads you started.'),
+      del('foundation_provider_skills', 'user_id', 'The skills you opted in to offer.'),
       soft('foundation_user_extension', 'user_id', 'service_deleted_at', 'Your Foundation plugin extension record.'),
       retain('foundation_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],

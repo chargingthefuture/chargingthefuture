@@ -1,6 +1,11 @@
 export type FoundationQuoteState = 'requested' | 'provider_responded' | 'closed';
 export type FoundationCallModality = 'voice' | 'video';
 
+export type FoundationOfferedSkill = {
+  id: string;
+  name: string;
+};
+
 export type FoundationProviderSearchItem = {
   profileId: string;
   providerUserId: string;
@@ -8,6 +13,8 @@ export type FoundationProviderSearchItem = {
   headline: string | null;
   bio: string | null;
   score: number;
+  // The skills this provider has opted in to be contacted about (their Foundation offer).
+  offeredSkills: FoundationOfferedSkill[];
 };
 
 export type FoundationThread = {
