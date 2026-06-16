@@ -1,6 +1,6 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { canonicalizePluginSlug, getPluginBySlug } from 'lib/plugins/repository';
+import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { PublicShellFrame } from '@/components/plugins/public-shell-frame';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
@@ -146,6 +146,13 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   const decision = await evaluatePluginAccess({
     requireUsername: selectedPlugin.slug !== 'chyme',
   });
+
+  // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
+  // route, not the public landing, since there is no approved user-facing version. Admins fall
+  // through to the normal render below.
+  if (isAdminOnlyPlugin(selectedPlugin.slug) && !(decision.allowed && decision.isAdmin)) {
+    notFound();
+  }
 
   if (!decision.allowed) {
     // Two cases see the plugin's public visitor view rather than a denial wall:

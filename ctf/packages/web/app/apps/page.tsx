@@ -3,7 +3,7 @@ import type { ShellCurrentUser } from '../../components/community-shell/shell-ty
 import type { TrustUserExtension } from '../../lib/trust/types';
 import { evaluatePluginAccess } from '../../lib/auth/server-authz';
 import { getGdpShellStats } from '../../lib/gdp/repository';
-import { listPluginRegistry } from '../../lib/plugins/repository';
+import { listPluginRegistry, filterPluginsForViewer } from '../../lib/plugins/repository';
 import { getTrustUserExtension } from '../../lib/trust/repository';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
@@ -40,6 +40,12 @@ export default async function AppsPage() {
     authDecisionPromise,
   ]);
 
+  // Operator-only plugins (e.g. Weekly Performance) are kept out of the user launcher unless the
+  // viewer is an admin. The matching /apps/<slug> route is admin-gated too, so this is UX, not the
+  // security boundary.
+  const isAdmin = !!(authDecision && authDecision.allowed && authDecision.isAdmin);
+  const visiblePlugins = filterPluginsForViewer(plugins, isAdmin);
+
   const currentUser = authDecision && authDecision.allowed
     ? buildShellUser(authDecision.userId, authDecision.username)
     : buildShellUser('guest', null);
@@ -50,7 +56,7 @@ export default async function AppsPage() {
 
   return (
     <CommunityShell
-      initialPlugins={plugins}
+      initialPlugins={visiblePlugins}
       shellStats={shellStats}
       currentUser={currentUser}
       trust={trust}
