@@ -44,6 +44,16 @@ export function ProviderProfile({
           </div>
           {quoteError && <div style={{ fontSize: 13, color: "#EF4444", marginBottom: 12 }}>{quoteError}</div>}
           {quoteSuccess && <div style={{ fontSize: 13, color: "#22C55E", marginBottom: 12 }}>Quote requested. Check the Quotes tab.</div>}
+          {provider.offeredSkills.length > 0 && (
+            <div style={{ padding: "20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}18`, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#4B5563", textTransform: "uppercase", marginBottom: 10 }}>Willing to be contacted about</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {provider.offeredSkills.map((s) => (
+                  <span key={s.id} style={{ padding: "4px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, background: `${COLOR}12`, color: COLOR, border: `1px solid ${COLOR}30` }}>{s.name}</span>
+                ))}
+              </div>
+            </div>
+          )}
           {provider.bio && (
             <div style={{ padding: "20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}18` }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#4B5563", textTransform: "uppercase", marginBottom: 10 }}>About</div>

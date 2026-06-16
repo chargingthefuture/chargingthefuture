@@ -15,6 +15,12 @@ export function getFoundationTokens(theme: ThemeName): FoundationTokens {
   return getPluginShellTokens(accent, theme);
 }
 
+/** One skill a provider has opted in to be contacted about. */
+export interface OfferedSkillView {
+  id: string;
+  name: string;
+}
+
 /** Provider view model — only fields the real search API returns. */
 export interface ProviderView {
   profileId: string;
@@ -23,6 +29,7 @@ export interface ProviderView {
   headline: string | null;
   bio: string | null;
   score: number;
+  offeredSkills: OfferedSkillView[];
 }
 
 /** Quote view model — only fields the real quote-history API returns. */
@@ -34,7 +41,7 @@ export interface QuoteView {
   createdAtIso: string;
 }
 
-export type FoundationTab = "browse" | "quotes" | "chat";
+export type FoundationTab = "browse" | "quotes" | "chat" | "offer";
 
 /** Trade filters map to the search `q` param; "All Trades" clears it. */
 export const TRADES = [

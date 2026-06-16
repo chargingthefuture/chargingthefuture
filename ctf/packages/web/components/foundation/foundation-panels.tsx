@@ -21,42 +21,74 @@ const EMPTY_STEPS = [
 ];
 
 export function BrowsePanel({
-  providers, onSelect,
+  providers, onSelect, activeSkillId = null, onSkillFilter,
 }: {
   providers: ProviderView[];
   onSelect: (p: ProviderView) => void;
+  activeSkillId?: string | null;
+  onSkillFilter?: (skillId: string | null) => void;
 }) {
+  // The active skill name (if any) is taken from whichever card still shows it.
+  const activeSkillName = activeSkillId
+    ? providers.flatMap((p) => p.offeredSkills).find((s) => s.id === activeSkillId)?.name ?? null
+    : null;
+
   return (
     <ScrollArea style={{ flex: 1 }}>
       <div style={{ padding: "24px" }}>
         <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(239,68,68,0.05) 100%)`, border: `1px solid ${COLOR}20` }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Find Vetted Trade Providers</div>
-          <div style={{ fontSize: 14, color: "#9CA3AF" }}>Background-checked · Trauma-informed · Service Credits accepted</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Find providers offering a skill</div>
+          <div style={{ fontSize: 14, color: "#9CA3AF" }}>Everyone here has opted in to be contacted — tap a skill to filter.</div>
         </div>
+        {activeSkillId ? (
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: `${COLOR}12`, border: `1px solid ${COLOR}30` }}>
+            <span style={{ fontSize: 13, color: "#F9FAFB" }}>Offering: <strong style={{ color: COLOR }}>{activeSkillName ?? "selected skill"}</strong></span>
+            <button onClick={() => onSkillFilter?.(null)} style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 7, background: "transparent", border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Clear</button>
+          </div>
+        ) : null}
         {providers.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Hammer size={20} style={{ color: "rgba(239,68,68,0.4)" }} />
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No providers found</div>
-            <div style={{ fontSize: 13, color: "#4B5563" }}>Try adjusting your search or trade filter.</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No providers offering this yet</div>
+            <div style={{ fontSize: 13, color: "#4B5563" }}>Try clearing the skill filter or searching differently.</div>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {providers.map((p) => (
-              <button key={p.profileId} onClick={() => onSelect(p)} style={{ width: "100%", textAlign: "left", padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}18`, cursor: "pointer", display: "flex", gap: 16, alignItems: "center" }}>
+              <div key={p.profileId} role="button" tabIndex={0} onClick={() => onSelect(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p); } }} style={{ width: "100%", textAlign: "left", padding: "18px 20px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: `1px solid ${COLOR}18`, cursor: "pointer", display: "flex", gap: 16, alignItems: "flex-start" }}>
                 <Avatar style={{ width: 52, height: 52, flexShrink: 0 }}>
                   <AvatarFallback style={{ background: `${COLOR}20`, color: COLOR, fontSize: 18, fontWeight: 800 }}>{initials(p.displayName)}</AvatarFallback>
                 </Avatar>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", marginBottom: 4 }}>{p.displayName}</div>
                   {p.headline && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 6 }}>{p.headline}</div>}
-                  {p.bio && <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.bio}</div>}
+                  {p.bio && <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: 8 }}>{p.bio}</div>}
+                  {p.offeredSkills.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {p.offeredSkills.map((s) => {
+                        const active = s.id === activeSkillId;
+                        return (
+                          <span
+                            key={s.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); onSkillFilter?.(active ? null : s.id); }}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSkillFilter?.(active ? null : s.id); } }}
+                            style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer", background: active ? COLOR : `${COLOR}12`, color: active ? "#1a1205" : COLOR, border: `1px solid ${active ? COLOR : COLOR + "30"}` }}
+                          >
+                            {s.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
                 <span style={{ padding: "7px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
                   View Profile
                 </span>
-              </button>
+              </div>
             ))}
           </div>
         )}
