@@ -36,6 +36,9 @@ const VOCABULARY = [
   { re: /\bflywheel\b/i, use: 'a plain description of the loop (e.g. "each answer improves the next")' },
   { re: /\bpunch list\b/i, use: 'list' },
   { re: /\bstale\b/i, use: 'drop it — it usually adds no value; if you mean something specific, name it (out-of-date, superseded, no longer current)' },
+  // "console" reads as developer jargon for a screen; say "dashboard". The negative lookahead skips
+  // the code identifiers console.log / console.error / console.info so quoting real code never trips.
+  { re: /\bconsole\b(?!\.\w)/i, use: 'dashboard' },
 ];
 
 function readStdin() {
