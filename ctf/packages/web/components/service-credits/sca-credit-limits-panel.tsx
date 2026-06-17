@@ -10,6 +10,13 @@ import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, type CreditLimitResponse, type CreditLimitLookup, type CreditLimitLookupResponse } from './sca-shared';
 
+// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
+const SURFACE = '#161B27';
+const BG = '#0F1117';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
 export function ServiceCreditsCreditLimitsPanel() {
   const [targetUserId, setTargetUserId] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
@@ -65,47 +72,84 @@ export function ServiceCreditsCreditLimitsPanel() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg border bg-card p-5">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Mutual-credit limits</h2>
-        <p className="text-sm text-muted-foreground">
+    <section
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: SURFACE,
+        padding: 18,
+        marginBottom: 16,
+      }}
+    >
+      <header>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Mutual-credit limits</h2>
+        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
           New accounts start at 0. Raise a limit only for trusted members; set to 0 to revoke.
         </p>
       </header>
 
       <Feedback error={error} notice={notice} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <Field label="Member user ID" value={targetUserId} onChange={setTargetUserId} placeholder="user_…" />
         <Field label="Credit limit (ServiceCredits)" type="number" value={creditLimit} onChange={setCreditLimit} placeholder="0" />
       </div>
 
-      <div className="space-y-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
           type="button"
           disabled={!targetUserId.trim() || lookingUp}
           onClick={() => void lookUp()}
-          className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+          style={{
+            display: 'inline-flex',
+            alignSelf: 'flex-start',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 8,
+            border: `1px solid ${BORDER}`,
+            background: BG,
+            color: TEXT,
+            padding: '9px 16px',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: !targetUserId.trim() || lookingUp ? 'not-allowed' : 'pointer',
+            opacity: !targetUserId.trim() || lookingUp ? 0.5 : 1,
+          }}
         >
           {lookingUp ? 'Looking up…' : 'Look up'}
         </button>
         {lookup ? (
-          <dl className="grid gap-x-6 gap-y-1 rounded-md border bg-background p-3 text-sm sm:grid-cols-2">
-            <div className="flex justify-between sm:block">
-              <dt className="text-muted-foreground">Mutual-credit limit</dt>
-              <dd className="font-semibold">{lookup.creditLimit}</dd>
+          <dl
+            style={{
+              display: 'grid',
+              gap: '4px 24px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              borderRadius: 10,
+              border: `1px solid ${BORDER}`,
+              background: BG,
+              padding: 12,
+              fontSize: 13,
+              margin: 0,
+            }}
+          >
+            <div>
+              <dt style={{ color: SUBTLE }}>Mutual-credit limit</dt>
+              <dd style={{ fontWeight: 700, color: TEXT, margin: 0 }}>{lookup.creditLimit}</dd>
             </div>
-            <div className="flex justify-between sm:block">
-              <dt className="text-muted-foreground">Source</dt>
-              <dd className="font-semibold">{lookup.isDefault ? 'Policy default' : 'Per-account'}</dd>
+            <div>
+              <dt style={{ color: SUBTLE }}>Source</dt>
+              <dd style={{ fontWeight: 700, color: TEXT, margin: 0 }}>{lookup.isDefault ? 'Policy default' : 'Per-account'}</dd>
             </div>
-            <div className="flex justify-between sm:block">
-              <dt className="text-muted-foreground">Frozen</dt>
-              <dd className="font-semibold">{lookup.frozen ? 'Yes' : 'No'}</dd>
+            <div>
+              <dt style={{ color: SUBTLE }}>Frozen</dt>
+              <dd style={{ fontWeight: 700, color: TEXT, margin: 0 }}>{lookup.frozen ? 'Yes' : 'No'}</dd>
             </div>
           </dl>
         ) : null}
-        <p className="text-xs text-muted-foreground">
+        <p style={{ fontSize: 11, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
           Every member gets the same flat limit by default. Override per account only when needed; set to 0 to revoke.
         </p>
       </div>

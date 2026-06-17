@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
+// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
 type FormanceStatus = {
   configured: boolean;
   apiUrlSet: boolean;
@@ -39,20 +45,29 @@ export function ServiceCreditsLedgerStatus() {
   const dotColor = status.configured ? '#22C55E' : '#6B7280';
 
   return (
-    <section className="rounded-lg border bg-card p-5 text-sm space-y-2">
-      <h2 className="text-lg font-medium">External ledger (Formance)</h2>
-      <p className="flex items-center gap-2">
+    <section
+      style={{
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: SURFACE,
+        padding: 18,
+        marginBottom: 16,
+        fontSize: 13,
+      }}
+    >
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 8px' }}>External ledger (Formance)</h2>
+      <p style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 6px' }}>
         <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
-        <span className="font-medium">{status.configured ? 'Configured' : 'Not configured'}</span>
+        <span style={{ fontWeight: 600, color: TEXT }}>{status.configured ? 'Configured' : 'Not configured'}</span>
       </p>
       {status.configured ? (
-        <p className="text-muted-foreground">
-          Ledger <span className="font-medium text-foreground">{status.ledger}</span> · asset{' '}
-          <span className="font-medium text-foreground">{status.asset}</span>
+        <p style={{ color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
+          Ledger <span style={{ fontWeight: 600, color: TEXT }}>{status.ledger}</span> · asset{' '}
+          <span style={{ fontWeight: 600, color: TEXT }}>{status.asset}</span>
           {status.demoMode ? ' · demo mode' : ''}
         </p>
       ) : (
-        <p className="text-muted-foreground">
+        <p style={{ color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
           The external mirror is paused. Balances are authoritative in the app database and remain correct;
           ledger operations commit locally and queue for reconciliation when Formance is reconnected.
         </p>
