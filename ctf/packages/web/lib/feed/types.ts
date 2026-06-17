@@ -89,7 +89,6 @@ export type FeedTimelineItem = {
 
 export type FeedConfig = {
   renderMode: FeedRenderMode;
-  killSwitchEnabled: boolean;
   maxTimelinePageSize: number;
   enabledChannels: FeedEnabledChannel[];
   isPublic: boolean;
@@ -99,7 +98,6 @@ export type FeedConfig = {
 
 export type FeedConfigInput = {
   renderMode: FeedRenderMode;
-  killSwitchEnabled: boolean;
   maxTimelinePageSize: number;
   enabledChannels?: FeedEnabledChannel[];
 };

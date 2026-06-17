@@ -606,7 +606,6 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_submission_id ON skil
 CREATE TABLE IF NOT EXISTS feed_render_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   render_mode TEXT NOT NULL,
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
   -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
@@ -619,15 +618,16 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
 -- Add columns with guarded DDL for legacy DBs
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS singleton_key BOOLEAN DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS render_mode TEXT NOT NULL DEFAULT 'card_only';
-ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS max_timeline_page_size INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS feed_render_config DROP COLUMN IF EXISTS kill_switch_enabled;
 -- Seed default feed config row (idempotent)
-INSERT INTO feed_render_config (singleton_key, render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
-SELECT TRUE, 'card_only', FALSE, 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
+INSERT INTO feed_render_config (singleton_key, render_mode, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
+SELECT TRUE, 'card_only', 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
 WHERE NOT EXISTS (
   SELECT 1 FROM feed_render_config WHERE singleton_key IS TRUE
 );
@@ -1081,7 +1081,6 @@ CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20,
   max_call_duration_minutes INTEGER NOT NULL DEFAULT 45,
   quota_state TEXT NOT NULL DEFAULT 'green' CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   updated_by_user_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1092,9 +1091,10 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER NOT NULL DEFAULT 45;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS quota_state TEXT DEFAULT 'green';
-ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
 CREATE TABLE IF NOT EXISTS trusttransport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
@@ -1276,12 +1276,13 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_events (
 CREATE TABLE IF NOT EXISTS workforce_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   exports_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   report_week_timezone TEXT NOT NULL,
   report_week_start_dow INTEGER NOT NULL DEFAULT 0,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS kill_switch_enabled;
 CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
