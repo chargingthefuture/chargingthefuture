@@ -46,8 +46,16 @@ export type ComicReviewItem = {
   turnId: string;
   conversationId: string;
   askedByUserId: string;
+  // The asker's @username snapshotted when they asked, or null for older rows asked before this was
+  // captured. The dashboard shows @username when present and falls back to the user id otherwise.
+  askedByUsername: string | null;
   questionBody: string;
   draftBody: string;
+  // Whether a draft turn is attached to this item (`draft_turn_id` is non-null). False means no
+  // draft is attached yet — it may still be generating in the background, drafting was unavailable,
+  // or the question was safety-held — so the dashboard shows a "write the answer" state instead of
+  // presenting the question text as if it were a draft.
+  hasDraft: boolean;
   intent: string | null;
   nluConfidence: number | null;
   engine: ComicTurnEngine;

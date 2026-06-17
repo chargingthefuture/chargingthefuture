@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await routeComicMessage(gate.auth.userId, input);
+    const result = await routeComicMessage(gate.auth.userId, gate.auth.username ?? null, input);
 
     // No @comic mention → peer-to-peer message, the assistant does nothing.
     if (result.outcome === 'not_mentioned') {
