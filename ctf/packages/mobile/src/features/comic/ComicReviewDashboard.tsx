@@ -403,7 +403,7 @@ export const ComicReviewDashboard = () => {
                   ? selected.draftBody
                   : selected.safetyCategory
                     ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
-                    : 'No AI draft was generated — the drafting service was unavailable when this was asked. Use Edit & approve to write the answer.'}
+                    : 'No AI draft is attached yet — it may still be generating, or drafting was unavailable. Refresh in a moment, or use Edit & approve to write the answer.'}
               </Text>
             </View>
 

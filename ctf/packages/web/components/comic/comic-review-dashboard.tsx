@@ -167,9 +167,9 @@ export function ComicReviewDashboard() {
   // the reviewer author the answer.
   useEffect(() => {
     if (selected) {
-      // Seed the editor from a real AI draft so the owner can refine it. When there is no draft
-      // (drafting service was unavailable, or a safety-held question), start blank — never seed the
-      // box with the question text, which would otherwise look like an AI draft.
+      // Seed the editor from a real AI draft so the owner can refine it. When no draft is attached
+      // (still generating, drafting unavailable, or a safety-held question), start blank — never seed
+      // the box with the question text, which would otherwise look like an AI draft.
       setCorrectedBody(selected.hasDraft ? selected.draftBody : '');
       setEditing(false);
     }
@@ -436,7 +436,7 @@ export function ComicReviewDashboard() {
                       ? selected.draftBody
                       : selected.safetyCategory
                         ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
-                        : 'No AI draft was generated — the drafting service was unavailable when this was asked. Use Edit & approve to write the answer.'}
+                        : 'No AI draft is attached yet — it may still be generating, or drafting was unavailable. Refresh in a moment, or use Edit & approve to write the answer.'}
                   </div>
                 </div>
               )}

@@ -51,9 +51,10 @@ export type ComicReviewItem = {
   askedByUsername: string | null;
   questionBody: string;
   draftBody: string;
-  // Whether a real AI draft exists for this item. False means no draft was generated (the drafting
-  // service was unavailable, or the question was safety-held) — the dashboard then shows a
-  // "write the answer" state instead of presenting the question text as if it were a draft.
+  // Whether a draft turn is attached to this item (`draft_turn_id` is non-null). False means no
+  // draft is attached yet — it may still be generating in the background, drafting was unavailable,
+  // or the question was safety-held — so the dashboard shows a "write the answer" state instead of
+  // presenting the question text as if it were a draft.
   hasDraft: boolean;
   intent: string | null;
   nluConfidence: number | null;
