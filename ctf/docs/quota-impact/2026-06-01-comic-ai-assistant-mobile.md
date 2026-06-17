@@ -5,7 +5,7 @@
 - Feature/Change: Add the Android surfaces for the comic AI Assistant (@comic): answer and
   "Reviewing for safety" pending cards interleaved into the mobile activity feed, the single-field
   `@comic` composer, the first-use consent sheet, the answer rating row, and the owner Review &
-  Correction console. All wired to `/api/comic/*` (Postgres + polling).
+  Correction dashboard. All wired to `/api/comic/*` (Postgres + polling).
 - PR: #238
 - Owner: chargingthefuture
 - Date: 2026-06-01

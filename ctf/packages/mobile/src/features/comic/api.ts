@@ -127,7 +127,7 @@ export async function rateComicAnswer(turnId: string, rating: ComicAnswerRating)
   return (await res.json()) as ComicRateResult;
 }
 
-// --- Owner Review & Correction Console (admin-gated server-side) ---
+// --- Owner Review & Correction Dashboard (admin-gated server-side) ---
 
 export type ComicReviewItem = {
   reviewId: string;
@@ -152,7 +152,7 @@ export type ComicReviewResponse = {
   pagination: { page: number; pageSize: number; total: number };
 };
 
-// The review queue. Returns 403 for non-admins (the console then shows an access notice).
+// The review queue. Returns 403 for non-admins (the dashboard then shows an access notice).
 export async function fetchComicReviewQueue(): Promise<{ items: ComicReviewItem[]; forbidden: boolean }> {
   const res = await authedFetch(`${BASE}/review`);
   if (res.status === 401 || res.status === 403) {

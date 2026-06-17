@@ -1,6 +1,6 @@
 'use client';
 
-// ServiceCredits admin surface — the money core operator console. Composes the three
+// ServiceCredits admin surface — the money core operator dashboard. Composes the three
 // action panels (governance, treasury, disputes) into one page. Admin access is enforced
 // server-side by the page wrapper and by every API route; this shell only renders the
 // operator controls. Mobile-responsive: panels stack on phone widths, side-by-side on

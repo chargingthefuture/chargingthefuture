@@ -74,6 +74,7 @@ This document is the canonical source of truth for brand language across:
 - victims -> survivors (except legal or statutory contexts)
 - generic chat -> plugin-context phrasing (for example Chyme chat)
 - punch list -> remaining work (or task list)
+- console (as the name of an operator/admin screen) -> dashboard
 
 ## Prohibited Patterns
 
@@ -84,6 +85,11 @@ This document is the canonical source of truth for brand language across:
 - Borrowed industry jargon that adds no meaning. Do not use "punch list" — it is opaque
   construction-trade jargon; say "remaining work" or "task list". Applies to docs, code comments,
   PR/commit text, and inventories, not just user-facing copy.
+- Do not call an operator/admin screen a "console" — the app's word for such a screen is
+  "dashboard". This covers visible labels, comments, docs, and code identifiers (component, file,
+  and CSS class names). Exempt: the JavaScript `console.*` logging API, the literal `console`
+  service in the Formance stack, and third-party product names that are actually called a console
+  (for example the Neon Console). Enforced in chat by `.claude/hooks/check-no-pleasantries.mjs`.
 
 ## Canonical Capability Names (Public Surfaces)
 

@@ -10,7 +10,7 @@
 - Plugin Name: AI Assistant (`@comic`)
 - Service Key (lowercase, stable): `comic`
 - Owner Team: Social Platform (proposed)
-- Rollout Stage: Web UI delivered (asker stream + owner review console, design `9a4a1af`); Android parity deferred
+- Rollout Stage: Web UI delivered (asker stream + owner review dashboard, design `9a4a1af`); Android parity deferred
 
 ## 2) Canonical Profile Usage
 

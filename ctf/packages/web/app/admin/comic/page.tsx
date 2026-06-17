@@ -1,12 +1,12 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { ComicReviewConsole } from '../../../components/comic/comic-review-console';
+import { ComicReviewDashboard } from '../../../components/comic/comic-review-dashboard';
 
 export const dynamic = 'force-dynamic';
 
 // Owner Review & Correction Dashboard for the AI Assistant (@comic). Admin-gated server-side; the
 // client screen fetches the pending queue and resolves items via the admin /api/comic/review*
 // routes. This is the supervision surface that keeps unreviewed drafts away from survivors.
-export default async function ComicReviewConsolePage() {
+export default async function ComicReviewDashboardPage() {
   const decision = await evaluatePluginAccess({ requiredRoles: ['admin'] });
 
   if (!decision.allowed) {
@@ -34,5 +34,5 @@ export default async function ComicReviewConsolePage() {
     );
   }
 
-  return <ComicReviewConsole />;
+  return <ComicReviewDashboard />;
 }

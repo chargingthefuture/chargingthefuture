@@ -78,7 +78,7 @@ export function ContributionsAdminShell() {
         setCurrentCycle(pickCurrentCycle(cycles));
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'Could not load the admin console.');
+          setLoadError(e instanceof Error ? e.message : 'Could not load the admin dashboard.');
         }
       }
     }
@@ -234,7 +234,7 @@ export function ContributionsAdminShell() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 14, color: t.TITLE }}>Contributions</span>
           </div>
-          <div style={{ fontSize: 11, color: t.MUTED }}>Admin console</div>
+          <div style={{ fontSize: 11, color: t.MUTED }}>Admin dashboard</div>
         </div>
         <nav style={{ padding: '10px 8px', flex: 1 }}>
           {TABS.map(({ key, label }) => {
