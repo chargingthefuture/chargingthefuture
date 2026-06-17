@@ -536,9 +536,9 @@ async function seedFoundation(c) {
   await c.query(
     `INSERT INTO foundation_capacity_policies
      (singleton_key, max_active_threads_per_user, max_messages_per_minute,
-      max_searches_per_minute, quota_state, kill_switch_enabled, updated_by_user_id)
-     VALUES (true, 20, 20, 40, 'green', false, $1)
-     ON CONFLICT (singleton_key) DO UPDATE SET quota_state = 'green', kill_switch_enabled = false`,
+      max_searches_per_minute, quota_state, updated_by_user_id)
+     VALUES (true, 20, 20, 40, 'green', $1)
+     ON CONFLICT (singleton_key) DO UPDATE SET quota_state = 'green'`,
     [ADMIN],
   );
 
