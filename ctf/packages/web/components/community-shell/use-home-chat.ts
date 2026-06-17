@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HubJoinResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
+import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
 import type { ChatMessage, ComicAnswerRating, ComicStreamItem, ShellCurrentUser } from './shell-types';
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
@@ -436,12 +437,53 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [],
   );
 
+  // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
+  // one-tap way to "ask what you need" and get pointed at the right feature.
+  const starterPrompts = useMemo(() => conciergeStarterPrompts(5), []);
+
+  // Run a concierge ask: show the question as the member's own message, then an instant local reply
+  // that points at the best-matching feature (with an "Open X" button), or a gentle fall-back to the
+  // AI Assistant / community when nothing matches. Purely local — it does not post to the community
+  // and does not touch the @comic or peer-post paths.
+  const sendConciergeAsk = useCallback((promptText: string) => {
+    const text = promptText.trim();
+    if (!text) {
+      return;
+    }
+    const time = formatTimeLabel(new Date());
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const matches = resolveConcierge(text);
+    const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time };
+
+    const top = matches[0];
+    const second = matches[1];
+    const reply: ChatMessage = top
+      ? {
+        id: `concierge-a-${stamp}`,
+        from: 'hub',
+        text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
+        time,
+        actionLabel: `Open ${top.name} →`,
+        actionSlug: top.slug,
+      }
+      : {
+        id: `concierge-a-${stamp}`,
+        from: 'hub',
+        text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
+        time,
+      };
+
+    setMessages((previous) => mergeMessages(previous, [userMsg, reply]));
+  }, []);
+
   return {
     messages,
     comicItems,
     input,
     setInput,
     sendMessage,
+    sendConciergeAsk,
+    starterPrompts,
     rateComicAnswer,
     composerMentionsComic,
     consentModalOpen,
