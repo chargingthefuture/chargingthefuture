@@ -10,6 +10,12 @@ import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, newIdempotencyKey, type BurnResponse, type MintGrantResponse } from './sca-shared';
 
+// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
 function useGovernanceForm() {
   const [targetUserId, setTargetUserId] = useState('');
   const [amount, setAmount] = useState('');
@@ -77,10 +83,21 @@ export function ServiceCreditsGovernancePanel() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg border bg-card p-5">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Governance</h2>
-        <p className="text-sm text-muted-foreground">
+    <section
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: SURFACE,
+        padding: 18,
+        marginBottom: 16,
+      }}
+    >
+      <header>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Governance</h2>
+        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
           Mint new credits to a member or burn credits from a member. Both require a governance ticket
           reference and are written to the audit trail.
         </p>
@@ -88,9 +105,9 @@ export function ServiceCreditsGovernancePanel() {
 
       <Feedback error={error} notice={notice} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Mint grant</h3>
+      <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Mint grant</h3>
           <Field label="Member user ID" value={mint.targetUserId} onChange={mint.setTargetUserId} placeholder="user_…" />
           <Field label="Amount (credits)" type="number" value={mint.amount} onChange={mint.setAmount} placeholder="0" />
           <Field label="Governance ticket ID" value={mint.ticket} onChange={mint.setTicket} placeholder="GOV-…" />
@@ -110,8 +127,8 @@ export function ServiceCreditsGovernancePanel() {
           />
         </div>
 
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Burn</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Burn</h3>
           <Field label="Member user ID" value={burn.targetUserId} onChange={burn.setTargetUserId} placeholder="user_…" />
           <Field label="Amount (credits)" type="number" value={burn.amount} onChange={burn.setAmount} placeholder="0" />
           <Field label="Governance ticket ID" value={burn.ticket} onChange={burn.setTicket} placeholder="GOV-…" />

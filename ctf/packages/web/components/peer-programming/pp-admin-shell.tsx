@@ -1,8 +1,7 @@
 'use client';
 
-// Peer Programming admin surface. Replaces the former plain-text stub with a real,
-// mobile-responsive admin UI consistent with the other /admin/{plugin} screens
-// (generic admin aesthetic; see whatworks / skills-hunt admin shells).
+// Peer Programming admin surface. Dark admin design system (rule 131), mirroring the
+// designed admin shells (see unlock-admin-shell). Mobile-responsive single column.
 //
 // Binds only endpoints that exist today:
 //   - GET  /api/peer-programming/admin/topics          (current published topic)
@@ -10,11 +9,21 @@
 //   - POST /api/peer-programming/admin/assignments/run (run weekly cohort assignment)
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Code2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { AssignmentRunResult, PeerProgrammingTopic } from './pp-admin-shared';
 import { ppAdminMutate } from './pp-admin-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
+
+// Admin design tokens (shared admin look from the design system). Peer Programming accent is mint.
+const COLOR = '#6EE7B7';
+const BG = '#0F1117';
+const PANEL = '#0D0F14';
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
 
 // Monday (UTC) of the current week — matches the server's getWeekStartDate so the
 // form defaults to the week the room actually reads.
@@ -122,68 +131,158 @@ export function PeerProgrammingAdminShell() {
   );
 
   return (
-    <main className={`mx-auto max-w-4xl space-y-6 ${isMobile ? 'px-4 py-6' : 'px-6 py-10'}`}>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Peer Programming Admin</h1>
-        <p className="text-sm text-muted-foreground">
-          Set the weekly topic guidance and run cohort assignment for this week&rsquo;s active
-          members.
-        </p>
-        <p className="text-sm">
-          <Link className="underline underline-offset-4" href="/apps/peer-programming">
-            Open the cohort room
+    <div
+      style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}
+    >
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 48px' }}>
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '14px 16px',
+            borderRadius: 12,
+            background: PANEL,
+            border: `1px solid ${BORDER}`,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 9,
+              background: `${COLOR}20`,
+              border: `1px solid ${COLOR}35`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Code2 size={18} color={COLOR} />
+          </div>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>Peer Programming Admin</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>Weekly topic &amp; cohort assignment</div>
+          </div>
+          <span
+            style={{
+              marginLeft: 'auto',
+              padding: '3px 9px',
+              borderRadius: 6,
+              background: 'rgba(99,102,241,0.15)',
+              border: '1px solid rgba(99,102,241,0.3)',
+              fontSize: 11,
+              color: '#6366F1',
+              fontWeight: 700,
+            }}
+          >
+            ADMIN
+          </span>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <Link
+            href="/apps/peer-programming"
+            style={{ fontSize: 13, fontWeight: 600, color: COLOR, textDecoration: 'none' }}
+          >
+            Open the cohort room →
           </Link>
-        </p>
-      </header>
+        </div>
 
-      {error ? (
-        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
-          {notice}
-        </p>
-      ) : null}
+        {error ? (
+          <div
+            role="alert"
+            style={{
+              marginBottom: 12,
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              color: '#EF4444',
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
+        ) : null}
+        {notice ? (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: 'rgba(34,197,94,0.1)',
+              border: '1px solid rgba(34,197,94,0.3)',
+              color: '#22C55E',
+              fontSize: 13,
+            }}
+          >
+            {notice}
+          </div>
+        ) : null}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <>
-          <section className="space-y-4 rounded-lg border bg-card p-5">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold">Weekly topic</h2>
-              {topic ? (
-                <p className="text-sm text-muted-foreground">
-                  Current published topic: <span className="font-medium">{topic.title}</span> (week
-                  of {topic.weekStartDate}, status {topic.status}).
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No topic is published for the current week. Fill in the form to set one.
-                </p>
-              )}
-            </div>
-            <PeerProgrammingAdminTopicForm
-              topic={topic}
-              defaultWeekStart={defaultWeekStart}
-              busy={savingTopic}
-              isMobile={isMobile}
-              onSubmit={submitTopic}
-            />
-          </section>
+        {loading ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14 }}>
+            Loading…
+          </div>
+        ) : (
+          <>
+            <section
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                borderRadius: 12,
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <div style={{ marginBottom: 12 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: 0 }}>Weekly topic</h2>
+                {topic ? (
+                  <p style={{ fontSize: 12, color: SUBTLE, marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>
+                    Current published topic:{' '}
+                    <span style={{ color: TEXT, fontWeight: 600 }}>{topic.title}</span> (week of{' '}
+                    {topic.weekStartDate}, status {topic.status}).
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 12, color: SUBTLE, marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>
+                    No topic is published for the current week. Fill in the form to set one.
+                  </p>
+                )}
+              </div>
+              <PeerProgrammingAdminTopicForm
+                topic={topic}
+                defaultWeekStart={defaultWeekStart}
+                busy={savingTopic}
+                isMobile={isMobile}
+                onSubmit={submitTopic}
+              />
+            </section>
 
-          <section className="space-y-4 rounded-lg border bg-card p-5">
-            <h2 className="text-lg font-semibold">Weekly cohort assignment</h2>
-            <PeerProgrammingAdminAssignments
-              busy={runningAssignment}
-              lastResult={lastRun}
-              onRun={runAssignment}
-            />
-          </section>
-        </>
-      )}
-    </main>
+            <section
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                borderRadius: 12,
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 12px' }}>
+                Weekly cohort assignment
+              </h2>
+              <PeerProgrammingAdminAssignments
+                busy={runningAssignment}
+                lastResult={lastRun}
+                onRun={runAssignment}
+              />
+            </section>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

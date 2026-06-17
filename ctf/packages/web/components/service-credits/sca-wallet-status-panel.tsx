@@ -8,6 +8,12 @@ import { useState } from 'react';
 import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, type WalletStatusResponse } from './sca-shared';
 
+// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
 export function ServiceCreditsWalletStatusPanel() {
   const [targetUserId, setTargetUserId] = useState('');
   const [reason, setReason] = useState('');
@@ -40,22 +46,33 @@ export function ServiceCreditsWalletStatusPanel() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg border bg-card p-5">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Wallet freeze</h2>
-        <p className="text-sm text-muted-foreground">
+    <section
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: SURFACE,
+        padding: 18,
+        marginBottom: 16,
+      }}
+    >
+      <header>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Wallet freeze</h2>
+        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
           Freezing blocks all spending; use for a risk-flagged account. Unfreeze to restore.
         </p>
       </header>
 
       <Feedback error={error} notice={notice} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <Field label="Member user ID" value={targetUserId} onChange={setTargetUserId} placeholder="user_…" />
         <Field label="Reason (optional)" value={reason} onChange={setReason} placeholder="Why this changed" />
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <ConfirmAction
           label="Freeze wallet"
           tone="danger"
