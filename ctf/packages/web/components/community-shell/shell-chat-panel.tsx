@@ -116,6 +116,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     input,
     setInput,
     sendMessage,
+    sendConciergeAsk,
+    starterPrompts,
     rateComicAnswer,
     composerMentionsComic,
     consentModalOpen,
@@ -208,6 +210,20 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
               Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.
             </div>
+            {starterPrompts.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                {starterPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className={styles.chatActionBtn}
+                    onClick={() => sendConciergeAsk(prompt)}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
