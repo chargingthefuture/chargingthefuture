@@ -90,8 +90,17 @@ export function resolveConcierge(text: string): ConciergeMatch[] {
   return scored.filter((m, index) => index === 0 || isCloseRunnerUp(topScore, m.score)).slice(0, CONCIERGE_MAX_MATCHES);
 }
 
-// The example questions from the intent table, for rendering tappable starter prompts on an empty
-// home chat (the one-tap "ask" path). Kept small and ordered by the table.
+// Featured starters for the empty home chat — empowerment-forward (get a place, work, a ride,
+// connection, a repair), per the reframe (2026-06-17): lead with getting-needs-met, not with
+// "log it" or "breathe". ClickLog / Mood / GentlePulse are still resolvable when someone explicitly
+// asks for them, but they are not featured as starters.
+const FEATURED_STARTER_SLUGS = ['lighthouse', 'workforce', 'trusttransport', 'chyme', 'directory'];
+
+// The example questions for tappable starter prompts on an empty home chat (the one-tap "ask" path).
 export function conciergeStarterPrompts(limit = 5): string[] {
-  return CONCIERGE_INTENTS.slice(0, limit).map((intent) => intent.starter);
+  const bySlug = new Map(CONCIERGE_INTENTS.map((intent) => [intent.slug, intent.starter]));
+  const featured = FEATURED_STARTER_SLUGS
+    .map((slug) => bySlug.get(slug))
+    .filter((starter): starter is string => typeof starter === 'string');
+  return featured.slice(0, limit);
 }

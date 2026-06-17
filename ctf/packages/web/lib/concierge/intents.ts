@@ -69,13 +69,17 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
   {
     slug: 'clicklog',
     name: 'ClickLog',
-    blurb: 'Log what happened and check in when you are safe.',
+    blurb: 'Keep a private record and check in when you are safe.',
+    // Narrow on purpose. ClickLog is for someone who EXPLICITLY wants to record something or set a
+    // safety check-in — it is NOT the route for "I'm being followed" descriptions. Reframe decision
+    // (2026-06-17): logging is not how the app solves a harassment problem, so surveillance phrasing
+    // is intentionally absent here; such messages fall through to the Hub (ask a person) or a
+    // getting-needs-met feature instead.
     keywords: [
-      'log it', 'log what happened', 'keep a record', 'document', 'incident', 'report it',
-      'something happened', 'check in', 'safety check', 'followed me', 'stalking', 'being followed',
-      'harassed', 'they followed', 'write it down', 'evidence',
+      'log it', 'log what happened', 'keep a record', 'want a record', 'write it down',
+      'document it', 'safety check-in', 'check in when i get home',
     ],
-    starter: 'Something happened on my walk home. I want a record, but I don’t want to call police.',
+    starter: 'I want a private record of what happened — and a check-in for when I get home.',
   },
   {
     slug: 'gentlepulse',
