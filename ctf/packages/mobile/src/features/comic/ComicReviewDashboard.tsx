@@ -13,11 +13,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchComicReviewQueue, resolveComicReview } from './api';
 import type { ComicReviewItem, ComicReviewResolution } from './api';
 
-// Owner Review & Correction Console (mobile). Matches the locked MobileAIReviewConsole /
+// Owner Review & Correction Dashboard (mobile). Matches the locked MobileAIReviewConsole /
 // MobileAIReviewConsoleEmpty mockups. Admin-gated server-side; a non-admin sees an access notice.
 // Provenance shown is real only (engine / intent / safety category / the real nlu confidence) —
 // the mockup's fabricated "Sources" list and hardcoded confidence buckets are intentionally not
-// reproduced, matching the web console (no fabricated source documents).
+// reproduced, matching the web dashboard (no fabricated source documents).
 const ACCENT = '#0EA5E9';
 const ACCENT_LIGHT = '#7DD3FC';
 const BG = '#0F1117';
@@ -48,7 +48,7 @@ function confidenceLabel(value: number | null): string {
 
 type ConfidenceBand = { label: string; color: string; pct: number | null; low: boolean };
 
-// Map the (possibly null) NLU confidence to a band, mirroring the web console. Confidence is no
+// Map the (possibly null) NLU confidence to a band, mirroring the web dashboard. Confidence is no
 // longer populated, so it is typically null — surfaced honestly rather than a fabricated number.
 function confidenceBand(value: number | null): ConfidenceBand {
   if (value === null) return { label: 'Not yet scored', color: ACCENT_LIGHT, pct: null, low: false };
@@ -93,14 +93,14 @@ function ConfidenceCard({ item }: { item: ComicReviewItem }) {
   );
 }
 
-function ConsoleHeader({ count, allClear }: { count: number; allClear: boolean }) {
+function DashboardHeader({ count, allClear }: { count: number; allClear: boolean }) {
   return (
     <View style={styles.header}>
       <View style={styles.headerIcon}>
         <Ionicons name="shield-checkmark" size={17} color={ACCENT} />
       </View>
       <View style={styles.headerText}>
-        <Text style={styles.headerTitle}>Review Console</Text>
+        <Text style={styles.headerTitle}>Review Dashboard</Text>
         <Text style={styles.headerSub}>AI Assistant answers awaiting review</Text>
       </View>
       <View style={[styles.countPill, allClear ? styles.countPillClear : null]}>
@@ -111,10 +111,10 @@ function ConsoleHeader({ count, allClear }: { count: number; allClear: boolean }
   );
 }
 
-function EmptyConsole() {
+function EmptyDashboard() {
   return (
     <View style={styles.screen}>
-      <ConsoleHeader count={0} allClear />
+      <DashboardHeader count={0} allClear />
       <View style={styles.emptyWrap}>
         <View style={styles.emptyIcon}>
           <Ionicons name="checkmark-circle" size={38} color="#22C55E" />
@@ -160,7 +160,7 @@ function ProvenanceRow({ item }: { item: ComicReviewItem }) {
   );
 }
 
-export const ComicReviewConsole = () => {
+export const ComicReviewDashboard = () => {
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
@@ -255,7 +255,7 @@ export const ComicReviewConsole = () => {
   if (loading) {
     return (
       <View style={styles.screen}>
-        <ConsoleHeader count={0} allClear={false} />
+        <DashboardHeader count={0} allClear={false} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={ACCENT} />
         </View>
@@ -266,10 +266,10 @@ export const ComicReviewConsole = () => {
   if (forbidden) {
     return (
       <View style={styles.screen}>
-        <ConsoleHeader count={0} allClear={false} />
+        <DashboardHeader count={0} allClear={false} />
         <View style={styles.center}>
           <Ionicons name="lock-closed-outline" size={32} color={SUBTLE} />
-          <Text style={styles.noticeText}>The review console is available to owners only.</Text>
+          <Text style={styles.noticeText}>The review dashboard is available to owners only.</Text>
         </View>
       </View>
     );
@@ -278,7 +278,7 @@ export const ComicReviewConsole = () => {
   if (error) {
     return (
       <View style={styles.screen}>
-        <ConsoleHeader count={0} allClear={false} />
+        <DashboardHeader count={0} allClear={false} />
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable style={styles.retryBtn} onPress={load}>
@@ -290,12 +290,12 @@ export const ComicReviewConsole = () => {
   }
 
   if (items.length === 0 || !selected) {
-    return <EmptyConsole />;
+    return <EmptyDashboard />;
   }
 
   return (
     <View style={styles.screen}>
-      <ConsoleHeader count={items.length} allClear={false} />
+      <DashboardHeader count={items.length} allClear={false} />
 
       <ScrollView
         horizontal

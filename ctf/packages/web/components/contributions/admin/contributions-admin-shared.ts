@@ -1,4 +1,4 @@
-// Shared types, API helpers, and the credit-valuation mapping for the Contributions admin console.
+// Shared types, API helpers, and the credit-valuation mapping for the Contributions admin dashboard.
 
 import type {
   ContributionStatus,

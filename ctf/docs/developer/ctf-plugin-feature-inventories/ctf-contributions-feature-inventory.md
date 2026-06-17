@@ -232,7 +232,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   dynamic route's full-Unlock default) with components under `components/contributions/` — signed-out
   public shell, loading, main (drive progress + the three paths + thank-you note + history), the
   post-submit confirmation (Signal URL inline), and the empty-history state. The owner-only admin
-  console is at `app/admin/contributions/page.tsx` with components under
+  dashboard is at `app/admin/contributions/page.tsx` with components under
   `components/contributions/admin/` — queue, drive management, settings. The app-wide fundraiser
   banner (`components/contributions/contributions-banner.tsx`) is integrated non-blocking at the top
   of the Hub content area for signed-in members. Desktop and phone-width layouts are both built
@@ -270,7 +270,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   framed as a thank-you, not a contract.)
 - The mobile admin screen mirrors the day-to-day review path (confirm/reject) and shows drive and
   settings as read-only summaries; creating/editing a drive and editing the config knobs is done on
-  the web admin console. The GitHub-star brand icon is rendered with lucide's `Star` (the brand
+  the web admin dashboard. The GitHub-star brand icon is rendered with lucide's `Star` (the brand
   mark was dropped in the app's lucide-react version).
 - The confirmed seed row is display-only (no ledger event behind it); harmless in demo data,
   but anyone reconciling seed data against the credits ledger should expect that one-row gap.
@@ -288,7 +288,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 - 2026-06-10: UI build + two owner-requested backend rules. Shipped the full Contributions UI on
   web and Android from the approved design mockups (issue #393): the member surfaces (signed-out
   public shell, loading, main drive/contribute/history, post-submit confirmation, empty history) at
-  `app/apps/contributions` gating on `any_authenticated`; the owner-only admin console (queue, drive
+  `app/apps/contributions` gating on `any_authenticated`; the owner-only admin dashboard (queue, drive
   management, settings) at `app/admin/contributions`; and the app-wide, non-blocking fundraiser
   banner integrated into the Hub shell. Built the matching Android feature at
   `packages/mobile/src/features/contributions/`. Flipped the registry entry to `isVisible: true`,

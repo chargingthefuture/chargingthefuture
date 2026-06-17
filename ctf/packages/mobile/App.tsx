@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
-import { ComicReviewConsole } from './src/features/comic';
+import { ComicReviewDashboard } from './src/features/comic';
 import { HubHome } from './src/features/hub';
 import { DirectoryList, AdminDirectory } from './src/features/directory';
 import { Feed } from './src/features/feed';
@@ -173,7 +173,7 @@ function AppShell() {
       case 'account-data':
         return <AccountData />;
       case 'comic-review':
-        return <ComicReviewConsole />;
+        return <ComicReviewDashboard />;
       case 'peer-programming-admin':
         return <AdminPeerProgramming />;
       case 'socketrelay-admin':

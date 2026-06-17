@@ -9,12 +9,12 @@ auditing, designing, or building any `/admin` surface.
 ## The admin model (what admin is, and is not)
 
 1. The app's admin model is: a **thin `/admin` landing** — a directory of cards that link to each
-   plugin's admin page — then **one dedicated admin page per plugin**, plus the **AI Review Console**
+   plugin's admin page — then **one dedicated admin page per plugin**, plus the **AI Review Dashboard**
    at `/admin/comic` (approve / edit / reject AI Assistant answers).
 2. There is **no "Admin Hub" / owner command-centre / everything-at-a-glance dashboard**, on desktop or
    mobile. The owner rejected it. Do not build one, and do not re-introduce the `MobileAdminHub` family
    or an "AI queue" tile. Platform-health numbers live in the **Weekly Performance** admin; AI answer
-   approvals live in the **AI Review Console**. Nowhere else.
+   approvals live in the **AI Review Dashboard**. Nowhere else.
 3. Admins reach admin pages from the app via the **Admin** entry in the Hub icon rail (desktop) and the
    Hub nav-drawer footer (mobile), both pointing at `/admin`. The entry is shown only to users whose
    role is `admin`. Every `/admin/*` route is server-role-gated regardless of what the nav shows.
@@ -35,7 +35,7 @@ auditing, designing, or building any `/admin` surface.
 
 - **Mobile** admin mockups exist for ~every plugin.
 - **Desktop** admin mockups exist for only **Contributions, Directory, GDP Rate, SkillsHunt**, plus the
-  **AI Review Console** (desktop + mobile).
+  **AI Review Dashboard** (desktop + mobile).
 - The **`/admin` landing** and the **Feed + Announcements** admin have **no mockup** (mobile or desktop).
 - The gap (missing desktop admin mockups + the admin landing + Feed admin) is tracked in GitHub issue
   **#473**.

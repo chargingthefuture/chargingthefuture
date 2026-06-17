@@ -2,7 +2,7 @@
 // MobileContributionsAdmin.tsx. Owner-only on the server; the API returns 401/403 to non-admins,
 // which surfaces here as a forbidden notice. Three tabs: Queue (review confirm/reject with the
 // resulting-SC helper), Drive (read-only summary of the current cycle), Settings (read-only view
-// of the credit knobs). The richer create/edit flows live on the web admin console; this mirrors
+// of the credit knobs). The richer create/edit flows live on the web admin dashboard; this mirrors
 // the review path one-to-one, which is the day-to-day admin action on mobile.
 
 import React, { useEffect, useState } from 'react';
@@ -158,7 +158,7 @@ export const ContributionsAdmin: React.FC = () => {
         if (msg.includes('403') || msg.includes('401') || msg.toLowerCase().includes('forbidden')) {
           setForbidden(true);
         } else {
-          setError(msg || 'Could not load the admin console.');
+          setError(msg || 'Could not load the admin dashboard.');
         }
       }
     }
@@ -182,7 +182,7 @@ export const ContributionsAdmin: React.FC = () => {
     return (
       <View style={[st.fill, st.center]}>
         <Text style={st.headerTitle}>Admin only</Text>
-        <Text style={[st.bodyText, { textAlign: 'center', marginTop: 8 }]}>This console is available to the platform owner only.</Text>
+        <Text style={[st.bodyText, { textAlign: 'center', marginTop: 8 }]}>This dashboard is available to the platform owner only.</Text>
       </View>
     );
   }
@@ -242,7 +242,7 @@ export const ContributionsAdmin: React.FC = () => {
               <Text style={st.infoRow}>GitHub stars goal: {cycle.githubStarGoal}</Text>
             </View>
           ) : (
-            <Text style={st.bodyText}>No active drive. Start one from the web admin console.</Text>
+            <Text style={st.bodyText}>No active drive. Start one from the web admin dashboard.</Text>
           )}
         </ScrollView>
       )}
@@ -260,7 +260,7 @@ export const ContributionsAdmin: React.FC = () => {
           ) : (
             <Text style={st.bodyText}>Settings unavailable.</Text>
           )}
-          <Text style={[st.bodyText, { marginTop: 12 }]}>Edit these values and the Signal instructions from the web admin console.</Text>
+          <Text style={[st.bodyText, { marginTop: 12 }]}>Edit these values and the Signal instructions from the web admin dashboard.</Text>
         </ScrollView>
       )}
     </View>

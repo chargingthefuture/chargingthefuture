@@ -6,7 +6,7 @@ import {
   ShieldCheck, Sparkles, X,
 } from 'lucide-react';
 import type { ComicReviewItem } from '../../lib/comic/types';
-import styles from './comic-review-console.module.css';
+import styles from './comic-review-dashboard.module.css';
 
 type ReviewListResponse = {
   ok: true;
@@ -82,7 +82,7 @@ const REVIEWER_GUIDANCE = [
   'Reject and escalate anything involving immediate danger.',
 ];
 
-export function ComicReviewConsole() {
+export function ComicReviewDashboard() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -229,7 +229,7 @@ export function ComicReviewConsole() {
   }
 
   return (
-    <div className={`${styles.console} ${selected ? styles.consoleDetail : styles.consoleList}`}>
+    <div className={`${styles.dashboard} ${selected ? styles.dashboardDetail : styles.dashboardList}`}>
       {/* Icon rail */}
       <aside className={styles.iconRail}>
         <div className={styles.iconRailLogo} aria-hidden="true">
