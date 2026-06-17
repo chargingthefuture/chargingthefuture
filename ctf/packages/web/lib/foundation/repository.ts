@@ -311,9 +311,9 @@ async function evaluateRateLimit(client: PoolClient, input: {
 
 async function assertConnectionThreadCapacity(client: PoolClient, actorUserId: string): Promise<void> {
   const [capacity, actorThreadCount] = await Promise.all([
-    client.query<{ max_active_threads_per_user: number; kill_switch_enabled: boolean }>(
+    client.query<{ max_active_threads_per_user: number }>(
       `
-        SELECT max_active_threads_per_user, kill_switch_enabled
+        SELECT max_active_threads_per_user
         FROM foundation_capacity_policies
         WHERE singleton_key = TRUE
       `,
@@ -328,10 +328,6 @@ async function assertConnectionThreadCapacity(client: PoolClient, actorUserId: s
       [actorUserId],
     ),
   ]);
-
-  if (capacity.rows[0]?.kill_switch_enabled) {
-    throw new Error('policy_denied');
-  }
 
   const maxActiveThreads = Number(capacity.rows[0]?.max_active_threads_per_user ?? 20);
   const activeThreads = parseCountRow(actorThreadCount.rows);
@@ -1235,7 +1231,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
     max_quote_transitions_per_minute: number;
     max_call_duration_minutes: number;
     quota_state: 'green' | 'yellow' | 'orange' | 'red';
-    kill_switch_enabled: boolean;
     updated_at: Date;
   }>(
     `
@@ -1246,7 +1241,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
         max_quote_transitions_per_minute,
         max_call_duration_minutes,
         quota_state,
-        kill_switch_enabled,
         updated_at
       FROM foundation_capacity_policies
       WHERE singleton_key = TRUE
@@ -1263,7 +1257,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
       maxQuoteTransitionsPerMinute: 20,
       maxCallDurationMinutes: 45,
       quotaState: 'green',
-      killSwitchEnabled: false,
       updatedAtIso: new Date().toISOString(),
     };
   }
@@ -1275,7 +1268,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
     maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
     maxCallDurationMinutes: row.max_call_duration_minutes,
     quotaState: row.quota_state,
-    killSwitchEnabled: row.kill_switch_enabled,
     updatedAtIso: toIso(row.updated_at),
   };
 }
@@ -1288,7 +1280,6 @@ export async function updateCapacityPolicy(input: {
   maxQuoteTransitionsPerMinute: number;
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
-  killSwitchEnabled: boolean;
 }): Promise<FoundationCapacityPolicy> {
   const updated = await queryDb<{
     max_active_threads_per_user: number;
@@ -1297,14 +1288,13 @@ export async function updateCapacityPolicy(input: {
     max_quote_transitions_per_minute: number;
     max_call_duration_minutes: number;
     quota_state: 'green' | 'yellow' | 'orange' | 'red';
-    kill_switch_enabled: boolean;
     updated_at: Date;
   }>(
     `
       INSERT INTO foundation_capacity_policies
-        (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, kill_switch_enabled, updated_by_user_id)
+        (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
       VALUES
-        (TRUE, $1, $2, $3, $4, $5, $6, $7, $8)
+        (TRUE, $1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (singleton_key)
       DO UPDATE SET
         max_active_threads_per_user = EXCLUDED.max_active_threads_per_user,
@@ -1313,7 +1303,6 @@ export async function updateCapacityPolicy(input: {
         max_quote_transitions_per_minute = EXCLUDED.max_quote_transitions_per_minute,
         max_call_duration_minutes = EXCLUDED.max_call_duration_minutes,
         quota_state = EXCLUDED.quota_state,
-        kill_switch_enabled = EXCLUDED.kill_switch_enabled,
         updated_by_user_id = EXCLUDED.updated_by_user_id,
         updated_at = NOW()
       RETURNING
@@ -1323,7 +1312,6 @@ export async function updateCapacityPolicy(input: {
         max_quote_transitions_per_minute,
         max_call_duration_minutes,
         quota_state,
-        kill_switch_enabled,
         updated_at
     `,
     [
@@ -1333,7 +1321,6 @@ export async function updateCapacityPolicy(input: {
       input.maxQuoteTransitionsPerMinute,
       input.maxCallDurationMinutes,
       input.quotaState,
-      input.killSwitchEnabled,
       input.actorUserId,
     ],
   );
@@ -1346,7 +1333,6 @@ export async function updateCapacityPolicy(input: {
     maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
     maxCallDurationMinutes: row.max_call_duration_minutes,
     quotaState: row.quota_state,
-    killSwitchEnabled: row.kill_switch_enabled,
     updatedAtIso: toIso(row.updated_at),
   };
 }

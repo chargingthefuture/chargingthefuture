@@ -11,7 +11,6 @@ type ConfigBody = Partial<FeedConfigInput>;
 function parseBody(body: ConfigBody): FeedConfigInput {
   return {
     renderMode: body.renderMode === 'card_toast' ? 'card_toast' : 'card_only',
-    killSwitchEnabled: Boolean(body.killSwitchEnabled),
     maxTimelinePageSize: Number(body.maxTimelinePageSize ?? 50),
     enabledChannels: Array.isArray(body.enabledChannels)
       ? body.enabledChannels.filter(

@@ -10,7 +10,6 @@ const API_ROOT = '/api/workforce';
 
 export type WorkforceConfig = {
   exportsEnabled: boolean;
-  killSwitchEnabled: boolean;
   reportWeekTimezone: string;
   reportWeekStartDow: number;
 };

@@ -73,7 +73,6 @@ export type WorkforceAnnouncementInput = {
 
 export type WorkforceConfig = {
   exportsEnabled: boolean;
-  killSwitchEnabled: boolean;
   reportWeekTimezone: string;
   reportWeekStartDow: number;
   updatedByUserId: string;
@@ -82,7 +81,6 @@ export type WorkforceConfig = {
 
 export type WorkforceConfigInput = {
   exportsEnabled: boolean;
-  killSwitchEnabled: boolean;
   reportWeekTimezone: string;
   reportWeekStartDow: number;
 };

@@ -83,7 +83,6 @@ export function FoundationAdminShell({
     maxQuoteTransitionsPerMinute: policy.maxQuoteTransitionsPerMinute,
     maxCallDurationMinutes: policy.maxCallDurationMinutes,
     quotaState: policy.quotaState,
-    killSwitchEnabled: policy.killSwitchEnabled,
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -165,21 +164,6 @@ export function FoundationAdminShell({
                 );
               })}
             </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: form.killSwitchEnabled ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${form.killSwitchEnabled ? 'rgba(239,68,68,0.3)' : BORDER}`, marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Kill switch</div>
-              <div style={{ fontSize: 12, color: SUBTLE }}>Pauses Foundation activity when enabled.</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setForm((prev) => ({ ...prev, killSwitchEnabled: !prev.killSwitchEnabled }))}
-              aria-pressed={form.killSwitchEnabled}
-              style={{ padding: '6px 14px', borderRadius: 8, background: form.killSwitchEnabled ? '#EF4444' : 'transparent', border: `1px solid ${form.killSwitchEnabled ? '#EF4444' : BORDER}`, color: form.killSwitchEnabled ? '#fff' : SUBTLE, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-            >
-              {form.killSwitchEnabled ? 'Enabled' : 'Disabled'}
-            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>

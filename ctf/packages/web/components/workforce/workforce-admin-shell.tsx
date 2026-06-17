@@ -92,7 +92,6 @@ export function WorkforceAdminShell({
   const [tab, setTab] = useState<Tab>('overview');
   const [config, setConfig] = useState({
     exportsEnabled: initialConfig.exportsEnabled,
-    killSwitchEnabled: initialConfig.killSwitchEnabled,
     reportWeekTimezone: initialConfig.reportWeekTimezone,
     reportWeekStartDow: initialConfig.reportWeekStartDow,
   });
@@ -166,7 +165,6 @@ export function WorkforceAdminShell({
         <div style={{ padding: '16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Config</div>
           <ToggleRow label="Exports enabled" hint="Allow report exports (execution still deferred)." value={config.exportsEnabled} onChange={(v) => setConfig((c) => ({ ...c, exportsEnabled: v }))} />
-          <ToggleRow label="Kill switch" hint="Pauses Workforce processing when on." value={config.killSwitchEnabled} onChange={(v) => setConfig((c) => ({ ...c, killSwitchEnabled: v }))} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
             <label style={{ display: 'block' }}>
               <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Report week timezone</span>

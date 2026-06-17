@@ -41,7 +41,6 @@ import type {
 
 type FeedConfigRow = {
   render_mode: 'card_only' | 'card_toast';
-  kill_switch_enabled: boolean;
   max_timeline_page_size: number;
   enabled_channels: unknown;
   is_public: boolean;
@@ -254,7 +253,6 @@ function mapAnnouncement(row: AnnouncementRow): Announcement {
 function mapFeedConfig(row: FeedConfigRow): FeedConfig {
   return {
     renderMode: row.render_mode,
-    killSwitchEnabled: row.kill_switch_enabled,
     maxTimelinePageSize: row.max_timeline_page_size,
     enabledChannels: normalizeEnabledChannels(row.enabled_channels),
     isPublic: row.is_public ?? true,
@@ -518,7 +516,7 @@ export function validateFeedConfigInput(input: FeedConfigInput): boolean {
   const channelsAllowed = !input.enabledChannels
     || input.enabledChannels.every((channel: string) => FEED_ALLOWED_CHANNELS.includes(channel as FeedEnabledChannel));
 
-  return renderModeAllowed && typeof input.killSwitchEnabled === 'boolean' && maxPageSizeAllowed && channelsAllowed;
+  return renderModeAllowed && maxPageSizeAllowed && channelsAllowed;
 }
 
 export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): boolean {
@@ -559,7 +557,7 @@ export function validateFeedCommunityReplyBody(body: string): boolean {
 export async function getFeedConfig(): Promise<FeedConfig> {
   const result = await queryDb<FeedConfigRow>(
     `
-      SELECT render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
+      SELECT render_mode, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
       FROM feed_render_config
       WHERE singleton_key = TRUE
       LIMIT 1
@@ -580,15 +578,14 @@ export async function updateFeedConfig(actorId: string, input: FeedConfigInput):
       UPDATE feed_render_config
       SET
         render_mode = $1,
-        kill_switch_enabled = $2,
-        max_timeline_page_size = $3,
-        enabled_channels = $4::jsonb,
-        updated_by_user_id = $5,
+        max_timeline_page_size = $2,
+        enabled_channels = $3::jsonb,
+        updated_by_user_id = $4,
         updated_at = NOW()
       WHERE singleton_key = TRUE
-      RETURNING render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
+      RETURNING render_mode, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
     `,
-    [input.renderMode, input.killSwitchEnabled, input.maxTimelinePageSize, JSON.stringify(enabledChannels), actorId],
+    [input.renderMode, input.maxTimelinePageSize, JSON.stringify(enabledChannels), actorId],
   );
 
   if (result.rows.length === 0) {
@@ -607,7 +604,7 @@ export async function listFeedTimeline(
   return withDbTransaction(async (client) => {
     const config = await client.query<FeedConfigRow>(
       `
-        SELECT render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
+        SELECT render_mode, max_timeline_page_size, enabled_channels, is_public, updated_by_user_id, updated_at
         FROM feed_render_config
         WHERE singleton_key = TRUE
         LIMIT 1
@@ -615,16 +612,6 @@ export async function listFeedTimeline(
     );
 
     const resolvedConfig = config.rows[0] ? mapFeedConfig(config.rows[0]) : null;
-    if (resolvedConfig?.killSwitchEnabled) {
-      return {
-        items: [],
-        pagination: {
-          page: pagination.page,
-          pageSize: pagination.pageSize,
-          total: 0,
-        },
-      };
-    }
 
     const offset = (pagination.page - 1) * pagination.pageSize;
     const actorRole = role ?? 'member';

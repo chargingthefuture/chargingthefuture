@@ -76,6 +76,5 @@ export type FoundationCapacityPolicy = {
   maxQuoteTransitionsPerMinute: number;
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
-  killSwitchEnabled: boolean;
   updatedAtIso: string;
 };
