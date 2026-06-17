@@ -704,6 +704,23 @@
   font-weight: 700;
 }
 
+/* Mobile-only "Back to queue" control inside the detail pane (hidden on desktop, where the
+   queue sidebar is always visible). Shown via the max-width: 900px media query below. */
+.mobileQueueBack {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #1E2A3A;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -728,13 +745,42 @@
 }
 
 @media (max-width: 900px) {
+  /* Single-column master/detail. The four-column desktop layout collapses to one
+     column on a phone; the queue list and the detail pane each take the full screen and
+     we swap between them based on whether an item is selected. Previously the queue
+     sidebar was hidden outright at this width, so the owner saw only the detail pane's
+     "Select an answer to review" prompt with no list to select from — pending items were
+     unreachable on mobile. */
   .console {
     grid-template-columns: 1fr;
   }
 
-  .iconRail,
-  .queueSidebar {
+  .iconRail {
     display: none;
+  }
+
+  /* No item selected → show the queue list full-screen, hide the detail pane. */
+  .consoleList .queueSidebar {
+    display: flex;
+    height: 100vh;
+  }
+
+  .consoleList .main {
+    display: none;
+  }
+
+  /* Item selected → hide the queue list, show the detail pane full-screen. */
+  .consoleDetail .queueSidebar {
+    display: none;
+  }
+
+  .consoleDetail .main {
+    display: flex;
+    height: 100vh;
+  }
+
+  .mobileQueueBack {
+    display: inline-flex;
   }
 
   .confCol {

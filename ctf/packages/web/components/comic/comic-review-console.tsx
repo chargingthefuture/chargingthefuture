@@ -229,7 +229,7 @@ export function ComicReviewConsole() {
   }
 
   return (
-    <div className={styles.console}>
+    <div className={`${styles.console} ${selected ? styles.consoleDetail : styles.consoleList}`}>
       {/* Icon rail */}
       <aside className={styles.iconRail}>
         <div className={styles.iconRailLogo} aria-hidden="true">
@@ -359,6 +359,18 @@ export function ComicReviewConsole() {
             </div>
           ) : (
             <div className={styles.detail}>
+              {/* Mobile-only: return to the queue list (the sidebar is hidden at phone width). */}
+              <button
+                type="button"
+                className={styles.mobileQueueBack}
+                onClick={() => {
+                  setEditing(false);
+                  setSelectedId(null);
+                }}
+              >
+                <ArrowLeft size={14} /> Back to queue
+              </button>
+
               {/* Asker meta */}
               <div className={styles.detailMeta}>
                 <span className={styles.detailChannel}>@comic</span>
