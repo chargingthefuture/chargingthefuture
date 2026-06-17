@@ -1,5 +1,10 @@
 # Design Sync Workflow Rules
 
+> **DEPRECATED (owner-directed, 2026-06-17).** There is no longer a design-repo→app sync: the Replit
+> design agent and the `design/` mirror are deprecated and production is the single source of truth.
+> See the SUPERSEDING POLICY in `127-design-pass-gating-rules.mdc`. Do not run or rely on this sync
+> workflow. Retained as history only.
+
 ## Intent
 
 Define exactly how design flows from the Replit design repo into this app repo without
