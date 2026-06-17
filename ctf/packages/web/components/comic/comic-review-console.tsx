@@ -229,7 +229,7 @@ export function ComicReviewConsole() {
   }
 
   return (
-    <div className={styles.console}>
+    <div className={`${styles.console} ${selected ? styles.consoleDetail : styles.consoleList}`}>
       {/* Icon rail */}
       <aside className={styles.iconRail}>
         <div className={styles.iconRailLogo} aria-hidden="true">
@@ -315,7 +315,7 @@ export function ComicReviewConsole() {
                   <Pencil size={15} color="#0EA5E9" /> Edit &amp; approve answer
                 </>
               ) : (
-                'Review & Correction Console'
+                'Review & Correction Dashboard'
               )}
             </div>
             <div className={styles.mainHeaderSub}>Approve, correct, or reject AI Assistant answers before they reach survivors</div>
@@ -359,6 +359,18 @@ export function ComicReviewConsole() {
             </div>
           ) : (
             <div className={styles.detail}>
+              {/* Mobile-only: return to the queue list (the sidebar is hidden at phone width). */}
+              <button
+                type="button"
+                className={styles.mobileQueueBack}
+                onClick={() => {
+                  setEditing(false);
+                  setSelectedId(null);
+                }}
+              >
+                <ArrowLeft size={14} /> Back to queue
+              </button>
+
               {/* Asker meta */}
               <div className={styles.detailMeta}>
                 <span className={styles.detailChannel}>@comic</span>
@@ -417,14 +429,14 @@ export function ComicReviewConsole() {
                 </div>
               )}
 
-              {/* Provenance + confidence (real fields only — no fabricated sources). */}
+              {/* Source + confidence (real fields only — no fabricated sources). */}
               <div className={styles.detailTwoCol}>
                 <div className={styles.detailCol}>
-                  <div className={styles.detailLabel}>Provenance</div>
+                  <div className={styles.detailLabel}>Source</div>
                   <div className={styles.provenanceList}>
                     {selected.safetyCategory ? null : (
                       <div className={styles.provenanceRow}>
-                        <FileText size={13} color="#0EA5E9" /> Drafted by engine: {selected.engine}
+                        <FileText size={13} color="#0EA5E9" /> Drafted by: {selected.engine}
                       </div>
                     )}
                     <div className={styles.provenanceRow}>
@@ -459,7 +471,7 @@ export function ComicReviewConsole() {
                       </div>
                     ) : (
                       <div className={styles.confHint}>
-                        <AlertTriangle size={13} /> No calibrated confidence yet — every draft is held for human review.
+                        <AlertTriangle size={13} /> No confidence score yet — every draft is held for human review.
                       </div>
                     )}
                   </div>
