@@ -85,9 +85,12 @@ For each `LOOK_MA_ITEMS` entry in `src/App.tsx`, replace its `solutions: [...]` 
 in the matching row's "Best apps" column (same order as the table). Leave the `q` text unchanged.
 Example: row 51 → `solutions: ["ServiceCredits", "SocketRelay"]`.
 
-## Open questions for the owner
+## Decisions (confirmed by owner, 2026-06-17)
 
-- Rows 19, 36, 39 are low-actionability "noticing" items; they currently route to a single best-fit
-  (Hub or ClickLog). Confirm that's the intent, or drop them from the routed set.
-- If any feature should be the default catch-all when nothing else fits, name it (current assumption:
-  the Hub itself — ask a person — is the fallback, so no per-problem catch-all is added).
+- Rows 19, 36, 39 (low-actionability "noticing" items) keep their single best-fit route (Hub or
+  ClickLog) — not dropped.
+- The Hub (ask a person) is the catch-all when nothing matches. There is no per-problem catch-all app;
+  the concierge resolver returns no match and the chat falls back to the Hub.
+
+This map is approved; it is ready to apply to the landing page `LOOK_MA_ITEMS` and to fold into the
+concierge intent table.
