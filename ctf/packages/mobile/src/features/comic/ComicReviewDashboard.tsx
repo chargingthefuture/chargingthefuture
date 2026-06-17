@@ -137,10 +137,12 @@ function ProvenanceRow({ item }: { item: ComicReviewItem }) {
     <View style={styles.provenanceWrap}>
       <Text style={styles.sectionLabel}>Provenance</Text>
       <View style={styles.provenanceGrid}>
-        <View style={styles.provenanceItem}>
-          <Text style={styles.provenanceKey}>Engine</Text>
-          <Text style={styles.provenanceValue}>{item.engine}</Text>
-        </View>
+        {item.hasDraft ? (
+          <View style={styles.provenanceItem}>
+            <Text style={styles.provenanceKey}>Engine</Text>
+            <Text style={styles.provenanceValue}>{item.engine}</Text>
+          </View>
+        ) : null}
         <View style={styles.provenanceItem}>
           <Text style={styles.provenanceKey}>Intent</Text>
           <Text style={styles.provenanceValue}>{item.intent ?? '—'}</Text>
@@ -248,7 +250,9 @@ export const ComicReviewDashboard = () => {
 
   const beginEdit = useCallback(() => {
     if (!selected) return;
-    setDraft(selected.draftBody);
+    // Seed from a real AI draft only; with no draft start blank so the question text is never
+    // presented as a draft to edit.
+    setDraft(selected.hasDraft ? selected.draftBody : '');
     setEditing(true);
   }, [selected]);
 
@@ -316,7 +320,7 @@ export const ComicReviewDashboard = () => {
             >
               <View style={[styles.chipDot, entry.safetyCategory ? styles.chipDotSafety : null]} />
               <Text style={[styles.chipText, active ? styles.chipTextActive : null]} numberOfLines={1}>
-                {shortAsker(entry.askedByUserId)}
+                {entry.askedByUsername ? `@${entry.askedByUsername}` : shortAsker(entry.askedByUserId)}
               </Text>
             </Pressable>
           );
@@ -325,7 +329,7 @@ export const ComicReviewDashboard = () => {
 
       <ScrollView contentContainerStyle={styles.detail} showsVerticalScrollIndicator={false}>
         <View style={styles.detailMeta}>
-          <Text style={styles.detailAsker}>{shortAsker(selected.askedByUserId)}</Text>
+          <Text style={styles.detailAsker}>{selected.askedByUsername ? `@${selected.askedByUsername}` : shortAsker(selected.askedByUserId)}</Text>
           <Text style={styles.detailTime}>{formatTime(selected.createdAtIso)}</Text>
         </View>
 
@@ -336,23 +340,28 @@ export const ComicReviewDashboard = () => {
 
         {editing ? (
           <>
-            {/* Original AI draft (read-only) — matches MobileAIReviewConsoleDetail. */}
-            <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabel}>Original AI draft</Text>
-              <View style={styles.needsCorrectionBadge}>
-                <Text style={styles.needsCorrectionText}>Needs correction</Text>
-              </View>
-            </View>
-            <View style={styles.draftReadonlyBox}>
-              <Text style={styles.draftReadonlyText}>{selected.draftBody}</Text>
-            </View>
+            {/* Original AI draft (read-only) — only when a real AI draft exists. With no draft
+                (drafting unavailable, or safety-held), there is nothing to show above the editor. */}
+            {selected.hasDraft ? (
+              <>
+                <View style={styles.draftHeader}>
+                  <Text style={styles.sectionLabel}>Original AI draft</Text>
+                  <View style={styles.needsCorrectionBadge}>
+                    <Text style={styles.needsCorrectionText}>Needs correction</Text>
+                  </View>
+                </View>
+                <View style={styles.draftReadonlyBox}>
+                  <Text style={styles.draftReadonlyText}>{selected.draftBody}</Text>
+                </View>
+              </>
+            ) : null}
 
-            {/* Editable corrected answer with Reset + character count. */}
+            {/* Editable answer with Reset + character count. */}
             <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabelCyan}>Your corrected answer</Text>
+              <Text style={styles.sectionLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</Text>
               <Pressable
                 style={styles.resetBtn}
-                onPress={() => setDraft(selected.draftBody)}
+                onPress={() => setDraft(selected.hasDraft ? selected.draftBody : '')}
                 disabled={busy}
               >
                 <Ionicons name="refresh" size={11} color={SUBTLE} />
@@ -364,7 +373,7 @@ export const ComicReviewDashboard = () => {
               value={draft}
               onChangeText={setDraft}
               multiline
-              placeholder="Correct the answer before approving…"
+              placeholder={selected.hasDraft ? 'Correct the answer before approving…' : 'Write the answer before approving…'}
               placeholderTextColor={SUBTLE}
               editable={!busy}
             />
@@ -382,7 +391,7 @@ export const ComicReviewDashboard = () => {
         ) : (
           <>
             <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabel}>{selected.safetyCategory ? 'No AI draft' : 'AI draft'}</Text>
+              <Text style={styles.sectionLabel}>{selected.hasDraft ? 'AI draft' : 'No AI draft'}</Text>
               <View style={styles.notSentBadge}>
                 <Ionicons name="sparkles" size={8} color={ACCENT_LIGHT} />
                 <Text style={styles.notSentText}>Not sent</Text>
@@ -390,9 +399,11 @@ export const ComicReviewDashboard = () => {
             </View>
             <View style={styles.draftBox}>
               <Text style={styles.draftText}>
-                {selected.safetyCategory
-                  ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
-                  : selected.draftBody}
+                {selected.hasDraft
+                  ? selected.draftBody
+                  : selected.safetyCategory
+                    ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
+                    : 'No AI draft was generated — the drafting service was unavailable when this was asked. Use Edit & approve to write the answer.'}
               </Text>
             </View>
 
@@ -433,10 +444,10 @@ export const ComicReviewDashboard = () => {
             </View>
           </>
         ) : (
-          // Default view: Approve & send (hidden for safety-flagged items with no AI draft to send),
-          // then Edit & approve + Reject.
+          // Default view: Approve & send (only when a real AI draft exists to send), then
+          // Edit & approve + Reject. With no draft the owner must author the answer via Edit.
           <>
-            {selected.safetyCategory ? null : (
+            {selected.hasDraft ? (
               <Pressable
                 style={[styles.approveBtn, busy ? styles.btnBusy : null]}
                 onPress={() => resolve('approve')}
@@ -451,7 +462,7 @@ export const ComicReviewDashboard = () => {
                   </>
                 )}
               </Pressable>
-            )}
+            ) : null}
             <View style={styles.secondaryRow}>
               <Pressable style={styles.editBtn} onPress={beginEdit} disabled={busy}>
                 <Ionicons name="pencil" size={14} color={ACCENT_LIGHT} />

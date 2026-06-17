@@ -167,7 +167,10 @@ export function ComicReviewDashboard() {
   // the reviewer author the answer.
   useEffect(() => {
     if (selected) {
-      setCorrectedBody(selected.safetyCategory ? '' : selected.draftBody);
+      // Seed the editor from a real AI draft so the owner can refine it. When there is no draft
+      // (drafting service was unavailable, or a safety-held question), start blank — never seed the
+      // box with the question text, which would otherwise look like an AI draft.
+      setCorrectedBody(selected.hasDraft ? selected.draftBody : '');
       setEditing(false);
     }
   }, [selected]);
@@ -374,7 +377,7 @@ export function ComicReviewDashboard() {
               {/* Asker meta */}
               <div className={styles.detailMeta}>
                 <span className={styles.detailChannel}>@comic</span>
-                <span>Asked by {selected.askedByUserId}</span>
+                <span>Asked by {selected.askedByUsername ? `@${selected.askedByUsername}` : selected.askedByUserId}</span>
                 <span className={styles.detailTime}>{formatRelativeTime(selected.createdAtIso)}</span>
               </div>
 
@@ -386,23 +389,26 @@ export function ComicReviewDashboard() {
 
               {editing ? (
                 <div className={styles.detailTwoCol}>
-                  {/* Original AI draft (read-only) */}
-                  <div className={styles.detailCol}>
-                    <div className={styles.detailColHead}>
-                      <span className={styles.detailLabel}>Original AI draft</span>
-                      <span className={styles.needsCorrectionTag}>Needs correction</span>
+                  {/* Original AI draft (read-only) — only when a real AI draft exists. With no draft
+                      (drafting unavailable, or safety-held), there is nothing to show beside the editor. */}
+                  {selected.hasDraft ? (
+                    <div className={styles.detailCol}>
+                      <div className={styles.detailColHead}>
+                        <span className={styles.detailLabel}>Original AI draft</span>
+                        <span className={styles.needsCorrectionTag}>Needs correction</span>
+                      </div>
+                      <div className={styles.draftReadonly}>{selected.draftBody}</div>
                     </div>
-                    <div className={styles.draftReadonly}>{selected.draftBody}</div>
-                  </div>
+                  ) : null}
 
                   {/* Corrected text (editable) */}
                   <div className={styles.detailCol}>
                     <div className={styles.detailColHead}>
-                      <span className={styles.detailLabelCyan}>Your corrected answer</span>
+                      <span className={styles.detailLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</span>
                       <button
                         type="button"
                         className={styles.resetBtn}
-                        onClick={() => setCorrectedBody(selected.draftBody)}
+                        onClick={() => setCorrectedBody(selected.hasDraft ? selected.draftBody : '')}
                       >
                         <RotateCcw size={11} /> Reset
                       </button>
@@ -420,12 +426,18 @@ export function ComicReviewDashboard() {
               ) : (
                 <div>
                   <div className={styles.detailColHead}>
-                    <span className={styles.detailLabel}>{selected.safetyCategory ? 'No AI draft' : 'AI Assistant draft'}</span>
+                    <span className={styles.detailLabel}>{selected.hasDraft ? 'AI Assistant draft' : 'No AI draft'}</span>
                     <span className={styles.notYetSentTag}>
                       <Sparkles size={9} /> Not yet sent
                     </span>
                   </div>
-                  <div className={styles.draftCard}>{selected.safetyCategory ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.' : selected.draftBody}</div>
+                  <div className={styles.draftCard}>
+                    {selected.hasDraft
+                      ? selected.draftBody
+                      : selected.safetyCategory
+                        ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
+                        : 'No AI draft was generated — the drafting service was unavailable when this was asked. Use Edit & approve to write the answer.'}
+                  </div>
                 </div>
               )}
 
@@ -434,11 +446,11 @@ export function ComicReviewDashboard() {
                 <div className={styles.detailCol}>
                   <div className={styles.detailLabel}>Source</div>
                   <div className={styles.provenanceList}>
-                    {selected.safetyCategory ? null : (
+                    {selected.hasDraft ? (
                       <div className={styles.provenanceRow}>
                         <FileText size={13} color="#0EA5E9" /> Drafted by: {selected.engine}
                       </div>
-                    )}
+                    ) : null}
                     <div className={styles.provenanceRow}>
                       <FileText size={13} color="#0EA5E9" /> Intent: {selected.intent ?? 'not classified'}
                     </div>
@@ -496,11 +508,11 @@ export function ComicReviewDashboard() {
                   </>
                 ) : (
                   <>
-                    {selected.safetyCategory ? null : (
+                    {selected.hasDraft ? (
                       <button type="button" className={styles.approveBtn} disabled={resolving} onClick={() => void resolveSelected('approve')}>
                         <Check size={16} /> Approve &amp; send
                       </button>
-                    )}
+                    ) : null}
                     <button type="button" className={styles.editBtn} disabled={resolving} onClick={() => setEditing(true)}>
                       <Pencil size={15} /> Edit &amp; approve
                     </button>

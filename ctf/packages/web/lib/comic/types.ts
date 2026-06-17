@@ -46,8 +46,15 @@ export type ComicReviewItem = {
   turnId: string;
   conversationId: string;
   askedByUserId: string;
+  // The asker's @username snapshotted when they asked, or null for older rows asked before this was
+  // captured. The dashboard shows @username when present and falls back to the user id otherwise.
+  askedByUsername: string | null;
   questionBody: string;
   draftBody: string;
+  // Whether a real AI draft exists for this item. False means no draft was generated (the drafting
+  // service was unavailable, or the question was safety-held) — the dashboard then shows a
+  // "write the answer" state instead of presenting the question text as if it were a draft.
+  hasDraft: boolean;
   intent: string | null;
   nluConfidence: number | null;
   engine: ComicTurnEngine;

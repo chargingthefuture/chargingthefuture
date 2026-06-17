@@ -3498,6 +3498,7 @@ ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS cre
 CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
+  asker_username TEXT NULL,
   channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3505,6 +3506,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
 );
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS asker_username TEXT NULL;
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
