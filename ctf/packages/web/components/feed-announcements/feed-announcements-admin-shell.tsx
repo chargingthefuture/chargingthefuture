@@ -131,7 +131,6 @@ export function FeedAnnouncementsAdminShell({
         <div style={{ padding: '16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 16, fontSize: 13, color: '#D1D5DB' }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10, color: TEXT }}>Feed config</div>
           <div style={{ marginBottom: 4 }}>Render mode: <span style={{ color: TEXT }}>{config.renderMode}</span></div>
-          <div style={{ marginBottom: 4 }}>Kill switch: <span style={{ color: config.killSwitchEnabled ? '#EF4444' : TEXT }}>{config.killSwitchEnabled ? 'enabled' : 'disabled'}</span></div>
           <div style={{ marginBottom: 4 }}>Max page size: <span style={{ color: TEXT }}>{config.maxTimelinePageSize}</span></div>
           <div>Channels: <span style={{ color: TEXT }}>{config.enabledChannels.join(', ')}</span></div>
         </div>

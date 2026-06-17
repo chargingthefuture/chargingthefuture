@@ -57,7 +57,6 @@ type WorkforceAnnouncementRow = {
 
 type WorkforceConfigRow = {
   exports_enabled: boolean;
-  kill_switch_enabled: boolean;
   report_week_timezone: string;
   report_week_start_dow: number;
   updated_by_user_id: string;
@@ -147,7 +146,6 @@ function mapAnnouncement(row: WorkforceAnnouncementRow): WorkforceAnnouncement {
 function mapConfig(row: WorkforceConfigRow): WorkforceConfig {
   return {
     exportsEnabled: row.exports_enabled,
-    killSwitchEnabled: row.kill_switch_enabled,
     reportWeekTimezone: row.report_week_timezone,
     reportWeekStartDow: row.report_week_start_dow,
     updatedByUserId: row.updated_by_user_id,
@@ -192,7 +190,6 @@ export function validateConfigInput(input: WorkforceConfigInput): boolean {
   const timezone = normalizeText(input.reportWeekTimezone ?? '');
 
   return typeof input.exportsEnabled === 'boolean'
-    && typeof input.killSwitchEnabled === 'boolean'
     && timezone.length > 0
     && timezone.length <= 64
     && Number.isInteger(input.reportWeekStartDow)
@@ -448,7 +445,7 @@ export async function deactivateAnnouncement(actorId: string, id: string): Promi
 export async function getWorkforceConfig(): Promise<WorkforceConfig> {
   const result = await queryDb<WorkforceConfigRow>(
     `
-      SELECT exports_enabled, kill_switch_enabled, report_week_timezone, report_week_start_dow,
+      SELECT exports_enabled, report_week_timezone, report_week_start_dow,
              updated_by_user_id, updated_at
       FROM workforce_config
       WHERE singleton_key = true
@@ -460,7 +457,6 @@ export async function getWorkforceConfig(): Promise<WorkforceConfig> {
   if (!row) {
     return {
       exportsEnabled: false,
-      killSwitchEnabled: false,
       reportWeekTimezone: WORKFORCE_DEFAULT_TIMEZONE,
       reportWeekStartDow: WORKFORCE_DEFAULT_WEEK_START_DOW,
       updatedByUserId: 'system',
@@ -475,21 +471,20 @@ export async function updateWorkforceConfig(actorId: string, input: WorkforceCon
   const result = await queryDb<WorkforceConfigRow>(
     `
       INSERT INTO workforce_config
-        (singleton_key, exports_enabled, kill_switch_enabled, report_week_timezone, report_week_start_dow, updated_by_user_id)
+        (singleton_key, exports_enabled, report_week_timezone, report_week_start_dow, updated_by_user_id)
       VALUES
-        (true, $1, $2, $3, $4, $5)
+        (true, $1, $2, $3, $4)
       ON CONFLICT (singleton_key)
       DO UPDATE SET
         exports_enabled = EXCLUDED.exports_enabled,
-        kill_switch_enabled = EXCLUDED.kill_switch_enabled,
         report_week_timezone = EXCLUDED.report_week_timezone,
         report_week_start_dow = EXCLUDED.report_week_start_dow,
         updated_by_user_id = EXCLUDED.updated_by_user_id,
         updated_at = NOW()
-      RETURNING exports_enabled, kill_switch_enabled, report_week_timezone, report_week_start_dow,
+      RETURNING exports_enabled, report_week_timezone, report_week_start_dow,
                 updated_by_user_id, updated_at
     `,
-    [input.exportsEnabled, input.killSwitchEnabled, normalizeText(input.reportWeekTimezone), input.reportWeekStartDow, actorId],
+    [input.exportsEnabled, normalizeText(input.reportWeekTimezone), input.reportWeekStartDow, actorId],
   );
 
   return mapConfig(result.rows[0]);

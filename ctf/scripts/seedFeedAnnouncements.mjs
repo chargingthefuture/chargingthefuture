@@ -22,12 +22,11 @@ const seedAdminId = 'seed-feed-admin-001';
 async function ensureFeedConfig(client) {
   await client.query(
     `
-      INSERT INTO feed_render_config (singleton_key, render_mode, kill_switch_enabled, max_timeline_page_size, is_public, updated_by_user_id)
-      VALUES (TRUE, 'card_only', FALSE, 50, TRUE, $1)
+      INSERT INTO feed_render_config (singleton_key, render_mode, max_timeline_page_size, is_public, updated_by_user_id)
+      VALUES (TRUE, 'card_only', 50, TRUE, $1)
       ON CONFLICT (singleton_key)
       DO UPDATE SET
         render_mode = EXCLUDED.render_mode,
-        kill_switch_enabled = EXCLUDED.kill_switch_enabled,
         max_timeline_page_size = EXCLUDED.max_timeline_page_size,
         updated_by_user_id = EXCLUDED.updated_by_user_id,
         updated_at = NOW()

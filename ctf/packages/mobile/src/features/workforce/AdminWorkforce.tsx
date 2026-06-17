@@ -76,28 +76,6 @@ export const AdminWorkforce = () => {
     [config, persistConfig],
   );
 
-  // The kill switch is a state-changing control: confirm before flipping it.
-  const toggleKillSwitch = useCallback(
-    (value: boolean) => {
-      if (!config) return;
-      Alert.alert(
-        value ? 'Enable kill switch' : 'Disable kill switch',
-        value
-          ? 'Enabling the kill switch pauses workforce operations. Continue?'
-          : 'Disabling the kill switch resumes workforce operations. Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: value ? 'Enable' : 'Disable',
-            style: value ? 'destructive' : 'default',
-            onPress: () => void persistConfig({ ...config, killSwitchEnabled: value }),
-          },
-        ],
-      );
-    },
-    [config, persistConfig],
-  );
-
   const runSync = useCallback(() => {
     if (!auth?.userId) return;
     Alert.alert('Run incremental sync', 'Run the recruited incremental sync now?', [
@@ -173,7 +151,7 @@ export const AdminWorkforce = () => {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Workforce Admin</Text>
-      <Text style={styles.subtitle}>Operational controls: config, kill switch, sync, and recompute.</Text>
+      <Text style={styles.subtitle}>Operational controls: config, sync, and recompute.</Text>
 
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
@@ -197,10 +175,6 @@ export const AdminWorkforce = () => {
           <View style={styles.switchRow}>
             <Switch value={config.exportsEnabled} onValueChange={toggleExports} disabled={busy === 'config'} />
             <Text style={styles.switchLabel}>Exports enabled</Text>
-          </View>
-          <View style={styles.switchRow}>
-            <Switch value={config.killSwitchEnabled} onValueChange={toggleKillSwitch} disabled={busy === 'config'} />
-            <Text style={styles.switchLabel}>Kill switch (pauses operations)</Text>
           </View>
           <Text style={styles.cardMeta}>Report timezone: {config.reportWeekTimezone}</Text>
           <Text style={styles.cardMeta}>Week start day-of-week: {config.reportWeekStartDow}</Text>

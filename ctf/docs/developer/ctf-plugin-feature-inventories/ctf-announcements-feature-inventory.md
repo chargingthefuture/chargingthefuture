@@ -66,7 +66,7 @@ Approved suggestions incorporated:
 
 1. Operated from `/admin/feed-announcements`.
 2. Coordinated controls with Feed rendering settings.
-3. Shared kill-switch/feature-flag and degradation behavior.
+3. Shared feature-flag and degradation behavior.
 
 ---
 
