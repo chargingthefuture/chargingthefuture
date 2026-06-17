@@ -1,5 +1,7 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
+import styles from './admin-landing.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,60 +35,78 @@ export default async function AdminPage() {
 
   if (!decision.allowed) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-12 space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin access denied</h1>
-        <p className="text-sm text-muted-foreground">
-          Request blocked by server-side role policy.
-        </p>
-        <dl className="rounded-lg border bg-card p-4 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="font-medium">HTTP status</dt>
-            <dd>{decision.status}</dd>
+      <div className={styles.page}>
+        <div className={styles.inner}>
+          <div className={styles.header}>
+            <div className={styles.iconChip}>
+              <ShieldCheck size={18} color="#6366F1" />
+            </div>
+            <div>
+              <div className={styles.title}>Admin access denied</div>
+              <div className={styles.subtitle}>Request blocked by server-side role policy.</div>
+            </div>
+            <span className={styles.badge}>ADMIN</span>
           </div>
-          <div className="mt-2 flex justify-between gap-4">
-            <dt className="font-medium">Deny code</dt>
-            <dd>{decision.code}</dd>
+
+          <div className={styles.denyCard}>
+            <div className={styles.denyRow}>
+              <span className={styles.denyLabel}>HTTP status</span>
+              <span>{decision.status}</span>
+            </div>
+            <div className={styles.denyRow}>
+              <span className={styles.denyLabel}>Deny code</span>
+              <span>{decision.code}</span>
+            </div>
+            <div className={styles.denyRow}>
+              <span className={styles.denyLabel}>Reason</span>
+              <span>{decision.reason}</span>
+            </div>
           </div>
-          <div className="mt-2 flex justify-between gap-4">
-            <dt className="font-medium">Reason</dt>
-            <dd>{decision.reason}</dd>
+
+          <div className={styles.footer}>
+            <Link className={styles.link} href="/">
+              ← Return to home
+            </Link>
           </div>
-        </dl>
-        <p className="text-sm">
-          <Link className="underline underline-offset-4" href="/">Return to home</Link>
-        </p>
-      </main>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
-        <p className="text-sm text-muted-foreground">
-          Pick an area to manage. Each area is restricted to admins.
-        </p>
-      </header>
+    <div className={styles.page}>
+      <div className={styles.inner}>
+        {/* Header */}
+        <div className={styles.header}>
+          <div className={styles.iconChip}>
+            <ShieldCheck size={18} color="#6366F1" />
+          </div>
+          <div>
+            <div className={styles.title}>Admin</div>
+            <div className={styles.subtitle}>Pick an area to manage. Each area is restricted to admins.</div>
+          </div>
+          <span className={styles.badge}>ADMIN</span>
+        </div>
 
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {ADMIN_AREAS.map((area) => (
-          <li key={area.href}>
-            <Link
-              href={area.href}
-              className="block rounded-lg border bg-card p-4 transition hover:border-foreground/30 hover:bg-card/80"
-            >
-              <span className="block text-sm font-medium">{area.name}</span>
-              <span className="mt-1 block text-sm text-muted-foreground">{area.description}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+        <ul className={styles.grid}>
+          {ADMIN_AREAS.map((area) => (
+            <li key={area.href}>
+              <Link href={area.href} className={styles.card}>
+                <span className={styles.cardName}>{area.name}</span>
+                <span className={styles.cardDesc}>{area.description}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
 
-      <footer className="border-t pt-4 text-sm text-muted-foreground">
-        Signed in as <span className="font-medium">{decision.userId}</span> · role{' '}
-        <span className="font-medium">{decision.role ?? 'not set'}</span> ·{' '}
-        <Link className="underline underline-offset-4" href="/">Return to home</Link>
-      </footer>
-    </main>
+        <div className={styles.footer}>
+          Signed in as <span className={styles.footerStrong}>{decision.userId}</span> · role{' '}
+          <span className={styles.footerStrong}>{decision.role ?? 'not set'}</span> ·{' '}
+          <Link className={styles.link} href="/">
+            Return to home
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

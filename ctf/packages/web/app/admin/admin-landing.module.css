@@ -1,0 +1,149 @@
+/* Admin landing page — shared dark admin look (rule 131). Neutral indigo accent for
+   cross-cutting admin chrome. A CSS module is used (rather than inline styles) so the
+   directory cards keep a hover affordance while the page stays a server component. */
+
+.page {
+  min-height: 100dvh;
+  background: #0f1117;
+  color: #f9fafb;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #0d0f14;
+  border: 1px solid #1e2a3a;
+  margin-bottom: 16px;
+}
+
+.iconChip {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.badge {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  display: block;
+  height: 100%;
+  border-radius: 12px;
+  background: #161b27;
+  border: 1px solid #1e2a3a;
+  padding: 16px;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.card:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: #1a2030;
+}
+
+.cardName {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.cardDesc {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #1e2a3a;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.footerStrong {
+  color: #f9fafb;
+  font-weight: 600;
+}
+
+.link {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.denyCard {
+  margin-top: 16px;
+  border-radius: 12px;
+  background: #161b27;
+  border: 1px solid #1e2a3a;
+  padding: 16px;
+  font-size: 13px;
+}
+
+.denyRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.denyRow + .denyRow {
+  margin-top: 8px;
+}
+
+.denyLabel {
+  color: #6b7280;
+}
