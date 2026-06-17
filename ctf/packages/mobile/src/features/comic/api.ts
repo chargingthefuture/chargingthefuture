@@ -134,8 +134,14 @@ export type ComicReviewItem = {
   turnId: string;
   conversationId: string;
   askedByUserId: string;
+  // The asker's @username snapshotted at ask time, or null for older rows. Shown in place of the
+  // raw user id when present.
+  askedByUsername: string | null;
   questionBody: string;
   draftBody: string;
+  // Whether a real AI draft exists. False → no draft (drafting unavailable or safety-held); the
+  // screen then shows a "write the answer" state instead of the question text as a draft.
+  hasDraft: boolean;
   intent: string | null;
   nluConfidence: number | null;
   // 'rasa' is a historical value only (the Rasa NLU integration was removed 2026-06-14); no new
