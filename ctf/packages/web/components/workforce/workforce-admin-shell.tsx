@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Briefcase, RefreshCw, Download } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
 import type { WorkforceAnnouncement, WorkforceConfig, WorkforceOccupation } from 'lib/workforce/types';
 import { WorkforceAdminOccupations } from './workforce-admin-occupations';
 import { WorkforceAdminAnnouncements } from './workforce-admin-announcements';
@@ -92,29 +92,21 @@ export function WorkforceAdminShell({
   const [tab, setTab] = useState<Tab>('overview');
   const [config, setConfig] = useState({
     exportsEnabled: initialConfig.exportsEnabled,
-    killSwitchEnabled: initialConfig.killSwitchEnabled,
     reportWeekTimezone: initialConfig.reportWeekTimezone,
     reportWeekStartDow: initialConfig.reportWeekStartDow,
   });
-  const [busy, setBusy] = useState<null | 'save' | 'recompute' | 'sync'>(null);
+  const [busy, setBusy] = useState<null | 'save'>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function run(kind: 'save' | 'recompute' | 'sync') {
+  async function run(kind: 'save') {
     if (busy) return;
     setBusy(kind);
     setError(null);
     setMessage(null);
-    let res: { ok: boolean; message?: string };
-    if (kind === 'save') {
-      res = await adminMutate('/api/workforce/admin/config', 'PUT', config);
-    } else if (kind === 'recompute') {
-      res = await adminMutate('/api/workforce/admin/recompute', 'POST', {});
-    } else {
-      res = await adminMutate('/api/workforce/admin/sync', 'POST', {});
-    }
+    const res: { ok: boolean; message?: string } = await adminMutate('/api/workforce/admin/config', 'PUT', config);
     if (res.ok) {
-      setMessage(kind === 'save' ? 'Config saved.' : kind === 'recompute' ? 'Recompute started.' : 'Sync started.');
+      setMessage('Config saved.');
       router.refresh();
     } else {
       setError(res.message ?? 'Action failed.');
@@ -173,7 +165,6 @@ export function WorkforceAdminShell({
         <div style={{ padding: '16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Config</div>
           <ToggleRow label="Exports enabled" hint="Allow report exports (execution still deferred)." value={config.exportsEnabled} onChange={(v) => setConfig((c) => ({ ...c, exportsEnabled: v }))} />
-          <ToggleRow label="Kill switch" hint="Pauses Workforce processing when on." value={config.killSwitchEnabled} onChange={(v) => setConfig((c) => ({ ...c, killSwitchEnabled: v }))} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
             <label style={{ display: 'block' }}>
               <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Report week timezone</span>
@@ -191,20 +182,6 @@ export function WorkforceAdminShell({
           <button type="button" disabled={busy !== null} onClick={() => void run('save')} style={{ padding: '11px 18px', borderRadius: 10, background: busy ? `${COLOR}66` : COLOR, border: 'none', color: '#3a1d05', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
             {busy === 'save' ? 'Saving…' : 'Save config'}
           </button>
-        </div>
-
-        {/* Operations */}
-        <div style={{ padding: '16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Operations</div>
-          <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 14 }}>Recompute regenerates derived figures; sync pulls the latest source data.</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" disabled={busy !== null} onClick={() => void run('recompute')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
-              <RefreshCw size={14} /> {busy === 'recompute' ? 'Recomputing…' : 'Recompute'}
-            </button>
-            <button type="button" disabled={busy !== null} onClick={() => void run('sync')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
-              <Download size={14} /> {busy === 'sync' ? 'Syncing…' : 'Sync'}
-            </button>
-          </div>
         </div>
         </>
         )}

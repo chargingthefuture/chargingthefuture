@@ -405,9 +405,6 @@ contracts:
       renderMode:
         type: string
         required: true
-      killSwitchEnabled:
-        type: boolean
-        required: true
       maxTimelinePageSize:
         type: integer
         required: true

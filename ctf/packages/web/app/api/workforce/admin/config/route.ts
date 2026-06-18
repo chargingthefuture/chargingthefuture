@@ -11,7 +11,6 @@ type ConfigBody = Partial<WorkforceConfigInput>;
 function toConfigInput(body: ConfigBody): WorkforceConfigInput {
   return {
     exportsEnabled: body.exportsEnabled === true,
-    killSwitchEnabled: body.killSwitchEnabled === true,
     reportWeekTimezone: typeof body.reportWeekTimezone === 'string' ? body.reportWeekTimezone : 'America/New_York',
     reportWeekStartDow: typeof body.reportWeekStartDow === 'number' ? body.reportWeekStartDow : 6,
   };
@@ -74,7 +73,7 @@ export async function PUT(request: Request) {
       reason: 'admin_route_guard',
       targetType: 'config',
       targetId: 'workforce',
-      metadata: { exportsEnabled: config.exportsEnabled, killSwitchEnabled: config.killSwitchEnabled },
+      metadata: { exportsEnabled: config.exportsEnabled },
     });
 
     logWorkforceAudit({

@@ -219,7 +219,7 @@ Both are read-only and best-effort. Neither renders a fiat figure.
 
 - Public page under the ServiceCredits app surface: the four headline numbers plus velocity and a plain-
   language note that credits are usable across the plugins and are not money.
-- Admin console (`/admin/service-credits`): the summary tiles the existing admin shell left out for lack of a
+- Admin dashboard (`/admin/service-credits`): the summary tiles the existing admin shell left out for lack of a
   backing endpoint (in-circulation / issued / treasury / mint budget remaining / concentration) now have one.
 
 ---

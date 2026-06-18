@@ -1,4 +1,4 @@
-// ServiceCredits admin screen (mobile) — money core operator console.
+// ServiceCredits admin screen (mobile) — money core operator dashboard.
 // Design reference: design/.../survivor-hub/MobileServiceCreditsAdmin.tsx (amber theme,
 // "ServiceCredits Admin" header). The mockup's summary tiles ("in circulation", "issued
 // this week"), the disputes queue, and the per-row resolve/deny buttons are omitted: no

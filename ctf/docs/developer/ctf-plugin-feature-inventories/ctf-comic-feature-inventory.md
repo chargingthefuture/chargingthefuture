@@ -163,7 +163,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 | Rasa | NLU **export only** (`exportQuestionsForRasa`); no Rasa service consumes it | Running Rasa service trains on exported + corrected turns |
 | "Approved sources" | Display-only category labels; no retrieval | Grounded retrieval (RAG) is a later target |
 | Moderation | Regex-only input check; no output check | Layered filter + Rasa fallback (see Future Notes) |
-| Human-in-the-loop | None (answers return directly; `flagged` rating exists, no queue) | Owner review/correction console; CDD loop |
+| Human-in-the-loop | None (answers return directly; `flagged` rating exists, no queue) | Owner review/correction dashboard; CDD loop |
 | Conversation store | None (single-turn `feed_questions`/`feed_answers`) | Multi-turn `comic_*` + Rasa tracker |
 
 ## Target User Features
@@ -176,7 +176,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 
 ## Target Admin / Owner Features
 
-1. **Review & correction console** — queue of bot turns awaiting review; approve, edit, or
+1. **Review & correction dashboard** — queue of bot turns awaiting review; approve, edit, or
    reject; corrections become training examples. **[Web UI delivered — design `9a4a1af`; at
    `/admin/comic`. 4 states: queue / empty / loading / detail-edit.]**
 2. **Threshold & safety controls** — auto-respond confidence threshold, safety-flag rules,
@@ -251,9 +251,10 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
 0..1)`, `comic_review_queue(status)`, `comic_training_examples(status)`,
 `comic_answer_ratings(rating)`:**
 
-1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `channel` text
-   [hub|feed], `status` text [open|closed], `created_at`, `updated_at`). Indexed on `user_id`,
-   `created_at`.
+1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `asker_username` text null
+   [the asker's @username snapshotted at ask time, shown in the review dashboard in place of the raw
+   user id; null for rows created before this was captured], `channel` text [hub|feed], `status` text
+   [open|closed], `created_at`, `updated_at`). Indexed on `user_id`, `created_at`.
 2. `comic_turns` — one row per turn (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
    `role` ∈ user|bot|human, `body`, `intent` text null, `nlu_confidence` numeric(5,4) null [0..1],
    `engine` ∈ rasa|ollama|template|human, `created_at`). Indexed on `conversation_id`, `created_at`.
@@ -346,7 +347,7 @@ Target: `web+android` parity.
     suppresses non-approved answer bodies) and reflected in the UI (pending card on submit).
     All four rule-126 states covered: Unauthenticated (read-only stream + locked composer with the
     @comic helper), Auth+Loading, Auth+Empty, Auth+Populated.
-  - **Owner Review & Correction Console** (`components/comic/comic-review-console.tsx`) routed at
+  - **Owner Review & Correction Dashboard** (`components/comic/comic-review-dashboard.tsx`) routed at
     **`/admin/comic`** (admin-gated server-side). All four states: queue (populated), empty (queue
     clear / "All caught up"), loading, and detail with editable corrected-text and Approve /
     Edit&approve / Reject actions; each item shows question, AI draft, provenance (engine/intent/
@@ -366,7 +367,7 @@ Target: `web+android` parity.
   - First-use consent bottom sheet (`ComicConsentSheet.tsx`, matches `MobileAIConsent`) gating the
     `consentGranted` flag before any send.
   - The helpful / not_helpful / flag rating row, wired to `POST /api/comic/answers/[turnId]/rate`.
-  - The Owner Review & Correction Console (`ComicReviewConsole.tsx`, matches `MobileAIReviewConsole`
+  - The Owner Review & Correction Dashboard (`ComicReviewDashboard.tsx`, matches `MobileAIReviewConsole`
     / `MobileAIReviewConsoleDetail` / `MobileAIReviewConsoleEmpty`) at the "AI Review" tile in the
     mobile app shell; admin-gated server-side (a non-admin sees an access notice). Queue chips +
     detail (question, AI draft, a dedicated **Confidence card** — band label + progress bar + a
@@ -376,7 +377,7 @@ Target: `web+android` parity.
     banner**, matching `MobileAIReviewConsoleDetail`. Every publish/reject prompts a confirm dialog
     (`Alert.alert`). Wired to `GET /api/comic/review` and `POST /api/comic/review/[turnId]/resolve`.
     The mockup's fabricated "Sources" list and hardcoded confidence values are intentionally not
-    reproduced — only the real `nlu_confidence` and provenance are shown, matching the web console.
+    reproduced — only the real `nlu_confidence` and provenance are shown, matching the web dashboard.
   - All requests send the `x-ctf-csrf: 1` header (mirrors the web CSRF handling) and target
     `/api/comic/*`. No third-party LLM egress.
   - Interim safety policy honored end-to-end: every answer routes through human review before it
@@ -404,9 +405,9 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 
 1. Originally three disconnected precursors + a dropped `hub_bots` design. Now unified: `@comic`
    routing, conversation store, and the human-in-the-loop review queue are implemented; the
-   **web UI** (asker stream + owner review console) is delivered (2026-05-31, design `9a4a1af`); and
+   **web UI** (asker stream + owner review dashboard) is delivered (2026-05-31, design `9a4a1af`); and
    the **Android UI** (asker cards + pending card + `@comic` composer + consent sheet + rating row +
-   owner review console) is delivered (2026-06-01, design `9a4a1af`). Still outstanding: a running
+   owner review dashboard) is delivered (2026-06-01, design `9a4a1af`). Still outstanding: a running
    Rasa (interim policy forces human review on every draft).
 2. `exportQuestionsForRasa` has a duplicate nested loop that double-counts examples.
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
@@ -451,7 +452,7 @@ The design pointer was bumped to `9a4a1af` (rule 128) and the web UI was built a
 1. **AI answer "pending human review" state** — the `ai_pending` "Reviewing for safety" card
    (`comic-cards.tsx` → `ComicPendingCard`). Interim mode holds every AI draft; the asker
    sees only this card until a human approves an answer.
-2. **Owner review/correction console** (admin) — `comic-review-console.tsx` at `/admin/comic`;
+2. **Owner review/correction dashboard** (admin) — `comic-review-dashboard.tsx` at `/admin/comic`;
    queue / empty / loading / detail-edit; approve/edit/reject; shows question, AI draft, provenance,
    confidence; editable corrected-text. (Mockups `AIReviewConsole*.tsx`.)
 3. **LLM-consent affordance** at first `@comic` use — `comic-consent-modal.tsx` (mockup
@@ -462,30 +463,31 @@ The design pointer was bumped to `9a4a1af` (rule 128) and the web UI was built a
 Required states per rule 126, all covered for the AI surfaces: Unauthenticated, Auth+Loading,
 Auth+Empty, Auth+Populated. Mobile (`Mobile*`/`MobileAIConsent` + `MobileAIReviewConsole*`) is now
 delivered (2026-06-01) in `ctf/packages/mobile/src/features/comic/`. Divergence carried over from
-the web build: the review console mockup's fabricated "Sources" list and hardcoded confidence
+the web build: the review dashboard mockup's fabricated "Sources" list and hardcoded confidence
 buckets are not reproduced — only real provenance (engine / intent / safety category / the real
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
 
-- 2026-06-14: Added a live Ollama status badge to the `/admin/comic` review console. New admin-only read endpoint `GET /api/comic/admin/ai-status` calls `pingOllama` (`lib/chatbot/ollama.ts`) — a 5s, no-inference liveness probe that hits `GET /health` for a RunPod endpoint or `GET /api/tags` for a native Ollama host (reusing the `OLLAMA_API_KEY` bearer) — and returns `{ ok, ollama: { configured, reachable, latencyMs, model } }`. The console queue header shows one badge (green reachable + latency / red unreachable / grey not configured) so the owner can tell at a glance whether drafting is working. Read-only; best-effort (a failed fetch hides the badge, never blocks the queue). Supersedes the never-merged #498, which also pinged Rasa — Rasa was removed (#503), so only Ollama is shown. No schema or contract change.
+- 2026-06-17: Review dashboard now shows the asker's **@username** instead of the raw Clerk user id, and presents an honest **no-draft** state. (1) Added a nullable `asker_username` column to `comic_conversations` (`schema.sql` + `schema.demo.sql`); `routeComicMessage` now takes the actor's username and snapshots it on the conversation at ask time (backfilled on later turns via `COALESCE`). Older rows have no snapshot and fall back to the user id. (2) `listPendingComicReviews` now returns `asked_by_username` and a `has_draft` flag (`q.draft_turn_id IS NOT NULL`); `ComicReviewItem` gained `askedByUsername` and `hasDraft` (web + mobile). When `hasDraft` is false — `draft_turn_id` is null, which means no draft is attached yet (it may still be generating in the background, drafting was unavailable, or the question was safety-held) — the web and Android dashboards no longer show the question text in the "AI draft" slot or offer "Approve & send"; they show a "No AI draft … write the answer" state and route the owner to Edit & approve. Server already blocks approving a draftless item with empty content (`approve_requires_content`). No new endpoints or contracts.
+- 2026-06-14: Added a live Ollama status badge to the `/admin/comic` review dashboard. New admin-only read endpoint `GET /api/comic/admin/ai-status` calls `pingOllama` (`lib/chatbot/ollama.ts`) — a 5s, no-inference liveness probe that hits `GET /health` for a RunPod endpoint or `GET /api/tags` for a native Ollama host (reusing the `OLLAMA_API_KEY` bearer) — and returns `{ ok, ollama: { configured, reachable, latencyMs, model } }`. The dashboard queue header shows one badge (green reachable + latency / red unreachable / grey not configured) so the owner can tell at a glance whether drafting is working. Read-only; best-effort (a failed fetch hides the badge, never blocks the queue). Supersedes the never-merged #498, which also pinged Rasa — Rasa was removed (#503), so only Ollama is shown. No schema or contract change.
 - 2026-06-14: Moved the RunPod worker image out of this monorepo into its own repo (`ctf/Runpod`). Deleted `ctf/ops/runpod-ollama/Dockerfile` here; the endpoint now builds from the dedicated repo so pushes to this monorepo's `main` never trigger a ~20 GB image rebuild (the worker repo changes rarely). The handler stays inlined in that one Dockerfile. The RunPod client adapter (`lib/chatbot/ollama.ts`) and the RunPod section of `ctf/docs/developer/OLLAMA.md` remain here and now point at the worker repo. No behavior change.
-- 2026-06-14: Generate the @comic draft in the BACKGROUND so the asker's submit never waits on the model. Previously `routeComicMessage` awaited `generateComicDraft` before returning; with the model moved to a serverless GPU (issue #502, PR #506), a cold start could take tens of seconds and stall the submit. Now the user turn + a `pending` review row commit in one short transaction first and the request returns immediately; the AI draft is generated in a detached background task (`generateAndAttachDraft`) that, only if the review is still `pending`, inserts the bot draft turn and records it on the new `comic_review_queue.draft_turn_id` column (guarded by `FOR UPDATE` + `WHERE status = 'pending'`). The review's `turn_id` is never repointed — it stays the asker's question turn, so the question is inferred stably even when the asker sends another message before the draft lands (fixes the mispairing flagged in CodeRabbit review of #507). A `template`-engine result (Ollama unreachable) is treated as a failed generation and not attached, leaving the item human-first. The admin console reads the draft from `draft_turn_id` (falling back to the question body for human-first); `resolveComicReview` publishes the draft turn on approve. Schema: added the nullable `draft_turn_id UUID` column to `comic_review_queue` (`schema.sql` + `schema.demo.sql`). The human-review guarantee is unchanged and strengthened — the question is enqueued before any AI work, so a slow/failed/absent model never loses it.
+- 2026-06-14: Generate the @comic draft in the BACKGROUND so the asker's submit never waits on the model. Previously `routeComicMessage` awaited `generateComicDraft` before returning; with the model moved to a serverless GPU (issue #502, PR #506), a cold start could take tens of seconds and stall the submit. Now the user turn + a `pending` review row commit in one short transaction first and the request returns immediately; the AI draft is generated in a detached background task (`generateAndAttachDraft`) that, only if the review is still `pending`, inserts the bot draft turn and records it on the new `comic_review_queue.draft_turn_id` column (guarded by `FOR UPDATE` + `WHERE status = 'pending'`). The review's `turn_id` is never repointed — it stays the asker's question turn, so the question is inferred stably even when the asker sends another message before the draft lands (fixes the mispairing flagged in CodeRabbit review of #507). A `template`-engine result (Ollama unreachable) is treated as a failed generation and not attached, leaving the item human-first. The admin dashboard reads the draft from `draft_turn_id` (falling back to the question body for human-first); `resolveComicReview` publishes the draft turn on approve. Schema: added the nullable `draft_turn_id UUID` column to `comic_review_queue` (`schema.sql` + `schema.demo.sql`). The human-review guarantee is unchanged and strengthened — the question is enqueued before any AI work, so a slow/failed/absent model never loses it.
 - 2026-06-14: Talk to a RunPod serverless endpoint for drafts (issue #502, PR #506). `lib/chatbot/ollama.ts` detects an `api.runpod.ai` `OLLAMA_BASE_URL`, submits the chat as a RunPod job (`/run`) and polls `/status/<id>` within the same 30s budget, reusing `OLLAMA_API_KEY` as the RunPod bearer; the self-hosted worker image was added at `ctf/ops/runpod-ollama/Dockerfile` (later moved to the dedicated worker repo — see the entry above). Inert unless `OLLAMA_BASE_URL` points at RunPod.
-- 2026-06-14: Removed the Rasa NLU integration; Ollama is now the only @comic AI engine. Deleted the `ctf-rasa` private Render service block (`render.yaml`), its image build job and path filter (`build-images.yml`), the ops project (`ctf/ops/rasa/`), the backend client (`lib/comic/rasa.ts`), the deploy runbook (`ctf/docs/developer/RASA.md`), and the Rasa status badge on the AI review console (web + Android) and the `ai-status` route (now returns `{ ok, ollama }`). `routeComicMessage` no longer calls any NLU service, so `intent`/`nlu_confidence` on the user turn stay null. Non-destructive on data: the `engine` CHECK still lists `rasa` and the `intent`/`nlu_confidence` columns remain for historical rows; nothing writes them now (noted in `schema.sql`/`schema.demo.sql`). The training-example export route was kept and de-Rasa-named (`buildTrainingNluYaml`) as a portable dataset for a future model. Reason: Rasa only produced reviewer-side intent labels at ~$25/mo, never generated answers, and never gated auto-publish — low value for the cost. Direction instead: upgrade the self-hosted Ollama model on a GPU host (issue #502), then retrieval + a confidence/safety gate, then fine-tune an open model on the exported, de-identified dataset; a third-party API stays off the table for survivor question text on privacy grounds. Contracts and this inventory updated; the Rasa-based "target architecture" sections below are superseded (see the note at the top of this file).
+- 2026-06-14: Removed the Rasa NLU integration; Ollama is now the only @comic AI engine. Deleted the `ctf-rasa` private Render service block (`render.yaml`), its image build job and path filter (`build-images.yml`), the ops project (`ctf/ops/rasa/`), the backend client (`lib/comic/rasa.ts`), the deploy runbook (`ctf/docs/developer/RASA.md`), and the Rasa status badge on the AI review dashboard (web + Android) and the `ai-status` route (now returns `{ ok, ollama }`). `routeComicMessage` no longer calls any NLU service, so `intent`/`nlu_confidence` on the user turn stay null. Non-destructive on data: the `engine` CHECK still lists `rasa` and the `intent`/`nlu_confidence` columns remain for historical rows; nothing writes them now (noted in `schema.sql`/`schema.demo.sql`). The training-example export route was kept and de-Rasa-named (`buildTrainingNluYaml`) as a portable dataset for a future model. Reason: Rasa only produced reviewer-side intent labels at ~$25/mo, never generated answers, and never gated auto-publish — low value for the cost. Direction instead: upgrade the self-hosted Ollama model on a GPU host (issue #502), then retrieval + a confidence/safety gate, then fine-tune an open model on the exported, de-identified dataset; a third-party API stays off the table for survivor question text on privacy grounds. Contracts and this inventory updated; the Rasa-based "target architecture" sections below are superseded (see the note at the top of this file).
 - 2026-06-13: Made @comic question capture reliable and fixed the asker copy. The Ollama draft was generated **inside** the question-capture DB transaction; a slow Ollama (up to the 30s timeout) held the transaction open, which Neon could abort (idle-in-transaction) and roll back the captured question — so it never reached the admin review queue. `routeComicMessage` now generates the draft (and logs inference) **outside** the transaction, mirroring the existing Rasa call, so the user turn + a `pending` review row always commit fast and reach `/admin/comic` regardless of the AI's speed/availability. Added a defensive human-first fallback when no draft is produced. Asker pending copy changed from "AI Assistant is preparing an answer…" to "Preparing your answer — a teammate is writing a verified response. Answers typically arrive within 72 hours." (sets honest expectations; the owner answers every question). No schema or contract change.
 - 2026-06-12: The Android @comic API client (`packages/mobile/src/features/comic/api.ts`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs. No schema, route, or contract change.
-- 2026-06-07: Aligned the **AI review console** (web + Android) to the newer `AIReviewConsole*` /
-  `MobileAIReviewConsole*` mockups (design `353f8f3`) on `feat/comic-ai-review-console-align`. No
+- 2026-06-07: Aligned the **AI review dashboard** (web + Android) to the newer `AIReviewConsole*` /
+  `MobileAIReviewConsole*` mockups (design `353f8f3`) on `feat/comic-ai-review-dashboard-align`. No
   backend change — binds only the existing `GET /api/comic/review` and
   `POST /api/comic/review/[turnId]/resolve` endpoints (mutations send `x-ctf-csrf: 1`). Web: added a
   confirm gesture (`window.confirm`) before every publish (approve / approve-corrected) and reject,
   so a misclick cannot silently send or discard an answer. Android: added the dedicated **Confidence
-  card** (band label + progress bar + low-confidence safety note) mirroring the web console; rebuilt
+  card** (band label + progress bar + low-confidence safety note) mirroring the web dashboard; rebuilt
   the edit view to the `MobileAIReviewConsoleDetail` layout (read-only Original AI draft beside the
   editable corrected answer, with Reset, a character count, and a safety reminder banner); hid the
   "Approve & send" action for safety-flagged human-first items (no AI draft to send) to match the web
-  console; and added a confirm dialog (`Alert.alert`) before every publish/reject. The fabricated
+  dashboard; and added a confirm dialog (`Alert.alert`) before every publish/reject. The fabricated
   "Sources" list and hardcoded confidence buckets in the mockups remain intentionally omitted — there
   is no backend for source documents, so only the real `nlu_confidence` and provenance are shown. No
   consent surface was added here; the existing first-use consent affordance already covers
@@ -500,16 +502,16 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   (`ComicAnswerCard` cyan answer card with the helpful/not_helpful/flag rating row + `ComicPendingCard`
   "Reviewing for safety"); `ComicComposer.tsx` (single-field `@comic` composer, no toggle, with the
   `@comic` chip + helper and first-use consent gating); `ComicConsentSheet.tsx` (consent bottom
-  sheet); and `ComicReviewConsole.tsx` (owner review console — queue chips + detail with question /
+  sheet); and `ComicReviewDashboard.tsx` (owner review dashboard — queue chips + detail with question /
   AI draft / real provenance + Approve / Edit&approve / Reject; "All caught up" empty state;
   admin-gated server-side with an access notice for non-admins). Interleaved the AI cards + composer
-  into the mobile feed stream (`features/feed/FeedStream.tsx`) and added the "AI Review" console tile
+  into the mobile feed stream (`features/feed/FeedStream.tsx`) and added the "AI Review" dashboard tile
   to the app shell (`App.tsx`). Reconciled the parity contract by adding `comic` to the existing
   `feed-announcements` `mobileFeatureDirs` (the parity gate requires each contract slug to exist in
   the plugin registry, and `@comic` surfaces inside the Hub/feed, not as its own navigable tile).
   **Interim safety policy honored end-to-end on mobile: every answer routes through human review
   before it reaches the asker; no auto-publish path.** Followed the web build's divergence: the
-  review-console mockup's fabricated "Sources" list and hardcoded confidence buckets are not
+  review-dashboard mockup's fabricated "Sources" list and hardcoded confidence buckets are not
   reproduced — only real provenance is shown. Mobile typecheck adds no new errors; mobile lint clean;
   web/Android parity check passes. Parity: web+android complete.
 - 2026-05-31: Normalized the audit contract to the canonical audit shape (template 203): removed the
@@ -551,7 +553,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   composer (no toggle) routes `@comic` mentions to `POST /api/comic/message` and everything else to
   the existing peer-to-peer hub path; `@comic` mention chip + helper copy; helpful/not_helpful/flag
   rating row; first-use consent modal gating `llm_consent_granted`. **Owner Review & Correction
-  Console** (`components/comic/comic-review-console.tsx` + `.module.css`) at `/admin/comic`
+  Dashboard** (`components/comic/comic-review-dashboard.tsx` + `.module.css`) at `/admin/comic`
   (admin-gated), 4 states (queue / empty / loading / detail-edit), wired to `GET /api/comic/review`
   + `POST /api/comic/review/[turnId]/resolve` with editable corrected-text and Approve/Edit&approve/
   Reject. **New backend (unblocked):** `GET /api/comic/conversation` (`comic.conversation.read`,
@@ -576,7 +578,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   (`isRasaConfigured()` false) → every `@comic` draft is enqueued for human review and the
   asker sees only a safe holding response. Web build + typecheck + lint pass. **All UI is
   deferred (design-gated, rule 127): `DESIGN PASS REQUIRED` for `@comic` chat rendering and the
-  owner review/correction console.**
+  owner review/correction dashboard.**
 - 2026-05-31: Pulled design `a460914`; reconciled to owner decisions — `@comic` mention stays
   the trigger (design toggle superseded), adopt the "AI Assistant" reply treatment, keep the
   `comic` internal slug. Added Design Status & Guidance (covered / modify / missing) to steer
@@ -605,10 +607,10 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
   - Done 2026-05-31: every turn captured; safety-flagged → human-first (no draft);
     non-flagged → Ollama draft enqueued to review (never auto-published). Confidence-gated
     auto-reply waits on Rasa (interim force-human-review).
-- [x] Owner review/correction console (web). Done 2026-05-31 against design `9a4a1af`.
+- [x] Owner review/correction dashboard (web). Done 2026-05-31 against design `9a4a1af`.
   - Backend done 2026-05-31 (`GET /api/comic/review`, `POST /api/comic/review/[turnId]/resolve`;
     approve/edit/reject; corrections persist as `comic_training_examples`). Web UI delivered:
-    `components/comic/comic-review-console.tsx` at `/admin/comic`, all 4 states.
+    `components/comic/comic-review-dashboard.tsx` at `/admin/comic`, all 4 states.
 - [x] Asker @comic chat surface (web): answer cards, `ai_pending` card, unified composer with the
       `@comic` mention chip + helper, rating row, first-use consent modal. Done 2026-05-31 against
       design `9a4a1af`. Added asker read (`GET /api/comic/conversation`) and answer rating
@@ -639,7 +641,7 @@ Ordered; dependencies noted; no phases. A task with no dependency can run anytim
 - [x] Android parity for `@comic`. Done 2026-06-01 against design `9a4a1af`.
   - Added `ctf/packages/mobile/src/features/comic/` (api client + `comic-cards.tsx` answer/pending
     cards + `ComicComposer.tsx` single-field `@comic` composer + `ComicConsentSheet.tsx` first-use
-    consent + `ComicReviewConsole.tsx` owner console) and interleaved the AI cards + composer into
+    consent + `ComicReviewDashboard.tsx` owner dashboard) and interleaved the AI cards + composer into
     the mobile feed stream (`features/feed/FeedStream.tsx`). Wired to `/api/comic/*`
     (conversation/message/rate/review/resolve) with `x-ctf-csrf: 1`. Reconciled the parity contract:
     added `comic` to the existing `feed-announcements` `mobileFeatureDirs` (the parity gate requires

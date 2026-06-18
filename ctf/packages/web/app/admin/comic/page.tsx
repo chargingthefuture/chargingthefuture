@@ -1,12 +1,12 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { ComicReviewConsole } from '../../../components/comic/comic-review-console';
+import { ComicReviewDashboard } from '../../../components/comic/comic-review-dashboard';
 
 export const dynamic = 'force-dynamic';
 
-// Owner Review & Correction Console for the AI Assistant (@comic). Admin-gated server-side; the
-// client console fetches the pending queue and resolves items via the admin /api/comic/review*
+// Owner Review & Correction Dashboard for the AI Assistant (@comic). Admin-gated server-side; the
+// client screen fetches the pending queue and resolves items via the admin /api/comic/review*
 // routes. This is the supervision surface that keeps unreviewed drafts away from survivors.
-export default async function ComicReviewConsolePage() {
+export default async function ComicReviewDashboardPage() {
   const decision = await evaluatePluginAccess({ requiredRoles: ['admin'] });
 
   if (!decision.allowed) {
@@ -14,7 +14,7 @@ export default async function ComicReviewConsolePage() {
       <main className="mx-auto max-w-3xl px-6 py-12 space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Admin access denied</h1>
         <p className="text-sm text-muted-foreground">
-          The AI Assistant review console is restricted to admins. Request blocked by server-side role policy.
+          The AI Assistant review dashboard is for admins only. Your account does not have admin access.
         </p>
         <dl className="rounded-lg border bg-card p-4 text-sm">
           <div className="flex justify-between gap-4">
@@ -34,5 +34,5 @@ export default async function ComicReviewConsolePage() {
     );
   }
 
-  return <ComicReviewConsole />;
+  return <ComicReviewDashboard />;
 }

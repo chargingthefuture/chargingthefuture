@@ -122,7 +122,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_endorsements_unique ON whatworks
 CREATE TABLE IF NOT EXISTS currencies (
   code TEXT PRIMARY KEY,
   label TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('token','fiat','crypto','barter')),
+  kind TEXT NOT NULL CHECK (kind IN ('token','fiat','crypto','barter','free')),
   is_service_credits BOOLEAN NOT NULL DEFAULT FALSE,
   symbol TEXT,
   decimal_places INTEGER NOT NULL DEFAULT 2,
@@ -143,6 +143,10 @@ ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT 
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Widen the kind check to allow 'free' (one-way, no-charge mutual aid) on legacy DBs whose constraint
+-- predates it. Drop + re-add is idempotent and keeps fresh and legacy schemas identical.
+ALTER TABLE IF EXISTS currencies DROP CONSTRAINT IF EXISTS currencies_kind_check;
+ALTER TABLE IF EXISTS currencies ADD CONSTRAINT currencies_kind_check CHECK (kind IN ('token','fiat','crypto','barter','free'));
 CREATE INDEX IF NOT EXISTS idx_currencies_active_sort ON currencies(is_active, sort_order);
 
 -- Seed the owner-curated launch set (inline + idempotent, like ctf_plugin_registry). Owner updates
@@ -159,7 +163,15 @@ INSERT INTO currencies (code, label, kind, is_service_credits, symbol, decimal_p
   ('CNY', 'Chinese Yuan',          'fiat',   FALSE, 'CN¥', 2, TRUE, 80),
   ('INR', 'Indian Rupee',          'fiat',   FALSE, '₹',   2, TRUE, 90),
   ('BRL', 'Brazilian Real',        'fiat',   FALSE, 'R$',  2, TRUE, 100),
-  ('BTC', 'Bitcoin',               'crypto', FALSE, '₿',   8, TRUE, 110)
+  ('BTC', 'Bitcoin',               'crypto', FALSE, '₿',   8, TRUE, 110),
+  -- Barter: a no-money exchange (goods/services traded directly). requires_amount = FALSE because a
+  -- barter trade has no monetary amount; it is selectable as a payment type and each completed barter
+  -- trade contributes to the Community Value Index by count, never by a fiat amount.
+  ('BARTER', 'Barter (no money)',  'barter', FALSE, NULL,  0, FALSE, 120),
+  -- Free: one-way mutual aid given at no charge (a meal, a ride, help). requires_amount = FALSE — there
+  -- is no price. Selectable as a payment type; each completed free exchange contributes to the Community
+  -- Value Index by count, never by a fiat amount, so mutual aid still counts toward the community economy.
+  ('FREE', 'Free (no charge)',     'free',   FALSE, NULL,  0, FALSE, 130)
 ON CONFLICT (code) DO UPDATE SET
   label              = EXCLUDED.label,
   kind               = EXCLUDED.kind,
@@ -277,7 +289,8 @@ CREATE TABLE IF NOT EXISTS peer_programming_weekly_topics (
   published_by_user_id TEXT,
   published_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (week_start_date)
 );
 
 -- Add columns with guarded DDL for legacy DBs
@@ -292,6 +305,10 @@ ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS pu
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_weekly_topics ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One topic row per week. The admin topic upsert relies on this for ON CONFLICT (week_start_date);
+-- without it, every "set the weekly topic" call fails. Guarded so legacy DBs gain the constraint too.
+CREATE UNIQUE INDEX IF NOT EXISTS peer_programming_weekly_topics_week_start_date_key
+  ON peer_programming_weekly_topics(week_start_date);
 
 -- === canonical-username-handle-baseline ===
 -- === users table: ensure prod compatibility ===
@@ -587,7 +604,6 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_submission_id ON skil
 CREATE TABLE IF NOT EXISTS feed_render_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   render_mode TEXT NOT NULL,
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
   -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
@@ -600,15 +616,16 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
 -- Add columns with guarded DDL for legacy DBs
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS singleton_key BOOLEAN DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS render_mode TEXT NOT NULL DEFAULT 'card_only';
-ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS max_timeline_page_size INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS feed_render_config DROP COLUMN IF EXISTS kill_switch_enabled;
 -- Seed default feed config row (idempotent)
-INSERT INTO feed_render_config (singleton_key, render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
-SELECT TRUE, 'card_only', FALSE, 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
+INSERT INTO feed_render_config (singleton_key, render_mode, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
+SELECT TRUE, 'card_only', 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
 WHERE NOT EXISTS (
   SELECT 1 FROM feed_render_config WHERE singleton_key IS TRUE
 );
@@ -1032,6 +1049,27 @@ CREATE TABLE IF NOT EXISTS trusttransport_requests (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- How the requester will settle the ride (issue #420): the chosen value type + an optional amount.
+-- "Free" (asking for a free ride — valid mutual aid) and "Barter" carry no amount; priced types
+-- (ServiceCredits, fiat, crypto) carry a positive amount. Both NULL means none was chosen.
+ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trusttransport_requests DROP CONSTRAINT IF EXISTS trusttransport_requests_price_consistency_check;
+DO $trusttransport_requests_price_consistency$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'trusttransport_requests_price_consistency_check'
+  ) THEN
+    ALTER TABLE trusttransport_requests
+      ADD CONSTRAINT trusttransport_requests_price_consistency_check
+      CHECK (
+        (price_amount IS NULL AND price_currency IS NULL) OR
+        (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
+      );
+  END IF;
+END
+$trusttransport_requests_price_consistency$;
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -1041,7 +1079,6 @@ CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20,
   max_call_duration_minutes INTEGER NOT NULL DEFAULT 45,
   quota_state TEXT NOT NULL DEFAULT 'green' CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   updated_by_user_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1052,9 +1089,10 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER NOT NULL DEFAULT 45;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS quota_state TEXT DEFAULT 'green';
-ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
 CREATE TABLE IF NOT EXISTS trusttransport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
@@ -1236,12 +1274,13 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_events (
 CREATE TABLE IF NOT EXISTS workforce_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   exports_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   report_week_timezone TEXT NOT NULL,
   report_week_start_dow INTEGER NOT NULL DEFAULT 0,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS kill_switch_enabled;
 CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1254,6 +1293,12 @@ CREATE TABLE IF NOT EXISTS service_credits_wallets (
   escrow_balance NUMERIC NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Wallet freeze (trust & safety): a frozen wallet cannot spend on either rail. Distinct from the
+-- mutual-credit limit, which only bounds going negative.
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_reason TEXT;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_by_user_id TEXT;
+ALTER TABLE IF EXISTS service_credits_wallets ADD COLUMN IF NOT EXISTS frozen_at TIMESTAMPTZ;
 CREATE TABLE IF NOT EXISTS service_credits_transfers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_user_id TEXT NOT NULL,
@@ -1352,6 +1397,30 @@ CREATE TABLE IF NOT EXISTS service_credits_disputes (
   reason TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Per-account mutual-credit limit: the most negative a wallet's available_balance may reach is
+-- -credit_limit. Absent a row, the member's limit is the treasury policy mutualCredit.defaultLimit.
+CREATE TABLE IF NOT EXISTS service_credits_credit_limits (
+  user_id TEXT PRIMARY KEY,
+  credit_limit NUMERIC NOT NULL DEFAULT 0 CHECK (credit_limit >= 0),
+  updated_by_user_id TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS credit_limit NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
+ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Enforce non-negative limits on legacy tables too (idempotent; the constraint inverts floor behaviour if negative).
+DO $service_credits_credit_limits_non_negative$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'service_credits_credit_limits_credit_limit_check'
+  ) THEN
+    ALTER TABLE service_credits_credit_limits
+      ADD CONSTRAINT service_credits_credit_limits_credit_limit_check
+      CHECK (credit_limit >= 0);
+  END IF;
+END
+$service_credits_credit_limits_non_negative$;
 
 -- === lighthouse-core ===
 CREATE TABLE IF NOT EXISTS lighthouse_user_extension (
@@ -1668,25 +1737,27 @@ ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS updated_at TI
 
 -- Seed plugin registry (upsert so re-running is safe)
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
-  ('chyme',              'Chyme',                'Room bootstrap, chat, join flow, and deletion behavior with policy/audit.',                       'implemented_shell', 10,  TRUE),
+  ('chyme',              'Chyme',                'Live social audio rooms. Broadcast, listen, and connect in real time.',                       'implemented_shell', 10,  TRUE),
   ('skills-taxonomy',    'Skills Taxonomy',      'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',                     'implemented_shell', 20,  TRUE),
-  ('directory',          'Directory',            'Unified user/admin profile surface with claimed/unclaimed policy controls.',                      'implemented_shell', 30,  TRUE),
-  ('workforce',          'Workforce',            'Dashboard reporting and recruited-state derivation from upstream data.',                           'implemented_shell', 50,  TRUE),
-  ('skills-hunt',        'Skills Hunt',          'Rounds, moderation, scoring, leaderboards, and governed profile generation.',                     'alpha',             60,  TRUE),
+  ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
+  ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
+  ('skills-hunt',        'Skills Hunt',          'Discover skills across the network.',                     'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
-  ('foundation',         'Foundation',           'Provider search and quote lifecycle using read-only Directory projections.',                      'implemented_shell', 70,  TRUE),
-  ('lighthouse',         'LightHouse',           'Profile/property/match parity scope with blocks lifecycle controls.',                             'implemented_shell', 80,  TRUE),
-  ('socketrelay',        'SocketRelay',          'Request and fulfillment flows with privacy-minimized public projections.',                        'implemented_shell', 90,  TRUE),
-  ('trusttransport',     'TrustTransport',       'Ride/package/food fulfillment with safety-first and dispute controls.',                           'implemented_shell', 100, TRUE),
-  ('peer-programming',   'Peer Programming',     'Weekly cohort assignments with deterministic fallback-open behavior.',                            'implemented_shell', 110, TRUE),
-  ('mood',               'Mood',                 'Mood submissions with 7-day cooldown and anonymous clientId persistence.',                        'implemented_shell', 120, TRUE),
-  ('gentlepulse',        'GentlePulse',          'Library listing/playback, ratings, favorites, and support route behavior.',                       'implemented_shell', 130, TRUE),
+  ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
+  ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),
+  ('socketrelay',        'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
+  ('trusttransport',     'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
+  ('peer-programming',   'Peer Programming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
+  ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
+  ('gentlepulse',        'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
-  ('gdp',                'GDP',                  'Aggregate transparency and admin publish flows with compliance controls.',                        'implemented_shell', 150, TRUE),
-  ('service-credits',    'Service Credits',      'Wallet/transfers/escrow/disputes and treasury governance workflows.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Flexible training cohorts with milestone escrow release, trainer payouts, stipends, and disputes.','implemented_shell', 170, TRUE),
-  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools that solved a specific problem, with admin-curated problems and reviewed suggestions.','implemented_shell', 200, TRUE),
-  ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE)
+  ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
+  ('service-credits',    'Service Credits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
+  ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
+  ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
+  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
+  ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
+  ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -2520,6 +2591,43 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated
 -- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+
+-- A Foundation provider opts in to being contacted to offer specific skills. This is the
+-- "willing to offer SAID skill" signal that distinguishes Foundation from the Directory (where a
+-- profile merely lists a skill): a survivor searching Foundation only sees providers who chose to
+-- be contactable for that skill. Each row is one offered skill for one provider; the skill_id must
+-- be one the provider already lists on their claimed Directory profile (enforced in the repository).
+-- A provider with zero rows here is not surfaced as a Foundation provider at all.
+CREATE TABLE IF NOT EXISTS foundation_provider_skills (
+  user_id TEXT NOT NULL,
+  skill_id UUID NOT NULL REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, skill_id)
+);
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS skill_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- skill_id must point at a real taxonomy skill; CASCADE so removing a skill clears the offers.
+-- No FK on user_id: an offer doesn't require a foundation_user_extension row and there's no
+-- canonical users table to reference; the repository constrains skill_id to the member's own
+-- Directory skills on write, so the app can't create orphans. Guarded so a legacy table without
+-- the constraint converges and a fresh table doesn't double-add it.
+DO $foundation_provider_skills_skill_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey'
+      AND table_name = 'foundation_provider_skills'
+      AND constraint_type = 'FOREIGN KEY'
+  ) THEN
+    ALTER TABLE foundation_provider_skills
+      ADD CONSTRAINT foundation_provider_skills_skill_id_fkey
+      FOREIGN KEY (skill_id) REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE;
+  END IF;
+END
+$foundation_provider_skills_skill_fk$;
+CREATE INDEX IF NOT EXISTS idx_foundation_provider_skills_skill ON foundation_provider_skills (skill_id);
+
 CREATE TABLE IF NOT EXISTS foundation_provider_accepted_currencies (
   user_id TEXT NOT NULL REFERENCES foundation_user_extension(user_id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
@@ -2594,6 +2702,7 @@ CREATE TABLE IF NOT EXISTS socketrelay_requests (
   title TEXT NOT NULL,
   details TEXT NOT NULL,
   category TEXT NOT NULL,
+  tags TEXT[] NOT NULL DEFAULT '{}',
   city TEXT,
   is_public BOOLEAN NOT NULL DEFAULT FALSE,
   status TEXT NOT NULL DEFAULT 'open',
@@ -2610,6 +2719,7 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_userna
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS city TEXT;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
@@ -2623,8 +2733,12 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at T
 -- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
--- Enforce the "Free = no price, never $0" rule at the DB level (issue #120 follow-up): a request either
--- has no price (both NULL) or a positive amount in a named currency. Guarded so it is added only once.
+-- Price/value-type consistency (issue #120 / #420): a request either names no value type (both NULL) or
+-- names a value type, with a positive amount for priced types and NO amount for amount-less types
+-- (Free, Barter — currencies.requires_amount = FALSE). "Free" therefore renders from price_currency =
+-- 'FREE' with a NULL amount, never as $0. Drop the older strict constraint (which forbade amount-less
+-- named types) so legacy DBs get the relaxed rule; the guarded block re-adds it under the same name.
+ALTER TABLE IF EXISTS socketrelay_requests DROP CONSTRAINT IF EXISTS socketrelay_requests_price_consistency_check;
 DO $socketrelay_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
@@ -2635,7 +2749,7 @@ BEGIN
       ADD CONSTRAINT socketrelay_requests_price_consistency_check
       CHECK (
         (price_amount IS NULL AND price_currency IS NULL) OR
-        (price_amount IS NOT NULL AND price_amount > 0 AND price_currency IS NOT NULL)
+        (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
       );
   END IF;
 END
@@ -2905,6 +3019,12 @@ ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NUL
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
+-- At most one row per member per UTC day. This makes the "record a sign-in once per day"
+-- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
+-- concurrent requests for the same member on the same UTC day cannot both write a row. The day
+-- is computed in UTC explicitly so the dedupe does not depend on the database session timezone.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
+  ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
 -- === PEER PROGRAMMING MODULE ===
 CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
@@ -3498,6 +3618,7 @@ ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS cre
 CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
+  asker_username TEXT NULL,
   channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3505,6 +3626,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
 );
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS asker_username TEXT NULL;
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -3762,6 +3884,54 @@ CREATE TABLE IF NOT EXISTS user_ui_preferences (
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- === BUG REPORTS (in-app "Report a problem" capture; raw text stays private) ===
+-- Users file problem reports from inside the app and never touch GitHub. The raw
+-- message is the private source of truth and is NEVER published. A separate process
+-- redacts it and creates an issue in the private triage repo (see rule 129). Anything
+-- flagged is held for owner review and is never auto-published (fail closed).
+CREATE TABLE IF NOT EXISTS bug_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'new'
+    CHECK (status IN ('new', 'held_for_review', 'issue_created', 'rejected', 'resolved')),
+  raw_message TEXT NOT NULL,
+  raw_context TEXT NULL,
+  page_url TEXT NULL,
+  plugin_slug TEXT NULL,
+  app_version TEXT NULL,
+  user_agent TEXT NULL,
+  redacted_message TEXT NULL,
+  redacted_context TEXT NULL,
+  risk_flags TEXT[] NOT NULL DEFAULT '{}',
+  risk_level TEXT NOT NULL DEFAULT 'unknown'
+    CHECK (risk_level IN ('clean', 'flagged', 'unknown')),
+  triage_repo TEXT NULL,
+  issue_number INTEGER NULL,
+  issue_url TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS raw_message TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS raw_context TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS page_url TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS plugin_slug TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS user_agent TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS redacted_message TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS redacted_context TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS risk_flags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS risk_level TEXT NOT NULL DEFAULT 'unknown';
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS triage_repo TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS issue_number INTEGER NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS issue_url TEXT NULL;
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created_at ON bug_reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_id, created_at DESC);
+
 -- === contributions plugin (voluntary fundraiser drives) ===
 -- Fundraiser cycles: each row is one time window (~3 months, owner-controlled) with
 -- owner-editable goals on the three external surfaces (fiat gift cards, Quora comments,
@@ -3979,6 +4149,54 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
   SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
   FROM skills_taxonomy_consumer_bindings
   GROUP BY target_type, target_id;
+
+-- === account_restrictions (platform-wide trust & safety signal) ===
+-- One canonical record of whether a member is restricted, and at what scope. The auth gate blocks an
+-- 'all'-scope restriction on every product route; value-movement and contact points additionally
+-- honour 'trading'/'contact' scopes. Supersedes the per-plugin flags
+-- (trusttransport_user_extension.account_restricted, service_credits_wallets.is_frozen), which are
+-- retired in code and backfilled below. Defined at the END so the tables it backfills from already exist.
+CREATE TABLE IF NOT EXISTS account_restrictions (
+  user_id TEXT PRIMARY KEY,
+  is_restricted BOOLEAN NOT NULL DEFAULT FALSE,
+  restriction_scope TEXT NOT NULL DEFAULT 'all' CHECK (restriction_scope IN ('all', 'trading', 'contact')),
+  restricted_at TIMESTAMPTZ,
+  restricted_by_user_id TEXT,
+  restriction_reason TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS is_restricted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restriction_scope TEXT NOT NULL DEFAULT 'all';
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restricted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restricted_by_user_id TEXT;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS restriction_reason TEXT;
+ALTER TABLE IF EXISTS account_restrictions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS account_restrictions_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('restrict', 'unrestrict')),
+  target_user_id TEXT NOT NULL,
+  scope TEXT,
+  reason TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_account_restrictions_audit_created ON account_restrictions_audit(created_at DESC);
+
+-- One-time backfill from the retired per-plugin flags. ON CONFLICT DO NOTHING so it never
+-- re-restricts a member whose canonical row already exists (e.g. after an operator unrestricts).
+INSERT INTO account_restrictions (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason)
+SELECT user_id, TRUE, 'trading', COALESCE(restricted_at, NOW()), restricted_by_user_id, restriction_reason
+FROM trusttransport_user_extension
+WHERE account_restricted = TRUE
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO account_restrictions (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason)
+SELECT user_id, TRUE, 'trading', COALESCE(frozen_at, NOW()), frozen_by_user_id, frozen_reason
+FROM service_credits_wallets
+WHERE is_frozen = TRUE
+ON CONFLICT (user_id) DO NOTHING;
 
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──
 -- Directory: move the single v2 `display_name` field to honest v3

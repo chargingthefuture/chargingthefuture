@@ -10,7 +10,7 @@
 - Plugin Name: AI Assistant (`@comic`)
 - Service Key (lowercase, stable): `comic`
 - Owner Team: Social Platform (proposed)
-- Rollout Stage: Web UI delivered (asker stream + owner review console, design `9a4a1af`); Android parity deferred
+- Rollout Stage: Web UI delivered (asker stream + owner review dashboard, design `9a4a1af`); Android parity deferred
 
 ## 2) Canonical Profile Usage
 
@@ -44,9 +44,11 @@ fields.
 ## 4) Domain Data Owned by Plugin
 
 - Table/entity: `comic_conversations`
-  - Contains personal data? yes (`user_id` ownership)
+  - Contains personal data? yes (`user_id` ownership, and `asker_username` — the asker's @username
+    snapshotted at ask time for display in the review dashboard)
   - Retention period: medium-lived under supervision policy
-  - Legal/compliance note: conversation context for the human-in-the-loop review trail
+  - Legal/compliance note: conversation context for the human-in-the-loop review trail; the whole row
+    (including `asker_username`) is removed when the user's comic data is deleted (see deletion scope)
 - Table/entity: `comic_turns`
   - Contains personal data? yes (asker message content + bot/human drafts)
   - Retention period: medium-lived; corrected turns feed training

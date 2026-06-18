@@ -4,8 +4,8 @@ import { ContributionsAdminShell } from '@/components/contributions/admin/contri
 
 export const dynamic = 'force-dynamic';
 
-// Owner-only admin console for the Contributions plugin, mirroring app/admin/unlock/page.tsx: the
-// server gate requires the admin role and redirects everyone else away. The interactive console
+// Owner-only admin dashboard for the Contributions plugin, mirroring app/admin/unlock/page.tsx: the
+// server gate requires the admin role and redirects everyone else away. The interactive dashboard
 // (queue, drive management, settings) is a client component that talks to the /api/contributions/
 // admin routes.
 export default async function ContributionsAdminPage() {

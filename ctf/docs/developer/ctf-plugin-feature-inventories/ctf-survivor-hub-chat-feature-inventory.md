@@ -110,7 +110,7 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 
 ## Target Admin Features
 
-1. Announcement authoring (admin-only) and channel config (kill switch, enabled channels, `is_public`) are operated through the Feed admin surface at `/admin/feed-announcements` and the `feed.*` command namespace — the Hub has no separate admin contract surface.
+1. Announcement authoring (admin-only) and channel config (enabled channels, `is_public`) are operated through the Feed admin surface at `/admin/feed-announcements` and the `feed.*` command namespace — the Hub has no separate admin contract surface.
 2. There is no bot or channel-visibility admin surface in the MVP (deferred with channels/DMs/bots).
 
 ## API Surface and Route Map
@@ -139,7 +139,7 @@ The Hub owns no message/channel/bot tables. Its channel is backed by the Feed sc
 - `feed_community_posts` / `feed_community_replies` — peer-to-peer posts.
 - `feed_questions` / `feed_answers` / `feed_answer_ratings` — AI Q&A and ratings.
 - `announcements` (+ revisions/state) — admin-only announcements.
-- `feed_render_config` — global singleton; `is_public BOOLEAN NOT NULL DEFAULT TRUE` marks the blended channel publicly viewable; `kill_switch_enabled`, `enabled_channels` gate rendering.
+- `feed_render_config` — global singleton; `is_public BOOLEAN NOT NULL DEFAULT TRUE` marks the blended channel publicly viewable; `enabled_channels` gates rendering.
 
 Platform-neutral tables consumed read-only by the Hub shell:
 

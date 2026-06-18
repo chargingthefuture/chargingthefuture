@@ -2,8 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Bug, ExternalLink } from 'lucide-react';
 import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
 import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
+
+// Admin design tokens (shared admin look from the design system). Bug Reports is cross-cutting
+// platform tooling with no plugin accent, so it uses the neutral admin indigo (rule 131).
+const COLOR = '#6366F1';
+const BG = '#0F1117';
+const PANEL = '#0D0F14';
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
 
 type AdminBugReport = {
   id: string;
@@ -41,12 +52,12 @@ const STATUS_LABEL: Record<BugReportStatus, string> = {
   resolved: 'Resolved',
 };
 
-const STATUS_PILL_CLASS: Record<BugReportStatus, string> = {
-  held_for_review: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  new: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  issue_created: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  rejected: 'bg-muted text-muted-foreground border-border',
-  resolved: 'bg-muted text-muted-foreground border-border',
+const STATUS_STYLE: Record<BugReportStatus, { bg: string; color: string; border: string }> = {
+  held_for_review: { bg: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: 'rgba(245,158,11,0.3)' },
+  new: { bg: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: 'rgba(56,189,248,0.3)' },
+  issue_created: { bg: 'rgba(34,197,94,0.12)', color: '#22C55E', border: 'rgba(34,197,94,0.3)' },
+  rejected: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)' },
+  resolved: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)' },
 };
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -64,6 +75,24 @@ function formatWhen(iso: string): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return 'unknown time';
   return new Date(then).toLocaleString();
+}
+
+function StatusPill({ status }: { status: BugReportStatus }) {
+  const s = STATUS_STYLE[status];
+  return (
+    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 120, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? TEXT }}>{value}</div>
+      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    </div>
+  );
 }
 
 export function BugReportsAdminShell() {
@@ -119,81 +148,85 @@ export function BugReportsAdminShell() {
   );
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12 space-y-8">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Bug Reports</h1>
-          <span className="rounded border border-indigo-500/40 bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-300">
-            ADMIN
-          </span>
+    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+      <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bug size={18} color={COLOR} />
+          </div>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>Bug Reports</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>In-app report triage</div>
+          </div>
+          <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
-        <p className="text-sm text-muted-foreground">
+
+        <p style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 16 }}>
           Reports filed from inside the app. A report the safety check flagged is{' '}
-          <span className="font-medium">held for review</span> and never sent to the triage repo on its own —
-          release it to send the redacted copy to triage, or reject it. Only redacted text is shown here; the
-          raw text stays in the database.
+          <span style={{ color: TEXT, fontWeight: 600 }}>held for review</span> and never sent to the triage repo on its
+          own — release it to send the redacted copy to triage, or reject it. Only redacted text is shown here; the raw
+          text stays in the database.
         </p>
+
+        {/* Snapshot */}
         {loadState === 'ready' ? (
-          <p className="text-sm text-muted-foreground">
-            {heldCount > 0
-              ? `${heldCount} report${heldCount === 1 ? '' : 's'} waiting for your review.`
-              : 'No reports are waiting for review.'}
-          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            <StatBlock label="Held for review" value={heldCount} accent="#F59E0B" />
+            <StatBlock label="Total reports" value={items.length} />
+          </div>
         ) : null}
-      </header>
 
-      {error ? (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300" role="status">
-          {error}
-        </div>
-      ) : null}
+        {error ? (
+          <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+            {error}
+          </div>
+        ) : null}
 
-      {loadState === 'loading' ? (
-        <p className="text-sm text-muted-foreground">Loading reports…</p>
-      ) : null}
+        {loadState === 'loading' ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+            Loading reports…
+          </div>
+        ) : null}
 
-      {loadState === 'ready' && items.length === 0 ? (
-        <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-          No bug reports yet. When someone files one from inside the app, it shows up here.
-        </div>
-      ) : null}
+        {loadState === 'ready' && items.length === 0 ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+            No bug reports yet. When someone files one from inside the app, it shows up here.
+          </div>
+        ) : null}
 
-      <ul className="space-y-3">
         {items.map((report) => {
           // A held report can be released to triage; a new one is already queued for the drain,
           // so it only offers reject. Release on a new report would 409 (the update only matches
           // held_for_review), so the button is hidden there.
           const canRelease = report.status === 'held_for_review';
           const canReject = report.status === 'held_for_review' || report.status === 'new';
+          const busy = busyId === report.id;
           return (
-            <li key={report.id} className="rounded-lg border bg-card p-4 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded border px-2 py-0.5 text-xs font-medium ${STATUS_PILL_CLASS[report.status]}`}
-                >
-                  {STATUS_LABEL[report.status]}
-                </span>
-                <span className="text-xs text-muted-foreground">{formatWhen(report.createdAt)}</span>
-                {report.pluginSlug ? (
-                  <span className="text-xs text-muted-foreground">· {report.pluginSlug}</span>
-                ) : null}
+            <div key={report.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <StatusPill status={report.status} />
+                <span style={{ fontSize: 12, color: SUBTLE }}>{formatWhen(report.createdAt)}</span>
+                {report.pluginSlug ? <span style={{ fontSize: 12, color: SUBTLE }}>· {report.pluginSlug}</span> : null}
               </div>
 
-              <p className="whitespace-pre-wrap text-sm">{report.redactedMessage || '(no message)'}</p>
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: TEXT, margin: 0 }}>
+                {report.redactedMessage || '(no message)'}
+              </p>
 
               {report.redactedContext ? (
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                  <span className="font-medium">What they were trying to do: </span>
+                <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, color: SUBTLE, marginTop: 8, marginBottom: 0 }}>
+                  <span style={{ color: TEXT, fontWeight: 600 }}>What they were trying to do: </span>
                   {report.redactedContext}
                 </p>
               ) : null}
 
               {report.riskFlags.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
                   {report.riskFlags.map((flag) => (
                     <span
                       key={flag}
-                      className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300"
+                      style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}
                     >
                       {RISK_FLAG_LABEL[flag] ?? flag}
                     </span>
@@ -201,24 +234,29 @@ export function BugReportsAdminShell() {
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 10, fontSize: 12, color: SUBTLE }}>
                 {report.pageUrl ? <span>Page: {report.pageUrl}</span> : null}
                 {report.appVersion ? <span>App: {report.appVersion}</span> : null}
                 {report.issueUrl ? (
-                  <Link className="underline underline-offset-4" href={report.issueUrl} target="_blank" rel="noreferrer">
-                    Triage issue #{report.issueNumber ?? '?'}
+                  <Link
+                    href={report.issueUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: COLOR, textDecoration: 'none' }}
+                  >
+                    <ExternalLink size={12} /> Triage issue #{report.issueNumber ?? '?'}
                   </Link>
                 ) : null}
               </div>
 
               {canRelease || canReject ? (
-                <div className="flex gap-2 pt-1">
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                   {canRelease ? (
                     <button
                       type="button"
                       onClick={() => void resolve(report.id, 'release')}
-                      disabled={busyId === report.id}
-                      className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                      disabled={busy}
+                      style={{ padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
                     >
                       Release to triage
                     </button>
@@ -227,22 +265,24 @@ export function BugReportsAdminShell() {
                     <button
                       type="button"
                       onClick={() => void resolve(report.id, 'reject')}
-                      disabled={busyId === report.id}
-                      className="rounded-md border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+                      disabled={busy}
+                      style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
                     >
                       Reject
                     </button>
                   ) : null}
                 </div>
               ) : null}
-            </li>
+            </div>
           );
         })}
-      </ul>
 
-      <footer className="border-t pt-4 text-sm text-muted-foreground">
-        <Link className="underline underline-offset-4" href="/admin">Back to admin</Link>
-      </footer>
-    </main>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, fontSize: 13 }}>
+          <Link href="/admin" style={{ color: COLOR, textDecoration: 'none' }}>
+            ← Back to admin
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

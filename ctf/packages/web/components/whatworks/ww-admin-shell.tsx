@@ -1,14 +1,33 @@
 'use client';
 
 // Functional WhatWorks admin: moderate suggestions (approve / reject / delete) and curate
-// the admin-owned problem categories. Generic admin aesthetic, consistent with other
-// /admin/{plugin} surfaces. Mutations carry the CSRF header via adminMutate().
+// the admin-owned problem categories. Dark admin design system (shared admin look), accent lime.
+// Mutations carry the CSRF header via adminMutate().
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ThumbsUp } from 'lucide-react';
 import type { WhatWorksProductStatus } from 'lib/whatworks/types';
 import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
 import { WhatWorksAdminProblems } from './ww-admin-problems';
+
+// Admin design tokens (shared admin look from the design system). WhatWorks accent is lime.
+const COLOR = '#84CC16';
+const BG = '#0F1117';
+const PANEL = '#0D0F14';
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
+function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? TEXT }}>{value}</div>
+      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
 
 export function WhatWorksAdminShell() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -141,58 +160,60 @@ export function WhatWorksAdminShell() {
   const approvedCount = problems.reduce((total, problem) => total + problem.approvedCount, 0);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">WhatWorks Admin</h1>
-        <p className="text-sm text-muted-foreground">
-          Curate problem categories and review survivor-suggested tools before they join the one shared list.
-        </p>
-        <p className="text-sm">
-          <Link className="underline underline-offset-4" href="/apps/whatworks">Open the WhatWorks list</Link>
-        </p>
-      </header>
+    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ThumbsUp size={18} color={COLOR} />
+          </div>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>WhatWorks Admin</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>Entry moderation</div>
+          </div>
+          <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
+        </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <article className="rounded-lg border bg-card p-4 text-sm">
-          <p className="text-xs text-muted-foreground">Problems</p>
-          <p className="text-2xl font-semibold">{problems.length}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4 text-sm">
-          <p className="text-xs text-muted-foreground">Pending review</p>
-          <p className="text-2xl font-semibold">{pendingCount}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4 text-sm">
-          <p className="text-xs text-muted-foreground">Approved tools</p>
-          <p className="text-2xl font-semibold">{approvedCount}</p>
-        </article>
-      </section>
+        <div style={{ marginBottom: 16 }}>
+          <Link href="/apps/whatworks" style={{ fontSize: 13, color: COLOR, textDecoration: 'underline', textUnderlineOffset: 4 }}>
+            Open the WhatWorks list
+          </Link>
+        </div>
 
-      {error ? (
-        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">{error}</p>
-      ) : null}
+        {/* Snapshot */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          <StatBlock label="Problems" value={problems.length} />
+          <StatBlock label="Pending review" value={pendingCount} accent="#F59E0B" />
+          <StatBlock label="Approved tools" value={approvedCount} accent="#22C55E" />
+        </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <>
-          <WhatWorksAdminProducts
-            products={products}
-            busyId={busyId}
-            statusFilter={statusFilter}
-            onChangeFilter={changeFilter}
-            onReview={reviewProduct}
-            onDelete={deleteProduct}
-          />
-          <WhatWorksAdminProblems
-            problems={problems}
-            busyId={busyId}
-            creating={creating}
-            onCreate={createProblem}
-            onToggleActive={toggleProblemActive}
-            onDelete={deleteProblem}
-          />
-        </>
-      )}
-    </main>
+        {error ? (
+          <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>{error}</div>
+        ) : null}
+
+        {loading ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>Loading…</div>
+        ) : (
+          <>
+            <WhatWorksAdminProducts
+              products={products}
+              busyId={busyId}
+              statusFilter={statusFilter}
+              onChangeFilter={changeFilter}
+              onReview={reviewProduct}
+              onDelete={deleteProduct}
+            />
+            <WhatWorksAdminProblems
+              problems={problems}
+              busyId={busyId}
+              creating={creating}
+              onCreate={createProblem}
+              onToggleActive={toggleProblemActive}
+              onDelete={deleteProblem}
+            />
+          </>
+        )}
+      </div>
+    </div>
   );
 }

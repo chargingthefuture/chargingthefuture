@@ -1,8 +1,6 @@
 'use client';
 
-// LevelUp admin surface. Replaces the former KPI-only stub with a real,
-// mobile-responsive admin UI consistent with the other /admin/{plugin} screens
-// (generic admin aesthetic; see whatworks / peer-programming admin shells).
+// LevelUp admin surface, dark admin design system (mirrors unlock-admin-shell.tsx).
 //
 // Binds only endpoints that exist today:
 //   - GET  /api/levelup/cohorts               (cohort list, read access)
@@ -13,7 +11,7 @@
 // here; cohort creation already lives in the trainer/admin plugin shell.
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { TrendingUp } from 'lucide-react';
 import {
   idempotencyKey,
   luAdminMutate,
@@ -21,11 +19,46 @@ import {
   type AdminKpis,
 } from './lu-admin-shared';
 
+// Admin design tokens (shared admin look from the design system). LevelUp accent is green.
+const COLOR = '#10B981';
+const BG = '#0F1117';
+const PANEL = '#0D0F14';
+const SURFACE = '#161B27';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
 type AdjustOutcome = { ok: boolean; adjustment?: unknown };
 
-export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
-  const isMobile = useIsMobile();
+function StatBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 140, padding: '12px 14px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: TEXT }}>{value}</div>
+      <div style={{ fontSize: 11, color: SUBTLE, marginTop: 3 }}>{label}</div>
+    </div>
+  );
+}
 
+function Pill({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: SURFACE, color: SUBTLE, border: `1px solid ${BORDER}`, textTransform: 'capitalize' }}>
+      {children}
+    </span>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 8,
+  background: BG,
+  border: `1px solid ${BORDER}`,
+  color: TEXT,
+  padding: '9px 12px',
+  fontSize: 13,
+  outline: 'none',
+};
+
+export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
   const [cohortsError, setCohortsError] = useState<string | null>(null);
 
@@ -112,189 +145,170 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
   }, [targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">LevelUp Admin</h1>
-          <span className="rounded border border-indigo-500/40 bg-indigo-500/10 px-2 py-0.5 text-xs font-semibold text-indigo-400">
-            ADMIN
-          </span>
+    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={18} color={COLOR} />
+          </div>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>LevelUp Admin</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>Program metrics, cohorts &amp; grants</div>
+          </div>
+          <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', fontSize: 11, color: '#6366F1', fontWeight: 700 }}>ADMIN</span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Program metrics, cohort overview, and Service Credits grants.
-        </p>
-      </header>
 
-      {/* KPI cards */}
-      <section className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Enrollments</p>
-          <p className="text-2xl font-semibold">{kpis.enrollments}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Completions</p>
-          <p className="text-2xl font-semibold">{kpis.completions}</p>
-        </article>
-        <article className="rounded-lg border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Avg days to first trainer payout</p>
-          <p className="text-2xl font-semibold">{kpis.avgDaysToFirstTrainerPayout} days</p>
-        </article>
-      </section>
+        {/* KPIs */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+          <StatBlock label="Enrollments" value={String(kpis.enrollments)} />
+          <StatBlock label="Completions" value={String(kpis.completions)} />
+          <StatBlock label="Avg days to first trainer payout" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
+        </div>
 
-      {/* Cohort overview */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Cohorts</h2>
-        {cohortsError ? (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-            {cohortsError}
-          </div>
-        ) : null}
-        {cohorts === null ? (
-          <p className="text-sm text-muted-foreground">Loading cohorts…</p>
-        ) : cohorts.length === 0 ? (
-          <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-            No cohorts yet. Trainers create cohorts from the plugin shell.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {cohorts.map((cohort) => (
-              <li key={cohort.id} className="rounded-lg border bg-card p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{cohort.title}</span>
-                  <span className="rounded border px-2 py-0.5 text-xs text-muted-foreground">
-                    {cohort.track}
-                  </span>
-                  <span className="rounded border px-2 py-0.5 text-xs text-muted-foreground capitalize">
-                    {cohort.status}
-                  </span>
+        {/* Cohorts */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Cohorts</h2>
+          {cohortsError ? (
+            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+              {cohortsError}
+            </div>
+          ) : null}
+          {cohorts === null ? (
+            <div style={{ fontSize: 13, color: SUBTLE }}>Loading cohorts…</div>
+          ) : cohorts.length === 0 ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+              No cohorts yet. Trainers create cohorts from the plugin shell.
+            </div>
+          ) : (
+            cohorts.map((cohort) => (
+              <div key={cohort.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{cohort.title}</span>
+                  <Pill>{cohort.track}</Pill>
+                  <Pill>{cohort.status}</Pill>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-                  <span>
-                    Seats: {cohort.seatsAvailable} of {cohort.seats} open
-                  </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: SUBTLE }}>
+                  <span>Seats: {cohort.seatsAvailable} of {cohort.seats} open</span>
                   <span>Required deposit: {cohort.requiredCredits} credits</span>
                   <span>Trainer split: {cohort.trainerSplitPercent}%</span>
                   <span>Completion bonus: {cohort.completionBonusCredits} credits</span>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              </div>
+            ))
+          )}
+        </div>
 
-      {/* Service Credits grant (grant-only — never removes credits) */}
-      <section className="space-y-3 rounded-lg border bg-card p-5">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Grant member Service Credits</h2>
-          <p className="text-sm text-muted-foreground">
+        {/* Service Credits grant (grant-only — never removes credits) */}
+        <div style={{ padding: '16px 18px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Grant member Service Credits</h2>
+          <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
             LevelUp only ever grants Service Credits to a member — it never removes them. Enter an
             amount greater than zero. Every grant is recorded against a governance ticket and is
             written to the audit log.
           </p>
-        </div>
 
-        {formError ? (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-            {formError}
-          </div>
-        ) : null}
-        {notice ? (
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
-            {notice}
-          </div>
-        ) : null}
-
-        <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
-          <label className="space-y-1 text-sm">
-            <span className="text-xs font-medium text-muted-foreground">Member user ID</span>
-            <input
-              className="w-full rounded border bg-background px-3 py-2"
-              value={targetUserId}
-              onChange={(event) => setTargetUserId(event.target.value)}
-              disabled={confirming || submitting}
-              placeholder="user_…"
-            />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="text-xs font-medium text-muted-foreground">
-              Amount to grant (greater than zero)
-            </span>
-            <input
-              className="w-full rounded border bg-background px-3 py-2"
-              value={amountText}
-              onChange={(event) => setAmountText(event.target.value)}
-              disabled={confirming || submitting}
-              inputMode="decimal"
-              min={0}
-              placeholder="e.g. 25"
-            />
-          </label>
-          <label className="space-y-1 text-sm md:col-span-2">
-            <span className="text-xs font-medium text-muted-foreground">Reason</span>
-            <input
-              className="w-full rounded border bg-background px-3 py-2"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              disabled={confirming || submitting}
-              placeholder="Why this adjustment is being made"
-            />
-          </label>
-          <label className="space-y-1 text-sm md:col-span-2">
-            <span className="text-xs font-medium text-muted-foreground">Governance ticket ID</span>
-            <input
-              className="w-full rounded border bg-background px-3 py-2"
-              value={governanceTicketId}
-              onChange={(event) => setGovernanceTicketId(event.target.value)}
-              disabled={confirming || submitting}
-              placeholder="e.g. GOV-1234"
-            />
-          </label>
-        </div>
-
-        {confirming ? (
-          <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
-            <p className="text-sm font-medium text-amber-300">
-              Confirm: this will add {magnitude} Service Credits to member {targetUserId.trim()}.
-            </p>
-            <p className="text-xs text-amber-200/80">
-              Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={submitAdjustment}
-                disabled={submitting}
-                className="rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-60"
-              >
-                {submitting ? 'Applying…' : `Yes, grant ${magnitude} credits`}
-              </button>
-              <button
-                type="button"
-                onClick={cancelConfirm}
-                disabled={submitting}
-                className="rounded border px-4 py-2 text-sm disabled:opacity-60"
-              >
-                Cancel
-              </button>
+          {formError ? (
+            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+              {formError}
             </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={beginConfirm}
-            disabled={submitting || !formReady}
-            className="rounded bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-60"
-          >
-            Review grant
-          </button>
-        )}
-      </section>
+          ) : null}
+          {notice ? (
+            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>
+              {notice}
+            </div>
+          ) : null}
 
-      <p className="text-sm">
-        <Link className="underline underline-offset-4" href="/apps/levelup">
-          Open plugin shell
-        </Link>
-      </p>
-    </main>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            <label style={{ display: 'block', fontSize: 12 }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Member user ID</span>
+              <input
+                style={inputStyle}
+                value={targetUserId}
+                onChange={(event) => setTargetUserId(event.target.value)}
+                disabled={confirming || submitting}
+                placeholder="user_…"
+              />
+            </label>
+            <label style={{ display: 'block', fontSize: 12 }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Amount to grant (greater than zero)</span>
+              <input
+                style={inputStyle}
+                value={amountText}
+                onChange={(event) => setAmountText(event.target.value)}
+                disabled={confirming || submitting}
+                inputMode="decimal"
+                min={0}
+                placeholder="e.g. 25"
+              />
+            </label>
+            <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Reason</span>
+              <input
+                style={inputStyle}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                disabled={confirming || submitting}
+                placeholder="Why this adjustment is being made"
+              />
+            </label>
+            <label style={{ display: 'block', fontSize: 12, gridColumn: '1 / -1' }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: SUBTLE, marginBottom: 6 }}>Governance ticket ID</span>
+              <input
+                style={inputStyle}
+                value={governanceTicketId}
+                onChange={(event) => setGovernanceTicketId(event.target.value)}
+                disabled={confirming || submitting}
+                placeholder="e.g. GOV-1234"
+              />
+            </label>
+          </div>
+
+          {confirming ? (
+            <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#FBBF24', marginBottom: 4 }}>
+                Confirm: this will add {magnitude} Service Credits to member {targetUserId.trim()}.
+              </p>
+              <p style={{ fontSize: 12, color: 'rgba(251,191,36,0.85)', marginBottom: 12 }}>
+                Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={submitAdjustment}
+                  disabled={submitting}
+                  style={{ padding: '8px 16px', borderRadius: 8, background: '#F59E0B', border: '1px solid #F59E0B', color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+                >
+                  {submitting ? 'Applying…' : `Yes, grant ${magnitude} credits`}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelConfirm}
+                  disabled={submitting}
+                  style={{ padding: '8px 16px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={beginConfirm}
+              disabled={submitting || !formReady}
+              style={{ marginTop: 14, padding: '9px 18px', borderRadius: 8, background: COLOR, border: `1px solid ${COLOR}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: submitting || !formReady ? 'not-allowed' : 'pointer', opacity: submitting || !formReady ? 0.6 : 1 }}
+            >
+              Review grant
+            </button>
+          )}
+        </div>
+
+        <p style={{ fontSize: 13, marginTop: 16 }}>
+          <Link href="/apps/levelup" style={{ color: COLOR, textDecoration: 'none', fontWeight: 600 }}>
+            Open plugin shell
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }

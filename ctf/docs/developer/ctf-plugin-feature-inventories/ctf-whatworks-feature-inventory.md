@@ -149,6 +149,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-06-17: Restyled the `/admin/whatworks` surface (`ww-admin-shell`, `ww-admin-products`, `ww-admin-problems`) to the shared dark admin design system (icon header with `ADMIN` badge, dark panel/surface tokens, status pills, tinted action buttons) per rule 131. Visual only — no change to data, endpoints, or moderation actions. The mockup's invented submitter handles, upvote counts, and per-entry flag have no backing fields, so they were not added; the real four-value status filter and verified counts are kept. Web typecheck + eslint clean.
 - 2026-06-12: The Android What Works API client (`packages/mobile/src/features/whatworks/api.ts`) now uses the shared authenticated fetch helper — every call carries the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against a hardcoded development URL with an empty token.
 - 2026-05-31: Initial implementation. Schema (`whatworks_problems`, `whatworks_products`,
   `whatworks_endorsements`), repository/policy/types, full `/api/whatworks/*` surface (public + user +

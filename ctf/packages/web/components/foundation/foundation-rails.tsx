@@ -9,6 +9,7 @@ import { COLOR, TRADES, initials, type FoundationTab, type ProviderView } from "
 
 const TABS: { icon: React.ElementType; key: FoundationTab; label: string }[] = [
   { icon: Wrench, key: "browse", label: "Browse" },
+  { icon: Shield, key: "offer", label: "Offer skills" },
   { icon: FileText, key: "quotes", label: "Quotes" },
   { icon: MessageSquare, key: "chat", label: "Chat" },
 ];

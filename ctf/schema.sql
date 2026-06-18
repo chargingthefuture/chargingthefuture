@@ -606,7 +606,6 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_submission_id ON skil
 CREATE TABLE IF NOT EXISTS feed_render_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   render_mode TEXT NOT NULL,
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
   -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
@@ -619,15 +618,16 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
 -- Add columns with guarded DDL for legacy DBs
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS singleton_key BOOLEAN DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS render_mode TEXT NOT NULL DEFAULT 'card_only';
-ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS max_timeline_page_size INTEGER NOT NULL DEFAULT 100;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS feed_render_config DROP COLUMN IF EXISTS kill_switch_enabled;
 -- Seed default feed config row (idempotent)
-INSERT INTO feed_render_config (singleton_key, render_mode, kill_switch_enabled, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
-SELECT TRUE, 'card_only', FALSE, 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
+INSERT INTO feed_render_config (singleton_key, render_mode, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
+SELECT TRUE, 'card_only', 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
 WHERE NOT EXISTS (
   SELECT 1 FROM feed_render_config WHERE singleton_key IS TRUE
 );
@@ -1081,7 +1081,6 @@ CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20,
   max_call_duration_minutes INTEGER NOT NULL DEFAULT 45,
   quota_state TEXT NOT NULL DEFAULT 'green' CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   updated_by_user_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1092,9 +1091,10 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER NOT NULL DEFAULT 45;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS quota_state TEXT DEFAULT 'green';
-ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
 CREATE TABLE IF NOT EXISTS trusttransport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
@@ -1276,12 +1276,13 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_events (
 CREATE TABLE IF NOT EXISTS workforce_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   exports_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  kill_switch_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   report_week_timezone TEXT NOT NULL,
   report_week_start_dow INTEGER NOT NULL DEFAULT 0,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS kill_switch_enabled;
 CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2592,6 +2593,43 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated
 -- separate field in foundation_provider_accepted_currencies, never derived from rate_currency.
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_amount NUMERIC;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS rate_currency TEXT REFERENCES currencies(code);
+
+-- A Foundation provider opts in to being contacted to offer specific skills. This is the
+-- "willing to offer SAID skill" signal that distinguishes Foundation from the Directory (where a
+-- profile merely lists a skill): a survivor searching Foundation only sees providers who chose to
+-- be contactable for that skill. Each row is one offered skill for one provider; the skill_id must
+-- be one the provider already lists on their claimed Directory profile (enforced in the repository).
+-- A provider with zero rows here is not surfaced as a Foundation provider at all.
+CREATE TABLE IF NOT EXISTS foundation_provider_skills (
+  user_id TEXT NOT NULL,
+  skill_id UUID NOT NULL REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, skill_id)
+);
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS skill_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS foundation_provider_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- skill_id must point at a real taxonomy skill; CASCADE so removing a skill clears the offers.
+-- No FK on user_id: an offer doesn't require a foundation_user_extension row and there's no
+-- canonical users table to reference; the repository constrains skill_id to the member's own
+-- Directory skills on write, so the app can't create orphans. Guarded so a legacy table without
+-- the constraint converges and a fresh table doesn't double-add it.
+DO $foundation_provider_skills_skill_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'foundation_provider_skills_skill_id_fkey'
+      AND table_name = 'foundation_provider_skills'
+      AND constraint_type = 'FOREIGN KEY'
+  ) THEN
+    ALTER TABLE foundation_provider_skills
+      ADD CONSTRAINT foundation_provider_skills_skill_id_fkey
+      FOREIGN KEY (skill_id) REFERENCES skills_taxonomy_skills(id) ON DELETE CASCADE;
+  END IF;
+END
+$foundation_provider_skills_skill_fk$;
+CREATE INDEX IF NOT EXISTS idx_foundation_provider_skills_skill ON foundation_provider_skills (skill_id);
+
 CREATE TABLE IF NOT EXISTS foundation_provider_accepted_currencies (
   user_id TEXT NOT NULL REFERENCES foundation_user_extension(user_id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
@@ -3582,6 +3620,7 @@ ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS cre
 CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
+  asker_username TEXT NULL,
   channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3589,6 +3628,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
 );
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS asker_username TEXT NULL;
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

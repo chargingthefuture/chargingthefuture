@@ -6,6 +6,32 @@
 import { useState } from 'react';
 import type { PeerProgrammingTopic } from './pp-admin-shared';
 
+// Admin design tokens (shared admin look from the design system). Peer Programming accent is mint.
+const COLOR = '#6EE7B7';
+const BG = '#0F1117';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: BG,
+  border: `1px solid ${BORDER}`,
+  color: TEXT,
+  borderRadius: 8,
+  padding: '8px 10px',
+  fontSize: 13,
+  fontFamily: 'inherit',
+};
+
+const labelTextStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 13,
+  fontWeight: 600,
+  color: TEXT,
+  marginBottom: 6,
+};
+
 type TopicDraft = {
   weekStartDate: string;
   title: string;
@@ -47,7 +73,7 @@ export function PeerProgrammingAdminTopicForm({
 
   return (
     <form
-      className="space-y-4"
+      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
       onSubmit={(event) => {
         event.preventDefault();
         if (!canSubmit) return;
@@ -60,61 +86,67 @@ export function PeerProgrammingAdminTopicForm({
         });
       }}
     >
-      <div className={isMobile ? 'space-y-4' : 'grid gap-4 sm:grid-cols-2'}>
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium">Week start date</span>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: 16,
+        }}
+      >
+        <label style={{ display: 'block' }}>
+          <span style={labelTextStyle}>Week start date</span>
           <input
             type="date"
             required
             value={draft.weekStartDate}
             onChange={(event) => setDraft((prev) => ({ ...prev, weekStartDate: event.target.value }))}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            style={inputStyle}
           />
-          <span className="block text-xs text-muted-foreground">
+          <span style={{ display: 'block', fontSize: 11, color: SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
             Use the Monday of the target week. The room shows the topic for the current week only.
           </span>
         </label>
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium">Title</span>
+        <label style={{ display: 'block' }}>
+          <span style={labelTextStyle}>Title</span>
           <input
             type="text"
             required
             value={draft.title}
             onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            style={inputStyle}
             placeholder="This week's focus"
           />
         </label>
       </div>
 
-      <label className="block space-y-1 text-sm">
-        <span className="font-medium">Guidance</span>
+      <label style={{ display: 'block' }}>
+        <span style={labelTextStyle}>Guidance</span>
         <textarea
           required
           value={draft.guidance}
           onChange={(event) => setDraft((prev) => ({ ...prev, guidance: event.target.value }))}
-          className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm"
+          style={{ ...inputStyle, minHeight: 112, resize: 'vertical' }}
           placeholder="What should cohorts work on together this week?"
         />
       </label>
 
-      <label className="block space-y-1 text-sm">
-        <span className="font-medium">Revision note (optional)</span>
+      <label style={{ display: 'block' }}>
+        <span style={labelTextStyle}>Revision note (optional)</span>
         <input
           type="text"
           value={draft.revisionNote}
           onChange={(event) => setDraft((prev) => ({ ...prev, revisionNote: event.target.value }))}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          style={inputStyle}
           placeholder="Why this guidance changed"
         />
       </label>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: TEXT, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={draft.publish}
           onChange={(event) => setDraft((prev) => ({ ...prev, publish: event.target.checked }))}
-          className="h-4 w-4"
+          style={{ width: 16, height: 16, accentColor: COLOR }}
         />
         <span>Publish (visible to cohorts). Leave unchecked to save as a draft.</span>
       </label>
@@ -122,7 +154,18 @@ export function PeerProgrammingAdminTopicForm({
       <button
         type="submit"
         disabled={!canSubmit}
-        className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
+        style={{
+          alignSelf: 'flex-start',
+          padding: '8px 16px',
+          borderRadius: 8,
+          background: COLOR,
+          border: `1px solid ${COLOR}`,
+          color: '#0F1117',
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: canSubmit ? 'pointer' : 'not-allowed',
+          opacity: canSubmit ? 1 : 0.5,
+        }}
       >
         {busy ? 'Saving…' : draft.publish ? 'Save and publish' : 'Save draft'}
       </button>

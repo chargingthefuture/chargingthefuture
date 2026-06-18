@@ -41,7 +41,6 @@ export async function PUT(request: Request) {
     maxQuoteTransitionsPerMinute?: number;
     maxCallDurationMinutes?: number;
     quotaState?: 'green' | 'yellow' | 'orange' | 'red';
-    killSwitchEnabled?: boolean;
   } = {};
   try {
     payload = await request.json();
@@ -59,7 +58,6 @@ export async function PUT(request: Request) {
     || !Number.isInteger(payload.maxQuoteTransitionsPerMinute)
     || !Number.isInteger(payload.maxCallDurationMinutes)
     || (payload.quotaState !== 'green' && payload.quotaState !== 'yellow' && payload.quotaState !== 'orange' && payload.quotaState !== 'red')
-    || typeof payload.killSwitchEnabled !== 'boolean'
   ) {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Full capacity policy payload is required.' },
@@ -74,7 +72,6 @@ export async function PUT(request: Request) {
     maxQuoteTransitionsPerMinute: number;
     maxCallDurationMinutes: number;
     quotaState: 'green' | 'yellow' | 'orange' | 'red';
-    killSwitchEnabled: boolean;
   };
 
   try {
@@ -86,7 +83,6 @@ export async function PUT(request: Request) {
       maxQuoteTransitionsPerMinute: validatedPayload.maxQuoteTransitionsPerMinute,
       maxCallDurationMinutes: validatedPayload.maxCallDurationMinutes,
       quotaState: validatedPayload.quotaState,
-      killSwitchEnabled: validatedPayload.killSwitchEnabled,
     });
 
     await insertFoundationAudit({

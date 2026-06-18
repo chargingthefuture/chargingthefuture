@@ -66,8 +66,10 @@ type ReviewRow = {
   turn_id: string;
   conversation_id: string;
   asked_by_user_id: string;
+  asked_by_username: string | null;
   question_body: string;
   draft_body: string;
+  has_draft: boolean;
   intent: string | null;
   nlu_confidence: string | null;
   engine: ComicTurnEngine;
@@ -147,6 +149,7 @@ async function evaluateComicRateLimit(
 async function resolveConversation(
   client: PoolClient,
   userId: string,
+  username: string | null,
   channel: ComicChannel,
   conversationId: string | null,
 ): Promise<string> {
@@ -162,9 +165,11 @@ async function resolveConversation(
     );
 
     if (existing.rows.length > 0) {
+      // Touch updated_at, and backfill the asker's @username if it was missing (older row) or has
+      // since changed — COALESCE keeps a stored value when the current request has none.
       await client.query(
-        'UPDATE comic_conversations SET updated_at = NOW() WHERE id = $1::uuid',
-        [conversationId],
+        'UPDATE comic_conversations SET updated_at = NOW(), asker_username = COALESCE($2, asker_username) WHERE id = $1::uuid',
+        [conversationId, username],
       );
       return existing.rows[0].id;
     }
@@ -172,11 +177,11 @@ async function resolveConversation(
 
   const created = await client.query<{ id: string }>(
     `
-      INSERT INTO comic_conversations (user_id, channel, status)
-      VALUES ($1, $2, 'open')
+      INSERT INTO comic_conversations (user_id, asker_username, channel, status)
+      VALUES ($1, $2, $3, 'open')
       RETURNING id
     `,
-    [userId, channel],
+    [userId, username, channel],
   );
 
   return created.rows[0].id;
@@ -296,6 +301,7 @@ async function logComicInference(
 // return only a holding response — never the unreviewed draft. No mention → no-op.
 export async function routeComicMessage(
   actorId: string,
+  actorUsername: string | null,
   input: ComicMessageInput,
 ): Promise<ComicMessageRouteResult> {
   const rawBody = normalizeText(input.body);
@@ -340,7 +346,7 @@ export async function routeComicMessage(
   // human review — see #504 for the future confidence-gated auto-publish.
   const reason = safety.flagged ? `safety:${safety.category}` : 'interim_human_review';
   const { conversationId, userTurnId, reviewId } = await withDbTransaction(async (client) => {
-    const resolvedConversationId = await resolveConversation(client, actorId, channel, input.conversationId ?? null);
+    const resolvedConversationId = await resolveConversation(client, actorId, actorUsername, channel, input.conversationId ?? null);
     const insertedUserTurnId = await insertTurn(client, {
       conversationId: resolvedConversationId,
       role: 'user',
@@ -448,8 +454,10 @@ function mapReviewRow(row: ReviewRow): ComicReviewItem {
     turnId: row.turn_id,
     conversationId: row.conversation_id,
     askedByUserId: row.asked_by_user_id,
+    askedByUsername: row.asked_by_username,
     questionBody: row.question_body,
     draftBody: row.draft_body,
+    hasDraft: row.has_draft,
     intent: row.intent,
     nluConfidence: toNumberOrNull(row.nlu_confidence),
     engine: row.engine,
@@ -477,7 +485,7 @@ export async function listPendingComicReviews(
   // q.turn_id is always the asker's question turn (never repointed), so the question is t.body
   // directly. The AI draft, when one was generated in the background, is the turn referenced by
   // q.draft_turn_id; LEFT JOIN it and fall back to the question body for human-first items (no
-  // draft), matching the prior console behaviour. engine likewise prefers the draft turn's engine.
+  // draft), matching the prior dashboard behaviour. engine likewise prefers the draft turn's engine.
   const result = await queryDb<ReviewRow>(
     `
       SELECT
@@ -485,8 +493,10 @@ export async function listPendingComicReviews(
         q.turn_id AS turn_id,
         t.conversation_id AS conversation_id,
         c.user_id AS asked_by_user_id,
+        c.asker_username AS asked_by_username,
         t.body AS question_body,
         COALESCE(d.body, t.body) AS draft_body,
+        (q.draft_turn_id IS NOT NULL) AS has_draft,
         t.intent AS intent,
         t.nlu_confidence::text AS nlu_confidence,
         COALESCE(d.engine, t.engine) AS engine,

@@ -6,7 +6,7 @@ import {
   ShieldCheck, Sparkles, X,
 } from 'lucide-react';
 import type { ComicReviewItem } from '../../lib/comic/types';
-import styles from './comic-review-console.module.css';
+import styles from './comic-review-dashboard.module.css';
 
 type ReviewListResponse = {
   ok: true;
@@ -82,7 +82,7 @@ const REVIEWER_GUIDANCE = [
   'Reject and escalate anything involving immediate danger.',
 ];
 
-export function ComicReviewConsole() {
+export function ComicReviewDashboard() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -167,7 +167,10 @@ export function ComicReviewConsole() {
   // the reviewer author the answer.
   useEffect(() => {
     if (selected) {
-      setCorrectedBody(selected.safetyCategory ? '' : selected.draftBody);
+      // Seed the editor from a real AI draft so the owner can refine it. When no draft is attached
+      // (still generating, drafting unavailable, or a safety-held question), start blank — never seed
+      // the box with the question text, which would otherwise look like an AI draft.
+      setCorrectedBody(selected.hasDraft ? selected.draftBody : '');
       setEditing(false);
     }
   }, [selected]);
@@ -229,7 +232,7 @@ export function ComicReviewConsole() {
   }
 
   return (
-    <div className={styles.console}>
+    <div className={`${styles.dashboard} ${selected ? styles.dashboardDetail : styles.dashboardList}`}>
       {/* Icon rail */}
       <aside className={styles.iconRail}>
         <div className={styles.iconRailLogo} aria-hidden="true">
@@ -315,7 +318,7 @@ export function ComicReviewConsole() {
                   <Pencil size={15} color="#0EA5E9" /> Edit &amp; approve answer
                 </>
               ) : (
-                'Review & Correction Console'
+                'Review & Correction Dashboard'
               )}
             </div>
             <div className={styles.mainHeaderSub}>Approve, correct, or reject AI Assistant answers before they reach survivors</div>
@@ -359,10 +362,22 @@ export function ComicReviewConsole() {
             </div>
           ) : (
             <div className={styles.detail}>
+              {/* Mobile-only: return to the queue list (the sidebar is hidden at phone width). */}
+              <button
+                type="button"
+                className={styles.mobileQueueBack}
+                onClick={() => {
+                  setEditing(false);
+                  setSelectedId(null);
+                }}
+              >
+                <ArrowLeft size={14} /> Back to queue
+              </button>
+
               {/* Asker meta */}
               <div className={styles.detailMeta}>
                 <span className={styles.detailChannel}>@comic</span>
-                <span>Asked by {selected.askedByUserId}</span>
+                <span>Asked by {selected.askedByUsername ? `@${selected.askedByUsername}` : selected.askedByUserId}</span>
                 <span className={styles.detailTime}>{formatRelativeTime(selected.createdAtIso)}</span>
               </div>
 
@@ -374,23 +389,26 @@ export function ComicReviewConsole() {
 
               {editing ? (
                 <div className={styles.detailTwoCol}>
-                  {/* Original AI draft (read-only) */}
-                  <div className={styles.detailCol}>
-                    <div className={styles.detailColHead}>
-                      <span className={styles.detailLabel}>Original AI draft</span>
-                      <span className={styles.needsCorrectionTag}>Needs correction</span>
+                  {/* Original AI draft (read-only) — only when a real AI draft exists. With no draft
+                      (drafting unavailable, or safety-held), there is nothing to show beside the editor. */}
+                  {selected.hasDraft ? (
+                    <div className={styles.detailCol}>
+                      <div className={styles.detailColHead}>
+                        <span className={styles.detailLabel}>Original AI draft</span>
+                        <span className={styles.needsCorrectionTag}>Needs correction</span>
+                      </div>
+                      <div className={styles.draftReadonly}>{selected.draftBody}</div>
                     </div>
-                    <div className={styles.draftReadonly}>{selected.draftBody}</div>
-                  </div>
+                  ) : null}
 
                   {/* Corrected text (editable) */}
                   <div className={styles.detailCol}>
                     <div className={styles.detailColHead}>
-                      <span className={styles.detailLabelCyan}>Your corrected answer</span>
+                      <span className={styles.detailLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</span>
                       <button
                         type="button"
                         className={styles.resetBtn}
-                        onClick={() => setCorrectedBody(selected.draftBody)}
+                        onClick={() => setCorrectedBody(selected.hasDraft ? selected.draftBody : '')}
                       >
                         <RotateCcw size={11} /> Reset
                       </button>
@@ -408,25 +426,31 @@ export function ComicReviewConsole() {
               ) : (
                 <div>
                   <div className={styles.detailColHead}>
-                    <span className={styles.detailLabel}>{selected.safetyCategory ? 'No AI draft' : 'AI Assistant draft'}</span>
+                    <span className={styles.detailLabel}>{selected.hasDraft ? 'AI Assistant draft' : 'No AI draft'}</span>
                     <span className={styles.notYetSentTag}>
                       <Sparkles size={9} /> Not yet sent
                     </span>
                   </div>
-                  <div className={styles.draftCard}>{selected.safetyCategory ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.' : selected.draftBody}</div>
+                  <div className={styles.draftCard}>
+                    {selected.hasDraft
+                      ? selected.draftBody
+                      : selected.safetyCategory
+                        ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
+                        : 'No AI draft is attached yet — it may still be generating, or drafting was unavailable. Refresh in a moment, or use Edit & approve to write the answer.'}
+                  </div>
                 </div>
               )}
 
-              {/* Provenance + confidence (real fields only — no fabricated sources). */}
+              {/* Source + confidence (real fields only — no fabricated sources). */}
               <div className={styles.detailTwoCol}>
                 <div className={styles.detailCol}>
-                  <div className={styles.detailLabel}>Provenance</div>
+                  <div className={styles.detailLabel}>Source</div>
                   <div className={styles.provenanceList}>
-                    {selected.safetyCategory ? null : (
+                    {selected.hasDraft ? (
                       <div className={styles.provenanceRow}>
-                        <FileText size={13} color="#0EA5E9" /> Drafted by engine: {selected.engine}
+                        <FileText size={13} color="#0EA5E9" /> Drafted by: {selected.engine}
                       </div>
-                    )}
+                    ) : null}
                     <div className={styles.provenanceRow}>
                       <FileText size={13} color="#0EA5E9" /> Intent: {selected.intent ?? 'not classified'}
                     </div>
@@ -459,7 +483,7 @@ export function ComicReviewConsole() {
                       </div>
                     ) : (
                       <div className={styles.confHint}>
-                        <AlertTriangle size={13} /> No calibrated confidence yet — every draft is held for human review.
+                        <AlertTriangle size={13} /> No confidence score yet — every draft is held for human review.
                       </div>
                     )}
                   </div>
@@ -484,11 +508,11 @@ export function ComicReviewConsole() {
                   </>
                 ) : (
                   <>
-                    {selected.safetyCategory ? null : (
+                    {selected.hasDraft ? (
                       <button type="button" className={styles.approveBtn} disabled={resolving} onClick={() => void resolveSelected('approve')}>
                         <Check size={16} /> Approve &amp; send
                       </button>
-                    )}
+                    ) : null}
                     <button type="button" className={styles.editBtn} disabled={resolving} onClick={() => setEditing(true)}>
                       <Pencil size={15} /> Edit &amp; approve
                     </button>

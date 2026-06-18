@@ -13,11 +13,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { fetchComicReviewQueue, resolveComicReview } from './api';
 import type { ComicReviewItem, ComicReviewResolution } from './api';
 
-// Owner Review & Correction Console (mobile). Matches the locked MobileAIReviewConsole /
+// Owner Review & Correction Dashboard (mobile). Matches the locked MobileAIReviewConsole /
 // MobileAIReviewConsoleEmpty mockups. Admin-gated server-side; a non-admin sees an access notice.
 // Provenance shown is real only (engine / intent / safety category / the real nlu confidence) —
 // the mockup's fabricated "Sources" list and hardcoded confidence buckets are intentionally not
-// reproduced, matching the web console (no fabricated source documents).
+// reproduced, matching the web dashboard (no fabricated source documents).
 const ACCENT = '#0EA5E9';
 const ACCENT_LIGHT = '#7DD3FC';
 const BG = '#0F1117';
@@ -48,7 +48,7 @@ function confidenceLabel(value: number | null): string {
 
 type ConfidenceBand = { label: string; color: string; pct: number | null; low: boolean };
 
-// Map the (possibly null) NLU confidence to a band, mirroring the web console. Confidence is no
+// Map the (possibly null) NLU confidence to a band, mirroring the web dashboard. Confidence is no
 // longer populated, so it is typically null — surfaced honestly rather than a fabricated number.
 function confidenceBand(value: number | null): ConfidenceBand {
   if (value === null) return { label: 'Not yet scored', color: ACCENT_LIGHT, pct: null, low: false };
@@ -93,14 +93,14 @@ function ConfidenceCard({ item }: { item: ComicReviewItem }) {
   );
 }
 
-function ConsoleHeader({ count, allClear }: { count: number; allClear: boolean }) {
+function DashboardHeader({ count, allClear }: { count: number; allClear: boolean }) {
   return (
     <View style={styles.header}>
       <View style={styles.headerIcon}>
         <Ionicons name="shield-checkmark" size={17} color={ACCENT} />
       </View>
       <View style={styles.headerText}>
-        <Text style={styles.headerTitle}>Review Console</Text>
+        <Text style={styles.headerTitle}>Review Dashboard</Text>
         <Text style={styles.headerSub}>AI Assistant answers awaiting review</Text>
       </View>
       <View style={[styles.countPill, allClear ? styles.countPillClear : null]}>
@@ -111,10 +111,10 @@ function ConsoleHeader({ count, allClear }: { count: number; allClear: boolean }
   );
 }
 
-function EmptyConsole() {
+function EmptyDashboard() {
   return (
     <View style={styles.screen}>
-      <ConsoleHeader count={0} allClear />
+      <DashboardHeader count={0} allClear />
       <View style={styles.emptyWrap}>
         <View style={styles.emptyIcon}>
           <Ionicons name="checkmark-circle" size={38} color="#22C55E" />
@@ -137,10 +137,12 @@ function ProvenanceRow({ item }: { item: ComicReviewItem }) {
     <View style={styles.provenanceWrap}>
       <Text style={styles.sectionLabel}>Provenance</Text>
       <View style={styles.provenanceGrid}>
-        <View style={styles.provenanceItem}>
-          <Text style={styles.provenanceKey}>Engine</Text>
-          <Text style={styles.provenanceValue}>{item.engine}</Text>
-        </View>
+        {item.hasDraft ? (
+          <View style={styles.provenanceItem}>
+            <Text style={styles.provenanceKey}>Engine</Text>
+            <Text style={styles.provenanceValue}>{item.engine}</Text>
+          </View>
+        ) : null}
         <View style={styles.provenanceItem}>
           <Text style={styles.provenanceKey}>Intent</Text>
           <Text style={styles.provenanceValue}>{item.intent ?? '—'}</Text>
@@ -160,7 +162,7 @@ function ProvenanceRow({ item }: { item: ComicReviewItem }) {
   );
 }
 
-export const ComicReviewConsole = () => {
+export const ComicReviewDashboard = () => {
   const [items, setItems] = useState<ComicReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
@@ -248,14 +250,16 @@ export const ComicReviewConsole = () => {
 
   const beginEdit = useCallback(() => {
     if (!selected) return;
-    setDraft(selected.draftBody);
+    // Seed from a real AI draft only; with no draft start blank so the question text is never
+    // presented as a draft to edit.
+    setDraft(selected.hasDraft ? selected.draftBody : '');
     setEditing(true);
   }, [selected]);
 
   if (loading) {
     return (
       <View style={styles.screen}>
-        <ConsoleHeader count={0} allClear={false} />
+        <DashboardHeader count={0} allClear={false} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={ACCENT} />
         </View>
@@ -266,10 +270,10 @@ export const ComicReviewConsole = () => {
   if (forbidden) {
     return (
       <View style={styles.screen}>
-        <ConsoleHeader count={0} allClear={false} />
+        <DashboardHeader count={0} allClear={false} />
         <View style={styles.center}>
           <Ionicons name="lock-closed-outline" size={32} color={SUBTLE} />
-          <Text style={styles.noticeText}>The review console is available to owners only.</Text>
+          <Text style={styles.noticeText}>The review dashboard is available to owners only.</Text>
         </View>
       </View>
     );
@@ -278,7 +282,7 @@ export const ComicReviewConsole = () => {
   if (error) {
     return (
       <View style={styles.screen}>
-        <ConsoleHeader count={0} allClear={false} />
+        <DashboardHeader count={0} allClear={false} />
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable style={styles.retryBtn} onPress={load}>
@@ -290,12 +294,12 @@ export const ComicReviewConsole = () => {
   }
 
   if (items.length === 0 || !selected) {
-    return <EmptyConsole />;
+    return <EmptyDashboard />;
   }
 
   return (
     <View style={styles.screen}>
-      <ConsoleHeader count={items.length} allClear={false} />
+      <DashboardHeader count={items.length} allClear={false} />
 
       <ScrollView
         horizontal
@@ -316,7 +320,7 @@ export const ComicReviewConsole = () => {
             >
               <View style={[styles.chipDot, entry.safetyCategory ? styles.chipDotSafety : null]} />
               <Text style={[styles.chipText, active ? styles.chipTextActive : null]} numberOfLines={1}>
-                {shortAsker(entry.askedByUserId)}
+                {entry.askedByUsername ? `@${entry.askedByUsername}` : shortAsker(entry.askedByUserId)}
               </Text>
             </Pressable>
           );
@@ -325,7 +329,7 @@ export const ComicReviewConsole = () => {
 
       <ScrollView contentContainerStyle={styles.detail} showsVerticalScrollIndicator={false}>
         <View style={styles.detailMeta}>
-          <Text style={styles.detailAsker}>{shortAsker(selected.askedByUserId)}</Text>
+          <Text style={styles.detailAsker}>{selected.askedByUsername ? `@${selected.askedByUsername}` : shortAsker(selected.askedByUserId)}</Text>
           <Text style={styles.detailTime}>{formatTime(selected.createdAtIso)}</Text>
         </View>
 
@@ -336,23 +340,28 @@ export const ComicReviewConsole = () => {
 
         {editing ? (
           <>
-            {/* Original AI draft (read-only) — matches MobileAIReviewConsoleDetail. */}
-            <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabel}>Original AI draft</Text>
-              <View style={styles.needsCorrectionBadge}>
-                <Text style={styles.needsCorrectionText}>Needs correction</Text>
-              </View>
-            </View>
-            <View style={styles.draftReadonlyBox}>
-              <Text style={styles.draftReadonlyText}>{selected.draftBody}</Text>
-            </View>
+            {/* Original AI draft (read-only) — only when a real AI draft exists. With no draft
+                (drafting unavailable, or safety-held), there is nothing to show above the editor. */}
+            {selected.hasDraft ? (
+              <>
+                <View style={styles.draftHeader}>
+                  <Text style={styles.sectionLabel}>Original AI draft</Text>
+                  <View style={styles.needsCorrectionBadge}>
+                    <Text style={styles.needsCorrectionText}>Needs correction</Text>
+                  </View>
+                </View>
+                <View style={styles.draftReadonlyBox}>
+                  <Text style={styles.draftReadonlyText}>{selected.draftBody}</Text>
+                </View>
+              </>
+            ) : null}
 
-            {/* Editable corrected answer with Reset + character count. */}
+            {/* Editable answer with Reset + character count. */}
             <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabelCyan}>Your corrected answer</Text>
+              <Text style={styles.sectionLabelCyan}>Your {selected.hasDraft ? 'corrected ' : ''}answer</Text>
               <Pressable
                 style={styles.resetBtn}
-                onPress={() => setDraft(selected.draftBody)}
+                onPress={() => setDraft(selected.hasDraft ? selected.draftBody : '')}
                 disabled={busy}
               >
                 <Ionicons name="refresh" size={11} color={SUBTLE} />
@@ -364,7 +373,7 @@ export const ComicReviewConsole = () => {
               value={draft}
               onChangeText={setDraft}
               multiline
-              placeholder="Correct the answer before approving…"
+              placeholder={selected.hasDraft ? 'Correct the answer before approving…' : 'Write the answer before approving…'}
               placeholderTextColor={SUBTLE}
               editable={!busy}
             />
@@ -382,7 +391,7 @@ export const ComicReviewConsole = () => {
         ) : (
           <>
             <View style={styles.draftHeader}>
-              <Text style={styles.sectionLabel}>{selected.safetyCategory ? 'No AI draft' : 'AI draft'}</Text>
+              <Text style={styles.sectionLabel}>{selected.hasDraft ? 'AI draft' : 'No AI draft'}</Text>
               <View style={styles.notSentBadge}>
                 <Ionicons name="sparkles" size={8} color={ACCENT_LIGHT} />
                 <Text style={styles.notSentText}>Not sent</Text>
@@ -390,9 +399,11 @@ export const ComicReviewConsole = () => {
             </View>
             <View style={styles.draftBox}>
               <Text style={styles.draftText}>
-                {selected.safetyCategory
-                  ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
-                  : selected.draftBody}
+                {selected.hasDraft
+                  ? selected.draftBody
+                  : selected.safetyCategory
+                    ? 'This safety-sensitive question was held for a person to answer directly — the AI Assistant did not draft a reply. Use Edit & approve to write the response.'
+                    : 'No AI draft is attached yet — it may still be generating, or drafting was unavailable. Refresh in a moment, or use Edit & approve to write the answer.'}
               </Text>
             </View>
 
@@ -433,10 +444,10 @@ export const ComicReviewConsole = () => {
             </View>
           </>
         ) : (
-          // Default view: Approve & send (hidden for safety-flagged items with no AI draft to send),
-          // then Edit & approve + Reject.
+          // Default view: Approve & send (only when a real AI draft exists to send), then
+          // Edit & approve + Reject. With no draft the owner must author the answer via Edit.
           <>
-            {selected.safetyCategory ? null : (
+            {selected.hasDraft ? (
               <Pressable
                 style={[styles.approveBtn, busy ? styles.btnBusy : null]}
                 onPress={() => resolve('approve')}
@@ -451,7 +462,7 @@ export const ComicReviewConsole = () => {
                   </>
                 )}
               </Pressable>
-            )}
+            ) : null}
             <View style={styles.secondaryRow}>
               <Pressable style={styles.editBtn} onPress={beginEdit} disabled={busy}>
                 <Ionicons name="pencil" size={14} color={ACCENT_LIGHT} />

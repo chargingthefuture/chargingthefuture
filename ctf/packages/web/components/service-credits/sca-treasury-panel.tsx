@@ -16,6 +16,13 @@ import {
   type TreasuryFeeResponse,
 } from './sca-shared';
 
+// Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
+const SURFACE = '#161B27';
+const BG = '#0F1117';
+const BORDER = '#1E2A3A';
+const TEXT = '#F9FAFB';
+const SUBTLE = '#6B7280';
+
 export function ServiceCreditsTreasuryPanel() {
   const [loading, setLoading] = useState(true);
   const [policyText, setPolicyText] = useState('');
@@ -113,24 +120,48 @@ export function ServiceCreditsTreasuryPanel() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg border bg-card p-5">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Treasury</h2>
-        <p className="text-sm text-muted-foreground">
+    <section
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: SURFACE,
+        padding: 18,
+        marginBottom: 16,
+      }}
+    >
+      <header>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, margin: '0 0 4px' }}>Treasury</h2>
+        <p style={{ fontSize: 13, color: SUBTLE, margin: 0, lineHeight: 1.5 }}>
           Review and edit the treasury policy, and move a fee from a member into the treasury wallet.
         </p>
       </header>
 
       <Feedback error={error} notice={notice} />
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Treasury policy</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Treasury policy</h3>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>Loading…</p>
         ) : (
           <>
             <textarea
-              className="h-48 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
+              style={{
+                height: 192,
+                width: '100%',
+                boxSizing: 'border-box',
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                background: BG,
+                color: TEXT,
+                padding: '9px 12px',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontSize: 12,
+                outline: 'none',
+                resize: 'vertical',
+              }}
               value={policyText}
               spellCheck={false}
               onChange={(event) => {
@@ -138,7 +169,7 @@ export function ServiceCreditsTreasuryPanel() {
                 setPolicyError(null);
               }}
             />
-            {policyError ? <p className="text-xs text-red-300">{policyError}</p> : null}
+            {policyError ? <p style={{ fontSize: 11, color: '#FCA5A5', margin: 0 }}>{policyError}</p> : null}
             <ConfirmAction
               label="Save policy"
               busy={busy === 'policy'}
@@ -149,9 +180,9 @@ export function ServiceCreditsTreasuryPanel() {
         )}
       </div>
 
-      <div className="space-y-3 border-t pt-4">
-        <h3 className="text-sm font-semibold">Collect fee</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: `1px solid ${BORDER}`, paddingTop: 16 }}>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Collect fee</h3>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           <Field label="Source member user ID" value={sourceUserId} onChange={setSourceUserId} placeholder="user_…" />
           <Field label="Treasury wallet user ID" value={treasuryUserId} onChange={setTreasuryUserId} placeholder="user_…" />
           <Field label="Amount (credits)" type="number" value={feeAmount} onChange={setFeeAmount} placeholder="0" />

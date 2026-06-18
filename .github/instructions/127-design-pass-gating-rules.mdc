@@ -1,10 +1,32 @@
 # Design Pass Gating Rules
 
-## Intent
+## SUPERSEDING POLICY (owner-directed, 2026-06-17): production is the single source of truth; the design gate is loosened; the design repo is deprecated
 
-Stop AI implementation agents from building UI against an unlocked design. Replit's design agent produces designs that are the **only** authoritative visual source for this codebase. Code agents that build UI before the design lands cause rework, drift, and product debt. This rule defines exactly when an agent must halt for a design pass, how to verify a pass exists, and how to resume.
+This section governs and overrides every "stop for design", "DESIGN PASS REQUIRED", design-submodule-as-only-source, parallel-Replit-workflow, and `#312` design-queue provision later in this file. Those provisions are **deprecated** — kept below only as history. Do not halt a build waiting for a design pass, do not require a mockup in the `design/` submodule before building UI, and do not append to the `#312` queue.
 
-Companion rule: `126-design-mockup-implementation-rules.mdc` covers what to do *after* a design exists. This rule (`127-`) covers what to do *before* one does.
+Owner decision and reasons (2026-06-17):
+
+- The Replit design agent is **deprecated**. It too often produced designs that ignored the plugin inventory, and the app is now in production. We will **not** maintain two design versions (a `design/` repo mirror and the running app). Syncing production back to the design repo is tedious and production changes constantly.
+- **The running production app is the single source of truth for design and copy.** The `design/` submodule and `ctf/agents/design.agent.md` remain useful **reference/inspiration only** (the design guide, tokens, component patterns, breakpoints) — they are no longer authoritative and need not be synced or kept byte-identical to the app.
+- **The agent now designs UI directly.** For a net-new surface, build it yourself following, in priority order: (1) the design guide / design system (`ctf/agents/design.agent.md`, existing tokens and CSS-module patterns), (2) the look and structure of already-shipped sibling screens, and (3) the plugin's inventory (Target User/Admin Features, states, data model). No stop, no checkpoint block, no queue. Cover the real states (loading / empty / error / populated) and the mobile-responsive layout, and keep it consistent with shipped screens.
+- **Owner bypass keywords are no longer required** to build a new surface; the default is now "build it well per the design guide + inventory." (`bypass design`, `design done`, `hotfix` still work and are still fine to use, but absence of a keyword is no longer a blocker.)
+
+### Hard guardrail — never overwrite approved production design or copy (critical)
+
+Loosening the gate must not let unapproved design/copy changes slip into production. Therefore:
+
+- **Do not change shipped copy, layout, color, or interaction on an existing production screen unless the owner explicitly asked for that change** in the current task. When your task is to add or fix something, be **additive/surgical** — touch only what the task requires; leave surrounding production copy and design exactly as they ship.
+- **Production wins over any old `design/` mockup.** If a reference mockup in the `design/` submodule differs from what's live, the live app is correct — never "restore" a screen to an old mockup, and never treat a stale mockup as a reason to rewrite shipped copy/design.
+- If you believe a shipped screen's copy or design is wrong and should change, **surface it to the owner and get approval first** — do not silently rewrite it.
+- This guardrail is the reason the gate is safe to loosen: agents get design latitude on **new** surfaces, and **zero** latitude to overwrite **approved, shipped** ones.
+
+The tiered test below (2026-06-05) still describes *which changes are routine iteration vs. a new surface*; apply it for judgment, but in all cases follow the guardrail above and build per the design guide + inventory rather than stopping.
+
+## Intent (historical — see SUPERSEDING POLICY above)
+
+Originally: stop AI implementation agents from building UI against an unlocked design, because Replit's design agent was the only authoritative visual source. That model is deprecated (see above). The material below is retained as history and for the still-useful "iterate in code vs. new surface" judgment test.
+
+Companion rule: `126-design-mockup-implementation-rules.mdc` (also deprecated as a hard requirement — reference only).
 
 ## Production-era policy (owner-directed, 2026-06-05): the gate is for new surfaces, not iteration on shipped screens
 
@@ -42,7 +64,7 @@ therefore for genuinely new surfaces and redesigns only.
 - The submodule pointer in this repo (`/design`) may lag the latest design-repo HEAD. Agents must `git -C design fetch && git -C design log --oneline -5` to see what's actually on the remote before claiming a design exists.
 - The design system reference (component path, CSS approach, breakpoints, typography, file→shell mapping) is in `ctf/agents/design.agent.md`. That file is the authoritative *index* into the design submodule — do not re-derive its facts from anywhere else.
 
-## When Stop-For-Design Is REQUIRED
+## When Stop-For-Design Is REQUIRED (DEPRECATED 2026-06-17 — see SUPERSEDING POLICY; do not stop)
 
 **A new or from-scratch-redesigned surface is design-skippable only by owner bypass.** This section applies to surfaces in the "design first" tier above — net-new surfaces and deliberate full redesigns. (Iterative changes to an already-shipped screen are *not* gated; see the production-era policy above and proceed in code.) An agent must halt before writing any UI code if the change introduces or materially restructures:
 
@@ -104,7 +126,7 @@ The owner may explicitly bypass the gate by including one of the following in th
 
 If the prompt is ambiguous, the agent must ask before proceeding.
 
-## Required Checkpoint Behavior
+## Required Checkpoint Behavior (DEPRECATED 2026-06-17 — no DESIGN PASS REQUIRED halt; build per the design guide + inventory)
 
 When stop-for-design is required, the agent must, in order:
 
@@ -145,7 +167,7 @@ When the owner asks the agent to resume, the agent must:
 4. **Splitting a single user-facing feature across "foundation now, UI later" without a session-continuity doc.** The doc is what makes the split safe. Without it, the next session has to re-litigate the spec and the owner pays the documentation cost again.
 5. **Asking the owner "should I keep going?" instead of stopping.** The gate is the stop. If the surface is REQUIRED, stop without asking. Resume on explicit owner instruction.
 
-## Owner-reported missing UI on the live app → append a prompt to the design queue (no permission needed)
+## Owner-reported missing UI on the live app → append a prompt to the design queue (DEPRECATED 2026-06-17 — build the surface yourself; do not use the #312 queue)
 
 When the owner, testing the production app, reports a missing or needed UI surface (a screen, control, state, modal) and the fix is **design-gated** (a new surface or material layout/IA change with no design in the submodule), the agent does **not** ask the owner for permission and does **not** stall. Instead it:
 

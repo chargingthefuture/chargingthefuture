@@ -1,5 +1,11 @@
 # Design & Mockup Implementation Rules
 
+> **DEPRECATED as a hard requirement (owner-directed, 2026-06-17).** The design repo / Replit workflow
+> is deprecated; production is the single source of truth — see the SUPERSEDING POLICY in
+> `127-design-pass-gating-rules.mdc`. Reference only: the principle "ground UI in real, existing
+> features; never ship fabricated/stub data" still holds, but there is no required mockup to implement
+> against. Build new surfaces from the design guide + shipped screens + inventory.
+
 ## Intent
 Ensure mockup implementations are grounded in existing features, preventing technical debt and scope creep caused by AI-generated designs that may include features not yet built.
 

@@ -127,15 +127,21 @@ export async function rateComicAnswer(turnId: string, rating: ComicAnswerRating)
   return (await res.json()) as ComicRateResult;
 }
 
-// --- Owner Review & Correction Console (admin-gated server-side) ---
+// --- Owner Review & Correction Dashboard (admin-gated server-side) ---
 
 export type ComicReviewItem = {
   reviewId: string;
   turnId: string;
   conversationId: string;
   askedByUserId: string;
+  // The asker's @username snapshotted at ask time, or null for older rows. Shown in place of the
+  // raw user id when present.
+  askedByUsername: string | null;
   questionBody: string;
   draftBody: string;
+  // Whether a real AI draft exists. False → no draft (drafting unavailable or safety-held); the
+  // screen then shows a "write the answer" state instead of the question text as a draft.
+  hasDraft: boolean;
   intent: string | null;
   nluConfidence: number | null;
   // 'rasa' is a historical value only (the Rasa NLU integration was removed 2026-06-14); no new
@@ -152,7 +158,7 @@ export type ComicReviewResponse = {
   pagination: { page: number; pageSize: number; total: number };
 };
 
-// The review queue. Returns 403 for non-admins (the console then shows an access notice).
+// The review queue. Returns 403 for non-admins (the dashboard then shows an access notice).
 export async function fetchComicReviewQueue(): Promise<{ items: ComicReviewItem[]; forbidden: boolean }> {
   const res = await authedFetch(`${BASE}/review`);
   if (res.status === 401 || res.status === 403) {
