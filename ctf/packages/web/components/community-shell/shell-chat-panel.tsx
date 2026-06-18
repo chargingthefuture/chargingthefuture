@@ -266,16 +266,13 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           it posts the question and an instant reply pointing at the best-matching feature, so there is
           always an immediate response. */}
       {starterPrompts.length > 0 ? (
-        <div
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}
-          role="group"
-          aria-label="Ask what you need"
-        >
+        <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
           {starterPrompts.map((prompt) => (
             <button
               key={prompt}
               type="button"
-              className={styles.chatActionBtn}
+              className={styles.conciergeChip}
+              title={prompt}
               onClick={() => sendConciergeAsk(prompt)}
             >
               {prompt}
