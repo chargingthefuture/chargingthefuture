@@ -34,9 +34,13 @@ ensure_ledger() {
   # finishes and the HTTP API is serving before we give up.
   while [ "$attempt" -lt 60 ]; do
     # curl writes the 3-digit status to stdout; on a connection failure it writes
-    # 000. Do NOT append `|| echo 000` — that emitted "000\n000", which matched
-    # neither branch below and made the loop quit on the very first attempt
-    # (the bug that left the ledgers uncreated on a fresh deploy).
+    # 000 AND exits non-zero. Do NOT append `|| echo 000` — that emitted
+    # "000\n000", which matched neither branch below. And do NOT rely on `set -e`
+    # here: `code="$(curl …)"` takes curl's non-zero exit as the assignment's
+    # status, so under errexit the very first warm-up failure killed this whole
+    # (backgrounded) loop before it could retry or log — leaving the books
+    # uncreated with no trace. The caller runs this loop with `set +e` so a
+    # transient curl failure just yields "000" and is retried.
     code="$(curl -s -o /dev/null -w '%{http_code}' -X POST \
       -H "Authorization: Bearer ${FORMANCE_API_TOKEN:-}" "${API}/v2/${name}" 2>/dev/null)"
     # Normalize to a clean 3-digit code (digits only, last 3, default 000) so odd
@@ -54,7 +58,15 @@ ensure_ledger() {
 }
 
 if command -v curl >/dev/null 2>&1; then
-  ( ensure_ledger "${FORMANCE_LEDGER:-}"; ensure_ledger "${FORMANCE_LEDGER_STAGING:-}" ) &
+  # `set +e` for the whole bootstrap subshell: it is best-effort and ensure_ledger
+  # always returns 0, but a transient curl failure during warm-up would otherwise
+  # abort the subshell under the script's top-level `set -e` (see note in the retry
+  # loop above). The startup echo makes a failed/slow bootstrap visible in the logs.
+  ( set +e
+    echo "[entrypoint] ensuring ledger books exist via ${API} ..."
+    ensure_ledger "${FORMANCE_LEDGER:-}"
+    ensure_ledger "${FORMANCE_LEDGER_STAGING:-}"
+  ) &
 else
   echo "[entrypoint] curl not found in image; skipping auto-bootstrap. Run 'pnpm formance:bootstrap' once."
 fi
