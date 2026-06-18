@@ -88,10 +88,14 @@ export function ContributionsAdminDrive({ t, cycle, saving, error, onSave, isMob
         <div style={{ marginTop: 6, paddingTop: 16, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 14 }}>Goals</div>
           {goals.map(({ Icon, label, value, set }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <Icon size={13} color={t.MUTED} style={{ flexShrink: 0 }} />
-              <label style={{ fontSize: 12, color: t.MUTED, width: 180, flexShrink: 0 }}>{label}</label>
-              <input value={value} onChange={(e) => set(e.target.value)} inputMode="numeric" style={fieldStyle(t, 100)} />
+            // On mobile the label + fixed-width input overflowed the card (the 180px label could not
+            // shrink), so stack the label over a full-width input on phones; desktop keeps the inline row.
+            <div key={label} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 5 : 10, marginBottom: isMobile ? 14 : 10 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.MUTED, width: isMobile ? 'auto' : 180, flexShrink: 0 }}>
+                <Icon size={13} color={t.MUTED} style={{ flexShrink: 0 }} />
+                {label}
+              </label>
+              <input value={value} onChange={(e) => set(e.target.value)} inputMode="numeric" style={fieldStyle(t, isMobile ? '100%' : 100)} />
             </div>
           ))}
         </div>
