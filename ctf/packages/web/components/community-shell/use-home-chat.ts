@@ -450,10 +450,15 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     if (!text) {
       return;
     }
-    const time = formatTimeLabel(new Date());
+    const now = new Date();
+    const time = formatTimeLabel(now);
+    // Stamp a real sentAtIso: the home stream sorts by epoch(sentAtIso) and falls back to the array
+    // index when it is missing — without this, concierge messages got a tiny fallback epoch and sorted
+    // to the TOP of the chat instead of the bottom. A real timestamp keeps them newest-last.
+    const sentAtIso = now.toISOString();
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const matches = resolveConcierge(text);
-    const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time };
+    const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time, sentAtIso };
 
     const top = matches[0];
     const second = matches[1];
@@ -463,6 +468,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         from: 'hub',
         text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
         time,
+        sentAtIso,
         actionLabel: `Open ${top.name} →`,
         actionSlug: top.slug,
       }
@@ -471,6 +477,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         from: 'hub',
         text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
         time,
+        sentAtIso,
       };
 
     setMessages((previous) => mergeMessages(previous, [userMsg, reply]));
