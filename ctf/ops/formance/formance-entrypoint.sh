@@ -23,23 +23,33 @@ ledger serve --bind="0.0.0.0:${PORT}" --worker=true --worker-grpc-address=127.0.
 LEDGER_PID=$!
 
 # Idempotently create a ledger book once the API is up. Retries through the
-# server's warm-up (connection refused / 5xx); treats 201 as created and 400/409
-# as already-exists. Always returns 0 so a hiccup never crashes the container.
+# server's warm-up (connection refused / 5xx / any not-yet-ready code); treats 201
+# as created and 400/409 as already-exists. Always returns 0 so a hiccup never
+# crashes the container.
 ensure_ledger() {
   name="$1"
   [ -n "$name" ] || return 0
   attempt=0
-  while [ "$attempt" -lt 40 ]; do
+  # ~3 minutes of retries so a slow first-boot schema migration (AUTO_UPGRADE)
+  # finishes and the HTTP API is serving before we give up.
+  while [ "$attempt" -lt 60 ]; do
+    # curl writes the 3-digit status to stdout; on a connection failure it writes
+    # 000. Do NOT append `|| echo 000` — that emitted "000\n000", which matched
+    # neither branch below and made the loop quit on the very first attempt
+    # (the bug that left the ledgers uncreated on a fresh deploy).
     code="$(curl -s -o /dev/null -w '%{http_code}' -X POST \
-      -H "Authorization: Bearer ${FORMANCE_API_TOKEN:-}" "${API}/v2/${name}" 2>/dev/null || echo 000)"
+      -H "Authorization: Bearer ${FORMANCE_API_TOKEN:-}" "${API}/v2/${name}" 2>/dev/null)"
+    # Normalize to a clean 3-digit code (digits only, last 3, default 000) so odd
+    # output ("", "000000", etc.) is treated as "not ready" and retried, not fatal.
+    code="$(printf '%s' "$code" | tr -cd '0-9')"
+    code="$(printf '%s' "${code:-000}" | tail -c 3)"
     case "$code" in
       201) echo "[entrypoint] created ledger '${name}'"; return 0 ;;
       400|409) echo "[entrypoint] ledger '${name}' already exists (HTTP ${code})"; return 0 ;;
-      000|5??) attempt=$((attempt + 1)); sleep 3 ;;
-      *) echo "[entrypoint] WARN: create '${name}' returned HTTP ${code} (non-fatal)"; return 0 ;;
+      *) attempt=$((attempt + 1)); sleep 3 ;;
     esac
   done
-  echo "[entrypoint] WARN: gave up ensuring ledger '${name}'; run 'pnpm formance:bootstrap' manually."
+  echo "[entrypoint] WARN: gave up ensuring ledger '${name}' after retries; create it once with 'pnpm formance:bootstrap' or POST /v2/${name}."
   return 0
 }
 

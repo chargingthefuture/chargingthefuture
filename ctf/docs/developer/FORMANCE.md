@@ -57,10 +57,14 @@ it as a Docker-image service; no Dockerfile build happens on Railway.
      auto-bootstrap uses). Generate with `openssl rand -hex 16`.
    - `FORMANCE_LEDGER` — production book name (e.g. `ctf-service-credits`).
    - `FORMANCE_LEDGER_STAGING` — optional demo book name.
-   - `PORT` is injected by Railway and read by the entrypoint (defaults to 3068); do
-     not hardcode it.
-4. **Expose the service** and copy its public `https://…up.railway.app` domain (or a
-   custom domain).
+   - `PORT` — the entrypoint binds whatever `PORT` is set to (default 3068). Railway
+     may inject its own `PORT`; the public domain's target port (next step) MUST match
+     whatever the ledger actually listens on. Deterministic setup: set `PORT=3068`
+     here and use target port 3068 below. A mismatch returns curl `(52) Empty reply
+     from server` even though the container logs `HTTP server started`.
+4. **Expose the service** (Settings → Networking → public domain) and set its
+   **target port** to the ledger's listen port (3068 with the pin above). Copy the
+   public `https://…up.railway.app` domain (or a custom domain).
 5. **Point the web app at it.** In Infisical (which syncs to the Render web service),
    set:
    - `FORMANCE_API_URL` — the ledger's **public https** Railway URL.
