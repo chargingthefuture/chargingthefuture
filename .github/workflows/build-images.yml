@@ -168,13 +168,11 @@ jobs:
           cache-from: type=gha,scope=ctf-formance-ledger
           cache-to: type=gha,scope=ctf-formance-ledger,mode=max
 
-      - name: Trigger Render deploy
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_NAME: ctf-formance-ledger
-          # Optional explicit id; when unset the script finds it by name.
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID_CTF_FORMANCE }}
-        run: bash .github/scripts/render-deploy.sh
+      # No Render deploy step: the ledger runs on Railway now (PR #570), not Render.
+      # The image is pushed to GHCR above; redeploy the Railway ledger service to
+      # pull :latest (or enable Railway's image-update watch to auto-pull). This
+      # workflow does not deploy to Railway. The old "Trigger Render deploy" step
+      # was removed — it only 404'd against the deleted Render service.
 
   # ── ctf-route-weather ───────────────────────────────────────────
   # No-UI plain-text route weather service. Tiny dependency-free Node image,
