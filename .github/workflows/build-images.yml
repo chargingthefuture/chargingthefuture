@@ -74,7 +74,9 @@ jobs:
               - 'ctf/tsconfig.base.json'
               - 'ctf/pnpm-workspace.yaml'
             formance:
-              - 'ctf/ops/formance/Dockerfile.ledger'
+              # Whole dir, not just the Dockerfile: formance-entrypoint.sh is COPYd
+              # into the image, so a change to it must rebuild ctf-formance-ledger too.
+              - 'ctf/ops/formance/**'
             routeweather:
               - 'ctf/ops/route-weather/**'
 

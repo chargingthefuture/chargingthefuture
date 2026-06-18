@@ -1,17 +1,17 @@
-# Formance Ledger — Render private service.
-# Wraps the official GHCR image with Render-compatible configuration.
+# Formance Ledger — Railway service.
+# Wraps the official GHCR image with a self-bootstrapping entrypoint.
 #
-# State lives entirely in external Neon Postgres (Render has no persistent
-# volumes). FORMANCE_POSTGRES_URI must be set in the Render dashboard. AUTO_UPGRADE
-# runs schema migrations on container start.
+# State lives entirely in an external Postgres (the Railway Postgres). The host
+# has no persistent volume — FORMANCE_POSTGRES_URI must be set on the service.
+# AUTO_UPGRADE runs schema migrations on container start.
 #
 # The base image's ENTRYPOINT is `ledger`, so it is reset to [] here and the
-# `serve` subcommand is invoked through a shell that expands Render's $PORT.
+# `serve` subcommand is invoked through a shell that expands the platform's $PORT.
 FROM ghcr.io/formancehq/ledger:v2.3.15-dev.1.g1077fe2@sha256:5c280c2b1b397c6d910e88d7f1719666fadf3b2be18ab6dad31a905dee876db7
 
-# Render has no persistent volumes — Formance state lives in the external
-# Neon Postgres database. AUTO_UPGRADE runs schema migrations on start.
-# FORMANCE_POSTGRES_URI must be set in the Render dashboard (Neon connection string).
+# The host has no persistent volume — Formance state lives in the external
+# Railway Postgres. AUTO_UPGRADE runs schema migrations on start.
+# FORMANCE_POSTGRES_URI must be set on the service (the Railway Postgres URL).
 ENV POSTGRES_MAX_OPEN_CONNS=40 \
     POSTGRES_MAX_IDLE_CONNS=40 \
     POSTGRES_CONN_MAX_IDLE_TIME=5m \
