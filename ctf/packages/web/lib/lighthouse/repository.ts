@@ -535,23 +535,44 @@ export async function listMyProperties(userId: string): Promise<LighthouseProper
   return result.rows.map(mapProperty);
 }
 
+// Quora profile URL for a member, read from their Unlock verification submission (the single place
+// a member's Quora link is captured; one row per user_id). Best-effort: any failure yields null so
+// the self-hosting header simply omits the Quora link. Self-service hosting (2026-06-18).
+export async function getHostQuoraUrl(userId: string): Promise<string | null> {
+  try {
+    const result = await queryDb<{ quora_profile_url: string | null }>(
+      `
+        SELECT quora_profile_url
+        FROM unlock_verification_submissions
+        WHERE user_id = $1 AND quora_profile_url IS NOT NULL AND quora_profile_url <> ''
+        LIMIT 1
+      `,
+      [userId],
+    );
+    return result.rows[0]?.quora_profile_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createProperty(actorUserId: string, input: LighthousePropertyInput): Promise<LighthouseProperty> {
   return withDbTransaction(async (client: PoolClient) => {
-    const hostProfile = await client.query(
+    // Member self-service hosting (owner decision, 2026-06-18): any member may list their own
+    // place — listing IS what makes them a host. We no longer hard-deny when there's no host
+    // profile; instead we transparently provision one so the member never has to fill a separate
+    // "host profile" form. ON CONFLICT keeps an existing profile row intact (a seeker who lists a
+    // place stays a seeker row but is flagged has_property = TRUE) and never trips the user_id
+    // unique constraint. The listing's host identity is composed from existing data
+    // (name / username / Quora / trust), not from this row.
+    await client.query(
       `
-        SELECT id
-        FROM lighthouse_profiles
-        WHERE user_id = $1
-          AND profile_type = 'host'
-          AND is_active = TRUE
-        LIMIT 1
+        INSERT INTO lighthouse_profiles (user_id, profile_type, is_active, has_property, updated_at)
+        VALUES ($1, 'host', TRUE, TRUE, NOW())
+        ON CONFLICT (user_id)
+        DO UPDATE SET has_property = TRUE, updated_at = NOW()
       `,
       [actorUserId],
     );
-
-    if (hostProfile.rows.length === 0) {
-      throw new Error('policy_denied');
-    }
 
     const created = await client.query(
       `

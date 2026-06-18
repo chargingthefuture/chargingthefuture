@@ -1,12 +1,13 @@
 "use client";
 
-import { Bell, Heart, Home, MessageSquare, Search, Settings } from "lucide-react";
+import { Bell, Heart, Home, KeyRound, MessageSquare, Search, Settings } from "lucide-react";
 import { COLOR, type Tab } from "./shared";
 
 const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Search, key: "browse", label: "Browse" },
   { icon: Heart, key: "matches", label: "Matches" },
   { icon: MessageSquare, key: "chat", label: "Chat" },
+  { icon: KeyRound, key: "host", label: "List your place" },
 ];
 
 export function LighthouseIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
