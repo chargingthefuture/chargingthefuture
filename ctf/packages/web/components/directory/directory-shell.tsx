@@ -107,8 +107,13 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
       setLoadingMembers(true);
       try {
         const params = new URLSearchParams();
-        if (activeFilter !== "All") params.append("sector", activeFilter);
-        if (debouncedQuery) params.append("query", debouncedQuery);
+        // The list route filters by sector UUID (`sectorId`) and search text (`q`).
+        // activeFilter holds the sector *name* shown on the chip, so map it to its id.
+        if (activeFilter !== "All") {
+          const sectorId = sectors.find((s) => s.name === activeFilter)?.id;
+          if (sectorId) params.append("sectorId", sectorId);
+        }
+        if (debouncedQuery) params.append("q", debouncedQuery);
         const res = await fetch(`/api/directory/list?${params.toString()}`, { signal: controller.signal });
         if (res.ok && !controller.signal.aborted) {
           const data = await res.json() as { items?: DirectoryListItem[] };
@@ -130,7 +135,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
     }
     void fetchMembers();
     return () => controller.abort();
-  }, [activeFilter, debouncedQuery]);
+  }, [activeFilter, debouncedQuery, sectors]);
 
   const sectorFilters = ["All", ...sectors.map((s) => s.name)];
   const isFiltered = activeFilter !== "All" || query.trim().length > 0;
