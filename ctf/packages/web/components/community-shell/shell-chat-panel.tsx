@@ -173,6 +173,9 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
   return (
     <div className={styles.chatPanelWrap}>
+      {/* The "From Survivor to Thriver" hero + stats are hidden on mobile, where they ate most of the
+          first screen before any chat was visible. Desktop keeps it. */}
+      {!isMobile ? (
       <div className={styles.heroBanner}>
         <div className={styles.heroBannerContent}>
           <p className={styles.heroBannerTag}>✦ From Survivor to Thriver</p>
@@ -200,6 +203,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           </div>
         </div>
       </div>
+      ) : null}
 
       {error ? (
         <section className={styles.usernameAlert} role="status">
