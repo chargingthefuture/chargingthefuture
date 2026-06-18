@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Heart, Clock, ArrowLeft } from 'lucide-react';
+import { Gift, Clock, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type { ContributionSubmission } from '@/lib/contributions/types';
@@ -264,7 +264,7 @@ function ContributionsSidebar({ t, active }: { t: ContributionsTokens; active: '
       <div style={{ padding: '18px 14px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Heart size={14} color="#fff" />
+            <Gift size={14} color="#fff" />
           </div>
           <span style={{ fontWeight: 700, fontSize: 14, color: t.TITLE }}>Contributions</span>
         </div>
@@ -312,7 +312,7 @@ function MobileFrame({ t, children, tab, onTab }: { t: ContributionsTokens; chil
       <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Heart size={13} color="#fff" />
+            <Gift size={13} color="#fff" />
           </div>
           <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE }}>Contributions</span>
         </div>
@@ -340,7 +340,7 @@ function MobileFrame({ t, children, tab, onTab }: { t: ContributionsTokens; chil
 function ErrorState({ t, message, onRetry, isMobile }: { t: ContributionsTokens; message: string; onRetry: () => void; isMobile: boolean }) {
   const body = (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', gap: 14 }}>
-      <Heart size={28} color={t.ACCENT} />
+      <Gift size={28} color={t.ACCENT} />
       <p style={{ margin: 0, fontSize: 14, color: t.MUTED, maxWidth: 360 }}>{message}</p>
       <button type="button" onClick={onRetry} style={{ padding: '9px 22px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
         Try again

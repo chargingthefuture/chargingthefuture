@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Heart } from 'lucide-react';
+import { Gift } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import type {
@@ -200,7 +200,7 @@ export function ContributionsAdminShell() {
         <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Heart size={13} color="#fff" />
+              <Gift size={13} color="#fff" />
             </div>
             <span style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Contributions Admin</span>
           </div>
@@ -230,7 +230,7 @@ export function ContributionsAdminShell() {
         <div style={{ padding: '18px 14px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Heart size={14} color="#fff" />
+              <Gift size={14} color="#fff" />
             </div>
             <span style={{ fontWeight: 700, fontSize: 14, color: t.TITLE }}>Contributions</span>
           </div>
