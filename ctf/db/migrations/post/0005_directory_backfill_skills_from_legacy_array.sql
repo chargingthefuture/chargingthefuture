@@ -37,10 +37,16 @@ BEGIN
       FROM directory_profiles dp
       CROSS JOIN LATERAL unnest(dp.skills) WITH ORDINALITY AS s(skill_name, ord)
       JOIN LATERAL (
-        SELECT id
-        FROM skills_taxonomy_skills
-        WHERE lower(name) = lower(trim(s.skill_name))
-        ORDER BY is_active DESC, display_order ASC, id ASC
+        SELECT sts.id
+        FROM skills_taxonomy_skills AS sts
+        WHERE lower(sts.name) = lower(trim(s.skill_name))
+        -- skills_taxonomy_skills is unique only per job_title_id, so the same name
+        -- can exist under several job titles. Prefer the one under the profile's own
+        -- job title when known. Legacy profiles usually have a NULL job_title_id, in
+        -- which case this term is NULL for every candidate and the active/display_order/id
+        -- tie-break below decides.
+        ORDER BY (sts.job_title_id::text = dp.job_title_id::text) DESC NULLS LAST,
+                 sts.is_active DESC, sts.display_order ASC, sts.id ASC
         LIMIT 1
       ) AS tax ON true
       WHERE dp.skills IS NOT NULL
@@ -48,6 +54,14 @@ BEGIN
         -- directory_profiles.id is varchar on cloned data; only cast values that are
         -- actually UUID-shaped so one malformed id can never abort the migration.
         AND dp.id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        -- Only seed profiles that have NO normalized skills yet. Once a member or
+        -- admin edits skills through the app (writing directory_profile_skills), that
+        -- junction is authoritative; re-running this backfill must not re-add a skill
+        -- they removed, by copying a stale value from the legacy array.
+        AND NOT EXISTS (
+          SELECT 1 FROM directory_profile_skills existing
+          WHERE existing.profile_id::text = lower(dp.id::text)
+        )
       ORDER BY dp.id, lower(trim(s.skill_name)), s.ord
     ) AS picked
     ON CONFLICT (profile_id, skill_id) DO NOTHING;

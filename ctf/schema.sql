@@ -1900,6 +1900,14 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS met
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === DIRECTORY MODULE ===
+-- Per-profile skills live in the normalized directory_profile_skills junction
+-- (below); the profile view reads skills only from that join. The original
+-- platform instead stored skills as a free-text array column on the profile
+-- (directory_profiles.skills TEXT[]). That legacy column is NOT recreated here —
+-- it only exists on databases cloned from the old platform — and v3 does not read
+-- it. post/0005_directory_backfill_skills_from_legacy_array.sql copies any such
+-- legacy array into the junction once (guarded + idempotent); directory_profile_skills
+-- is the authoritative source afterward.
 CREATE TABLE IF NOT EXISTS directory_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claimed_by_user_id TEXT,
