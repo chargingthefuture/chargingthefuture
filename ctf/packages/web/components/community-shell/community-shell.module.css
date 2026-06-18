@@ -485,6 +485,43 @@
   background: rgba(14, 165, 233, 0.18);
 }
 
+/* Concierge "ask what you need" chips. Emerald — deliberately NOT the sky-blue
+   (#38BDF8) the @comic AI Assistant uses, so a member can tell "route me to a
+   feature" apart from "ask the AI". The rail scrolls horizontally instead of
+   wrapping, so the long prompt sentences stay on one line on a phone. */
+.conciergeChipRail {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.conciergeChip {
+  flex: 0 0 auto;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #34D399;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.conciergeChip:hover {
+  background: rgba(52, 211, 153, 0.18);
+}
+
 .chatTime {
   font-size: 11px;
   color: #374151;
