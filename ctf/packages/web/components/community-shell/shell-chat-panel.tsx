@@ -210,20 +210,6 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
               Survivor Hub is live. Share with the community, or type <strong>@comic</strong> to ask the AI Assistant.
             </div>
-            {starterPrompts.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                {starterPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className={styles.chatActionBtn}
-                    onClick={() => sendConciergeAsk(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
         ) : null}
 
@@ -274,9 +260,29 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         })}
       </div>
 
-      {/* Suggestion chips are hidden for now: they read as AI/@comic questions, but tapping one
-          only fills the composer — it does not return an immediate answer, which confuses members.
-          Revisit as a proper one-tap @comic ask — tracked in issue #471. */}
+      {/* Concierge "ask what you need" chips — persistent (shown whether or not the chat already has
+          messages), so a member can always tap one. Unlike the old hidden chips (#471) that merely
+          filled the composer with no answer, tapping here runs the local concierge (sendConciergeAsk):
+          it posts the question and an instant reply pointing at the best-matching feature, so there is
+          always an immediate response. */}
+      {starterPrompts.length > 0 ? (
+        <div
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}
+          role="group"
+          aria-label="Ask what you need"
+        >
+          {starterPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className={styles.chatActionBtn}
+              onClick={() => sendConciergeAsk(prompt)}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {/* @comic mention affordance + helper copy (per the locked design / naming rules). On phones
           the standalone "@comic" chip duplicated the "@comic" in the helper text, so the chip is
