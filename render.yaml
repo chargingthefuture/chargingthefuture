@@ -66,7 +66,10 @@ services:
       #   SENTRY_DSN / SENTRY_AUTH_TOKEN
       #   CRON_SECRET
       #   INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET
-      #   FORMANCE_POSTGRES_URI         — Neon Postgres URI for Formance ledger
+      #   FORMANCE_API_URL              — public Railway https URL of the ledger service
+      #   FORMANCE_API_TOKEN            — bearer token the ledger API expects
+      #   FORMANCE_LEDGER               — ledger book name (e.g. ctf-service-credits)
+      #   (the ledger's own FORMANCE_POSTGRES_URI lives on Railway, not here)
       #
       # IMPORTANT — the browser-side Clerk values are NOT in this list and are
       # NOT read from Render/Infisical at runtime. Next.js inlines every
@@ -96,9 +99,13 @@ services:
     image:
       url: ghcr.io/chargingthefuture/ctf-route-weather:latest
     region: ohio
-    # Cheapest tier is plenty — dependency-free Node, no DB. Starter avoids the
-    # free-tier spin-down so the endpoint answers quickly when asked while driving.
-    plan: starter
+    # Free tier — cold start accepted (owner decision, 2026-06-16). This is a
+    # personal, occasional-use endpoint, so paying for an always-on Starter instance
+    # 24/7 isn't worth it. Trade-off: after ~15 min idle the free instance spins down,
+    # so the FIRST request (e.g. a Siri/Shortcut weather ask while driving) waits for a
+    # cold start (~30s+) before answering; subsequent requests are fast until it idles
+    # again. Switch back to `starter` if the cold-start delay becomes annoying.
+    plan: free
     healthCheckPath: /health
     envVars:
       # PORT is injected by Render and read by the server. Do NOT hardcode it.
@@ -155,23 +162,18 @@ services:
   #     - key: REDIS_URL
   #       sync: false
 
-  # ── Formance Ledger (financial ledger) ───────────────────────────
-  # Image built by build-images.yml → ghcr.io/chargingthefuture/ctf-formance-ledger:latest
-  # Private service — wraps ghcr.io/formancehq/ledger with Render-compatible config.
-  # All state lives in Neon Postgres (no persistent disk on Render).
-  # AUTO_UPGRADE=true handles schema migrations on container start.
-  # Backups: daily pg_dump → Supabase Storage via backup-formance-supabase.yml.
-  # FORMANCE_POSTGRES_URI injected by Infisical → Render Sync.
-  - type: pserv
-    name: ctf-formance-ledger
-    runtime: image
-    image:
-      url: ghcr.io/chargingthefuture/ctf-formance-ledger:latest
-    region: ohio
-    plan: starter
-    envVars:
-      # FORMANCE_POSTGRES_URI is synced from Infisical → Render Sync.
-      # AUTO_UPGRADE=true (baked into image) runs schema migrations on startup —
-      # no manual SQL needed. Ensure this var is set before first deploy.
-      - key: FORMANCE_POSTGRES_URI
-        sync: false
+  # ── Formance Ledger (financial ledger) — NOT on Render ────────────
+  # The Formance ledger and its Postgres run on RAILWAY, not Render. Same reason
+  # Infisical and Unleash stay on Railway (see the note above): Render bills a flat
+  # per-instance tier 24/7, and the ledger is a mostly-idle stateful service. Worse,
+  # its database has to stay awake around the clock (the ledger runs a background
+  # worker that polls Postgres), so a managed DB on a sleep-assumed free tier (Neon
+  # free = 100 compute-hours/month) is exhausted before month-end and the project is
+  # suspended. Railway meters actual RAM/CPU and does not cap with suspension, so a
+  # quiet ledger + its Postgres are cheaper there (~$7-12/mo metered vs ~$26/mo for a
+  # Render private service + Neon Launch). Deploy runbook + env wiring:
+  # ctf/docs/developer/FORMANCE.md. The web app reaches it over its public Railway
+  # https URL (FORMANCE_API_URL), authenticated by FORMANCE_API_TOKEN.
+  # Do NOT re-add the ledger here unless transaction volume grows enough to justify a
+  # flat always-on tier anyway. The ledger image is still built by build-images.yml
+  # (ghcr.io/chargingthefuture/ctf-formance-ledger:latest); Railway pulls it.
