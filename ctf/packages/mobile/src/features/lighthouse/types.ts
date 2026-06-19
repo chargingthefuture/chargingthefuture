@@ -48,3 +48,31 @@ export type MatchesResponse = {
   total: number;
   pagination: { page: number; pageSize: number };
 };
+
+// GET /api/lighthouse/my-properties — the host's own listings plus the composed
+// host identity (the Quora link surfaced from the member's Unlock submission).
+export type MyPropertiesResponse = {
+  ok: boolean;
+  items: LighthouseProperty[];
+  host?: { quoraProfileUrl?: string | null } | null;
+};
+
+// Body for POST /api/lighthouse/properties. Mirrors LighthousePropertyInput in
+// ctf/packages/web/lib/lighthouse/types.ts — only fields the route accepts.
+export type PropertyCreateInput = {
+  title: string;
+  description: string;
+  propertyType: string | null;
+  addressLine: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zipCode: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  monthlyRent: number | null;
+  availableFromIso: string | null;
+  amenities: string[] | null;
+  houseRules: string[] | null;
+  airbnbProfileUrl: string | null;
+};

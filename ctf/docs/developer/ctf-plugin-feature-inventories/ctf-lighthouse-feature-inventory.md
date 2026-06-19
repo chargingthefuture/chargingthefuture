@@ -377,4 +377,5 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ### Change Log
 
+- 2026-06-19: Android parity for the member self-service "List your place" host tab (web shipped earlier, #598). Added a `host` tab to the RN `LighthouseTabs` and built `LighthouseHost.tsx` + `LighthouseHostForm.tsx`, binding `GET /api/lighthouse/my-properties` (the host's own listings + composed Quora link) and `POST /api/lighthouse/properties` (with the `x-ctf-csrf` header). Mirrors the web host surface, including the composed host identity (username + Quora link — no separate host profile to fill). Two web-header items were not ported: the Trust widget (no mobile Trust primitive exists yet) and `photos`/`isActive` (the web host form does not collect them either). Real-data-only; no schema, route, or contract change. Mobile typecheck passes.
 - 2026-02-25: Created initial LightHouse CTF rewrite checklist aligned to parity inventory scope, with v1 blocks inclusion, web+android parity gates, schema/deletion decision locks, and security/policy validation requirements.
