@@ -31,7 +31,7 @@ export function DirectoryBrowse({
   }
 
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: isMobile ? "16px" : "24px" }}>
         {rewardCard && rewardCard.isActive && (
           <a href={rewardCard.ctaUrl} style={{ display: "block", marginBottom: 16, padding: "18px 22px", borderRadius: 14, background: `${SKILLS_HUNT_COLOR}10`, border: `1px solid ${SKILLS_HUNT_COLOR}30`, textDecoration: "none", color: "inherit" }}>

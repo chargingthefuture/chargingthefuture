@@ -287,15 +287,15 @@ export function SkillsHuntShell({
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
+    <div style={{ position: "relative", width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <SkillsHuntIconRail tab={tab} onTab={setTab} notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((o) => !o)} unreadCount={unreadCount} />
       {notifOpen && (
         <SkillsHuntNotifications notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
       )}
       <SkillsHuntSidebar tab={tab} onTab={setTab} achievements={achievements} currentUserEntry={currentUserEntry} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <ShellHeader t={t} activeRound={activeRound} />
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "24px" }}>
           {content}
         </div>
       </div>

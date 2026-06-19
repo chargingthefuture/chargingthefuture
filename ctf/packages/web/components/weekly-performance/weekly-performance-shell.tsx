@@ -154,7 +154,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
       <WeeklyPerformanceIconRail />
       <WeeklyPerformanceSidebar
         weeks={weeks}
