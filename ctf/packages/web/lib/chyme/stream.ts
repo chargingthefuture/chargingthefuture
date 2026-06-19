@@ -26,7 +26,7 @@ async function ensureMember(streamClient: StreamChat, userId: string, name: stri
 async function ensureChannel(streamClient: StreamChat, streamUserId: string) {
   const channel = streamClient.channel('messaging', CHYME_STREAM_CHANNEL_ID, {
     created_by_id: streamUserId,
-    name: 'Chyme Main Room',
+    name: 'Chyme Main Room: Exit the Gauntlet',
   });
 
   try {

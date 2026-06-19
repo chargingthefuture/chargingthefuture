@@ -36,10 +36,15 @@ type Props = {
   onBack: () => void;
 };
 
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Date + time, built manually so it does not depend on React Native's inconsistent Intl/toLocaleString
+// support. Example: "Jun 19, 13:23".
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso);
-    return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${MONTH_ABBR[d.getMonth()]} ${d.getDate()}, ${time}`;
   } catch {
     return '';
   }

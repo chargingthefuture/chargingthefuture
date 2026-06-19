@@ -38,7 +38,7 @@ export function ChymeChatPanel({
             <div key={message.id} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: message.userId === currentUserId ? PRIMARY : '#A7F3D0' }}>{chymeHandle(message.username, message.userId)}</span>
-                <span style={{ fontSize: 11, color: '#374151' }}>{new Date(message.sentAtIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span style={{ fontSize: 11, color: '#374151' }}>{new Date(message.sentAtIso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.5 }}>{message.text}</div>
             </div>
