@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BG, COLOR, initials, type Member } from "./shared";
+import { useTheme } from "@/hooks/useTheme";
+import { getDirectoryTokens, initials, type Member } from "./shared";
 
 export function DirectoryProfileDetail({
   member,
@@ -19,11 +21,16 @@ export function DirectoryProfileDetail({
   onAttach?: (profileId: string, targetUserId: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const p = member;
+  const { theme } = useTheme();
+  const t = getDirectoryTokens(theme);
   const [attachInput, setAttachInput] = useState("");
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [attachSuccess, setAttachSuccess] = useState(false);
   const showAttach = isAdmin && p.claimedByUserId == null && typeof onAttach === "function";
+  const profileUrl = p.profileUrl?.trim() ? p.profileUrl.trim() : null;
+  const headline = p.headline?.trim() ? p.headline.trim() : null;
+  const bio = p.bio?.trim() ? p.bio.trim() : null;
 
   async function handleAttach() {
     const target = attachInput.trim();
@@ -40,77 +47,132 @@ export function DirectoryProfileDetail({
     setAttaching(false);
   }
 
+  const sectionLabel = { fontSize: 12, fontWeight: 700, color: t.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 12 };
+
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: "#E8EAF0", display: "flex", flexDirection: "column" }}>
-      <div style={{ height: 56, borderBottom: `1px solid ${COLOR}25`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
-        <button onClick={onBack} style={{ color: COLOR, background: "none", border: "none", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-          ← Back
+    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
+      {/* Header — matches the shell: a styled back button, not bare text. */}
+      <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, background: t.HEADER, flexShrink: 0 }}>
+        <button onClick={onBack} aria-label="Back to directory" title="Back to directory" style={{ width: 38, height: 38, borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center", color: t.ACCENT, cursor: "pointer", flexShrink: 0 }}>
+          <ChevronLeft size={20} />
         </button>
-        <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>📇 Provider Profile</div>
-      </div>
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ flex: 1, padding: "32px 40px", overflow: "auto" }}>
-          <div style={{ display: "flex", gap: 24, marginBottom: 32 }}>
-            <Avatar style={{ width: 80, height: 80 }}>
-              <AvatarFallback style={{ background: `${COLOR}30`, color: COLOR, fontSize: 28, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>
+        <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Provider profile</div>
+      </header>
+
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 64px" }}>
+          {/* Identity */}
+          <div style={{ display: "flex", gap: 18, marginBottom: 24, alignItems: "center" }}>
+            <Avatar style={{ width: 72, height: 72, flexShrink: 0 }}>
+              <AvatarFallback style={{ background: `${t.ACCENT}30`, color: t.ACCENT, fontSize: 26, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>
             </Avatar>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>{p.name}</div>
-              <div style={{ fontSize: 15, color: "#9CA3AF", marginBottom: 8 }}>{p.jobTitle}</div>
-              <Badge style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 12 }}>{p.sector}</Badge>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: headline ? 4 : 8 }}>{p.name}</div>
+              {headline && <div style={{ fontSize: 15, color: t.SUBTLE, marginBottom: 8, lineHeight: 1.4 }}>{headline}</div>}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {p.sector && <Badge style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 12 }}>{p.sector}</Badge>}
+                {p.jobTitle && <Badge style={{ background: "transparent", color: t.MUTED, border: `1px solid ${t.BORDER}`, fontSize: 12 }}>{p.jobTitle}</Badge>}
+              </div>
             </div>
           </div>
-          <div style={{ maxWidth: 640 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Specializations</div>
+
+          {/* Quora profile — every directory profile is sourced from Quora, so this is the social
+              proof and the way to learn more before bartering, trading, or exchanging credits. */}
+          <a
+            href={profileUrl ?? undefined}
+            target={profileUrl ? "_blank" : undefined}
+            rel={profileUrl ? "noopener noreferrer" : undefined}
+            aria-disabled={profileUrl ? undefined : true}
+            style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderRadius: 12,
+              background: profileUrl ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)",
+              border: `1px solid ${profileUrl ? `${t.ACCENT}35` : t.BORDER}`,
+              textDecoration: "none", color: t.TEXT, marginBottom: 24,
+              pointerEvents: profileUrl ? "auto" : "none", opacity: profileUrl ? 1 : 0.6,
+            }}
+          >
+            <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: profileUrl ? t.ACCENT : t.MUTED }}>
+                {profileUrl ? "View Quora profile" : "Quora profile not linked yet"}
+              </div>
+              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>
+                {profileUrl ? "Their Quora profile is the social proof — read more before you reach out." : "This profile has no Quora link on file."}
+              </div>
+            </div>
+          </a>
+
+          {/* About */}
+          {bio && (
+            <section style={{ marginBottom: 24 }}>
+              <div style={sectionLabel}>About</div>
+              <p style={{ fontSize: 14, color: t.SUBTLE, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{bio}</p>
+            </section>
+          )}
+
+          {/* Specializations */}
+          <section style={{ marginBottom: 24 }}>
+            <div style={sectionLabel}>Specializations</div>
             {p.skills.length > 0 ? (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {p.skills.map((s) => (
-                  <Badge key={s} style={{ background: `${COLOR}15`, color: COLOR, border: `1px solid ${COLOR}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
+                  <Badge key={s} style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 13, color: "#4B5563", marginBottom: 24 }}>No skills listed yet.</div>
+              <div style={{ fontSize: 13, color: t.FAINT }}>No skills listed yet.</div>
             )}
-            {showAttach && (
-              <div style={{ marginTop: 16, padding: "20px", borderRadius: 16, background: `${COLOR}0A`, border: `1px solid ${COLOR}30` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attach to account</div>
-                <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, marginBottom: 12 }}>This profile is unclaimed. Attach it to a user account by their Clerk user ID.</div>
-                <input
-                  value={attachInput}
-                  onChange={(e) => { setAttachInput(e.target.value); setAttachError(null); }}
-                  placeholder="Clerk user ID"
-                  disabled={attaching}
-                  style={{ width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.04)", border: `1px solid ${COLOR}30`, borderRadius: 8, fontSize: 13, color: "#E8EAF0", outline: "none", boxSizing: "border-box", marginBottom: 10 }}
-                />
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          </section>
+
+          {/* How to connect — directory is read-only, so reaching out happens through the Quora
+              profile and the rest of the app. This tells the viewer what they can do next. */}
+          <section style={{ padding: "16px 18px", borderRadius: 12, background: `${t.ACCENT}0A`, border: `1px solid ${t.ACCENT}25` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Sparkles size={14} style={{ color: t.ACCENT }} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Want to work together?</div>
+            </div>
+            <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
+              The directory shows who is in the community and what they do. To barter, trade, or exchange
+              credits, reach out through their Quora profile above, or find them in the plugins where work
+              actually happens.
+            </div>
+          </section>
+
+          {showAttach && (
+            <div style={{ marginTop: 24, padding: "20px", borderRadius: 16, background: `${t.ACCENT}0A`, border: `1px solid ${t.ACCENT}30` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attach to account</div>
+              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 12 }}>This profile is unclaimed. Attach it to a user account by their Clerk user ID.</div>
+              <input
+                value={attachInput}
+                onChange={(e) => { setAttachInput(e.target.value); setAttachError(null); }}
+                placeholder="Clerk user ID"
+                disabled={attaching}
+                style={{ width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.04)", border: `1px solid ${t.ACCENT}30`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+              />
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={handleAttach}
+                  disabled={attaching || attachInput.trim().length === 0}
+                  style={{ padding: "9px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: attaching || attachInput.trim().length === 0 ? "not-allowed" : "pointer", opacity: attaching || attachInput.trim().length === 0 ? 0.5 : 1 }}
+                >
+                  {attaching ? "Attaching…" : "Attach"}
+                </button>
+                {currentUserId && (
                   <button
                     type="button"
-                    onClick={handleAttach}
-                    disabled={attaching || attachInput.trim().length === 0}
-                    style={{ padding: "9px 18px", borderRadius: 8, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: attaching || attachInput.trim().length === 0 ? "not-allowed" : "pointer", opacity: attaching || attachInput.trim().length === 0 ? 0.5 : 1 }}
+                    onClick={() => { setAttachInput(currentUserId); setAttachError(null); }}
+                    disabled={attaching}
+                    style={{ padding: "9px 14px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontWeight: 600, fontSize: 12, cursor: attaching ? "not-allowed" : "pointer" }}
                   >
-                    {attaching ? "Attaching…" : "Attach"}
+                    Use my account
                   </button>
-                  {currentUserId && (
-                    <button
-                      type="button"
-                      onClick={() => { setAttachInput(currentUserId); setAttachError(null); }}
-                      disabled={attaching}
-                      style={{ padding: "9px 14px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 12, cursor: attaching ? "not-allowed" : "pointer" }}
-                    >
-                      Use my account
-                    </button>
-                  )}
-                </div>
-                {attachSuccess && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: COLOR }}>Attached.</div>
-                )}
-                {attachError && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: "#EF4444" }}>{attachError}</div>
                 )}
               </div>
-            )}
-          </div>
+              {attachSuccess && <div style={{ marginTop: 10, fontSize: 12, color: t.ACCENT }}>Attached.</div>}
+              {attachError && <div style={{ marginTop: 10, fontSize: 12, color: "#EF4444" }}>{attachError}</div>}
+            </div>
+          )}
         </div>
       </div>
     </div>

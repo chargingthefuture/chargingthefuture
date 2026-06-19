@@ -33,6 +33,9 @@ type DirectoryListItem = {
   jobTitleName: string | null;
   claimedByUserId: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
+  profileUrl: string | null;
+  headline: string | null;
+  bio: string | null;
 };
 
 export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
@@ -124,6 +127,9 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             jobTitle: item.jobTitleName ?? "",
             skills: item.skills.map((s) => s.name),
             claimedByUserId: item.claimedByUserId ?? null,
+            profileUrl: item.profileUrl ?? null,
+            headline: item.headline ?? null,
+            bio: item.bio ?? null,
           }));
           setMembers(mapped);
         }
