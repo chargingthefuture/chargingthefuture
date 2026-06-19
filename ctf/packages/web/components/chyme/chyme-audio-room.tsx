@@ -12,7 +12,7 @@ import {
   type Call,
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
-import { Mic } from 'lucide-react';
+import { Mic, Headphones } from 'lucide-react';
 import { BORDER, PRIMARY, chymeHandle, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
 import { reportError } from 'lib/observability/report';
@@ -209,6 +209,21 @@ function ChymeAudioRoomLive({
 }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
+  const call = useCall();
+  // Hand-raise is tracked locally so the toggle is reliable for the person pressing it: their own
+  // tile shows ✋ and the button reads "Lower Hand" until they lower it. Stream reactions are
+  // transient (the SDK clears participant.reaction after a few seconds), so they can't carry a
+  // persistent state on their own; we still emit one so others get a best-effort signal.
+  const [handRaised, setHandRaised] = useState(false);
+  const onToggleHand = () => {
+    if (handRaised) {
+      void call?.sendReaction({ type: 'lower_hand', emoji_code: ':hand:' });
+      setHandRaised(false);
+      return;
+    }
+    void call?.sendReaction({ type: 'raised_hand', emoji_code: ':raised_hand:' });
+    setHandRaised(true);
+  };
 
   // One tile per user. A member with a lingering/extra Stream session would otherwise show
   // up twice on stage; collapse to a single tile per userId, preferring the local session.
@@ -233,7 +248,7 @@ function ChymeAudioRoomLive({
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
           {uniqueParticipants.map((participant) => (
-            <ChymeSpeakerTile key={participant.userId} participant={participant} />
+            <ChymeSpeakerTile key={participant.userId} participant={participant} localHandRaised={handRaised} />
           ))}
         </div>
       )}
@@ -249,16 +264,21 @@ function ChymeAudioRoomLive({
       isMobile={isMobile}
       onLeave={onLeave}
       stage={stage}
-      controls={<ChymeAudioControls onLeave={onLeave} />}
+      controls={<ChymeAudioControls onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} />}
     />
   );
 }
 
-function ChymeSpeakerTile({ participant }: { participant: StreamVideoParticipant }) {
+function ChymeSpeakerTile({ participant, localHandRaised = false }: { participant: StreamVideoParticipant; localHandRaised?: boolean }) {
   const isSelf = participant.isLocalParticipant;
+  // Signed-out guests join as listen-only (their Stream id is minted as `chyme-guest-…`). They can
+  // never publish, so a mic icon is misleading — show a headphones "listening" indicator instead.
+  const isGuest = participant.userId.startsWith('chyme-guest-');
   const speaking = participant.isSpeaking;
   const publishingAudio = isPublishingAudio(participant);
-  const handRaised = participant.reaction?.type === 'raised_hand';
+  // The local member's raised hand is driven by their own toggle so it is reliable and persists
+  // until they lower it; everyone else's comes from the (transient) Stream reaction, best-effort.
+  const handRaised = isSelf ? localHandRaised : participant.reaction?.type === 'raised_hand';
   const name = participant.name || participant.userId;
 
   return (
@@ -288,14 +308,18 @@ function ChymeSpeakerTile({ participant }: { participant: StreamVideoParticipant
             width: 22,
             height: 22,
             borderRadius: '50%',
-            background: publishingAudio ? PRIMARY : 'rgba(120,120,120,0.9)',
+            background: !isGuest && publishingAudio ? PRIMARY : 'rgba(120,120,120,0.9)',
             border: '2px solid #021006',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Mic size={10} style={{ color: '#fff', opacity: publishingAudio ? 1 : 0.5 }} />
+          {isGuest ? (
+            <Headphones size={10} style={{ color: '#fff', opacity: 0.85 }} />
+          ) : (
+            <Mic size={10} style={{ color: '#fff', opacity: publishingAudio ? 1 : 0.5 }} />
+          )}
         </div>
         {handRaised && (
           <div style={{ position: 'absolute', top: -6, right: -6, fontSize: 16 }} aria-label="hand raised">
@@ -307,41 +331,37 @@ function ChymeSpeakerTile({ participant }: { participant: StreamVideoParticipant
       <span
         style={{
           fontSize: 10,
-          background: publishingAudio ? `${PRIMARY}20` : 'rgba(255,255,255,0.05)',
-          color: publishingAudio ? PRIMARY : '#6B7280',
-          border: `1px solid ${publishingAudio ? `${PRIMARY}35` : 'transparent'}`,
+          background: !isGuest && publishingAudio ? `${PRIMARY}20` : 'rgba(255,255,255,0.05)',
+          color: !isGuest && publishingAudio ? PRIMARY : '#6B7280',
+          border: `1px solid ${!isGuest && publishingAudio ? `${PRIMARY}35` : 'transparent'}`,
           padding: '1px 8px',
           borderRadius: 20,
         }}
       >
-        {publishingAudio ? 'speaking' : 'muted'}
+        {isGuest ? 'listening' : publishingAudio ? 'speaking' : 'muted'}
       </span>
     </div>
   );
 }
 
-function ChymeAudioControls({ onLeave }: { onLeave: () => void }) {
+function ChymeAudioControls({
+  onLeave,
+  handRaised,
+  onToggleHand,
+}: {
+  onLeave: () => void;
+  handRaised: boolean;
+  onToggleHand: () => void;
+}) {
   const { useMicrophoneState } = useCallStateHooks();
   const { microphone, isMute } = useMicrophoneState();
-  const call = useCall();
-  const [handRaised, setHandRaised] = useState(false);
 
   return (
     <ChymeControls
       muted={isMute}
       onToggleMute={() => void microphone.toggle()}
       handRaised={handRaised}
-      onToggleHand={() => {
-        // A real toggle: lower if already raised, raise otherwise. Previously this only ever
-        // raised (and auto-cleared after 2.5s), so pressing "Lower Hand" did nothing.
-        if (handRaised) {
-          void call?.sendReaction({ type: 'lower_hand', emoji_code: ':hand:' });
-          setHandRaised(false);
-          return;
-        }
-        void call?.sendReaction({ type: 'raised_hand', emoji_code: ':raised_hand:' });
-        setHandRaised(true);
-      }}
+      onToggleHand={onToggleHand}
       joinReady
       onLeave={onLeave}
     />
