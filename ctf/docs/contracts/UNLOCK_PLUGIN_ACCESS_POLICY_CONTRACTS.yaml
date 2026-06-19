@@ -97,3 +97,27 @@ policies:
       - insufficient_role
       - submission_not_approved
       - duplicate_grant_attempt
+
+  - pluginId: unlock
+    command: unlock.admin.rewards.reconcile
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - system
+    attributePolicies:
+      adminOnlyOperation: required
+      idempotentSelfHeal: enforced
+      oneTimeGrantPerUser: enforced
+    consentRequirements:
+      scopes:
+        - unlock_incentive_grant
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role

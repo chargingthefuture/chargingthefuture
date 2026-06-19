@@ -87,3 +87,30 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: unlock
+    command: unlock.admin.rewards.reconcile
+    commandVersion: 1.0.0
+    purpose: incentive_award_self_heal
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - unlock_verification_submissions
+      - unlock_audit_log
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+    targetContext:
+      adminUserId: user_identifier
+      scanned: count
+      granted: count
+      alreadyGranted: count
+      failed: count
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
