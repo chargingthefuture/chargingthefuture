@@ -5,6 +5,7 @@ import type { SkillsHuntRound, SkillsHuntSubmission, SkillsHuntSubmissionStatus 
 import { COLOR, promptRejectReason, type ReviewAction } from "./sha-shared";
 import { SkillsHuntAdminFilters, SkillsHuntAdminBulkBar } from "./sha-filters";
 import { SkillsHuntAdminTable } from "./sha-table";
+import { SkillsHuntCreateRound } from "./sha-create-round";
 
 type Props = { rounds: SkillsHuntRound[] };
 
@@ -113,8 +114,9 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   return (
     <div style={{ minHeight: "100vh", background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <AdminHeader />
+      <SkillsHuntCreateRound />
       {rounds.length === 0 ? (
-        <div style={{ color: "#6B7280" }}>No rounds yet. Create one before moderating.</div>
+        <div style={{ color: "#6B7280" }}>No rounds yet. Use “New round” above to create the first one.</div>
       ) : (
         <>
           <SkillsHuntAdminFilters rounds={rounds} activeRoundId={activeRoundId} onRound={setActiveRoundId} statusFilter={statusFilter} onStatus={setStatusFilter} />
