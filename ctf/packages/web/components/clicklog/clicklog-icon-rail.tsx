@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, Bell, Clock, FileText, Settings } from "lucide-react";
+import { AlertTriangle, Clock, FileText } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { BORDER, BRAND, SUBTLE } from "./clicklog-shared";
 
 // The hub icon-rail chrome. ClickLog is a single-view tool, so the nav glyphs
@@ -18,10 +19,7 @@ export function ClicklogIconRail() {
           <Icon size={20} />
         </div>
       ))}
-      <div style={{ flex: 1 }} />
-      <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: SUBTLE }}><Bell size={18} /></div>
-      <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: SUBTLE }}><Settings size={18} /></div>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${BRAND}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: BRAND }}>S</div>
+      <PluginRailFooter />
     </aside>
   );
 }
