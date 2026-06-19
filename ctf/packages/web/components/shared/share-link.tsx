@@ -64,6 +64,9 @@ export function ShareLink({
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The popup opens above the trigger by default, but flips below when the trigger sits near the top
+  // of the viewport — otherwise the popup is clipped behind the header (the "modal doesn't fit" bug).
+  const [placement, setPlacement] = useState<"top" | "bottom">("top");
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
@@ -73,6 +76,11 @@ export function ShareLink({
 
   useEffect(() => {
     if (!open) return;
+    // Decide which way to open: if there isn't room for the popup above the trigger, open below.
+    // ~190px covers the popup (title + URL field + two rows + padding).
+    const POPUP_HEIGHT = 190;
+    const triggerTop = triggerRef.current?.getBoundingClientRect().top ?? POPUP_HEIGHT + 1;
+    setPlacement(triggerTop < POPUP_HEIGHT + 16 ? "bottom" : "top");
     // Focus the URL field so a keyboard/AT user lands on the link itself.
     urlRef.current?.focus();
     urlRef.current?.select();
@@ -151,7 +159,9 @@ export function ShareLink({
           onClick={(e) => e.stopPropagation()}
           style={{
             position: "absolute",
-            bottom: "calc(100% + 8px)",
+            ...(placement === "top"
+              ? { bottom: "calc(100% + 8px)" }
+              : { top: "calc(100% + 8px)" }),
             left: 0,
             zIndex: 50,
             width: 280,
