@@ -37,6 +37,7 @@ import type {
   FeedQuestionInput,
   FeedTimelineItem,
   MembershipEventType,
+  PublicCommunityPost,
 } from 'lib/shared/feed-primitives/types';
 
 type FeedConfigRow = {
@@ -569,6 +570,67 @@ export async function getFeedConfig(): Promise<FeedConfig> {
   }
 
   return mapFeedConfig(result.rows[0]);
+}
+
+// Read-only Commons for signed-out visitors. Community (peer) posts are public the way Quora posts
+// are, so an anonymous visitor can read them — but only community posts (never announcements or AI
+// Q&A), and only when an admin has turned public viewing on (feed_render_config.is_public) and the
+// community channel is enabled. Returns `isPublic: false` (and no posts) when public viewing is off,
+// the config row is missing, or community is disabled — the caller then shows the sign-in prompt
+// instead. Mirrors the member-visible filter (active, published, not expired, targeted to the
+// general audience) but carries no per-user state and no author user id.
+export async function listPublicCommunityPosts(
+  limit = FEED_DEFAULT_PAGE_SIZE,
+): Promise<{ isPublic: boolean; posts: PublicCommunityPost[] }> {
+  const safeLimit = Math.min(Math.max(limit, 1), FEED_MAX_PAGE_SIZE);
+
+  let config: FeedConfig | null = null;
+  try {
+    config = await getFeedConfig();
+  } catch {
+    config = null;
+  }
+
+  if (!config || !config.isPublic || !config.enabledChannels.includes('community')) {
+    return { isPublic: false, posts: [] };
+  }
+
+  const result = await queryDb<{
+    id: string;
+    author_username: string | null;
+    body: string;
+    category: FeedCommunityCategory;
+    created_at: Date;
+  }>(
+    `
+      SELECT c.id, c.author_username, c.body, c.category, c.created_at
+      FROM feed_items f
+      JOIN feed_community_posts c ON c.id = f.source_community_post_id
+      WHERE f.item_type = 'community'
+        AND f.is_active = TRUE
+        AND f.published_at <= NOW()
+        AND (f.expires_at IS NULL OR f.expires_at > NOW())
+        AND EXISTS (
+          SELECT 1
+          FROM feed_item_targets t
+          WHERE t.item_id = f.id
+            AND t.target_role IN ('member', 'admin', 'all')
+        )
+      ORDER BY f.published_at DESC, f.id DESC
+      LIMIT $1
+    `,
+    [safeLimit],
+  );
+
+  const posts: PublicCommunityPost[] = result.rows.map((row) => ({
+    id: row.id,
+    authorUsername: row.author_username,
+    body: row.body,
+    category: row.category,
+    createdAtIso: toIso(row.created_at),
+  }));
+
+  return { isPublic: true, posts };
 }
 
 export async function updateFeedConfig(actorId: string, input: FeedConfigInput): Promise<FeedConfig> {

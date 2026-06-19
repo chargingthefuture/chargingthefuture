@@ -63,6 +63,17 @@ export type FeedCommunityDetail = {
   replies: FeedCommunityReply[];
 };
 
+// The read-only shape shown to signed-out visitors on the public Commons. Community (peer) posts are
+// public the way Quora posts are, so a not-signed-in visitor can read them — but nothing identifying
+// beyond the author's chosen @username, and no replies/compose. Deliberately omits author_user_id.
+export type PublicCommunityPost = {
+  id: string;
+  authorUsername: string | null;
+  body: string;
+  category: FeedCommunityCategory;
+  createdAtIso: string;
+};
+
 export type FeedPagination = {
   page: number;
   pageSize: number;
