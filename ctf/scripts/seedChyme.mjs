@@ -52,7 +52,7 @@ async function main() {
     const roomResult = await client.query(
       `
         INSERT INTO chyme_rooms (room_key, room_name, call_active)
-        VALUES ($1, 'Chyme Main Room', false)
+        VALUES ($1, 'Chyme Main Room: Exit the Gauntlet', false)
         ON CONFLICT (room_key)
         DO UPDATE SET room_name = EXCLUDED.room_name, updated_at = NOW()
         RETURNING id

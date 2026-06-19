@@ -1,6 +1,6 @@
 export const CHYME_PLUGIN_ID = 'chyme';
 export const CHYME_MAIN_ROOM_KEY = 'chyme-main-room';
-export const CHYME_MAIN_ROOM_NAME = 'Chyme Main Room';
+export const CHYME_MAIN_ROOM_NAME = 'Chyme Main Room: Exit the Gauntlet';
 export const CHYME_MAX_MESSAGE_LENGTH = 1000;
 export const CHYME_DEFAULT_MESSAGES_LIMIT = 100;
 
