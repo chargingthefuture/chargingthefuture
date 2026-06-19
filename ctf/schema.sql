@@ -3043,6 +3043,23 @@ BEGIN
   END IF;
 END
 $$;
+-- One-time dedupe so the unique index below can be built on legacy data. Before that index existed
+-- the app could write more than one row per member per UTC day (every sign-in, across instances),
+-- so a database cloned from that era has duplicate (user_id, UTC-day) rows. Collapse each group to a
+-- single row — keep the earliest sign-in of the day — before creating the index. `login_events` is
+-- only a daily activity signal (the 7-day "active members" window reads DISTINCT user_id), so which
+-- row survives does not matter. This DELETE is naturally idempotent: once deduped it removes nothing.
+DELETE FROM login_events
+WHERE ctid IN (
+  SELECT ctid FROM (
+    SELECT ctid, ROW_NUMBER() OVER (
+      PARTITION BY user_id, (created_at AT TIME ZONE 'UTC')::date
+      ORDER BY created_at ASC, ctid ASC
+    ) AS rn
+    FROM login_events
+  ) ranked
+  WHERE ranked.rn > 1
+);
 -- At most one row per member per UTC day. This makes the "record a sign-in once per day"
 -- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
 -- concurrent requests for the same member on the same UTC day cannot both write a row. The day
