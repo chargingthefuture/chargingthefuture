@@ -957,11 +957,29 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Add prod unlock audit/config tables if missing
+-- createOrUpdateUnlockSubmission upserts with ON CONFLICT (user_id); guarantee a unique conflict
+-- target on user_id regardless of which column is the primary key. Dedupe first (keep the most
+-- recently updated row per member) so the index can build; idempotent once one row per member.
+DELETE FROM unlock_verification_submissions
+WHERE ctid IN (
+  SELECT ctid FROM (
+    SELECT ctid, ROW_NUMBER() OVER (
+      PARTITION BY user_id
+      ORDER BY updated_at DESC, id DESC
+    ) AS rn
+    FROM unlock_verification_submissions
+  ) ranked
+  WHERE ranked.rn > 1
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
+  ON unlock_verification_submissions (user_id);
+
+-- Add prod unlock audit/config tables if missing. user_id/action are nullable because the writer
+-- (insertUnlockAudit) populates actor_user_id/command/... and not the legacy user_id/action columns.
 CREATE TABLE IF NOT EXISTS unlock_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  action TEXT NOT NULL,
+  user_id TEXT,
+  action TEXT,
   details JSONB DEFAULT '{}'::jsonb NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -973,6 +991,15 @@ CREATE TABLE IF NOT EXISTS unlock_audit_log (
   request_id TEXT,
   target_user_id TEXT
 );
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS command TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS policy_status TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS target_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE IF EXISTS unlock_audit_log ALTER COLUMN action DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS unlock_runtime_config (
   singleton_id INTEGER PRIMARY KEY DEFAULT 1,

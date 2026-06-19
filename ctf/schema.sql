@@ -959,11 +959,37 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Add prod unlock audit/config tables if missing
+-- The app upserts a submission with `ON CONFLICT (user_id)` (createOrUpdateUnlockSubmission). That
+-- requires a unique constraint on user_id as the conflict target. schema.sql declares user_id as the
+-- PRIMARY KEY, but on databases cloned with the primary key on `id` instead, the conflict target is
+-- missing and every submission INSERT fails with "there is no unique or exclusion constraint matching
+-- the ON CONFLICT specification" — which surfaces to members as the generic 503 "Unlock submission
+-- unavailable." A unique index on user_id is a valid conflict target regardless of which column is
+-- the primary key. Dedupe first (keep the most recently updated row per member) so the index can
+-- build even if a legacy row pair slipped in; idempotent once there is one row per member.
+DELETE FROM unlock_verification_submissions
+WHERE ctid IN (
+  SELECT ctid FROM (
+    SELECT ctid, ROW_NUMBER() OVER (
+      PARTITION BY user_id
+      ORDER BY updated_at DESC, id DESC
+    ) AS rn
+    FROM unlock_verification_submissions
+  ) ranked
+  WHERE ranked.rn > 1
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
+  ON unlock_verification_submissions (user_id);
+
+-- Add prod unlock audit/config tables if missing.
+-- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
+-- actor_user_id/command/policy_status/reason columns and does NOT populate the legacy user_id/action
+-- columns, so requiring them NOT NULL would make every audit INSERT fail (and, because the submission
+-- route awaits the audit write, would turn an otherwise-successful submission into the same 503).
 CREATE TABLE IF NOT EXISTS unlock_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  action TEXT NOT NULL,
+  user_id TEXT,
+  action TEXT,
   details JSONB DEFAULT '{}'::jsonb NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -975,6 +1001,17 @@ CREATE TABLE IF NOT EXISTS unlock_audit_log (
   request_id TEXT,
   target_user_id TEXT
 );
+-- Guarded DDL for legacy unlock_audit_log tables: make sure the columns the writer uses exist, and
+-- drop the legacy NOT NULL on user_id/action (the writer does not populate them).
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS command TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS policy_status TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS target_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_audit_log ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE IF EXISTS unlock_audit_log ALTER COLUMN action DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS unlock_runtime_config (
   singleton_id INTEGER PRIMARY KEY DEFAULT 1,
