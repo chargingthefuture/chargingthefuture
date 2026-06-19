@@ -117,6 +117,8 @@ contracts:
         type: integer
       failed:
         type: integer
+      errors:
+        type: array
     dataAccess:
       - unlock_verification_submissions
       - unlock_audit_log

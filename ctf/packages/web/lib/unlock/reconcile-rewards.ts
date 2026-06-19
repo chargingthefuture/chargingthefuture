@@ -11,6 +11,10 @@ export type UnlockRewardReconcileResult = {
   granted: number;
   alreadyGranted: number;
   failed: number;
+  // Per-submission failure reasons, so a stuck reward is diagnosable from the route response / cron log
+  // instead of only from Sentry. The message is the mint error (e.g. mint_budget_exceeded, invalid_payload,
+  // or a database error) — schema-level text only, no secrets. Empty when nothing failed.
+  errors: { submissionId: number; message: string }[];
 };
 
 // Self-heals missed Unlock approval rewards. The approval handler mints the 100-credit reward as a
@@ -25,6 +29,7 @@ export async function reconcileUnlockRewards(limit = 100): Promise<UnlockRewardR
   let granted = 0;
   let alreadyGranted = 0;
   let failed = 0;
+  const errors: { submissionId: number; message: string }[] = [];
 
   for (const submission of submissions) {
     const idempotencyKey = `unlock-approval-submission-${submission.id}`;
@@ -63,9 +68,10 @@ export async function reconcileUnlockRewards(limit = 100): Promise<UnlockRewardR
       });
     } catch (error) {
       failed += 1;
+      errors.push({ submissionId: submission.id, message: error instanceof Error ? error.message : 'unknown_error' });
       reportError(error, { area: 'unlock', op: 'reconcile_rewards', extra: { submissionId: submission.id } });
     }
   }
 
-  return { scanned: submissions.length, granted, alreadyGranted, failed };
+  return { scanned: submissions.length, granted, alreadyGranted, failed, errors };
 }

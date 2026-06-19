@@ -91,7 +91,7 @@ export function UnlockAdminShell({
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
       });
       const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; granted?: number; alreadyGranted?: number; failed?: number; reason?: string; code?: string; message?: string }
+        | { ok?: boolean; granted?: number; alreadyGranted?: number; failed?: number; errors?: { submissionId: number; message: string }[]; reason?: string; code?: string; message?: string }
         | null;
       if (!res.ok || !data?.ok) {
         setError(data?.reason ?? data?.message ?? data?.code ?? `Retry failed (${res.status}).`);
@@ -99,13 +99,18 @@ export function UnlockAdminShell({
       }
       const granted = data.granted ?? 0;
       const failed = data.failed ?? 0;
-      setNotice(
-        failed > 0
-          ? `Granted ${granted}. ${failed} still could not be granted — check the logs.`
-          : granted > 0
+      const reasons = (data.errors ?? []).map((e) => `#${e.submissionId}: ${e.message}`).join('; ');
+      if (failed > 0) {
+        // Surface the mint failure reason so the operator can act on it (e.g. a mint budget cap or a
+        // misconfigured incentive amount) rather than seeing a silent "still pending".
+        setError(`Granted ${granted}. ${failed} could not be granted${reasons ? ` — ${reasons}` : ''}.`);
+      } else {
+        setNotice(
+          granted > 0
             ? `Granted ${granted} pending reward${granted === 1 ? '' : 's'}.`
             : 'No pending rewards to grant.',
-      );
+        );
+      }
       // Refresh so the snapshot counts and reward pills reflect the freshly granted rewards.
       router.refresh();
     } catch {
