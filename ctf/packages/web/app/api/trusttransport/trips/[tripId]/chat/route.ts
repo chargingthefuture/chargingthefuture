@@ -23,22 +23,21 @@ export async function POST(_request: Request, { params }: { params: Promise<{ tr
   }
 
   try {
-    const channelId = await ensureTrustTransportTripChannel({
+    const streamChannelId = await ensureTrustTransportTripChannel({
       tripId: trip.id,
       requesterUserId: trip.requesterUserId,
       providerUserId: trip.providerUserId,
     });
-    if (!channelId) {
+    if (!streamChannelId) {
       return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
     }
     const credentials = await createTrustTransportParticipantToken(userId);
     if (!credentials) {
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
-    // `streamChannelId` is returned (in addition to `channelId`) so the web chat tab connects to the
-    // real trip channel instead of falling back to the raw trip id. A trip is text chat only — there is
-    // deliberately no video room (the transport plugin does not do video).
-    return NextResponse.json({ ok: true, channelId, streamChannelId: channelId, ...credentials });
+    // Single canonical key: `streamChannelId` is the real Stream channel id. Web and mobile both read
+    // this one key. A trip is text chat only — there is deliberately no video room.
+    return NextResponse.json({ ok: true, streamChannelId, ...credentials });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     reportError(e, { area: 'trusttransport', op: 'trips_tripid_chat' });

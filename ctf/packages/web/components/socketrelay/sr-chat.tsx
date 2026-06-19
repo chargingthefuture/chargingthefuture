@@ -86,12 +86,12 @@ function ChatPane({
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: SUBTLE, fontSize: 14 }}>Loading chat…</div>
         ) : chatError ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14 }}>{chatError}</div>
-        ) : chatCredentials?.streamApiKey ? (
+        ) : chatCredentials?.streamApiKey && chatCredentials.streamChannelId ? (
           <StreamChatPanel
             streamApiKey={chatCredentials.streamApiKey}
             streamToken={chatCredentials.streamToken as string}
             streamUserId={chatCredentials.streamUserId as string}
-            streamChannelId={chatCredentials.streamChannelId || selected.id}
+            streamChannelId={chatCredentials.streamChannelId}
           />
         ) : (
           <div style={{ flex: 1 }} />
