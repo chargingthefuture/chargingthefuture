@@ -847,7 +847,9 @@ export async function updateAdminProfile(
   input: DirectoryProfileInput,
 ): Promise<DirectoryProfile | null> {
   return withDbTransaction(async (client) => {
-    const existing = await client.query<{ id: string }>('SELECT id FROM directory_profiles WHERE id = $1::uuid', [profileId]);
+    // Compare ids as text — directory_profiles.id is varchar in the carried-over v2
+    // database, so a ::uuid cast fails to plan / throws on non-uuid ids. See #534.
+    const existing = await client.query<{ id: string }>('SELECT id FROM directory_profiles WHERE id::text = $1', [profileId]);
     if (existing.rows.length === 0) {
       return null;
     }
@@ -876,7 +878,7 @@ export async function updateAdminProfile(
           job_title_id = $8::uuid,
           is_active = true,
           updated_at = NOW()
-        WHERE id = $1::uuid
+        WHERE id::text = $1
       `,
       [profileId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
     );
@@ -914,7 +916,7 @@ export async function updateAdminProfile(
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id = $1::uuid
+        WHERE p.id::text = $1
       `,
       [profileId],
     );
@@ -929,8 +931,14 @@ export async function assignAdminProfile(
   userId: string,
 ): Promise<DirectoryProfile | null> {
   return withDbTransaction(async (client) => {
+    // Compare ids as text: directory_profiles.id carried over from v2 as varchar,
+    // so casting the bind param to ::uuid against a varchar column fails to plan
+    // (and throws "invalid input syntax for type uuid" for non-uuid v2 ids). Cast
+    // the column to text instead — works for both the v2 varchar column and a
+    // fresh-schema uuid column. Same fix as the list query (#534). Proper id-type
+    // reconciliation is tracked in the #520 cleanup.
     const existing = await client.query<{ id: string; claimed_by_user_id: string | null }>(
-      'SELECT id, claimed_by_user_id FROM directory_profiles WHERE id = $1::uuid',
+      'SELECT id, claimed_by_user_id FROM directory_profiles WHERE id::text = $1',
       [profileId],
     );
 
@@ -942,7 +950,7 @@ export async function assignAdminProfile(
       `
         UPDATE directory_profiles
         SET claimed_by_user_id = $2, updated_at = NOW()
-        WHERE id = $1::uuid
+        WHERE id::text = $1
       `,
       [profileId, userId],
     );
@@ -990,7 +998,7 @@ export async function assignAdminProfile(
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id = $1::uuid
+        WHERE p.id::text = $1
       `,
       [profileId],
     );
@@ -1001,8 +1009,10 @@ export async function assignAdminProfile(
 
 export async function deleteAdminProfile(actorId: string, profileId: string): Promise<'deleted' | 'claimed_guard' | 'not_found'> {
   return withDbTransaction(async (client) => {
+    // Compare ids as text — directory_profiles.id is varchar in the carried-over v2
+    // database, so a ::uuid cast fails to plan / throws on non-uuid ids. See #534.
     const existing = await client.query<{ claimed_by_user_id: string | null }>(
-      'SELECT claimed_by_user_id FROM directory_profiles WHERE id = $1::uuid',
+      'SELECT claimed_by_user_id FROM directory_profiles WHERE id::text = $1',
       [profileId],
     );
 
@@ -1024,7 +1034,7 @@ export async function deleteAdminProfile(actorId: string, profileId: string): Pr
       return 'claimed_guard';
     }
 
-    await client.query('DELETE FROM directory_profiles WHERE id = $1::uuid', [profileId]);
+    await client.query('DELETE FROM directory_profiles WHERE id::text = $1', [profileId]);
 
     await client.query(
       `
