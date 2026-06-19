@@ -310,8 +310,8 @@ function PublicState({ onSignIn }: { onSignIn: () => void }) {
         <Text style={styles.publicTitle}>TrustTransport</Text>
       </View>
       <Text style={styles.publicDesc}>
-        Rides, package delivery, and food — all with trauma-informed,
-        background-checked providers. Pay with Service Credits.
+        Rides, package delivery, and food from fellow community members.
+        Pay with Service Credits.
       </Text>
       <View style={styles.serviceRow}>
         {[

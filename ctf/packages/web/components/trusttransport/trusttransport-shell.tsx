@@ -21,10 +21,10 @@ function ShellHeader({ t }: { t: TrustTransportTokens }) {
       <Car size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>TrustTransport</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>Rides · Packages · Food · Safety-first</div>
+        <div style={{ fontSize: 12, color: t.MUTED }}>Rides · Packages · Food · Community mutual aid</div>
       </div>
       <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
-        Safety-First
+        Community
       </Badge>
     </header>
   );
