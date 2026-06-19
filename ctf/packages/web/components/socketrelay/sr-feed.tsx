@@ -87,7 +87,7 @@ export function SocketRelayFeed({
   onEdit: (request: SrRequest) => void;
 }) {
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "20px 24px" }}>
         {requests.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
