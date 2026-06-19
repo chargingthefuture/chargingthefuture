@@ -33,7 +33,6 @@ export async function fetchLighthouseStreamCredentials(): Promise<LighthouseStre
     streamApiKey: data.streamApiKey,
     streamToken: data.streamToken,
     streamUserId: data.streamUserId,
-    // The route returns the channel id as `channelId`.
-    streamChannelId: data.channelId,
+    streamChannelId: data.streamChannelId,
   };
 }
