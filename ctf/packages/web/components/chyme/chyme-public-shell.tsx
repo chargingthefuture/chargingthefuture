@@ -14,7 +14,15 @@ import {
   Bell,
   Star,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import type { StreamJoinCredentials } from 'lib/chyme/stream';
+import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
+
+// Live state for the one default public Chyme room, fetched client-side from
+// /api/chyme/public/room. `credentials` is present only when the room is live
+// and Stream is configured, so a guest can actually listen.
+type LiveState = { isLive: boolean; participantCount: number; credentials?: StreamJoinCredentials };
 
 // Chyme's brand is green. The signed-out (guest) shell must look like the signed-in app, not a
 // different purple product — so these mirror the deep-green chrome from chyme-shared (page #04160A,
@@ -39,7 +47,7 @@ const LOCKED_CONTROLS = [
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function DesktopChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+function DesktopChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string; verifyUrl?: string; live: LiveState }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Marketing banner */}
@@ -88,10 +96,20 @@ function DesktopChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verif
 
           <div style={{ padding: '10px 12px 6px', fontSize: 11, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Now — Public</div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
-            <div style={{ borderRadius: 10, border: `1px dashed ${BORDER}`, padding: '20px 16px', margin: '4px 0', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 6 }}>No public rooms are streaming right now</div>
-              <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5 }}>Public rooms appear here when hosts go live. Sign in to start a room or get notified when one opens.</div>
-            </div>
+            {live.isLive ? (
+              <div style={{ borderRadius: 10, border: `1px solid ${COLOR}40`, background: `${COLOR}10`, padding: '14px 16px', margin: '4px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Chyme Main Room</div>
+                  <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>{live.participantCount} listening/on stage</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ borderRadius: 10, border: `1px dashed ${BORDER}`, padding: '20px 16px', margin: '4px 0', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 6 }}>No public rooms are streaming right now</div>
+                <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5 }}>Public rooms appear here when hosts go live. Sign in to start a room or get notified when one opens.</div>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -113,6 +131,12 @@ function DesktopChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verif
 
           {/* Invitation body */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+            {live.credentials ? (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
+                <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
+              </div>
+            ) : null}
             <div style={{ borderRadius: 12, border: `1px solid ${COLOR}25`, background: `${COLOR}08`, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Users size={16} color={SUBTLE} />
@@ -163,7 +187,7 @@ function DesktopChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verif
   );
 }
 
-function MobileChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+function MobileChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string; verifyUrl?: string; live: LiveState }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, overflow: 'hidden' }}>
       {/* Header */}
@@ -232,11 +256,21 @@ function MobileChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
 
       {/* Room list — empty state */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
-        <div style={{ borderRadius: 10, border: `1px dashed ${BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>No public rooms right now</div>
-          <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
-        </div>
+        {live.isLive && live.credentials ? (
+          <div>
+            <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
+            <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
+          </div>
+        ) : null}
+        {!live.isLive ? (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
+            <div style={{ borderRadius: 10, border: `1px dashed ${BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>No public rooms right now</div>
+              <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
+            </div>
+          </>
+        ) : null}
       </div>
 
       {/* Locked bottom bar */}
@@ -261,6 +295,33 @@ function MobileChymePublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
  * mockup's placeholder rooms.
  */
 export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
+  // Fetch the one default public room's live status once on mount. When it is
+  // live and Stream is configured, the API returns join credentials so a
+  // signed-out visitor can actually listen. Any error is ignored — the guest
+  // simply sees the not-live view.
+  const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0 });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch('/api/chyme/public/room', { signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.ok) {
+          setLive({
+            isLive: !!data.isLive,
+            participantCount: data.participantCount ?? 0,
+            credentials: data.credentials,
+          });
+        }
+      } catch {
+        // Ignore — guest just sees the not-live view.
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
   // Render both layouts and let CSS pick by the 768px breakpoint, rather than a
   // client `matchMedia` hook. This page is server-rendered for signed-out
   // visitors; a CSS switch is always in lock-step with the breakpoint and needs
@@ -270,10 +331,10 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   return (
     <div className="ctf-self-responsive">
       <div className="ctf-bp-desktop">
-        <DesktopChymePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />
+        <DesktopChymePublic signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} />
       </div>
       <div className="ctf-bp-mobile">
-        <MobileChymePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />
+        <MobileChymePublic signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} />
       </div>
     </div>
   );

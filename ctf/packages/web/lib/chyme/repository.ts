@@ -190,6 +190,17 @@ async function enqueueServiceCreditsDeletionReclaim(
   );
 }
 
+// Read-only fetch of the one main room. The public, unauthenticated live-state endpoint must NOT
+// write (ensureMainRoom upserts on every call), so it uses this instead — otherwise a public page
+// turns every read into row-write traffic. Returns null if the room has never been created.
+async function getMainRoomReadOnly(client: PoolClient): Promise<RoomRow | null> {
+  const result = await client.query<RoomRow>(
+    `SELECT id, room_key, room_name, call_active FROM chyme_rooms WHERE room_key = $1 LIMIT 1`,
+    [CHYME_MAIN_ROOM_KEY],
+  );
+  return result.rows[0] ?? null;
+}
+
 async function ensureMainRoom(client: PoolClient): Promise<RoomRow> {
   const inserted = await client.query<RoomRow>(
     `
@@ -298,6 +309,31 @@ export async function getRoomState(identity: IdentityInput): Promise<ChymeRoomRe
       // not a stored flag that nothing turns off.
       callActive: participants.length > 0,
       participants,
+    };
+  });
+}
+
+// Public, no-identity view of the one default room's live state. Used by the signed-out guest path
+// so a visitor can see whether the room is live and listen in. Unlike getRoomState it does NOT create
+// a service profile or otherwise touch the viewer — a guest is not a member.
+export async function getPublicRoomLiveState(): Promise<{
+  roomName: string;
+  roomKey: string;
+  callActive: boolean;
+  participantCount: number;
+}> {
+  return withDbTransaction(async (client) => {
+    const room = await getMainRoomReadOnly(client);
+    if (!room) {
+      // Room not created yet (no member has ever opened Chyme): nothing to listen to.
+      return { roomName: CHYME_MAIN_ROOM_NAME, roomKey: CHYME_MAIN_ROOM_KEY, callActive: false, participantCount: 0 };
+    }
+    const participants = await listRoomParticipants(client, room.id);
+    return {
+      roomName: room.room_name,
+      roomKey: room.room_key,
+      callActive: participants.length > 0,
+      participantCount: participants.length,
     };
   });
 }
