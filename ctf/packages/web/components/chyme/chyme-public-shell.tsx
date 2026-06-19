@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Search,
   Heart,
-  Bell,
   Star,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -22,7 +21,7 @@ import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
 // Live state for the one default public Chyme room, fetched client-side from
 // /api/chyme/public/room. `credentials` is present only when the room is live
 // and Stream is configured, so a guest can actually listen.
-type LiveState = { isLive: boolean; participantCount: number; credentials?: StreamJoinCredentials };
+type LiveState = { isLive: boolean; participantCount: number; roomName?: string; credentials?: StreamJoinCredentials };
 
 // Chyme's brand is green. The signed-out (guest) shell must look like the signed-in app, not a
 // different purple product — so these mirror the deep-green chrome from chyme-shared (page #04160A,
@@ -100,7 +99,7 @@ function DesktopChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string;
               <div style={{ borderRadius: 10, border: `1px solid ${COLOR}40`, background: `${COLOR}10`, padding: '14px 16px', margin: '4px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR, flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Chyme Main Room</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{live.roomName ?? 'Chyme Main Room'}</div>
                   <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>{live.participantCount} listening/on stage</div>
                 </div>
               </div>
@@ -133,6 +132,7 @@ function DesktopChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string;
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
             {live.credentials ? (
               <div style={{ marginBottom: 16 }}>
+                {live.roomName ? <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 2 }}>{live.roomName}</div> : null}
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
                 <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
               </div>
@@ -171,15 +171,9 @@ function DesktopChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string;
                 <Lock size={11} /><Icon size={14} /><span style={{ fontSize: 13 }}>{label}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: `1px solid ${COLOR}30`, color: COLOR, cursor: 'pointer' }}>
-              <Bell size={14} /><span style={{ fontSize: 13 }}>Notify me</span>
-            </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: SUBTLE }}>Want to speak?</span>
-              <a href={verifyUrl ?? signInUrl} style={{ padding: '8px 20px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
-                {verifyUrl ? 'Finish verifying' : 'Sign In to Participate →'}
-              </a>
-            </div>
+            <a href={verifyUrl ?? signInUrl} style={{ marginLeft: 'auto', padding: '8px 20px', borderRadius: 8, background: `linear-gradient(90deg,${ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+              {verifyUrl ? 'Finish verifying' : 'Sign In to Participate →'}
+            </a>
           </div>
         </main>
       </div>
@@ -258,6 +252,7 @@ function MobileChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string; 
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {live.isLive && live.credentials ? (
           <div>
+            {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 2 }}>{live.roomName}</div> : null}
             <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
             <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
           </div>
@@ -312,6 +307,7 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
           setLive({
             isLive: !!data.isLive,
             participantCount: data.participantCount ?? 0,
+            roomName: typeof data.roomName === 'string' ? data.roomName : undefined,
             credentials: data.credentials,
           });
         }

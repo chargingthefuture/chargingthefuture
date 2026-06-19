@@ -40,10 +40,12 @@ export function ChymeGuestListen({
 
     void (async () => {
       try {
-        // create: false — a guest only ever joins an existing live call, never starts one.
-        await activeCall.join({ create: false });
+        // Disable the mic and camera BEFORE joining so the browser never prompts a guest for device
+        // access — they can only listen, so there is nothing to publish and no reason to ask.
         try { await activeCall.camera.disable(); } catch { /* no camera */ }
         try { await activeCall.microphone.disable(); } catch { /* already muted */ }
+        // create: false — a guest only ever joins an existing live call, never starts one.
+        await activeCall.join({ create: false });
         if (cancelled) return;
         setClient(videoClient);
         setCall(activeCall);
