@@ -284,6 +284,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-06-18: Fixed the admin Drive form overflowing on mobile (`contributions-admin-drive.tsx`). Each goal row was a fixed `display:flex` with a non-shrinking 180px label plus a fixed-width input, so the fields ran off the screen on a phone. The goal rows now stack the label over a full-width input on mobile (`isMobile`); desktop keeps the inline row. Presentation only — no route, schema, or contract change.
 - 2026-06-18: Changed the Contributions plugin icon from `Heart` to `Gift` across the shell, public shell, banner, and admin shell (`components/contributions/**`). The heart duplicated the app brand logo (also a heart); `Gift` is distinct and fits the fundraiser/gift-drive purpose. Icon swap only — no copy, route, schema, or contract change.
 - 2026-06-12: Android API client (`ContributionsApi.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain dev-only fetch against hardcoded emulator/localhost URLs. No backend, schema, or contract change.
 - 2026-06-10: UI build + two owner-requested backend rules. Shipped the full Contributions UI on
