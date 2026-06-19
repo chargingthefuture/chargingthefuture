@@ -68,8 +68,8 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 1. Four-column layout on `/apps`: icon rail (72px), left sidebar (240px), main content (flex), right rail (280px).
 2. Section toggle between **Chat** and **Apps** controlled by icon rail buttons; section state is shell-local.
 3. Right rail renders auth-provider username/display name for signed-in users and a sign-in CTA for unsigned visitors.
-4. Right rail "About Survivor Hub" section with live implemented-plugin count.
-5. Right rail "Active Apps" list with the top implemented plugins (sorted by recent use).
+4. Right rail "About Survivor Hub" section with chat-first copy that points members to ask in the chat (no plugin-count framing).
+5. Right rail no longer shows a "Ready/Active Apps" list (removed 2026-06-18) — apps are reached via the Apps section; the "· N ready apps" line was also dropped from the signed-in profile card.
 6. Sign-in and Create-Account CTAs visible in icon rail and right rail for unsigned visitors.
 7. Hero banner ("Free to join · End-to-end encrypted") visible to unsigned visitors.
 
@@ -193,6 +193,7 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-06-18: Right-rail cleanup. Reframed the "About Survivor Hub" copy to be chat-first ("say what you need in the chat… we'll point you to the right place") instead of the off-brand "connects you with N live plugins… in one place" framing. Removed the "Ready Apps" list and the "· N ready apps" line from the signed-in profile card ("ready apps" read as meaningless); apps are reached via the Apps section. Dropped the now-unused `readyApps`/`implementedCount` props from `ShellRightRail` and their computation in `community-shell.tsx`. Presentation only — no API/route/schema change.
 - 2026-06-18: Fixed home-chat ordering and added auto-scroll. Concierge messages (`sendConciergeAsk`) were created without `sentAtIso`, and the stream's `toEpoch` falls back to the array index when a timestamp is missing — so a tapped chip's question/reply got a tiny epoch and sorted to the **top** of the chat instead of the bottom. They now carry a real `sentAtIso` and sort newest-last. Also added a bottom sentinel + `scrollIntoView` so the chat auto-scrolls to the latest entry when the stream grows (`shell-chat-panel.tsx`). Note: the home/Survivor Hub chat is the custom Feed-backed stream, not GetStream (Stream is only the LightHouse/Chyme DM surfaces); these are fixes to that custom stream, not a Stream migration. No API/route/schema change.
 - 2026-06-18: Made the concierge "ask what you need" chips persistent. They previously rendered only on an empty chat (and an older chip row above the composer was commented out — #471, "only fills the composer, no answer"). That concern no longer applies: the concierge returns an instant local reply via `sendConciergeAsk` (posts the question and a feature-pointing reply). The chips are now shown above the composer at all times in `shell-chat-panel.tsx`. No API/route/schema change; feature item 6 above updated to match. (Inventory note backfilled after the code shipped in PR #593.)
 - 2026-06-12: The Android Hub API client (`packages/mobile/src/features/hub/api.ts`) now uses the shared authenticated fetch helper — both the message read and the post call carry the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against hardcoded development URLs.
