@@ -3393,11 +3393,32 @@ ALTER TABLE IF EXISTS service_credits_escrow_holds ADD COLUMN IF NOT EXISTS upda
 -- service_credits_governance_events (7 missing)
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS actor_id TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS amount NUMERIC;
-ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS governance_ticket_id UUID;
+-- governance_ticket_id is a free-text ticket reference, not a UUID. Every automated mint passes a
+-- prefixed string (e.g. 'unlock:submission:5', 'levelup:<cohort>:completion:<id>',
+-- 'contribution-<id>') and the admin governance route accepts free text, so a UUID-typed column
+-- rejects every such INSERT with "invalid input syntax for type uuid" and the mint silently fails
+-- (best-effort callers swallow it; the unlock approval reward is the symptom that surfaced this).
+-- Fresh databases get TEXT here; the guarded block below converts any legacy UUID column to TEXT.
+ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS governance_ticket_id TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS provider_transaction_id TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS reason TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS target_user_id TEXT;
+-- Legacy fix: if an existing database created governance_ticket_id as UUID, convert it to TEXT so the
+-- non-UUID ticket references the app uses can be stored. Idempotent: skips when already TEXT; the
+-- uuid->text cast preserves existing values as their canonical text form.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'service_credits_governance_events'
+      AND column_name = 'governance_ticket_id'
+      AND data_type = 'uuid'
+  ) THEN
+    ALTER TABLE service_credits_governance_events
+      ALTER COLUMN governance_ticket_id TYPE TEXT USING governance_ticket_id::text;
+  END IF;
+END $$;
 
 -- service_credits_ledger_entries (1 missing — already in CREATE TABLE? double-check)
 -- Note: created_at IS in CREATE TABLE; may be a column-ref extraction edge case.
