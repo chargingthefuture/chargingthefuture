@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, DollarSign, MessageSquare, Star } from 'lucide-react';
+import { Gift, DollarSign, MessageSquare, Star } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import {
@@ -113,7 +113,7 @@ export function ContributionsBanner() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 18px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, fontFamily: FONT_FAMILY, flexWrap: 'wrap' }}>
       <div style={{ width: 28, height: 28, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Heart size={13} color="#fff" />
+        <Gift size={13} color="#fff" />
       </div>
       <div style={{ fontSize: 13, color: t.MUTED, flexShrink: 0, maxWidth: 260 }}>If everyone who&apos;s able gave a little, this drive would be covered.</div>
       <div style={{ display: 'flex', gap: 14, flex: 1, alignItems: 'center', minWidth: 240 }}>

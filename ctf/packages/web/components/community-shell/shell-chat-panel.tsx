@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { AtSign } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -130,6 +130,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   // Build the interleaved, time-ordered stream: tag hub messages and comic items with a numeric
@@ -163,6 +164,12 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
   }, [messages, comicItems]);
 
   const hasContent = streamEntries.length > 0;
+
+  // Auto-scroll the chat to the latest entry when the stream grows (a sent message, a concierge
+  // reply, or new polled history), so members always land on what they saw last — like a normal chat.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [streamEntries.length]);
 
   return (
     <div className={styles.chatPanelWrap}>
@@ -258,6 +265,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
             </div>
           );
         })}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Concierge "ask what you need" chips — persistent (shown whether or not the chat already has
