@@ -18,7 +18,6 @@ export type WorkforceDashboard = {
   workforceTotal: number;
   recruitedTotal: number;
   occupationsTotal: number;
-  activeAnnouncementsTotal: number;
 };
 
 export type WorkforceOverviewResult = {

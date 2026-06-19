@@ -54,12 +54,6 @@ Planning constraints applied:
 2. Occupation detail route with deterministic error/empty handling.
 3. Role-aware behaviors where admin-only mutation controls are hidden from non-admin users.
 
-### 1.5 Workforce Announcements Experience (Parity)
-
-1. User-visible announcements route for active notices.
-2. Deterministic active/inactive rendering behavior.
-3. Consistent parity behavior across web and mobile clients.
-
 ## 2) Admin Features
 
 ### 2.1 Workforce Admin Operations
@@ -74,19 +68,13 @@ Planning constraints applied:
 2. Server-enforced role + policy checks for every mutation.
 3. Mutation outcomes emitted to standardized workforce admin audit events.
 
-### 2.3 Workforce Admin Announcements (Parity)
-
-1. Admin announcements list/create/update/deactivate operations.
-2. Active-state lifecycle controls for time-bound or manually deactivated announcements.
-3. Mutation outcomes emitted to standardized workforce admin audit events.
-
-### 2.4 Workforce Configuration Governance
+### 2.3 Workforce Configuration Governance
 
 1. Controlled mutation of planning assumptions and policy flags.
 2. Validation and safe defaults on all state-changing admin operations.
 3. Feature flags for risky behavior changes.
 
-### 2.5 Data Stewardship Controls
+### 2.4 Data Stewardship Controls
 
 1. Admin tools for reconciliation diagnostics against canonical Directory state.
 2. Operational tools for backfill/recompute with auditability.
@@ -111,22 +99,17 @@ Command groups:
 8. `workforce.occupations.admin.create`
 9. `workforce.occupations.admin.update`
 10. `workforce.occupations.admin.delete`
-11. `workforce.announcements.list`
-12. `workforce.announcements.admin.list`
-13. `workforce.announcements.admin.create`
-14. `workforce.announcements.admin.update`
-15. `workforce.announcements.admin.deactivate`
-16. `workforce.report.summary.fetch`
-17. `workforce.report.skillLevel.fetch`
-18. `workforce.report.sector.fetch`
-19. `workforce.export.job.create`
-20. `workforce.export.job.status.fetch`
-21. `workforce.export.job.result.fetch`
-22. `workforce.admin.config.fetch`
-23. `workforce.admin.config.update`
-24. `workforce.admin.recompute.enqueue`
-25. `workforce.admin.auditEvents.fetch`
-26. `workforce.metric.recruited.derive`
+11. `workforce.report.summary.fetch`
+12. `workforce.report.skillLevel.fetch`
+13. `workforce.report.sector.fetch`
+14. `workforce.export.job.create`
+15. `workforce.export.job.status.fetch`
+16. `workforce.export.job.result.fetch`
+17. `workforce.admin.config.fetch`
+18. `workforce.admin.config.update`
+19. `workforce.admin.recompute.enqueue`
+20. `workforce.admin.auditEvents.fetch`
+21. `workforce.metric.recruited.derive`
 
 ### 3.2 HTTP Projection Routes
 
@@ -136,7 +119,6 @@ User routes:
 - `GET /api/workforce/profile` — read-only; a live view of the member's own claimed Directory profile (occupation = job title, skill level derived, recruited = claimed). There is no create/update/delete: Workforce stores no profile of its own.
 - `GET /api/workforce/occupations`
 - `GET /api/workforce/occupations/:id`
-- `GET /api/workforce/announcements`
 - `GET /api/workforce/reports/summary`
 - `GET /api/workforce/reports/skill-level/:skillLevel`
 - `GET /api/workforce/reports/sector/:sector`
@@ -151,10 +133,6 @@ Admin routes:
 - `POST /api/workforce/admin/occupations`
 - `PUT /api/workforce/admin/occupations/:id`
 - `DELETE /api/workforce/admin/occupations/:id`
-- `GET /api/workforce/admin/announcements`
-- `POST /api/workforce/admin/announcements`
-- `PUT /api/workforce/admin/announcements/:id`
-- `DELETE /api/workforce/admin/announcements/:id`
 - `GET /api/workforce/admin/audit-events`
 
 ## 4) Data Model and Storage Contracts
@@ -171,17 +149,16 @@ Tables owned by the plugin and present in `ctf/schema.sql`:
 
 1. `workforce_profiles` (plugin extension shape only)
 2. `workforce_occupations`
-3. `workforce_announcements`
-4. `workforce_user_extension`
-5. `workforce_recruited_events` (append-only inferred events; unique on `inference_dedupe_key`)
-6. `workforce_config`
-7. `workforce_recruited_sync_cursor`
-8. `workforce_export_jobs`
-9. `workforce_admin_audit_trail`
+3. `workforce_user_extension`
+4. `workforce_recruited_events` (append-only inferred events; unique on `inference_dedupe_key`)
+5. `workforce_config`
+6. `workforce_recruited_sync_cursor`
+7. `workforce_export_jobs`
+8. `workforce_admin_audit_trail`
 
 Note: `workforce_report_snapshots` was spec'd in an early draft of the `workforce.dashboard.fetch`
 command contract but was **removed by owner decision (2026-05-21)** rather than built — the dashboard
-derives all state live from `workforce_profiles` / `workforce_occupations` / `workforce_announcements`
+derives all state live from `workforce_profiles` / `workforce_occupations`
 in `getDashboard()`, so no snapshot table is needed and none exists.
 
 ### 4.3 Storage and Derivation Rules
@@ -256,12 +233,13 @@ Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added 
 - **Delivered states:** loading, empty (zero workforce total), error, and main authenticated dashboard.
 - **Public/unauthenticated state:** `WorkforcePublic` component renders the pre-auth landing with a locked content region.
 - **Omitted (no API backing):** Status Distribution percentage bars, Critical Skill Gaps data, Recommended Pathways match scores, "Add Skills" / "View Demand Map" CTAs. All have inline code comments explaining the omission.
-- **Stats shown from real data:** Total Members (`workforceTotal`), Recruited (`recruitedTotal`), Occupations (`occupationsTotal`), Active Announcements (`activeAnnouncementsTotal`).
+- **Stats shown from real data:** Total Members (`workforceTotal`), Recruited (`recruitedTotal`), Occupations (`occupationsTotal`).
 - **Profile section:** occupation name, skill level, region, recruited state — all from real `GET /api/workforce/profile` response.
 - **Rule 116 compliance:** dashboard logic is split across `WorkforceDashboard` (orchestration/state), `WorkforceStatCard` (stat card sub-component), `WorkforceProfileCard` (profile sub-component), `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic` — no function exceeds 200 lines.
 
 ## 10) Change Log
 
+- 2026-06-18: Removed per-plugin announcements from Workforce. Deleted the admin Announcements tab and its component (`workforce-admin-announcements.tsx`), the `activeAnnouncementsTotal` dashboard stat card (web hero stats + admin shell), the user/admin announcement routes (`/api/workforce/announcements`, `/api/workforce/admin/announcements` and its `:id` route), the repository announcement types/mappers/validators/functions (`listAnnouncements`, `createAnnouncement`, `updateAnnouncement`, `deactivateAnnouncement`, `mapAnnouncement`, `validateAnnouncementInput`, `WorkforceAnnouncementRow`) and the `activeAnnouncementsTotal` dashboard count, the `WorkforceAnnouncement`/`WorkforceAnnouncementInput` types and the `activeAnnouncementsTotal` field on `WorkforceDashboard`, the five `workforce.announcements.*` command contracts, and the announcements seed block. Unlike LightHouse/SocketRelay (which read the shared `announcements` table by targeting), Workforce had its own dedicated `workforce_announcements` table; that table is dropped from `schema.sql` and a guarded `DROP TABLE IF EXISTS workforce_announcements;` migration was added at `ctf/db/migrations/post/0007_drop_workforce_announcements.sql`. Announcements are now posted in one place — the Feed (`feed-announcements` plugin), which can target any plugin (including Workforce) — so the Feed is the single place to post announcements about Workforce. Sections 1.5, 2.3, the announcement command/route/data-model entries, and the announcement dashboard stat were removed above to match.
 - 2026-06-17: Removed the Workforce kill switch (owner decision — unapproved agentic addition). Dropped `workforce_config.kill_switch_enabled` (`schema.sql` + `schema.demo.sql` add a guarded `DROP COLUMN IF EXISTS`), the `killSwitchEnabled` field on `WorkforceConfig`/`WorkforceConfigInput`, its validation, the `PUT /api/workforce/admin/config` parse/audit usage, the web admin toggle, and the Android admin toggle + confirm dialog. Part of a product-wide kill-switch removal (also feed and Foundation). Exports toggle and report-week settings are unchanged. (The earlier dated entries below still mention the kill switch as the historical record of when it existed.)
 - 2026-06-13: Web admin CRUD. Added Occupations and Announcements tabs to the admin shell (the Config + Operations panels move under an Overview tab). Occupations (`components/workforce/workforce-admin-occupations.tsx`): add (`POST /api/workforce/admin/occupations`), hide/show (`PUT …/occupations/:id` with `isActive` flipped), and delete (`DELETE …/occupations/:id`). Announcements (`components/workforce/workforce-admin-announcements.tsx`): post (`POST /api/workforce/admin/announcements`) and delete (`DELETE …/announcements/:id`). All with `x-ctf-csrf: '1'`; split into their own components for the rule-116 size budget. No new endpoint, schema, or contract.
 - 2026-06-13: Web admin design pass. Replaced the bare diagnostic `/admin/workforce` page with `components/workforce/workforce-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, Config + Operations panels). Bound to the real backend — `getDashboard` counts and the editable `getWorkforceConfig` (exports enabled, kill switch, report week timezone, week-start day). Real actions on existing endpoints (with `x-ctf-csrf: '1'`): save config (`PUT /api/workforce/admin/config`), recompute (`POST /api/workforce/admin/recompute`), and sync (`POST /api/workforce/admin/sync`). Occupations and announcements admin CRUD remain available via their endpoints but are not surfaced in this slice. No new endpoint, schema, or contract.

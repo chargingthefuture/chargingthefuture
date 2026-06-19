@@ -38,12 +38,11 @@ interface StatGridProps {
 
 function StatGrid({ dashboard }: StatGridProps) {
   // API: dashboard.workforceTotal, dashboard.recruitedTotal,
-  //      dashboard.occupationsTotal, dashboard.activeAnnouncementsTotal
+  //      dashboard.occupationsTotal
   const stats = [
     { label: 'Total Members', value: formatCount(dashboard.workforceTotal), color: COLOR },
     { label: 'Recruited', value: formatCount(dashboard.recruitedTotal), color: '#22C55E' },
     { label: 'Occupations', value: formatCount(dashboard.occupationsTotal), color: '#F59E0B' },
-    { label: 'Announcements', value: String(dashboard.activeAnnouncementsTotal), color: '#6366F1' },
   ];
 
   return (

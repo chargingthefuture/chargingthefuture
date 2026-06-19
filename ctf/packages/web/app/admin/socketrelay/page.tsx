@@ -3,7 +3,6 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import {
   listAdminFulfillments,
   listAdminRequests,
-  listSocketRelayAdminAnnouncements,
 } from 'lib/socketrelay/repository';
 import { SocketRelayAdminShell } from '@/components/socketrelay/socketrelay-admin-shell';
 
@@ -15,10 +14,9 @@ export default async function SocketRelayAdminPage() {
     redirect('/apps/socketrelay');
   }
 
-  const [requests, fulfillments, announcements] = await Promise.all([
+  const [requests, fulfillments] = await Promise.all([
     listAdminRequests({ page: 1, pageSize: 100 }),
     listAdminFulfillments(),
-    listSocketRelayAdminAnnouncements(),
   ]);
 
   return (
@@ -26,7 +24,6 @@ export default async function SocketRelayAdminPage() {
       requests={requests.items}
       requestsTotal={requests.total}
       fulfillments={fulfillments}
-      announcements={announcements}
     />
   );
 }

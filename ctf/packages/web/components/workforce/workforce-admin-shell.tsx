@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Briefcase } from 'lucide-react';
-import type { WorkforceAnnouncement, WorkforceConfig, WorkforceOccupation } from 'lib/workforce/types';
+import type { WorkforceConfig, WorkforceOccupation } from 'lib/workforce/types';
 import { WorkforceAdminOccupations } from './workforce-admin-occupations';
-import { WorkforceAdminAnnouncements } from './workforce-admin-announcements';
 
 // Admin design tokens (shared admin look). Workforce accent is orange.
 const COLOR = '#F97316';
@@ -20,7 +19,6 @@ type WorkforceAdminDashboard = {
   workforceTotal: number;
   recruitedTotal: number;
   occupationsTotal: number;
-  activeAnnouncementsTotal: number;
 };
 
 const DOW_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -75,18 +73,16 @@ async function adminMutate(url: string, method: 'POST' | 'PUT', body?: unknown):
   }
 }
 
-type Tab = 'overview' | 'occupations' | 'announcements';
+type Tab = 'overview' | 'occupations';
 
 export function WorkforceAdminShell({
   dashboard,
   config: initialConfig,
   occupations,
-  announcements,
 }: {
   dashboard: WorkforceAdminDashboard;
   config: WorkforceConfig;
   occupations: WorkforceOccupation[];
-  announcements: WorkforceAnnouncement[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('overview');
@@ -134,12 +130,11 @@ export function WorkforceAdminShell({
           <StatBlock label="Workforce" value={dashboard.workforceTotal} accent={COLOR} />
           <StatBlock label="Recruited" value={dashboard.recruitedTotal} accent="#22C55E" />
           <StatBlock label="Occupations" value={dashboard.occupationsTotal} />
-          <StatBlock label="Active announcements" value={dashboard.activeAnnouncementsTotal} />
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          {(['overview', 'occupations', 'announcements'] as const).map((t) => (
+          {(['overview', 'occupations'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -154,8 +149,6 @@ export function WorkforceAdminShell({
 
         {tab === 'occupations' ? (
           <WorkforceAdminOccupations occupations={occupations} />
-        ) : tab === 'announcements' ? (
-          <WorkforceAdminAnnouncements announcements={announcements} />
         ) : (
         <>
         {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}

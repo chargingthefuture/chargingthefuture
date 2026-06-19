@@ -7,7 +7,6 @@ import {
   LIGHTHOUSE_PROFILE_TYPES,
 } from './constants';
 import type {
-  LighthouseAnnouncementInput,
   LighthouseBlock,
   LighthouseMatch,
   LighthouseMatchCreateInput,
@@ -19,15 +18,6 @@ import type {
   LighthousePropertyInput,
 } from './types';
 import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from './stream';
-import {
-  archiveAnnouncement,
-  createAnnouncementDraft,
-  listAnnouncements,
-  listFeedTimeline,
-  publishAnnouncement,
-  updateAnnouncementDraft,
-} from 'lib/feed/repository';
-import type { Announcement, AnnouncementDraftInput, FeedTimelineItem } from 'lib/shared/feed-primitives/types';
 
 type CountRow = { total: string };
 
@@ -273,12 +263,6 @@ export function validateMatchCreateInput(input: LighthouseMatchCreateInput): boo
 
 export function validateMatchUpdateInput(input: LighthouseMatchUpdateInput): boolean {
   return LIGHTHOUSE_MATCH_STATUSES.includes(input.status);
-}
-
-export function validateAnnouncementInput(input: LighthouseAnnouncementInput): boolean {
-  const title = normalizeText(input.title ?? '');
-  const body = normalizeText(input.body ?? '');
-  return title.length > 0 && body.length > 0;
 }
 
 export async function getProfile(userId: string): Promise<LighthouseProfile | null> {
@@ -1013,85 +997,6 @@ export async function updateMatch(input: {
 
     return mapMatch(updated.rows[0]);
   });
-}
-
-export async function listAnnouncementsForLighthouseUser(input: {
-  userId: string;
-  role: string | null;
-  page?: number;
-  pageSize?: number;
-}): Promise<{ items: FeedTimelineItem[]; total: number; pagination: { page: number; pageSize: number } }> {
-  const paging = normalizePage(input.page, input.pageSize);
-  const timeline = await listFeedTimeline(
-    input.userId,
-    input.role,
-    { page: paging.page, pageSize: paging.pageSize },
-    { pluginId: 'lighthouse' },
-  );
-
-  const items = timeline.items.filter((item: FeedTimelineItem) => item.itemType === 'announcement');
-
-  return {
-    items,
-    total: items.length,
-    pagination: {
-      page: paging.page,
-      pageSize: paging.pageSize,
-    },
-  };
-}
-
-export async function listLighthouseAdminAnnouncements(): Promise<Announcement[]> {
-  const items = await listAnnouncements(true);
-
-  return items.filter((item: Announcement) => {
-    const plugins = item.targeting?.plugins;
-    if (!plugins || plugins.length === 0) {
-      return true;
-    }
-
-    return plugins.includes('lighthouse');
-  });
-}
-
-export async function createLighthouseAdminAnnouncement(actorUserId: string, input: LighthouseAnnouncementInput): Promise<Announcement> {
-  const draftInput: AnnouncementDraftInput = {
-    title: normalizeText(input.title),
-    body: normalizeText(input.body),
-    mandatory: typeof input.mandatory === 'boolean' ? input.mandatory : false,
-    priority: Number.isInteger(input.priority) ? Number(input.priority) : 0,
-    expiresAtIso: normalizeNullableText(input.expiresAtIso),
-    targeting: { plugins: ['lighthouse'] },
-  };
-
-  const draft = await createAnnouncementDraft(actorUserId, draftInput);
-  if (input.isActive === false) {
-    return draft;
-  }
-
-  return publishAnnouncement(actorUserId, draft.id);
-}
-
-export async function updateLighthouseAdminAnnouncement(actorUserId: string, announcementId: string, input: LighthouseAnnouncementInput): Promise<Announcement> {
-  const draftInput: AnnouncementDraftInput = {
-    title: normalizeText(input.title),
-    body: normalizeText(input.body),
-    mandatory: typeof input.mandatory === 'boolean' ? input.mandatory : false,
-    priority: Number.isInteger(input.priority) ? Number(input.priority) : 0,
-    expiresAtIso: normalizeNullableText(input.expiresAtIso),
-    targeting: { plugins: ['lighthouse'] },
-  };
-
-  const updated = await updateAnnouncementDraft(actorUserId, announcementId, draftInput);
-  if (input.isActive !== false) {
-    return publishAnnouncement(actorUserId, updated.id);
-  }
-
-  return archiveAnnouncement(actorUserId, updated.id);
-}
-
-export async function deleteLighthouseAdminAnnouncement(actorUserId: string, announcementId: string): Promise<Announcement> {
-  return archiveAnnouncement(actorUserId, announcementId);
 }
 
 export async function createBlock(actorUserId: string, blockedUserId: string, reason?: string): Promise<LighthouseBlock> {

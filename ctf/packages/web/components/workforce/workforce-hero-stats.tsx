@@ -32,19 +32,13 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
       delta: 'Awaiting recruitment',
       color: '#F59E0B',
     },
-    {
-      label: 'Announcements',
-      value: dashboard.activeAnnouncementsTotal.toLocaleString(),
-      delta: 'Active notices',
-      color: '#EF4444',
-    },
   ];
 
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(3, 1fr)',
         gap: 12,
         marginBottom: 24,
       }}
