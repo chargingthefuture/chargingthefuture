@@ -302,6 +302,27 @@ export async function getRoomState(identity: IdentityInput): Promise<ChymeRoomRe
   });
 }
 
+// Public, no-identity view of the one default room's live state. Used by the signed-out guest path
+// so a visitor can see whether the room is live and listen in. Unlike getRoomState it does NOT create
+// a service profile or otherwise touch the viewer — a guest is not a member.
+export async function getPublicRoomLiveState(): Promise<{
+  roomName: string;
+  roomKey: string;
+  callActive: boolean;
+  participantCount: number;
+}> {
+  return withDbTransaction(async (client) => {
+    const room = await ensureMainRoom(client);
+    const participants = await listRoomParticipants(client, room.id);
+    return {
+      roomName: room.room_name,
+      roomKey: room.room_key,
+      callActive: participants.length > 0,
+      participantCount: participants.length,
+    };
+  });
+}
+
 export async function listRoomMessages(identity: IdentityInput, limit = CHYME_DEFAULT_MESSAGES_LIMIT): Promise<ChymeMessage[]> {
   return withDbTransaction(async (client) => {
     const room = await ensureMainRoom(client);

@@ -64,6 +64,32 @@ export async function createStreamJoinCredentials(
   }
 }
 
+// Mint a short-lived Stream identity for an anonymous guest so they can LISTEN to the public room.
+// The guest is an ephemeral Stream user (random id), not a member — they get a token that lets them
+// join the call and receive audio. They never publish: the client joins muted with no controls, so
+// "listen-only" is enforced on the client. (Server-side publish restriction would require Stream
+// call-type role config, which is out of scope here.)
+export async function createChymeGuestListenCredentials(): Promise<StreamJoinCredentials | null> {
+  const streamConfig = await resolveStreamCredentials();
+  if (!streamConfig) {
+    return null;
+  }
+
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
+  try {
+    const guestUserId = `chyme-guest-${crypto.randomUUID()}`;
+    await streamClient.upsertUser({ id: guestUserId, name: 'Guest listener' });
+    return {
+      streamApiKey: streamConfig.apiKey,
+      streamChannelId: CHYME_STREAM_CHANNEL_ID,
+      streamUserId: guestUserId,
+      streamToken: streamClient.createToken(guestUserId),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
+}
+
 export async function sendChymeStreamMessage(input: {
   userId: string;
   name: string;
