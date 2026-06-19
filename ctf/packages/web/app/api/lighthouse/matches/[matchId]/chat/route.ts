@@ -26,14 +26,14 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
   }
 
   try {
-    const channelId = await ensureLighthouseMatchChannel({
+    const streamChannelId = await ensureLighthouseMatchChannel({
       matchId: match.id,
       seekerUserId: match.seekerUserId,
       seekerDisplayName: buildIdentityDisplayName(null, match.seekerUserId),
       hostUserId: match.hostUserId,
       hostDisplayName: buildIdentityDisplayName(null, match.hostUserId),
     });
-    if (!channelId) {
+    if (!streamChannelId) {
       return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
     }
     const credentials = await createLighthouseParticipantToken(
@@ -43,7 +43,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
     if (!credentials) {
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, channelId, ...credentials });
+    // Single canonical key: `streamChannelId` is the real Stream channel id. Web and mobile both
+    // read this one key.
+    return NextResponse.json({ ok: true, streamChannelId, ...credentials });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     reportError(e, { area: 'lighthouse', op: 'matches_matchid_chat' });

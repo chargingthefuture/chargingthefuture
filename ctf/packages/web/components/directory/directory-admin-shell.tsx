@@ -465,7 +465,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
 
   // ── Desktop layout ───────────────────────────────────────────────────────
   return (
-    <div style={{ display: "flex", height: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100dvh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: "hidden" }}>
       {/* Icon rail */}
       <aside style={{ width: 72, background: "#090B0F", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
         <Link href="/apps/directory" aria-label="Back to Directory" style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}25`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: COLOR }}>

@@ -1,12 +1,12 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
 import { MessageCircle, Plus, Radio, Share2 } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, SUBTLE, type Tab } from "./sr-shared";
 
 // The three tabs are real controls. Fixes: the brand mark used the same Share2 glyph as the Feed tab
 // (so it showed twice) — it's now a distinct Radio (relay) mark; the dead Bell/Settings buttons
-// (no destination) are removed; and the static "S" avatar is the live Clerk account menu.
+// (no destination) are removed; and the shared footer below carries the account menu.
 const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Share2, key: "feed", label: "Feed" },
   { icon: Plus, key: "post", label: "Post" },
@@ -24,10 +24,7 @@ export function SocketRelayIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab
           <Icon size={20} />
         </button>
       ))}
-      <div style={{ flex: 1 }} />
-      <span title="Your account — sign out or manage your profile" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <UserButton />
-      </span>
+      <PluginRailFooter />
     </aside>
   );
 }

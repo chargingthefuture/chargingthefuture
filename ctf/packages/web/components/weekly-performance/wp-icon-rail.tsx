@@ -1,6 +1,7 @@
 "use client";
 
-import { BarChart2, Bell, Calendar, Settings, TrendingUp } from "lucide-react";
+import { BarChart2, Calendar, TrendingUp } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { BORDER, BRAND, SUBTLE } from "./wp-shared";
 
 // Hub icon-rail chrome. Weekly Performance is a single dashboard view, so the
@@ -18,10 +19,7 @@ export function WeeklyPerformanceIconRail() {
           <Icon size={20} />
         </div>
       ))}
-      <div style={{ flex: 1 }} />
-      <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: SUBTLE }}><Bell size={18} /></div>
-      <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: SUBTLE }}><Settings size={18} /></div>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${BRAND}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: BRAND }}>S</div>
+      <PluginRailFooter />
     </aside>
   );
 }

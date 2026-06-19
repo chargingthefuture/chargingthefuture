@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { SkillsHuntRound, SkillsHuntSubmission, SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
 import { COLOR, promptRejectReason, type ReviewAction } from "./sha-shared";
 import { SkillsHuntAdminFilters, SkillsHuntAdminBulkBar } from "./sha-filters";
@@ -22,6 +23,7 @@ function AdminHeader() {
 }
 
 export function SkillsHuntAdminShell({ rounds }: Props) {
+  const isMobile = useIsMobile();
   const [activeRoundId, setActiveRoundId] = useState<string | null>(rounds[0]?.id ?? null);
   const [statusFilter, setStatusFilter] = useState<SkillsHuntSubmissionStatus>("pending");
   const [submissions, setSubmissions] = useState<SkillsHuntSubmission[]>([]);
@@ -112,7 +114,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   const allPendingSelected = pendingCount > 0 && selected.size === pendingCount;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
+    <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <AdminHeader />
       <SkillsHuntCreateRound />
       {rounds.length === 0 ? (

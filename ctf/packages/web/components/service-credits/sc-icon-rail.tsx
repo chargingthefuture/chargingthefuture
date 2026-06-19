@@ -1,14 +1,14 @@
 "use client";
 
 import { Wallet, TrendingUp, BarChart3 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
 import { Coins } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, type Tab } from "./sc-shared";
 
 // Every glyph here is a real control. The Coins brand mark sits at the top once (the Wallet tab uses
-// a distinct Wallet icon so the coin no longer appears twice), the three tabs switch the view, and
-// the account menu is the live Clerk control. The old decorative Bell/Settings (no destination) and
-// the chat-styled "Info" tab were removed.
+// a distinct Wallet icon so the coin no longer appears twice) and the three tabs switch the view. The
+// shared footer below adds the go-back, account, and account-menu controls. The old decorative
+// Bell/Settings (no destination) and the chat-styled "Info" tab were removed.
 const TABS: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Wallet, key: "wallet", label: "Wallet" },
   { icon: TrendingUp, key: "earn", label: "Earn" },
@@ -31,10 +31,7 @@ export function ServiceCreditsIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: 
           <Icon size={20} />
         </button>
       ))}
-      <div style={{ flex: 1 }} />
-      <span title="Your account — sign out or manage your profile" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <UserButton />
-      </span>
+      <PluginRailFooter />
     </aside>
   );
 }

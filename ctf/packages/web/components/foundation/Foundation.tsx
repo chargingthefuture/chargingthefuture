@@ -100,14 +100,14 @@ export function Foundation() {
         {connectionStatus && <div style={{ marginTop: 12 }}>{connectionStatus}</div>}
         {chatLoading && <div>Loading chat…</div>}
         {chatError && <div style={{ color: 'red' }}>{chatError}</div>}
-        {chatCredentials && (
+        {chatCredentials?.streamChannelId && (
           <div style={{ marginTop: 24 }}>
             <h3>Live Chat</h3>
             <StreamChatPanel
               streamApiKey={chatCredentials.streamApiKey}
               streamToken={chatCredentials.streamToken}
               streamUserId={chatCredentials.streamUserId}
-              streamChannelId={chatCredentials.streamChannelId || ''}
+              streamChannelId={chatCredentials.streamChannelId}
             />
           </div>
         )}

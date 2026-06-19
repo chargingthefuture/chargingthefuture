@@ -47,8 +47,8 @@ export function TrustTransportBookTab(props: BookTabProps) {
   const parsedAmount = Number(priceAmount);
   const hasValidAmount = !requiresAmount || (Number.isFinite(parsedAmount) && parsedAmount > 0);
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
+    <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+      <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", minHeight: 0 }}>
         <div style={{ padding: "20px 24px", borderRadius: 16, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Book a {name}</div>
           <div style={{ fontSize: 13, color: "#9CA3AF" }}>Community mutual aid · Trauma-informed · Service Credits accepted</div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Globe, BarChart2 } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, type GdpTab } from "./gdp-shared";
 
 const TABS: { icon: React.ElementType; key: GdpTab; label: string }[] = [
@@ -20,6 +21,7 @@ export function GdpIconRail({ tab, onTab }: { tab: GdpTab; onTab: (tab: GdpTab) 
           <Icon size={20} />
         </button>
       ))}
+      <PluginRailFooter />
     </aside>
   );
 }

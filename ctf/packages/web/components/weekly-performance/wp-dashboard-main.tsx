@@ -23,7 +23,7 @@ export function WeeklyPerformanceDashboardMain({
 }) {
   const live = isLiveWeek(week);
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
       {/* The phone shell already renders the title, the week selector, and an Export
           button in its own sticky header, so this desktop header is redundant — and
           its fixed flex row squeezes the title on a narrow screen. Show it on desktop
@@ -49,7 +49,7 @@ export function WeeklyPerformanceDashboardMain({
       {metrics.length === 0 ? (
         <WeeklyPerformanceEmptyMain week={week} />
       ) : (
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "24px" }}>
           <WeeklyPerformanceMetricCards metrics={metrics} comparison={comparison} />
           <WeeklyPerformanceComparisonChart comparison={comparison} />
         </div>

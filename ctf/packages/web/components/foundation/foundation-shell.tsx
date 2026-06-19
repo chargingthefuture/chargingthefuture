@@ -191,15 +191,15 @@ export function FoundationShell() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT, display: "flex" }}>
+    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: FONT, color: t.TEXT, display: "flex" }}>
       <IconRail tab={tab} onTab={setTab} />
       <FilterSidebar query={query} onQuery={setQuery} trade={trade} onTrade={setTrade} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <Hammer size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Foundation — Trade Services</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Vetted providers · Background-checked · Safe</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Community trade providers · Trauma-informed</div>
           </div>
         </header>
         {content}

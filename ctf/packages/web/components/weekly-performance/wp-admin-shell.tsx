@@ -242,7 +242,10 @@ export function WeeklyPerformanceAdminShell() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        // Mobile relies on the document scrolling, so keep minHeight there. On
+        // desktop the document is locked (globals.css), so bound this surface to
+        // one viewport and let it scroll its own content.
+        ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }),
         background: BG,
         color: TEXT,
         fontFamily: "'Inter', system-ui, sans-serif",

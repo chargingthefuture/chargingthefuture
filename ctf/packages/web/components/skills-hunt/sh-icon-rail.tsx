@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Bell, Settings } from "lucide-react";
+import { Search, Bell } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, TABS, type Tab } from "./sh-shared";
 
 export function SkillsHuntIconRail({
@@ -27,7 +28,6 @@ export function SkillsHuntIconRail({
           <Icon size={20} />
         </button>
       ))}
-      <div style={{ flex: 1 }} />
       <button type="button" aria-label="Notifications" aria-expanded={notifOpen} onClick={onToggleNotif}
         style={{ position: "relative", width: 44, height: 44, borderRadius: 12, background: notifOpen ? `${COLOR}20` : "transparent", border: notifOpen ? `1px solid ${COLOR}40` : "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: notifOpen ? COLOR : "#6B7280" }}>
         <Bell size={18} />
@@ -37,9 +37,7 @@ export function SkillsHuntIconRail({
           </span>
         )}
       </button>
-      <button type="button" aria-label="Settings" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}>
-        <Settings size={18} />
-      </button>
+      <PluginRailFooter />
     </aside>
   );
 }
