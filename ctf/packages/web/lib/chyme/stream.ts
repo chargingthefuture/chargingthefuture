@@ -26,9 +26,6 @@ async function ensureMember(streamClient: StreamChat, userId: string, name: stri
 async function ensureChannel(streamClient: StreamChat, streamUserId: string) {
   const channel = streamClient.channel('messaging', CHYME_STREAM_CHANNEL_ID, {
     created_by_id: streamUserId,
-    // Cosmetic GetStream channel display name; members see the DB room_name, and this only
-    // applies to newly created channels. Left as-is so this rename touches no Stream code
-    // (avoids the quota-impact gate for a change with zero Stream-usage impact).
     name: 'Chyme Main Room',
   });
 
