@@ -16,15 +16,18 @@ import {
 } from 'lucide-react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 
-// Palette from the ChymePublic / MobileChymePublic design mockups.
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
+// Chyme's brand is green. The signed-out (guest) shell must look like the signed-in app, not a
+// different purple product — so these mirror the deep-green chrome from chyme-shared (page #04160A,
+// card #041a0b, divider #052e16, mint-white title) and the green accent. The old purple/cyan accent
+// made the guest view look like a separate app.
+const BG = '#04160A';
+const SURFACE = '#041a0b';
+const BORDER = '#052e16';
+const TEXT = '#F0FDF4';
 const SUBTLE = '#6B7280';
 const COLOR = '#22C55E';
-const ACCENT = '#7C3AED';
-const ACCENT_CYAN = '#0EA5E9';
+const ACCENT = '#22C55E';
+const ACCENT_CYAN = '#16A34A';
 
 // Locked participation controls shown on the desktop bottom bar. Each requires a
 // signed-in account, so for a visitor they render disabled with a lock glyph.
