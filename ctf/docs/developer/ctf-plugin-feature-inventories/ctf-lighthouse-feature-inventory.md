@@ -67,6 +67,17 @@ longer a precondition for browsing, hosting, or matching.
 5. Property creation does not require a pre-existing host profile (owner decision, 2026-06-12). A
    member can list a property without first creating a LightHouse profile; any host preference data is
    captured as optional extension data, not a precondition.
+6. **Member self-service hosting (owner decision, 2026-06-18).** Any member can list their own place
+   from the member surface — a "List your place" tab (`lighthouse-host.tsx`, reached from the icon
+   rail / mobile tab bar) with a create-listing form for the property fields above. There is no
+   admin-vetting gate and **no separate host-profile form**: `createProperty` transparently provisions
+   the member's host `lighthouse_profiles` row (`ON CONFLICT (user_id) DO NOTHING`/`has_property = TRUE`,
+   never overwriting a seeker row), so listing IS what makes a member a host. The host identity shown
+   on the surface is **composed from existing data** — username (from the auth gate), the member's
+   Quora link (read from `unlock_verification_submissions.quora_profile_url` and returned on
+   `GET /api/lighthouse/my-properties` as `host.quoraProfileUrl`), and the shared `TrustWidgetCard`
+   (fetched from `GET /api/trust/user/self`) — never re-entered. The old "host-only" enforcement on
+   create is removed; update/delete remain owner-scoped.
 
 ### 1.5 Matches Workflow
 
@@ -237,6 +248,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-06-18: Member self-service hosting (owner decision). The member surface had no way to create a listing and `createProperty` hard-denied (`policy_denied`) without a pre-existing admin-granted host profile — and there was no UI to become a host — so no one could list (0 hosts, 0 properties). Added a "List your place" tab to the member shell (`lighthouse-host.tsx`, wired into `lighthouse-icon-rail.tsx` + the mobile tab bar; `LighthouseShell` now receives `userId`/`username` from the plugin page) with a create-listing form posting to `POST /api/lighthouse/properties`. Removed the host-profile gate in `createProperty`; it now transparently provisions the member's host `lighthouse_profiles` row (`ON CONFLICT (user_id)`, never overwriting a seeker), so there is no separate host-profile form. Host identity is composed from existing data: username (auth gate), Quora link (new `getHostQuoraUrl`, read from `unlock_verification_submissions`, returned on `GET /api/lighthouse/my-properties` as `host.quoraProfileUrl`), and the shared `TrustWidgetCard` (`GET /api/trust/user/self`). Added the `lighthouse.property.create` command + access-policy contracts (roles: member, admin; `selfServiceHosting: enabled`, `hostProfileAutoProvisioned: true`). Web + mobile-responsive; Android RN host tab is a tracked follow-up. Schema unchanged (existing tables).
 - 2026-06-13: Web admin slice 3 — match moderation + announcements. Added a Cancel-match action on pending/accepted matches (`PUT /api/lighthouse/admin/matches/:id` with `status: 'cancelled'`, `x-ctf-csrf: '1'`) and a new Announcements tab (`components/lighthouse/lighthouse-admin-announcements.tsx`) that creates (`POST /api/lighthouse/admin/announcements`) and deletes (`DELETE /api/lighthouse/admin/announcements/:id`) admin announcements. Announcements split into their own component to keep the shell within the rule-116 size budget. No new endpoint, schema, or contract.
 - 2026-06-13: Web admin slice 2 — property moderation. Added a Hide/Restore listing action to each property in the admin Properties tab. Because the admin property endpoint validates a full record, the action resends the property via the existing `PUT /api/lighthouse/admin/properties/:propertyId` (with `x-ctf-csrf: '1'`) with `isActive` flipped, then refreshes. Match status changes and announcement CRUD remain available via their endpoints but are not yet surfaced. No new endpoint, schema, or contract.
 - 2026-06-13: Web admin design pass (slice 1 — read-only). Replaced the bare diagnostic `/admin/lighthouse` page with `components/lighthouse/lighthouse-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, Properties/Matches tabs). Bound to the real backend — `getLighthouseAdminStats`, `listLighthousePropertiesAdmin`, `listLighthouseMatchesAdmin` — shown as styled read-only lists (property title/location/rent/active state; match status/parties/date). Moderation actions (hide/unhide a property via the full-payload `PUT`, announcement create/activate/delete, match status) are a follow-up slice. The mobile mockup depicts a "housing request" approve/reject queue that does not match LightHouse's real admin surface (listings + matches + announcements), so per the admin build rule the real data was styled instead. No new endpoint, schema, or contract.

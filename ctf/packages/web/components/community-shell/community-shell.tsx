@@ -236,10 +236,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
     window.localStorage.setItem(PLUGIN_SORT_MODE_STORAGE_KEY, mode);
   };
 
-  const implementedCount = plugins.filter((p) => p.availabilityState === 'implemented_shell').length;
-  const readyApps = orderedPlugins
-    .filter((p) => p.availabilityState === 'implemented_shell')
-    .slice(0, 5);
 
   return (
     <div className={`${styles.shell} ctf-self-responsive`}>
@@ -333,8 +329,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           )}
         </main>
         <ShellRightRail
-          readyApps={readyApps}
-          implementedCount={implementedCount}
           currentUser={currentUser}
           trust={trust}
           isAuthenticated={isAuthenticated}

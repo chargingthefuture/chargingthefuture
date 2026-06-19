@@ -70,3 +70,68 @@ contracts:
     purpose: user_safety_controls
     retentionClass: audit_long_lived
     idempotency: true
+
+  - pluginId: lighthouse
+    command: lighthouse.property.create
+    version: 1.0.0
+    description: >-
+      Member self-service — create a property listing. Listing a place transparently provisions the
+      member's host profile (no separate host-profile form). The host identity shown on the listing
+      is composed from existing data (name/username, Quora link, Trust signals), not re-entered.
+    inputSchema:
+      title:
+        type: string
+        required: true
+      description:
+        type: string
+        required: true
+      propertyType:
+        type: string
+        required: false
+      addressLine:
+        type: string
+        required: false
+      city:
+        type: string
+        required: false
+      state:
+        type: string
+        required: false
+      country:
+        type: string
+        required: false
+      zipCode:
+        type: string
+        required: false
+      bedrooms:
+        type: number
+        required: false
+      bathrooms:
+        type: number
+        required: false
+      monthlyRent:
+        type: number
+        required: false
+      availableFromIso:
+        type: string
+        required: false
+      amenities:
+        type: array
+        required: false
+      houseRules:
+        type: array
+        required: false
+      airbnbProfileUrl:
+        type: string
+        required: false
+    outputSchema:
+      propertyId:
+        type: string
+      updatedAt:
+        type: string
+    dataAccess:
+      - lighthouse_properties
+      - lighthouse_profiles
+    purpose: property_listing_management
+    retentionClass: transactional_long_lived
+    idempotency: false

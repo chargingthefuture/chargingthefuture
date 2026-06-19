@@ -3,7 +3,11 @@
    directory cards keep a hover affordance while the page stays a server component. */
 
 .page {
-  min-height: 100dvh;
+  /* Own scroller: on desktop globals.css locks html/body to height:100vh + overflow:hidden
+     (each shell scrolls internally), so this landing page must scroll itself or its lower
+     rows (e.g. Bug Reports) get clipped and unreachable. */
+  height: 100dvh;
+  overflow-y: auto;
   background: #0f1117;
   color: #f9fafb;
   font-family: 'Inter', system-ui, sans-serif;
