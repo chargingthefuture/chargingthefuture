@@ -251,6 +251,16 @@ migrations, new or changed API contracts, new stateful logic, a whole new plugin
 Net effect: **low-risk = ready + auto-merge (completes itself); risky = draft + label (workflow makes it
 ready hourly, owner merges after reading the review).**
 
+#### If a PR merges with unaddressed CodeRabbit actionable findings, open a follow-up PR (always)
+
+CodeRabbit's actionable findings are wanted, not optional. If a PR is merged (often accidentally, via
+auto-merge or a quick owner merge) **before** its CodeRabbit actionable items were applied, the agent
+**must open a small follow-up PR** that applies the still-valid findings — never leave them dropped on
+the floor (owner directive, 2026-06-19). Verify each finding against the merged code first: apply the
+ones that still hold, skip any that no longer apply with a one-line reason, keep the change minimal,
+and reference the original PR. (Worked example: #624 merged with five findings → follow-up #628 applied
+the resolve atomicity guard, error handling, a11y button, contract `dataAccess`, and the wording fix.)
+
 ### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
 
 When several plugin PRs are open at once, all appending narrative to the **same** change-log section
