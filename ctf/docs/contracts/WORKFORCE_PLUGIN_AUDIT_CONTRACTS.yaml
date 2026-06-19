@@ -106,31 +106,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: workforce
-    command: workforce.announcements.admin.update
-    commandVersion: 1.0.0
-    purpose: workforce_admin_operations
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        csrfCheck: pass_or_fail
-    dataClassesAccessed:
-      - workforce_announcement_metadata
-      - admin_mutation_audit_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      announcementId: announcement_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: workforce
     command: workforce.export.job.create
     commandVersion: 1.0.0
     purpose: workforce_reporting_exports
