@@ -234,7 +234,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'lighthouse') {
-    return <LighthouseShell />;
+    return <LighthouseShell userId={decision.userId} username={decision.username} />;
   }
 
   if (selectedPlugin.slug === 'socketrelay') {

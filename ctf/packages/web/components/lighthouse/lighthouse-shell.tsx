@@ -12,10 +12,12 @@ import { LighthouseRightPanel } from "./lighthouse-right-panel";
 import { LighthouseBrowse } from "./lighthouse-browse";
 import { LighthouseMatches } from "./lighthouse-matches";
 import { LighthouseChat } from "./lighthouse-chat";
+import { LighthouseHost } from "./lighthouse-host";
 import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 
-export function LighthouseShell() {
+export function LighthouseShell({ userId, username }: { userId: string; username: string | null }) {
+  void userId;
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -119,6 +121,7 @@ export function LighthouseShell() {
           chatCredentials={chatCredentials}
         />
       )}
+      {tab === "host" && <LighthouseHost username={username} />}
     </>
   );
 
@@ -127,6 +130,7 @@ export function LighthouseShell() {
       { key: "browse", label: "Browse" },
       { key: "matches", label: "Matches" },
       { key: "chat", label: "Chat" },
+      { key: "host", label: "List" },
     ];
     const filters: { key: ListingFilter; label: string }[] = [
       { key: "all", label: "All" },
