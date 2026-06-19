@@ -41,7 +41,7 @@ function DesktopFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
           <span style={{ color: COLOR }}>who accept Service Credits</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 520 }}>
-          Vetted electricians, plumbers, carpenters, HVAC techs, and more. All background-checked, all trauma-informed. Pay with Service Credits or cash.
+          Electricians, plumbers, carpenters, HVAC techs, and more — fellow community members. Pay with Service Credits or cash.
         </p>
         <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
           {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
@@ -75,7 +75,7 @@ function MobileFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           <Hammer size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>Foundation</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Vetted electricians, plumbers, carpenters, and more. All background-checked and trauma-informed. Pay with Service Credits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Electricians, plumbers, carpenters, and more — fellow community members. Pay with Service Credits.</p>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 

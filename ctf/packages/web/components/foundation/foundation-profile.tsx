@@ -67,7 +67,7 @@ export function ProviderProfile({
               <Shield size={14} style={{ color: COLOR }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: COLOR }}>Safety Guarantee</span>
             </div>
-            <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>This provider is background-checked and trauma-informed. Service Credits accepted on all bookings.</div>
+            <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>This provider is a fellow community member, not a formally vetted service. Service Credits accepted on all bookings.</div>
           </div>
         </div>
       </div>

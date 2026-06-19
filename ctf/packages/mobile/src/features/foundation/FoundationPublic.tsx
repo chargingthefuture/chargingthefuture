@@ -28,7 +28,7 @@ export function FoundationPublic({ onSignIn }: { onSignIn?: () => void }) {
       {/* Hero copy */}
       <View style={styles.hero}>
         <Text style={styles.heroBody}>
-          Vetted electricians, plumbers, carpenters, and more. All background-checked and trauma-informed. Pay with Service Credits.
+          Electricians, plumbers, carpenters, and more — fellow community members. Pay with Service Credits.
         </Text>
         <TouchableOpacity style={styles.joinBtn} onPress={onSignIn}>
           <Text style={styles.joinBtnText}>Join the Hub — Free</Text>

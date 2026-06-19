@@ -10,7 +10,7 @@ import {
 } from "./foundation-ui";
 
 const INFO_MSGS = [
-  { id: 1, text: "Foundation connects you with vetted trade providers. Safety-first — every provider is background-checked and trauma-informed. What do you need help with?" },
+  { id: 1, text: "Foundation connects you with trade providers from the community — electricians, plumbers, carpenters, and more. Pay with Service Credits. What do you need help with?" },
   { id: 2, text: "Search by trade or keyword, then open a provider to request a quote. Service Credits are accepted on all bookings.", action: "Browse Providers" },
 ];
 
