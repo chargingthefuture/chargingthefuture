@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { COLOR } from "./shared";
 
 const PRICING: { range: string; l: string; c: string }[] = [
@@ -27,13 +27,6 @@ export function LighthouseRightPanel() {
           <div style={{ fontSize: 11, color: "#6B7280" }}>{l}</div>
         </div>
       ))}
-      <div style={{ marginTop: 16, padding: "14px 16px", borderRadius: 12, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-          <Eye size={12} style={{ color: COLOR }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: COLOR }}>Privacy by Design</span>
-        </div>
-        <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your location is never exposed to landlords without your consent.</div>
-      </div>
     </aside>
   );
 }
