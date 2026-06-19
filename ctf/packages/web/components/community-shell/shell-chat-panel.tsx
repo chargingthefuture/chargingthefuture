@@ -14,6 +14,15 @@ import styles from './community-shell.module.css';
 
 const ECONOMY_TARGET_USD = 300_000_000_000;
 
+// Avatar glyph for a chat sender: "SH" for the Survivor Hub system/AI, otherwise the first letter of
+// the member's handle. Keeps each post attributable instead of every row reading as the same "SH".
+function avatarFromSender(label: string): string {
+  const trimmed = label.trim();
+  if (!trimmed || trimmed.toLowerCase() === 'survivor hub') return 'SH';
+  const handle = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+  return handle.charAt(0).toUpperCase() || 'SH';
+}
+
 function formatScaledValue(value: number | null, prefix = ''): string {
   if (!value) return `${prefix}0`;
   if (value >= 1_000_000_000) return `${prefix}${(value / 1_000_000_000).toFixed(0)}B`;
@@ -307,13 +316,15 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           }
 
           const msg = entry.message;
+          const senderName = msg.senderLabel ?? 'Survivor Hub';
           return (
             <div
               key={msg.id}
               className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}
             >
-              {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">SH</div> : null}
+              {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
               <div className={styles.chatBubbleGroup}>
+                {msg.from === 'hub' ? <span className={styles.chatSender}>{senderName}</span> : null}
                 <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
                   {msg.text}
                 </div>
