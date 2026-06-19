@@ -33,6 +33,9 @@ type DirectoryListItem = {
   jobTitleName: string | null;
   claimedByUserId: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
+  profileUrl: string | null;
+  headline: string | null;
+  bio: string | null;
 };
 
 export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
@@ -124,6 +127,9 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             jobTitle: item.jobTitleName ?? "",
             skills: item.skills.map((s) => s.name),
             claimedByUserId: item.claimedByUserId ?? null,
+            profileUrl: item.profileUrl ?? null,
+            headline: item.headline ?? null,
+            bio: item.bio ?? null,
           }));
           setMembers(mapped);
         }
@@ -230,7 +236,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
+    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       {/* Icon rail */}
       <aside style={{ width: 72, background: t.RAIL, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
@@ -286,7 +292,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
       </aside>
 
       {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <BookOpen size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>

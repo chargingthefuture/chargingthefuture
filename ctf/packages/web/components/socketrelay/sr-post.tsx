@@ -119,7 +119,7 @@ export function SocketRelayPost({
     onChange(needsAmount ? { priceCurrency: code, requiresAmount: true } : { priceCurrency: code, priceAmount: "", requiresAmount: false });
   }
   return (
-    <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto" }}>
+    <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", minHeight: 0 }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>{editing ? "Edit Your Request" : "Post a Request"}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 620 }}>
         <FormField label="Title">

@@ -9,7 +9,7 @@ import { BORDER, BRAND, SUBTLE, SURFACE, TEXT, type WpWeek, formatWeekRange, isL
 export function WeeklyPerformanceEmptyMain({ week }: { week: WpWeek | null }) {
   const inProgress = isLiveWeek(week);
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "40px 48px" }}>
+    <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "40px 48px" }}>
       <div style={{ padding: "28px 32px", borderRadius: 16, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 32 }}>
         <div style={{ textAlign: "center", padding: "32px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
           <div style={{ width: 64, height: 64, borderRadius: 18, background: `${BRAND}10`, border: `1px dashed ${BRAND}25`, display: "flex", alignItems: "center", justifyContent: "center" }}>

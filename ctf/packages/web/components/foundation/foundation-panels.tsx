@@ -37,7 +37,7 @@ export function BrowsePanel({
       : null);
 
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <div style={{ marginBottom: 20, padding: "20px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(239,68,68,0.05) 100%)`, border: `1px solid ${COLOR}20` }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Find providers offering a skill</div>
@@ -107,7 +107,7 @@ export function QuotesPanel({
   onBrowse: () => void;
 }) {
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>My Quote Requests</div>
         <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 20 }}>Track your service requests and responses</div>
@@ -165,8 +165,8 @@ export function ChatPanel({
   onBrowse: () => void;
 }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-      <ScrollArea style={{ flex: 1, padding: "16px 24px" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScrollArea style={{ flex: 1, minHeight: 0, padding: "16px 24px" }}>
         <div style={{ paddingBottom: 8 }}>
           {INFO_MSGS.map((msg) => (
             <div key={msg.id} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 12 }}>

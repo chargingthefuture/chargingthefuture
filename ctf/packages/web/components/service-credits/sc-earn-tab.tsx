@@ -11,7 +11,7 @@ import { PEER_TO_PEER_AREAS, PLATFORM_EARN_METHODS } from "./service-credits.con
 // being paid by another member. Platform-reward cards link to where they happen.
 export function ServiceCreditsEarnTab() {
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Earn ServiceCredits</div>
         <div style={{ fontSize: 14, color: "#6B7280", marginBottom: 20 }}>A few rewards come from the platform. The rest you earn from other members.</div>
