@@ -77,18 +77,29 @@ function mapUnlockRuntimeConfig(row: UnlockRuntimeConfigRow | undefined): Unlock
 }
 
 export async function getUnlockRuntimeConfig(): Promise<UnlockRuntimeConfig> {
-  const result = await queryDb<UnlockRuntimeConfigRow>(
-    `SELECT
-       submission_window_hours,
-       reminder_schedule_hours,
-       incentive_amount::text,
-       support_only_after_expiry
-     FROM unlock_runtime_config
-     WHERE singleton_id = 1
-     LIMIT 1`,
-  );
+  // Resilience: never let the runtime-config read block a member's verification. This runs before
+  // the submission INSERT, so if `unlock_runtime_config` is missing/unmigrated (or a column it reads
+  // — e.g. incentive_amount/support_only_after_expiry — does not yet exist on the connected DB) the
+  // query would throw and surface as a generic 503 ("Unlock submission unavailable."). Fall back to
+  // the documented defaults instead. (If you hit this, the real fix is running the Update Neon DB
+  // action so the guarded ALTERs are applied; this just stops it from blocking submissions.)
+  try {
+    const result = await queryDb<UnlockRuntimeConfigRow>(
+      `SELECT
+         submission_window_hours,
+         reminder_schedule_hours,
+         incentive_amount::text,
+         support_only_after_expiry
+       FROM unlock_runtime_config
+       WHERE singleton_id = 1
+       LIMIT 1`,
+    );
 
-  return mapUnlockRuntimeConfig(result.rows[0]);
+    return mapUnlockRuntimeConfig(result.rows[0]);
+  } catch (error) {
+    console.error('[unlock] runtime config read failed; using defaults', error);
+    return mapUnlockRuntimeConfig(undefined);
+  }
 }
 
 export async function getEffectiveUnlockAccessTier(userId: string): Promise<UnlockAccessTier | null> {
