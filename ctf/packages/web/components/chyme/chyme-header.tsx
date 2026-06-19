@@ -8,10 +8,12 @@ export function ChymeHeader({
   participantCount,
   isLive,
   onRefresh,
+  refreshing = false,
 }: {
   participantCount: number;
   isLive: boolean;
   onRefresh: () => void;
+  refreshing?: boolean;
 }) {
   const isMobile = useIsMobile();
 
@@ -44,10 +46,12 @@ export function ChymeHeader({
       </span>
       <button
         onClick={onRefresh}
-        style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}
-        title="Refresh messages"
+        disabled={refreshing}
+        style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: '#6B7280' }}
+        title="Refresh the room and chat"
+        aria-label="Refresh the room and chat"
       >
-        <RefreshCw size={16} />
+        <RefreshCw size={16} className={refreshing ? 'animate-spin' : undefined} />
       </button>
     </header>
   );
