@@ -146,10 +146,10 @@ export function SocketRelayChat({
         {fulfillments.map((f) => {
           const isRequester = Boolean(currentUserId && f.requesterUserId === currentUserId);
           return (
-            <div key={f.id} onClick={() => onSelect(f)} style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: selected?.id === f.id ? `${COLOR}18` : "transparent", border: selected?.id === f.id ? `1px solid ${COLOR}30` : "1px solid transparent", marginBottom: 4 }}>
+            <button key={f.id} type="button" aria-pressed={selected?.id === f.id} onClick={() => onSelect(f)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: selected?.id === f.id ? `${COLOR}18` : "transparent", border: selected?.id === f.id ? `1px solid ${COLOR}30` : "1px solid transparent", marginBottom: 4 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#E8EAF0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fulfillmentTitle(f)}</div>
               <div style={{ fontSize: 11, color: SUBTLE }}>{isRequester ? "Your request" : "You're helping"} · <span style={{ textTransform: "capitalize" }}>{f.status}</span></div>
-            </div>
+            </button>
           );
         })}
       </div>

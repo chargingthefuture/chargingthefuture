@@ -658,13 +658,26 @@ export async function resolveFulfillment(
   outcome: SocketRelayResolveOutcome,
 ): Promise<SocketRelayFulfillment> {
   return withDbTransaction(async (client) => {
-    const fulfillment = await getFulfillmentById(fulfillmentId);
-    if (!fulfillment) {
+    // Lock the row inside the transaction and require it to still be active, so a concurrent or
+    // retried resolve can't both pass checks and double-apply side effects (e.g. incrementing
+    // reopened_count twice or inserting duplicate request events).
+    const locked = await client.query<FulfillmentRow>(
+      `SELECT id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at
+       FROM socketrelay_fulfillments
+       WHERE id = $1::uuid
+       FOR UPDATE`,
+      [fulfillmentId],
+    );
+    if ((locked.rowCount ?? 0) === 0) {
       throw new Error('fulfillment_not_found');
     }
+    const fulfillment = mapFulfillmentRow(locked.rows[0]);
     // The requester is the request owner; the fulfiller (helper) cannot resolve.
     if (!isAdmin && fulfillment.requesterUserId !== actorUserId) {
       throw new Error('actor_not_requester');
+    }
+    if (fulfillment.status !== 'active') {
+      throw new Error('fulfillment_not_active');
     }
 
     const reopen = outcome === 'unsuccessful_reopen';
@@ -673,10 +686,13 @@ export async function resolveFulfillment(
     const updated = await client.query<FulfillmentRow>(
       `UPDATE socketrelay_fulfillments
        SET status = $3, close_reason = $2, updated_at = NOW()
-       WHERE id = $1::uuid
+       WHERE id = $1::uuid AND status = 'active'
        RETURNING id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at`,
       [fulfillmentId, outcome, fulfillmentStatus],
     );
+    if ((updated.rowCount ?? 0) === 0) {
+      throw new Error('fulfillment_not_active');
+    }
 
     if (reopen) {
       // Put the request back into the open pool for other helpers (mirrors repost).

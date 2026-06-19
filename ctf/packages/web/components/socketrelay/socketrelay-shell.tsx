@@ -219,19 +219,24 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   // we refresh and clear the selection so the resolved/reopened state is reflected.
   async function handleResolve(fulfillmentId: string, outcome: SrResolveOutcome) {
     setResolving(true);
+    setChatError(null);
     try {
       const res = await fetch(`/api/socketrelay/fulfillments/${fulfillmentId}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ outcome }),
       });
-      if (res.ok) {
-        await fetchData(false);
-        setSelectedFulfillment(null);
-        setChatCredentials(null);
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(payload?.message ?? "Couldn't resolve this request. Please try again.");
       }
-    } catch {
-      // A refresh will reflect the latest state.
+      setSelectedFulfillment(null);
+      setChatCredentials(null);
+      await fetchData(false);
+    } catch (e) {
+      // Surface the failure and still refresh so the chat doesn't sit on stale state.
+      setChatError(e instanceof Error ? e.message : "Couldn't resolve this request. Please try again.");
+      await fetchData(false);
     } finally {
       setResolving(false);
     }
