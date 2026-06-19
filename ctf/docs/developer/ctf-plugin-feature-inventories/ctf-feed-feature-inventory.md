@@ -158,6 +158,10 @@ User routes:
 - `POST /api/feed/stream` — mint Stream chat credentials for the announcements channel (`ctf-feed-announcements`)
 - `POST /api/questions/stream` — mint Stream chat credentials for the questions channel (`ctf-feed-questions`); used by the mobile Questions screen
 
+Public (unauthenticated) routes:
+
+- `GET /api/feed/public/community` — read-only Commons for signed-out visitors. Returns `{ isPublic, posts }` where `posts` are community (peer) posts only — no announcements, AI answers, replies, per-user state, or author user ids. Returns `isPublic: false` (empty) unless `feed_render_config.is_public` is on and the community channel is enabled. Backs the signed-out home panel (community posts are public the way Quora posts are; visitors read but cannot post without signing in).
+
 Admin routes:
 
 - `GET /api/feed/admin/config`

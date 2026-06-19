@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AtSign } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
+import type { PublicCommunityPost } from '../../lib/feed/types';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
@@ -56,8 +57,52 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
     return <AuthenticatedChatPanel stats={stats} plugins={plugins} currentUser={currentUser} />;
   }
 
+  return <PublicCommunityPanel stats={stats} plugins={plugins} signInUrl={signInUrl} />;
+}
+
+function formatPostTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// Signed-out Commons: community (peer) posts are public the way Quora posts are, so a not-signed-in
+// visitor reads them here — read-only and nothing else (no AI assistant, no concierge chips, no
+// composer). Posts come from the public, unauthenticated endpoint, which itself only returns posts
+// when an admin has turned public viewing on. When public viewing is off (or the read fails), we fall
+// back to the plain sign-in prompt. A single sign-in call-to-action lets a visitor join to take part.
+function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats; plugins: PluginRegistryItem[]; signInUrl: string }) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
+
+  const [posts, setPosts] = useState<PublicCommunityPost[]>([]);
+  const [isPublic, setIsPublic] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/feed/public/community', { cache: 'no-store' });
+        if (!res.ok) throw new Error('public_community_unavailable');
+        const data = (await res.json()) as { isPublic: boolean; posts: PublicCommunityPost[] };
+        if (!active) return;
+        setIsPublic(Boolean(data.isPublic));
+        setPosts(Array.isArray(data.posts) ? data.posts : []);
+      } catch {
+        if (!active) return;
+        setIsPublic(false);
+        setPosts([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hasPosts = isPublic && posts.length > 0;
 
   return (
     <div className={styles.chatPanelWrap}>
@@ -90,11 +135,31 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
       </div>
 
       <div className={styles.chatMessages}>
-        <div className={styles.chatBubbleGroup}>
-          <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
-            To start connecting with Survivor Hub and accessing community support, please sign in.
+        {loading ? (
+          <p className={styles.chatFootnote}>Loading community posts…</p>
+        ) : hasPosts ? (
+          posts.map((post) => {
+            const authorLabel = post.authorUsername ? `@${post.authorUsername}` : 'Community member';
+            const initial = post.authorUsername ? post.authorUsername.charAt(0).toUpperCase() : 'C';
+            return (
+              <div key={post.id} className={styles.chatRow}>
+                <div className={styles.chatAvatar} aria-hidden="true">{initial}</div>
+                <div className={styles.chatBubbleGroup}>
+                  <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>{post.body}</div>
+                  <span className={styles.chatTime}>{authorLabel} · {formatPostTime(post.createdAtIso)}</span>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className={styles.chatBubbleGroup}>
+            <div className={`${styles.chatBubble} ${styles.chatBubbleHub}`}>
+              {isPublic
+                ? 'No community posts yet. Sign in to start the conversation.'
+                : 'To start connecting with Survivor Hub and accessing community support, please sign in.'}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className={styles.chatSuggestions}>
@@ -102,15 +167,10 @@ export function ShellChatPanel({ stats, plugins, currentUser, isAuthenticated = 
           Sign In to Get Started
         </Link>
         <p className={styles.chatSuggestionsInfo}>
-          Survivor Hub is free and helps you access housing, work, safety resources, and connect with others in the community.
+          {hasPosts
+            ? 'You are reading the community. Sign in — free — to post, reply, and access housing, work, and safety resources.'
+            : 'Survivor Hub is free and helps you access housing, work, safety resources, and connect with others in the community.'}
         </p>
-      </div>
-
-      {/* Locked composer — read-only stream; sign in (or @comic) to participate. */}
-      <div className={styles.comicLockedComposer}>
-        <span className={styles.comicLockedLock} aria-hidden="true">🔒</span>
-        <span className={styles.comicLockedText}>Sign in to post — or type @comic to ask the AI Assistant…</span>
-        <Link href={signInUrl} className={styles.comicLockedJoinBtn}>Join Free →</Link>
       </div>
     </div>
   );
