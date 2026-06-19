@@ -14,7 +14,6 @@ type ShellRightRailProps = {
 };
 
 export function ShellRightRail({ currentUser, trust, isAuthenticated = false, signInUrl = '/sign-in' }: ShellRightRailProps) {
-  const displayName = currentUser.displayName;
   const initial = currentUser.initial;
 
   if (!isAuthenticated) {
@@ -44,7 +43,9 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
     <aside className={`${styles.panel} ${styles.rightRail}`}>
       <section className={styles.profileCard}>
         <div className={styles.profileAvatar} aria-hidden="true">{initial}</div>
-        <p className={styles.profileName}>Welcome, {displayName}</p>
+        {/* The greeting deliberately carries no handle: displayName is already "@username", so
+            "Welcome, @username" plus the @username meta line below repeated the handle twice. */}
+        <p className={styles.profileName}>Welcome back</p>
         <p className={styles.profileMeta}>{currentUser.username ? `@${currentUser.username}` : 'Member'}</p>
         <span className={styles.profileBadge}>Verified Community ✓</span>
       </section>

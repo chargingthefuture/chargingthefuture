@@ -31,8 +31,10 @@ export default function RootLayout({
   const clerkOptions = getClerkRuntimeOptions();
 
   // Point Clerk at its hosted Account Portal (accounts.<domain>) for sign-in and
-  // sign-up rather than a page rendered on this app's own domain. After a
-  // completed flow, Clerk returns the user to the app (signInFallbackRedirectUrl).
+  // sign-up rather than a page rendered on this app's own domain. After a completed
+  // flow, force the return to the app home (the chat) regardless of which page started
+  // sign-in — a *force* redirect (not fallback) so signing in from a deep page like
+  // /apps still lands on the calmer chat home, which then routes by unlock tier.
   const signInUrl = getHostedSignInUrl();
   const signUpUrl = getHostedSignUpUrl();
   const afterSignOutUrl = getHostedAfterSignOutUrl();
@@ -57,7 +59,7 @@ export default function RootLayout({
           {...(signInUrl ? { signInUrl } : {})}
           {...(signUpUrl ? { signUpUrl } : {})}
           {...(appHomeUrl
-            ? { signInFallbackRedirectUrl: appHomeUrl, signUpFallbackRedirectUrl: appHomeUrl }
+            ? { signInForceRedirectUrl: appHomeUrl, signUpForceRedirectUrl: appHomeUrl }
             : {})}
           {...(afterSignOutUrl ? { afterSignOutUrl } : {})}
         >
