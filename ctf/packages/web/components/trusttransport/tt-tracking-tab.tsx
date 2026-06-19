@@ -69,7 +69,7 @@ export function TrustTransportTrackingTab({
   onChat: (r: TripRequest) => void;
 }) {
   return (
-    <div style={{ flex: 1, padding: "24px", overflowY: "auto" }}>
+    <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>Tracking</div>
       {requests.length === 0
         ? <TrackingEmpty onBook={onBook} />

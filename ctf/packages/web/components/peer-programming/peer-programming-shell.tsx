@@ -222,10 +222,10 @@ export function PeerProgrammingShell() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
+    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <PeerProgrammingIconRail tab={tab} onTab={setTab} />
       <PeerProgrammingSidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <ShellHeader active={Boolean(room?.cohortId)} t={t} />
         {content}
       </div>

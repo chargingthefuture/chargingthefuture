@@ -26,6 +26,12 @@ export interface Member {
   jobTitle: string;
   skills: string[];
   claimedByUserId: string | null;
+  // Every directory profile is sourced from a Quora profile, so the link is the
+  // social proof and the way a viewer learns more before reaching out. Optional
+  // on the type so list payloads that omit it still typecheck.
+  profileUrl?: string | null;
+  headline?: string | null;
+  bio?: string | null;
 }
 
 export interface Sector {

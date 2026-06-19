@@ -147,7 +147,7 @@ export function GentlePulseShell() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
+    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <GentlePulseIconRail tab={tab} onTab={setTab} />
       <GentlePulseSidebar
         categories={categories}
@@ -157,7 +157,7 @@ export function GentlePulseShell() {
         favoriteCount={favorites.size}
       />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <Heart size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>

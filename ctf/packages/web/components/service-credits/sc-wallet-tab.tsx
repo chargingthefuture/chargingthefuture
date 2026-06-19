@@ -49,7 +49,7 @@ function TransactionsEmpty() {
 
 export function ServiceCreditsWalletTab({ balance, escrow }: { balance: number; escrow: number }) {
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <BalanceCard balance={balance} />
         <StatsRow balance={balance} escrow={escrow} />

@@ -65,7 +65,7 @@ export function ServiceCreditsCirculationTab() {
   }, []);
 
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: "#F9FAFB", marginBottom: 4 }}>The economy</div>
         <div style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6, marginBottom: 20 }}>
