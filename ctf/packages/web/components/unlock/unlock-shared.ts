@@ -49,10 +49,16 @@ export function toDisplayStatus(reviewStatus: UnlockReviewStatus | null): Displa
   return "pending";
 }
 
+// What full access actually means, in plain language — outcomes a new member cares about, not a
+// list of plugin/feature names (which read as jargon and feel both overwhelming and incomplete).
+// These read like the home-page prompts: each line quietly stands in for one or more plugins
+// (housing → LightHouse, rides → TrustTransport, work/earn → Workforce + Directory + ServiceCredits,
+// skills → Skills Hunt + LevelUp, "ask for anything" → the Commons + AI assistant).
 export const UNLOCK_BENEFITS = [
-  "Full Directory access",
-  "Skills Hunt participation",
-  "ServiceCredits trading",
-  "Plugin marketplace",
-  "GDP contribution",
+  "A real community of survivors — and growing",
+  "Find safe housing",
+  "Get help with rides and transportation",
+  "Find work and ways to earn",
+  "Build skills with people who get it",
+  "Ask for anything you need, anytime",
 ];

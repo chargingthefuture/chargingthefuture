@@ -3,7 +3,7 @@
 import { CheckCircle, ExternalLink, Send, Shield, Unlock as UnlockIcon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { getUnlockTokens } from "./unlock-shared";
+import { getUnlockTokens, UNLOCK_BENEFITS } from "./unlock-shared";
 
 const WHY = [
   { icon: "🔗", t: "Real-person proof", d: "Quora activity proves you're a real person with history online." },
@@ -11,7 +11,8 @@ const WHY = [
   { icon: "✅", t: "Admin-reviewed", d: "A human reviews every submission — no automated rejection." },
 ];
 
-const UNLOCKS = ["Full Directory", "Skills Hunt", "ServiceCredits", "All plugins"];
+// Single source of truth with the status-view right rail, in plain outcome language.
+const UNLOCKS = UNLOCK_BENEFITS;
 
 export function UnlockSubmissionView({
   url,
