@@ -22,13 +22,6 @@ const occupations = [
   { id: '22222222-2222-4222-8222-222222222222', name: 'Workforce Mentor', sector: 'education' },
 ];
 
-const announcements = [
-  {
-    title: 'Workforce phase-1 seed baseline',
-    body: 'Deterministic workforce seed data has been applied for dashboard and admin flow validation.',
-  },
-];
-
 const seededUsers = [
   {
     userId: 'seed-directory-profile-001',
@@ -116,19 +109,6 @@ async function main() {
           DO NOTHING
         `,
         [user.userId, dedupe],
-      );
-    }
-
-    for (const announcement of announcements) {
-      await client.query(
-        `
-          INSERT INTO workforce_announcements
-            (title, body, is_active, published_at, expires_at, created_by_user_id, updated_by_user_id)
-          VALUES
-            ($1, $2, true, NOW(), NULL, 'seed-admin', 'seed-admin')
-          ON CONFLICT DO NOTHING
-        `,
-        [announcement.title, announcement.body],
       );
     }
 

@@ -107,12 +107,3 @@ export type LighthouseMatchUpdateInput = {
   status: LighthouseMatchStatus;
   hostResponse?: string | null;
 };
-
-export type LighthouseAnnouncementInput = {
-  title: string;
-  body: string;
-  mandatory?: boolean;
-  priority?: number;
-  expiresAtIso?: string | null;
-  isActive?: boolean;
-};

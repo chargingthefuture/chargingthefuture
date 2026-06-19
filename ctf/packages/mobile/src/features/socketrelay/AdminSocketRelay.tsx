@@ -6,7 +6,6 @@
 //   GET    /api/socketrelay/admin/requests
 //   DELETE /api/socketrelay/admin/requests/:id   (destructive — confirm gesture required)
 //   GET    /api/socketrelay/admin/fulfillments
-//   GET    /api/socketrelay/admin/announcements
 //
 // Admin access is enforced server-side; a 401/403 renders an "admins only" notice.
 
@@ -24,7 +23,6 @@ import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   deleteAdminRequest,
   fetchAdminOverview,
-  type AdminAnnouncement,
   type AdminFulfillment,
   type AdminRequest,
 } from './admin-api';
@@ -131,23 +129,6 @@ function FulfillmentCard({ item }: { item: AdminFulfillment }) {
   );
 }
 
-function AnnouncementCard({ item }: { item: AdminAnnouncement }) {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeaderRow}>
-        <View style={{ flex: 1, paddingRight: 8 }}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          {item.mandatory ? <Text style={styles.cardMeta}>Mandatory</Text> : null}
-        </View>
-        <StatusBadge status={item.status} />
-      </View>
-      <Text style={styles.cardBody} numberOfLines={3}>
-        {item.body}
-      </Text>
-    </View>
-  );
-}
-
 export const AdminSocketRelay = () => {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
@@ -157,7 +138,6 @@ export const AdminSocketRelay = () => {
   const [requests, setRequests] = useState<AdminRequest[]>([]);
   const [requestsTotal, setRequestsTotal] = useState(0);
   const [fulfillments, setFulfillments] = useState<AdminFulfillment[]>([]);
-  const [announcements, setAnnouncements] = useState<AdminAnnouncement[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -174,7 +154,6 @@ export const AdminSocketRelay = () => {
     setRequests(result.requests);
     setRequestsTotal(result.requestsTotal);
     setFulfillments(result.fulfillments);
-    setAnnouncements(result.announcements);
     setLoading(false);
   }, [auth]);
 
@@ -290,17 +269,6 @@ export const AdminSocketRelay = () => {
         fulfillments.map((item) => (
           <React.Fragment key={item.id}>
             <FulfillmentCard item={item} />
-          </React.Fragment>
-        ))
-      )}
-
-      <Text style={styles.sectionLabel}>Announcements</Text>
-      {announcements.length === 0 ? (
-        <Text style={styles.emptyText}>No plugin announcements.</Text>
-      ) : (
-        announcements.map((item) => (
-          <React.Fragment key={item.id}>
-            <AnnouncementCard item={item} />
           </React.Fragment>
         ))
       )}

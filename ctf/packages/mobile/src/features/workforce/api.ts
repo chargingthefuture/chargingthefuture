@@ -9,7 +9,6 @@ export interface WorkforceDashboardData {
   workforceTotal: number;
   recruitedTotal: number;
   occupationsTotal: number;
-  activeAnnouncementsTotal: number;
   generatedAtIso: string;
 }
 

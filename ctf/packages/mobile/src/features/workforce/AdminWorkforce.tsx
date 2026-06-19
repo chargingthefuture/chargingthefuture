@@ -144,7 +144,6 @@ export const AdminWorkforce = () => {
         { label: 'Workforce total', value: dashboard.workforceTotal, color: COLOR },
         { label: 'Recruited total', value: dashboard.recruitedTotal, color: '#22C55E' },
         { label: 'Occupations', value: dashboard.occupationsTotal, color: '#A78BFA' },
-        { label: 'Active announcements', value: dashboard.activeAnnouncementsTotal, color: '#F59E0B' },
       ]
     : [];
 

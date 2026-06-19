@@ -83,12 +83,3 @@ export type SocketRelayPublicRequest = {
   priceAmount: number | null;
   createdAtIso: string;
 };
-
-export type SocketRelayAnnouncementInput = {
-  title: string;
-  body: string;
-  mandatory: boolean;
-  priority: number;
-  expiresAtIso: string | null;
-  isActive: boolean;
-};

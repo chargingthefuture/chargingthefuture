@@ -11,7 +11,6 @@ import {
   SOCKETRELAY_MAX_TITLE_LENGTH,
 } from './constants';
 import type {
-  SocketRelayAnnouncementInput,
   SocketRelayFulfillment,
   SocketRelayMessage,
   SocketRelayProfile,
@@ -21,15 +20,6 @@ import type {
   SocketRelayRequestInput,
 } from './types';
 import { ensureSocketRelayFulfillmentChannel } from './stream';
-import {
-  archiveAnnouncement,
-  createAnnouncementDraft,
-  listAnnouncements,
-  listFeedTimeline,
-  publishAnnouncement,
-  updateAnnouncementDraft,
-} from 'lib/feed/repository';
-import type { Announcement, AnnouncementDraftInput } from 'lib/shared/feed-primitives/types';
 
 type CountRow = { total: string };
 
@@ -789,96 +779,6 @@ export async function adminDeleteRequest(requestId: string): Promise<void> {
   if ((result.rowCount ?? 0) === 0) {
     throw new Error('request_not_found');
   }
-}
-
-export async function listAnnouncementsForSocketRelayUser(input: {
-  userId: string;
-  role: string | null;
-  page: number;
-  pageSize: number;
-}) {
-  const timeline = await listFeedTimeline(
-    input.userId,
-    input.role,
-    { page: normalizePage(input.page), pageSize: normalizePageSize(input.pageSize) },
-    { pluginId: 'socketrelay' },
-  );
-
-  return {
-    items: timeline.items.filter((item) => item.itemType === 'announcement'),
-    pagination: timeline.pagination,
-  };
-}
-
-export async function listSocketRelayAdminAnnouncements(): Promise<Announcement[]> {
-  const items = await listAnnouncements(true);
-  return items.filter((item) => {
-    const plugins = item.targeting?.plugins;
-    if (!plugins || plugins.length === 0) {
-      return false;
-    }
-
-    return plugins.includes('socketrelay');
-  });
-}
-
-export function validateAnnouncementInput(input: SocketRelayAnnouncementInput): boolean {
-  const title = normalizeText(input.title);
-  const body = normalizeText(input.body);
-
-  if (title.length === 0 || title.length > 160) {
-    return false;
-  }
-
-  if (body.length === 0 || body.length > 5000) {
-    return false;
-  }
-
-  if (!Number.isInteger(input.priority) || input.priority < -10 || input.priority > 10) {
-    return false;
-  }
-
-  return typeof input.mandatory === 'boolean' && typeof input.isActive === 'boolean';
-}
-
-export async function createSocketRelayAdminAnnouncement(actorUserId: string, input: SocketRelayAnnouncementInput): Promise<Announcement> {
-  const draftInput: AnnouncementDraftInput = {
-    title: normalizeText(input.title),
-    body: normalizeText(input.body),
-    mandatory: input.mandatory,
-    priority: input.priority,
-    expiresAtIso: input.expiresAtIso,
-    targeting: { plugins: ['socketrelay'] },
-  };
-
-  const draft = await createAnnouncementDraft(actorUserId, draftInput);
-  if (!input.isActive) {
-    return draft;
-  }
-
-  return publishAnnouncement(actorUserId, draft.id);
-}
-
-export async function updateSocketRelayAdminAnnouncement(actorUserId: string, announcementId: string, input: SocketRelayAnnouncementInput): Promise<Announcement> {
-  const draftInput: AnnouncementDraftInput = {
-    title: normalizeText(input.title),
-    body: normalizeText(input.body),
-    mandatory: input.mandatory,
-    priority: input.priority,
-    expiresAtIso: input.expiresAtIso,
-    targeting: { plugins: ['socketrelay'] },
-  };
-
-  const updated = await updateAnnouncementDraft(actorUserId, announcementId, draftInput);
-  if (input.isActive) {
-    return publishAnnouncement(actorUserId, updated.id);
-  }
-
-  return archiveAnnouncement(actorUserId, updated.id);
-}
-
-export async function deleteSocketRelayAdminAnnouncement(actorUserId: string, announcementId: string): Promise<Announcement> {
-  return archiveAnnouncement(actorUserId, announcementId);
 }
 
 export async function insertSocketRelayAudit(input: AuditInput): Promise<void> {

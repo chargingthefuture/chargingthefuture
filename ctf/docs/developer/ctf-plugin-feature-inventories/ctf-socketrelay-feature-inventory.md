@@ -50,11 +50,6 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
 2. Public DTO projection with privacy-minimized fields only.
 3. Anti-scraping and rate-limit behavior defined at contract level.
 
-### 1.6 User Announcements
-
-1. Authenticated announcement consumption surface.
-2. Active/non-expired announcement filtering by policy contract.
-
 ## 2) Admin Features
 
 ### 2.1 Requests and Fulfillments Oversight
@@ -62,12 +57,6 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
 1. Admin list/oversight views for requests and fulfillments.
 2. Role-gated moderation actions for request lifecycle interventions.
 3. Deterministic audit capture for sensitive admin mutations.
-
-### 2.2 Announcement Management
-
-1. Admin list/create/update/deactivate announcement flows.
-2. Server-enforced admin authorization on write paths.
-3. Policy-consistent mutation outcomes and audit events.
 
 ## 3) API Surface and Route Map
 
@@ -89,7 +78,6 @@ User/authenticated routes:
 - `POST /api/socketrelay/fulfillments/:id/close`
 - `GET /api/socketrelay/fulfillments/:id/messages`
 - `POST /api/socketrelay/fulfillments/:id/messages`
-- `GET /api/socketrelay/announcements`
 
 Public routes:
 
@@ -101,10 +89,6 @@ Admin routes:
 - `GET /api/socketrelay/admin/requests`
 - `GET /api/socketrelay/admin/fulfillments`
 - `DELETE /api/socketrelay/admin/requests/:id`
-- `GET /api/socketrelay/admin/announcements`
-- `POST /api/socketrelay/admin/announcements`
-- `PUT /api/socketrelay/admin/announcements/:id`
-- `DELETE /api/socketrelay/admin/announcements/:id`
 
 ## 4) Data Model and Storage Contracts
 
@@ -158,18 +142,18 @@ Web admin mobile-responsive: confirmed. `app/admin/socketrelay/page.tsx` is a se
 ## 7) Seed Coverage Status
 
 `ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle (including the `tags` array
-alongside the legacy `category`), fulfillment outcomes, and announcement states for dev validation.
+alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 8) Gaps and Known Technical Debt
 
 1. Anti-scraping rate limit thresholds on `/api/socketrelay/public` are conservative defaults; production-grade abuse signal classification is a known follow-up.
 2. Audit retention policy for `socketrelay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
 3. The design mockup (`MobileSocketRelayAdmin.tsx`) shows per-request approve/reject moderation, but the backend exposes no approve/reject request endpoint — the only admin request-state mutation is `DELETE /api/socketrelay/admin/requests/:id`. The Android admin mirrors delete only; an approve/reject command/contract + route would be needed to back that mockup affordance.
-4. Mobile-created announcements cannot be targeted to the SocketRelay plugin: `POST /api/socketrelay/admin/announcements` does not accept a `targeting` field, and `listSocketRelayAdminAnnouncements` only returns announcements whose targeting includes `socketrelay`. The Android admin therefore reads announcements (`GET`) but does not offer a create form, since a created announcement would not appear in the plugin-scoped list.
-5. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchSocketRelayStreamCredentials.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socketrelay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
+4. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchSocketRelayStreamCredentials.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socketrelay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
 
 ## 9) Change Log
 
+- 2026-06-18: Removed per-plugin announcements from SocketRelay. Deleted the admin Announcements tab and its inline post/delete form from `socketrelay-admin-shell.tsx` (with the draft state and create/delete functions), the user/admin announcement routes (`/api/socketrelay/announcements`, `/api/socketrelay/admin/announcements` and its `:id` route), the repository announcement functions (`listSocketRelayAdminAnnouncements`, `createSocketRelayAdminAnnouncement`, `updateSocketRelayAdminAnnouncement`, `deleteSocketRelayAdminAnnouncement`, `listAnnouncementsForSocketRelayUser`) and the announcement validator, and the `SocketRelayAnnouncementInput` type. The Android admin (`AdminSocketRelay.tsx` + `admin-api.ts`) no longer reads the announcements endpoint either. Announcements are now posted in one place — the Feed (`feed-announcements` plugin), which can target any plugin (including SocketRelay) — so the Feed is the single place to post announcements about SocketRelay. No schema change: SocketRelay only ever read the shared `announcements` table by targeting (it has no SocketRelay-specific announcements table). Sections 1.6, 2.2, and the announcement route entries were removed above to match.
 - 2026-06-13: Web admin design pass. Replaced the bare diagnostic `/admin/socketrelay` page with `components/socketrelay/socketrelay-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, Requests / Fulfillments / Announcements tabs). Bound to the real backend — `listAdminRequests`, `listAdminFulfillments`, `listSocketRelayAdminAnnouncements`. Real actions wired to existing endpoints (with `x-ctf-csrf: '1'`): remove a request (`DELETE /api/socketrelay/admin/requests/:id`), post an announcement (`POST /api/socketrelay/admin/announcements`), and delete an announcement (`DELETE /api/socketrelay/admin/announcements/:id`); fulfillments are a read-only list. No new endpoint, schema, or contract.
 - 2026-06-12: Removed the "Make this request publicly visible" toggle from the post form (web `sr-post.tsx`; Android had no visible toggle). SocketRelay is community-only — there is no public board, so the option was misleading. Requests are now members-only (`isPublic` defaults to `false` on both web and Android); the now-redundant "Members only" feed badge was removed. Also made the web post form show friendly, field-specific validation (title, details, at least one tag, and an amount when a priced value type is chosen) before submitting, so a member never sees the raw server "Invalid request payload" message. No schema, route, or contract change (the `is_public` column stays; it is just no longer user-toggled).
 - 2026-06-12: Adopted the shared currency selector on "Post a Request" (issue #420). A request can now name **how it's settled** — default **Free** (mutual aid), or ServiceCredits / fiat / crypto / Barter. Data model: `socketrelay_requests.price_currency` (FK → `currencies.code`) and `price_amount` are now written/read; the price-consistency check was relaxed so an amount-less named type (Free, Barter — `requires_amount=false`) is allowed (currency set, amount null), alongside "no value type" (both null) and "priced" (positive amount + currency). API: `POST /api/socketrelay/requests` (create) and `PUT /api/socketrelay/requests/:id` (update) parse `priceCurrency`/`priceAmount` and validate them against the catalog via `isValidRequestPrice` (amount required only for priced types; also enforced in the repository write path). UI: the web post form (`sr-post.tsx`) and Android (`SocketRelay.tsx`) show the value-type selector with the amount input hidden for Free/Barter; the feed shows a settlement badge (`settlementLabel` — never the bare `SC` code, never a fiat equivalent for ServiceCredits). Free/Barter exchanges become a Community Value Index source once recognition is wired (issue #121).

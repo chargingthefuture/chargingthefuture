@@ -1249,18 +1249,6 @@ CREATE TABLE IF NOT EXISTS workforce_occupations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS workforce_announcements (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  published_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ,
-  created_by_user_id TEXT NOT NULL,
-  updated_by_user_id TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 CREATE TABLE IF NOT EXISTS workforce_user_extension (
   user_id TEXT PRIMARY KEY,
   availability_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -3545,10 +3533,6 @@ ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS target_user_id T
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_by_user_id TEXT;
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_at TIMESTAMPTZ;
-
--- workforce_announcements (2 — defensive)
-ALTER TABLE IF EXISTS workforce_announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_announcements ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
 
 -- workforce_occupations (2 — defensive)
 ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

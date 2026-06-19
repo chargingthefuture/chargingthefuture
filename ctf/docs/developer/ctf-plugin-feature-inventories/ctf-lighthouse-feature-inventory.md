@@ -90,14 +90,7 @@ longer a precondition for browsing, hosting, or matching.
    - `pending`, `accepted`, `rejected`, `cancelled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
 
-### 1.6 Announcements (User View)
-
-1. Announcements route parity target (`/apps/lighthouse/announcements`).
-2. Authenticated read of active, non-expired announcements is required.
-3. Announcement type parity target:
-   - `info | warning | maintenance | update | promotion`.
-
-### 1.7 Blocks (User Safety)
+### 1.6 Blocks (User Safety)
 
 1. `lighthouse_blocks` is in required v1 parity scope.
 2. User-level block create/check/list/delete behaviors must be implemented through policy-controlled plugin contracts.
@@ -128,12 +121,6 @@ longer a precondition for browsing, hosting, or matching.
 2. Admin match update parity target (`PUT /api/lighthouse/admin/matches/:id`).
 3. Admin moderation/status correction independent of host/seeker ownership remains required.
 4. Admin writes must preserve authz + CSRF guarantees.
-
-### 2.4 Admin Announcement Management
-
-1. Admin announcements route parity target (`/apps/lighthouse/admin/announcements`).
-2. Admin announcements CRUD/deactivation parity is required.
-3. Cache refresh/revalidation after admin announcement mutations is required.
 
 ## 3) API Surface and Route Map
 
@@ -170,15 +157,7 @@ longer a precondition for browsing, hosting, or matching.
 - `PUT /api/lighthouse/admin/properties/:id`
 - `PUT /api/lighthouse/admin/matches/:id`
 
-### 3.5 Announcement APIs
-
-- `GET /api/lighthouse/announcements`
-- `GET /api/lighthouse/admin/announcements`
-- `POST /api/lighthouse/admin/announcements`
-- `PUT /api/lighthouse/admin/announcements/:id`
-- `DELETE /api/lighthouse/admin/announcements/:id`
-
-### 3.6 Blocks APIs (required v1)
+### 3.5 Blocks APIs (required v1)
 
 - Route contract to be finalized during implementation planning.
 - Required operations:
@@ -196,9 +175,8 @@ Required entities for parity scope:
    (FK → `currencies(code)`; the currency the rent is listed in). Backfilled to `USD` for existing
    non-null rents; Canadian listings with no cost yet keep NULL.
 3. `lighthouse_matches`
-4. `lighthouse_announcements`
-5. `lighthouse_blocks`
-6. `lighthouse_property_accepted_currencies` — join (`property_id`, `currency_code` FK →
+4. `lighthouse_blocks`
+5. `lighthouse_property_accepted_currencies` — join (`property_id`, `currency_code` FK →
    `currencies`) listing every currency a property accepts. "Accepts ServiceCredits" is true iff a
    row with `currency_code='SC'` exists here — it is never derived from `rent_currency`.
 
@@ -249,6 +227,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 ## 9) Change Log
 
 - 2026-06-18: Member self-service hosting (owner decision). The member surface had no way to create a listing and `createProperty` hard-denied (`policy_denied`) without a pre-existing admin-granted host profile — and there was no UI to become a host — so no one could list (0 hosts, 0 properties). Added a "List your place" tab to the member shell (`lighthouse-host.tsx`, wired into `lighthouse-icon-rail.tsx` + the mobile tab bar; `LighthouseShell` now receives `userId`/`username` from the plugin page) with a create-listing form posting to `POST /api/lighthouse/properties`. Removed the host-profile gate in `createProperty`; it now transparently provisions the member's host `lighthouse_profiles` row (`ON CONFLICT (user_id)`, never overwriting a seeker), so there is no separate host-profile form. Host identity is composed from existing data: username (auth gate), Quora link (new `getHostQuoraUrl`, read from `unlock_verification_submissions`, returned on `GET /api/lighthouse/my-properties` as `host.quoraProfileUrl`), and the shared `TrustWidgetCard` (`GET /api/trust/user/self`). Added the `lighthouse.property.create` command + access-policy contracts (roles: member, admin; `selfServiceHosting: enabled`, `hostProfileAutoProvisioned: true`). Web + mobile-responsive; Android RN host tab is a tracked follow-up. Schema unchanged (existing tables).
+- 2026-06-18: Removed per-plugin announcements from LightHouse. The admin Announcements tab and its component (`lighthouse-admin-announcements.tsx`), the user/admin announcement routes (`/api/lighthouse/announcements`, `/api/lighthouse/admin/announcements` and its `:id` route), the repository announcement functions, and the `LighthouseAnnouncementInput` type were deleted. Announcements are now posted in one place — the Feed (`feed-announcements` plugin), which can target any plugin (including LightHouse) — so the Feed is the single place to post announcements about LightHouse. No schema change: LightHouse only ever read the shared `announcements` table by targeting (it has no `lighthouse_announcements` table in v3). Sections 1.6, 2.4, 3.5, and the data-model announcement entry were removed above to match.
 - 2026-06-13: Web admin slice 3 — match moderation + announcements. Added a Cancel-match action on pending/accepted matches (`PUT /api/lighthouse/admin/matches/:id` with `status: 'cancelled'`, `x-ctf-csrf: '1'`) and a new Announcements tab (`components/lighthouse/lighthouse-admin-announcements.tsx`) that creates (`POST /api/lighthouse/admin/announcements`) and deletes (`DELETE /api/lighthouse/admin/announcements/:id`) admin announcements. Announcements split into their own component to keep the shell within the rule-116 size budget. No new endpoint, schema, or contract.
 - 2026-06-13: Web admin slice 2 — property moderation. Added a Hide/Restore listing action to each property in the admin Properties tab. Because the admin property endpoint validates a full record, the action resends the property via the existing `PUT /api/lighthouse/admin/properties/:propertyId` (with `x-ctf-csrf: '1'`) with `isActive` flipped, then refreshes. Match status changes and announcement CRUD remain available via their endpoints but are not yet surfaced. No new endpoint, schema, or contract.
 - 2026-06-13: Web admin design pass (slice 1 — read-only). Replaced the bare diagnostic `/admin/lighthouse` page with `components/lighthouse/lighthouse-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, Properties/Matches tabs). Bound to the real backend — `getLighthouseAdminStats`, `listLighthousePropertiesAdmin`, `listLighthouseMatchesAdmin` — shown as styled read-only lists (property title/location/rent/active state; match status/parties/date). Moderation actions (hide/unhide a property via the full-payload `PUT`, announcement create/activate/delete, match status) are a follow-up slice. The mobile mockup depicts a "housing request" approve/reject queue that does not match LightHouse's real admin surface (listings + matches + announcements), so per the admin build rule the real data was styled instead. No new endpoint, schema, or contract.

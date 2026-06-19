@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, EyeOff, Eye, XCircle } from 'lucide-react';
 import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } from 'lib/lighthouse/types';
-import type { Announcement } from 'lib/feed/types';
-import { LighthouseAdminAnnouncements } from './lighthouse-admin-announcements';
 
 // Admin design tokens (shared admin look). LightHouse accent is blue.
 const COLOR = '#60A5FA';
@@ -25,7 +23,7 @@ type LighthouseAdminStats = {
   generatedAtIso: string;
 };
 
-type Tab = 'properties' | 'matches' | 'announcements';
+type Tab = 'properties' | 'matches';
 
 // Statuses an admin can force a match into (e.g. to shut down a problematic match).
 const MATCH_CANCELLABLE = new Set(['pending', 'accepted']);
@@ -86,12 +84,10 @@ export function LighthouseAdminShell({
   stats,
   properties,
   matches,
-  announcements,
 }: {
   stats: LighthouseAdminStats;
   properties: LighthouseProperty[];
   matches: LighthouseMatch[];
-  announcements: Announcement[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('properties');
@@ -176,7 +172,7 @@ export function LighthouseAdminShell({
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['properties', 'matches', 'announcements'] as const).map((t) => (
+          {(['properties', 'matches'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -223,7 +219,7 @@ export function LighthouseAdminShell({
               );
             })
           )
-        ) : tab === 'matches' ? (
+        ) : (
           matches.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center', color: SUBTLE, fontSize: 14, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>No matches yet.</div>
           ) : (
@@ -246,8 +242,6 @@ export function LighthouseAdminShell({
               );
             })
           )
-        ) : (
-          <LighthouseAdminAnnouncements announcements={announcements} />
         )}
       </div>
     </div>

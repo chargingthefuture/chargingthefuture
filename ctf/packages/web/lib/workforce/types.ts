@@ -8,7 +8,6 @@ export type WorkforceDashboard = {
   workforceTotal: number;
   recruitedTotal: number;
   occupationsTotal: number;
-  activeAnnouncementsTotal: number;
   generatedAtIso: string;
 };
 
@@ -49,26 +48,6 @@ export type WorkforceOccupationInput = {
   name: string;
   sector: string | null;
   isActive?: boolean;
-};
-
-export type WorkforceAnnouncement = {
-  id: string;
-  title: string;
-  body: string;
-  isActive: boolean;
-  publishedAtIso: string;
-  expiresAtIso: string | null;
-  createdByUserId: string;
-  updatedByUserId: string;
-  createdAtIso: string;
-  updatedAtIso: string;
-};
-
-export type WorkforceAnnouncementInput = {
-  title: string;
-  body: string;
-  isActive?: boolean;
-  expiresAtIso?: string | null;
 };
 
 export type WorkforceConfig = {

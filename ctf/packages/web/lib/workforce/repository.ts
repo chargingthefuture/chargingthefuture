@@ -9,14 +9,10 @@ import {
   WORKFORCE_DEFAULT_PAGE_SIZE,
   WORKFORCE_DEFAULT_TIMEZONE,
   WORKFORCE_DEFAULT_WEEK_START_DOW,
-  WORKFORCE_MAX_ANNOUNCEMENT_BODY_LENGTH,
-  WORKFORCE_MAX_ANNOUNCEMENT_TITLE_LENGTH,
   WORKFORCE_MAX_OCCUPATION_NAME_LENGTH,
   WORKFORCE_MAX_PAGE_SIZE,
 } from './constants';
 import type {
-  WorkforceAnnouncement,
-  WorkforceAnnouncementInput,
   WorkforceConfig,
   WorkforceConfigInput,
   WorkforceDashboard,
@@ -36,19 +32,6 @@ type WorkforceOccupationRow = {
   name: string;
   sector: string | null;
   is_active: boolean;
-  created_by_user_id: string;
-  updated_by_user_id: string;
-  created_at: Date;
-  updated_at: Date;
-};
-
-type WorkforceAnnouncementRow = {
-  id: string;
-  title: string;
-  body: string;
-  is_active: boolean;
-  published_at: Date;
-  expires_at: Date | null;
   created_by_user_id: string;
   updated_by_user_id: string;
   created_at: Date;
@@ -111,31 +94,12 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function isValidIsoDatetime(value: string): boolean {
-  return !Number.isNaN(Date.parse(value));
-}
-
 function mapOccupation(row: WorkforceOccupationRow): WorkforceOccupation {
   return {
     id: row.id,
     name: row.name,
     sector: row.sector,
     isActive: row.is_active,
-    createdByUserId: row.created_by_user_id,
-    updatedByUserId: row.updated_by_user_id,
-    createdAtIso: toIso(row.created_at),
-    updatedAtIso: toIso(row.updated_at),
-  };
-}
-
-function mapAnnouncement(row: WorkforceAnnouncementRow): WorkforceAnnouncement {
-  return {
-    id: row.id,
-    title: row.title,
-    body: row.body,
-    isActive: row.is_active,
-    publishedAtIso: toIso(row.published_at),
-    expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
     createdByUserId: row.created_by_user_id,
     updatedByUserId: row.updated_by_user_id,
     createdAtIso: toIso(row.created_at),
@@ -175,17 +139,6 @@ export function validateOccupationInput(input: WorkforceOccupationInput): boolea
     && (input.isActive === undefined || typeof input.isActive === 'boolean');
 }
 
-export function validateAnnouncementInput(input: WorkforceAnnouncementInput): boolean {
-  const title = normalizeText(input.title ?? '');
-  const body = normalizeText(input.body ?? '');
-
-  return title.length > 0
-    && title.length <= WORKFORCE_MAX_ANNOUNCEMENT_TITLE_LENGTH
-    && body.length > 0
-    && body.length <= WORKFORCE_MAX_ANNOUNCEMENT_BODY_LENGTH
-    && (!input.expiresAtIso || isValidIsoDatetime(input.expiresAtIso));
-}
-
 export function validateConfigInput(input: WorkforceConfigInput): boolean {
   const timezone = normalizeText(input.reportWeekTimezone ?? '');
 
@@ -202,18 +155,16 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
   // active directory profiles, and "recruited" means a profile that has been claimed by a user.
   // We read directory_profiles live rather than keeping a synced workforce_profiles copy, so the
   // numbers can never drift and there is no sync job to fail.
-  const [workforceCount, recruitedCount, occupationCount, activeAnnouncementCount] = await Promise.all([
+  const [workforceCount, recruitedCount, occupationCount] = await Promise.all([
     queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL"),
     queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL AND claimed_by_user_id IS NOT NULL"),
     queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_occupations WHERE is_active = true'),
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_announcements WHERE is_active = true AND (expires_at IS NULL OR expires_at > NOW())'),
   ]);
 
   return {
     workforceTotal: Number.parseInt(workforceCount.rows[0]?.total ?? '0', 10),
     recruitedTotal: Number.parseInt(recruitedCount.rows[0]?.total ?? '0', 10),
     occupationsTotal: Number.parseInt(occupationCount.rows[0]?.total ?? '0', 10),
-    activeAnnouncementsTotal: Number.parseInt(activeAnnouncementCount.rows[0]?.total ?? '0', 10),
     generatedAtIso: new Date().toISOString(),
   };
 }
@@ -357,89 +308,6 @@ export async function deleteOccupation(id: string): Promise<'deleted' | 'not_fou
   );
 
   return result.rows.length > 0 ? 'deleted' : 'not_found';
-}
-
-export async function listAnnouncements(publicOnly = true): Promise<WorkforceAnnouncement[]> {
-  const result = await queryDb<WorkforceAnnouncementRow>(
-    `
-      SELECT id, title, body, is_active, published_at, expires_at, created_by_user_id, updated_by_user_id, created_at, updated_at
-      FROM workforce_announcements
-      WHERE ($1::boolean = false OR (
-        is_active = true
-        AND published_at <= NOW()
-        AND (expires_at IS NULL OR expires_at > NOW())
-      ))
-      ORDER BY published_at DESC, created_at DESC
-    `,
-    [publicOnly],
-  );
-
-  return result.rows.map(mapAnnouncement);
-}
-
-export async function createAnnouncement(actorId: string, input: WorkforceAnnouncementInput): Promise<WorkforceAnnouncement> {
-  const result = await queryDb<WorkforceAnnouncementRow>(
-    `
-      INSERT INTO workforce_announcements
-        (title, body, is_active, published_at, expires_at, created_by_user_id, updated_by_user_id)
-      VALUES
-        ($1, $2, COALESCE($3, true), NOW(), $4::timestamptz, $5, $5)
-      RETURNING id, title, body, is_active, published_at, expires_at, created_by_user_id, updated_by_user_id, created_at, updated_at
-    `,
-    [normalizeText(input.title), normalizeText(input.body), input.isActive, input.expiresAtIso ?? null, actorId],
-  );
-
-  return mapAnnouncement(result.rows[0]);
-}
-
-export async function updateAnnouncement(
-  actorId: string,
-  id: string,
-  input: WorkforceAnnouncementInput,
-): Promise<WorkforceAnnouncement | null> {
-  const result = await queryDb<WorkforceAnnouncementRow>(
-    `
-      UPDATE workforce_announcements
-      SET
-        title = $2,
-        body = $3,
-        is_active = COALESCE($4, is_active),
-        expires_at = CASE WHEN $5::boolean THEN NULL ELSE COALESCE($6::timestamptz, expires_at) END,
-        updated_by_user_id = $7,
-        updated_at = NOW()
-      WHERE id = $1::uuid
-      RETURNING id, title, body, is_active, published_at, expires_at, created_by_user_id, updated_by_user_id, created_at, updated_at
-    `,
-    [
-      id,
-      normalizeText(input.title),
-      normalizeText(input.body),
-      input.isActive,
-      input.expiresAtIso === null,
-      input.expiresAtIso ?? null,
-      actorId,
-    ],
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return mapAnnouncement(result.rows[0]);
-}
-
-export async function deactivateAnnouncement(actorId: string, id: string): Promise<'deactivated' | 'not_found'> {
-  const result = await queryDb<{ id: string }>(
-    `
-      UPDATE workforce_announcements
-      SET is_active = false, updated_by_user_id = $2, updated_at = NOW()
-      WHERE id = $1::uuid
-      RETURNING id
-    `,
-    [id, actorId],
-  );
-
-  return result.rows.length > 0 ? 'deactivated' : 'not_found';
 }
 
 export async function getWorkforceConfig(): Promise<WorkforceConfig> {
