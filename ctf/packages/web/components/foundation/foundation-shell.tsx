@@ -199,7 +199,7 @@ export function FoundationShell() {
           <Hammer size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Foundation — Trade Services</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Vetted providers · Background-checked · Safe</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Community trade providers · Trauma-informed</div>
           </div>
         </header>
         {content}

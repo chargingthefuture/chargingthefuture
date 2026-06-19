@@ -1,7 +1,7 @@
 'use client';
 
-import { BarChart2, Bell, Settings } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { BarChart2 } from 'lucide-react';
+import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 
 const COLOR = '#F97316';
 
@@ -71,51 +71,7 @@ export function WorkforceIconRail({ activeTab, onTabChange }: WorkforceIconRailP
         </button>
       ))}
 
-      <div style={{ flex: 1 }} />
-
-      <button
-        type="button"
-        aria-label="Notifications"
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: 'transparent',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          color: '#6B7280',
-        }}
-      >
-        <Bell size={18} />
-      </button>
-
-      <button
-        type="button"
-        aria-label="Settings"
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: 'transparent',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          color: '#6B7280',
-        }}
-      >
-        <Settings size={18} />
-      </button>
-
-      <Avatar style={{ width: 36, height: 36 }}>
-        <AvatarFallback style={{ background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700 }}>
-          W
-        </AvatarFallback>
-      </Avatar>
+      <PluginRailFooter />
     </aside>
   );
 }

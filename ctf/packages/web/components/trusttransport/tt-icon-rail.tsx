@@ -1,7 +1,7 @@
 "use client";
 
 import { Car, MapPin, Navigation, MessageCircle } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, type Tab } from "./tt-shared";
 
 // The book tab uses a distinct MapPin glyph so the Car no longer appears twice (brand mark + tab).
@@ -22,10 +22,7 @@ export function TrustTransportIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: 
           <Icon size={20} />
         </button>
       ))}
-      <div style={{ flex: 1 }} />
-      <span title="Your account — sign out or manage your profile" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <UserButton />
-      </span>
+      <PluginRailFooter />
     </aside>
   );
 }

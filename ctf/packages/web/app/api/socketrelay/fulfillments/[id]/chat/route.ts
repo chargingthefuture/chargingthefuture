@@ -24,14 +24,14 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   }
 
   try {
-    const channelId = await ensureSocketRelayFulfillmentChannel({
+    const streamChannelId = await ensureSocketRelayFulfillmentChannel({
       fulfillmentId: fulfillment.id,
       requesterUserId: fulfillment.requesterUserId,
       requesterDisplayName: buildIdentityDisplayName(null, fulfillment.requesterUserId),
       fulfillerUserId: fulfillment.fulfillerUserId,
       fulfillerDisplayName: buildIdentityDisplayName(null, fulfillment.fulfillerUserId),
     });
-    if (!channelId) {
+    if (!streamChannelId) {
       return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
     }
     const credentials = await createSocketRelayParticipantToken(
@@ -41,7 +41,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (!credentials) {
       return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, channelId, ...credentials });
+    // Single canonical key: `streamChannelId` is the real Stream channel id
+    // (`socketrelay-fulfillment-<id>`). Web and mobile both read this one key.
+    return NextResponse.json({ ok: true, streamChannelId, ...credentials });
   } catch (error: unknown) {
     reportError(error, { area: 'socketrelay', op: 'fulfillments_id_chat' });
     const message = error instanceof Error ? error.message : 'Error creating chat channel';

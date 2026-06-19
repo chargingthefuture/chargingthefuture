@@ -1,6 +1,6 @@
 // Stream chat credentials for a trip thread. A trip is text chat only — there is no video.
 // The web route is POST /api/trusttransport/trips/[tripId]/chat; it returns
-// { ok, channelId, streamApiKey, streamUserId, streamToken }, mapped here to the
+// { ok, streamChannelId, streamApiKey, streamUserId, streamToken }, mapped here to the
 // shape the Stream client components consume. Goes through authedFetch so the
 // Clerk bearer token is attached and the base URL comes from runtime config.
 import { Platform } from 'react-native';
@@ -16,7 +16,6 @@ export interface TrustTransportStreamCredentials {
 type TripChatResponse = {
   ok: boolean;
   message?: string;
-  channelId?: string;
   streamChannelId?: string;
   streamApiKey: string;
   streamUserId: string;
@@ -35,7 +34,7 @@ export async function fetchTrustTransportStreamCredentials(tripId: string): Prom
   if (!data.ok) {
     throw new Error(data.message || 'Unable to load TrustTransport chat credentials');
   }
-  const chatChannelId = data.streamChannelId ?? data.channelId;
+  const chatChannelId = data.streamChannelId;
   if (!chatChannelId) {
     throw new Error('TrustTransport chat credentials response is missing the channel id');
   }

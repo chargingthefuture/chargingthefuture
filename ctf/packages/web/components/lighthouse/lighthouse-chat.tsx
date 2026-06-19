@@ -45,12 +45,12 @@ export function LighthouseChat({
           <div>Loading chat…</div>
         ) : chatError ? (
           <div style={{ color: "#EF4444" }}>{chatError}</div>
-        ) : chatCredentials ? (
+        ) : chatCredentials?.streamChannelId ? (
           <StreamChatPanel
             streamApiKey={chatCredentials.streamApiKey}
             streamToken={chatCredentials.streamToken}
             streamUserId={chatCredentials.streamUserId}
-            streamChannelId={chatCredentials.streamChannelId || selectedMatch.id}
+            streamChannelId={chatCredentials.streamChannelId}
           />
         ) : null}
       </div>

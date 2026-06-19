@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, Heart, Home, KeyRound, MessageCircle, Search, Settings } from "lucide-react";
+import { Heart, Home, KeyRound, MessageCircle, Search } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, type Tab } from "./shared";
 
 const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
@@ -21,10 +22,7 @@ export function LighthouseIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab)
           <Icon size={20} />
         </button>
       ))}
-      <div style={{ flex: 1 }} />
-      <button aria-label="Notifications" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><Bell size={18} /></button>
-      <button aria-label="Settings" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><Settings size={18} /></button>
-      <div style={{ width: 36, height: 36, borderRadius: 12, background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>S</div>
+      <PluginRailFooter />
     </aside>
   );
 }

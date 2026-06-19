@@ -1,7 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bell, BarChart2, Settings, Smile } from "lucide-react";
+import { BarChart2, Smile } from "lucide-react";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { useTheme } from "@/hooks/useTheme";
 import { getMoodTokens, type Tab } from "./mood-shared";
 
@@ -23,12 +23,7 @@ export function MoodIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => vo
           <Icon size={20} />
         </button>
       ))}
-      <div style={{ flex: 1 }} />
-      <button type="button" aria-label="Notifications" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.SUBTLE }}><Bell size={18} /></button>
-      <button type="button" aria-label="Settings" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.SUBTLE }}><Settings size={18} /></button>
-      <Avatar style={{ width: 36, height: 36 }}>
-        <AvatarFallback style={{ background: `${t.ACCENT}30`, color: t.ACCENT, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
-      </Avatar>
+      <PluginRailFooter />
     </aside>
   );
 }

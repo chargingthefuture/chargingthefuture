@@ -34,7 +34,7 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
   };
 
   return (
-    <div style={{ minHeight: '100dvh', overflowY: 'auto', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 64px' }}>
         <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Your account</h1>
