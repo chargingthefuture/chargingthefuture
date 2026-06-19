@@ -25,10 +25,17 @@ import type { ChymeJoinResponse } from 'lib/chyme/types';
 const CALL_TYPE = 'default';
 
 // Stream call ids accept [0-9a-zA-Z_-]; coerce anything else so an arbitrary
-// room key can never produce an invalid id.
-function toCallId(raw: string): string {
+// room key can never produce an invalid id. Exported so the guest listen-only path joins the
+// exact same call as members.
+export function toCallIdForChyme(raw: string): string {
   const cleaned = raw.replace(/[^0-9a-zA-Z_-]/g, '-');
   return cleaned.length > 0 ? cleaned : 'chyme-main-room';
+}
+
+export const CHYME_CALL_TYPE = CALL_TYPE;
+
+function toCallId(raw: string): string {
+  return toCallIdForChyme(raw);
 }
 
 function isPublishingAudio(participant: StreamVideoParticipant): boolean {

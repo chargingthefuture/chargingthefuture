@@ -64,6 +64,36 @@ export async function createStreamJoinCredentials(
   }
 }
 
+// Mint a short-lived Stream identity for an anonymous guest so they can LISTEN to the public room.
+// The guest is an ephemeral Stream user (random id), not a member — they get a token that lets them
+// join the call and receive audio. They never publish: the client joins muted with no controls, so
+// "listen-only" is enforced on the client. (Server-side publish restriction would require Stream
+// call-type role config, which is out of scope here.)
+export async function createChymeGuestListenCredentials(): Promise<StreamJoinCredentials | null> {
+  const streamConfig = await resolveStreamCredentials();
+  if (!streamConfig) {
+    return null;
+  }
+
+  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
+  try {
+    const guestUserId = `chyme-guest-${crypto.randomUUID()}`;
+    await streamClient.upsertUser({ id: guestUserId, name: 'Guest listener' });
+    // This token is handed to anonymous visitors from a public endpoint, so it must expire — an
+    // indefinite token would leave a wide replay/abuse window. One hour is plenty to join and listen;
+    // the page re-fetches a fresh token on reload.
+    const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
+    return {
+      streamApiKey: streamConfig.apiKey,
+      streamChannelId: CHYME_STREAM_CHANNEL_ID,
+      streamUserId: guestUserId,
+      streamToken: streamClient.createToken(guestUserId, expiresAt),
+    };
+  } finally {
+    await streamClient.disconnectUser();
+  }
+}
+
 export async function sendChymeStreamMessage(input: {
   userId: string;
   name: string;
