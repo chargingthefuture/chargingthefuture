@@ -21,8 +21,8 @@ export function LighthouseChat({
   return (
     <div style={{ padding: 24, height: "100%", display: "flex", flexDirection: "column", flex: 1 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(234,179,8,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>LightHouse Chat</div>
-        <div style={{ fontSize: 14, color: "#9CA3AF" }}>Connect with your match in real time.</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Direct Line</div>
+        <div style={{ fontSize: 14, color: "#9CA3AF" }}>Your private line with this match — talk in real time.</div>
       </div>
       <div style={{ marginBottom: 16 }}>
         <label htmlFor="match-select" style={{ color: "#9CA3AF", fontSize: 14, marginRight: 8 }}>Select Match:</label>

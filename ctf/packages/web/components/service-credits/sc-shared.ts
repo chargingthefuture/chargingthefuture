@@ -21,7 +21,7 @@ export function getServiceCreditsTokens(theme: ThemeName): ServiceCreditsTokens 
 }
 
 export type WalletData = { availableBalance: number; escrowBalance: number };
-export type Tab = "wallet" | "earn" | "economy" | "info";
+export type Tab = "wallet" | "earn" | "economy";
 
 // Public circulation metrics returned by GET /api/service-credits/circulation. Aggregate,
 // non-identifying figures only — never a per-member number and never a fiat equivalent.
