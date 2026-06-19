@@ -24,6 +24,7 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -58,9 +59,25 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  async function refreshMessages(): Promise<void> {
-    const payload = await requestJson<{ roomKey: string; messages: ChymeMessage[] }>('/api/chyme/messages?limit=50');
-    setMessages(payload.messages);
+  // Refresh BOTH the room (live status + participant count) and the chat. The button used to refresh
+  // only the messages, so when there were no new messages it looked like nothing happened and the
+  // participant count never updated. `refreshing` drives the spinning icon so the press is visible.
+  async function refreshRoomAndMessages(): Promise<void> {
+    if (refreshing) return;
+    setRefreshing(true);
+    setError(null);
+    try {
+      const [roomPayload, messagePayload] = await Promise.all([
+        requestJson<ChymeRoomResponse>('/api/chyme/room'),
+        requestJson<{ roomKey: string; messages: ChymeMessage[] }>('/api/chyme/messages?limit=50'),
+      ]);
+      setRoom(roomPayload);
+      setMessages(messagePayload.messages);
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : 'Unable to refresh the room.');
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function handleSend(): Promise<void> {
@@ -121,7 +138,8 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
       <ChymeHeader
         participantCount={room?.participants.length ?? 0}
         isLive={Boolean(room)}
-        onRefresh={() => void refreshMessages()}
+        onRefresh={() => void refreshRoomAndMessages()}
+        refreshing={refreshing}
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
@@ -130,7 +148,8 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
           room={room}
           joinState={joinState}
           onJoin={() => void handleJoin()}
-          onRefresh={() => void refreshMessages()}
+          onRefresh={() => void refreshRoomAndMessages()}
+          refreshing={refreshing}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden' }}>

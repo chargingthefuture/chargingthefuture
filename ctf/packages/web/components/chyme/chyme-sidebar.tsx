@@ -13,12 +13,14 @@ export function ChymeSidebar({
   joinState,
   onJoin,
   onRefresh,
+  refreshing = false,
 }: {
   loading: boolean;
   room: ChymeRoomResponse | null;
   joinState: JoinState;
   onJoin: () => void;
   onRefresh: () => void;
+  refreshing?: boolean;
 }) {
   const isMobile = useIsMobile();
   const joinLabel = joinState === 'joining' ? 'Joining…' : joinState === 'ready' ? '✓ Joined' : 'Join Room';
@@ -39,11 +41,12 @@ export function ChymeSidebar({
         {isMobile && (
           <button
             onClick={onRefresh}
-            aria-label="Refresh messages"
-            title="Refresh messages"
-            style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280', flexShrink: 0 }}
+            disabled={refreshing}
+            aria-label="Refresh the room and chat"
+            title="Refresh the room and chat"
+            style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: '#6B7280', flexShrink: 0 }}
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : undefined} />
           </button>
         )}
       </div>
