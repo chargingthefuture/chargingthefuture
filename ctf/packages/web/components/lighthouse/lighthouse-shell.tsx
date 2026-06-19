@@ -17,7 +17,6 @@ import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 
 export function LighthouseShell({ userId, username }: { userId: string; username: string | null }) {
-  void userId;
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -27,6 +26,7 @@ export function LighthouseShell({ userId, username }: { userId: string; username
   const [filter, setFilter] = useState<ListingFilter>("all");
   const [saved, setSaved] = useState<string[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [editPropertyId, setEditPropertyId] = useState<string | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [chatCredentials, setChatCredentials] = useState<ChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
@@ -82,7 +82,18 @@ export function LighthouseShell({ userId, username }: { userId: string; username
   }
 
   if (selectedProperty) {
-    return <LighthousePropertyDetail property={selectedProperty} onBack={() => setSelectedProperty(null)} />;
+    return (
+      <LighthousePropertyDetail
+        property={selectedProperty}
+        onBack={() => setSelectedProperty(null)}
+        currentUserId={userId}
+        onEdit={(p) => {
+          setSelectedProperty(null);
+          setEditPropertyId(p.id);
+          setTab("host");
+        }}
+      />
+    );
   }
 
   const creditsCount = properties.filter((p) => p.credits).length;
@@ -121,7 +132,13 @@ export function LighthouseShell({ userId, username }: { userId: string; username
           chatCredentials={chatCredentials}
         />
       )}
-      {tab === "host" && <LighthouseHost username={username} />}
+      {tab === "host" && (
+        <LighthouseHost
+          username={username}
+          editPropertyId={editPropertyId}
+          onEditHandled={() => setEditPropertyId(null)}
+        />
+      )}
     </>
   );
 
