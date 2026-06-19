@@ -165,8 +165,8 @@ export function ChatPanel({
   onBrowse: () => void;
 }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-      <ScrollArea style={{ flex: 1, padding: "16px 24px" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScrollArea style={{ flex: 1, minHeight: 0, padding: "16px 24px" }}>
         <div style={{ paddingBottom: 8 }}>
           {INFO_MSGS.map((msg) => (
             <div key={msg.id} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 12 }}>

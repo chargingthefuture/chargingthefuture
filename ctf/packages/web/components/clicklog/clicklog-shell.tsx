@@ -187,11 +187,11 @@ export function ClicklogShell() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
       <ClicklogIconRail />
       <ClicklogSidebar total={stats.total} weekdayCounts={stats.weekdayCounts} />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <AlertTriangle size={18} color={t.ACCENT} />
           <div style={{ flex: 1 }}>
@@ -200,7 +200,7 @@ export function ClicklogShell() {
           </div>
         </header>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "32px 48px" }}>
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "32px 48px" }}>
           {content}
         </div>
       </div>

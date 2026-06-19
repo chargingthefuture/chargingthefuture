@@ -129,7 +129,7 @@ export function GdpDashboard({
   const hasSectors = sectors.length > 0;
   const hasCountries = countries.length > 0;
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <GdpHero metrics={metrics} />
         <div style={{ display: "grid", gridTemplateColumns: hasSectors && hasCountries ? "3fr 2fr" : "1fr", gap: 20 }}>

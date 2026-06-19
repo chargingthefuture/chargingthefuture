@@ -71,7 +71,7 @@ export function PeerProgrammingCohortsTab({
   feedback: FeedbackFormProps;
 }) {
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+    <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Weekly Global Masterminds</div>
         <div style={{ fontSize: 14, color: "#9CA3AF" }}>Deterministic placement — you always get a cohort. No one left behind.</div>
