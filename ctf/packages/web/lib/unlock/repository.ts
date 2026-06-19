@@ -363,25 +363,33 @@ export async function insertUnlockAudit(input: {
   requestId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
-  await queryDb(
-    `INSERT INTO unlock_audit_log (
-       actor_user_id,
-       command,
-       policy_status,
-       reason,
-       target_user_id,
-       request_id,
-       metadata
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
-    [
-      input.actorUserId,
-      input.command,
-      input.policyStatus,
-      input.reason,
-      input.targetUserId ?? null,
-      input.requestId ?? null,
-      JSON.stringify(input.metadata ?? {}),
-    ],
-  );
+  // Best-effort: the audit row is a secondary record, but the submission route awaits this call, so
+  // a throw here (e.g. a legacy unlock_audit_log missing a column, or its user_id/action still NOT
+  // NULL) would turn an otherwise-successful submission into a generic 503 for the member. Never let
+  // the audit write block the member flow — log the real cause and move on.
+  try {
+    await queryDb(
+      `INSERT INTO unlock_audit_log (
+         actor_user_id,
+         command,
+         policy_status,
+         reason,
+         target_user_id,
+         request_id,
+         metadata
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+      [
+        input.actorUserId,
+        input.command,
+        input.policyStatus,
+        input.reason,
+        input.targetUserId ?? null,
+        input.requestId ?? null,
+        JSON.stringify(input.metadata ?? {}),
+      ],
+    );
+  } catch (error) {
+    console.error('[unlock] audit write failed (non-blocking)', error);
+  }
 }
