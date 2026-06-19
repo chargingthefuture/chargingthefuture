@@ -112,9 +112,9 @@ export function FoundationProviderDetail({ provider, onBack }: FoundationProvide
 
         {/* Safety guarantee */}
         <View style={styles.safetyBox}>
-          <Text style={styles.safetyTitle}>&#x1F6E1;&#xFE0F; Safety Guarantee</Text>
+          <Text style={styles.safetyTitle}>&#x1F6E1;&#xFE0F; Good to know</Text>
           <Text style={styles.safetyBody}>
-            Background-checked, insured, trauma-informed.
+            Providers are fellow community members, not a formally vetted service — use your judgment.
           </Text>
         </View>
       </ScrollView>
