@@ -3043,6 +3043,20 @@ BEGIN
   END IF;
 END
 $$;
+-- One-time dedupe so the unique index below can be built on legacy data: a database cloned from
+-- before the index existed can hold duplicate (user_id, UTC-day) rows. Keep the earliest sign-in of
+-- each day and drop the rest. Naturally idempotent — once deduped it removes nothing.
+DELETE FROM login_events
+WHERE ctid IN (
+  SELECT ctid FROM (
+    SELECT ctid, ROW_NUMBER() OVER (
+      PARTITION BY user_id, (created_at AT TIME ZONE 'UTC')::date
+      ORDER BY created_at ASC, ctid ASC
+    ) AS rn
+    FROM login_events
+  ) ranked
+  WHERE ranked.rn > 1
+);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
   ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
