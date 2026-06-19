@@ -102,3 +102,30 @@ contracts:
     purpose: incentive_award
     retentionClass: financial_audit_long_lived
     idempotency: true
+
+  - pluginId: unlock
+    command: unlock.admin.rewards.reconcile
+    version: 1.0.0
+    description: Admin-triggered drain that mints any approved-but-uncredited unlock verification reward. Same idempotent mint as the approval handler and the cron, so it can never double-grant.
+    inputSchema: {}
+    outputSchema:
+      scanned:
+        type: integer
+      granted:
+        type: integer
+      alreadyGranted:
+        type: integer
+      failed:
+        type: integer
+    dataAccess:
+      - unlock_verification_submissions
+      - unlock_audit_log
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+      - service_credits_wallets
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+      - service_credits_admin_audit_trail
+    purpose: incentive_award_self_heal
+    retentionClass: financial_audit_long_lived
+    idempotency: true

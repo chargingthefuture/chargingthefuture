@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Unlock, Key, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
 import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
 
@@ -73,8 +73,47 @@ export function UnlockAdminShell({
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reconciling, setReconciling] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const visible = tab === 'pending' ? submissions.filter((s) => s.reviewStatus === 'pending') : submissions;
+  // Approved submissions whose 100-credit reward never landed (incentive_granted_at still null). These
+  // are exactly the rows the "Retry pending rewards" drain will mint. Counted from the loaded page.
+  const pendingRewardCount = submissions.filter((s) => s.reviewStatus === 'approved' && !s.incentiveGrantedAt).length;
+
+  async function retryRewards() {
+    setReconciling(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch('/api/unlock/admin/reconcile-rewards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; granted?: number; alreadyGranted?: number; failed?: number; reason?: string; code?: string; message?: string }
+        | null;
+      if (!res.ok || !data?.ok) {
+        setError(data?.reason ?? data?.message ?? data?.code ?? `Retry failed (${res.status}).`);
+        return;
+      }
+      const granted = data.granted ?? 0;
+      const failed = data.failed ?? 0;
+      setNotice(
+        failed > 0
+          ? `Granted ${granted}. ${failed} still could not be granted — check the logs.`
+          : granted > 0
+            ? `Granted ${granted} pending reward${granted === 1 ? '' : 's'}.`
+            : 'No pending rewards to grant.',
+      );
+      // Refresh so the snapshot counts and reward pills reflect the freshly granted rewards.
+      router.refresh();
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setReconciling(false);
+    }
+  }
 
   async function review(id: number, reviewStatus: ReviewStatus) {
     setBusyId(id);
@@ -124,6 +163,23 @@ export function UnlockAdminShell({
           <StatBlock label="Support-only" value={dashboard.lockedSupportOnlyCount} />
         </div>
 
+        {/* Reward self-heal: grant any approved verification whose reward is still pending. Idempotent. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={retryRewards}
+            disabled={reconciling}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${COLOR}1A`, border: `1px solid ${COLOR}55`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: reconciling ? 'not-allowed' : 'pointer', opacity: reconciling ? 0.6 : 1 }}
+          >
+            <RefreshCw size={13} /> {reconciling ? 'Retrying…' : 'Retry pending rewards'}
+          </button>
+          {pendingRewardCount > 0 ? (
+            <span style={{ fontSize: 12, color: SUBTLE }}>
+              {pendingRewardCount} approved submission{pendingRewardCount === 1 ? '' : 's'} awaiting reward
+            </span>
+          ) : null}
+        </div>
+
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {(['pending', 'all'] as const).map((t) => (
@@ -141,6 +197,10 @@ export function UnlockAdminShell({
 
         {error ? (
           <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>{error}</div>
+        ) : null}
+
+        {notice ? (
+          <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>{notice}</div>
         ) : null}
 
         {visible.length === 0 ? (
@@ -183,7 +243,7 @@ export function UnlockAdminShell({
         )}
 
         <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginTop: 16 }}>
-          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued automatically and arrive within {UNLOCK_REWARD_SLA_HOURS} hours — if a reward is still pending it will be retried in the background.
+          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now.
         </p>
       </div>
     </div>
