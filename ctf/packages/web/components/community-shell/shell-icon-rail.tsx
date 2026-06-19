@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
-import { MessageSquare, Zap, Shield, SlidersHorizontal } from 'lucide-react';
+import { Users, Zap, Shield, SlidersHorizontal } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import { HelpControl } from '../bug-reports/help-control';
 import styles from './community-shell.module.css';
@@ -24,10 +24,11 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
         type="button"
         className={section === 'chat' ? `${styles.iconRailBtn} ${styles.iconRailBtnActive}` : styles.iconRailBtn}
         onClick={() => onSectionChange('chat')}
-        aria-label="Chat"
+        aria-label="Commons"
+        title="Commons — the community chat"
         aria-pressed={section === 'chat'}
       >
-        <MessageSquare size={18} />
+        <Users size={18} />
       </button>
 
       <button

@@ -261,7 +261,7 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             className={section === 'chat' ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn}
             onClick={() => setSection('chat')}
           >
-            Chat
+            Commons
           </button>
           <button
             type="button"

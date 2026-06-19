@@ -1,12 +1,12 @@
 "use client";
 
-import { Bell, Heart, Home, KeyRound, MessageSquare, Search, Settings } from "lucide-react";
+import { Bell, Heart, Home, KeyRound, MessageCircle, Search, Settings } from "lucide-react";
 import { COLOR, type Tab } from "./shared";
 
 const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Search, key: "browse", label: "Browse" },
   { icon: Heart, key: "matches", label: "Matches" },
-  { icon: MessageSquare, key: "chat", label: "Chat" },
+  { icon: MessageCircle, key: "chat", label: "Direct Line" },
   { icon: KeyRound, key: "host", label: "List your place" },
 ];
 
