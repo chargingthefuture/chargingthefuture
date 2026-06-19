@@ -104,7 +104,7 @@ export function Foundation() {
           </View>
           <View>
             <Text style={styles.appTitle}>Foundation</Text>
-            <Text style={styles.appSubtitle}>Vetted trade providers</Text>
+            <Text style={styles.appSubtitle}>Community trade providers</Text>
           </View>
         </View>
         <View style={styles.verifiedBadge}>
