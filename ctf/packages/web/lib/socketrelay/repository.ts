@@ -18,6 +18,8 @@ import type {
   SocketRelayPublicRequest,
   SocketRelayRequest,
   SocketRelayRequestInput,
+  SocketRelayRequestStatus,
+  SocketRelayResolveOutcome,
 } from './types';
 import { ensureSocketRelayFulfillmentChannel } from './stream';
 
@@ -608,15 +610,23 @@ export async function getFulfillmentById(fulfillmentId: string): Promise<SocketR
 }
 
 export async function listMyFulfillments(userId: string): Promise<SocketRelayFulfillment[]> {
-  const result = await queryDb<FulfillmentRow>(
-    `SELECT id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at
-     FROM socketrelay_fulfillments
-     WHERE requester_user_id = $1 OR fulfiller_user_id = $1
-     ORDER BY created_at DESC`,
+  // Join the request so the chat can show what the conversation is about (title + current status)
+  // instead of a bare "Fulfillment <uuid>".
+  const result = await queryDb<FulfillmentRow & { request_title: string | null; request_status: string | null }>(
+    `SELECT f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id, f.status, f.close_reason, f.created_at, f.updated_at,
+            r.title AS request_title, r.status AS request_status
+     FROM socketrelay_fulfillments f
+     LEFT JOIN socketrelay_requests r ON r.id = f.request_id
+     WHERE f.requester_user_id = $1 OR f.fulfiller_user_id = $1
+     ORDER BY f.created_at DESC`,
     [userId],
   );
 
-  return result.rows.map(mapFulfillmentRow);
+  return result.rows.map((row) => ({
+    ...mapFulfillmentRow(row),
+    requestTitle: row.request_title ?? undefined,
+    requestStatus: (row.request_status as SocketRelayRequestStatus | null) ?? undefined,
+  }));
 }
 
 async function ensureFulfillmentParticipant(fulfillmentId: string, actorUserId: string, isAdmin: boolean): Promise<SocketRelayFulfillment> {
@@ -637,29 +647,58 @@ async function ensureFulfillmentParticipant(fulfillmentId: string, actorUserId: 
   return fulfillment;
 }
 
-export async function closeFulfillment(fulfillmentId: string, actorUserId: string, isAdmin: boolean, reason: string | null): Promise<SocketRelayFulfillment> {
+// Resolve a claimed request. Only the REQUESTER (the person who posted it) or an admin may resolve —
+// a helper can chat on the Direct Line but cannot close someone else's request. The requester picks
+// one of four outcomes; `unsuccessful_reopen` cancels this helper and puts the request back to open
+// so others can offer, while the other three close the request (the outcome is kept in close_reason).
+export async function resolveFulfillment(
+  fulfillmentId: string,
+  actorUserId: string,
+  isAdmin: boolean,
+  outcome: SocketRelayResolveOutcome,
+): Promise<SocketRelayFulfillment> {
   return withDbTransaction(async (client) => {
-    const fulfillment = await ensureFulfillmentParticipant(fulfillmentId, actorUserId, isAdmin);
+    const fulfillment = await getFulfillmentById(fulfillmentId);
+    if (!fulfillment) {
+      throw new Error('fulfillment_not_found');
+    }
+    // The requester is the request owner; the fulfiller (helper) cannot resolve.
+    if (!isAdmin && fulfillment.requesterUserId !== actorUserId) {
+      throw new Error('actor_not_requester');
+    }
+
+    const reopen = outcome === 'unsuccessful_reopen';
+    const fulfillmentStatus = reopen ? 'cancelled' : 'closed';
 
     const updated = await client.query<FulfillmentRow>(
       `UPDATE socketrelay_fulfillments
-       SET status = 'closed', close_reason = $2, updated_at = NOW()
+       SET status = $3, close_reason = $2, updated_at = NOW()
        WHERE id = $1::uuid
        RETURNING id, request_id, requester_user_id, fulfiller_user_id, status, close_reason, created_at, updated_at`,
-      [fulfillmentId, normalizeNullableText(reason)],
+      [fulfillmentId, outcome, fulfillmentStatus],
     );
 
-    await client.query(
-      `UPDATE socketrelay_requests
-       SET status = 'closed', updated_at = NOW()
-       WHERE id = $1::uuid`,
-      [fulfillment.requestId],
-    );
+    if (reopen) {
+      // Put the request back into the open pool for other helpers (mirrors repost).
+      await client.query(
+        `UPDATE socketrelay_requests
+         SET status = 'open', claimed_fulfillment_id = NULL, reopened_count = reopened_count + 1, updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [fulfillment.requestId],
+      );
+    } else {
+      await client.query(
+        `UPDATE socketrelay_requests
+         SET status = 'closed', updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [fulfillment.requestId],
+      );
+    }
 
     await client.query(
       `INSERT INTO socketrelay_request_events (request_id, actor_user_id, event_name, metadata)
-       VALUES ($1::uuid, $2, 'fulfillment_closed', '{}'::jsonb)`,
-      [fulfillment.requestId, actorUserId],
+       VALUES ($1::uuid, $2, $3, jsonb_build_object('outcome', $4::text))`,
+      [fulfillment.requestId, actorUserId, reopen ? 'fulfillment_reopened' : 'fulfillment_closed', outcome],
     );
 
     return mapFulfillmentRow(updated.rows[0]);
