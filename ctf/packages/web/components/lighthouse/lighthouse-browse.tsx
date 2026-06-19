@@ -38,14 +38,24 @@ export function LighthouseBrowse({
                     <Heart size={16} style={{ color: saved.includes(p.id) ? "#EC4899" : "#4B5563" }} fill={saved.includes(p.id) ? "#EC4899" : "none"} />
                   </button>
                 </div>
-                <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {p.city}, {p.state}</div>
-                <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bed size={11} /> {p.bedrooms === 0 ? "Studio" : `${p.bedrooms}bd`}</span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bath size={11} /> {p.bathrooms}ba</span>
-                </div>
+                {([p.city, p.state].filter((s) => s && String(s).trim().length > 0).join(", ")) ? (
+                  <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}><MapPin size={11} /> {[p.city, p.state].filter((s) => s && String(s).trim().length > 0).join(", ")}</div>
+                ) : null}
+                {(Number.isFinite(p.bedrooms) || Number.isFinite(p.bathrooms)) ? (
+                  <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#9CA3AF", marginBottom: 12 }}>
+                    {Number.isFinite(p.bedrooms) ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bed size={11} /> {p.bedrooms === 0 ? "Studio" : `${p.bedrooms}bd`}</span>
+                    ) : null}
+                    {Number.isFinite(p.bathrooms) ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bath size={11} /> {p.bathrooms}ba</span>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>${p.monthlyRent || "—"}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>
+                    {Number.isFinite(p.monthlyRent) ? (
+                      <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>{p.monthlyRent > 0 ? <>${p.monthlyRent}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></> : "Free"}</div>
+                    ) : null}
                     {p.credits && <div style={{ fontSize: 10, color: "#F59E0B" }}>Credits ✓</div>}
                   </div>
                   <button onClick={() => onSelect(p)} style={{ padding: "8px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>View</button>
