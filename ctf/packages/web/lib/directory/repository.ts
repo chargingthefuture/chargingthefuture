@@ -476,7 +476,22 @@ export async function listDirectoryForMember(
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
         WHERE p.is_active = true
-          AND ($1::uuid IS NULL OR p.sector_id = $1::uuid)
+          AND (
+            $1::uuid IS NULL
+            OR p.sector_id = $1::uuid
+            -- A profile's sector is usually implied by its skills (skill -> job title -> sector)
+            -- rather than stored on p.sector_id, which is typically null for carried-over/claimed
+            -- profiles. Match either the profile's own sector or any sector its skills map to, so
+            -- the left-rail sector filter actually returns the people whose skills belong to it.
+            OR EXISTS (
+              SELECT 1
+              FROM directory_profile_skills dps_sec
+              JOIN skills_taxonomy_skills sk_sec ON sk_sec.id = dps_sec.skill_id
+              JOIN skills_taxonomy_job_titles jt_sec ON jt_sec.id = sk_sec.job_title_id
+              WHERE dps_sec.profile_id::text = p.id::text
+                AND jt_sec.sector_id = $1::uuid
+            )
+          )
           AND ($2::uuid IS NULL OR p.job_title_id = $2::uuid)
           AND (
             $3::uuid IS NULL
@@ -521,7 +536,22 @@ export async function listDirectoryForMember(
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
         WHERE p.is_active = true
-          AND ($1::uuid IS NULL OR p.sector_id = $1::uuid)
+          AND (
+            $1::uuid IS NULL
+            OR p.sector_id = $1::uuid
+            -- A profile's sector is usually implied by its skills (skill -> job title -> sector)
+            -- rather than stored on p.sector_id, which is typically null for carried-over/claimed
+            -- profiles. Match either the profile's own sector or any sector its skills map to, so
+            -- the left-rail sector filter actually returns the people whose skills belong to it.
+            OR EXISTS (
+              SELECT 1
+              FROM directory_profile_skills dps_sec
+              JOIN skills_taxonomy_skills sk_sec ON sk_sec.id = dps_sec.skill_id
+              JOIN skills_taxonomy_job_titles jt_sec ON jt_sec.id = sk_sec.job_title_id
+              WHERE dps_sec.profile_id::text = p.id::text
+                AND jt_sec.sector_id = $1::uuid
+            )
+          )
           AND ($2::uuid IS NULL OR p.job_title_id = $2::uuid)
           AND (
             $3::uuid IS NULL
