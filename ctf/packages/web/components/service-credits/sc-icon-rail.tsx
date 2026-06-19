@@ -1,14 +1,18 @@
 "use client";
 
-import { Coins, TrendingUp, BarChart3, MessageSquare, Bell, Settings } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Wallet, TrendingUp, BarChart3 } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
+import { Coins } from "lucide-react";
 import { COLOR, type Tab } from "./sc-shared";
 
+// Every glyph here is a real control. The Coins brand mark sits at the top once (the Wallet tab uses
+// a distinct Wallet icon so the coin no longer appears twice), the three tabs switch the view, and
+// the account menu is the live Clerk control. The old decorative Bell/Settings (no destination) and
+// the chat-styled "Info" tab were removed.
 const TABS: { icon: React.ElementType; key: Tab; label: string }[] = [
-  { icon: Coins, key: "wallet", label: "Wallet" },
+  { icon: Wallet, key: "wallet", label: "Wallet" },
   { icon: TrendingUp, key: "earn", label: "Earn" },
   { icon: BarChart3, key: "economy", label: "Economy" },
-  { icon: MessageSquare, key: "info", label: "Info" },
 ];
 
 const railBtn: React.CSSProperties = {
@@ -18,7 +22,7 @@ const railBtn: React.CSSProperties = {
 export function ServiceCreditsIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
   return (
     <aside style={{ width: 72, background: "#090B0F", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}30`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${COLOR}30`, border: `1px solid ${COLOR}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }} aria-hidden="true">
         <Coins size={20} style={{ color: COLOR }} />
       </div>
       {TABS.map(({ icon: Icon, key, label }) => (
@@ -28,11 +32,9 @@ export function ServiceCreditsIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: 
         </button>
       ))}
       <div style={{ flex: 1 }} />
-      <button type="button" aria-label="Notifications" style={{ ...railBtn, background: "transparent", border: "none", color: "#6B7280" }}><Bell size={18} /></button>
-      <button type="button" aria-label="Settings" style={{ ...railBtn, background: "transparent", border: "none", color: "#6B7280" }}><Settings size={18} /></button>
-      <Avatar style={{ width: 36, height: 36 }}>
-        <AvatarFallback style={{ background: `${COLOR}30`, color: COLOR, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
-      </Avatar>
+      <span title="Your account — sign out or manage your profile" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <UserButton />
+      </span>
     </aside>
   );
 }

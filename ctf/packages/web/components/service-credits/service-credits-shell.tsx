@@ -13,7 +13,6 @@ import { ServiceCreditsSidebar } from "./sc-sidebar";
 import { ServiceCreditsWalletTab } from "./sc-wallet-tab";
 import { ServiceCreditsEarnTab } from "./sc-earn-tab";
 import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
-import { ServiceCreditsInfoTab } from "./sc-info-tab";
 import { ServiceCreditsSendPanel } from "./sc-send-panel";
 
 function CenteredNote({ color, children }: { color: string; children: React.ReactNode }) {
@@ -78,7 +77,6 @@ export function ServiceCreditsShell() {
       {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} />}
       {tab === "earn" && <ServiceCreditsEarnTab />}
       {tab === "economy" && <ServiceCreditsCirculationTab />}
-      {tab === "info" && <ServiceCreditsInfoTab />}
     </>
   );
 
@@ -87,7 +85,6 @@ export function ServiceCreditsShell() {
       { key: "wallet", label: "Wallet" },
       { key: "earn", label: "Earn" },
       { key: "economy", label: "Economy" },
-      { key: "info", label: "Info" },
     ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
@@ -115,7 +112,7 @@ export function ServiceCreditsShell() {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
       <ServiceCreditsIconRail tab={tab} onTab={setTab} />
-      <ServiceCreditsSidebar />
+      <ServiceCreditsSidebar tab={tab} onTab={setTab} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <ShellHeader balance={balance} t={t} />
         {content}

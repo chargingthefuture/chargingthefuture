@@ -1,20 +1,49 @@
-export const EARN_METHODS = [
-  { title: "Complete a Skills Hunt Round", credits: "+200", difficulty: "Medium", color: "#FBBF24" },
-  { title: "Facilitate a Peer Programming Session", credits: "+500", difficulty: "High", color: "#6EE7B7" },
-  { title: "Verify Your Provider Profile", credits: "+50", difficulty: "Easy", color: "#93C5FD" },
-  { title: "Refer a Survivor", credits: "+100/referral", difficulty: "Easy", color: "#22C55E" },
-  { title: "Complete GentlePulse Streak (30 days)", credits: "+150", difficulty: "Medium", color: "#34D399" },
+// How members actually get ServiceCredits (owner-confirmed model, 2026-06-19).
+//
+// The platform itself only funds a few rewards. Everything else is peer-to-peer: you earn the same
+// way you spend — by being paid by another member for a service or good. The earlier list (Peer
+// Programming +500, Verify Provider +50, Referral +100, GentlePulse streak +150) overstated what the
+// operator pays out and was removed.
+export const PLATFORM_EARN_METHODS: {
+  title: string;
+  detail: string;
+  credits: string;
+  note: string;
+  color: string;
+  href: string | null;
+}[] = [
+  {
+    title: 'Verify your account',
+    detail: 'Add your Quora profile so we can confirm you are a real person.',
+    credits: '+100',
+    note: 'one-time',
+    color: '#22C55E',
+    href: '/plugin/unlock',
+  },
+  {
+    title: 'Take part in Skills Hunt',
+    detail: 'Earn credits by competing in Skills Hunt rounds.',
+    credits: 'Per round',
+    note: 'ongoing',
+    color: '#FBBF24',
+    href: '/apps/skills-hunt',
+  },
+  {
+    title: 'Contribute during a fundraiser',
+    detail: 'Pitch in when the community runs a fundraiser. The next one starts in July.',
+    credits: 'Varies',
+    note: 'seasonal',
+    color: '#A855F7',
+    href: null,
+  },
 ];
 
-export const SPEND_OPTIONS = [
-  { title: "Housing (LightHouse)", credits: "Varies", icon: "🏠", color: "#60A5FA" },
-  { title: "Transport (TrustTransport)", credits: "10–50/ride", icon: "📦", color: "#38BDF8" },
-  { title: "Therapy Sessions (Directory)", credits: "100–300", icon: "📇", color: "#93C5FD" },
-  { title: "Trade Services (Foundation)", credits: "50–500", icon: "🪛", color: "#F59E0B" },
-  { title: "Peer-to-peer (SocketRelay)", credits: "Any amount", icon: "🔂", color: "#FB923C" },
-];
-
-export const INFO_MSGS = [
-  { id: 1, text: "ServiceCredits are your utility tokens for the entire Survivor Hub economy. Earn, spend, trade — across all apps." },
-  { id: 2, text: "5 ways to earn right now: Skills Hunt round (+200), Facilitating a cohort (+500), Profile verification (+50), Referrals (+100 each), or 30-day GentlePulse streak (+150).", action: "Verify Profile Now" },
+// Where credits change hands between members. You earn here as the provider and spend here as the
+// buyer — the same transactions, both directions — so this is both how you earn (beyond the platform
+// rewards above) and where you spend.
+export const PEER_TO_PEER_AREAS: { title: string; role: string; icon: string; color: string }[] = [
+  { title: 'Housing — LightHouse', role: 'Host a place / pay a host', icon: '🏠', color: '#60A5FA' },
+  { title: 'Transport — TrustTransport', role: 'Give rides / pay a driver', icon: '📦', color: '#38BDF8' },
+  { title: 'Services — Directory & Foundation', role: 'Offer your skills / hire help', icon: '🪛', color: '#F59E0B' },
+  { title: 'Requests — SocketRelay', role: 'Fulfill requests / ask for help', icon: '🔂', color: '#FB923C' },
 ];
