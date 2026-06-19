@@ -17,6 +17,7 @@ import {
   type SrFulfillmentsResponse,
   type SrListResponse,
   type SrRequest,
+  type SrResolveOutcome,
   type Tab,
 } from "./sr-shared";
 import { SocketRelayLoading } from "./sr-loading";
@@ -74,6 +75,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
   const [chatCredentials, setChatCredentials] = useState<SrChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
@@ -213,6 +215,28 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
     }
   }
 
+  // Only the requester (the person who posted) can resolve; the route enforces this too. On success
+  // we refresh and clear the selection so the resolved/reopened state is reflected.
+  async function handleResolve(fulfillmentId: string, outcome: SrResolveOutcome) {
+    setResolving(true);
+    try {
+      const res = await fetch(`/api/socketrelay/fulfillments/${fulfillmentId}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ outcome }),
+      });
+      if (res.ok) {
+        await fetchData(false);
+        setSelectedFulfillment(null);
+        setChatCredentials(null);
+      }
+    } catch {
+      // A refresh will reflect the latest state.
+    } finally {
+      setResolving(false);
+    }
+  }
+
   if (loading) return <SocketRelayLoading />;
   if (error) {
     return (
@@ -262,7 +286,10 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
         <SocketRelayChat
           fulfillments={fulfillments}
           selected={selectedFulfillment}
+          currentUserId={userId}
+          resolving={resolving}
           onSelect={(f) => void openFulfillmentChat(f)}
+          onResolve={(id, outcome) => void handleResolve(id, outcome)}
           chatLoading={chatLoading}
           chatError={chatError}
           chatCredentials={chatCredentials}

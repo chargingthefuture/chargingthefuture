@@ -45,6 +45,8 @@ export type SrRequest = {
   updatedAtIso: string;
 };
 
+export type SrResolveOutcome = "successful" | "no_longer_needed" | "unsuccessful_reopen" | "unsuccessful_close";
+
 export type SrFulfillment = {
   id: string;
   requestId: string;
@@ -54,6 +56,9 @@ export type SrFulfillment = {
   closeReason: string | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // Joined from the request by /api/socketrelay/my-fulfillments so the chat can show context.
+  requestTitle?: string;
+  requestStatus?: SrRequestStatus;
 };
 
 export type SrListResponse = { ok: boolean; items: SrRequest[]; page: number; pageSize: number; total: number };
