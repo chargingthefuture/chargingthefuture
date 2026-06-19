@@ -1,0 +1,155 @@
+'use client';
+
+import Link from 'next/link';
+import type { CSSProperties, ReactNode } from 'react';
+import { UserButton } from '@clerk/nextjs';
+import { ChevronRight, Database, Home, ShieldCheck, Sparkles, UserCircle } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
+import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
+import { TrustRightRailCard } from '@/components/shared/trust/TrustRightRailCard';
+import type { TrustUserExtension } from 'lib/trust/types';
+
+// One identity, shown wherever it lives. This hub does not store a profile — it routes the member to
+// the real place each part is edited, so they never feel like they are filling in "another profile".
+export function AccountHubShell({ username, trust }: { username: string | null; trust: TrustUserExtension }) {
+  const { theme } = useTheme();
+  const tok = getAccountDataTokens(theme);
+  const handle = username ? `@${username}` : 'Member';
+  const initial = username ? username.charAt(0).toUpperCase() : 'S';
+
+  const cardStyle: CSSProperties = {
+    background: tok.SURFACE,
+    border: `1px solid ${tok.BORDER}`,
+    borderRadius: 14,
+    padding: '18px 20px',
+    marginBottom: 16,
+  };
+  const sectionLabel: CSSProperties = {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: tok.SUBTLE,
+    marginBottom: 10,
+  };
+
+  return (
+    <div style={{ minHeight: '100dvh', overflowY: 'auto', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 64px' }}>
+        <header style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Your account</h1>
+          <p style={{ fontSize: 14, color: tok.SUBTLE, lineHeight: 1.6, margin: 0 }}>
+            You have one identity across Survivor Hub. Here is everywhere it shows up — update each part where it lives.
+          </p>
+        </header>
+
+        {/* Identity — name, username, photo, email (managed by the account provider) */}
+        <section style={cardStyle}>
+          <div style={sectionLabel}>Identity</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: `${tok.BRAND}22`, border: `1px solid ${tok.BRAND}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: tok.BRAND, flexShrink: 0 }}>
+              {initial}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{handle}</div>
+              <div style={{ fontSize: 13, color: tok.SUBTLE }}>Your name, username, photo, and email</div>
+            </div>
+            {/* Clerk's account menu is the one place identity basics are edited. */}
+            <span title="Manage your name, username, photo, and email" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <UserButton />
+            </span>
+          </div>
+        </section>
+
+        {/* Trust — earned through participation, not a form */}
+        <section style={cardStyle}>
+          <div style={{ ...sectionLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={12} /> Trust
+          </div>
+          <TrustRightRailCard trust={trust} />
+          <p style={{ fontSize: 12, color: tok.SUBTLE, lineHeight: 1.6, margin: 0 }}>
+            Trust is earned by taking part — completing your profile, making a transaction, and using the plugins. There is nothing to fill in here.
+          </p>
+        </section>
+
+        {/* Manage each part of the profile where it lives */}
+        <section style={cardStyle}>
+          <div style={sectionLabel}>Manage your profile</div>
+          <AccountLinkRow
+            href="/plugin/unlock"
+            icon={<ShieldCheck size={18} />}
+            title="Verification"
+            desc="Confirm you are a real person with your Quora profile to unlock full access."
+            tok={tok}
+          />
+          <AccountLinkRow
+            href="/apps/directory"
+            icon={<UserCircle size={18} />}
+            title="Your skills profile"
+            desc="Your headline, skills, and how people can reach and pay you."
+            tok={tok}
+          />
+          <AccountLinkRow
+            href="/apps/lighthouse"
+            icon={<Home size={18} />}
+            title="Your housing listings"
+            desc="Places you host and offer to the community."
+            tok={tok}
+            last
+          />
+        </section>
+
+        {/* Data & privacy */}
+        <section style={cardStyle}>
+          <div style={sectionLabel}>Data &amp; privacy</div>
+          <AccountLinkRow
+            href="/account/data"
+            icon={<Database size={18} />}
+            title="Your data &amp; deletion"
+            desc="See everything the platform stores about you, and delete it — one service or your whole account."
+            tok={tok}
+            last
+          />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function AccountLinkRow({
+  href,
+  icon,
+  title,
+  desc,
+  tok,
+  last = false,
+}: {
+  href: string;
+  icon: ReactNode;
+  title: string;
+  desc: string;
+  tok: ReturnType<typeof getAccountDataTokens>;
+  last?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 4px',
+        borderBottom: last ? 'none' : `1px solid ${tok.BORDER}`,
+        textDecoration: 'none',
+        color: tok.TEXT,
+      }}
+    >
+      <span style={{ color: tok.BRAND, flexShrink: 0, display: 'flex' }}>{icon}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{title}</span>
+        <span style={{ display: 'block', fontSize: 12, color: tok.SUBTLE, lineHeight: 1.5 }}>{desc}</span>
+      </span>
+      <ChevronRight size={16} style={{ color: tok.SUBTLE, flexShrink: 0 }} />
+    </Link>
+  );
+}

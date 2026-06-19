@@ -57,10 +57,10 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
       ) : null}
 
       <Link
-        href="/account/data"
+        href="/account"
         className={styles.iconRailBtn}
-        aria-label="Account and data"
-        title="Account & Data — see and delete your data"
+        aria-label="Account"
+        title="Account — your identity, trust, profile, and data"
       >
         <Shield size={18} />
       </Link>
