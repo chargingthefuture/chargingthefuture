@@ -262,11 +262,15 @@ function MobileChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string; 
             <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
           </div>
         ) : null}
-        <div style={{ fontSize: 11, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
-        <div style={{ borderRadius: 10, border: `1px dashed ${BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>No public rooms right now</div>
-          <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
-        </div>
+        {!live.isLive ? (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: SUBTLE, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
+            <div style={{ borderRadius: 10, border: `1px dashed ${BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 4 }}>No public rooms right now</div>
+              <div style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
+            </div>
+          </>
+        ) : null}
       </div>
 
       {/* Locked bottom bar */}

@@ -8,6 +8,13 @@ import { reportError } from 'lib/observability/report';
 // Chyme's promise is "free to listen, sign in to speak", so this route returns whether the room is
 // live and, when it is, a guest Stream identity to receive the audio. Speaking still requires a
 // signed-in account (the guest client joins muted with no speak controls).
+//
+// Abuse surface: this mints a billable Stream guest identity for anonymous callers, so it could be
+// hammered to burn participant-minutes. It is bounded today by (1) only minting when the room is
+// actually live and (2) a short-lived (1h) guest token (see createChymeGuestListenCredentials). A
+// shared-store rate limit / IP throttle is the next step if guest minutes become material — tracked
+// as a documented limitation in ctf/docs/quota-impact/2026-06-19-chyme-guest-listen.md. Not added
+// here to avoid standing up throttling infra in this change.
 export async function GET() {
   try {
     const state = await getPublicRoomLiveState();

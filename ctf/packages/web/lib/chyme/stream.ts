@@ -79,11 +79,15 @@ export async function createChymeGuestListenCredentials(): Promise<StreamJoinCre
   try {
     const guestUserId = `chyme-guest-${crypto.randomUUID()}`;
     await streamClient.upsertUser({ id: guestUserId, name: 'Guest listener' });
+    // This token is handed to anonymous visitors from a public endpoint, so it must expire — an
+    // indefinite token would leave a wide replay/abuse window. One hour is plenty to join and listen;
+    // the page re-fetches a fresh token on reload.
+    const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
     return {
       streamApiKey: streamConfig.apiKey,
       streamChannelId: CHYME_STREAM_CHANNEL_ID,
       streamUserId: guestUserId,
-      streamToken: streamClient.createToken(guestUserId),
+      streamToken: streamClient.createToken(guestUserId, expiresAt),
     };
   } finally {
     await streamClient.disconnectUser();

@@ -190,6 +190,17 @@ async function enqueueServiceCreditsDeletionReclaim(
   );
 }
 
+// Read-only fetch of the one main room. The public, unauthenticated live-state endpoint must NOT
+// write (ensureMainRoom upserts on every call), so it uses this instead — otherwise a public page
+// turns every read into row-write traffic. Returns null if the room has never been created.
+async function getMainRoomReadOnly(client: PoolClient): Promise<RoomRow | null> {
+  const result = await client.query<RoomRow>(
+    `SELECT id, room_key, room_name, call_active FROM chyme_rooms WHERE room_key = $1 LIMIT 1`,
+    [CHYME_MAIN_ROOM_KEY],
+  );
+  return result.rows[0] ?? null;
+}
+
 async function ensureMainRoom(client: PoolClient): Promise<RoomRow> {
   const inserted = await client.query<RoomRow>(
     `
@@ -312,7 +323,11 @@ export async function getPublicRoomLiveState(): Promise<{
   participantCount: number;
 }> {
   return withDbTransaction(async (client) => {
-    const room = await ensureMainRoom(client);
+    const room = await getMainRoomReadOnly(client);
+    if (!room) {
+      // Room not created yet (no member has ever opened Chyme): nothing to listen to.
+      return { roomName: CHYME_MAIN_ROOM_NAME, roomKey: CHYME_MAIN_ROOM_KEY, callActive: false, participantCount: 0 };
+    }
     const participants = await listRoomParticipants(client, room.id);
     return {
       roomName: room.room_name,
