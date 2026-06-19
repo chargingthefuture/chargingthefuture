@@ -3023,10 +3023,32 @@ ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NUL
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
+-- Legacy guard: on databases cloned before `created_at` was a `timestamptz`, this column can be a
+-- plain `timestamp without time zone`. The guarded `ADD COLUMN IF NOT EXISTS` above does NOT retype
+-- an existing column, so it stays the legacy type. That breaks the UTC-day index below: with a
+-- timestamp-without-tz input, `created_at AT TIME ZONE 'UTC'` resolves to the STABLE overload of
+-- `timezone()` and the index build fails with "functions in index expression must be marked
+-- IMMUTABLE" (this is what stalled the Update Neon DB apply). Retype it to `timestamptz` first,
+-- interpreting the stored wall-clock as UTC. The block is conditional so it is a no-op (and does not
+-- shift values) once the column is already `timestamptz`.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'login_events' AND column_name = 'created_at'
+      AND data_type = 'timestamp without time zone'
+  ) THEN
+    ALTER TABLE login_events
+      ALTER COLUMN created_at TYPE TIMESTAMPTZ USING (created_at AT TIME ZONE 'UTC');
+  END IF;
+END
+$$;
 -- At most one row per member per UTC day. This makes the "record a sign-in once per day"
 -- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
 -- concurrent requests for the same member on the same UTC day cannot both write a row. The day
 -- is computed in UTC explicitly so the dedupe does not depend on the database session timezone.
+-- Because `created_at` is guaranteed `timestamptz` by the block above, the `AT TIME ZONE 'UTC'`
+-- expression here resolves to the IMMUTABLE overload of `timezone()` and is index-safe.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
   ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
