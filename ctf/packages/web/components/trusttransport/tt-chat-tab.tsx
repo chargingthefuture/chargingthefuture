@@ -38,13 +38,13 @@ function ChatPane({ selected, creds, loading, error }: { selected: TripRequest |
   if (error) {
     return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14, padding: 24, textAlign: "center" }}>{error}</div>;
   }
-  if (creds) {
+  if (creds?.streamChannelId) {
     return (
       <StreamChatPanel
         streamApiKey={creds.streamApiKey}
         streamToken={creds.streamToken}
         streamUserId={creds.streamUserId}
-        streamChannelId={creds.streamChannelId ?? selected.id}
+        streamChannelId={creds.streamChannelId}
       />
     );
   }

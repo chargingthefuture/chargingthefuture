@@ -16,7 +16,7 @@ const INFO_MSGS = [
 
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
-  "Get quotes from vetted providers",
+  "Get quotes from community providers",
   "Accept a quote and pay with Service Credits",
 ];
 
