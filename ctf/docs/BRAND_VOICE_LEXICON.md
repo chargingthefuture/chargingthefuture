@@ -37,8 +37,10 @@ This document is the canonical source of truth for brand language across:
 
 - Survivors is the default user descriptor in UI and editorial content.
 - Victims is only allowed in legal, statutory, or externally quoted contexts.
-- Use plugin-context naming for chat, for example Chyme chat.
-- Prefer named capabilities over generic labels.
+- Prefer named capabilities over generic labels — never a bare "Chat".
+- **Commons**: the homepage community chat — the shared, many-voices space where members post to everyone. Use "the Commons" (capital C) for the home chat surface; its nav uses a community (people) icon.
+- **Direct Line**: the private, one-to-one chat paired with a single plugin transaction — a LightHouse match, a SocketRelay request, a TrustTransport trip, a Foundation quote. Use "Direct Line" for that paired chat; its nav uses a single-bubble icon. ("LightHouse Direct Line" etc. is fine when the plugin needs naming.)
+- Group rooms are not a Direct Line: a many-people room (for example Chyme's audio-room chat) stays "Room Chat", since Direct Line means one-to-one.
 
 ## Specterati Lexicon
 
@@ -72,7 +74,8 @@ This document is the canonical source of truth for brand language across:
 - gang stalking -> Specterati harassment
 - gang stalker -> Specterati operator
 - victims -> survivors (except legal or statutory contexts)
-- generic chat -> plugin-context phrasing (for example Chyme chat)
+- home/community chat -> the Commons
+- a plugin's one-to-one transaction chat -> Direct Line (for example LightHouse Direct Line)
 - punch list -> remaining work (or task list)
 - console (as the name of an operator/admin screen) -> dashboard
 

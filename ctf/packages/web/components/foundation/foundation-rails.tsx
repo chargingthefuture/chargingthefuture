@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Hammer, Search, Shield, Bell, Settings, MessageSquare, Wrench, FileText,
+  Hammer, Search, Shield, Bell, Settings, MessageCircle, Wrench, FileText,
 } from "lucide-react";
 import { COLOR, TRADES, initials, type FoundationTab, type ProviderView } from "./foundation-ui";
 
@@ -11,7 +11,7 @@ const TABS: { icon: React.ElementType; key: FoundationTab; label: string }[] = [
   { icon: Wrench, key: "browse", label: "Browse" },
   { icon: Shield, key: "offer", label: "Offer skills" },
   { icon: FileText, key: "quotes", label: "Quotes" },
-  { icon: MessageSquare, key: "chat", label: "Chat" },
+  { icon: MessageCircle, key: "chat", label: "Direct Line" },
 ];
 
 export function IconRail({ tab, onTab }: { tab: FoundationTab; onTab: (t: FoundationTab) => void }) {

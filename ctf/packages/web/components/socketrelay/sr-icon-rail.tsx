@@ -1,13 +1,13 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bell, MessageSquare, Plus, Settings, Share2 } from "lucide-react";
+import { Bell, MessageCircle, Plus, Settings, Share2 } from "lucide-react";
 import { COLOR, SUBTLE, type Tab } from "./sr-shared";
 
 const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Share2, key: "feed", label: "Feed" },
   { icon: Plus, key: "post", label: "Post" },
-  { icon: MessageSquare, key: "chat", label: "Chat" },
+  { icon: MessageCircle, key: "chat", label: "Direct Line" },
 ];
 
 export function SocketRelayIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {

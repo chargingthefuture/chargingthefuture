@@ -20,7 +20,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { key: 'browse', label: 'Browse', icon: 'search-outline', activeIcon: 'search' },
   { key: 'matches', label: 'Matches', icon: 'mail-outline', activeIcon: 'mail' },
-  { key: 'chat', label: 'Chat', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
+  { key: 'chat', label: 'Direct Line', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
 ];
 
 export const LighthouseTabs: React.FC = () => {
