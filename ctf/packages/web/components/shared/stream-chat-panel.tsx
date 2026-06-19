@@ -14,6 +14,8 @@ export interface StreamChatPanelProps {
   streamUserId: string;
   streamChannelId: string;
   channelType?: string;
+  /** Plugin brand color used to tint Stream's accent (send button, links, active states). */
+  accentColor?: string;
 }
 
 export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
@@ -22,6 +24,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   streamUserId,
   streamChannelId,
   channelType = 'messaging',
+  accentColor,
 }) => {
   const [client, setClient] = useState<StreamChat | null>(null);
   // The Stream Channel type is generically parameterized and impractical to satisfy here; the value is
@@ -56,16 +59,29 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId, channelType]);
 
-  if (loading) return <div>Loading chat…</div>;
-  if (error) return <div>{error}</div>;
-  if (!client || !channel) return <div>Chat unavailable.</div>;
+  if (loading) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Loading chat…</div>;
+  if (error) return <div style={{ padding: 16, color: '#EF4444', fontSize: 14 }}>{error}</div>;
+  if (!client || !channel) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Chat unavailable.</div>;
+
+  // The whole app is dark, so the chat must use Stream's dark theme (it used to render the light
+  // theme, which looked like a white widget dropped into a dark plugin). The wrapper carries the
+  // theme class and, when given, tints Stream's accent CSS variables to the plugin's brand color.
+  const themeVars = accentColor
+    ? ({
+        '--str-chat__primary-color': accentColor,
+        '--str-chat__active-primary-color': accentColor,
+        '--str-chat__message-send-color': accentColor,
+      } as React.CSSProperties)
+    : {};
 
   return (
-    <Chat client={client} theme="messaging light">
-      <Channel channel={channel}>
-        <MessageList />
-        <MessageInput />
-      </Channel>
-    </Chat>
+    <div className="str-chat__theme-dark" style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}>
+      <Chat client={client}>
+        <Channel channel={channel}>
+          <MessageList />
+          <MessageInput />
+        </Channel>
+      </Chat>
+    </div>
   );
 };

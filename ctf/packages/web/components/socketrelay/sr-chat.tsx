@@ -92,6 +92,7 @@ function ChatPane({
             streamToken={chatCredentials.streamToken as string}
             streamUserId={chatCredentials.streamUserId as string}
             streamChannelId={chatCredentials.streamChannelId}
+            accentColor={COLOR}
           />
         ) : (
           <div style={{ flex: 1 }} />
