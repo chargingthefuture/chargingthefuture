@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LighthouseScreen } from './LighthouseScreen';
+import { LighthouseHost } from './LighthouseHost';
 import { LighthouseMatches } from './LighthouseMatches';
 import { LighthouseStreamTab } from './LighthouseStreamTab';
 
 const COLOR = '#60A5FA';
 const DARK = '#090B0F';
 
-type TabKey = 'browse' | 'matches' | 'chat';
+type TabKey = 'browse' | 'host' | 'matches' | 'chat';
 
 interface NavItem {
   key: TabKey;
@@ -19,6 +20,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { key: 'browse', label: 'Browse', icon: 'search-outline', activeIcon: 'search' },
+  { key: 'host', label: 'List your place', icon: 'home-outline', activeIcon: 'home' },
   { key: 'matches', label: 'Matches', icon: 'mail-outline', activeIcon: 'mail' },
   { key: 'chat', label: 'Direct Line', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
 ];
@@ -30,6 +32,7 @@ export const LighthouseTabs: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.content}>
         {tab === 'browse' && <LighthouseScreen />}
+        {tab === 'host' && <LighthouseHost />}
         {tab === 'matches' && <LighthouseMatches />}
         {tab === 'chat' && <LighthouseStreamTab />}
       </View>
