@@ -66,6 +66,37 @@ contracts:
     dataAccess:
       - socketrelay_requests
       - socketrelay_fulfillments
+      - socketrelay_request_events
+    purpose: fulfillment_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: socketrelay
+    command: socketrelay.fulfillment.resolve
+    version: 1.0.0
+    description: >-
+      Requester-only resolution of a claimed request. The requester picks an outcome:
+      successful / no_longer_needed close the request; unsuccessful_reopen cancels the helper and
+      returns the request to open; unsuccessful_close closes it. Helpers cannot resolve.
+    inputSchema:
+      fulfillmentId:
+        type: string
+        required: true
+      outcome:
+        type: string
+        required: true
+        enum:
+          - successful
+          - no_longer_needed
+          - unsuccessful_reopen
+          - unsuccessful_close
+    outputSchema:
+      status:
+        type: string
+    dataAccess:
+      - socketrelay_requests
+      - socketrelay_fulfillments
+      - socketrelay_request_events
     purpose: fulfillment_lifecycle
     retentionClass: transactional_long_lived
     idempotency: true

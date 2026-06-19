@@ -51,6 +51,19 @@ export type SocketRelayRequestInput = {
 
 export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'cancelled';
 
+// How the requester (the person who posted the request) resolves a claimed request. Only the
+// requester (or an admin) may resolve — a helper can chat but cannot close someone else's request.
+//   successful          -> the help happened; close the request.
+//   no_longer_needed     -> requester no longer needs it; close the request.
+//   unsuccessful_reopen  -> it didn't work out; cancel this helper and put the request back to open
+//                           so others can offer.
+//   unsuccessful_close   -> it didn't work out and the requester is done; close the request.
+export type SocketRelayResolveOutcome =
+  | 'successful'
+  | 'no_longer_needed'
+  | 'unsuccessful_reopen'
+  | 'unsuccessful_close';
+
 export type SocketRelayFulfillment = {
   id: string;
   requestId: string;
@@ -60,6 +73,11 @@ export type SocketRelayFulfillment = {
   closeReason: string | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // Populated by listMyFulfillments (joined from the request) so the chat can show what the
+  // conversation is actually about instead of a bare "Fulfillment <uuid>". Optional because the
+  // single-fulfillment fetch does not join the request.
+  requestTitle?: string;
+  requestStatus?: SocketRelayRequestStatus;
 };
 
 export type SocketRelayMessage = {
