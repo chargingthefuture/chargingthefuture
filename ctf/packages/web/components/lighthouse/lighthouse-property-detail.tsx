@@ -17,13 +17,21 @@ export function LighthousePropertyDetail({ property, onBack }: { property: Prope
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={{ fontSize: 24, fontWeight: 800, color: "#F9FAFB", marginBottom: 8 }}>{l.title || l.id}</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-              <span style={{ background: "rgba(255,255,255,0.05)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12, borderRadius: 8, padding: "3px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} />{l.city}, {l.state}</span>
+              {([l.city, l.state].filter((s) => s && String(s).trim().length > 0).join(", ")) ? (
+                <span style={{ background: "rgba(255,255,255,0.05)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12, borderRadius: 8, padding: "3px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} />{[l.city, l.state].filter((s) => s && String(s).trim().length > 0).join(", ")}</span>
+              ) : null}
               {l.credits && <span style={{ background: "#F59E0B15", color: "#F59E0B", border: "1px solid #F59E0B30", fontSize: 12, borderRadius: 8, padding: "3px 10px" }}>Credits ✓</span>}
             </div>
             <div style={{ display: "flex", gap: 16, marginBottom: 20, fontSize: 14, color: "#9CA3AF", flexWrap: "wrap" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bed size={14} />{l.bedrooms === 0 ? "Studio" : `${l.bedrooms} bed`}</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bath size={14} />{l.bathrooms} bath</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Calendar size={14} />Available {l.availableFromIso ? new Date(l.availableFromIso).toLocaleDateString() : "—"}</span>
+              {Number.isFinite(l.bedrooms) ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bed size={14} />{l.bedrooms === 0 ? "Studio" : `${l.bedrooms} bed`}</span>
+              ) : null}
+              {Number.isFinite(l.bathrooms) ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bath size={14} />{l.bathrooms} bath</span>
+              ) : null}
+              {l.availableFromIso ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Calendar size={14} />Available {new Date(l.availableFromIso).toLocaleDateString()}</span>
+              ) : null}
             </div>
             {l.description && (
               <>
@@ -41,7 +49,9 @@ export function LighthousePropertyDetail({ property, onBack }: { property: Prope
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
             <div style={{ padding: "24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: `1px solid ${COLOR}25` }}>
-              <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>${l.monthlyRent || "—"}<span style={{ fontSize: 14, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>
+              {Number.isFinite(l.monthlyRent) ? (
+                <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>{l.monthlyRent > 0 ? <>${l.monthlyRent}<span style={{ fontSize: 14, color: "#6B7280", fontWeight: 400 }}>/mo</span></> : "Free"}</div>
+              ) : null}
               {l.credits && <div style={{ fontSize: 12, color: "#F59E0B", marginBottom: 16 }}>✓ Accepts Service Credits</div>}
               <button style={{ width: "100%", padding: "12px", borderRadius: 10, background: COLOR, border: "none", color: "#0F1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>Apply Now</button>
               <button style={{ width: "100%", padding: "12px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: `1px solid ${COLOR}35`, color: COLOR, fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><MessageSquare size={14} /> Message Host</button>
