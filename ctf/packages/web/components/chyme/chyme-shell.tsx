@@ -5,6 +5,7 @@ import { ChevronLeft, Radio } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { ChymeLiveShell } from '@/components/chyme/chyme-live-shell';
+import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
 import { getChymeTokens } from './chyme-shared';
 
 type ChymeShellProps = {
@@ -58,34 +59,6 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
           flexShrink: 0,
         }}
       >
-        {/* Back button */}
-        <Link
-          href="/apps"
-          aria-label="Back to apps"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 10,
-            background: t.ACCENT_TINT_10,
-            border: `1px solid ${t.ACCENT_TINT_30}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: t.ACCENT,
-            textDecoration: 'none',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = t.ACCENT_TINT_15;
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = t.ACCENT_TINT_10;
-          }}
-        >
-          <ChevronLeft size={20} />
-        </Link>
-
         {/* Chyme logo/icon */}
         <div
           style={{
@@ -103,6 +76,10 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
         >
           <Radio size={20} />
         </div>
+
+        {/* Shared bottom: back to all apps, account and settings, and the account avatar —
+            identical to every other plugin rail. */}
+        <PluginRailFooter />
       </aside>
 
       {/* Main Chyme component */}

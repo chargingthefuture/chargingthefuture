@@ -325,11 +325,15 @@ function ChymeAudioControls({ onLeave }: { onLeave: () => void }) {
       onToggleMute={() => void microphone.toggle()}
       handRaised={handRaised}
       onToggleHand={() => {
-        // Broadcast a raised-hand reaction to everyone in the room, then clear
-        // the local pressed state shortly after (the reaction is transient).
+        // A real toggle: lower if already raised, raise otherwise. Previously this only ever
+        // raised (and auto-cleared after 2.5s), so pressing "Lower Hand" did nothing.
+        if (handRaised) {
+          void call?.sendReaction({ type: 'lower_hand', emoji_code: ':hand:' });
+          setHandRaised(false);
+          return;
+        }
         void call?.sendReaction({ type: 'raised_hand', emoji_code: ':raised_hand:' });
         setHandRaised(true);
-        window.setTimeout(() => setHandRaised(false), 2500);
       }}
       joinReady
       onLeave={onLeave}
