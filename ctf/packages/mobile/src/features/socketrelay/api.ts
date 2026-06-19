@@ -56,12 +56,48 @@ export function socketRelayHandle(
   return username ? `@${username}` : `user-${id.slice(0, 8)}`;
 }
 
+// How the requester (the person who posted the request) resolves a claimed request. Only the
+// requester (or an admin) may resolve — a helper can chat but cannot close someone else's request.
+// Mirrors the web SocketRelayResolveOutcome / SrResolveOutcome union exactly.
+//   successful          -> the help happened; close the request.
+//   no_longer_needed     -> requester no longer needs it; close the request.
+//   unsuccessful_reopen  -> it didn't work out; cancel this helper and put the request back to open.
+//   unsuccessful_close   -> it didn't work out and the requester is done; close the request.
+export type SocketRelayResolveOutcome =
+  | 'successful'
+  | 'no_longer_needed'
+  | 'unsuccessful_reopen'
+  | 'unsuccessful_close';
+
+export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'cancelled';
+
+// Mirrors the web SrFulfillment. `requestTitle`/`requestStatus` are joined from the request by
+// GET /api/socketrelay/my-fulfillments so the Direct Line can show context; both are optional
+// because a single-fulfillment fetch does not join the request.
+export type SocketRelayFulfillment = {
+  id: string;
+  requestId: string;
+  requesterUserId: string;
+  fulfillerUserId: string;
+  status: SocketRelayFulfillmentStatus;
+  closeReason: string | null;
+  createdAtIso: string;
+  updatedAtIso: string;
+  requestTitle?: string;
+  requestStatus?: SocketRelayRequestStatus;
+};
+
 export type ListRequestsResponse = {
   ok: boolean;
   items: SocketRelayRequest[];
   page: number;
   pageSize: number;
   total: number;
+};
+
+export type ListMyFulfillmentsResponse = {
+  ok: boolean;
+  items: SocketRelayFulfillment[];
 };
 
 export async function listRequests(
@@ -124,4 +160,31 @@ export async function fulfillRequest(requestId: string): Promise<void> {
     body: JSON.stringify({}),
   });
   if (!res.ok) throw new Error('Failed to fulfill request');
+}
+
+// The signed-in member's Direct Lines: every fulfillment they're part of, whether they posted the
+// request (requester) or offered to help (fulfiller). The server joins requestTitle/requestStatus.
+export async function listMyFulfillments(): Promise<ListMyFulfillmentsResponse> {
+  return authedFetchJson<ListMyFulfillmentsResponse>(`${BASE}/my-fulfillments`);
+}
+
+// Resolve (close/reopen) a fulfillment. The server enforces that only the requester (or an admin)
+// may resolve; the mobile UI only surfaces these actions to the requester. Mirrors the web
+// handleResolve: POST /api/socketrelay/fulfillments/:id/close with { outcome }.
+export async function resolveFulfillment(
+  fulfillmentId: string,
+  outcome: SocketRelayResolveOutcome,
+): Promise<void> {
+  const res = await authedFetch(`${BASE}/fulfillments/${fulfillmentId}/close`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify({ outcome }),
+  });
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(payload?.message ?? "Couldn't resolve this request. Please try again.");
+  }
 }

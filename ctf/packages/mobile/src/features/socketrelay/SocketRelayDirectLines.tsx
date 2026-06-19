@@ -1,0 +1,234 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
+import {
+  listMyFulfillments,
+  resolveFulfillment,
+  type SocketRelayFulfillment,
+  type SocketRelayResolveOutcome,
+} from './api';
+import { SocketRelayLoading } from './SocketRelayLoading';
+
+// Design color — matches the SocketRelay shell accent.
+const COLOR = '#FB923C';
+
+// The four outcomes a requester can pick. Mirrors the web ResolveBar (sr-chat.tsx) exactly:
+// labels, colors, and the meaning of each outcome are kept in sync with the web Direct Line.
+const RESOLVE_ACTIONS: {
+  outcome: SocketRelayResolveOutcome;
+  label: string;
+  color: string;
+}[] = [
+  { outcome: 'successful', label: 'Mark successful', color: '#22C55E' },
+  { outcome: 'no_longer_needed', label: 'No longer needed', color: '#6B7280' },
+  { outcome: 'unsuccessful_reopen', label: "Didn't work — reopen for others", color: '#FBBF24' },
+  { outcome: 'unsuccessful_close', label: "Didn't work — close", color: '#EF4444' },
+];
+
+function fulfillmentTitle(f: SocketRelayFulfillment): string {
+  return f.requestTitle && f.requestTitle.trim().length > 0
+    ? f.requestTitle
+    : `Request ${f.id.slice(0, 8)}`;
+}
+
+// One Direct Line card: request title, the member's role (your request vs you're helping), and —
+// for the requester on an active line — the four resolve actions. The helper sees a short note.
+function DirectLineCard({
+  fulfillment,
+  isRequester,
+  resolving,
+  onResolve,
+}: {
+  fulfillment: SocketRelayFulfillment;
+  isRequester: boolean;
+  resolving: boolean;
+  onResolve: (_fulfillmentId: string, _outcome: SocketRelayResolveOutcome) => void;
+}) {
+  const isActive = fulfillment.status === 'active';
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{fulfillmentTitle(fulfillment)}</Text>
+      <Text style={styles.cardRole}>
+        {isRequester
+          ? "Your request — you're talking with the helper."
+          : 'You offered to help — talking with the requester.'}
+      </Text>
+
+      {!isActive ? (
+        <Text style={styles.note}>
+          This request is{' '}
+          {fulfillment.requestStatus === 'open' ? 'open again' : 'closed'}.
+        </Text>
+      ) : !isRequester ? (
+        <Text style={styles.note}>
+          Only the person who posted this request can close it.
+        </Text>
+      ) : (
+        <View style={styles.actionRow}>
+          {RESOLVE_ACTIONS.map((a) => (
+            <TouchableOpacity
+              key={a.outcome}
+              style={[
+                styles.actionBtn,
+                { backgroundColor: `${a.color}14`, borderColor: `${a.color}40` },
+                resolving && styles.actionBtnDisabled,
+              ]}
+              onPress={() => onResolve(fulfillment.id, a.outcome)}
+              disabled={resolving}
+              accessibilityRole="button"
+              accessibilityLabel={a.label}
+            >
+              <Text style={[styles.actionBtnText, { color: a.color }]}>{a.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// The Direct Lines tab: lists the signed-in member's fulfillments and surfaces requester-only
+// resolve controls. `currentUserId` decides requester-vs-helper (from useAuth().user.id).
+export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: string }) {
+  const [fulfillments, setFulfillments] = useState<SocketRelayFulfillment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
+  const load = useCallback((showLoading = true) => {
+    if (showLoading) setLoading(true);
+    setError(null);
+    listMyFulfillments()
+      .then((res) => setFulfillments(res.items))
+      .catch(() => setError('Failed to load your Direct Lines.'))
+      .finally(() => {
+        if (showLoading) setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleResolve = useCallback(
+    async (fulfillmentId: string, outcome: SocketRelayResolveOutcome) => {
+      setResolving(true);
+      setResolveError(null);
+      try {
+        await resolveFulfillment(fulfillmentId, outcome);
+        // Refresh so the resolved/reopened state is reflected; do not show the full loading screen.
+        load(false);
+      } catch (e) {
+        setResolveError(
+          e instanceof Error ? e.message : "Couldn't resolve this request. Please try again.",
+        );
+      } finally {
+        setResolving(false);
+      }
+    },
+    [load],
+  );
+
+  if (loading) {
+    return <SocketRelayLoading />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centeredMsg}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (fulfillments.length === 0) {
+    return (
+      <View style={styles.centeredMsg}>
+        <Text style={styles.emptyTitle}>No Direct Lines yet</Text>
+        <Text style={styles.emptyBody}>
+          When you offer to help on a request — or someone offers to help with yours — a private
+          Direct Line opens here.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={styles.pad}>
+        {resolving ? (
+          <View style={styles.resolvingRow}>
+            <ActivityIndicator size="small" color={COLOR} />
+            <Text style={styles.resolvingText}>Resolving…</Text>
+          </View>
+        ) : null}
+        {resolveError ? <Text style={styles.errorText}>{resolveError}</Text> : null}
+        {fulfillments.map((f) => (
+          <DirectLineCard
+            key={f.id}
+            fulfillment={f}
+            isRequester={Boolean(currentUserId && f.requesterUserId === currentUserId)}
+            resolving={resolving}
+            onResolve={(id, outcome) => void handleResolve(id, outcome)}
+          />
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1 },
+  pad: { padding: 16 },
+  card: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+    marginBottom: 10,
+  },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: '#F0FDF4', marginBottom: 4, lineHeight: 20 },
+  cardRole: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
+  note: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  actionBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  actionBtnDisabled: { opacity: 0.6 },
+  actionBtnText: { fontSize: 12, fontWeight: '600' },
+  centeredMsg: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyTitle: { fontSize: 15, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
+  emptyBody: {
+    fontSize: 13,
+    color: '#4B5563',
+    textAlign: 'center',
+    maxWidth: 320,
+    lineHeight: 20,
+  },
+  errorText: { color: '#F43F5E', textAlign: 'center', marginBottom: 12 },
+  retryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    backgroundColor: `${COLOR}20`,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+  },
+  retryBtnText: { color: COLOR, fontWeight: '700', fontSize: 13 },
+  resolvingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  resolvingText: { color: COLOR, fontSize: 13, fontWeight: '600' },
+});
