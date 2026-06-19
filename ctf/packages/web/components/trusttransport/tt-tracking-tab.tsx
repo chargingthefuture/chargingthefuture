@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Navigation, MessageSquare } from "lucide-react";
+import { Car, Navigation, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { COLOR, ttSettlementLabel, type TripRequest } from "./tt-shared";
 
@@ -19,7 +19,7 @@ function TrackingEmpty({ onBook }: { onBook: () => void }) {
         <Navigation size={20} style={{ color: "rgba(249,115,22,0.4)" }} />
       </div>
       <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No active trips</div>
-      <div style={{ fontSize: 13, color: "#4B5563" }}>Book a ride to see live tracking here.</div>
+      <div style={{ fontSize: 13, color: "#4B5563" }}>Book a ride to follow its status here.</div>
       <button type="button" onClick={onBook} style={{ padding: "10px 20px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
         Book a Ride
       </button>
@@ -49,11 +49,11 @@ function TrackingCard({ request, onChat }: { request: TripRequest; onChat: (r: T
       </div>
       <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center", color: "#9CA3AF", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
         {awaitingDriver
-          ? "Waiting for a driver to accept. The live map appears once someone's on the way."
-          : "Live map — tracking in progress"}
+          ? "Waiting for a driver to accept your request."
+          : "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics."}
       </div>
       <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        <MessageSquare size={14} /> {awaitingDriver ? "Message (opens when matched)" : "Chat"}
+        <MessageCircle size={14} /> {awaitingDriver ? "Direct Line (opens when matched)" : "Direct Line"}
       </button>
     </div>
   );
@@ -70,7 +70,7 @@ export function TrustTransportTrackingTab({
 }) {
   return (
     <div style={{ flex: 1, padding: "24px", overflowY: "auto" }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>Live Tracking</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", marginBottom: 20 }}>Tracking</div>
       {requests.length === 0
         ? <TrackingEmpty onBook={onBook} />
         : requests.map((r) => <TrackingCard key={r.id} request={r} onChat={onChat} />)}

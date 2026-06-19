@@ -40,14 +40,14 @@ function DesktopTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: stri
       <div style={{ padding: '48px 64px 32px', display: 'flex', gap: 80 }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <span style={{ padding: '4px 14px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 12, color: COLOR, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-            Safety-first transport
+            Community transport
           </span>
           <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
             Rides, deliveries, and food —<br />
-            <span style={{ color: COLOR }}>trauma-informed drivers only</span>
+            <span style={{ color: COLOR }}>from the community</span>
           </h1>
           <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 480 }}>
-            Every driver is background-checked and trauma-informed. Your pickup location is never stored permanently. Pay with Service Credits.
+            Drivers are fellow community members offering mutual aid. Your pickup location is never stored permanently. Pay with Service Credits.
           </p>
           <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
             {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
@@ -108,7 +108,7 @@ function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: strin
           <Car size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>TrustTransport</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Rides, package delivery, and food — all with trauma-informed, background-checked providers. Pay with Service Credits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Rides, package delivery, and food from fellow community members. Pay with Service Credits.</p>
 
         {/* Service type cards */}
         <div style={{ display: 'flex', gap: 10 }}>
