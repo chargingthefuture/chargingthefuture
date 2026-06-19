@@ -23,8 +23,10 @@ import { deriveTagChips, requestTags, suggestTags } from './tags';
 import { SocketRelayTagInput } from './SocketRelayTagInput';
 import { SocketRelayLoading } from './SocketRelayLoading';
 import { SocketRelayEmpty } from './SocketRelayEmpty';
+import { SocketRelayDirectLines } from './SocketRelayDirectLines';
 import { CurrencySelect } from '../currency';
 import type { Currency } from '../currency';
+import { useAuth } from '../../auth/auth-context';
 
 // Design color — from MobileSocketRelay.tsx mockup
 const COLOR = '#FB923C';
@@ -32,9 +34,11 @@ const COLOR = '#FB923C';
 // SocketRelayRequest model (title/details/tags/city/status only).
 // Those mockup UI elements are omitted per real-data-only policy.
 
-type NavKey = 'feed' | 'post';
+type NavKey = 'feed' | 'post' | 'lines';
 
 export function SocketRelay() {
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const [activeNav, setActiveNav] = useState<NavKey>('feed');
   const [requests, setRequests] = useState<SocketRelayRequest[]>([]);
   const [myRequestIds, setMyRequestIds] = useState<string[]>([]);
@@ -445,14 +449,18 @@ export function SocketRelay() {
 
       {/* Body */}
       <View style={styles.body}>
-        {activeNav === 'feed' ? renderFeed() : renderPost()}
+        {activeNav === 'feed'
+          ? renderFeed()
+          : activeNav === 'lines'
+            ? <SocketRelayDirectLines currentUserId={currentUserId} />
+            : renderPost()}
       </View>
 
       {/* Bottom nav */}
       <View style={styles.bottomNav}>
-        {(['feed', 'post'] as NavKey[]).map((key) => {
-          const label = key === 'feed' ? 'Feed' : 'Post';
-          const icon = key === 'feed' ? '↗' : '+';
+        {(['feed', 'lines', 'post'] as NavKey[]).map((key) => {
+          const label = key === 'feed' ? 'Feed' : key === 'lines' ? 'Lines' : 'Post';
+          const icon = key === 'feed' ? '↗' : key === 'lines' ? '💬' : '+';
           const active = activeNav === key;
           return (
             <TouchableOpacity
