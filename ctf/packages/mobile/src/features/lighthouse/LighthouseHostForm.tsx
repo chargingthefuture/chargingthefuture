@@ -79,7 +79,7 @@ function toInputPayload(form: HostForm): PropertyCreateInput {
 interface FieldProps {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (_value: string) => void;
   placeholder?: string;
   keyboardType?: 'default' | 'numeric';
   multiline?: boolean;
@@ -104,7 +104,7 @@ const Field: React.FC<FieldProps> = ({ label, value, onChange, placeholder, keyb
 interface Props {
   submitting: boolean;
   error: string | null;
-  onSubmit: (input: PropertyCreateInput) => void;
+  onSubmit: (_input: PropertyCreateInput) => void;
 }
 
 export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmit }) => {
