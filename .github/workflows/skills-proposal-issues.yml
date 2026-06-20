@@ -1,0 +1,53 @@
+name: Skills Hunt — Propose Skill Promotions
+
+# Turns free-text "proposed" skills from accepted Skills Hunt nominations into GitHub
+# issues that propose adding them to the canonical skills taxonomy, each with an
+# AI-suggested sector + occupation. The pipeline ONLY files issues — it never writes
+# the taxonomy. A unique tracking row per distinct skill keeps reruns and overlapping
+# schedules from filing duplicate issues. See ctf/scripts/proposeSkillPromotions.mjs.
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 */6 * * *"   # every 6 hours, at :17 to avoid a top-of-hour stampede
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  propose-skill-promotions:
+    name: File skill-promotion issues from accepted nominations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # DATABASE_URL is a runtime secret; Infisical is the single source of truth
+      # (this matches how bug-reports-create-issues.yml gets the database connection).
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # The script needs only the Postgres client. Install it standalone so we do not
+      # pay for a full monorepo install on every run.
+      - name: Install Postgres client
+        run: npm install --no-save pg@8
+
+      - name: Propose skill promotions
+        env:
+          # DATABASE_URL and ANTHROPIC_API_KEY are injected by the Infisical step above
+          # (Infisical is the single source of truth for those runtime secrets).
+          # GITHUB_TOKEN is the automatic GitHub Actions token (issues: write granted above).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node ctf/scripts/proposeSkillPromotions.mjs
