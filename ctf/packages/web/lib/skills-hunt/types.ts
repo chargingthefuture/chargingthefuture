@@ -33,6 +33,10 @@ export type SkillsHuntRound = {
   startsAtIso: string;
   endsAtIso: string;
   scoringConfig: Record<string, unknown>;
+  // Whole ServiceCredits minted to the scout when a nomination is accepted (0 = no reward).
+  rewardCreditsPerAccept: number;
+  // Optional ceiling on total reward credits one scout can earn in this round (null = no cap).
+  rewardPerUserRoundCap: number | null;
   createdByUserId: string;
   updatedByUserId: string;
   createdAtIso: string;
@@ -46,6 +50,8 @@ export type SkillsHuntRoundInput = {
   startsAtIso: string;
   endsAtIso: string;
   scoringConfig?: Record<string, unknown>;
+  rewardCreditsPerAccept?: number;
+  rewardPerUserRoundCap?: number | null;
 };
 
 export type SkillsHuntUrlValidationResult = 'valid' | 'invalid' | 'dead';
@@ -72,6 +78,8 @@ export type SkillsHuntSubmission = {
   pointsAwarded: number;
   participationPoints: number;
   creditGranted: boolean;
+  creditAmount: number;
+  creditGrantedAtIso: string | null;
   urlValidationResult: SkillsHuntUrlValidationResult | null;
   urlValidationCheckedAtIso: string | null;
   scoreBreakdown: Record<string, unknown>;

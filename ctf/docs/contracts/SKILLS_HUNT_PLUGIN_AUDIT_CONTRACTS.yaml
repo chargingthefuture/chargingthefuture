@@ -4,7 +4,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.round.create
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: campaign_governance
     policyDecision:
       status: allow_or_deny
@@ -26,7 +26,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.round.update
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: campaign_governance
     policyDecision:
       status: allow_or_deny
@@ -112,7 +112,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.submission.review
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: moderation_and_scoring
     policyDecision:
       status: allow_or_deny
@@ -128,6 +128,38 @@ auditEvents:
       reviewAction: review_action
     requestId: request_identifier
     traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # ServiceCredits reward minted to a scout on an accepted nomination. Triggered
+  # by skills-hunt.submission.review (accept) and recorded in the ServiceCredits
+  # admin audit trail; mirrors the Unlock approval reward audit.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: service-credits.governance.mint.grant.skills-hunt
+    commandVersion: 1.0.0
+    purpose: contribution_reward
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submissions
+      - service_credits_governance_events
+      - service_credits_admin_audit_trail
+    # Recorded via insertServiceCreditsAudit into service_credits_admin_audit_trail,
+    # so the shape is targetType/targetId + a metadata object (not the targetContext
+    # block the skills-hunt audit log uses). targetId is the governance event id.
+    targetType: governance_event
+    targetId: governance_event_identifier
+    metadata:
+      skillsHuntSubmissionId: submission_identifier
+      roundId: round_identifier
+      targetUserId: scout_identifier
+      amount: credit_amount
+      idempotencyKey: idempotency_key
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
@@ -334,3 +366,5 @@ changelog:
     change: Initial Skills Hunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
   - date: 2026-05-12
     change: Added audit event templates for skills-hunt.submission.report and skills-hunt.profile.delete.
+  - date: 2026-06-20
+    change: Bumped commandVersion to 1.1.0 for skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review (ServiceCredits reward additions), and added the service-credits.governance.mint.grant.skills-hunt audit event for accept-reward minting.

@@ -13,6 +13,7 @@ import { DirectoryProfileDetail } from "./directory-profile-detail";
 import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
 import { DirectoryBrowse } from "./directory-browse";
 import { DirectoryRightPanel } from "./directory-right-panel";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   title: "Help grow the Directory",
@@ -217,6 +218,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             </Link>
             <BookOpen size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Directory</span>
+            <PluginAdminButton href="/admin/directory" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ position: "relative" }}>
@@ -302,6 +304,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
             ✓ Verified Network
           </Badge>
+          <PluginAdminButton href="/admin/directory" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 
         {content}

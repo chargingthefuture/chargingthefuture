@@ -14,8 +14,9 @@ import { TrustTransportBookTab } from "./tt-book-tab";
 import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
-function ShellHeader({ t }: { t: TrustTransportTokens }) {
+function ShellHeader({ t, isAdmin }: { t: TrustTransportTokens; isAdmin?: boolean }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Car size={18} style={{ color: t.ACCENT }} />
@@ -26,11 +27,12 @@ function ShellHeader({ t }: { t: TrustTransportTokens }) {
       <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
         Community
       </Badge>
+      <PluginAdminButton href="/admin/trusttransport" isAdmin={isAdmin} accent={t.ACCENT} />
     </header>
   );
 }
 
-export function TrustTransportShell() {
+export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modes, setModes] = useState<Mode[]>([]);
@@ -234,6 +236,7 @@ export function TrustTransportShell() {
             </Link>
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>TrustTransport</span>
+            <PluginAdminButton href="/admin/trusttransport" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -251,7 +254,7 @@ export function TrustTransportShell() {
       <TrustTransportIconRail tab={tab} onTab={setTab} />
       <TrustTransportSidebar rideTypes={rideTypes} rideType={rideType} onRideType={setRideType} requests={requests} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader t={t} />
+        <ShellHeader t={t} isAdmin={isAdmin} />
         {content}
       </div>
       <TrustTransportRightPanel requestCount={requests.length} modeCount={modes.length || rideTypes.length} onBook={() => setTab("book")} />
