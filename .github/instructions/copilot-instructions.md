@@ -204,62 +204,46 @@ After that both go green. The whole fix costs about one title edit, one descript
 empty commit. If you can set the PR body at creation time, put the Conventional-Commit title and the
 `Parity Status:` line in up front so both pass on the first run and no empty commit is needed.
 
-### CodeRabbit Review Labeling (self-triage)
+### Code Review (CodeRabbit disabled)
 
-CodeRabbit auto-review is gated on the `coderabbit` label (see `.coderabbit.yaml`), and the
-account is on the **free tier**, so reviews are a scarce resource. Agents self-triage and apply the
-label **only when the change is genuinely complex/risky**. Cadence is no longer paced by hand — a
-scheduled workflow (`.github/workflows/pace-coderabbit-reviews.yml`) promotes one labelled draft to
-ready-for-review per hour, so label every qualifying PR and let the workflow drain the queue.
+**CodeRabbit review is DISABLED (owner directive, 2026-06-20): the owner uses a different
+code-review tool.** Do **not** apply the `coderabbit` label, do **not** open PRs as drafts to wait
+for a CodeRabbit review, and do **not** comment `@coderabbitai`. The `.coderabbit.yaml` auto-review is
+off and the CLI/pacing workflows (`coderabbit-review.yml`, `pace-coderabbit-reviews.yml`) have been
+removed.
 
-- **Label `coderabbit`** when the PR touches any of: money / ServiceCredits ledger, auth/authz, CSRF,
-  data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
-  whole new plugin.
-- **Do NOT label** pure restyles, rule-116 decompositions, icon swaps, or doc-sync PRs with **no
-  behavior change** — these are low-risk and waste the quota.
-- Apply the label via the GitHub MCP (`issue_write`) right after opening the PR. To force a one-off
-  review on an unlabeled PR, comment `@coderabbitai review` instead of labeling.
+#### Two lanes by risk
 
-#### Two lanes: low-risk PRs finish themselves; risky PRs wait for CodeRabbit + the owner's merge
+The repo has **auto-merge** and **auto-delete head branches** turned on. Pick the lane by risk:
 
-The repo has **auto-merge** and **auto-delete head branches** turned on. That lets most PRs complete
-with no human in the loop. Pick the lane by risk:
-
-**Low-risk lane (default — the bulk of readiness-pass work).** Restyles, copy/color/spacing, responsive
-layout of shipped screens, rule-116 decompositions, docs, refactors, type/lint/test changes — anything
-that does **not** hit the `coderabbit` trigger list above. For these:
+**Low-risk lane (default — the bulk of work).** Restyles, copy/color/spacing, responsive layout of
+shipped screens, rule-116 decompositions, docs, refactors, type/lint/test changes. For these:
 
 - Open the PR **ready for review** (`draft: false`), with the Conventional-Commit title and the
   `Parity Status:` line set at creation so the title/parity checks pass on the first run.
-- **Turn on auto-merge** right after opening (GitHub MCP `enable_pr_auto_merge`, merge method squash
-  or merge per repo default). CI runs, and when it's green GitHub merges the PR and deletes the branch.
-  Fully hands-off — the owner can step away.
-- Do **not** label these `coderabbit`.
+- **Turn on auto-merge** right after opening (GitHub MCP `enable_pr_auto_merge`, merge method per repo
+  default). CI runs, and when it's green GitHub merges the PR and deletes the branch — hands-off.
 
-**Review lane (risky).** Anything on the `coderabbit` trigger list (money/ledger, auth, CSRF, schema/
-migrations, new or changed API contracts, new stateful logic, a whole new plugin). For these:
+**Owner-review lane (risky).** Anything that touches money / ServiceCredits ledger, auth/authz, CSRF,
+data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
+whole new plugin. For these:
 
-- Open the PR **as a draft** and apply the `coderabbit` label. Then **stop** — do not mark it ready and
-  do **not** enable auto-merge.
-- The hourly pacing workflow promotes the oldest such draft to ready-for-review, which triggers
-  CodeRabbit at the free-tier rate. After the review posts and CI is green, **the owner reads
-  CodeRabbit's findings and merges** (owner decision, 2026-06-05: risky changes are not auto-merged —
-  they get human eyes first). Branch cleanup is still automatic.
-- **Never treat a pending/absent CodeRabbit review as a blocker.** Keep building the backlog; a labelled
-  draft simply waits its turn in the hourly queue and then for the owner's merge.
+- Open the PR **ready for review** (not a draft), with the title and `Parity Status:` line set at
+  creation, but do **not** enable auto-merge — leave it for the owner to review with their tool and
+  merge (owner decision, 2026-06-05: risky changes get human eyes first). Branch cleanup is still
+  automatic on merge.
+- **Never treat a pending review as a blocker.** Keep building the backlog; a risky PR simply waits for
+  the owner's review and merge.
 
-Net effect: **low-risk = ready + auto-merge (completes itself); risky = draft + label (workflow makes it
-ready hourly, owner merges after reading the review).**
+Net effect: **low-risk = ready + auto-merge (completes itself); risky = ready, owner reviews and merges.**
 
-#### If a PR merges with unaddressed CodeRabbit actionable findings, open a follow-up PR (always)
+#### If a risky PR merges before its review findings were applied, open a follow-up PR (always)
 
-CodeRabbit's actionable findings are wanted, not optional. If a PR is merged (often accidentally, via
-auto-merge or a quick owner merge) **before** its CodeRabbit actionable items were applied, the agent
-**must open a small follow-up PR** that applies the still-valid findings — never leave them dropped on
-the floor (owner directive, 2026-06-19). Verify each finding against the merged code first: apply the
-ones that still hold, skip any that no longer apply with a one-line reason, keep the change minimal,
-and reference the original PR. (Worked example: #624 merged with five findings → follow-up #628 applied
-the resolve atomicity guard, error handling, a11y button, contract `dataAccess`, and the wording fix.)
+Review findings are wanted, not optional. If a risky PR is merged (often via a quick owner merge)
+**before** its review findings were applied, the agent **must open a small follow-up PR** that applies
+the still-valid findings — never leave them dropped on the floor (owner directive, 2026-06-19). Verify
+each finding against the merged code first: apply the ones that still hold, skip any that no longer
+apply with a one-line reason, keep the change minimal, and reference the original PR.
 
 ### Updating `PRODUCTION_READINESS_PLAN.md` (avoid change-log merge conflicts)
 
