@@ -68,7 +68,7 @@ function SubmittedState({ onReset, onViewLeaderboard }: { onReset: () => void; o
 
 function WhyThisWorks() {
   return (
-    <div style={{ width: 260, flexShrink: 0 }}>
+    <div style={{ width: 260, flexShrink: 0, maxWidth: "100%" }}>
       <div style={{ padding: "18px", borderRadius: 14, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 12 }}>Why this works</div>
         {WHY_ITEMS.map((item, i) => (
@@ -126,7 +126,7 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
 function NominationForm({ form }: { form: ScoutFormModel }) {
   const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && !form.submitting;
   return (
-    <div style={{ flex: 1, maxWidth: 580 }}>
+    <div style={{ flex: "1 1 320px", maxWidth: 580 }}>
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Nominate a Survivor</div>
         <div style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>Think of someone you believe may be a survivor — you don&apos;t need to be 100% certain. Their Quora profile helps verify their identity, and their skills join our economy.</div>
@@ -178,7 +178,7 @@ export function SkillsHuntScoutTab({
   if (noActiveRound) return <NoActiveRound />;
   if (submitted) return <SubmittedState onReset={onReset} onViewLeaderboard={() => onNavTab("leaderboard")} />;
   return (
-    <div style={{ display: "flex", gap: 24 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
       <NominationForm form={form} />
       <WhyThisWorks />
     </div>
