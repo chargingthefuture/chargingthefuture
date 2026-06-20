@@ -46,7 +46,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     try {
       const res = await fetch(`/api/skills-hunt/rounds/${activeRound.id}/submissions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
           fullName: fullName.trim(),
           bio: bio.trim(),
