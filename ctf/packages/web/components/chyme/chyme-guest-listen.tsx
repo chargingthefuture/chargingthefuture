@@ -20,9 +20,11 @@ import { CHYME_CALL_TYPE, toCallIdForChyme } from './chyme-audio-room';
 // signing in.
 export function ChymeGuestListen({
   credentials,
+  participantCount,
   accent = '#22C55E',
 }: {
   credentials: StreamJoinCredentials;
+  participantCount: number;
   accent?: string;
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
@@ -76,7 +78,7 @@ export function ChymeGuestListen({
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <GuestAudioSink accent={accent} />
+        <GuestAudioSink accent={accent} participantCount={participantCount} />
       </StreamCall>
     </StreamVideo>
   );
@@ -90,10 +92,14 @@ function GuestNote({ accent, text }: { accent: string; text: string }) {
   );
 }
 
-function GuestAudioSink({ accent }: { accent: string }) {
+function GuestAudioSink({ accent, participantCount }: { accent: string; participantCount: number }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
-  const count = participants.length;
+  // Show the authoritative server-side count (the same number the room list shows). The Stream client
+  // participant list counts every connected identity — including the guest's own ephemeral session and
+  // any guest sessions Stream has not yet timed out — which over-counts and is inconsistent with the
+  // rest of the UI. The Stream list is still used below, but only to play each participant's audio.
+  const count = participantCount;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: '#F0FDF4', fontSize: 13, fontWeight: 600 }}>
       <Radio size={16} style={{ color: accent }} />
