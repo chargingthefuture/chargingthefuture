@@ -134,7 +134,7 @@ function DesktopChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string;
               <div style={{ marginBottom: 16 }}>
                 {live.roomName ? <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 2 }}>{live.roomName}</div> : null}
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
-                <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
+                <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={COLOR} />
               </div>
             ) : null}
             <div style={{ borderRadius: 12, border: `1px solid ${COLOR}25`, background: `${COLOR}08`, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -254,7 +254,7 @@ function MobileChymePublic({ signInUrl, verifyUrl, live }: { signInUrl: string; 
           <div>
             {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 2 }}>{live.roomName}</div> : null}
             <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
-            <ChymeGuestListen credentials={live.credentials} accent={COLOR} />
+            <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={COLOR} />
           </div>
         ) : null}
         {!live.isLive ? (
