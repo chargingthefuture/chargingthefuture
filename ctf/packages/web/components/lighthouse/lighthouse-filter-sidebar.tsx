@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { COLOR, type Property } from "./shared";
+import { COLOR, listingAcceptsCredits, type Property } from "./shared";
 
 export type ListingFilter = "all" | "available" | "credits";
 
@@ -23,7 +23,7 @@ export function countAvailableNow(properties: Property[]): number {
 
 export function filterProperties(properties: Property[], filter: ListingFilter): Property[] {
   if (filter === "available") return properties.filter(isAvailableNow);
-  if (filter === "credits") return properties.filter((p) => p.credits);
+  if (filter === "credits") return properties.filter(listingAcceptsCredits);
   return properties;
 }
 
@@ -40,7 +40,7 @@ export function LighthouseFilterSidebar({
   filter: ListingFilter;
   onFilter: (filter: ListingFilter) => void;
 }) {
-  const creditsCount = properties.filter((p) => p.credits).length;
+  const creditsCount = properties.filter(listingAcceptsCredits).length;
   const rents = properties.map((p) => p.monthlyRent).filter((r) => typeof r === "number" && r > 0);
   const avgRent = rents.length > 0 ? Math.round(rents.reduce((a, b) => a + b, 0) / rents.length) : null;
 

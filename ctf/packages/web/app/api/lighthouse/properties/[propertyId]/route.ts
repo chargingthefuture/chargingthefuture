@@ -30,6 +30,10 @@ function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
     bedrooms: typeof body.bedrooms === 'number' ? body.bedrooms : null,
     bathrooms: typeof body.bathrooms === 'number' ? body.bathrooms : null,
     monthlyRent: typeof body.monthlyRent === 'number' ? body.monthlyRent : null,
+    rentCurrency: typeof body.rentCurrency === 'string' ? body.rentCurrency : null,
+    acceptedCurrencies: Array.isArray(body.acceptedCurrencies)
+      ? body.acceptedCurrencies.filter((code): code is string => typeof code === 'string')
+      : null,
     availableFromIso: typeof body.availableFromIso === 'string' ? body.availableFromIso : null,
     amenities: body.amenities,
     houseRules: body.houseRules,

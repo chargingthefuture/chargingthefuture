@@ -217,10 +217,14 @@ CREATE TABLE IF NOT EXISTS chyme_room_members (
   username TEXT NULL,
   avatar_url TEXT NULL,
   role TEXT NOT NULL CHECK (role IN ('speaker', 'listener')),
+  hand_raised BOOLEAN NOT NULL DEFAULT FALSE,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, user_id)
 );
+-- Persistent raise-hand state: a raised hand must stay up for everyone until the member
+-- lowers it or leaves. Guarded for legacy DBs that pre-date the column.
+ALTER TABLE IF EXISTS chyme_room_members ADD COLUMN IF NOT EXISTS hand_raised BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_room_id ON chyme_room_members(room_id);
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_user_id ON chyme_room_members(user_id);
 CREATE TABLE IF NOT EXISTS chyme_messages (

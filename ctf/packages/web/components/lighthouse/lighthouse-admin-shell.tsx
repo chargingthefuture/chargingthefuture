@@ -71,6 +71,9 @@ function propertyToInput(p: LighthouseProperty, isActive: boolean): LighthousePr
     bedrooms: p.bedrooms,
     bathrooms: p.bathrooms,
     monthlyRent: p.monthlyRent,
+    // Preserve currency choices on hide/unhide so a full-record resend doesn't drop them.
+    rentCurrency: p.rentCurrency,
+    acceptedCurrencies: p.acceptedCurrencies,
     availableFromIso: p.availableFromIso,
     amenities: p.amenities,
     houseRules: p.houseRules,

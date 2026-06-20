@@ -1,0 +1,90 @@
+import { NextResponse } from 'next/server';
+import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
+import { logChymeAudit } from 'lib/chyme/audit';
+import { setRoomMemberHandRaised } from 'lib/chyme/repository';
+import { reportError } from 'lib/observability/report';
+import { requireChymeAccess } from '../_lib';
+
+// Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing
+// the raised hand until they lower it (or leave). Stream reactions are transient and auto-clear, so
+// they cannot carry this state; this stores it server-side and returns the refreshed room.
+type HandRequestBody = {
+  raised?: unknown;
+};
+
+export async function POST(request: Request) {
+  const gate = await requireChymeAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  let body: HandRequestBody;
+  try {
+    body = (await request.json()) as HandRequestBody;
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: CHYME_ERROR_CODE.invalidPayload,
+        message: 'Invalid JSON payload.',
+      },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body.raised !== 'boolean') {
+    logChymeAudit({
+      pluginId: 'chyme',
+      command: 'chyme.hand',
+      actorId: gate.auth.userId,
+      status: 'deny',
+      reason: 'invalid_raised_flag',
+      target: { roomKey: 'chyme-main-room' },
+      result: 'failure',
+      errorCategory: 'validation',
+    });
+
+    return NextResponse.json(
+      {
+        ok: false,
+        code: CHYME_ERROR_CODE.invalidPayload,
+        message: 'Field "raised" must be a boolean.',
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const room = await setRoomMemberHandRaised(gate.identity, body.raised);
+
+    logChymeAudit({
+      pluginId: 'chyme',
+      command: 'chyme.hand',
+      actorId: gate.auth.userId,
+      status: 'allow',
+      reason: 'approved_user_or_admin',
+      target: { roomId: room.roomId, roomKey: room.roomKey },
+      result: 'success',
+      errorCategory: null,
+    });
+
+    return NextResponse.json({ ok: true, room }, { status: 200 });
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'hand_toggle', extra: { userId: gate.auth.userId } });
+    logChymeAudit({
+      pluginId: 'chyme',
+      command: 'chyme.hand',
+      actorId: gate.auth.userId,
+      status: 'allow',
+      reason: 'approved_user_or_admin',
+      target: { roomKey: 'chyme-main-room' },
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
+    return NextResponse.json(
+      { ok: false, code: CHYME_ERROR_CODE.internalError, message: 'Unable to update raised hand.' },
+      { status: 500 },
+    );
+  }
+}
