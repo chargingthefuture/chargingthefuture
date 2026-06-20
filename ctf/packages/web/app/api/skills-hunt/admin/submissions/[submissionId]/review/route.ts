@@ -134,6 +134,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
       command: 'skills-hunt.submission.review',
+      commandVersion: '1.1.0',
       status: 'allow',
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',
@@ -166,6 +167,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
       command: 'skills-hunt.submission.review',
+      commandVersion: '1.1.0',
       status: 'allow',
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',

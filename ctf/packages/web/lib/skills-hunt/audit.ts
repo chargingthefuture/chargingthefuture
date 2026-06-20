@@ -10,6 +10,9 @@ type SkillsHuntAuditEvent = {
   result: 'success' | 'failure';
   errorCategory: string | null;
   metadata?: Record<string, unknown>;
+  // Version of the command being audited. Defaults to the v1 baseline; callers
+  // for a bumped command pass its current version so the log matches the contract.
+  commandVersion?: string;
 };
 
 export function logSkillsHuntAudit(event: SkillsHuntAuditEvent): void {
@@ -19,7 +22,7 @@ export function logSkillsHuntAudit(event: SkillsHuntAuditEvent): void {
     actorId: event.actorId,
     pluginId: 'skills-hunt',
     command: event.command,
-    commandVersion: '1.0.0',
+    commandVersion: event.commandVersion ?? '1.0.0',
     policyDecision: {
       status: event.status,
       reason: event.reason,
