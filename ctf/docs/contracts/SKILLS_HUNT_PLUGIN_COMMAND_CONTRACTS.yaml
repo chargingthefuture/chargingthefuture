@@ -1,8 +1,8 @@
 contracts:
   - pluginId: skills-hunt
     command: skills-hunt.round.create
-    version: 1.0.0
-    description: Create a Skills Hunt round with scoring config, schedule window, and governance metadata.
+    version: 1.1.0
+    description: Create a Skills Hunt round with scoring config, ServiceCredits reward config, schedule window, and governance metadata.
     inputSchema:
       name:
         type: string
@@ -19,6 +19,14 @@ contracts:
       scoringConfig:
         type: object
         required: false
+      rewardCreditsPerAccept:
+        type: integer
+        required: false
+        description: Whole ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
+      rewardPerUserRoundCap:
+        type: integer
+        required: false
+        description: Optional ceiling on total reward credits one scout can earn in this round. Null = no cap.
     outputSchema:
       roundId:
         type: string
@@ -35,8 +43,8 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.round.update
-    version: 1.0.0
-    description: Update round schedule, status, and scoring controls for an existing Skills Hunt campaign.
+    version: 1.1.0
+    description: Update round schedule, status, scoring controls, and ServiceCredits reward config for an existing Skills Hunt campaign.
     inputSchema:
       roundId:
         type: string
@@ -59,6 +67,14 @@ contracts:
       scoringConfig:
         type: object
         required: false
+      rewardCreditsPerAccept:
+        type: integer
+        required: false
+        description: Whole ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
+      rewardPerUserRoundCap:
+        type: integer
+        required: false
+        description: Optional ceiling on total reward credits one scout can earn in this round. Null = no cap.
     outputSchema:
       roundId:
         type: string
@@ -169,8 +185,12 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.submission.review
-    version: 1.0.0
-    description: Apply moderator/admin review decision including accept/reject/edit/flag and scoring updates.
+    version: 1.1.0
+    description: >-
+      Apply moderator/admin review decision including accept/reject/edit/flag and scoring updates.
+      On accept, when the round has a ServiceCredits reward configured, mint that reward to the
+      scout via the ServiceCredits treasury (best-effort, idempotent per submission, bounded by the
+      per-scout round cap and the per-period mint budget). The mint never fails the review decision.
     inputSchema:
       submissionId:
         type: string
@@ -191,12 +211,23 @@ contracts:
         type: string
       pointsAwarded:
         type: integer
+      creditGranted:
+        type: boolean
+      creditAmount:
+        type: integer
       reviewedAt:
         type: string
     dataAccess:
       - skills_hunt_submissions
       - skills_hunt_leaderboard
       - skills_hunt_audit_log
+      # ServiceCredits reward on accept (mirrors the Unlock approval reward).
+      - service_credits_wallets
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+      - service_credits_admin_audit_trail
     purpose: moderation_and_scoring
     retentionClass: audit_long_lived
     idempotency: true

@@ -112,7 +112,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.submission.review
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: moderation_and_scoring
     policyDecision:
       status: allow_or_deny
@@ -126,6 +126,35 @@ auditEvents:
       roundId: round_identifier
       submissionId: submission_identifier
       reviewAction: review_action
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # ServiceCredits reward minted to a scout on an accepted nomination. Triggered
+  # by skills-hunt.submission.review (accept) and recorded in the ServiceCredits
+  # admin audit trail; mirrors the Unlock approval reward audit.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: service-credits.governance.mint.grant.skills-hunt
+    commandVersion: 1.0.0
+    purpose: contribution_reward
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submissions
+      - service_credits_governance_events
+      - service_credits_admin_audit_trail
+    targetContext:
+      roundId: round_identifier
+      submissionId: submission_identifier
+      governanceEventId: governance_event_identifier
+      targetUserId: scout_identifier
+      amount: credit_amount
     requestId: request_identifier
     traceId: trace_identifier
     result:
