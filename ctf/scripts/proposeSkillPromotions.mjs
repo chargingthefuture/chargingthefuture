@@ -305,6 +305,10 @@ async function main() {
     await ensureLabel();
 
     for (const candidate of candidates) {
+      // Set once we own the dedupe row; cleared once the issue is fully recorded. If the
+      // classify/issue steps throw in between, the catch deletes this row so the skill is
+      // retried on the next run instead of being permanently skipped by the unique index.
+      let rollbackRowId = null;
       try {
         // 4a. Win the dedupe race FIRST. If another run already inserted this skill,
         //     this returns no row and we skip — no duplicate issue is ever filed.
@@ -323,6 +327,7 @@ async function main() {
         }
 
         const rowId = insertResult.rows[0].id;
+        rollbackRowId = rowId;
 
         // 3. Classify (only after we own the row, so we never burn API calls on dupes).
         const { sector, occupation, rationale } = await classifySkill(
@@ -354,12 +359,25 @@ async function main() {
           [rowId, number, url, sector, occupation],
         );
 
+        rollbackRowId = null;
         proposed += 1;
       } catch (error) {
         failed += 1;
         console.error(
           `proposeSkillPromotions: failed to process "${candidate.skill_label}": ${error?.message || error}`,
         );
+        // Roll back the dedupe row (only if the issue was never filed) so a transient
+        // classify/issue failure retries next run rather than dropping the skill forever.
+        if (rollbackRowId) {
+          try {
+            await client.query(
+              'DELETE FROM skills_hunt_proposed_skill_promotions WHERE id = $1 AND issue_number IS NULL',
+              [rollbackRowId],
+            );
+          } catch {
+            // Best-effort cleanup; if it fails the row simply stays and is skipped later.
+          }
+        }
       }
     }
   } finally {
