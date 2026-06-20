@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import { Menu } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { HubChannelInfo } from '../../lib/hub/types';
@@ -127,6 +129,27 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [recentPluginSlugs, setRecentPluginSlugs] = useState<string[]>([]);
   const [pluginUsageCounts, setPluginUsageCounts] = useState<Record<string, number>>({});
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Self-heal an out-of-date signed-out render. A back/forward navigation can restore a
+  // cached "guest" version of this route (the server resolved the visitor before
+  // the session was known, or the route's cached payload predates sign-in), even
+  // though Clerk's client session shows the member is signed in. Without this, the
+  // member lands on the signed-out shell and has to refresh by hand. When the
+  // server shell says guest (isAuthenticated false) but the client knows otherwise,
+  // re-fetch this route's server components so the signed-in shell replaces the
+  // cached one. Guarded with a ref so it runs once and cannot loop if the server
+  // genuinely returns guest.
+  const router = useRouter();
+  const { isAuthenticated: clientAuthenticated, isLoading: authLoading } = useAuth();
+  const didReconcileAuth = useRef(false);
+
+  useEffect(() => {
+    if (authLoading || didReconcileAuth.current) return;
+    if (!isAuthenticated && clientAuthenticated) {
+      didReconcileAuth.current = true;
+      router.refresh();
+    }
+  }, [authLoading, isAuthenticated, clientAuthenticated, router]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
