@@ -162,7 +162,6 @@ export function LighthouseShell({ userId, username }: { userId: string; username
               <ChevronLeft size={20} />
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>🏠 LightHouse</span>
-            <span style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>✓ Private</span>
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -199,7 +198,6 @@ export function LighthouseShell({ userId, username }: { userId: string; username
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>🏠 LightHouse — Safe Housing</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Verified listings · Privacy-first</div>
           </div>
-          <span style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>✓ Privacy Protected</span>
         </header>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto", minHeight: 0 }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bath, Bed, Calendar, Lock, MapPin, MessageSquare, Pencil } from "lucide-react";
+import { Bath, Bed, Calendar, MapPin, MessageSquare, Pencil } from "lucide-react";
 import { BG, COLOR, type Property } from "./shared";
 
 export function LighthousePropertyDetail({
@@ -50,13 +50,6 @@ export function LighthousePropertyDetail({
                 <div style={{ fontSize: 14, color: "#9CA3AF", lineHeight: 1.6, marginBottom: 24 }}>{l.description}</div>
               </>
             )}
-            <div style={{ padding: "16px", borderRadius: 12, background: `${COLOR}08`, border: `1px solid ${COLOR}20` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <Lock size={12} style={{ color: COLOR }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: COLOR }}>Privacy Protected</span>
-              </div>
-              <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6 }}>Your exact location is never shown to hosts until you confirm a booking.</div>
-            </div>
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
             <div style={{ padding: "24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: `1px solid ${COLOR}25` }}>
