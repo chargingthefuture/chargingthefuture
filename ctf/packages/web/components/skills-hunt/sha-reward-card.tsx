@@ -10,6 +10,19 @@ const field: React.CSSProperties = {
 };
 const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 5 };
 
+// Load the current card. A 404 means "not configured yet" → null (start empty);
+// any other non-OK response throws so the caller can surface the message.
+async function fetchRewardCard(): Promise<SkillsHuntFeatureRewardCard | null> {
+  const res = await fetch("/api/skills-hunt/feature-reward-card");
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? "Unable to load reward card.");
+  }
+  const data = (await res.json()) as { card: SkillsHuntFeatureRewardCard | null };
+  return data.card ?? null;
+}
+
 export function SkillsHuntAdminRewardCard() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -27,23 +40,13 @@ export function SkillsHuntAdminRewardCard() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/skills-hunt/feature-reward-card");
-        // A 404 means the card has not been configured yet — start from empty fields.
-        if (res.status === 404) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as { message?: string } | null;
-          throw new Error(body?.message ?? "Unable to load reward card.");
-        }
-        const data = (await res.json()) as { card: SkillsHuntFeatureRewardCard | null };
-        if (!cancelled && data.card) {
-          setTitle(data.card.title);
-          setDescription(data.card.description);
-          setCtaLabel(data.card.ctaLabel);
-          setCtaUrl(data.card.ctaUrl);
-          setIsActive(data.card.isActive);
+        const card = await fetchRewardCard();
+        if (!cancelled && card) {
+          setTitle(card.title);
+          setDescription(card.description);
+          setCtaLabel(card.ctaLabel);
+          setCtaUrl(card.ctaUrl);
+          setIsActive(card.isActive);
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Unable to load reward card.");

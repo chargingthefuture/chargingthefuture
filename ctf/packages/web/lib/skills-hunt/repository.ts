@@ -222,6 +222,10 @@ function toIso(value: Date): string {
   return value.toISOString();
 }
 
+function toIsoOrNull(value: Date | null | undefined): string | null {
+  return value ? toIso(value) : null;
+}
+
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
@@ -361,18 +365,18 @@ function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
     participationPoints: row.participation_points ?? 0,
     creditGranted: row.credit_granted ?? false,
     creditAmount: Number(row.credit_amount ?? 0),
-    creditGrantedAtIso: row.credit_granted_at ? toIso(row.credit_granted_at) : null,
+    creditGrantedAtIso: toIsoOrNull(row.credit_granted_at),
     urlValidationResult: row.url_validation_result ?? null,
-    urlValidationCheckedAtIso: row.url_validation_checked_at ? toIso(row.url_validation_checked_at) : null,
+    urlValidationCheckedAtIso: toIsoOrNull(row.url_validation_checked_at),
     scoreBreakdown: normalizeJsonObject(row.score_breakdown),
     reviewAction: row.review_action,
     reviewNotes: row.review_notes,
     reviewedByUserId: row.reviewed_by_user_id,
-    reviewedAtIso: row.reviewed_at ? toIso(row.reviewed_at) : null,
+    reviewedAtIso: toIsoOrNull(row.reviewed_at),
     editHistory: mapEditHistory(row.edit_history),
-    editedAtIso: row.edited_at ? toIso(row.edited_at) : null,
-    deletedAtIso: row.deleted_at ? toIso(row.deleted_at) : null,
-    directoryProfileGeneratedAtIso: row.directory_profile_generated_at ? toIso(row.directory_profile_generated_at) : null,
+    editedAtIso: toIsoOrNull(row.edited_at),
+    deletedAtIso: toIsoOrNull(row.deleted_at),
+    directoryProfileGeneratedAtIso: toIsoOrNull(row.directory_profile_generated_at),
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
   };
@@ -468,6 +472,10 @@ function isValidRewardField(value: number | null | undefined): boolean {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
+function hasValidRewardConfig(input: SkillsHuntRoundInput): boolean {
+  return isValidRewardField(input.rewardCreditsPerAccept) && isValidRewardField(input.rewardPerUserRoundCap);
+}
+
 export function validateRoundInput(input: SkillsHuntRoundInput): boolean {
   const name = normalizeText(input.name ?? '');
   const description = normalizeNullableText(input.description);
@@ -477,8 +485,7 @@ export function validateRoundInput(input: SkillsHuntRoundInput): boolean {
     && name.length <= SKILLS_HUNT_MAX_ROUND_NAME_LENGTH
     && (!description || description.length <= SKILLS_HUNT_MAX_ROUND_DESCRIPTION_LENGTH)
     && validStatus
-    && isValidRewardField(input.rewardCreditsPerAccept)
-    && isValidRewardField(input.rewardPerUserRoundCap)
+    && hasValidRewardConfig(input)
     && isIsoDatetime(input.startsAtIso)
     && isIsoDatetime(input.endsAtIso)
     && Date.parse(input.endsAtIso) > Date.parse(input.startsAtIso);

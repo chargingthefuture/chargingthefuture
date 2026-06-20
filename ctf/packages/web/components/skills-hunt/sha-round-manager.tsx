@@ -53,6 +53,24 @@ function parseWholeNonNegative(value: string): number | null {
   return Math.floor(n);
 }
 
+// Validate the form and assemble the request payload, or return a message to show.
+function buildPayloadOrError(v: FormValues): { error: string } | { payload: SubmitPayload } {
+  if (!v.name.trim()) return { error: "Name is required." };
+  const startIso = new Date(v.startsAt).toISOString();
+  const endIso = new Date(v.endsAt).toISOString();
+  if (Number.isNaN(Date.parse(startIso)) || Number.isNaN(Date.parse(endIso))) return { error: "Start and end must be valid dates." };
+  if (new Date(endIso) <= new Date(startIso)) return { error: "End must be after start." };
+  const perAccept = parseWholeNonNegative(v.rewardPerAccept) ?? 0;
+  const cap = parseWholeNonNegative(v.rewardCap);
+  if (Number.isNaN(perAccept) || Number.isNaN(cap)) return { error: "Reward amounts must be whole, non-negative numbers." };
+  return {
+    payload: {
+      name: v.name.trim(), description: v.description.trim() || null, status: v.status,
+      startsAtIso: startIso, endsAtIso: endIso, rewardCreditsPerAccept: perAccept, rewardPerUserRoundCap: cap,
+    },
+  };
+}
+
 function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
   initial: FormValues; submitLabel: string; onSubmit: (payload: SubmitPayload) => Promise<void>; onCancel?: () => void;
 }) {
@@ -63,20 +81,11 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
 
   async function submit() {
     setError(null);
-    if (!v.name.trim()) { setError("Name is required."); return; }
-    const startIso = new Date(v.startsAt).toISOString();
-    const endIso = new Date(v.endsAt).toISOString();
-    if (Number.isNaN(Date.parse(startIso)) || Number.isNaN(Date.parse(endIso))) { setError("Start and end must be valid dates."); return; }
-    if (new Date(endIso) <= new Date(startIso)) { setError("End must be after start."); return; }
-    const perAccept = parseWholeNonNegative(v.rewardPerAccept) ?? 0;
-    const cap = parseWholeNonNegative(v.rewardCap);
-    if (Number.isNaN(perAccept) || Number.isNaN(cap)) { setError("Reward amounts must be whole, non-negative numbers."); return; }
+    const result = buildPayloadOrError(v);
+    if ("error" in result) { setError(result.error); return; }
     setSaving(true);
     try {
-      await onSubmit({
-        name: v.name.trim(), description: v.description.trim() || null, status: v.status,
-        startsAtIso: startIso, endsAtIso: endIso, rewardCreditsPerAccept: perAccept, rewardPerUserRoundCap: cap,
-      });
+      await onSubmit(result.payload);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save round.");
       setSaving(false);

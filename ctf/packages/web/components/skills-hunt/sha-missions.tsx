@@ -24,6 +24,20 @@ function Labeled({ id, text, children }: { id: string; text: string; children: R
   return <div><label style={label} htmlFor={id}>{text}</label>{children}</div>;
 }
 
+function missionValidationError(title: string, goalTarget: number, isSector: boolean, sectorName: string): string | null {
+  if (!title.trim()) return "Title is required.";
+  if (!Number.isFinite(goalTarget) || goalTarget < 1) return "Goal target must be at least 1.";
+  if (isSector && !sectorName.trim()) return "Sector name is required for this goal type.";
+  return null;
+}
+
+function missionGoalMetadata(isSector: boolean, sectorName: string, sectorId: string): Record<string, unknown> {
+  if (!isSector) return {};
+  const base: Record<string, unknown> = { sectorName: sectorName.trim() };
+  if (sectorId.trim()) base.sectorId = sectorId.trim();
+  return base;
+}
+
 function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArchive: (id: string) => void }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
@@ -59,13 +73,10 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
 
   async function submit() {
     setError(null);
-    if (!title.trim()) return setError("Title is required.");
-    if (!Number.isFinite(goalTarget) || goalTarget < 1) return setError("Goal target must be at least 1.");
     const isSector = goalType === "count_skills_in_sector";
-    if (isSector && !sectorName.trim()) return setError("Sector name is required for this goal type.");
-    const goalMetadata: Record<string, unknown> = isSector
-      ? { sectorName: sectorName.trim(), ...(sectorId.trim() ? { sectorId: sectorId.trim() } : {}) }
-      : {};
+    const validationError = missionValidationError(title, goalTarget, isSector, sectorName);
+    if (validationError) return setError(validationError);
+    const goalMetadata = missionGoalMetadata(isSector, sectorName, sectorId);
     setSaving(true);
     try {
       const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/missions`, {
