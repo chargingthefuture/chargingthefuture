@@ -1,32 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireUnlockUserAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { normalizeQuoraProfileUrl, requireUnlockUserAccess, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
 type SubmissionBody = {
   quoraProfileUrl?: string;
 };
-
-function normalizeQuoraProfileUrl(rawUrl: string): string | null {
-  try {
-    const parsed = new URL(rawUrl.trim());
-    const host = parsed.hostname.toLowerCase();
-    if (host !== 'quora.com' && host !== 'www.quora.com') {
-      return null;
-    }
-
-    if (!parsed.pathname.startsWith('/profile/')) {
-      return null;
-    }
-
-    parsed.hash = '';
-    parsed.search = '';
-    return parsed.toString();
-  } catch (error) {
-    reportError(error, { area: 'unlock', op: 'submission' });
-    return null;
-  }
-}
 
 export async function POST(request: Request) {
   const gate = await requireUnlockUserAccess();

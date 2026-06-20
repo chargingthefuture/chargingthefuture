@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw } from 'lucide-react';
+import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw, Pencil } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
 import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
 
@@ -75,6 +75,12 @@ export function UnlockAdminShell({
   const [error, setError] = useState<string | null>(null);
   const [reconciling, setReconciling] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Inline URL editor state: which submission is being edited, the draft URL, a per-editor error,
+  // and whether the save request is in flight.
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editUrl, setEditUrl] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingUrl, setSavingUrl] = useState(false);
 
   const visible = tab === 'pending' ? submissions.filter((s) => s.reviewStatus === 'pending') : submissions;
   // Approved submissions whose 100-credit reward never landed (incentive_granted_at still null). These
@@ -141,6 +147,47 @@ export function UnlockAdminShell({
       setError('Network error. Try again.');
     } finally {
       setBusyId(null);
+    }
+  }
+
+  function startEditUrl(s: UnlockSubmission) {
+    setEditingId(s.id);
+    setEditUrl(s.quoraProfileUrl);
+    setEditError(null);
+  }
+
+  function cancelEditUrl() {
+    setEditingId(null);
+    setEditUrl('');
+    setEditError(null);
+  }
+
+  async function saveUrl(id: number) {
+    setSavingUrl(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/unlock/admin/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ quoraProfileUrl: editUrl }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; submission?: UnlockSubmission; reason?: string; code?: string; message?: string }
+        | null;
+      if (!res.ok || !data?.ok || !data.submission) {
+        setEditError(data?.message ?? data?.reason ?? data?.code ?? `Save failed (${res.status}).`);
+        return;
+      }
+      // Reflect the corrected (re-normalized) URL from the server, then refresh so any
+      // server-rendered view stays in sync. Close the editor.
+      const saved = data.submission;
+      setSubmissions((prev) => prev.map((s) => (s.id === id ? saved : s)));
+      cancelEditUrl();
+      router.refresh();
+    } catch {
+      setEditError('Network error. Try again.');
+    } finally {
+      setSavingUrl(false);
     }
   }
 
@@ -219,11 +266,40 @@ export function UnlockAdminShell({
               <div key={s.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <Key size={14} color={COLOR} />
-                  <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: TEXT, flex: 1, wordBreak: 'break-all' }}>
-                    {s.quoraProfileUrl}
-                  </a>
-                  <StatusPill status={s.reviewStatus} />
-                  {s.reviewStatus === 'approved' ? <RewardPill grantedAt={s.incentiveGrantedAt} /> : null}
+                  {editingId === s.id ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                          type="url"
+                          value={editUrl}
+                          onChange={(e) => setEditUrl(e.target.value)}
+                          aria-label="Quora profile URL"
+                          disabled={savingUrl}
+                          style={{ flex: 1, minWidth: 200, padding: '6px 10px', borderRadius: 8, background: BG, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13 }}
+                        />
+                        <button type="button" disabled={savingUrl} onClick={() => saveUrl(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: `${COLOR}1A`, border: `1px solid ${COLOR}55`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: savingUrl ? 'not-allowed' : 'pointer', opacity: savingUrl ? 0.6 : 1 }}>
+                          <CheckCircle size={13} /> {savingUrl ? 'Saving…' : 'Save'}
+                        </button>
+                        <button type="button" disabled={savingUrl} onClick={cancelEditUrl} style={{ padding: '6px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: savingUrl ? 'not-allowed' : 'pointer', opacity: savingUrl ? 0.6 : 1 }}>
+                          Cancel
+                        </button>
+                      </div>
+                      {editError ? (
+                        <div role="alert" style={{ fontSize: 12, color: '#EF4444' }}>{editError}</div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <>
+                      <a href={s.quoraProfileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: TEXT, flex: 1, wordBreak: 'break-all' }}>
+                        {s.quoraProfileUrl}
+                      </a>
+                      <button type="button" aria-label="Edit URL" title="Edit URL" onClick={() => startEditUrl(s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        <Pencil size={12} /> Edit
+                      </button>
+                      <StatusPill status={s.reviewStatus} />
+                      {s.reviewStatus === 'approved' ? <RewardPill grantedAt={s.incentiveGrantedAt} /> : null}
+                    </>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 4 }}>User: {s.userId}</div>
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 10 }}>

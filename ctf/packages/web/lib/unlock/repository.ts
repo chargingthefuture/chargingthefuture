@@ -320,6 +320,46 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
   return mapUnlockSubmission(result.rows[0]);
 }
 
+// Admin correction path: overwrite the stored Quora profile URL (and its normalized form) for a
+// single submission, e.g. when a member submitted a link with a typo. Does not touch review status,
+// access tier, or the verification window. Returns the updated submission, or null if no row matched.
+export async function updateUnlockSubmissionQuoraUrl(
+  submissionId: number,
+  quoraProfileUrl: string,
+  quoraProfileUrlNormalized: string,
+): Promise<UnlockSubmission | null> {
+  const result = await queryDb<UnlockSubmissionRow>(
+    `UPDATE unlock_verification_submissions
+     SET
+       quora_profile_url = $2,
+       quora_profile_url_normalized = $3,
+       updated_at = NOW()
+     WHERE id = $1
+     RETURNING
+       id,
+       user_id,
+       quora_profile_url,
+       quora_profile_url_normalized,
+       review_status,
+       access_tier,
+       unlock_window_expires_at,
+       reminder_stage,
+       reviewed_by_user_id,
+       reviewed_at,
+       review_note,
+       incentive_granted_at,
+       created_at,
+       updated_at`,
+    [submissionId, quoraProfileUrl, quoraProfileUrlNormalized],
+  );
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return mapUnlockSubmission(result.rows[0]);
+}
+
 export async function markUnlockIncentiveGranted(submissionId: number): Promise<boolean> {
   const result = await queryDb<{ id: number }>(
     `UPDATE unlock_verification_submissions
