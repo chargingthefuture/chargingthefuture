@@ -1,6 +1,6 @@
 'use client';
 
-import type { RefObject } from 'react';
+import { useMemo, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { Lock, MessageSquare } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
@@ -34,6 +34,14 @@ export type ChymeRoomViewProps = {
 export function ChymeRoomView(props: ChymeRoomViewProps) {
   const { room, currentUser, showChat, onToggleChat, joinInfo, joinReady } = props;
   const isMobile = useIsMobile();
+
+  // Clerk user ids of members whose hand is raised, derived from the polled room state. Passed to
+  // the audio room so each stage tile shows a persistent raised hand for everyone but the local
+  // member (who is driven by their own instant toggle).
+  const raisedHandUserIds = useMemo(
+    () => new Set(room.participants.filter((p) => p.handRaised).map((p) => p.userId)),
+    [room.participants],
+  );
 
   const chatPanel = (
     <ChymeChatPanel
@@ -82,6 +90,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           chatPanel={chatPanel}
           isMobile={isMobile}
           onLeave={props.onLeave}
+          raisedHandUserIds={raisedHandUserIds}
         />
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden' }}>
