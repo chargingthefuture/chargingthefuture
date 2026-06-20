@@ -2,9 +2,22 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { insertSkillsHuntAudit, reviewSubmission, validateReviewInput } from 'lib/skills-hunt/repository';
+import {
+  getRound,
+  insertSkillsHuntAudit,
+  markSkillsHuntCreditGranted,
+  reviewSubmission,
+  sumGrantedCreditsForUserInRound,
+  validateReviewInput,
+} from 'lib/skills-hunt/repository';
+import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
 import type { SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+
+// System actor recorded on the ServiceCredits mint for an accepted nomination —
+// mirrors Unlock's 'unlock-incentive-system'. The human reviewer is captured
+// separately in the admin audit trail.
+const SKILLS_HUNT_INCENTIVE_ACTOR_ID = 'skills-hunt-incentive-system';
 
 type ReviewBody = Partial<SkillsHuntSubmissionReviewInput>;
 
@@ -72,6 +85,66 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       targetId: submission.id,
       metadata: { action: input.action },
     });
+
+    // ServiceCredits reward on accept — mirrors the Unlock approval reward.
+    // The review decision is already committed and audited above; the mint is a
+    // best-effort follow-up so a ledger outage never fails the accept. It is
+    // idempotent (credit_granted guard + ledger idempotency key), pays only when
+    // the round has a per-accept reward configured, and respects the per-scout
+    // round cap. Both admins and moderators can accept, so either can trigger the
+    // configured reward; the owner controls payout via the per-round amount.
+    if (submission.status === 'accepted' && !submission.creditGranted) {
+      try {
+        const round = await getRound(submission.roundId);
+        const perAccept = round?.rewardCreditsPerAccept ?? 0;
+        if (round && perAccept > 0) {
+          const cap = round.rewardPerUserRoundCap;
+          const alreadyPaid =
+            cap === null ? 0 : await sumGrantedCreditsForUserInRound(round.id, submission.submitterUserId);
+          const withinCap = cap === null || alreadyPaid + perAccept <= cap;
+          if (withinCap) {
+            const idempotencyKey = `skills-hunt-accept-submission-${submission.id}`;
+            const grant = await mintGrant({
+              actorId: SKILLS_HUNT_INCENTIVE_ACTOR_ID,
+              targetUserId: submission.submitterUserId,
+              amount: perAccept,
+              grantReason: 'skills_hunt_accept_reward',
+              governanceTicketId: `skills-hunt:submission:${submission.id}`,
+              idempotencyKey,
+            });
+
+            const recorded = await markSkillsHuntCreditGranted(submission.id, perAccept);
+            if (recorded) {
+              submission.creditGranted = true;
+              submission.creditAmount = perAccept;
+              submission.creditGrantedAtIso = new Date().toISOString();
+
+              await insertServiceCreditsAudit({
+                actorId: gate.auth.userId,
+                command: 'service-credits.governance.mint.grant.skills-hunt',
+                policyStatus: 'allow',
+                reason: 'skills_hunt_accept_reward',
+                targetType: 'governance_event',
+                targetId: grant.governanceEventId,
+                metadata: {
+                  skillsHuntSubmissionId: submission.id,
+                  roundId: round.id,
+                  targetUserId: submission.submitterUserId,
+                  amount: perAccept,
+                  idempotencyKey,
+                },
+              });
+            }
+          }
+        }
+      } catch (rewardError) {
+        reportError(rewardError, {
+          area: 'skills-hunt',
+          op: 'admin_submissions_submissionid_review_reward',
+          extra: { submissionId },
+        });
+      }
+    }
 
     return NextResponse.json({ ok: true, submission }, { status: 200 });
   } catch (error) {

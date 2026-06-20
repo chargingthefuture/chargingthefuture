@@ -118,6 +118,8 @@ type SkillsHuntRoundRow = {
   starts_at: Date;
   ends_at: Date;
   scoring_config: Record<string, unknown>;
+  reward_credits_per_accept?: number | null;
+  reward_per_user_round_cap?: number | null;
   created_by_user_id: string;
   updated_by_user_id: string;
   created_at: Date;
@@ -139,6 +141,8 @@ type SkillsHuntSubmissionRow = {
   points_awarded: number;
   participation_points?: number | null;
   credit_granted?: boolean | null;
+  credit_amount?: number | null;
+  credit_granted_at?: Date | null;
   url_validation_result?: 'valid' | 'invalid' | 'dead' | null;
   url_validation_checked_at?: Date | null;
   score_breakdown: Record<string, unknown>;
@@ -313,6 +317,11 @@ function mapRound(row: SkillsHuntRoundRow): SkillsHuntRound {
     startsAtIso: toIso(row.starts_at),
     endsAtIso: toIso(row.ends_at),
     scoringConfig: normalizeJsonObject(row.scoring_config),
+    rewardCreditsPerAccept: Number(row.reward_credits_per_accept ?? 0),
+    rewardPerUserRoundCap:
+      row.reward_per_user_round_cap === null || row.reward_per_user_round_cap === undefined
+        ? null
+        : Number(row.reward_per_user_round_cap),
     createdByUserId: row.created_by_user_id,
     updatedByUserId: row.updated_by_user_id,
     createdAtIso: toIso(row.created_at),
@@ -351,6 +360,8 @@ function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
     pointsAwarded: row.points_awarded,
     participationPoints: row.participation_points ?? 0,
     creditGranted: row.credit_granted ?? false,
+    creditAmount: Number(row.credit_amount ?? 0),
+    creditGrantedAtIso: row.credit_granted_at ? toIso(row.credit_granted_at) : null,
     urlValidationResult: row.url_validation_result ?? null,
     urlValidationCheckedAtIso: row.url_validation_checked_at ? toIso(row.url_validation_checked_at) : null,
     scoreBreakdown: normalizeJsonObject(row.score_breakdown),
@@ -437,6 +448,26 @@ export function parsePaginationParams(url: string): SkillsHuntPagination {
   };
 }
 
+// Reward config is whole, non-negative ServiceCredits. Coerce defensively so a
+// stray float/NaN/negative from the client never reaches the ledger: floor to a
+// non-negative integer, and treat absent/blank as the safe default (0 / no cap).
+function normalizeRewardPerAccept(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
+function normalizeRewardCap(value: number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.floor(value));
+}
+
+function isValidRewardField(value: number | null | undefined): boolean {
+  // Accept absent (default), or a finite non-negative number. Reject NaN/negative.
+  if (value === null || value === undefined) return true;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
 export function validateRoundInput(input: SkillsHuntRoundInput): boolean {
   const name = normalizeText(input.name ?? '');
   const description = normalizeNullableText(input.description);
@@ -446,6 +477,8 @@ export function validateRoundInput(input: SkillsHuntRoundInput): boolean {
     && name.length <= SKILLS_HUNT_MAX_ROUND_NAME_LENGTH
     && (!description || description.length <= SKILLS_HUNT_MAX_ROUND_DESCRIPTION_LENGTH)
     && validStatus
+    && isValidRewardField(input.rewardCreditsPerAccept)
+    && isValidRewardField(input.rewardPerUserRoundCap)
     && isIsoDatetime(input.startsAtIso)
     && isIsoDatetime(input.endsAtIso)
     && Date.parse(input.endsAtIso) > Date.parse(input.startsAtIso);
@@ -537,6 +570,8 @@ async function getRoundById(client: PoolClient, roundId: string): Promise<Skills
         starts_at,
         ends_at,
         scoring_config,
+        reward_credits_per_accept,
+        reward_per_user_round_cap,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1230,6 +1265,8 @@ export async function listRounds(status: SkillsHuntRoundStatus | null): Promise<
         starts_at,
         ends_at,
         scoring_config,
+        reward_credits_per_accept,
+        reward_per_user_round_cap,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1249,9 +1286,9 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
     const row = await client.query<SkillsHuntRoundRow>(
       `
         INSERT INTO skills_hunt_rounds
-          (name, description, status, starts_at, ends_at, scoring_config, created_by_user_id, updated_by_user_id)
+          (name, description, status, starts_at, ends_at, scoring_config, reward_credits_per_accept, reward_per_user_round_cap, created_by_user_id, updated_by_user_id)
         VALUES
-          ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6::jsonb, $7, $7)
+          ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6::jsonb, $7, $8, $9, $9)
         RETURNING
           id,
           name,
@@ -1260,6 +1297,8 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
           starts_at,
           ends_at,
           scoring_config,
+          reward_credits_per_accept,
+          reward_per_user_round_cap,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1272,6 +1311,8 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
         input.startsAtIso,
         input.endsAtIso,
         JSON.stringify(input.scoringConfig ?? {}),
+        normalizeRewardPerAccept(input.rewardCreditsPerAccept),
+        normalizeRewardCap(input.rewardPerUserRoundCap),
         actorId,
       ],
     );
@@ -1301,7 +1342,9 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
           starts_at = $5::timestamptz,
           ends_at = $6::timestamptz,
           scoring_config = $7::jsonb,
-          updated_by_user_id = $8,
+          reward_credits_per_accept = $8,
+          reward_per_user_round_cap = $9,
+          updated_by_user_id = $10,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
@@ -1312,6 +1355,8 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
           starts_at,
           ends_at,
           scoring_config,
+          reward_credits_per_accept,
+          reward_per_user_round_cap,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1325,6 +1370,8 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
         input.startsAtIso,
         input.endsAtIso,
         JSON.stringify(input.scoringConfig ?? {}),
+        normalizeRewardPerAccept(input.rewardCreditsPerAccept),
+        normalizeRewardCap(input.rewardPerUserRoundCap),
         actorId,
       ],
     );
@@ -1361,6 +1408,90 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
 
     return mapRound(updated.rows[0]);
   });
+}
+
+// Read a single round (including its reward config) without a caller-supplied
+// client. Used by the review route to resolve the per-accept reward and cap.
+export async function getRound(roundId: string): Promise<SkillsHuntRound | null> {
+  const result = await queryDb<SkillsHuntRoundRow>(
+    `
+      SELECT
+        id,
+        name,
+        description,
+        status,
+        starts_at,
+        ends_at,
+        scoring_config,
+        reward_credits_per_accept,
+        reward_per_user_round_cap,
+        created_by_user_id,
+        updated_by_user_id,
+        created_at,
+        updated_at
+      FROM skills_hunt_rounds
+      WHERE id = $1::uuid
+      LIMIT 1
+    `,
+    [roundId],
+  );
+
+  const row = result.rows[0];
+  return row ? mapRound(row) : null;
+}
+
+// Total reward credits already paid to one scout in one round. Used for the
+// per-scout, per-round cap check before minting another reward.
+export async function sumGrantedCreditsForUserInRound(roundId: string, userId: string): Promise<number> {
+  const result = await queryDb<{ total: string | null }>(
+    `
+      SELECT COALESCE(SUM(credit_amount), 0)::text AS total
+      FROM skills_hunt_submissions
+      WHERE round_id = $1::uuid
+        AND submitter_user_id = $2
+        AND credit_granted = TRUE
+    `,
+    [roundId, userId],
+  );
+  return Number(result.rows[0]?.total ?? 0);
+}
+
+// Idempotently record that a submission's reward was minted. Returns true only
+// on the transition from not-granted → granted, so a concurrent/retried review
+// cannot double-count the payout. The ledger mint is itself idempotent on its
+// idempotency key; this flag is the fast-path guard and the bookkeeping record.
+export async function markSkillsHuntCreditGranted(submissionId: string, amount: number): Promise<boolean> {
+  const result = await queryDb(
+    `
+      UPDATE skills_hunt_submissions
+      SET credit_granted = TRUE, credit_amount = $2, credit_granted_at = NOW(), updated_at = NOW()
+      WHERE id = $1::uuid AND credit_granted = FALSE
+    `,
+    [submissionId, Math.max(0, Math.floor(amount))],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+// Round-level reward rollup for the admin shell: how many scouts were paid and
+// how many credits in total this round has minted.
+export async function getRoundRewardSummary(
+  roundId: string,
+): Promise<{ totalCreditsPaid: number; rewardedSubmissionCount: number }> {
+  const result = await queryDb<{ total: string | null; count: string | null }>(
+    `
+      SELECT
+        COALESCE(SUM(credit_amount), 0)::text AS total,
+        COUNT(*) FILTER (WHERE credit_granted = TRUE)::text AS count
+      FROM skills_hunt_submissions
+      WHERE round_id = $1::uuid
+        AND credit_granted = TRUE
+    `,
+    [roundId],
+  );
+  return {
+    totalCreditsPaid: Number(result.rows[0]?.total ?? 0),
+    rewardedSubmissionCount: Number(result.rows[0]?.count ?? 0),
+  };
 }
 
 export async function createSubmission(
@@ -1434,6 +1565,8 @@ export async function createSubmission(
           points_awarded,
           participation_points,
           credit_granted,
+          credit_amount,
+          credit_granted_at,
           score_breakdown,
           review_action,
           review_notes,
@@ -1540,6 +1673,8 @@ export async function listSubmissions(
       points_awarded,
       participation_points,
       credit_granted,
+      credit_amount,
+      credit_granted_at,
       url_validation_result,
       url_validation_checked_at,
       score_breakdown,
@@ -1687,6 +1822,8 @@ export async function reviewSubmission(
           points_awarded,
           participation_points,
           credit_granted,
+          credit_amount,
+          credit_granted_at,
           url_validation_result,
           url_validation_checked_at,
           score_breakdown,
