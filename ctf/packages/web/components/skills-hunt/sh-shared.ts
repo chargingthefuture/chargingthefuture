@@ -35,17 +35,37 @@ export function getSkillsHuntTokens(theme: ThemeName): SkillsHuntTokens {
   return getPluginShellTokens(accent, theme);
 }
 
-export const SKILL_TAXONOMY: Record<string, string[]> = {
-  "Technology":         ["Software Engineering", "UI/UX Design", "Data Analysis", "Cybersecurity", "Web Development", "IT Support"],
-  "Healthcare":         ["Nursing", "Counseling", "Mental Health", "Physical Therapy", "Home Health Aide"],
-  "Trades":             ["Carpentry", "Plumbing", "Electrical", "Welding", "HVAC", "Masonry", "Auto Repair"],
-  "Creative":           ["Graphic Design", "Photography", "Video Editing", "Music Production", "Writing & Editing"],
-  "Education":          ["Teaching", "Tutoring", "Translation", "Sign Language Interpretation"],
-  "Business & Legal":   ["Accounting", "Legal Aid", "Paralegal", "Marketing", "Bookkeeping"],
-  "Food & Hospitality": ["Cooking", "Catering", "Barista", "Event Planning"],
-  "Agriculture":        ["Farming", "Landscaping", "Animal Care"],
-  "Beauty & Wellness":  ["Hair Styling", "Cosmetology", "Massage Therapy", "Esthetics"],
+// Shape of one row from GET /api/skills-taxonomy/flattened. The picker only needs the
+// sector and skill names; the full row type lives in lib/skills-taxonomy/types.ts.
+export type TaxonomyFlattenedRow = {
+  sectorName: string;
+  skillName: string;
 };
+
+// Group flattened taxonomy rows into the picker's category → skills shape:
+// sectorName → de-duped, sorted list of skill names. A skill that appears under
+// multiple sectors is listed under each; that is fine — selecting the name selects it.
+export function groupTaxonomyBySector(rows: TaxonomyFlattenedRow[]): Record<string, string[]> {
+  const bySector = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const sector = row.sectorName?.trim();
+    const skill = row.skillName?.trim();
+    if (!sector || !skill) continue;
+    let set = bySector.get(sector);
+    if (!set) {
+      set = new Set<string>();
+      bySector.set(sector, set);
+    }
+    set.add(skill);
+  }
+  const result: Record<string, string[]> = {};
+  for (const sector of [...bySector.keys()].sort((a, b) => a.localeCompare(b))) {
+    const skills = bySector.get(sector);
+    if (!skills) continue;
+    result[sector] = [...skills].sort((a, b) => a.localeCompare(b));
+  }
+  return result;
+}
 
 export const BADGE_META: Record<string, { emoji: string; desc: string }> = {
   "first-finder":         { emoji: "🔍", desc: "First accepted submission for a URL" },

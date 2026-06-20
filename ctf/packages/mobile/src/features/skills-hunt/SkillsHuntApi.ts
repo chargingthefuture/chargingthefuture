@@ -6,6 +6,10 @@
 
 import { authedFetchJson } from '../../auth/authedFetch';
 
+// The canonical skills taxonomy lives under a different API base than the rest of
+// Skills Hunt, so its read is called with an absolute path rather than getJson.
+const TAXONOMY_FLATTENED_PATH = '/api/skills-taxonomy/flattened';
+
 const API_BASE = '/api/skills-hunt';
 
 export type Round = {
@@ -60,6 +64,13 @@ export type Notification = {
   createdAtIso: string;
 };
 
+// One row from GET /api/skills-taxonomy/flattened. The scout picker only needs the
+// sector and skill names to group skills by sector.
+export type TaxonomyFlattenedItem = {
+  sectorName: string;
+  skillName: string;
+};
+
 export type MissionWithProgress = {
   id: string;
   roundId: string;
@@ -97,6 +108,8 @@ export const SkillsHuntApi = {
   listMissions: (roundId: string) =>
     getJson<{ items: MissionWithProgress[] }>(`/rounds/${roundId}/missions`),
   listNotifications: () => getJson<{ notifications: Notification[] }>(`/notifications`),
+  listTaxonomyFlattened: () =>
+    authedFetchJson<{ items: TaxonomyFlattenedItem[]; generatedAt: string }>(TAXONOMY_FLATTENED_PATH),
   markNotificationRead: (notificationId: string) =>
     postJson<{ ok: true }>(`/notifications/${notificationId}/read`, {}),
   submitNomination: (
