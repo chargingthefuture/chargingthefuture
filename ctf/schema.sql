@@ -342,6 +342,10 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  -- ServiceCredits reward config (owner-set per round; defaults make a round pay nothing).
+  -- A whole-credit reward minted to the scout when a nomination is accepted, capped per scout.
+  reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
+  reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -369,6 +373,10 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   points_awarded INTEGER NOT NULL DEFAULT 0,
   participation_points INTEGER NOT NULL DEFAULT 0,
   credit_granted BOOLEAN NOT NULL DEFAULT FALSE,
+  -- ServiceCredits reward bookkeeping: amount minted to the scout on accept and when.
+  -- credit_granted is the idempotency marker; it is never unset once a reward is paid.
+  credit_amount INTEGER NOT NULL DEFAULT 0,
+  credit_granted_at TIMESTAMPTZ NULL,
   url_validation_result TEXT NULL CHECK (url_validation_result IN ('valid', 'invalid', 'dead')),
   url_validation_checked_at TIMESTAMPTZ NULL,
   edit_history JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -3456,6 +3464,11 @@ ALTER TABLE IF EXISTS skills_hunt_notifications ADD COLUMN IF NOT EXISTS is_read
 -- skills_hunt_rounds (2 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
+-- ServiceCredits reward config (per-round; defaults pay nothing so legacy rounds are unaffected).
+-- Brand-new columns, so the CHECK constraints match the CREATE TABLE and add cleanly on a
+-- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
 
 -- skills_hunt_submissions (1 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -3538,6 +3551,8 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN signature_hash DROP D
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS participation_points INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS credit_granted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS credit_amount INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS credit_granted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_validation_result TEXT;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_validation_checked_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;

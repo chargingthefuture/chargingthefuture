@@ -15,6 +15,8 @@ function toRoundInput(body: RoundBody): SkillsHuntRoundInput {
     startsAtIso: typeof body.startsAtIso === 'string' ? body.startsAtIso : new Date().toISOString(),
     endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : new Date(Date.now() + 86400000).toISOString(),
     scoringConfig: body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : {},
+    rewardCreditsPerAccept: typeof body.rewardCreditsPerAccept === 'number' ? body.rewardCreditsPerAccept : 0,
+    rewardPerUserRoundCap: typeof body.rewardPerUserRoundCap === 'number' ? body.rewardPerUserRoundCap : null,
   };
 }
 

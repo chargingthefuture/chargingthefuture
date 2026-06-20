@@ -2,9 +2,22 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { insertSkillsHuntAudit, reviewSubmission, validateReviewInput } from 'lib/skills-hunt/repository';
-import type { SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
+import {
+  claimSkillsHuntRewardUnderCap,
+  getRound,
+  insertSkillsHuntAudit,
+  revertSkillsHuntCreditClaim,
+  reviewSubmission,
+  validateReviewInput,
+} from 'lib/skills-hunt/repository';
+import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
+import type { SkillsHuntSubmission, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+
+// System actor recorded on the ServiceCredits mint for an accepted nomination —
+// mirrors Unlock's 'unlock-incentive-system'. The human reviewer is captured
+// separately in the admin audit trail.
+const SKILLS_HUNT_INCENTIVE_ACTOR_ID = 'skills-hunt-incentive-system';
 
 type ReviewBody = Partial<SkillsHuntSubmissionReviewInput>;
 
@@ -15,6 +28,82 @@ function toReviewInput(body: ReviewBody): SkillsHuntSubmissionReviewInput {
       : 'flag',
     notes: typeof body.notes === 'string' ? body.notes : null,
   };
+}
+
+// Best-effort ServiceCredits reward for an accepted nomination — mirrors the
+// Unlock approval reward. Idempotent (the credit_granted guard plus the ledger
+// idempotency key), pays only when the round configures a per-accept reward, and
+// respects the per-scout round cap. A ledger outage is reported but never thrown,
+// so it can never fail the review decision. Mutates `submission` once paid.
+async function grantAcceptRewardBestEffort(submission: SkillsHuntSubmission, reviewerUserId: string): Promise<void> {
+  if (submission.status !== 'accepted' || submission.creditGranted) {
+    return;
+  }
+  try {
+    const round = await getRound(submission.roundId);
+    if (!round || round.rewardCreditsPerAccept <= 0) {
+      return;
+    }
+    const perAccept = round.rewardCreditsPerAccept;
+
+    // Claim the reward atomically under the per-scout round cap (advisory-locked
+    // per round+scout) so two concurrent accepts can't overpay. The claim marks
+    // the submission credited; we mint next and revert the claim if it fails.
+    const claimed = await claimSkillsHuntRewardUnderCap({
+      submissionId: submission.id,
+      roundId: round.id,
+      submitterUserId: submission.submitterUserId,
+      amount: perAccept,
+      cap: round.rewardPerUserRoundCap,
+    });
+    if (!claimed) {
+      return;
+    }
+
+    const idempotencyKey = `skills-hunt-accept-submission-${submission.id}`;
+    let grant: Awaited<ReturnType<typeof mintGrant>>;
+    try {
+      grant = await mintGrant({
+        actorId: SKILLS_HUNT_INCENTIVE_ACTOR_ID,
+        targetUserId: submission.submitterUserId,
+        amount: perAccept,
+        grantReason: 'skills_hunt_accept_reward',
+        governanceTicketId: `skills-hunt:submission:${submission.id}`,
+        idempotencyKey,
+      });
+    } catch (mintError) {
+      // Mint rejected (e.g. mint budget) — release the claim so the cap and the
+      // paid flag stay accurate, then surface via the outer best-effort handler.
+      await revertSkillsHuntCreditClaim(submission.id);
+      throw mintError;
+    }
+
+    submission.creditGranted = true;
+    submission.creditAmount = perAccept;
+    submission.creditGrantedAtIso = new Date().toISOString();
+
+    await insertServiceCreditsAudit({
+      actorId: reviewerUserId,
+      command: 'service-credits.governance.mint.grant.skills-hunt',
+      policyStatus: 'allow',
+      reason: 'skills_hunt_accept_reward',
+      targetType: 'governance_event',
+      targetId: grant.governanceEventId,
+      metadata: {
+        skillsHuntSubmissionId: submission.id,
+        roundId: round.id,
+        targetUserId: submission.submitterUserId,
+        amount: perAccept,
+        idempotencyKey,
+      },
+    });
+  } catch (rewardError) {
+    reportError(rewardError, {
+      area: 'skills-hunt',
+      op: 'admin_submissions_submissionid_review_reward',
+      extra: { submissionId: submission.id },
+    });
+  }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
@@ -54,6 +143,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
       command: 'skills-hunt.submission.review',
+      commandVersion: '1.1.0',
       status: 'allow',
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',
@@ -73,6 +163,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       metadata: { action: input.action },
     });
 
+    // The review decision is already committed and audited above; paying the
+    // accept reward is a best-effort follow-up (see grantAcceptRewardBestEffort).
+    await grantAcceptRewardBestEffort(submission, gate.auth.userId);
+
     return NextResponse.json({ ok: true, submission }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_review' });
@@ -82,6 +176,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
       command: 'skills-hunt.submission.review',
+      commandVersion: '1.1.0',
       status: 'allow',
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',
@@ -91,13 +186,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       metadata: { action: input.action },
     });
 
-    return NextResponse.json(
-      {
-        ok: false,
-        code: isNotFound ? SKILLS_HUNT_ERROR_CODE.submissionNotFound : SKILLS_HUNT_ERROR_CODE.persistenceUnavailable,
-        message: isNotFound ? 'Submission not found.' : 'Unable to review submission.',
-      },
-      { status: isNotFound ? 404 : 503 },
-    );
+    const failure = isNotFound
+      ? { code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.', status: 404 }
+      : { code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to review submission.', status: 503 };
+    return NextResponse.json({ ok: false, code: failure.code, message: failure.message }, { status: failure.status });
   }
 }
