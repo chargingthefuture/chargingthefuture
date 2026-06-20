@@ -106,6 +106,27 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
+    command: chyme.hand
+    version: 1.0.0
+    description: Persist the caller's raise/lower hand on their room presence row so the raised hand stays visible to everyone until lowered or the member leaves.
+    inputSchema:
+      raised:
+        type: boolean
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      room:
+        type: object
+    dataAccess:
+      - chyme_rooms
+      - chyme_service_profiles
+      - chyme_room_members
+    purpose: social_audio_presence
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
     command: chyme.profile.delete.service
     version: 1.0.0
     description: Execute service-scoped Chyme deletion and record compliance event.

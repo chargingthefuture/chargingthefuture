@@ -49,9 +49,13 @@ type ChymeAudioRoomProps = {
   chatPanel: ReactNode;
   isMobile: boolean;
   onLeave: () => void;
+  // Clerk user ids (NOT the `chyme-` Stream id) of members whose hand is raised per the server,
+  // refreshed by the live shell's room poll. Drives the persistent raised-hand indicator for
+  // everyone except the local member (who is driven by their own instant local toggle).
+  raisedHandUserIds: ReadonlySet<string>;
 };
 
-export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isMobile, onLeave }: ChymeAudioRoomProps) {
+export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isMobile, onLeave, raisedHandUserIds }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
@@ -153,7 +157,13 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <ChymeAudioRoomLive showChat={showChat} chatPanel={chatPanel} isMobile={isMobile} onLeave={onLeave} />
+        <ChymeAudioRoomLive
+          showChat={showChat}
+          chatPanel={chatPanel}
+          isMobile={isMobile}
+          onLeave={onLeave}
+          raisedHandUserIds={raisedHandUserIds}
+        />
       </StreamCall>
     </StreamVideo>
   );
@@ -201,28 +211,38 @@ function ChymeAudioRoomLive({
   chatPanel,
   isMobile,
   onLeave,
+  raisedHandUserIds,
 }: {
   showChat: boolean;
   chatPanel: ReactNode;
   isMobile: boolean;
   onLeave: () => void;
+  raisedHandUserIds: ReadonlySet<string>;
 }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
   const call = useCall();
   // Hand-raise is tracked locally so the toggle is reliable for the person pressing it: their own
-  // tile shows ✋ and the button reads "Lower Hand" until they lower it. Stream reactions are
-  // transient (the SDK clears participant.reaction after a few seconds), so they can't carry a
-  // persistent state on their own; we still emit one so others get a best-effort signal.
+  // tile shows ✋ and the button reads "Lower Hand" until they lower it. The state is ALSO persisted
+  // server-side (POST /api/chyme/hand) so it rides on the member's presence row and everyone else
+  // keeps seeing it until it's lowered or they leave. We still emit the Stream reaction so others
+  // get an instant best-effort signal before the next room poll arrives.
   const [handRaised, setHandRaised] = useState(false);
   const onToggleHand = () => {
-    if (handRaised) {
-      void call?.sendReaction({ type: 'lower_hand', emoji_code: ':hand:' });
-      setHandRaised(false);
-      return;
-    }
-    void call?.sendReaction({ type: 'raised_hand', emoji_code: ':raised_hand:' });
-    setHandRaised(true);
+    const next = !handRaised;
+    setHandRaised(next);
+    void call?.sendReaction(
+      next
+        ? { type: 'raised_hand', emoji_code: ':raised_hand:' }
+        : { type: 'lower_hand', emoji_code: ':hand:' },
+    );
+    void fetch('/api/chyme/hand', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ raised: next }),
+    }).catch(() => {
+      /* best-effort: the next room poll reconciles; local state already reflects the toggle */
+    });
   };
 
   // One tile per user. A member with a lingering/extra Stream session would otherwise show
@@ -248,7 +268,12 @@ function ChymeAudioRoomLive({
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
           {uniqueParticipants.map((participant) => (
-            <ChymeSpeakerTile key={participant.userId} participant={participant} localHandRaised={handRaised} />
+            <ChymeSpeakerTile
+              key={participant.userId}
+              participant={participant}
+              localHandRaised={handRaised}
+              raisedHandUserIds={raisedHandUserIds}
+            />
           ))}
         </div>
       )}
@@ -269,16 +294,28 @@ function ChymeAudioRoomLive({
   );
 }
 
-function ChymeSpeakerTile({ participant, localHandRaised = false }: { participant: StreamVideoParticipant; localHandRaised?: boolean }) {
+function ChymeSpeakerTile({
+  participant,
+  localHandRaised = false,
+  raisedHandUserIds,
+}: {
+  participant: StreamVideoParticipant;
+  localHandRaised?: boolean;
+  raisedHandUserIds: ReadonlySet<string>;
+}) {
   const isSelf = participant.isLocalParticipant;
   // Signed-out guests join as listen-only (their Stream id is minted as `chyme-guest-…`). They can
   // never publish, so a mic icon is misleading — show a headphones "listening" indicator instead.
   const isGuest = participant.userId.startsWith('chyme-guest-');
   const speaking = participant.isSpeaking;
   const publishingAudio = isPublishingAudio(participant);
-  // The local member's raised hand is driven by their own toggle so it is reliable and persists
-  // until they lower it; everyone else's comes from the (transient) Stream reaction, best-effort.
-  const handRaised = isSelf ? localHandRaised : participant.reaction?.type === 'raised_hand';
+  // The local member's raised hand is driven by their own toggle so it is reliable and instant.
+  // Everyone else's comes from the server-persisted set (keyed by clerk user id): Stream ids are
+  // `chyme-<clerkUserId>`, so strip the prefix and look it up. Guests never show a hand.
+  const clerkUserId = participant.userId.startsWith('chyme-') ? participant.userId.slice('chyme-'.length) : participant.userId;
+  const handRaised = isSelf
+    ? localHandRaised
+    : !isGuest && raisedHandUserIds.has(clerkUserId);
   const name = participant.name || participant.userId;
 
   return (

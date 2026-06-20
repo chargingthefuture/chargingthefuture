@@ -65,6 +65,7 @@ type ParticipantRow = {
   username: string | null;
   avatar_url: string | null;
   role: 'speaker' | 'listener';
+  hand_raised: boolean;
   joined_at: Date;
   last_seen_at: Date;
 };
@@ -101,6 +102,7 @@ function mapParticipant(row: ParticipantRow): ChymeParticipant {
     username: row.username,
     avatarUrl: row.avatar_url,
     role: row.role,
+    handRaised: row.hand_raised,
     joinedAtIso: row.joined_at.toISOString(),
     lastSeenAtIso: row.last_seen_at.toISOString(),
   };
@@ -280,6 +282,7 @@ async function listRoomParticipants(client: PoolClient, roomId: string): Promise
         username,
         avatar_url,
         role,
+        hand_raised,
         joined_at,
         last_seen_at
       FROM chyme_room_members
@@ -441,8 +444,40 @@ export async function touchRoomPresence(identity: IdentityInput): Promise<void> 
   });
 }
 
+// Persist a member's raise/lower hand. Unlike a transient Stream reaction, this rides on the
+// member's presence row so everyone in the room keeps seeing the raised hand until the member
+// lowers it (or leaves / their presence goes stale). last_seen_at is bumped so toggling also
+// counts as a heartbeat. If the member has no presence row (not in the call), the UPDATE matches
+// nothing and this is a no-op — we still return the current room state for the client.
+export async function setRoomMemberHandRaised(
+  identity: IdentityInput,
+  raised: boolean,
+): Promise<ChymeRoomResponse> {
+  return withDbTransaction(async (client) => {
+    const room = await ensureMainRoom(client);
+    await client.query(
+      `
+        UPDATE chyme_room_members
+        SET hand_raised = $3, last_seen_at = NOW()
+        WHERE room_id = $1 AND user_id = $2
+      `,
+      [room.id, identity.userId, raised],
+    );
+    const participants = await listRoomParticipants(client, room.id);
+
+    return {
+      roomId: room.id,
+      roomName: room.room_name,
+      roomKey: room.room_key,
+      callActive: participants.length > 0,
+      participants,
+    };
+  });
+}
+
 // Explicit leave: remove the member row so the member stops being counted immediately
-// (rather than waiting for the presence window to lapse). Called when a member taps Leave.
+// (rather than waiting for the presence window to lapse). Deleting the row also clears any
+// raised hand, so a member who left can never linger with a hand up.
 export async function leaveRoom(identity: IdentityInput): Promise<void> {
   await withDbTransaction(async (client) => {
     const room = await ensureMainRoom(client);
