@@ -11,6 +11,7 @@ import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
 import { BrowsePanel, QuotesPanel, ChatPanel } from "./foundation-panels";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 
@@ -22,7 +23,7 @@ function Centered({ color, children }: { color: string; children: React.ReactNod
   );
 }
 
-export function FoundationShell() {
+export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<ProviderView[]>([]);
@@ -170,6 +171,7 @@ export function FoundationShell() {
             </Link>
             <Hammer size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Foundation</span>
+            <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -201,6 +203,7 @@ export function FoundationShell() {
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Foundation — Trade Services</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Community trade providers · Trauma-informed</div>
           </div>
+          <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
         {content}
       </div>

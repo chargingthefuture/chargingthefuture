@@ -27,6 +27,7 @@ import { SocketRelayFeed } from "./sr-feed";
 import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { SocketRelayChat } from "./sr-chat";
 import { SocketRelayRightPanel } from "./sr-right-panel";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
 
@@ -57,7 +58,7 @@ type SocketRelayShellProps = {
   role?: string | null;
 };
 
-export function SocketRelayShell({ userId }: SocketRelayShellProps) {
+export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requests, setRequests] = useState<SrRequest[]>([]);
@@ -319,6 +320,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
             <Share2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, flex: 1 }}>SocketRelay</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{openCount} open</Badge>
+            <PluginAdminButton href="/admin/socketrelay" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -365,6 +367,7 @@ export function SocketRelayShell({ userId }: SocketRelayShellProps) {
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
             {openCount} open
           </Badge>
+          <PluginAdminButton href="/admin/socketrelay" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 
         {content}

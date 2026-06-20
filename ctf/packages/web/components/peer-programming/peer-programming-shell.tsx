@@ -13,6 +13,7 @@ import { PeerProgrammingCohortsTab } from "./pp-cohorts-tab";
 import { PeerProgrammingSessionTab } from "./pp-session-tab";
 import { PeerProgrammingChatTab } from "./pp-chat-tab";
 import { PeerProgrammingRightPanel } from "./pp-right-panel";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 // Shape returned by GET /api/peer-programming/room. The shell's view models (Room,
 // Message) differ from the API, so map explicitly here rather than casting.
@@ -45,7 +46,7 @@ async function fetchRoomData(signal: AbortSignal): Promise<{ room: Room; message
   return { room, messages: mapMessages(data.messages ?? []) };
 }
 
-function ShellHeader({ active, t }: { active: boolean; t: PeerProgrammingTokens }) {
+function ShellHeader({ active, t, isAdmin }: { active: boolean; t: PeerProgrammingTokens; isAdmin?: boolean }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Users size={18} style={{ color: t.ACCENT }} />
@@ -58,11 +59,12 @@ function ShellHeader({ active, t }: { active: boolean; t: PeerProgrammingTokens 
           Cohort Active
         </span>
       )}
+      <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
     </header>
   );
 }
 
-export function PeerProgrammingShell() {
+export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -209,6 +211,7 @@ export function PeerProgrammingShell() {
             </Link>
             <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Peer Programming</span>
+            <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -226,7 +229,7 @@ export function PeerProgrammingShell() {
       <PeerProgrammingIconRail tab={tab} onTab={setTab} />
       <PeerProgrammingSidebar />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader active={Boolean(room?.cohortId)} t={t} />
+        <ShellHeader active={Boolean(room?.cohortId)} t={t} isAdmin={isAdmin} />
         {content}
       </div>
       <PeerProgrammingRightPanel room={room} participants={participants} onJoinSession={() => setTab("session")} />
