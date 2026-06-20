@@ -301,6 +301,17 @@ export function UnlockAdminShell({
                     </>
                   )}
                 </div>
+                {s.quoraProfileUrlNormalized ? (
+                  <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                    <span>Normalized:</span>
+                    <a href={s.quoraProfileUrlNormalized} target="_blank" rel="noopener noreferrer" style={{ color: COLOR, fontWeight: 600, wordBreak: 'break-all' }}>
+                      {s.quoraProfileUrlNormalized}
+                    </a>
+                    {s.quoraProfileUrlNormalized !== s.quoraProfileUrl ? (
+                      <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>(cleaned from submitted link)</span>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 4 }}>User: {s.userId}</div>
                 <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 10 }}>
                   Submitted {new Date(s.createdAt).toLocaleDateString()} · window expires {new Date(s.unlockWindowExpiresAt).toLocaleDateString()} · tier {s.accessTier}
