@@ -230,11 +230,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'foundation') {
-    return <FoundationShell />;
+    return <FoundationShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'lighthouse') {
-    return <LighthouseShell userId={decision.userId} username={decision.username} />;
+    return <LighthouseShell userId={decision.userId} username={decision.username} isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'socketrelay') {
@@ -242,11 +242,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'trusttransport') {
-    return <TrustTransportShell />;
+    return <TrustTransportShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'peer-programming') {
-    return <PeerProgrammingShell />;
+    return <PeerProgrammingShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'mood') {
@@ -262,11 +262,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell />;
+    return <GdpShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'service-credits') {
-    return <ServiceCreditsShell />;
+    return <ServiceCreditsShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'levelup') {

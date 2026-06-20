@@ -5,6 +5,7 @@ import { BORDER, BRAND, SUBTLE, TEXT, type WpComparison, type WpMetric, type WpW
 import { WeeklyPerformanceMetricCards } from "./wp-metric-cards";
 import { WeeklyPerformanceComparisonChart } from "./wp-comparison-chart";
 import { WeeklyPerformanceEmptyMain } from "./wp-empty-main";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 export function WeeklyPerformanceDashboardMain({
   week,
@@ -43,6 +44,7 @@ export function WeeklyPerformanceDashboardMain({
               <Download size={14} /> Export
             </button>
           )}
+          <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={BRAND} />
         </header>
       )}
 

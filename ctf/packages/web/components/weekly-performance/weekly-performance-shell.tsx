@@ -20,6 +20,7 @@ import { WeeklyPerformanceIconRail } from "./wp-icon-rail";
 import { WeeklyPerformanceSidebar } from "./wp-sidebar";
 import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
 import { WeeklyPerformanceRightRail } from "./wp-right-rail";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 type WeeklyPerformanceShellProps = {
   isAdmin: boolean;
@@ -136,6 +137,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
               <ChevronLeft size={20} />
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Weekly Performance</span>
+            <PluginAdminButton href="/admin/weekly-performance" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>
             <select value={selectedWeekStart ?? ""} onChange={(e) => setSelectedWeekStart(e.target.value)} style={{ flex: 1, padding: "8px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, color: t.TEXT, fontSize: 13 }}>

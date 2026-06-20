@@ -14,6 +14,7 @@ import { ServiceCreditsWalletTab } from "./sc-wallet-tab";
 import { ServiceCreditsEarnTab } from "./sc-earn-tab";
 import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
 import { ServiceCreditsSendPanel } from "./sc-send-panel";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 function CenteredNote({ color, children }: { color: string; children: React.ReactNode }) {
   return (
@@ -23,7 +24,7 @@ function CenteredNote({ color, children }: { color: string; children: React.Reac
   );
 }
 
-function ShellHeader({ balance, t }: { balance: number; t: ServiceCreditsTokens }) {
+function ShellHeader({ balance, t, isAdmin }: { balance: number; t: ServiceCreditsTokens; isAdmin?: boolean }) {
   return (
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Coins size={18} style={{ color: t.ACCENT }} />
@@ -34,11 +35,12 @@ function ShellHeader({ balance, t }: { balance: number; t: ServiceCreditsTokens 
       <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>
         {fmtCredits(balance)} credits
       </Badge>
+      <PluginAdminButton href="/admin/service-credits" isAdmin={isAdmin} accent={t.ACCENT} />
     </header>
   );
 }
 
-export function ServiceCreditsShell() {
+export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
@@ -96,6 +98,7 @@ export function ServiceCreditsShell() {
             <Coins size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>ServiceCredits</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{fmtCredits(balance)}</Badge>
+            <PluginAdminButton href="/admin/service-credits" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -114,7 +117,7 @@ export function ServiceCreditsShell() {
       <ServiceCreditsIconRail tab={tab} onTab={setTab} />
       <ServiceCreditsSidebar tab={tab} onTab={setTab} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-        <ShellHeader balance={balance} t={t} />
+        <ShellHeader balance={balance} t={t} isAdmin={isAdmin} />
         {content}
       </div>
       <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />

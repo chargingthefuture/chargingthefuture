@@ -16,6 +16,7 @@ import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
+import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 
 const COLOR = '#F97316';
 
@@ -195,9 +196,7 @@ function WorkforceDashboardContent({
   );
 }
 
-// isAdmin is accepted to match the call site signature; admin-specific UI is not yet implemented
 export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
-  void isAdmin;
   const [tab] = useState<Tab>('dashboard');
   const [view, setView] = useState<SidebarView>('overview');
   const [loading, setLoading] = useState(true);
@@ -316,6 +315,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
             </Link>
             <BarChart2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Workforce</span>
+            <PluginAdminButton href="/admin/workforce" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: 'flex', gap: 6, padding: '0 12px 8px', overflowX: 'auto' }}>
             {views.map(({ key, label }) => (
@@ -375,6 +375,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
                 : 'Live workforce tracker'}
             </div>
           </div>
+          <PluginAdminButton href="/admin/workforce" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 
         {content}

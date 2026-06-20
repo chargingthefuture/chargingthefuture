@@ -14,6 +14,7 @@ import { LevelUpLoading } from "./lu-loading";
 import { LevelUpTrainers } from "./lu-trainers";
 import { LevelUpAchievements } from "./lu-achievements";
 import { LevelUpWallet } from "./lu-wallet";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const HEADINGS: Record<NavKey, string> = {
   browse: "Browse Cohorts",
@@ -68,7 +69,7 @@ async function fetchWalletView(signal: AbortSignal): Promise<WalletView | null> 
   return data.wallet ?? null;
 }
 
-function ShellHeader({ nav, isAdmin, t }: { nav: NavKey; isAdmin: boolean; t: LevelupTokens }) {
+function ShellHeader({ nav, isAdmin, t, showAdminButton = false }: { nav: NavKey; isAdmin: boolean; t: LevelupTokens; showAdminButton?: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
       <div>
@@ -77,12 +78,15 @@ function ShellHeader({ nav, isAdmin, t }: { nav: NavKey; isAdmin: boolean; t: Le
           {SUBHEADINGS[nav]}
         </div>
       </div>
-      {nav === "browse" && (
-        <button type="button" disabled={!isAdmin}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", color: t.TEXT_SUBTLE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: isAdmin ? "pointer" : "not-allowed", opacity: isAdmin ? 1 : 0.5 }}>
-          <Plus size={14} /> Create Cohort
-        </button>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {nav === "browse" && (
+          <button type="button" disabled={!isAdmin}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", color: t.TEXT_SUBTLE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: isAdmin ? "pointer" : "not-allowed", opacity: isAdmin ? 1 : 0.5 }}>
+            <Plus size={14} /> Create Cohort
+          </button>
+        )}
+        {showAdminButton && <PluginAdminButton href="/admin/levelup" isAdmin={isAdmin} accent={t.ACCENT} />}
+      </div>
     </div>
   );
 }
@@ -245,7 +249,7 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
 
   const content = (
     <>
-      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} />
+      <ShellHeader nav={nav} isAdmin={isAdmin} t={t} showAdminButton={!isMobile} />
       <ShellContent
         nav={nav}
         loading={loading}
@@ -292,6 +296,7 @@ export function LevelupShell({ isAdmin = false }: { userId?: string; isAdmin?: b
               <ChevronLeft size={20} />
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>LevelUp</span>
+            <PluginAdminButton href="/admin/levelup" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
             {navItems.map(({ key, label }) => (

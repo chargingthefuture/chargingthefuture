@@ -16,8 +16,9 @@ import { LighthouseChat } from "./lighthouse-chat";
 import { LighthouseHost } from "./lighthouse-host";
 import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
-export function LighthouseShell({ userId, username }: { userId: string; username: string | null }) {
+export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -177,6 +178,7 @@ export function LighthouseShell({ userId, username }: { userId: string; username
               <ChevronLeft size={20} />
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>🏠 LightHouse</span>
+            <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (
@@ -213,6 +215,7 @@ export function LighthouseShell({ userId, username }: { userId: string; username
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>🏠 LightHouse — Safe Housing</div>
             <div style={{ fontSize: 12, color: t.MUTED }}>Verified listings · Privacy-first</div>
           </div>
+          <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
         </header>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto", minHeight: 0 }}>
