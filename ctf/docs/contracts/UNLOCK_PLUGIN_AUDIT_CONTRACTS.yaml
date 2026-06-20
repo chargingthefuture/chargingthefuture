@@ -68,6 +68,30 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: unlock
+    command: unlock.admin.submission.url.edit
+    commandVersion: 1.0.0
+    purpose: moderation_data_correction
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - unlock_verification_submissions
+      - unlock_audit_log
+    targetContext:
+      adminUserId: user_identifier
+      submissionId: submission_identifier
+      targetUserId: user_identifier
+      quoraProfileUrlNormalized: normalized_url
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: unlock
     command: unlock.incentive.approval.credit-grant
     commandVersion: 1.0.0
     purpose: incentive_award
