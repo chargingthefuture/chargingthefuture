@@ -38,6 +38,7 @@ export interface Profile {
 
 export interface Property {
   id: string;
+  hostUserId: string;
   img?: string;
   title: string;
   city: string;

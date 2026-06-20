@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ExternalLink, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import type { TrustUserExtension } from "@/lib/trust/types";
@@ -46,7 +46,72 @@ function toListOrNull(value: string): string[] | null {
   return list.length > 0 ? list : null;
 }
 
-export function LighthouseHost({ username }: { username: string | null }) {
+// Full listing record as returned by GET /api/lighthouse/properties/[propertyId]
+// (mirrors LighthouseProperty in lib/lighthouse/types.ts). Used to prefill the
+// edit form from the listing's complete current data — the update endpoint does a
+// full replace, so every column must be sent back.
+type FullProperty = {
+  title?: string | null;
+  description?: string | null;
+  propertyType?: string | null;
+  addressLine?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  zipCode?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  monthlyRent?: number | null;
+  availableFromIso?: string | null;
+  amenities?: string[] | null;
+  houseRules?: string[] | null;
+  airbnbProfileUrl?: string | null;
+};
+
+function numToString(value: number | null | undefined): string {
+  return typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+}
+
+function listToString(value: string[] | null | undefined): string {
+  return Array.isArray(value) ? value.join(", ") : "";
+}
+
+function dateInputValue(iso: string | null | undefined): string {
+  // The "Available from" field is a <input type="date">, which needs YYYY-MM-DD.
+  if (!iso) return "";
+  const match = /^\d{4}-\d{2}-\d{2}/.exec(iso);
+  return match ? match[0] : "";
+}
+
+function fullPropertyToForm(p: FullProperty): PropertyForm {
+  return {
+    title: p.title ?? "",
+    description: p.description ?? "",
+    propertyType: p.propertyType ?? "",
+    addressLine: p.addressLine ?? "",
+    city: p.city ?? "",
+    state: p.state ?? "",
+    country: p.country ?? "",
+    zipCode: p.zipCode ?? "",
+    bedrooms: numToString(p.bedrooms),
+    bathrooms: numToString(p.bathrooms),
+    monthlyRent: numToString(p.monthlyRent),
+    availableFromIso: dateInputValue(p.availableFromIso),
+    amenities: listToString(p.amenities),
+    houseRules: listToString(p.houseRules),
+    airbnbProfileUrl: p.airbnbProfileUrl ?? "",
+  };
+}
+
+export function LighthouseHost({
+  username,
+  editPropertyId,
+  onEditHandled,
+}: {
+  username: string | null;
+  editPropertyId?: string | null;
+  onEditHandled?: () => void;
+}) {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
 
@@ -55,8 +120,10 @@ export function LighthouseHost({ username }: { username: string | null }) {
   const [trust, setTrust] = useState<TrustUserExtension | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<PropertyForm>(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
 
   async function loadMine() {
     try {
@@ -90,6 +157,30 @@ export function LighthouseHost({ username }: { username: string | null }) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  async function beginEdit(id: string) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/lighthouse/properties/${id}`);
+      const data = await res.json().catch(() => ({})) as { ok?: boolean; property?: FullProperty; message?: string };
+      if (!res.ok || !data.ok || !data.property) {
+        setError(data.message ?? "Could not load the listing to edit. Please try again.");
+        return;
+      }
+      setForm(fullPropertyToForm(data.property));
+      setEditingId(id);
+      setShowForm(true);
+      requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    } catch {
+      setError("Could not load the listing to edit. Please try again.");
+    }
+  }
+
+  useEffect(() => {
+    if (!editPropertyId) return;
+    void beginEdit(editPropertyId);
+    onEditHandled?.();
+  }, [editPropertyId]);
+
   async function submit() {
     if (!form.title.trim() || !form.description.trim()) {
       setError("Title and description are required.");
@@ -97,38 +188,46 @@ export function LighthouseHost({ username }: { username: string | null }) {
     }
     setSubmitting(true);
     setError(null);
+    const body = JSON.stringify({
+      title: form.title.trim(),
+      description: form.description.trim(),
+      propertyType: form.propertyType.trim() || null,
+      addressLine: form.addressLine.trim() || null,
+      city: form.city.trim() || null,
+      state: form.state.trim() || null,
+      country: form.country.trim() || null,
+      zipCode: form.zipCode.trim() || null,
+      bedrooms: toNumberOrNull(form.bedrooms),
+      bathrooms: toNumberOrNull(form.bathrooms),
+      monthlyRent: toNumberOrNull(form.monthlyRent),
+      availableFromIso: form.availableFromIso.trim() || null,
+      amenities: toListOrNull(form.amenities),
+      houseRules: toListOrNull(form.houseRules),
+      airbnbProfileUrl: form.airbnbProfileUrl.trim() || null,
+    });
+    const failureMessage = editingId
+      ? "Could not save the changes. Please try again."
+      : "Could not create the listing. Please try again.";
     try {
-      const res = await fetch("/api/lighthouse/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({
-          title: form.title.trim(),
-          description: form.description.trim(),
-          propertyType: form.propertyType.trim() || null,
-          addressLine: form.addressLine.trim() || null,
-          city: form.city.trim() || null,
-          state: form.state.trim() || null,
-          country: form.country.trim() || null,
-          zipCode: form.zipCode.trim() || null,
-          bedrooms: toNumberOrNull(form.bedrooms),
-          bathrooms: toNumberOrNull(form.bathrooms),
-          monthlyRent: toNumberOrNull(form.monthlyRent),
-          availableFromIso: form.availableFromIso.trim() || null,
-          amenities: toListOrNull(form.amenities),
-          houseRules: toListOrNull(form.houseRules),
-          airbnbProfileUrl: form.airbnbProfileUrl.trim() || null,
-        }),
-      });
-      const body = await res.json().catch(() => ({})) as { ok?: boolean; message?: string };
-      if (!res.ok || !body.ok) {
-        setError(body.message ?? "Could not create the listing. Please try again.");
+      const res = await fetch(
+        editingId ? `/api/lighthouse/properties/${editingId}` : "/api/lighthouse/properties",
+        {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+          body,
+        },
+      );
+      const resBody = await res.json().catch(() => ({})) as { ok?: boolean; message?: string };
+      if (!res.ok || !resBody.ok) {
+        setError(resBody.message ?? failureMessage);
         return;
       }
       setForm(EMPTY_FORM);
+      setEditingId(null);
       setShowForm(false);
       await loadMine();
     } catch {
-      setError("Could not create the listing. Please try again.");
+      setError(failureMessage);
     } finally {
       setSubmitting(false);
     }
@@ -169,13 +268,14 @@ export function LighthouseHost({ username }: { username: string | null }) {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Your listings ({myProperties.length})</div>
-        <button type="button" onClick={() => { setShowForm((v) => !v); setError(null); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        <button type="button" onClick={() => { setShowForm((v) => !v); setEditingId(null); setForm(EMPTY_FORM); setError(null); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
           <Plus size={16} /> {showForm ? "Close" : "List your place"}
         </button>
       </div>
 
       {showForm ? (
-        <div style={{ background: t.HEADER, border: `1px solid ${t.BORDER}`, borderRadius: 14, padding: 16, marginBottom: 18 }}>
+        <div ref={formRef} style={{ background: t.HEADER, border: `1px solid ${t.BORDER}`, borderRadius: 14, padding: 16, marginBottom: 18 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>{editingId ? "Edit listing" : "List your place"}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {field("title", "Title *", { placeholder: "Quiet 1-bed near transit" })}
             {field("propertyType", "Type", { placeholder: "Apartment, room, house…" })}
@@ -196,7 +296,9 @@ export function LighthouseHost({ username }: { username: string | null }) {
           {error ? <div style={{ color: "#EF4444", fontSize: 13, marginTop: 10 }}>{error}</div> : null}
           <div style={{ marginTop: 14 }}>
             <button type="button" onClick={() => void submit()} disabled={submitting} style={{ padding: "9px 18px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0B0B0F", fontSize: 14, fontWeight: 700, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1 }}>
-              {submitting ? "Publishing…" : "Publish listing"}
+              {editingId
+                ? (submitting ? "Saving…" : "Save changes")
+                : (submitting ? "Publishing…" : "Publish listing")}
             </button>
           </div>
         </div>
@@ -207,12 +309,17 @@ export function LighthouseHost({ username }: { username: string | null }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {myProperties.map((p) => (
-            <div key={p.id} style={{ background: t.HEADER, border: `1px solid ${t.BORDER}`, borderRadius: 12, padding: 14 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{p.title}</div>
-              <div style={{ fontSize: 13, color: t.MUTED, marginTop: 2 }}>
-                {[p.city, p.state].filter(Boolean).join(", ") || "Location not set"}
-                {p.monthlyRent ? ` · $${p.monthlyRent}/mo` : " · Service Credits / free"}
+            <div key={p.id} style={{ background: t.HEADER, border: `1px solid ${t.BORDER}`, borderRadius: 12, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{p.title}</div>
+                <div style={{ fontSize: 13, color: t.MUTED, marginTop: 2 }}>
+                  {[p.city, p.state].filter(Boolean).join(", ") || "Location not set"}
+                  {p.monthlyRent ? ` · $${p.monthlyRent}/mo` : " · Service Credits / free"}
+                </div>
               </div>
+              <button type="button" onClick={() => void beginEdit(p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 9, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                <Pencil size={14} /> Edit
+              </button>
             </div>
           ))}
         </div>
