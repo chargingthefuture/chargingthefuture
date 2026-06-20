@@ -112,6 +112,32 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: chyme
+    command: chyme.hand
+    commandVersion: 1.0.0
+    purpose: social_audio_presence
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        approvalGateCheck: pass_or_fail
+        raisedFlagCheck: pass_or_fail
+    dataClassesAccessed:
+      - participant_roster_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      roomId: room_identifier
+      roomKey: room_key
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
     command: chyme.profile.delete.service
     commandVersion: 1.0.0
     purpose: service_scoped_deletion

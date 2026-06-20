@@ -15,6 +15,7 @@ export type ChymeParticipant = {
   username: string | null;
   avatarUrl: string | null;
   role: ChymeRole;
+  handRaised: boolean;
   joinedAtIso: string;
   lastSeenAtIso: string;
 };
@@ -71,6 +72,7 @@ export type ChymeAuditEvent = {
     | 'chyme.message.send'
     | 'chyme.call.join'
     | 'chyme.call.leave'
+    | 'chyme.hand'
     | 'chyme.profile.delete.service'
     | 'account.profile.delete.full';
   actorId: string;

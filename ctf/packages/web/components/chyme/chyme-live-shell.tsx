@@ -59,6 +59,32 @@ export function ChymeLiveShell({ currentUser }: { currentUser: CurrentUser }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Light room poll: while a room is shown AND the tab is visible, refresh just the room state every
+  // 15s so other members' persistent raised hands (and the live participant list) appear/disappear
+  // without a manual refresh. It updates only `room` — chat messages and the draft are untouched.
+  // A backgrounded tab stops polling, mirroring the heartbeat's visibility guard, so it stays light.
+  const roomLoaded = room !== null;
+  useEffect(() => {
+    if (!roomLoaded) return;
+    const poll = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      void requestJson<ChymeRoomResponse>('/api/chyme/room')
+        .then((payload) => setRoom(payload))
+        .catch(() => {
+          /* best-effort: a transient poll failure is ignored; the next tick retries */
+        });
+    };
+    const intervalId = window.setInterval(poll, 15000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [roomLoaded]);
+
   // Refresh BOTH the room (live status + participant count) and the chat. The button used to refresh
   // only the messages, so when there were no new messages it looked like nothing happened and the
   // participant count never updated. `refreshing` drives the spinning icon so the press is visible.
