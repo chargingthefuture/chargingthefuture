@@ -59,7 +59,12 @@ longer a precondition for browsing, hosting, or matching.
    - title, description, property type,
    - address, city, state, country, zip,
    - bedrooms, bathrooms,
-   - monthly rent, available from,
+   - monthly rent, **rent currency** (the currency the rent is listed in, chosen with the shared
+     `CurrencySelect`; defaults to `USD`),
+   - **accepted currencies** (a checklist built from `GET /api/currencies`; each checked code is
+     persisted to `lighthouse_property_accepted_currencies`. Checking ServiceCredits means the listing
+     accepts ServiceCredits — this is a separate field from the rent currency, never derived from it),
+   - available from,
    - amenities, house rules,
    - photos,
    - Airbnb profile URL,
@@ -226,6 +231,27 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-06-20: Multi-currency for property listings (issue #120). The host create/edit form
+  (`lighthouse-host.tsx`) no longer assumes USD: it adds a **Rent currency** picker (shared
+  `CurrencySelect`, defaults to `USD`) next to Monthly rent, and an **Accepted currencies** checklist
+  (built once from `GET /api/currencies`; each option toggles a code, ServiceCredits shown by its
+  label) with a hint that checking ServiceCredits means the listing accepts ServiceCredits. The
+  create/update API contract gained two optional inputs — `rentCurrency` (string|null) and
+  `acceptedCurrencies` (string[]) — read in `parsePropertyInput` on both `POST /api/lighthouse/properties`
+  and `PUT /api/lighthouse/properties/:id`. `createProperty` writes `rent_currency` and inserts one
+  validated row per accepted code into `lighthouse_property_accepted_currencies` (unknown/inactive
+  codes skipped) in the same transaction; `updateProperty` sets `rent_currency` and REPLACEs the
+  accepted set (delete-then-insert) in its transaction. Reads (`listProperties`, `getPropertyById`,
+  `listMyProperties`, `listLighthousePropertiesAdmin`) attach `acceptedCurrencies` and a server-computed
+  `acceptsServiceCredits` (true iff an accepted code joins to `currencies.is_service_credits = TRUE`),
+  so `LighthouseProperty` now carries `rentCurrency`, `acceptedCurrencies`, and `acceptsServiceCredits`.
+  Display: the browse card and property detail format rent in its own currency (fiat symbol, or the
+  ServiceCredits label — never a "$" for ServiceCredits; 0 = "Free"; blank when unset) using a
+  `code -> Currency` map the shell fetches once from `/api/currencies`; the "Accepts Service Credits"
+  badge and the Credits filter now read `acceptsServiceCredits` (legacy `credits` field kept as a
+  fallback). The admin hide/unhide resend preserves both currency fields. `lighthouse.property.create`
+  command contract `inputSchema` and `dataAccess` updated to include the currency fields and the
+  `lighthouse_property_accepted_currencies` table. No schema change (the columns/table already shipped).
 - 2026-06-18: Member self-service hosting (owner decision). The member surface had no way to create a listing and `createProperty` hard-denied (`policy_denied`) without a pre-existing admin-granted host profile — and there was no UI to become a host — so no one could list (0 hosts, 0 properties). Added a "List your place" tab to the member shell (`lighthouse-host.tsx`, wired into `lighthouse-icon-rail.tsx` + the mobile tab bar; `LighthouseShell` now receives `userId`/`username` from the plugin page) with a create-listing form posting to `POST /api/lighthouse/properties`. Removed the host-profile gate in `createProperty`; it now transparently provisions the member's host `lighthouse_profiles` row (`ON CONFLICT (user_id)`, never overwriting a seeker), so there is no separate host-profile form. Host identity is composed from existing data: username (auth gate), Quora link (new `getHostQuoraUrl`, read from `unlock_verification_submissions`, returned on `GET /api/lighthouse/my-properties` as `host.quoraProfileUrl`), and the shared `TrustWidgetCard` (`GET /api/trust/user/self`). Added the `lighthouse.property.create` command + access-policy contracts (roles: member, admin; `selfServiceHosting: enabled`, `hostProfileAutoProvisioned: true`). Web + mobile-responsive; Android RN host tab is a tracked follow-up. Schema unchanged (existing tables).
 - 2026-06-18: Removed per-plugin announcements from LightHouse. The admin Announcements tab and its component (`lighthouse-admin-announcements.tsx`), the user/admin announcement routes (`/api/lighthouse/announcements`, `/api/lighthouse/admin/announcements` and its `:id` route), the repository announcement functions, and the `LighthouseAnnouncementInput` type were deleted. Announcements are now posted in one place — the Feed (`feed-announcements` plugin), which can target any plugin (including LightHouse) — so the Feed is the single place to post announcements about LightHouse. No schema change: LightHouse only ever read the shared `announcements` table by targeting (it has no `lighthouse_announcements` table in v3). Sections 1.6, 2.4, 3.5, and the data-model announcement entry were removed above to match.
 - 2026-06-13: Web admin slice 3 — match moderation + announcements. Added a Cancel-match action on pending/accepted matches (`PUT /api/lighthouse/admin/matches/:id` with `status: 'cancelled'`, `x-ctf-csrf: '1'`) and a new Announcements tab (`components/lighthouse/lighthouse-admin-announcements.tsx`) that creates (`POST /api/lighthouse/admin/announcements`) and deletes (`DELETE /api/lighthouse/admin/announcements/:id`) admin announcements. Announcements split into their own component to keep the shell within the rule-116 size budget. No new endpoint, schema, or contract.

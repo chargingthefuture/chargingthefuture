@@ -1,10 +1,11 @@
 "use client";
 
 import { Bath, Bed, Heart, MapPin } from "lucide-react";
-import { COLOR, type Property } from "./shared";
+import { COLOR, formatRent, listingAcceptsCredits, type CurrencyMap, type Property } from "./shared";
 
 export function LighthouseBrowse({
   properties,
+  currencies,
   totalCount,
   creditsCount,
   saved,
@@ -12,6 +13,7 @@ export function LighthouseBrowse({
   onSelect,
 }: {
   properties: Property[];
+  currencies: CurrencyMap;
   totalCount: number;
   creditsCount: number;
   saved: string[];
@@ -53,10 +55,13 @@ export function LighthouseBrowse({
                 ) : null}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    {Number.isFinite(p.monthlyRent) ? (
-                      <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>{p.monthlyRent > 0 ? <>${p.monthlyRent}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></> : "Free"}</div>
-                    ) : null}
-                    {p.credits && <div style={{ fontSize: 10, color: "#F59E0B" }}>Credits ✓</div>}
+                    {(() => {
+                      const rent = formatRent(p, currencies);
+                      if (rent === null) return null;
+                      if (rent === "Free") return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>Free</div>;
+                      return <div style={{ fontSize: 18, fontWeight: 800, color: COLOR }}>{rent}<span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>;
+                    })()}
+                    {listingAcceptsCredits(p) && <div style={{ fontSize: 10, color: "#F59E0B" }}>Credits ✓</div>}
                   </div>
                   <button onClick={() => onSelect(p)} style={{ padding: "8px 16px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>View</button>
                 </div>

@@ -32,6 +32,14 @@ export type LighthouseProperty = {
   bedrooms: number | null;
   bathrooms: number | null;
   monthlyRent: number | null;
+  // Currency the monthly rent is listed in (references currencies.code). Null when no rent is set.
+  rentCurrency: string | null;
+  // Currencies this listing accepts. Independent of rentCurrency — a fiat rent can still accept
+  // ServiceCredits. Codes reference currencies.code.
+  acceptedCurrencies: string[];
+  // Computed server-side: true when any accepted currency is ServiceCredits, so the client can show
+  // the "Accepts ServiceCredits" badge without loading the currency catalog.
+  acceptsServiceCredits: boolean;
   availableFromIso: string | null;
   amenities: string[];
   houseRules: string[];
@@ -89,6 +97,8 @@ export type LighthousePropertyInput = {
   bedrooms?: number | null;
   bathrooms?: number | null;
   monthlyRent?: number | null;
+  rentCurrency?: string | null;
+  acceptedCurrencies?: string[] | null;
   availableFromIso?: string | null;
   amenities?: unknown;
   houseRules?: unknown;

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { BG, getLighthouseTokens, type ChatCredentials, type Match, type Property, type Tab } from "./shared";
+import type { Currency } from "@/lib/currency/types";
+import { BG, getLighthouseTokens, listingAcceptsCredits, type ChatCredentials, type CurrencyMap, type Match, type Property, type Tab } from "./shared";
 import { LighthouseIconRail } from "./lighthouse-icon-rail";
 import { LighthouseFilterSidebar, type ListingFilter, filterProperties } from "./lighthouse-filter-sidebar";
 import { LighthouseRightPanel } from "./lighthouse-right-panel";
@@ -31,6 +32,7 @@ export function LighthouseShell({ userId, username }: { userId: string; username
   const [chatCredentials, setChatCredentials] = useState<ChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
@@ -45,6 +47,14 @@ export function LighthouseShell({ userId, username }: { userId: string; username
 
         const matchRes = await fetch("/api/lighthouse/matches");
         setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
+
+        // Currency catalog, fetched once, so the card/detail can format rent in its own currency
+        // (a fiat symbol, or the ServiceCredits label — never a "$" for ServiceCredits).
+        const currencyRes = await fetch("/api/currencies", { cache: "no-store" });
+        if (currencyRes.ok) {
+          const data = await currencyRes.json() as { currencies?: Currency[] };
+          setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
+        }
       } catch {
         setError("Failed to load LightHouse data.");
       } finally {
@@ -81,10 +91,14 @@ export function LighthouseShell({ userId, username }: { userId: string; username
     );
   }
 
+  const currencyMap: CurrencyMap = {};
+  for (const currency of currencies) currencyMap[currency.code] = currency;
+
   if (selectedProperty) {
     return (
       <LighthousePropertyDetail
         property={selectedProperty}
+        currencies={currencyMap}
         onBack={() => setSelectedProperty(null)}
         currentUserId={userId}
         onEdit={(p) => {
@@ -96,7 +110,7 @@ export function LighthouseShell({ userId, username }: { userId: string; username
     );
   }
 
-  const creditsCount = properties.filter((p) => p.credits).length;
+  const creditsCount = properties.filter(listingAcceptsCredits).length;
   const visibleProperties = filterProperties(properties, filter).filter((p) => {
     if (!search.trim()) return true;
     const haystack = `${p.title} ${p.city} ${p.state}`.toLowerCase();
@@ -112,6 +126,7 @@ export function LighthouseShell({ userId, username }: { userId: string; username
       {tab === "browse" && (
         <LighthouseBrowse
           properties={visibleProperties}
+          currencies={currencyMap}
           totalCount={properties.length}
           creditsCount={creditsCount}
           saved={saved}

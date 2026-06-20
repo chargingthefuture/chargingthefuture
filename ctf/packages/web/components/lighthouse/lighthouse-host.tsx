@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import type { TrustUserExtension } from "@/lib/trust/types";
-import { getLighthouseTokens, type Property } from "./shared";
+import { CurrencySelect } from "@/components/shared/currency-select";
+import type { Currency } from "@/lib/currency/types";
+import { SERVICE_CREDITS_LABEL } from "@/lib/currency/types";
+import { sortPreferred } from "@/lib/currency/format";
+import { formatRent, getLighthouseTokens, type CurrencyMap, type Property } from "./shared";
 
 // Member self-service hosting. A member lists their own place here; there is NO separate "host
 // profile" form — the host identity shown on a listing is composed from data we already have
@@ -24,16 +28,22 @@ type PropertyForm = {
   bedrooms: string;
   bathrooms: string;
   monthlyRent: string;
+  rentCurrency: string;
+  acceptedCurrencies: string[];
   availableFromIso: string;
   amenities: string;
   houseRules: string;
   airbnbProfileUrl: string;
 };
 
+// Keys of PropertyForm whose value is a plain string (everything except the multi-select
+// acceptedCurrencies). The shared <input>/<textarea> field helper only ever edits these.
+type StringFormKey = Exclude<keyof PropertyForm, "acceptedCurrencies">;
+
 const EMPTY_FORM: PropertyForm = {
   title: "", description: "", propertyType: "", addressLine: "", city: "", state: "", country: "",
-  zipCode: "", bedrooms: "", bathrooms: "", monthlyRent: "", availableFromIso: "", amenities: "",
-  houseRules: "", airbnbProfileUrl: "",
+  zipCode: "", bedrooms: "", bathrooms: "", monthlyRent: "", rentCurrency: "USD", acceptedCurrencies: [],
+  availableFromIso: "", amenities: "", houseRules: "", airbnbProfileUrl: "",
 };
 
 function toNumberOrNull(value: string): number | null {
@@ -62,6 +72,8 @@ type FullProperty = {
   bedrooms?: number | null;
   bathrooms?: number | null;
   monthlyRent?: number | null;
+  rentCurrency?: string | null;
+  acceptedCurrencies?: string[] | null;
   availableFromIso?: string | null;
   amenities?: string[] | null;
   houseRules?: string[] | null;
@@ -96,6 +108,8 @@ function fullPropertyToForm(p: FullProperty): PropertyForm {
     bedrooms: numToString(p.bedrooms),
     bathrooms: numToString(p.bathrooms),
     monthlyRent: numToString(p.monthlyRent),
+    rentCurrency: p.rentCurrency ?? "USD",
+    acceptedCurrencies: Array.isArray(p.acceptedCurrencies) ? p.acceptedCurrencies : [],
     availableFromIso: dateInputValue(p.availableFromIso),
     amenities: listToString(p.amenities),
     houseRules: listToString(p.houseRules),
@@ -123,6 +137,7 @@ export function LighthouseHost({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const formRef = useRef<HTMLDivElement | null>(null);
 
   async function loadMine() {
@@ -142,6 +157,17 @@ export function LighthouseHost({
     void loadMine();
     void (async () => {
       try {
+        const res = await fetch("/api/currencies", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json() as { currencies?: Currency[] };
+          setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
+        }
+      } catch {
+        // The accepted-currencies checklist is supplementary; ignore failures.
+      }
+    })();
+    void (async () => {
+      try {
         const res = await fetch("/api/trust/user/self");
         if (res.ok) {
           const data = await res.json() as TrustUserExtension & { allowed?: boolean };
@@ -153,8 +179,17 @@ export function LighthouseHost({
     })();
   }, []);
 
-  function setField<K extends keyof PropertyForm>(key: K, value: string) {
+  function setField(key: StringFormKey, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleAcceptedCurrency(code: string) {
+    setForm((prev) => ({
+      ...prev,
+      acceptedCurrencies: prev.acceptedCurrencies.includes(code)
+        ? prev.acceptedCurrencies.filter((c) => c !== code)
+        : [...prev.acceptedCurrencies, code],
+    }));
   }
 
   async function beginEdit(id: string) {
@@ -200,6 +235,8 @@ export function LighthouseHost({
       bedrooms: toNumberOrNull(form.bedrooms),
       bathrooms: toNumberOrNull(form.bathrooms),
       monthlyRent: toNumberOrNull(form.monthlyRent),
+      rentCurrency: form.rentCurrency || null,
+      acceptedCurrencies: form.acceptedCurrencies,
       availableFromIso: form.availableFromIso.trim() || null,
       amenities: toListOrNull(form.amenities),
       houseRules: toListOrNull(form.houseRules),
@@ -233,10 +270,16 @@ export function LighthouseHost({
     }
   }
 
+  const currencyMap: CurrencyMap = useMemo(() => {
+    const map: CurrencyMap = {};
+    for (const currency of currencies) map[currency.code] = currency;
+    return map;
+  }, [currencies]);
+
   const labelStyle: React.CSSProperties = { fontSize: 12, color: t.MUTED, fontWeight: 600, marginBottom: 4, display: "block" };
   const inputStyle: React.CSSProperties = { width: "100%", padding: "9px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" };
 
-  function field(key: keyof PropertyForm, label: string, opts?: { type?: string; placeholder?: string; textarea?: boolean }) {
+  function field(key: StringFormKey, label: string, opts?: { type?: string; placeholder?: string; textarea?: boolean }) {
     return (
       <div style={{ flex: "1 1 160px", minWidth: 140 }}>
         <label style={labelStyle}>{label}</label>
@@ -288,10 +331,50 @@ export function LighthouseHost({
             {field("bedrooms", "Bedrooms", { type: "number" })}
             {field("bathrooms", "Bathrooms", { type: "number" })}
             {field("monthlyRent", "Monthly rent", { type: "number", placeholder: "0 for Service Credits / free" })}
+            <div style={{ flex: "1 1 160px", minWidth: 140 }}>
+              <label style={labelStyle}>Rent currency</label>
+              <CurrencySelect
+                value={form.rentCurrency}
+                currencies={currencies.length > 0 ? currencies : undefined}
+                onChange={(code) => setField("rentCurrency", code)}
+                ariaLabel="Rent currency"
+                className="lighthouse-rent-currency-select"
+              />
+            </div>
             {field("availableFromIso", "Available from", { type: "date" })}
             {field("amenities", "Amenities (comma separated)")}
             {field("houseRules", "House rules (comma separated)")}
             {field("airbnbProfileUrl", "Listing URL (optional)")}
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Accepted currencies</label>
+            <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
+              Choose every currency this listing accepts. Checking {SERVICE_CREDITS_LABEL} means your
+              listing accepts {SERVICE_CREDITS_LABEL} — this is separate from the rent currency above.
+            </div>
+            {currencies.length === 0 ? (
+              <div style={{ fontSize: 12, color: t.MUTED }}>Loading currencies…</div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {sortPreferred(currencies).map((currency) => {
+                  const checked = form.acceptedCurrencies.includes(currency.code);
+                  const optionLabel = currency.isServiceCredits
+                    ? SERVICE_CREDITS_LABEL
+                    : (currency.symbol ? `${currency.label} (${currency.symbol})` : currency.label);
+                  return (
+                    <label key={currency.code} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: t.TEXT, cursor: "pointer", background: checked ? `${t.ACCENT}14` : "transparent", border: `1px solid ${checked ? t.ACCENT + "40" : t.BORDER}`, borderRadius: 8, padding: "6px 10px" }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAcceptedCurrency(currency.code)}
+                        aria-label={`Accept ${optionLabel}`}
+                      />
+                      {optionLabel}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
           {error ? <div style={{ color: "#EF4444", fontSize: 13, marginTop: 10 }}>{error}</div> : null}
           <div style={{ marginTop: 14 }}>
@@ -314,7 +397,11 @@ export function LighthouseHost({
                 <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{p.title}</div>
                 <div style={{ fontSize: 13, color: t.MUTED, marginTop: 2 }}>
                   {[p.city, p.state].filter(Boolean).join(", ") || "Location not set"}
-                  {p.monthlyRent ? ` · $${p.monthlyRent}/mo` : " · Service Credits / free"}
+                  {(() => {
+                    const rent = formatRent(p, currencyMap);
+                    if (rent === null) return " · Service Credits / free";
+                    return rent === "Free" ? " · Free" : ` · ${rent}/mo`;
+                  })()}
                 </div>
               </div>
               <button type="button" onClick={() => void beginEdit(p.id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 9, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
