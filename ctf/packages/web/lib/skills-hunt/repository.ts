@@ -1463,12 +1463,18 @@ export async function claimSkillsHuntRewardUnderCap(input: {
   return withDbTransaction(async (client) => {
     await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`sh-reward:${input.roundId}:${input.submitterUserId}`]);
 
-    const current = await client.query<{ credit_granted: boolean | null }>(
-      `SELECT credit_granted FROM skills_hunt_submissions WHERE id = $1::uuid FOR UPDATE`,
-      [input.submissionId],
+    const current = await client.query<{ credit_granted: boolean | null; status: string }>(
+      `SELECT credit_granted, status
+       FROM skills_hunt_submissions
+       WHERE id = $1::uuid AND round_id = $2::uuid AND submitter_user_id = $3
+       FOR UPDATE`,
+      [input.submissionId, input.roundId, input.submitterUserId],
     );
     const row = current.rows[0];
-    if (!row || row.credit_granted) {
+    // Re-check inside the lock: the submission must still belong to this
+    // round+scout, still be accepted (a concurrent reject/flag could have moved
+    // it after the route's in-memory check), and not already credited.
+    if (!row || row.status !== 'accepted' || row.credit_granted) {
       return false;
     }
 
