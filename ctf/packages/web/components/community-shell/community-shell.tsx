@@ -250,7 +250,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
           <Menu size={18} />
         </button>
         <div className={styles.mobileBarBrand}>
-          <span className={styles.mobileBarLogo} aria-hidden="true">SH</span>
           <span className={styles.mobileBarTitle}>Survivor Hub</span>
         </div>
         <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
