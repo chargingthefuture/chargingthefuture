@@ -63,6 +63,9 @@ function SubmissionRow(props: RowProps) {
       </td>
       <td style={{ padding: "10px 6px", fontSize: 11, color: urlColor }}>{s.urlValidationResult ?? "—"}</td>
       <td style={{ padding: "10px 6px", color: COLOR, fontWeight: 700 }}>{s.pointsAwarded}</td>
+      <td style={{ padding: "10px 6px", fontSize: 12, color: s.creditGranted ? "#22C55E" : "#4B5563", fontWeight: s.creditGranted ? 700 : 400 }} title={s.creditGranted ? "ServiceCredits paid to this scout" : "No ServiceCredits paid"}>
+        {s.creditGranted ? `+${s.creditAmount}` : "—"}
+      </td>
       <td style={{ padding: "10px 6px" }}><RowActions {...props} /></td>
     </tr>
   );
@@ -103,6 +106,7 @@ export function SkillsHuntAdminTable({
           <th style={headCell}>Quora</th>
           <th style={headCell}>URL check</th>
           <th style={headCell}>Pts</th>
+          <th style={headCell}>Reward</th>
           <th style={{ ...headCell, width: 220 }}>Actions</th>
         </tr>
       </thead>
