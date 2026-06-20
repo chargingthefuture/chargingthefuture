@@ -3,11 +3,11 @@ import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../.
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import {
+  claimSkillsHuntRewardUnderCap,
   getRound,
   insertSkillsHuntAudit,
-  markSkillsHuntCreditGranted,
+  revertSkillsHuntCreditClaim,
   reviewSubmission,
-  sumGrantedCreditsForUserInRound,
   validateReviewInput,
 } from 'lib/skills-hunt/repository';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
@@ -46,29 +46,38 @@ async function grantAcceptRewardBestEffort(submission: SkillsHuntSubmission, rev
     }
     const perAccept = round.rewardCreditsPerAccept;
 
-    const cap = round.rewardPerUserRoundCap;
-    if (cap !== null) {
-      const alreadyPaid = await sumGrantedCreditsForUserInRound(round.id, submission.submitterUserId);
-      if (alreadyPaid + perAccept > cap) {
-        return;
-      }
+    // Claim the reward atomically under the per-scout round cap (advisory-locked
+    // per round+scout) so two concurrent accepts can't overpay. The claim marks
+    // the submission credited; we mint next and revert the claim if it fails.
+    const claimed = await claimSkillsHuntRewardUnderCap({
+      submissionId: submission.id,
+      roundId: round.id,
+      submitterUserId: submission.submitterUserId,
+      amount: perAccept,
+      cap: round.rewardPerUserRoundCap,
+    });
+    if (!claimed) {
+      return;
     }
 
     const idempotencyKey = `skills-hunt-accept-submission-${submission.id}`;
-    const grant = await mintGrant({
-      actorId: SKILLS_HUNT_INCENTIVE_ACTOR_ID,
-      targetUserId: submission.submitterUserId,
-      amount: perAccept,
-      grantReason: 'skills_hunt_accept_reward',
-      governanceTicketId: `skills-hunt:submission:${submission.id}`,
-      idempotencyKey,
-    });
-
-    // markSkillsHuntCreditGranted only returns true on the not-granted → granted
-    // transition, so a concurrent/retried review records the audit exactly once.
-    if (!(await markSkillsHuntCreditGranted(submission.id, perAccept))) {
-      return;
+    let grant: Awaited<ReturnType<typeof mintGrant>>;
+    try {
+      grant = await mintGrant({
+        actorId: SKILLS_HUNT_INCENTIVE_ACTOR_ID,
+        targetUserId: submission.submitterUserId,
+        amount: perAccept,
+        grantReason: 'skills_hunt_accept_reward',
+        governanceTicketId: `skills-hunt:submission:${submission.id}`,
+        idempotencyKey,
+      });
+    } catch (mintError) {
+      // Mint rejected (e.g. mint budget) — release the claim so the cap and the
+      // paid flag stay accurate, then surface via the outer best-effort handler.
+      await revertSkillsHuntCreditClaim(submission.id);
+      throw mintError;
     }
+
     submission.creditGranted = true;
     submission.creditAmount = perAccept;
     submission.creditGrantedAtIso = new Date().toISOString();

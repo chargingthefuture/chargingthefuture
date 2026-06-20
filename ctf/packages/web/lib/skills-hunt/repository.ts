@@ -1447,36 +1447,63 @@ export async function getRound(roundId: string): Promise<SkillsHuntRound | null>
   return row ? mapRound(row) : null;
 }
 
-// Total reward credits already paid to one scout in one round. Used for the
-// per-scout, per-round cap check before minting another reward.
-export async function sumGrantedCreditsForUserInRound(roundId: string, userId: string): Promise<number> {
-  const result = await queryDb<{ total: string | null }>(
-    `
-      SELECT COALESCE(SUM(credit_amount), 0)::text AS total
-      FROM skills_hunt_submissions
-      WHERE round_id = $1::uuid
-        AND submitter_user_id = $2
-        AND credit_granted = TRUE
-    `,
-    [roundId, userId],
-  );
-  return Number(result.rows[0]?.total ?? 0);
+// Atomically claim the accept reward for a submission under the per-scout,
+// per-round cap. A transaction-scoped advisory lock keyed on (round, scout)
+// serializes concurrent accepts for the same scout so two of them cannot both
+// pass the cap and overpay. On success the submission is marked credited inside
+// the lock (claim-then-mint); the caller mints next and reverts the claim if the
+// mint is rejected. Returns false when already granted or the cap would be crossed.
+export async function claimSkillsHuntRewardUnderCap(input: {
+  submissionId: string;
+  roundId: string;
+  submitterUserId: string;
+  amount: number;
+  cap: number | null;
+}): Promise<boolean> {
+  return withDbTransaction(async (client) => {
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`sh-reward:${input.roundId}:${input.submitterUserId}`]);
+
+    const current = await client.query<{ credit_granted: boolean | null }>(
+      `SELECT credit_granted FROM skills_hunt_submissions WHERE id = $1::uuid FOR UPDATE`,
+      [input.submissionId],
+    );
+    const row = current.rows[0];
+    if (!row || row.credit_granted) {
+      return false;
+    }
+
+    if (input.cap !== null) {
+      const sum = await client.query<{ total: string | null }>(
+        `SELECT COALESCE(SUM(credit_amount), 0)::text AS total
+         FROM skills_hunt_submissions
+         WHERE round_id = $1::uuid AND submitter_user_id = $2 AND credit_granted = TRUE`,
+        [input.roundId, input.submitterUserId],
+      );
+      if (Number(sum.rows[0]?.total ?? 0) + input.amount > input.cap) {
+        return false;
+      }
+    }
+
+    await client.query(
+      `UPDATE skills_hunt_submissions
+       SET credit_granted = TRUE, credit_amount = $2, credit_granted_at = NOW(), updated_at = NOW()
+       WHERE id = $1::uuid`,
+      [input.submissionId, Math.max(0, Math.floor(input.amount))],
+    );
+    return true;
+  });
 }
 
-// Idempotently record that a submission's reward was minted. Returns true only
-// on the transition from not-granted → granted, so a concurrent/retried review
-// cannot double-count the payout. The ledger mint is itself idempotent on its
-// idempotency key; this flag is the fast-path guard and the bookkeeping record.
-export async function markSkillsHuntCreditGranted(submissionId: string, amount: number): Promise<boolean> {
-  const result = await queryDb(
-    `
-      UPDATE skills_hunt_submissions
-      SET credit_granted = TRUE, credit_amount = $2, credit_granted_at = NOW(), updated_at = NOW()
-      WHERE id = $1::uuid AND credit_granted = FALSE
-    `,
-    [submissionId, Math.max(0, Math.floor(amount))],
+// Release a reward claim when the mint that should follow it is rejected, so the
+// per-scout cap and the paid flag stay accurate (the mint is transactional, so a
+// rejection means no credits moved).
+export async function revertSkillsHuntCreditClaim(submissionId: string): Promise<void> {
+  await queryDb(
+    `UPDATE skills_hunt_submissions
+     SET credit_granted = FALSE, credit_amount = 0, credit_granted_at = NULL, updated_at = NOW()
+     WHERE id = $1::uuid AND credit_granted = TRUE`,
+    [submissionId],
   );
-  return (result.rowCount ?? 0) > 0;
 }
 
 // Round-level reward rollup for the admin shell: how many scouts were paid and
