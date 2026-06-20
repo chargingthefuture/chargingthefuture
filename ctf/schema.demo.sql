@@ -232,10 +232,14 @@ CREATE TABLE IF NOT EXISTS chyme_room_members (
   username TEXT NULL,
   avatar_url TEXT NULL,
   role TEXT NOT NULL CHECK (role IN ('speaker', 'listener')),
+  hand_raised BOOLEAN NOT NULL DEFAULT FALSE,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, user_id)
 );
+-- Persistent raise-hand state: a raised hand must stay up for everyone until the member
+-- lowers it or leaves. Guarded for legacy DBs that pre-date the column.
+ALTER TABLE IF EXISTS chyme_room_members ADD COLUMN IF NOT EXISTS hand_raised BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_room_id ON chyme_room_members(room_id);
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_user_id ON chyme_room_members(user_id);
 CREATE TABLE IF NOT EXISTS chyme_messages (
@@ -961,9 +965,14 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- createOrUpdateUnlockSubmission upserts with ON CONFLICT (user_id); guarantee a unique conflict
--- target on user_id regardless of which column is the primary key. Dedupe first (keep the most
--- recently updated row per member) so the index can build; idempotent once one row per member.
+-- The app upserts a submission with `ON CONFLICT (user_id)` (createOrUpdateUnlockSubmission). That
+-- requires a unique constraint on user_id as the conflict target. schema.sql declares user_id as the
+-- PRIMARY KEY, but on databases cloned with the primary key on `id` instead, the conflict target is
+-- missing and every submission INSERT fails with "there is no unique or exclusion constraint matching
+-- the ON CONFLICT specification" — which surfaces to members as the generic 503 "Unlock submission
+-- unavailable." A unique index on user_id is a valid conflict target regardless of which column is
+-- the primary key. Dedupe first (keep the most recently updated row per member) so the index can
+-- build even if a legacy row pair slipped in; idempotent once there is one row per member.
 DELETE FROM unlock_verification_submissions
 WHERE ctid IN (
   SELECT ctid FROM (
@@ -978,8 +987,11 @@ WHERE ctid IN (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
   ON unlock_verification_submissions (user_id);
 
--- Add prod unlock audit/config tables if missing. user_id/action are nullable because the writer
--- (insertUnlockAudit) populates actor_user_id/command/... and not the legacy user_id/action columns.
+-- Add prod unlock audit/config tables if missing.
+-- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
+-- actor_user_id/command/policy_status/reason columns and does NOT populate the legacy user_id/action
+-- columns, so requiring them NOT NULL would make every audit INSERT fail (and, because the submission
+-- route awaits the audit write, would turn an otherwise-successful submission into the same 503).
 CREATE TABLE IF NOT EXISTS unlock_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT,
@@ -995,6 +1007,8 @@ CREATE TABLE IF NOT EXISTS unlock_audit_log (
   request_id TEXT,
   target_user_id TEXT
 );
+-- Guarded DDL for legacy unlock_audit_log tables: make sure the columns the writer uses exist, and
+-- drop the legacy NOT NULL on user_id/action (the writer does not populate them).
 ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
 ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS command TEXT;
 ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb NOT NULL;
@@ -1273,18 +1287,6 @@ CREATE TABLE IF NOT EXISTS workforce_occupations (
   name TEXT NOT NULL,
   sector TEXT NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_by_user_id TEXT NOT NULL,
-  updated_by_user_id TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE TABLE IF NOT EXISTS workforce_announcements (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  published_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ,
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1929,6 +1931,23 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS met
 ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === DIRECTORY MODULE ===
+-- Per-profile skills live in the normalized directory_profile_skills junction
+-- (below); the profile view reads skills only from that join. The original
+-- platform instead stored skills as a free-text array column on the profile
+-- (directory_profiles.skills TEXT[]). That legacy column is NOT recreated here —
+-- it only exists on databases cloned from the old platform — and v3 does not read
+-- it. post/0005_directory_backfill_skills_from_legacy_array.sql copies any such
+-- legacy array into the junction once (guarded + idempotent); directory_profile_skills
+-- is the authoritative source afterward.
+-- Likewise the original platform stored the profile blurb in a legacy
+-- directory_profiles.description column (not recreated here); v3 renders the blurb
+-- from `bio`. post/0006_directory_backfill_bio_from_legacy_description.sql copies
+-- description -> bio once where bio is empty. The legacy quora_url column also exists
+-- only on cloned data; v3 renders the Quora link from profile_url, so
+-- post/0007_directory_backfill_profile_url_from_legacy_quora_url.sql copies
+-- quora_url -> profile_url once where profile_url is empty. The legacy signal_url
+-- column is left in place and surfaced later by the Foundation/SocketRelay contact
+-- flow, not copied here.
 CREATE TABLE IF NOT EXISTS directory_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claimed_by_user_id TEXT,
@@ -3050,18 +3069,14 @@ ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NUL
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
--- At most one row per member per UTC day. This makes the "record a sign-in once per day"
--- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
--- concurrent requests for the same member on the same UTC day cannot both write a row. The day
--- is computed in UTC explicitly so the dedupe does not depend on the database session timezone.
---
 -- Legacy guard: on databases cloned before `created_at` was a `timestamptz`, this column can be a
 -- plain `timestamp without time zone`. The guarded `ADD COLUMN IF NOT EXISTS` above does NOT retype
 -- an existing column, so it stays the legacy type. That breaks the UTC-day index below: with a
 -- timestamp-without-tz input, `created_at AT TIME ZONE 'UTC'` resolves to the STABLE overload of
 -- `timezone()` and the index build fails with "functions in index expression must be marked
--- IMMUTABLE". Retype it to `timestamptz` first, interpreting the stored wall-clock as UTC. The
--- block is conditional so it is a no-op (and does not shift values) once the column is timestamptz.
+-- IMMUTABLE" (this is what stalled the Update Neon DB apply). Retype it to `timestamptz` first,
+-- interpreting the stored wall-clock as UTC. The block is conditional so it is a no-op (and does not
+-- shift values) once the column is already `timestamptz`.
 DO $$
 BEGIN
   IF EXISTS (
@@ -3074,9 +3089,12 @@ BEGIN
   END IF;
 END
 $$;
--- One-time dedupe so the unique index below can be built on legacy data: a database cloned from
--- before the index existed can hold duplicate (user_id, UTC-day) rows. Keep the earliest sign-in of
--- each day and drop the rest. Naturally idempotent — once deduped it removes nothing.
+-- One-time dedupe so the unique index below can be built on legacy data. Before that index existed
+-- the app could write more than one row per member per UTC day (every sign-in, across instances),
+-- so a database cloned from that era has duplicate (user_id, UTC-day) rows. Collapse each group to a
+-- single row — keep the earliest sign-in of the day — before creating the index. `login_events` is
+-- only a daily activity signal (the 7-day "active members" window reads DISTINCT user_id), so which
+-- row survives does not matter. This DELETE is naturally idempotent: once deduped it removes nothing.
 DELETE FROM login_events
 WHERE ctid IN (
   SELECT ctid FROM (
@@ -3088,6 +3106,12 @@ WHERE ctid IN (
   ) ranked
   WHERE ranked.rn > 1
 );
+-- At most one row per member per UTC day. This makes the "record a sign-in once per day"
+-- dedupe atomic at the database level (the app inserts with ON CONFLICT DO NOTHING), so two
+-- concurrent requests for the same member on the same UTC day cannot both write a row. The day
+-- is computed in UTC explicitly so the dedupe does not depend on the database session timezone.
+-- Because `created_at` is guaranteed `timestamptz` by the block above, the `AT TIME ZONE 'UTC'`
+-- expression here resolves to the IMMUTABLE overload of `timezone()` and is index-safe.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
   ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
@@ -3378,11 +3402,32 @@ ALTER TABLE IF EXISTS service_credits_escrow_holds ADD COLUMN IF NOT EXISTS upda
 -- service_credits_governance_events (7 missing)
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS actor_id TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS amount NUMERIC;
-ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS governance_ticket_id UUID;
+-- governance_ticket_id is a free-text ticket reference, not a UUID. Every automated mint passes a
+-- prefixed string (e.g. 'unlock:submission:5', 'levelup:<cohort>:completion:<id>',
+-- 'contribution-<id>') and the admin governance route accepts free text, so a UUID-typed column
+-- rejects every such INSERT with "invalid input syntax for type uuid" and the mint silently fails
+-- (best-effort callers swallow it; the unlock approval reward is the symptom that surfaced this).
+-- Fresh databases get TEXT here; the guarded block below converts any legacy UUID column to TEXT.
+ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS governance_ticket_id TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS provider_transaction_id TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS reason TEXT;
 ALTER TABLE IF EXISTS service_credits_governance_events ADD COLUMN IF NOT EXISTS target_user_id TEXT;
+-- Legacy fix: if an existing database created governance_ticket_id as UUID, convert it to TEXT so the
+-- non-UUID ticket references the app uses can be stored. Idempotent: skips when already TEXT; the
+-- uuid->text cast preserves existing values as their canonical text form.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'service_credits_governance_events'
+      AND column_name = 'governance_ticket_id'
+      AND data_type = 'uuid'
+  ) THEN
+    ALTER TABLE service_credits_governance_events
+      ALTER COLUMN governance_ticket_id TYPE TEXT USING governance_ticket_id::text;
+  END IF;
+END $$;
 
 -- service_credits_ledger_entries (1 missing — already in CREATE TABLE? double-check)
 -- Note: created_at IS in CREATE TABLE; may be a column-ref extraction edge case.
@@ -3599,10 +3644,6 @@ ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS status T
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_by_user_id TEXT;
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_at TIMESTAMPTZ;
 
--- workforce_announcements (2 — defensive)
-ALTER TABLE IF EXISTS workforce_announcements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_announcements ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
-
 -- workforce_occupations (2 — defensive)
 ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
@@ -3660,6 +3701,28 @@ ALTER TABLE IF EXISTS service_credits_adapter_outbox ADD COLUMN IF NOT EXISTS at
 ALTER TABLE IF EXISTS service_credits_command_idempotency ADD COLUMN IF NOT EXISTS actor_id TEXT;
 ALTER TABLE IF EXISTS service_credits_command_idempotency ADD COLUMN IF NOT EXISTS command_name TEXT;
 ALTER TABLE IF EXISTS service_credits_command_idempotency ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+
+-- The governance mint/transfer code upserts idempotency + adapter-outbox rows with
+-- `ON CONFLICT (actor_id, command_name, idempotency_key)` and `ON CONFLICT (command_name,
+-- idempotency_key)`, but the matching unique indexes were never created — so every mint threw
+-- "no unique or exclusion constraint matching the ON CONFLICT specification" and the reward never
+-- landed (this blocked the Unlock approval reward + its "Retry pending rewards" drain). Add the two
+-- missing unique indexes, and relax the legacy `command` NOT NULL column (the code writes
+-- `command_name`, never `command`, so leaving it NOT NULL also blocks the insert).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_adapter_outbox_command_idem
+  ON service_credits_adapter_outbox (command_name, idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_command_idempotency_actor_command_idem
+  ON service_credits_command_idempotency (actor_id, command_name, idempotency_key);
+DO $sc_cmd_idem_command_nullable$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'service_credits_command_idempotency' AND column_name = 'command'
+  ) THEN
+    ALTER TABLE service_credits_command_idempotency ALTER COLUMN command DROP NOT NULL;
+  END IF;
+END
+$sc_cmd_idem_command_nullable$;
 
 -- service_credits_wallet_tombstones (2 missing)
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
@@ -4429,4 +4492,154 @@ BEGIN
   END IF;
 END
 $skills_hunt_submissions_display_name_to_full_name$;
+
+
+-- ── post migration: 0005_directory_backfill_skills_from_legacy_array.sql ──
+-- post/0005: Backfill directory_profile_skills from the legacy directory_profiles.skills text[].
+--
+-- The original platform stored up to three skills as a free-text array column
+-- (directory_profiles.skills TEXT[]). v3 normalized skills into the
+-- directory_profile_skills junction (profile_id -> skill_id -> skills_taxonomy_skills)
+-- and reads skills ONLY from that junction. The v2->v3 clone carried the profile rows
+-- (and the legacy skills array column) forward but no migration ever populated the
+-- junction, so every cloned profile showed zero skills.
+--
+-- This copies each legacy skill name into the junction by matching it
+-- (case-insensitively) against skills_taxonomy_skills. It is:
+--   * guarded   — no-ops on a fresh v3 DB that never had the legacy skills column.
+--   * idempotent — ON CONFLICT (profile_id, skill_id) DO NOTHING; safe to re-run
+--     and safe to run after the same backfill was applied by hand.
+--   * deterministic — when a legacy name matches more than one taxonomy skill (the
+--     same skill name under different job titles), DISTINCT ON picks exactly one
+--     (active first, then lowest display_order, then lowest id), so a profile never
+--     gets the same name twice.
+-- Legacy names with no taxonomy match are skipped (no junction row); those are
+-- reported separately so a name-mapping can be decided if needed.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'directory_profiles'
+      AND column_name = 'skills'
+  ) THEN
+    INSERT INTO directory_profile_skills (profile_id, skill_id, display_order)
+    SELECT picked.profile_id, picked.skill_id, picked.display_order
+    FROM (
+      SELECT DISTINCT ON (dp.id, lower(trim(s.skill_name)))
+             dp.id::uuid AS profile_id,
+             tax.id      AS skill_id,
+             s.ord       AS display_order
+      FROM directory_profiles dp
+      CROSS JOIN LATERAL unnest(dp.skills) WITH ORDINALITY AS s(skill_name, ord)
+      JOIN LATERAL (
+        SELECT sts.id
+        FROM skills_taxonomy_skills AS sts
+        WHERE lower(sts.name) = lower(trim(s.skill_name))
+        -- skills_taxonomy_skills is unique only per job_title_id, so the same name
+        -- can exist under several job titles. Prefer the one under the profile's own
+        -- job title when known. Legacy profiles usually have a NULL job_title_id, in
+        -- which case this term is NULL for every candidate and the active/display_order/id
+        -- tie-break below decides.
+        ORDER BY (sts.job_title_id::text = dp.job_title_id::text) DESC NULLS LAST,
+                 sts.is_active DESC, sts.display_order ASC, sts.id ASC
+        LIMIT 1
+      ) AS tax ON true
+      WHERE dp.skills IS NOT NULL
+        AND array_length(dp.skills, 1) > 0
+        -- directory_profiles.id is varchar on cloned data; only cast values that are
+        -- actually UUID-shaped so one malformed id can never abort the migration.
+        AND dp.id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        -- Only seed profiles that have NO normalized skills yet. Once a member or
+        -- admin edits skills through the app (writing directory_profile_skills), that
+        -- junction is authoritative; re-running this backfill must not re-add a skill
+        -- they removed, by copying a stale value from the legacy array.
+        AND NOT EXISTS (
+          SELECT 1 FROM directory_profile_skills existing
+          WHERE existing.profile_id::text = lower(dp.id::text)
+        )
+      ORDER BY dp.id, lower(trim(s.skill_name)), s.ord
+    ) AS picked
+    ON CONFLICT (profile_id, skill_id) DO NOTHING;
+  END IF;
+END $$;
+
+
+-- ── post migration: 0006_directory_backfill_bio_from_legacy_description.sql ──
+-- post/0006: Backfill directory_profiles.bio from the legacy free-text description.
+--
+-- The original platform stored the profile blurb in directory_profiles.description
+-- (VARCHAR(140) NOT NULL). v3 renders the blurb from `bio`, which was never
+-- populated for cloned profiles — so a carried-over profile showed only a name.
+-- This copies description -> bio, but ONLY where bio is currently empty, so an
+-- in-app edit is never overwritten. Guarded (no-ops on a fresh v3 DB that never
+-- had the legacy column) and idempotent (re-running changes nothing once bio is set).
+--
+-- The legacy contact columns (directory_profiles.signal_url, directory_profiles.quora_url)
+-- are intentionally NOT touched here: they stay on the profile row (tied to the
+-- Clerk member via claimed_by_user_id once claimed) and will be surfaced by the
+-- Foundation/SocketRelay contact flow when that is built. They are not copied into
+-- the core `users` table, which is the cloned legacy table keyed by a legacy uuid
+-- and is disconnected from v3's Clerk identity.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'directory_profiles'
+      AND column_name = 'description'
+  ) THEN
+    UPDATE directory_profiles
+    SET bio = btrim(description)
+    WHERE (bio IS NULL OR btrim(bio) = '')
+      AND description IS NOT NULL
+      AND btrim(description) <> '';
+  END IF;
+END $$;
+
+
+-- ── post migration: 0007_directory_backfill_profile_url_from_legacy_quora_url.sql ──
+-- post/0007: Backfill directory_profiles.profile_url from the legacy quora_url.
+--
+-- The original platform stored each profile's Quora link in directory_profiles.quora_url.
+-- v3 renders the Quora link from profile_url — the directory profile detail shows
+-- "View Quora profile" when it is set and "Quora profile not linked yet" when it is
+-- empty. profile_url was never populated for cloned / manually-created profiles, so a
+-- carried-over profile showed "not linked yet" even though it had a Quora link in the
+-- legacy column. This copies quora_url -> profile_url, but ONLY where profile_url is
+-- currently empty, so an in-app edit is never overwritten. Guarded (no-ops on a DB that
+-- never had the legacy column) and idempotent (re-running changes nothing once
+-- profile_url is set).
+--
+-- Companion to post/0006, which deliberately left the legacy contact columns alone.
+-- The Quora link is now surfaced directly on the profile, so it is backfilled here;
+-- signal_url is still left in place for the Foundation/SocketRelay contact flow.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'directory_profiles'
+      AND column_name = 'quora_url'
+  ) THEN
+    UPDATE directory_profiles
+    SET profile_url = btrim(quora_url),
+        updated_at = NOW()
+    WHERE (profile_url IS NULL OR btrim(profile_url) = '')
+      AND quora_url IS NOT NULL
+      AND btrim(quora_url) <> '';
+  END IF;
+END $$;
+
+
+-- ── post migration: 0007_drop_workforce_announcements.sql ──
+-- post/0007: Drop the per-plugin workforce announcements table.
+--
+-- Announcements are now posted in one place — the Feed (feed-announcements
+-- plugin), which can target any plugin. Workforce no longer keeps its own
+-- announcements, so the dedicated table is removed. Guarded with IF EXISTS so
+-- it no-ops on a fresh database that never had the table, and idempotent
+-- (re-running changes nothing once the table is gone).
+DROP TABLE IF EXISTS workforce_announcements;
 

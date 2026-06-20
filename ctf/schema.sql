@@ -1948,9 +1948,12 @@ ALTER TABLE IF EXISTS skills_taxonomy_change_events ADD COLUMN IF NOT EXISTS cre
 -- Likewise the original platform stored the profile blurb in a legacy
 -- directory_profiles.description column (not recreated here); v3 renders the blurb
 -- from `bio`. post/0006_directory_backfill_bio_from_legacy_description.sql copies
--- description -> bio once where bio is empty. The legacy contact columns
--- (signal_url, quora_url) also exist only on cloned data; they are left in place and
--- surfaced later by the Foundation/SocketRelay contact flow, not copied here.
+-- description -> bio once where bio is empty. The legacy quora_url column also exists
+-- only on cloned data; v3 renders the Quora link from profile_url, so
+-- post/0007_directory_backfill_profile_url_from_legacy_quora_url.sql copies
+-- quora_url -> profile_url once where profile_url is empty. The legacy signal_url
+-- column is left in place and surfaced later by the Foundation/SocketRelay contact
+-- flow, not copied here.
 CREATE TABLE IF NOT EXISTS directory_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claimed_by_user_id TEXT,
