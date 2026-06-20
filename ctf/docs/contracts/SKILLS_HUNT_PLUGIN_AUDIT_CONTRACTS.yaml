@@ -4,7 +4,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.round.create
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: campaign_governance
     policyDecision:
       status: allow_or_deny
@@ -26,7 +26,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.round.update
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: campaign_governance
     policyDecision:
       status: allow_or_deny

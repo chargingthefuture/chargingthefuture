@@ -452,3 +452,5 @@ changelog:
     change: Initial Skills Hunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
   - date: 2026-05-12
     change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) commands.
+  - date: 2026-06-20
+    change: Bumped skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review to v1.1.0 — round create/update gain the rewardCreditsPerAccept and rewardPerUserRoundCap inputs, and submission.review mints the configured ServiceCredits reward to the scout on accept (idempotent, cap- and budget-bounded).

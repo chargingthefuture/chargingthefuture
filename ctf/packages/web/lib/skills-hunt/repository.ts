@@ -1488,7 +1488,7 @@ export async function getRoundRewardSummary(
     `
       SELECT
         COALESCE(SUM(credit_amount), 0)::text AS total,
-        COUNT(*) FILTER (WHERE credit_granted = TRUE)::text AS count
+        COUNT(*)::text AS count
       FROM skills_hunt_submissions
       WHERE round_id = $1::uuid
         AND credit_granted = TRUE

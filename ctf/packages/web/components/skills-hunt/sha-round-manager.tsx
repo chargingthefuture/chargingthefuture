@@ -49,17 +49,21 @@ function fromRound(r: SkillsHuntRound): FormValues {
 function parseWholeNonNegative(value: string): number | null {
   if (!value.trim()) return null;
   const n = Number(value);
-  if (!Number.isFinite(n) || n < 0) return Number.NaN;
-  return Math.floor(n);
+  // Reject fractional input rather than truncating — payout amounts must be exact whole credits.
+  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) return Number.NaN;
+  return n;
 }
 
 // Validate the form and assemble the request payload, or return a message to show.
 function buildPayloadOrError(v: FormValues): { error: string } | { payload: SubmitPayload } {
   if (!v.name.trim()) return { error: "Name is required." };
-  const startIso = new Date(v.startsAt).toISOString();
-  const endIso = new Date(v.endsAt).toISOString();
-  if (Number.isNaN(Date.parse(startIso)) || Number.isNaN(Date.parse(endIso))) return { error: "Start and end must be valid dates." };
-  if (new Date(endIso) <= new Date(startIso)) return { error: "End must be after start." };
+  // Validate the dates before calling toISOString(), which throws on an invalid date.
+  const startDate = new Date(v.startsAt);
+  const endDate = new Date(v.endsAt);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return { error: "Start and end must be valid dates." };
+  if (endDate <= startDate) return { error: "End must be after start." };
+  const startIso = startDate.toISOString();
+  const endIso = endDate.toISOString();
   const perAccept = parseWholeNonNegative(v.rewardPerAccept) ?? 0;
   const cap = parseWholeNonNegative(v.rewardCap);
   if (Number.isNaN(perAccept) || Number.isNaN(cap)) return { error: "Reward amounts must be whole, non-negative numbers." };
