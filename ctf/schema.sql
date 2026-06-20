@@ -3689,6 +3689,28 @@ ALTER TABLE IF EXISTS service_credits_command_idempotency ADD COLUMN IF NOT EXIS
 ALTER TABLE IF EXISTS service_credits_command_idempotency ADD COLUMN IF NOT EXISTS command_name TEXT;
 ALTER TABLE IF EXISTS service_credits_command_idempotency ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 
+-- The governance mint/transfer code upserts idempotency + adapter-outbox rows with
+-- `ON CONFLICT (actor_id, command_name, idempotency_key)` and `ON CONFLICT (command_name,
+-- idempotency_key)`, but the matching unique indexes were never created — so every mint threw
+-- "no unique or exclusion constraint matching the ON CONFLICT specification" and the reward never
+-- landed (this blocked the Unlock approval reward + its "Retry pending rewards" drain). Add the two
+-- missing unique indexes, and relax the legacy `command` NOT NULL column (the code writes
+-- `command_name`, never `command`, so leaving it NOT NULL also blocks the insert).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_adapter_outbox_command_idem
+  ON service_credits_adapter_outbox (command_name, idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_command_idempotency_actor_command_idem
+  ON service_credits_command_idempotency (actor_id, command_name, idempotency_key);
+DO $sc_cmd_idem_command_nullable$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'service_credits_command_idempotency' AND column_name = 'command'
+  ) THEN
+    ALTER TABLE service_credits_command_idempotency ALTER COLUMN command DROP NOT NULL;
+  END IF;
+END
+$sc_cmd_idem_command_nullable$;
+
 -- service_credits_wallet_tombstones (2 missing)
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS deletion_request_id UUID;
