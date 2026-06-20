@@ -521,6 +521,27 @@ CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (mission_id, user_id)
 );
+-- Proposed-skill promotion tracker: one row per distinct free-text "proposed" skill
+-- harvested from accepted Skills Hunt nominations that is NOT yet in the canonical
+-- taxonomy. A scheduled pipeline (ctf/scripts/proposeSkillPromotions.mjs) files one
+-- GitHub issue per row proposing the skill be added to the taxonomy, with an
+-- AI-suggested sector + occupation. The pipeline only files issues; it never writes
+-- the taxonomy. normalized_skill is the trim+lowercase dedupe key (UNIQUE) so each
+-- distinct skill becomes at most one issue, even across overlapping scheduled runs.
+CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  normalized_skill TEXT NOT NULL,
+  skill_label TEXT NOT NULL,
+  source_submission_id UUID,
+  suggested_sector TEXT,
+  suggested_occupation TEXT,
+  issue_number INTEGER,
+  issue_url TEXT,
+  status TEXT NOT NULL DEFAULT 'proposed',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_proposed_skill_promotions_normalized ON skills_hunt_proposed_skill_promotions (normalized_skill);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_rounds (status, starts_at DESC, ends_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
@@ -3469,6 +3490,22 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
+
+-- skills_hunt_proposed_skill_promotions — companion ALTERs for every column so a
+-- legacy copy of the table is healed (the CREATE TABLE IF NOT EXISTS above is skipped
+-- when the table already exists). NOT NULL columns carry a DEFAULT so the ALTER
+-- succeeds on tables with existing rows.
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS normalized_skill TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS skill_label TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS source_submission_id UUID;
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS suggested_sector TEXT;
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS suggested_occupation TEXT;
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS issue_number INTEGER;
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS issue_url TEXT;
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'proposed';
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- skills_hunt_submissions (1 — defensive)
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
