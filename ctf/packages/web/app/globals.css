@@ -108,6 +108,18 @@ body {
 }
 
 /*
+ * Native <select> dropdown options. Many selects use a translucent background and
+ * light text, so the popped-open option list inherits light text but the browser
+ * paints it on a light surface — leaving it light-on-light and unreadable until an
+ * option is hovered. Give options an opaque themed surface so their text is always
+ * visible. Uses theme tokens so it works in both the default and comic dark themes.
+ */
+option {
+  background-color: var(--ctf-surface, #161b27);
+  color: var(--ctf-text, #f9fafb);
+}
+
+/*
  * On desktop the viewport is locked so each shell manages its own internal
  * scrolling (sidebars, chat panes, and so on). On small screens we let the
  * whole document scroll instead — otherwise anything taller or wider than the
