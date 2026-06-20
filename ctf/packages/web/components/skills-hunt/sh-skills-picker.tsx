@@ -1,7 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { X, ChevronDown } from "lucide-react";
-import { COLOR, SKILL_TAXONOMY } from "./sh-shared";
+import { COLOR, groupTaxonomyBySector, type TaxonomyFlattenedRow } from "./sh-shared";
+
+type TaxonomyLoadState =
+  | { status: "loading" }
+  | { status: "ready"; categories: Record<string, string[]> }
+  | { status: "error" };
+
+// Fetch the canonical skills taxonomy once on mount and group it by sector for the picker.
+// On error or an empty result the picker still renders the free-text proposed-skills box so a
+// scout can proceed.
+function useTaxonomy(): TaxonomyLoadState {
+  const [state, setState] = useState<TaxonomyLoadState>({ status: "loading" });
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/skills-taxonomy/flattened");
+        if (!res.ok) throw new Error(`Taxonomy request failed (${res.status})`);
+        const data = (await res.json()) as { items?: TaxonomyFlattenedRow[] };
+        if (!active) return;
+        setState({ status: "ready", categories: groupTaxonomyBySector(data.items ?? []) });
+      } catch {
+        if (active) setState({ status: "error" });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return state;
+}
 
 interface SkillsPickerProps {
   skills: string[];
@@ -78,6 +111,9 @@ function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onO
 
 export function SkillsPicker(props: SkillsPickerProps) {
   const { skills, proposedSkills, freeText, openCategory, canAddMore, allSkillCount, onToggleSkill, onRemoveProposed, onOpenCategory, onFreeText, onAddProposed } = props;
+  const taxonomy = useTaxonomy();
+  const categories = taxonomy.status === "ready" ? taxonomy.categories : {};
+  const hasCategories = Object.keys(categories).length > 0;
   return (
     <div>
       <label style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", display: "block", marginBottom: 6 }}>
@@ -87,9 +123,17 @@ export function SkillsPicker(props: SkillsPickerProps) {
 
       <SelectedChips skills={skills} proposedSkills={proposedSkills} onToggleSkill={onToggleSkill} onRemoveProposed={onRemoveProposed} />
 
-      {canAddMore && (
+      {canAddMore && taxonomy.status === "loading" && (
+        <div style={{ fontSize: 12, color: "#6B7280", padding: "10px 0" }}>Loading skills…</div>
+      )}
+
+      {canAddMore && taxonomy.status === "error" && (
+        <div style={{ fontSize: 12, color: "#F59E0B", padding: "6px 0", marginBottom: 4 }}>Could not load the skills list — add skills as free text below.</div>
+      )}
+
+      {canAddMore && taxonomy.status === "ready" && hasCategories && (
         <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
-          {Object.entries(SKILL_TAXONOMY).map(([category, categorySkills]) => (
+          {Object.entries(categories).map(([category, categorySkills]) => (
             <CategoryRow key={category} category={category} categorySkills={categorySkills} skills={skills} isOpen={openCategory === category} canAddMore={canAddMore} onOpenCategory={onOpenCategory} onToggleSkill={onToggleSkill} />
           ))}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,26 +7,40 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native';
-import { SkillsHuntApi, type Round } from './SkillsHuntApi';
+import { SkillsHuntApi, type Round, type TaxonomyFlattenedItem } from './SkillsHuntApi';
 
 const COLOR = '#FBBF24';
 const BIO_MAX = 280;
 
-// Taxonomy from the design spec (§2.1); sourced from skills_taxonomy_skills.
-// Loaded statically here because there is no unauthenticated taxonomy API
-// endpoint exposed to mobile. A future improvement would be fetching from
-// GET /api/skills-taxonomy/hierarchy when auth allows.
-const SKILL_TAXONOMY: Record<string, string[]> = {
-  'Technology':         ['Software Engineering', 'UI/UX Design', 'Data Analysis', 'Web Development', 'IT Support'],
-  'Healthcare':         ['Nursing', 'Counseling', 'Mental Health', 'Physical Therapy', 'Home Health Aide'],
-  'Trades':             ['Carpentry', 'Plumbing', 'Electrical', 'Welding', 'Auto Repair', 'Masonry'],
-  'Creative':           ['Graphic Design', 'Photography', 'Video Editing', 'Writing & Editing'],
-  'Education':          ['Teaching', 'Tutoring', 'Translation'],
-  'Business & Legal':   ['Accounting', 'Legal Aid', 'Paralegal', 'Marketing'],
-  'Food & Hospitality': ['Cooking', 'Catering', 'Barista'],
-  'Agriculture':        ['Farming', 'Landscaping', 'Animal Care'],
-  'Beauty & Wellness':  ['Hair Styling', 'Cosmetology', 'Massage Therapy'],
-};
+// Group flattened taxonomy rows from GET /api/skills-taxonomy/flattened into the
+// picker's category → skills shape: sectorName → de-duped, sorted list of skill names.
+// A skill may appear under multiple sectors; selecting the name selects it.
+function groupBySector(rows: TaxonomyFlattenedItem[]): Record<string, string[]> {
+  const bySector = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const sector = row.sectorName?.trim();
+    const skill = row.skillName?.trim();
+    if (!sector || !skill) continue;
+    let set = bySector.get(sector);
+    if (!set) {
+      set = new Set<string>();
+      bySector.set(sector, set);
+    }
+    set.add(skill);
+  }
+  const result: Record<string, string[]> = {};
+  for (const sector of [...bySector.keys()].sort((a, b) => a.localeCompare(b))) {
+    const skills = bySector.get(sector);
+    if (!skills) continue;
+    result[sector] = [...skills].sort((a, b) => a.localeCompare(b));
+  }
+  return result;
+}
+
+type TaxonomyState =
+  | { status: 'loading' }
+  | { status: 'ready'; categories: Record<string, string[]> }
+  | { status: 'error' };
 
 // ─── Submitted confirmation view ─────────────────────────────────────────────
 
@@ -51,10 +65,12 @@ function SubmittedView({ onReset }: { onReset: () => void }) {
 // ─── Taxonomy accordion ──────────────────────────────────────────────────────
 
 function TaxonomyAccordion({
+  categories,
   selected,
   canAddMore,
   onToggle,
 }: {
+  categories: Record<string, string[]>;
   selected: string[];
   canAddMore: boolean;
   onToggle: (_skill: string) => void;
@@ -63,7 +79,7 @@ function TaxonomyAccordion({
 
   return (
     <View style={styles.accordionRoot}>
-      {Object.entries(SKILL_TAXONOMY).map(([cat, catSkills]) => {
+      {Object.entries(categories).map(([cat, catSkills]) => {
         const isOpen = openCategory === cat;
         const selectedInCat = catSkills.filter(s => selected.includes(s)).length;
         return (
@@ -129,9 +145,28 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [taxonomy, setTaxonomy] = useState<TaxonomyState>({ status: 'loading' });
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await SkillsHuntApi.listTaxonomyFlattened();
+        if (!active) return;
+        setTaxonomy({ status: 'ready', categories: groupBySector(res.items ?? []) });
+      } catch {
+        if (active) setTaxonomy({ status: 'error' });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const allSkillCount = skills.length + proposed.length;
   const canAddMore = allSkillCount < 10;
+  const taxonomyCategories = taxonomy.status === 'ready' ? taxonomy.categories : {};
+  const hasCategories = Object.keys(taxonomyCategories).length > 0;
 
   const toggleSkill = (s: string) => {
     setSkills(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -261,8 +296,17 @@ export function SkillsHuntScoutTab({ round }: { round: Round }) {
       )}
 
       {/* Accordion taxonomy picker */}
-      {canAddMore && (
+      {canAddMore && taxonomy.status === 'loading' && (
+        <Text style={[styles.tiny, { color: '#6B7280', marginVertical: 8 }]}>Loading skills…</Text>
+      )}
+      {canAddMore && taxonomy.status === 'error' && (
+        <Text style={[styles.tiny, { color: '#F59E0B', marginVertical: 6 }]}>
+          Could not load the skills list — add skills as free text below.
+        </Text>
+      )}
+      {canAddMore && taxonomy.status === 'ready' && hasCategories && (
         <TaxonomyAccordion
+          categories={taxonomyCategories}
           selected={skills}
           canAddMore={canAddMore}
           onToggle={toggleSkill}
