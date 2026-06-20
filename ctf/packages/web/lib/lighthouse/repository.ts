@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   LIGHTHOUSE_DEFAULT_PAGE,
@@ -52,6 +53,7 @@ type LighthousePropertyRow = {
   bedrooms: number | null;
   bathrooms: number | string | null;
   monthly_rent: number | string | null;
+  rent_currency: string | null;
   available_from: Date | string | null;
   amenities: unknown;
   house_rules: unknown;
@@ -197,6 +199,11 @@ function mapProperty(row: LighthousePropertyRow): LighthouseProperty {
     bedrooms: row.bedrooms,
     bathrooms: parseNullableNumber(row.bathrooms),
     monthlyRent: parseNullableNumber(row.monthly_rent),
+    rentCurrency: row.rent_currency,
+    // The accepted-currencies set and the ServiceCredits flag are loaded separately (per the join
+    // table) by attachAcceptedCurrencies; mapProperty stays pure and defaults them to empty here.
+    acceptedCurrencies: [],
+    acceptsServiceCredits: false,
     availableFromIso: row.available_from ? toIso(row.available_from) : null,
     amenities: normalizeStringArray(parseJsonArray(row.amenities)),
     houseRules: normalizeStringArray(parseJsonArray(row.house_rules)),
@@ -205,6 +212,91 @@ function mapProperty(row: LighthousePropertyRow): LighthouseProperty {
     isActive: row.is_active,
     updatedAtIso: toIso(row.updated_at),
   };
+}
+
+type AcceptedCurrencyRow = { property_id: string; currency_code: string; is_service_credits: boolean };
+
+const ACCEPTED_CURRENCIES_SQL = `
+  SELECT pac.property_id::text AS property_id, pac.currency_code, c.is_service_credits
+  FROM lighthouse_property_accepted_currencies pac
+  JOIN currencies c ON c.code = pac.currency_code
+  WHERE pac.property_id = ANY($1::uuid[])
+`;
+
+// Load each property's accepted currencies from lighthouse_property_accepted_currencies and attach
+// them to the mapped properties. acceptsServiceCredits is computed by joining the accepted codes
+// against currencies.is_service_credits — never derived from the rent currency. Best-effort: any
+// failure leaves the (empty) defaults so a listing still renders without currency annotations.
+async function attachAcceptedCurrencies(properties: LighthouseProperty[]): Promise<LighthouseProperty[]> {
+  const propertyIds = properties.map((property) => property.id);
+  if (propertyIds.length === 0) {
+    return properties;
+  }
+
+  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [propertyIds]);
+  return mergeAcceptedCurrencies(properties, result.rows);
+}
+
+// Same as attachAcceptedCurrencies but reads on a transaction client so freshly inserted rows are
+// visible inside createProperty/updateProperty.
+async function attachAcceptedCurrenciesWithClient(
+  client: PoolClient,
+  properties: LighthouseProperty[],
+): Promise<LighthouseProperty[]> {
+  const propertyIds = properties.map((property) => property.id);
+  if (propertyIds.length === 0) {
+    return properties;
+  }
+
+  const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [propertyIds]);
+  return mergeAcceptedCurrencies(properties, result.rows);
+}
+
+function mergeAcceptedCurrencies(properties: LighthouseProperty[], rows: AcceptedCurrencyRow[]): LighthouseProperty[] {
+  const codesByProperty = new Map<string, string[]>();
+  const serviceCreditsByProperty = new Map<string, boolean>();
+  for (const row of rows) {
+    const codes = codesByProperty.get(row.property_id) ?? [];
+    codes.push(row.currency_code);
+    codesByProperty.set(row.property_id, codes);
+    if (row.is_service_credits) {
+      serviceCreditsByProperty.set(row.property_id, true);
+    }
+  }
+
+  return properties.map((property) => ({
+    ...property,
+    acceptedCurrencies: codesByProperty.get(property.id) ?? [],
+    acceptsServiceCredits: serviceCreditsByProperty.get(property.id) ?? false,
+  }));
+}
+
+// Validate the requested accepted-currency codes against the active currencies catalog and persist
+// them for a property. Caller is responsible for clearing existing rows first (REPLACE semantics on
+// update). Unknown or inactive codes are skipped. Runs inside the caller's transaction.
+async function replaceAcceptedCurrencies(client: PoolClient, propertyId: string, codes: string[]): Promise<void> {
+  const requested = Array.from(
+    new Set(codes.filter((code): code is string => typeof code === 'string' && code.trim().length > 0).map((code) => code.trim())),
+  );
+  if (requested.length === 0) {
+    return;
+  }
+
+  const valid = await client.query<{ code: string }>(
+    `SELECT code FROM currencies WHERE code = ANY($1::text[]) AND is_active = TRUE`,
+    [requested],
+  );
+  const validCodes = valid.rows.map((row) => row.code);
+  for (const code of validCodes) {
+    await client.query(
+      `
+        INSERT INTO lighthouse_property_accepted_currencies (property_id, currency_code)
+        VALUES ($1::uuid, $2)
+        ON CONFLICT (property_id, currency_code) DO NOTHING
+      `,
+      [propertyId, code],
+    );
+  }
 }
 
 function mapMatch(row: LighthouseMatchRow): LighthouseMatch {
@@ -423,6 +515,7 @@ export async function listProperties(input: {
           bedrooms,
           bathrooms,
           monthly_rent,
+          rent_currency,
           available_from,
           amenities,
           house_rules,
@@ -442,7 +535,7 @@ export async function listProperties(input: {
   ]);
 
   return {
-    items: rows.rows.map(mapProperty),
+    items: await attachAcceptedCurrencies(rows.rows.map(mapProperty)),
     total: parseCountRow(countResult.rows),
     pagination: {
       page: paging.page,
@@ -468,6 +561,7 @@ export async function getPropertyById(propertyId: string): Promise<LighthousePro
         bedrooms,
         bathrooms,
         monthly_rent,
+        rent_currency,
         available_from,
         amenities,
         house_rules,
@@ -482,7 +576,11 @@ export async function getPropertyById(propertyId: string): Promise<LighthousePro
     [propertyId],
   );
 
-  return result.rows[0] ? mapProperty(result.rows[0]) : null;
+  if (!result.rows[0]) {
+    return null;
+  }
+  const [property] = await attachAcceptedCurrencies([mapProperty(result.rows[0])]);
+  return property;
 }
 
 export async function listMyProperties(userId: string): Promise<LighthouseProperty[]> {
@@ -502,6 +600,7 @@ export async function listMyProperties(userId: string): Promise<LighthouseProper
         bedrooms,
         bathrooms,
         monthly_rent,
+        rent_currency,
         available_from,
         amenities,
         house_rules,
@@ -516,7 +615,7 @@ export async function listMyProperties(userId: string): Promise<LighthouseProper
     [userId],
   );
 
-  return result.rows.map(mapProperty);
+  return attachAcceptedCurrencies(result.rows.map(mapProperty));
 }
 
 // Quora profile URL for a member, read from their Unlock verification submission (the single place
@@ -561,9 +660,9 @@ export async function createProperty(actorUserId: string, input: LighthousePrope
     const created = await client.query(
       `
         INSERT INTO lighthouse_properties
-          (host_user_id, title, description, property_type, address_line, city, state, country, zip_code, bedrooms, bathrooms, monthly_rent, available_from, amenities, house_rules, photos, airbnb_profile_url, is_active, created_by_user_id, updated_by_user_id)
+          (host_user_id, title, description, property_type, address_line, city, state, country, zip_code, bedrooms, bathrooms, monthly_rent, available_from, amenities, house_rules, photos, airbnb_profile_url, is_active, rent_currency, created_by_user_id, updated_by_user_id)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::date, $14::jsonb, $15::jsonb, $16::jsonb, $17, $18, $1, $1)
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::date, $14::jsonb, $15::jsonb, $16::jsonb, $17, $18, $19, $1, $1)
         RETURNING
           id,
           host_user_id,
@@ -578,6 +677,7 @@ export async function createProperty(actorUserId: string, input: LighthousePrope
           bedrooms,
           bathrooms,
           monthly_rent,
+          rent_currency,
           available_from,
           amenities,
           house_rules,
@@ -605,10 +705,15 @@ export async function createProperty(actorUserId: string, input: LighthousePrope
         JSON.stringify(normalizeStringArray(parseJsonArray(input.photos))),
         normalizeNullableText(input.airbnbProfileUrl),
         typeof input.isActive === 'boolean' ? input.isActive : true,
+        input.rentCurrency ?? null,
       ],
     );
 
-    return mapProperty(created.rows[0]);
+    const propertyId = created.rows[0].id as string;
+    await replaceAcceptedCurrencies(client, propertyId, Array.isArray(input.acceptedCurrencies) ? input.acceptedCurrencies : []);
+
+    const [property] = await attachAcceptedCurrenciesWithClient(client, [mapProperty(created.rows[0])]);
+    return property;
   });
 }
 
@@ -654,6 +759,7 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
           airbnb_profile_url = $17,
           is_active = $18,
           updated_by_user_id = $19,
+          rent_currency = $20,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
@@ -670,6 +776,7 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
           bedrooms,
           bathrooms,
           monthly_rent,
+          rent_currency,
           available_from,
           amenities,
           house_rules,
@@ -698,10 +805,16 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
         normalizeNullableText(input.airbnbProfileUrl),
         typeof input.isActive === 'boolean' ? input.isActive : true,
         actorUserId,
+        input.rentCurrency ?? null,
       ],
     );
 
-    return mapProperty(updated.rows[0]);
+    // Replace the accepted-currencies set: clear existing rows, then insert the validated new set.
+    await client.query('DELETE FROM lighthouse_property_accepted_currencies WHERE property_id = $1::uuid', [propertyId]);
+    await replaceAcceptedCurrencies(client, propertyId, Array.isArray(input.acceptedCurrencies) ? input.acceptedCurrencies : []);
+
+    const [property] = await attachAcceptedCurrenciesWithClient(client, [mapProperty(updated.rows[0])]);
+    return property;
   });
 }
 
@@ -916,8 +1029,6 @@ export async function listMatches(actorUserId: string): Promise<LighthouseMatch[
   return result.rows.map(mapMatch);
 }
 
-import type { PoolClient } from 'pg';
-
 export async function updateMatch(input: {
   actorUserId: string;
   matchId: string;
@@ -1116,6 +1227,7 @@ export async function listLighthousePropertiesAdmin(): Promise<LighthousePropert
         bedrooms,
         bathrooms,
         monthly_rent,
+        rent_currency,
         available_from,
         amenities,
         house_rules,
@@ -1128,7 +1240,7 @@ export async function listLighthousePropertiesAdmin(): Promise<LighthousePropert
     `,
   );
 
-  return result.rows.map(mapProperty);
+  return attachAcceptedCurrencies(result.rows.map(mapProperty));
 }
 
 export async function listLighthouseMatchesAdmin(): Promise<LighthouseMatch[]> {

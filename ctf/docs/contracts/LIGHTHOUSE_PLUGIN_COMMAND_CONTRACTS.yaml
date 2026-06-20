@@ -112,6 +112,19 @@ contracts:
       monthlyRent:
         type: number
         required: false
+      rentCurrency:
+        type: string
+        required: false
+        description: >-
+          Currency the monthly rent is listed in (references currencies.code). Null/omitted leaves it
+          unset. Independent of acceptedCurrencies.
+      acceptedCurrencies:
+        type: array
+        required: false
+        description: >-
+          Currency codes (references currencies.code) the listing accepts; persisted to
+          lighthouse_property_accepted_currencies. Unknown/inactive codes are skipped. Including the
+          ServiceCredits code means the listing accepts ServiceCredits — never derived from rentCurrency.
       availableFromIso:
         type: string
         required: false
@@ -131,6 +144,7 @@ contracts:
         type: string
     dataAccess:
       - lighthouse_properties
+      - lighthouse_property_accepted_currencies
       - lighthouse_profiles
     purpose: property_listing_management
     retentionClass: transactional_long_lived

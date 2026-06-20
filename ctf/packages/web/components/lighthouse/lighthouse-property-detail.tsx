@@ -1,15 +1,17 @@
 "use client";
 
 import { Bath, Bed, Calendar, MapPin, MessageSquare, Pencil } from "lucide-react";
-import { BG, COLOR, type Property } from "./shared";
+import { BG, COLOR, formatRent, listingAcceptsCredits, type CurrencyMap, type Property } from "./shared";
 
 export function LighthousePropertyDetail({
   property,
+  currencies,
   onBack,
   currentUserId,
   onEdit,
 }: {
   property: Property;
+  currencies: CurrencyMap;
   onBack: () => void;
   currentUserId: string;
   onEdit: (p: Property) => void;
@@ -31,7 +33,7 @@ export function LighthousePropertyDetail({
               {([l.city, l.state].filter((s) => s && String(s).trim().length > 0).join(", ")) ? (
                 <span style={{ background: "rgba(255,255,255,0.05)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.08)", fontSize: 12, borderRadius: 8, padding: "3px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={11} />{[l.city, l.state].filter((s) => s && String(s).trim().length > 0).join(", ")}</span>
               ) : null}
-              {l.credits && <span style={{ background: "#F59E0B15", color: "#F59E0B", border: "1px solid #F59E0B30", fontSize: 12, borderRadius: 8, padding: "3px 10px" }}>Credits ✓</span>}
+              {listingAcceptsCredits(l) && <span style={{ background: "#F59E0B15", color: "#F59E0B", border: "1px solid #F59E0B30", fontSize: 12, borderRadius: 8, padding: "3px 10px" }}>Credits ✓</span>}
             </div>
             <div style={{ display: "flex", gap: 16, marginBottom: 20, fontSize: 14, color: "#9CA3AF", flexWrap: "wrap" }}>
               {Number.isFinite(l.bedrooms) ? (
@@ -53,10 +55,13 @@ export function LighthousePropertyDetail({
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
             <div style={{ padding: "24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: `1px solid ${COLOR}25` }}>
-              {Number.isFinite(l.monthlyRent) ? (
-                <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>{l.monthlyRent > 0 ? <>${l.monthlyRent}<span style={{ fontSize: 14, color: "#6B7280", fontWeight: 400 }}>/mo</span></> : "Free"}</div>
-              ) : null}
-              {l.credits && <div style={{ fontSize: 12, color: "#F59E0B", marginBottom: 16 }}>✓ Accepts Service Credits</div>}
+              {(() => {
+                const rent = formatRent(l, currencies);
+                if (rent === null) return null;
+                if (rent === "Free") return <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>Free</div>;
+                return <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>{rent}<span style={{ fontSize: 14, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>;
+              })()}
+              {listingAcceptsCredits(l) && <div style={{ fontSize: 12, color: "#F59E0B", marginBottom: 16 }}>✓ Accepts Service Credits</div>}
               {isOwn ? (
                 <>
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12, lineHeight: 1.6 }}>This is your listing.</div>
