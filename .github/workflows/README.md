@@ -37,7 +37,6 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `ci.yml` | CI | Push to `main`; all PRs to `main` | The main pull-request gate: rules checks, plugin contracts, end-of-file formatting, modularity limits, secret-leak guard, schema-drift gate, parity status, lint, typecheck, and the web/Android builds. |
 | `cleanup-artifacts.yml` | Cleanup Old Artifacts and Close CI Budget Issues | Daily 2:00 AM UTC; manual | Deletes build artifacts older than a day and closes any open CI-budget issues. |
 | `cleanup-workflow-runs.yml` | Cleanup deprecated workflow runs | Manual | One-off cleanup that deletes Actions runs belonging to workflow files that no longer exist, to tidy the Actions sidebar. |
-| `coderabbit-review.yml` | CodeRabbit Review | PRs to `main` (not drafts) | Runs the CodeRabbit AI reviewer on non-draft PRs. |
 | `create-neon-branch.yml` | Create Neon branch | Manual | Creates a fresh Postgres branch in Neon (e.g. a clean clone of production) for migration testing, without printing connection strings. |
 | `deploy-blog-gh-pages.yml` | Deploy Blog to GitHub Pages | Manual; or signalled by the product-update workflow | Builds the external blog/wiki site and publishes it to GitHub Pages. |
 | `expo-android-release.yml` | Expo Android Release | On `mobile-v*` tags; manual | Builds a signed production Android APK with Expo EAS and attaches it to a GitHub Release. |
@@ -48,7 +47,6 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `github-actions-billing-token-reminder.yml` | GitHub Actions Billing Token Rotation Reminder | Mondays 12:00 UTC; manual | Files a reminder issue every ~45 days to rotate the Actions billing token, with a runbook checklist. |
 | `github-actions-budget-monitor.yml` | GitHub Actions Budget Monitor | Every 6 hours; manual | Checks Actions usage (minutes, artifact storage, cache) against budgets, posts a report issue, and closes the rotation reminder when usage is healthy. |
 | `inspect-schema-drift.yml` | Inspect schema drift (read-only) | Manual | Read-only report of tables and foreign keys whose types differ from the v3 canonical schema, plus Directory health counts — used for migration planning. |
-| `pace-coderabbit-reviews.yml` | Pace CodeRabbit reviews | Hourly at :17; manual | Promotes the single oldest `coderabbit`-labelled draft PR to ready-for-review once an hour (if its checks are green), to stay within CodeRabbit's free-tier limit. |
 | `pr-title-semantic.yml` | PR Title Semantic | On PRs (open/edit) | Checks that the PR title starts with a Conventional Commit prefix (`feat:`, `fix:`, `chore:`, …). |
 | `provision-demo-schema.yml` | Provision demo schema in Neon | Manual | Regenerates `schema.demo.sql` from `schema.sql` and loads it into the Neon demo database. |
 | `render-debug-agent.yml` | Render Debug Agent | Manual | Pulls logs from a Render service, diagnoses errors, and opens a PR with proposed fixes. |
@@ -68,7 +66,6 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 A few names don't say what the workflow produces. If you rename them, update the `name:` field,
 this table, and any branch-protection rule that references the check name:
 
-- `pace-coderabbit-reviews.yml` — "Pace CodeRabbit reviews" → e.g. "Promote oldest CodeRabbit draft (hourly)".
 - `render-debug-agent.yml` — "Render Debug Agent" → e.g. "Render error diagnosis + fix PR".
 - `route-weather-briefing.yml` — "Route weather briefing" → e.g. "Daily route weather phone alert".
 - `generate-product-update.yml` — "Generate Product Update" → e.g. "Publish product update (wiki + blog + feed + Quora draft)".

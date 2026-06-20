@@ -1,14 +1,12 @@
 # CodeRabbit configuration
 # Docs: https://docs.coderabbit.ai/reference/configuration
 #
-# This repo has agents opening PRs frequently. To control review spend,
-# auto-review is gated on a label: CodeRabbit only reviews PRs that carry
-# the "coderabbit" label. Apply that label to large or complex PRs (or any
-# PR you want reviewed). For an unlabeled PR, trigger a one-off review by
-# commenting "@coderabbitai review".
-#
-# Note: a committed .coderabbit.yaml overrides the CodeRabbit org-UI settings
-# for this repository.
+# CodeRabbit review is DISABLED (owner directive, 2026-06-20): the owner uses a
+# different code-review tool. Auto-review is turned off below, and the CLI review
+# workflow (coderabbit-review.yml) and the draft-pacing workflow
+# (pace-coderabbit-reviews.yml) have been removed. This file is kept (not deleted)
+# because a committed .coderabbit.yaml overrides the CodeRabbit org-UI settings, so
+# keeping it with auto_review disabled guarantees the app does not review PRs here.
 reviews:
   # Suppress the "Review skipped / in progress / completed" status COMMENT in the
   # PR thread. Real reviews (walkthrough + inline comments) still post when a review
@@ -27,12 +25,8 @@ reviews:
     docstrings:
       mode: "off"
   auto_review:
-    enabled: true
-    # Never spend review credits on draft PRs.
-    drafts: false
-    # Only auto-review PRs that carry one of these labels.
-    labels:
-      - coderabbit
+    # Disabled: the owner uses a different code-review tool (2026-06-20).
+    enabled: false
   tools:
     # Disable CodeRabbit's bundled ESLint. It runs ESLint 10 (flat-config only),
     # which errors on this repo's classic .eslintrc.cjs ("'root' key not supported
