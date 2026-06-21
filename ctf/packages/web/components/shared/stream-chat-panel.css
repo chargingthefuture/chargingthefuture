@@ -145,3 +145,74 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Conversation wrapper (ConversationBody in stream-chat-panel.tsx). It positions the reminder toast
+ * over the message list without disturbing the Window/Thread layout: the wrapper is the relative
+ * anchor; the toast floats at the bottom of it. */
+.ctf-chat-conversation {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Reminder toast (ReminderToast in stream-chat-panel.tsx). A short confirmation that floats above the
+ * composer after a member sets or fires a "Remind me about this" reminder, then clears itself. Uses
+ * the plugin accent border when present and neutral dark tones otherwise, matching the panel. */
+.ctf-chat-reminder-toast {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 64px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--str-chat__primary-color, rgba(255, 255, 255, 0.18));
+  background-color: rgba(17, 24, 39, 0.96);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  color: #F3F4F6;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ctf-chat-reminder-toast__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ctf-chat-reminder-toast__close {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: #9CA3AF;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ctf-chat-reminder-toast__close:hover {
+  color: #E5E7EB;
+}
+
+/* Polls (default stream-chat-react 12.16 Poll components, created from the composer's attachment menu
+ * and rendered in the MessageList). The defaults already inherit Stream's dark theme; these rules
+ * only tint the create-poll affordance and the poll card's primary accents to the plugin color so a
+ * poll matches the rest of the Direct Line panel. They are scoped under the dark theme wrapper and
+ * fall back to Stream's defaults when no plugin accent is set. */
+.str-chat__theme-dark .str-chat__attachment-selector-actions-menu__create-poll-button:hover {
+  color: var(--str-chat__primary-color, inherit);
+}
+
+.str-chat__theme-dark .str-chat__poll-option__votes-bar {
+  background-color: var(--str-chat__primary-color, var(--str-chat__primary-color));
+}
+
+.str-chat__theme-dark .str-chat__create-poll-modal .str-chat__button--primary {
+  background-color: var(--str-chat__primary-color, var(--str-chat__primary-color));
+  color: var(--ctf-chat-other-fg, #FFFFFF);
+}
