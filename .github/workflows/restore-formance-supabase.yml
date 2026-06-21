@@ -1,4 +1,4 @@
-name: Restore Formance from Supabase
+name: Formance — Restore from Supabase
 
 # On-demand restore of a Formance pg_dump backup (produced by
 # backup-formance-supabase.yml) into a TARGET database — for disaster recovery or

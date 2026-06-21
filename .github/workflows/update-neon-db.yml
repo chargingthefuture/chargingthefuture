@@ -1,4 +1,4 @@
-name: Update Neon DB (migrations + schema.sql)
+name: Neon — Update DB (Migrations + schema.sql)
 
 # Brings the database referenced by DATABASE_URL up to the v3 spec, in order:
 #   1. ctf/db/migrations/pre/*.sql   (structural fixes that must precede the canonical schema)

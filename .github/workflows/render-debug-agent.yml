@@ -1,4 +1,4 @@
-name: Render Debug Agent
+name: Render — Debug Agent
 
 on:
   workflow_dispatch:

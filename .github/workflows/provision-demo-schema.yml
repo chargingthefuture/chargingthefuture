@@ -1,4 +1,4 @@
-name: Provision demo schema in Neon
+name: Neon — Provision Demo Schema
 
 on:
   workflow_dispatch:

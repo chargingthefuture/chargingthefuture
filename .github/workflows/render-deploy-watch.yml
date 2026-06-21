@@ -1,4 +1,4 @@
-name: Render Deploy Watch
+name: Render — Watch Deploy
 
 # When a commit lands on main, Render auto-deploys it. For each service in the
 # matrix, this finds that commit's deploy through the Render API and follows it

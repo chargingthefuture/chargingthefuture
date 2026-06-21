@@ -1,4 +1,4 @@
-name: Route weather briefing
+name: Route Weather Briefing
 
 # Builds the plain-text route weather report for a fixed route and pushes it to
 # your phone via ntfy.sh. Free: runs on a GitHub Actions cron, no always-on

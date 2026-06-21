@@ -1,4 +1,4 @@
-name: Backup Formance to Supabase
+name: Formance — Nightly Backup to Supabase
 
 # Nightly backup of Formance Postgres to Supabase Storage.
 # Runs daily at 3am UTC and on manual dispatch.

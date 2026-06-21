@@ -1,4 +1,4 @@
-name: Inspect schema drift (read-only)
+name: Inspect — Schema Drift (read-only)
 
 # Manually triggered, read-only diagnostic. It never writes. Reports, to the Actions log, the
 # tables whose id type still differs from the v3 canonical uuid (the v2 -> v3 drift), with row

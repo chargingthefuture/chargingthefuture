@@ -1,4 +1,4 @@
-name: Deploy Blog to GitHub Pages
+name: Github Pages — Deploy Blog
 
 on:
   # Triggered by the product-update workflow after it publishes to wiki-site,

@@ -1,4 +1,4 @@
-name: Bug Reports — Create Triage Issues
+name: Bug Reports — Create Github Issues
 
 # Drains clean, user-filed bug reports from the app database into the PRIVATE triage
 # repo as issues. Raw user text never leaves the database — only redacted text is
