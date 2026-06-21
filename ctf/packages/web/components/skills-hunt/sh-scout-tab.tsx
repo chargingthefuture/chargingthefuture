@@ -20,6 +20,7 @@ export interface ScoutFormModel {
   onBio: (v: string) => void;
   onQuora: (v: string) => void;
   onToggleSkill: (s: string) => void;
+  onAddOccupationSkills: (skillNames: string[]) => void;
   onRemoveProposed: (s: string) => void;
   onOpenCategory: (c: string | null) => void;
   onFreeText: (v: string) => void;
@@ -147,6 +148,7 @@ function NominationForm({ form }: { form: ScoutFormModel }) {
           canAddMore={form.canAddMore}
           allSkillCount={form.allSkillCount}
           onToggleSkill={form.onToggleSkill}
+          onAddOccupationSkills={form.onAddOccupationSkills}
           onRemoveProposed={form.onRemoveProposed}
           onOpenCategory={form.onOpenCategory}
           onFreeText={form.onFreeText}

@@ -35,12 +35,38 @@ export function getSkillsHuntTokens(theme: ThemeName): SkillsHuntTokens {
   return getPluginShellTokens(accent, theme);
 }
 
-// Shape of one row from GET /api/skills-taxonomy/flattened. The picker only needs the
-// sector and skill names; the full row type lives in lib/skills-taxonomy/types.ts.
+// Shape of one row from GET /api/skills-taxonomy/flattened. The picker needs the sector and skill
+// names for its category list, and the job-title (occupation) name for the "add a profession's
+// skills" shortcut; the full row type lives in lib/skills-taxonomy/types.ts.
 export type TaxonomyFlattenedRow = {
   sectorName: string;
+  jobTitleName: string;
   skillName: string;
 };
+
+// Group flattened taxonomy rows by occupation (job title) → de-duped, sorted skill names. Powers the
+// optional "add a profession's skills" shortcut: picking a profession adds all of its skills at once.
+export function groupSkillsByOccupation(rows: TaxonomyFlattenedRow[]): Record<string, string[]> {
+  const byOccupation = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const occupation = row.jobTitleName?.trim();
+    const skill = row.skillName?.trim();
+    if (!occupation || !skill) continue;
+    let set = byOccupation.get(occupation);
+    if (!set) {
+      set = new Set<string>();
+      byOccupation.set(occupation, set);
+    }
+    set.add(skill);
+  }
+  const result: Record<string, string[]> = {};
+  for (const occupation of [...byOccupation.keys()].sort((a, b) => a.localeCompare(b))) {
+    const skills = byOccupation.get(occupation);
+    if (!skills) continue;
+    result[occupation] = [...skills].sort((a, b) => a.localeCompare(b));
+  }
+  return result;
+}
 
 // Group flattened taxonomy rows into the picker's category → skills shape:
 // sectorName → de-duped, sorted list of skill names. A skill that appears under
