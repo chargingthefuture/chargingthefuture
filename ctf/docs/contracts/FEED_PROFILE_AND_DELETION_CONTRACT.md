@@ -40,6 +40,7 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
   - `feed_user_read_state` — `(user_id, item_id, read_at)`; which feed items the user has read.
   - `feed_user_dismissals` — `(user_id, item_id, dismissed_at)`; dismissed non-mandatory items.
   - `feed_answer_ratings` — `(user_id, answer_id, rating)`; the user's answer ratings.
+  - `feed_community_post_reactions` — `(post_id, user_id, emoji)`; the user's emoji reactions on community posts.
   - `announcement_user_state` — `(user_id, announcement_id, read_at, acknowledged_at, dismissed_at)`.
 
 ## 4) Domain Data Owned by Plugin
@@ -71,7 +72,7 @@ When user deletes Feed usage only:
 
 - Delete immediately:
   - per-user state rows in `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`,
-    and `announcement_user_state`
+    `feed_community_post_reactions`, and `announcement_user_state`
 - Anonymize/pseudonymize:
   - historical authored content (`feed_community_posts`, `feed_community_replies`, `feed_questions`)
     where hard delete is not policy-allowed

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HubJoinResponse, HubLastSeenResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
-import type { ChatMessage, ChatQuotedMessage, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
+import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
+import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 
 // The peer message the composer is currently replying to (Signal-style quote). Carries the
 // quoted post's id (the reply target) plus a quote preview for the composer banner.
@@ -106,7 +107,39 @@ function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessa
     sentAtIso: message.sentAtIso,
     communityPostId: message.communityPostId,
     quotedMessage: message.quotedMessage,
+    reactions: message.reactions ?? [],
   };
+}
+
+// Order reaction summaries by the fixed reaction set so chips stay in a stable order after an
+// optimistic add inserts a new emoji.
+function orderReactionsByFixedSet(reactions: ChatReactionSummary[]): ChatReactionSummary[] {
+  const rank = new Map<string, number>(FEED_REACTION_EMOJIS.map((emoji, index) => [emoji, index]));
+  return [...reactions].sort((a, b) => (rank.get(a.emoji) ?? 999) - (rank.get(b.emoji) ?? 999));
+}
+
+// Flip the current member's reaction for one emoji on one message, adjusting count and the
+// reactedByMe flag. Used for the optimistic update before the server confirms and the 10s poll
+// reconciles. Removing the last reaction of an emoji drops its chip entirely.
+function applyReactionToggle(message: ChatMessage, emoji: string): ChatMessage {
+  const reactions = message.reactions ?? [];
+  const existing = reactions.find((reaction) => reaction.emoji === emoji);
+
+  if (existing) {
+    const nextCount = existing.reactedByMe ? existing.count - 1 : existing.count + 1;
+    const nextReactedByMe = !existing.reactedByMe;
+    const next = nextCount <= 0
+      ? reactions.filter((reaction) => reaction.emoji !== emoji)
+      : reactions.map((reaction) =>
+        reaction.emoji === emoji
+          ? { emoji, count: nextCount, reactedByMe: nextReactedByMe }
+          : reaction,
+      );
+    return { ...message, reactions: orderReactionsByFixedSet(next) };
+  }
+
+  const next = [...reactions, { emoji, count: 1, reactedByMe: true }];
+  return { ...message, reactions: orderReactionsByFixedSet(next) };
 }
 
 function getMessageDedupKey(message: ChatMessage): string {
@@ -459,6 +492,43 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setReplyTarget(null);
   }, []);
 
+  // Toggle the current member's emoji reaction on a peer post. Optimistically flips the chip
+  // (count + reactedByMe) right away, then POSTs; on failure the optimistic change is reverted.
+  // The 10s history poll reconciles to the authoritative server aggregate.
+  const toggleReaction = useCallback(
+    async (postId: string, emoji: string) => {
+      // Optimistically flip every message backed by this community post.
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.communityPostId === postId ? applyReactionToggle(message, emoji) : message,
+        ),
+      );
+
+      try {
+        await requestJson<{ ok: true; reacted: boolean }>(
+          `/api/hub/messages/${encodeURIComponent(postId)}/reactions`,
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-ctf-csrf': '1',
+            },
+            body: JSON.stringify({ emoji }),
+          },
+        );
+      } catch (reactError) {
+        // Revert the optimistic flip (toggling the same emoji again undoes it).
+        setMessages((previous) =>
+          previous.map((message) =>
+            message.communityPostId === postId ? applyReactionToggle(message, emoji) : message,
+          ),
+        );
+        setError(reactError instanceof Error ? reactError.message : 'Unable to update your reaction right now.');
+      }
+    },
+    [],
+  );
+
   // Consent modal "Confirm": persist consent and send the held @comic question.
   const confirmConsent = useCallback(async () => {
     if (typeof window !== 'undefined') {
@@ -584,6 +654,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     replyTarget,
     beginReply,
     cancelReply,
+    toggleReaction,
     lastSeenAtIso,
     markSeen,
     isSending,

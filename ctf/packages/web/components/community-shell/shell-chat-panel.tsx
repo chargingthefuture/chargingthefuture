@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, Reply, X } from 'lucide-react';
+import { AtSign, Reply, SmilePlus, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
+import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 import type { ChatMessage, ComicStreamItem, ShellCurrentUser, ShellStats } from './shell-types';
 import { useHomeChat } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
@@ -176,6 +177,70 @@ function PublicCommunityPanel({ stats, plugins, signInUrl }: { stats: ShellStats
   );
 }
 
+// Compact reaction row under a peer bubble: each emoji that has at least one reaction shows as a
+// pill (emoji + count, highlighted when the member reacted), plus a small "add reaction"
+// affordance that reveals the fixed quick set to pick from. Tapping a pill or a picker emoji
+// toggles the reaction. Only rendered for peer posts (which carry a communityPostId).
+function ChatReactionRow({
+  postId,
+  reactions,
+  onToggle,
+}: {
+  postId: string;
+  reactions: ChatMessage['reactions'];
+  onToggle: (postId: string, emoji: string) => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const summaries = reactions ?? [];
+
+  return (
+    <div className={styles.chatReactionRow}>
+      {summaries.map((reaction) => (
+        <button
+          key={reaction.emoji}
+          type="button"
+          className={reaction.reactedByMe ? `${styles.chatReactionPill} ${styles.chatReactionPillActive}` : styles.chatReactionPill}
+          onClick={() => onToggle(postId, reaction.emoji)}
+          aria-pressed={reaction.reactedByMe}
+          aria-label={`${reaction.emoji} reaction, ${reaction.count}${reaction.reactedByMe ? ', you reacted' : ''}`}
+        >
+          <span aria-hidden="true">{reaction.emoji}</span>
+          <span className={styles.chatReactionCount}>{reaction.count}</span>
+        </button>
+      ))}
+
+      <button
+        type="button"
+        className={styles.chatReactionAdd}
+        onClick={() => setPickerOpen((open) => !open)}
+        aria-expanded={pickerOpen}
+        aria-label="Add a reaction"
+      >
+        <SmilePlus size={14} />
+      </button>
+
+      {pickerOpen ? (
+        <div className={styles.chatReactionPicker} role="menu" aria-label="Pick a reaction">
+          {FEED_REACTION_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              className={styles.chatReactionPickerBtn}
+              onClick={() => {
+                onToggle(postId, emoji);
+                setPickerOpen(false);
+              }}
+              aria-label={`React with ${emoji}`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedChatPanelProps) {
   const implementedCount = plugins.filter((plugin) => plugin.availabilityState === 'implemented_shell').length;
   const opportunityValue = Math.max(ECONOMY_TARGET_USD - (stats.gdpValueUsd ?? 0), 0);
@@ -195,6 +260,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     replyTarget,
     beginReply,
     cancelReply,
+    toggleReaction,
     lastSeenAtIso,
     markSeen,
     isSending,
@@ -393,6 +459,13 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
                       </button>
                     ) : null}
                   </div>
+                  {msg.communityPostId ? (
+                    <ChatReactionRow
+                      postId={msg.communityPostId}
+                      reactions={msg.reactions}
+                      onToggle={(postId, emoji) => void toggleReaction(postId, emoji)}
+                    />
+                  ) : null}
                 </div>
               </div>
             </Fragment>
