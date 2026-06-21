@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ export function DirectoryProfileDetail({
   // A profile nominated through Skills Hunt is community-generated; show that and who
   // nominated it instead of a generic headline.
   const isCommunityGenerated = p.source === "community-generated";
+  const pendingSkills = p.pendingSkills ?? [];
 
   async function handleAttach() {
     const target = attachInput.trim();
@@ -122,13 +124,26 @@ export function DirectoryProfileDetail({
             </section>
           )}
 
-          {/* Specializations */}
+          {/* Specializations. Real taxonomy skills render as accent chips. A profile
+              nominated through Skills Hunt may also have free-text skills that are not yet
+              in the taxonomy (still a proposal in skills_hunt_proposed_skill_promotions);
+              those render as muted "pending review" chips so the section is never empty
+              just because a nominated skill has not been promoted yet. */}
           <section style={{ marginBottom: 24 }}>
             <div style={sectionLabel}>Specializations</div>
-            {p.skills.length > 0 ? (
+            {p.skills.length > 0 || pendingSkills.length > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {p.skills.map((s) => (
                   <Badge key={s} style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
+                ))}
+                {pendingSkills.map((s) => (
+                  <Badge
+                    key={`pending-${s}`}
+                    title="Nominated through Skills Hunt; not yet in the skills taxonomy."
+                    style={{ background: "rgba(255,255,255,0.04)", color: t.MUTED, border: `1px dashed ${t.BORDER}`, fontSize: 13, padding: "5px 12px", fontWeight: 500 }}
+                  >
+                    {s} <span style={{ color: t.FAINT, fontWeight: 400 }}>· pending review</span>
+                  </Badge>
                 ))}
               </div>
             ) : (
@@ -144,9 +159,12 @@ export function DirectoryProfileDetail({
               <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Want to work together?</div>
             </div>
             <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
-              The directory shows who is in the community and what they do. To barter, trade, or exchange
-              credits, reach out through their Quora profile above, or find them in the plugins where work
-              actually happens.
+              The directory shows who is in the community and what they do. Want a service or good from
+              this person? Look for them in{" "}
+              <Link href="/apps/foundation" style={{ color: t.ACCENT, fontWeight: 600, textDecoration: "none" }}>Foundation</Link>,
+              where members offer and exchange help — or browse{" "}
+              <Link href="/apps/foundation" style={{ color: t.ACCENT, fontWeight: 600, textDecoration: "none" }}>Foundation</Link>{" "}
+              to find someone else who can.
             </div>
           </section>
 

@@ -2,6 +2,7 @@
 
 import { Pool } from 'pg';
 import { syncSkillsTaxonomyFromLegacy } from './lib/syncSkillsTaxonomyFromLegacy.mjs';
+import { seedSkillsTaxonomyPromotions } from './lib/seedSkillsTaxonomyPromotions.mjs';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -26,6 +27,22 @@ async function main() {
       `jobTitles=${summary.jobTitles}`,
       `skills=${summary.skills}`,
       `source=${summary.sourceFile}`,
+    ].join(' '),
+  );
+
+  // Apply curated, owner-approved skill promotions AFTER the legacy sync. The legacy
+  // sync deactivates rows it did not touch, so promotions must run afterwards to keep
+  // promoted occupations/skills active. This step is idempotent.
+  const promotions = await seedSkillsTaxonomyPromotions({ pool });
+  console.log(
+    [
+      'Skills taxonomy promotions applied.',
+      `occupations=${promotions.occupations}`,
+      `skills=${promotions.skills}`,
+      `proposalsMarkedPromoted=${promotions.proposalsMarkedPromoted}`,
+      promotions.missingSectors.length > 0
+        ? `missingSectors=${promotions.missingSectors.join('; ')}`
+        : 'missingSectors=none',
     ].join(' '),
   );
 }

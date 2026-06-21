@@ -13,6 +13,13 @@ export type DirectoryProfile = {
   jobTitleId: string | null;
   jobTitleName: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
+  // Free-text skills that were nominated for this profile through Skills Hunt but
+  // are not yet in the canonical taxonomy. They live in
+  // skills_hunt_proposed_skill_promotions (status not yet 'promoted'), joined to the
+  // profile via the originating submission (skills_hunt_directory_profiles). Surfaced
+  // as muted "pending review" chips so a community-generated profile is never empty
+  // just because its nominated skill has not been promoted yet.
+  pendingSkills: string[];
   isActive: boolean;
   // Skills Hunt + Clerk username co-change (continuity §2.4 / §4 in
   // ctf-skills-hunt-session-continuity.md). source drives the visible
