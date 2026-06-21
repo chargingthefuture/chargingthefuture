@@ -921,6 +921,7 @@ CREATE TABLE IF NOT EXISTS feed_community_posts (
   category TEXT NOT NULL DEFAULT 'general',
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
   reply_count INTEGER NOT NULL DEFAULT 0,
+  reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -931,6 +932,7 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS body TEXT NO
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -951,11 +953,22 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Per-member "last seen" marker for the Hub home channel, used to draw a single
+-- "New messages" divider where a member left off. One row per member; updated to NOW()
+-- after the member views the chat. Best-effort: a read/write failure must never break chat.
+CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
+  user_id TEXT PRIMARY KEY,
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_feed_questions_created_at ON feed_questions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answers_question_created_at ON feed_answers(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answer_ratings_answer_id ON feed_answer_ratings(answer_id);
 CREATE INDEX IF NOT EXISTS idx_llm_inference_log_question_created_at ON llm_inference_log(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_community_posts_created_at ON feed_community_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_community_posts_reply_to ON feed_community_posts(reply_to_post_id);
 CREATE INDEX IF NOT EXISTS idx_feed_community_replies_post_created_at ON feed_community_replies(post_id, created_at ASC);
 
 -- === unlock tables (prod-compatible) ===
