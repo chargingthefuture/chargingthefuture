@@ -94,6 +94,27 @@ export type ComicTrainingExample = {
 
 export type ComicAnswerRatingValue = 'helpful' | 'not_helpful' | 'flagged';
 
+// One answered @comic turn paired with its rating, for the de-identified training export. Holds the
+// question text, the published answer text, the most-recent rating value, and when it was rated. It
+// carries NO user id and no other PII — text + rating + timestamps only.
+export type ComicRatedAnswerExample = {
+  question: string;
+  answer: string;
+  rating: ComicAnswerRatingValue;
+  ratedAtIso: string;
+};
+
+// At-a-glance counts of the accumulated training signal, for the @comic admin dashboard. Best-effort
+// read; a failure to compute simply hides the counter.
+export type ComicTrainingStats = {
+  // Total non-discarded owner-correction training examples.
+  trainingExamplesTotal: number;
+  // Breakdown of those training examples by status ('pending' | 'exported'); 'discarded' is excluded.
+  trainingExamplesByStatus: Record<string, number>;
+  // Distinct answered turns that carry at least one rating.
+  ratedAnswersTotal: number;
+};
+
 export type ComicRateAnswerResult = {
   turnId: string;
   rating: ComicAnswerRatingValue;
