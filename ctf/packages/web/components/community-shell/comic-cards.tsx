@@ -10,6 +10,20 @@ type ComicAnswerCardProps = {
   onRate: (turnId: string, rating: ComicAnswerRating) => void;
 };
 
+// Relative "X ago" for a quick sense of recency.
+function formatRelativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return 'just now';
+  const diffMs = Date.now() - then;
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
 // Full, unambiguous timestamp for a global audience: month spelled out, date, year, time, and the
 // viewer's timezone — e.g. "June 21, 2026, 7:44 AM EDT".
 function formatTimestamp(iso: string): string {
@@ -18,6 +32,11 @@ function formatTimestamp(iso: string): string {
   const datePart = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date);
   const timePart = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
   return `${datePart}, ${timePart}`;
+}
+
+// "47 min ago · June 21, 2026, 7:44 AM EDT" — quick recency plus the exact, global-clear timestamp.
+function formatRelativeAndExact(iso: string): string {
+  return `${formatRelativeTime(iso)} · ${formatTimestamp(iso)}`;
 }
 
 // Answered AI Assistant card: cyan treatment, Sparkles avatar, "AI Assistant" label, 🤖 AI Q&A
@@ -36,7 +55,7 @@ export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardP
             <span className={styles.comicCardName}>AI Assistant</span>
             <span className={styles.comicCardBadge}>🤖 AI Q&amp;A</span>
           </div>
-          <div className={styles.comicCardMeta}>Asked by {askedByLabel} · {formatTimestamp(item.askedAtIso)}</div>
+          <div className={styles.comicCardMeta}>Asked by {askedByLabel} · {formatRelativeAndExact(item.askedAtIso)}</div>
         </div>
       </div>
 
@@ -105,7 +124,7 @@ export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) 
               <ShieldCheck size={9} /> Reviewing for safety
             </span>
           </div>
-          <div className={styles.comicCardMeta}>Asked by {askedByLabel} · {formatTimestamp(item.askedAtIso)}</div>
+          <div className={styles.comicCardMeta}>Asked by {askedByLabel} · {formatRelativeAndExact(item.askedAtIso)}</div>
         </div>
       </div>
 
