@@ -16,8 +16,6 @@ import { ShieldCheck, Eye, CheckCircle2 } from "lucide-react";
 import type { TrustUserExtension, TrustEvidenceItem } from "../../lib/trust/types";
 
 const BRAND = "#0EA5E9";
-const BRAND_DIM = "rgba(14,165,233,0.15)";
-const BRAND_BORDER = "rgba(14,165,233,0.25)";
 const CARD_BG = "rgba(14,165,233,0.06)";
 const CARD_BORDER = "rgba(14,165,233,0.18)";
 const HAIRLINE = "rgba(255,255,255,0.05)";
@@ -28,23 +26,14 @@ function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function WidgetHeader({ verified }: { verified: boolean }) {
+// Header is just the Trust label. There is no verified/unverified status chip: the platform does
+// not verify members, so showing a "Verified"/"Unverified" badge would promise something it cannot
+// support. Trust is signal-only.
+function WidgetHeader() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <ShieldCheck size={14} style={{ color: BRAND }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#38BDF8", letterSpacing: "0.06em", textTransform: "uppercase" }}>Trust</span>
-      </div>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 4,
-        background: verified ? BRAND_DIM : "rgba(255,255,255,0.05)",
-        color: verified ? "#38BDF8" : "#6B7280",
-        border: `1px solid ${verified ? BRAND_BORDER : "rgba(255,255,255,0.08)"}`,
-        fontSize: 10, padding: "2px 8px", borderRadius: 20,
-      }}>
-        <ShieldCheck size={9} />
-        {verified ? "Verified" : "Unverified"}
-      </div>
+    <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "12px 14px 10px" }}>
+      <ShieldCheck size={14} style={{ color: BRAND }} />
+      <span style={{ fontSize: 12, fontWeight: 700, color: "#38BDF8", letterSpacing: "0.06em", textTransform: "uppercase" }}>Trust</span>
     </div>
   );
 }
@@ -78,10 +67,6 @@ function EmptyBody({ visibility }: { visibility: string }) {
             <span style={{ fontSize: 11, color: "#6B7280" }}>{label}</span>
           </div>
         ))}
-      </div>
-
-      <div style={{ fontSize: 11, color: "#4B5563", textAlign: "center", lineHeight: 1.5, marginBottom: 10 }}>
-        Verification is handled manually by admins.
       </div>
 
       <VisibilityRow visibility={visibility} bordered />
@@ -123,11 +108,10 @@ export interface TrustWidgetCardProps {
 }
 
 export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust }) => {
-  const verified = trust.trustStatus === "verified";
   const hasEvidence = trust.trustEvidence.length > 0;
   return (
     <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <WidgetHeader verified={verified} />
+      <WidgetHeader />
       {hasEvidence
         ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} />
         : <EmptyBody visibility={trust.trustVisibility} />}
