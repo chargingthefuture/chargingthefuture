@@ -31,6 +31,9 @@ export function DirectoryProfileDetail({
   const profileUrl = p.profileUrl?.trim() ? p.profileUrl.trim() : null;
   const headline = p.headline?.trim() ? p.headline.trim() : null;
   const bio = p.bio?.trim() ? p.bio.trim() : null;
+  // A profile nominated through Skills Hunt is community-generated; show that and who
+  // nominated it instead of a generic headline.
+  const isCommunityGenerated = p.source === "community-generated";
 
   async function handleAttach() {
     const target = attachInput.trim();
@@ -67,8 +70,17 @@ export function DirectoryProfileDetail({
               <AvatarFallback style={{ background: `${t.ACCENT}30`, color: t.ACCENT, fontSize: 26, fontWeight: 800 }}>{initials(p.name)}</AvatarFallback>
             </Avatar>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: headline ? 4 : 8 }}>{p.name}</div>
-              {headline && <div style={{ fontSize: 15, color: t.SUBTLE, marginBottom: 8, lineHeight: 1.4 }}>{headline}</div>}
+              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: headline || isCommunityGenerated ? 4 : 8 }}>{p.name}</div>
+              {isCommunityGenerated ? (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Community-generated profile</div>
+                  {p.invitedByUsername && (
+                    <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 2, lineHeight: 1.4 }}>Nominated by @{p.invitedByUsername}</div>
+                  )}
+                </div>
+              ) : (
+                headline && <div style={{ fontSize: 15, color: t.SUBTLE, marginBottom: 8, lineHeight: 1.4 }}>{headline}</div>
+              )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {p.sector && <Badge style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 12 }}>{p.sector}</Badge>}
                 {p.jobTitle && <Badge style={{ background: "transparent", color: t.MUTED, border: `1px solid ${t.BORDER}`, fontSize: 12 }}>{p.jobTitle}</Badge>}
