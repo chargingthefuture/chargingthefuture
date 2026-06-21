@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { HubJoinResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
-import type { ChatMessage, ComicAnswerRating, ComicStreamItem, ShellCurrentUser } from './shell-types';
+import type { ChatMessage, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
 
@@ -37,10 +37,12 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
     return 'Now';
   }
 
-  return new Intl.DateTimeFormat('en', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+  // Full, unambiguous timestamp for a global audience: month spelled out, date, year, time, and the
+  // viewer's timezone — e.g. "June 21, 2026, 7:44 AM EDT". Built in two parts so the date and time are
+  // always joined by a comma (avoids the locale "at" separator).
+  const datePart = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date);
+  const timePart = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
+  return `${datePart}, ${timePart}`;
 }
 
 function getActionForText(text: string): MessageAction | null {
@@ -181,6 +183,7 @@ type ComicConversationResponse = {
     answer: string | null;
     answerTurnId: string | null;
     currentUserRating: ComicAnswerRating | null;
+    linkedPlugins: ComicLinkedPlugin[];
     askedAtIso: string;
   }>;
 };
@@ -301,6 +304,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         answer: null,
         answerTurnId: null,
         currentUserRating: null,
+        linkedPlugins: [],
         askedAtIso: new Date().toISOString(),
         optimistic: true,
       };

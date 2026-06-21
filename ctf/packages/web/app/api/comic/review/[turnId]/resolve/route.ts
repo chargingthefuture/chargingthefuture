@@ -14,6 +14,16 @@ function isResolution(value: unknown): value is ComicReviewResolveInput['resolut
   return typeof value === 'string' && (RESOLUTIONS as readonly string[]).includes(value);
 }
 
+// Keep only string entries from a possibly-untrusted array; non-arrays yield an empty list. The
+// repository does the real validation (registry membership, dedupe, cap) — here we just narrow the
+// shape so a malformed payload cannot reach it.
+function parseLinkedPluginSlugs(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
 function parseBody(body: ResolveBody): ComicReviewResolveInput | null {
   // Reject (rather than silently coerce to 'approve') any resolution outside the allowed set so a
   // malformed/unknown value cannot accidentally publish a draft.
@@ -25,6 +35,7 @@ function parseBody(body: ResolveBody): ComicReviewResolveInput | null {
     resolution: body.resolution,
     correctedBody: typeof body.correctedBody === 'string' ? body.correctedBody : null,
     reason: typeof body.reason === 'string' ? body.reason : null,
+    linkedPluginSlugs: parseLinkedPluginSlugs(body.linkedPluginSlugs),
   };
 }
 
