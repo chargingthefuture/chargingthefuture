@@ -245,6 +245,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'presence',
+    name: 'Member Presence',
+    dataSummary: 'The cross-plugin index that shows where you are active in other plugins on your Directory profile.',
+    serviceScopeSupported: true,
+    tables: [
+      del('member_plugin_presence', 'user_id', 'Index rows marking your listings/activity across plugins.'),
+    ],
+  },
+  {
     slug: 'workforce',
     name: 'Workforce',
     dataSummary: 'Your workforce extension record, plus any leftover rows from the legacy workforce profile/recruitment tables (now unused — the workforce view is read-only over your Directory profile).',
