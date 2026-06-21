@@ -19,6 +19,15 @@ import type {
   LighthousePropertyInput,
 } from './types';
 import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from './stream';
+import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+
+// Cross-plugin presence: a LightHouse property listing marks its host as active in LightHouse.
+// Labels and deep link mirror scripts/backfillMemberPresence.mjs exactly so live writes match the
+// one-time backfill.
+const LIGHTHOUSE_PRESENCE_SLUG = 'lighthouse';
+const LIGHTHOUSE_PRESENCE_REF_TYPE = 'property';
+const LIGHTHOUSE_PRESENCE_LABEL = 'Housing listing';
+const LIGHTHOUSE_PRESENCE_DEEP_LINK = '/apps/lighthouse';
 
 type CountRow = { total: string };
 
@@ -639,7 +648,7 @@ export async function getHostQuoraUrl(userId: string): Promise<string | null> {
 }
 
 export async function createProperty(actorUserId: string, input: LighthousePropertyInput): Promise<LighthouseProperty> {
-  return withDbTransaction(async (client: PoolClient) => {
+  const property = await withDbTransaction(async (client: PoolClient) => {
     // Member self-service hosting (owner decision, 2026-06-18): any member may list their own
     // place — listing IS what makes them a host. We no longer hard-deny when there's no host
     // profile; instead we transparently provision one so the member never has to fill a separate
@@ -715,10 +724,32 @@ export async function createProperty(actorUserId: string, input: LighthousePrope
     const [property] = await attachAcceptedCurrenciesWithClient(client, [mapProperty(created.rows[0])]);
     return property;
   });
+
+  // Best-effort presence write after the listing is durably committed. A new active listing makes the
+  // host active in LightHouse; an inactive listing is recorded as not-present. Never breaks create.
+  if (property.isActive) {
+    await recordMemberPresence({
+      userId: property.hostUserId,
+      pluginSlug: LIGHTHOUSE_PRESENCE_SLUG,
+      refType: LIGHTHOUSE_PRESENCE_REF_TYPE,
+      refId: property.id,
+      label: LIGHTHOUSE_PRESENCE_LABEL,
+      deepLink: LIGHTHOUSE_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: property.hostUserId,
+      pluginSlug: LIGHTHOUSE_PRESENCE_SLUG,
+      refType: LIGHTHOUSE_PRESENCE_REF_TYPE,
+      refId: property.id,
+    });
+  }
+
+  return property;
 }
 
 export async function updateProperty(actorUserId: string, propertyId: string, input: LighthousePropertyInput, isAdmin: boolean): Promise<LighthouseProperty> {
-  return withDbTransaction(async (client: PoolClient) => {
+  const property = await withDbTransaction(async (client: PoolClient) => {
     const existing = await client.query(
       `
         SELECT host_user_id
@@ -816,10 +847,33 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
     const [property] = await attachAcceptedCurrenciesWithClient(client, [mapProperty(updated.rows[0])]);
     return property;
   });
+
+  // Best-effort presence write after the listing is durably committed. An update may toggle the
+  // listing's active flag, so re-record presence when active or clear it when the host marked it
+  // inactive/closed. Never breaks update.
+  if (property.isActive) {
+    await recordMemberPresence({
+      userId: property.hostUserId,
+      pluginSlug: LIGHTHOUSE_PRESENCE_SLUG,
+      refType: LIGHTHOUSE_PRESENCE_REF_TYPE,
+      refId: property.id,
+      label: LIGHTHOUSE_PRESENCE_LABEL,
+      deepLink: LIGHTHOUSE_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: property.hostUserId,
+      pluginSlug: LIGHTHOUSE_PRESENCE_SLUG,
+      refType: LIGHTHOUSE_PRESENCE_REF_TYPE,
+      refId: property.id,
+    });
+  }
+
+  return property;
 }
 
 export async function deleteProperty(actorUserId: string, propertyId: string, isAdmin: boolean): Promise<boolean> {
-  return withDbTransaction(async (client: PoolClient) => {
+  const result = await withDbTransaction(async (client: PoolClient) => {
     const existing = await client.query(
       `
         SELECT host_user_id
@@ -831,16 +885,29 @@ export async function deleteProperty(actorUserId: string, propertyId: string, is
     );
 
     if (existing.rows.length === 0) {
-      return false;
+      return { deleted: false, hostUserId: null as string | null };
     }
 
     if (!isAdmin && existing.rows[0].host_user_id !== actorUserId) {
       throw new Error('not_owner');
     }
 
+    const hostUserId = existing.rows[0].host_user_id as string | null;
     const deleted = await client.query('DELETE FROM lighthouse_properties WHERE id = $1::uuid', [propertyId]);
-    return (deleted.rowCount ?? 0) > 0;
+    return { deleted: (deleted.rowCount ?? 0) > 0, hostUserId };
   });
+
+  // Best-effort presence clear after the listing row is durably removed. Never breaks delete.
+  if (result.deleted && result.hostUserId) {
+    await clearMemberPresence({
+      userId: result.hostUserId,
+      pluginSlug: LIGHTHOUSE_PRESENCE_SLUG,
+      refType: LIGHTHOUSE_PRESENCE_REF_TYPE,
+      refId: propertyId,
+    });
+  }
+
+  return result.deleted;
 }
 
 export async function isBlockedPair(userA: string, userB: string): Promise<boolean> {

@@ -8,9 +8,17 @@ beside it. This is not a standalone plugin with its own routes-and-admin surface
 (`member_plugin_presence`) plus one read API and a Directory profile surface. The index is owned and
 written by the source plugins (for this first cut, by a one-time backfill); Directory only reads it.
 
+Live per-plugin write hooks now keep the index current in real time for LightHouse property listings,
+TrustTransport ride requests, Foundation provider offerings, and SocketRelay posts: the source plugin
+writes presence as the listing is created, updated, closed, or removed, so the index no longer waits on
+the periodic backfill for those sources. The one source still on the backfill only is the TrustTransport
+ride offer (the driver offer), because it has no create or remove path in the web app — see the
+deferred follow-up below.
+
 Out of scope for this first cut, recorded as deferred follow-ups in the Build Checklist below:
-live per-plugin write hooks, and presence/trust badges on other interaction surfaces (Commons post
-author, LightHouse host, TrustTransport driver, Foundation provider).
+the TrustTransport ride-offer write hook (no web create/remove path exists yet), and presence/trust
+badges on other interaction surfaces (Commons post author, LightHouse host, TrustTransport driver,
+Foundation provider).
 
 ## Intent and Outcome
 
@@ -22,8 +30,9 @@ the existing trust card rendered next to it so trust reads as peer social proof 
 ## Owner-Locked Decisions
 
 - Presence uses a shared index that each plugin writes to — not direct per-plugin queries from
-  Directory. For this first cut, the index is populated by a one-time backfill from existing listings;
-  live per-plugin write hooks are a deferred follow-up.
+  Directory. The index was first populated by a one-time backfill from existing listings; live
+  per-plugin write hooks now keep it current as listings are created, closed, and removed (for all
+  sources except the TrustTransport ride offer, which has no web create/remove path yet).
 - Nothing is public in this app, so any listing a member has counts as presence. There is no
   public/private gate on a presence entry.
 - Presence and the trust panel apply only to claimed profiles (a profile whose
@@ -36,7 +45,24 @@ the existing trust card rendered next to it so trust reads as peer social proof 
 - One shared table, `member_plugin_presence`, holds one row per member-owned listing.
 - A repository (`lib/presence/repository.ts`) exposes a read (`getMemberPresence`) and an idempotent
   write pair (`upsertMemberPresence` / `deactivateMemberPresence`). The write pair is used by the
-  backfill now and is the contract future per-plugin write hooks will call.
+  backfill and by the live per-plugin write hooks.
+- A best-effort wrapper (`lib/presence/live.ts`) exposes `recordMemberPresence` and
+  `clearMemberPresence`, which each source plugin's repository calls after a listing row is durably
+  committed. The wrapper swallows and reports any presence-write failure (a missing presence table on a
+  fresh deploy, a transient database error) so a presence write can never break, roll back, or delay
+  the listing operation that triggered it. Each source mirrors the exact label and deep link the
+  backfill uses, so live writes and the backfill produce identical rows.
+- Live write hooks by source (in each plugin's `repository.ts`):
+  - LightHouse: `createProperty` / `updateProperty` record presence when the property is active and
+    clear it when inactive; `deleteProperty` clears it. Keyed on `host_user_id`.
+  - TrustTransport requests: `createRequest` records presence; `updateTripStatus` and `cancelOrder`
+    clear it when the request reaches a terminal status (and re-record otherwise). Keyed on
+    `requester_user_id`. The accepted/assigned states still count as active, matching the backfill.
+  - Foundation: `setOwnOfferedSkills` records one presence row per currently offered skill and clears
+    any skill dropped from the set. Keyed on `user_id`, ref id = skill id.
+  - SocketRelay: `createRequest` and `repostRequest` record presence (status open); `claimRequest`,
+    `resolveFulfillment` (on close), and `adminDeleteRequest` clear it; `updateRequest` re-syncs to the
+    post's current status. Keyed on `owner_user_id`.
 - A read API (`GET /api/presence/user/[userId]`) returns the active presence list for a member,
   gated to any signed-in member.
 - The Directory profile detail (a client component) fetches presence and trust for the profile's
@@ -140,9 +166,16 @@ seeded/real data of the source plugins. Re-running the backfill is safe and idem
 
 ## Gaps and Known Technical Debt
 
-- Presence freshness depends on re-running the backfill until live write hooks land; a listing removed
-  after a backfill stays present until the next run (the deactivate helper exists but is not yet wired
-  to plugin lifecycle events).
+- Presence for LightHouse, TrustTransport requests, Foundation, and SocketRelay is now written live as
+  listings change, so it no longer waits on the backfill. The TrustTransport ride offer (driver offer)
+  is the one source still backfill-only: there is no web create or remove path for an offer (offers
+  appear only via seed scripts in the current code), so there is nothing to hook. If an offer
+  create/remove path is added later, wire `recordMemberPresence` / `clearMemberPresence` on
+  `provider_user_id` with the same `offer` ref type and "Offering rides" label the backfill uses.
+- Presence writes are best-effort and not part of the listing's database transaction: a presence write
+  that fails after the listing commits is logged and dropped, leaving the index momentarily stale until
+  the next write or backfill. This is intentional — the listing operation must never fail because of a
+  presence write.
 - Foundation presence is one row per offered skill, labeled generically; if a member offers many
   skills this could read as several identical "Provider offering" entries. A future pass could collapse
   Foundation to a single per-member entry.
@@ -160,12 +193,17 @@ seeded/real data of the source plugins. Re-running the backfill is safe and idem
    private-trust calm state. Blocked by task 4. Done.
 6. This inventory doc. Done.
 
-Deferred follow-ups (not in this first cut):
+7. Live per-plugin write hooks: each source plugin calls the best-effort `recordMemberPresence` when a
+   listing is created/updated and `clearMemberPresence` when it is closed or removed, keeping the index
+   current without waiting on the periodic backfill. Done for LightHouse property listings,
+   TrustTransport ride requests, Foundation provider offerings, and SocketRelay posts.
 
-7. Live per-plugin write hooks: each source plugin calls `upsertMemberPresence` when a listing is
-   created/updated and `deactivateMemberPresence` when it is removed, replacing the periodic backfill.
-   Cover these in each source plugin's own contracts and deletion scope.
-8. Presence/trust badges on other interaction surfaces: the Commons (SocketRelay) post author, the
+Deferred follow-ups (not yet done):
+
+8. TrustTransport ride-offer write hook: the driver offer is the one presence source still backfill-only
+   because the web app has no create or remove path for an offer (offers exist only via seed scripts).
+   When such a path is added, wire the same record/clear hooks on `provider_user_id`.
+9. Presence/trust badges on other interaction surfaces: the Commons (SocketRelay) post author, the
    LightHouse host, the TrustTransport driver, and the Foundation provider — so presence and trust are
    visible where members actually meet, not only on the Directory profile.
 
@@ -174,3 +212,12 @@ Deferred follow-ups (not in this first cut):
 - 2026-06-21: First cut. Added `member_plugin_presence`, the presence repository, the backfill script,
   the read API, and the "Also active in" + trust surface on the Directory provider profile. Live write
   hooks and other-surface badges deferred.
+- 2026-06-21: Live per-plugin write hooks. Added `lib/presence/live.ts` (best-effort
+  `recordMemberPresence` / `clearMemberPresence` that swallow and report failures so a presence write
+  can never break a listing operation). Wired the source plugin repositories to write presence as
+  listings change: LightHouse (`createProperty` / `updateProperty` / `deleteProperty`), TrustTransport
+  ride requests (`createRequest` / `updateTripStatus` / `cancelOrder`), Foundation
+  (`setOwnOfferedSkills`), and SocketRelay (`createRequest` / `updateRequest` / `repostRequest` /
+  `claimRequest` / `resolveFulfillment` / `adminDeleteRequest`). Each write mirrors the backfill's exact
+  label and deep link. The TrustTransport ride offer remains backfill-only: there is no web create or
+  remove path for an offer to hook. No schema change.
