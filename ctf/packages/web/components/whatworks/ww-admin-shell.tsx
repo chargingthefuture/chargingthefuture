@@ -144,6 +144,29 @@ export function WhatWorksAdminShell() {
     });
   }
 
+  async function editProblem(problem: AdminProblem, patch: { emoji: string; title: string; context: string }): Promise<boolean> {
+    setBusyId(problem.id);
+    setError(null);
+    try {
+      const result = await adminMutate(`/api/whatworks/admin/problems/${problem.id}`, 'PATCH', {
+        emoji: patch.emoji,
+        title: patch.title,
+        context: patch.context,
+      });
+      if (!result.ok) {
+        setError(result.message ?? 'Could not update the problem.');
+        return false;
+      }
+      await loadProblems();
+      return true;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not update the problem.');
+      return false;
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function deleteProblem(problem: AdminProblem): void {
     if (!window.confirm(`Delete “${problem.title}” and its ${problem.productCount} tool(s)? This cannot be undone.`)) return;
     void run(problem.id, async () => {
@@ -208,6 +231,7 @@ export function WhatWorksAdminShell() {
               busyId={busyId}
               creating={creating}
               onCreate={createProblem}
+              onEdit={editProblem}
               onToggleActive={toggleProblemActive}
               onDelete={deleteProblem}
             />
