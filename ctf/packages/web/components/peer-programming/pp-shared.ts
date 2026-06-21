@@ -60,6 +60,17 @@ export interface Message {
 
 export type Tab = "cohorts" | "session" | "chat";
 
+// How the viewer relates to the cohort they currently have open (mirrors the room API).
+export type RoomAccess = "member" | "admin" | "listener";
+
+// One running cohort for the week, as shown in the "listen in" / admin list.
+export interface CohortSummary {
+  id: string;
+  cohortLabel: string;
+  memberCount: number;
+  fallbackOpen: boolean;
+}
+
 export function initials(name: string): string {
   return name
     .split(" ")

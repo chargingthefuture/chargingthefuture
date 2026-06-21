@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { BG, getPeerProgrammingTokens, type Message, type PeerProgrammingTokens, type Room, type Tab } from "./pp-shared";
+import { BG, getPeerProgrammingTokens, type CohortSummary, type Message, type PeerProgrammingTokens, type Room, type RoomAccess, type Tab } from "./pp-shared";
 import { PeerProgrammingLoading } from "./pp-loading";
 import { PeerProgrammingIconRail } from "./pp-icon-rail";
 import { PeerProgrammingSidebar } from "./pp-sidebar";
@@ -20,7 +20,23 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 type RoomApiTopic = { title: string } | null;
 type RoomApiCohort = { id: string; cohortLabel: string; memberCount: number; fallbackOpen: boolean } | null;
 type RoomApiMessage = { id: string; authorUserId: string; body: string; createdAtIso: string; parentMessageId: string | null };
-type RoomApiResponse = { ok: boolean; topic: RoomApiTopic; cohort: RoomApiCohort; messages: RoomApiMessage[] };
+type RoomApiResponse = {
+  ok: boolean;
+  topic: RoomApiTopic;
+  cohort: RoomApiCohort;
+  messages: RoomApiMessage[];
+  cohorts?: CohortSummary[];
+  myCohortId?: string | null;
+  access?: RoomAccess;
+};
+
+type RoomData = {
+  room: Room;
+  messages: Message[];
+  cohorts: CohortSummary[];
+  myCohortId: string | null;
+  access: RoomAccess;
+};
 
 function mapMessages(rows: RoomApiMessage[]): Message[] {
   return rows.map((row) => ({
@@ -32,8 +48,12 @@ function mapMessages(rows: RoomApiMessage[]): Message[] {
   }));
 }
 
-async function fetchRoomData(signal: AbortSignal): Promise<{ room: Room; messages: Message[] }> {
-  const res = await fetch("/api/peer-programming/room", { signal });
+function roomUrl(cohortId?: string | null): string {
+  return cohortId ? `/api/peer-programming/room?cohortId=${encodeURIComponent(cohortId)}` : "/api/peer-programming/room";
+}
+
+async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Promise<RoomData> {
+  const res = await fetch(roomUrl(cohortId), { signal });
   if (!res.ok) throw new Error("Failed to load room");
   const data = (await res.json()) as RoomApiResponse;
   const room: Room = {
@@ -43,7 +63,21 @@ async function fetchRoomData(signal: AbortSignal): Promise<{ room: Room; message
     topic: data.topic?.title,
     participants: [],
   };
-  return { room, messages: mapMessages(data.messages ?? []) };
+  return {
+    room,
+    messages: mapMessages(data.messages ?? []),
+    cohorts: data.cohorts ?? [],
+    myCohortId: data.myCohortId ?? null,
+    access: data.access ?? (data.cohort ? "member" : "listener"),
+  };
+}
+
+// Read an optional ?cohortId= from the URL on the client (admin "Open room →" deep links and
+// listen-in links use it). Done from window rather than useSearchParams to avoid a Suspense
+// boundary requirement on this client shell.
+function initialCohortIdFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("cohortId");
 }
 
 function ShellHeader({ active, t, isAdmin }: { active: boolean; t: PeerProgrammingTokens; isAdmin?: boolean }) {
@@ -69,6 +103,12 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [cohorts, setCohorts] = useState<CohortSummary[]>([]);
+  const [myCohortId, setMyCohortId] = useState<string | null>(null);
+  const [access, setAccess] = useState<RoomAccess>("listener");
+  // Which cohort's room is open. null = the viewer's own cohort (the default room).
+  const [activeCohortId, setActiveCohortId] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState<Tab>("cohorts");
   const [messageInput, setMessageInput] = useState("");
@@ -81,14 +121,22 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 
   useEffect(() => {
     const controller = new AbortController();
+    const deepLinked = initialCohortIdFromUrl();
+    if (deepLinked) {
+      setActiveCohortId(deepLinked);
+      setTab("chat");
+    }
     async function fetchData() {
       setLoading(true);
       setError(null);
       try {
-        const { room: loadedRoom, messages: loadedMessages } = await fetchRoomData(controller.signal);
+        const data = await fetchRoomData(controller.signal, deepLinked);
         if (controller.signal.aborted) return;
-        setRoom(loadedRoom);
-        setMessages(loadedMessages);
+        setRoom(data.room);
+        setMessages(data.messages);
+        setCohorts(data.cohorts);
+        setMyCohortId(data.myCohortId);
+        setAccess(data.access);
       } catch (e: unknown) {
         if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
         setError(e instanceof Error ? e.message : "Failed to load peer programming data.");
@@ -100,9 +148,31 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return () => controller.abort();
   }, []);
 
+  // Open another running cohort to listen in (read-only unless you are a member of it). Passing
+  // null returns to your own cohort. Refetches the room for that cohort and jumps to the chat.
+  async function openCohort(cohortId: string | null) {
+    setSwitching(true);
+    setError(null);
+    try {
+      const data = await fetchRoomData(new AbortController().signal, cohortId);
+      setRoom(data.room);
+      setMessages(data.messages);
+      setCohorts(data.cohorts);
+      setMyCohortId(data.myCohortId);
+      setAccess(data.access);
+      setActiveCohortId(cohortId);
+      setTab("chat");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to open that cohort.");
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   async function handlePostMessage() {
     if (!messageInput.trim()) return;
     if (!room?.cohortId) { setError("You are not in a cohort yet."); return; }
+    if (access !== "member") { setError("You are listening in — only cohort members can post here."); return; }
     setSubmitting(true);
     setError(null);
     try {
@@ -113,8 +183,8 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       });
       if (!res.ok) throw new Error("Failed to post message");
       setMessageInput("");
-      // The room endpoint is the source of truth for the cohort's messages.
-      const roomRes = await fetch("/api/peer-programming/room");
+      // The room endpoint is the source of truth for the open cohort's messages.
+      const roomRes = await fetch(roomUrl(activeCohortId));
       if (roomRes.ok) {
         const data = (await roomRes.json()) as RoomApiResponse;
         setMessages(mapMessages(data.messages ?? []));
@@ -180,6 +250,12 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             success: feedbackSuccess,
             error: feedbackError,
           }}
+          cohorts={cohorts}
+          myCohortId={myCohortId}
+          openCohortId={activeCohortId}
+          onOpenCohort={(id) => void openCohort(id)}
+          switching={switching}
+          isAdmin={Boolean(isAdmin)}
         />
       )}
       {tab === "session" && <PeerProgrammingSessionTab room={room} participants={participants} />}
@@ -191,6 +267,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           onMessageInput={setMessageInput}
           onSend={() => void handlePostMessage()}
           submitting={submitting}
+          readOnly={access !== "member"}
         />
       )}
     </>

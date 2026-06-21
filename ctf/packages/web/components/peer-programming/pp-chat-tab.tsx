@@ -28,6 +28,7 @@ export function PeerProgrammingChatTab({
   onMessageInput,
   onSend,
   submitting,
+  readOnly = false,
 }: {
   room: Room | null;
   messages: Message[];
@@ -35,6 +36,9 @@ export function PeerProgrammingChatTab({
   onMessageInput: (v: string) => void;
   onSend: () => void;
   submitting: boolean;
+  // True when the viewer is listening in (or an admin viewing another cohort): the chat is visible
+  // but the composer is replaced by a notice, since only cohort members can post.
+  readOnly?: boolean;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -57,6 +61,10 @@ export function PeerProgrammingChatTab({
       {!hasCohort ? (
         <div style={{ padding: "12px 24px", borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", textAlign: "center", color: "#6B7280", fontSize: 13 }}>
           Join a cohort to participate in chat
+        </div>
+      ) : readOnly ? (
+        <div style={{ padding: "12px 24px", borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>
+          You’re listening in — only cohort members can post here.
         </div>
       ) : (
         <div style={{ padding: "8px 24px 20px", flexShrink: 0 }}>

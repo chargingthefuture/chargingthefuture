@@ -1,6 +1,6 @@
-import type { PeerProgrammingTopic } from 'lib/peer-programming/types';
+import type { PeerProgrammingCohort, PeerProgrammingTopic } from 'lib/peer-programming/types';
 
-export type { PeerProgrammingTopic };
+export type { PeerProgrammingCohort, PeerProgrammingTopic };
 
 // Result of running the weekly cohort assignment process. Mirrors the
 // `runWeeklyAssignment` return shape spread into the route response.
