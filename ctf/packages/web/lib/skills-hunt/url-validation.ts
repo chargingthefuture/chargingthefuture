@@ -67,13 +67,16 @@ export async function checkUrlLiveness(
       return { result: 'dead', status: response.status, checkedAtIso };
     }
 
-    if (response.status >= 200 && response.status < 400) {
-      return { result: 'valid', status: response.status, checkedAtIso };
-    }
-
-    return { result: 'invalid', status: response.status, checkedAtIso };
+    // Anything that is not an unambiguous 404/410 counts as valid. A 2xx/3xx is obviously
+    // live; a 401/403/405/429 is Quora's bot wall answering (real profiles return these to a
+    // server-side HEAD); and an opaque redirect under redirect:'manual' reports status 0.
+    // None of those mean the profile is gone, so we must not flag a genuine URL "invalid" —
+    // the admin still reviews the link by hand.
+    return { result: 'valid', status: response.status, checkedAtIso };
   } catch {
-    return { result: 'invalid', status: null, checkedAtIso };
+    // Timeout or network error — often Quora rate-limiting the worker. Per the policy above,
+    // do not auto-reject a well-formed Quora URL on a flaky or blocked request.
+    return { result: 'valid', status: null, checkedAtIso };
   } finally {
     clearTimeout(timer);
   }
