@@ -12,6 +12,7 @@ function parseBody(body: CommunityBody): FeedCommunityPostInput {
   return {
     body: typeof body.body === 'string' ? body.body : '',
     category: body.category,
+    replyToPostId: typeof body.replyToPostId === 'string' ? body.replyToPostId : null,
   };
 }
 
@@ -72,6 +73,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Community post blocked by content moderation.' },
         { status: 422 },
+      );
+    }
+
+    if (code === 'reply_target_invalid' || code === 'reply_target_not_found') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'The post you are replying to is no longer available.' },
+        { status: 400 },
       );
     }
 

@@ -84,6 +84,8 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 7. Announcements render as official Survivor Hub items; community posts render with their author.
 8. Connection state visible as footer status (connecting, live, fallback).
 9. Unsigned visitors see a sign-in gate in place of the input; the channel itself is publicly readable when `feed_render_config.is_public` is TRUE (public read enforcement is a tracked follow-up).
+10. Signal-style quoted reply: each peer message shows a small "Reply" affordance. Tapping it sets the composer's "Replying to …" banner (a one-line quote preview + cancel X); sending while it is set posts the message with `replyToPostId` so it stores and renders a compact quoted block (author + ~120-char snippet) above its body. Backed by `feed_community_posts.reply_to_post_id`; the quote is resolved server-side into `HubMessage.quotedMessage`.
+11. Unread divider: on entry the chat reads the member's `feed_hub_last_seen` marker (`GET /api/hub/last-seen`) and draws a single "New messages" divider before the first stream entry newer than it (none if everything is already seen). After the member has viewed the chat it marks seen once (`POST /api/hub/last-seen`, debounced/best-effort). Placement uses the per-entry `epoch` already computed for the unified stream.
 
 ### Sidebar — Channels (deferred)
 
@@ -117,8 +119,10 @@ The Survivor Hub is the primary entry point of CTF for both unauthenticated visi
 
 The Hub home channel is backed by the Feed model. Hub routes under `/api/hub/*`:
 
-- `GET /api/hub/messages` — blended channel history, backed by `listFeedTimeline` over `feed_items` (announcements + AI Q&A + community), mapped to the `HubMessage` contract. Returns `channelId: 'community'`.
-- `POST /api/hub/messages` — create a peer-to-peer community post, backed by `createFeedCommunityPost` (CSRF-guarded; rate-limit + moderation honored).
+- `GET /api/hub/messages` — blended channel history, backed by `listFeedTimeline` over `feed_items` (announcements + AI Q&A + community), mapped to the `HubMessage` contract. Returns `channelId: 'community'`. Each peer message now carries `communityPostId` (the underlying post id — the reply target) and `quotedMessage` (`{ author, snippet }`, resolved server-side) when the post is a Signal-style reply.
+- `POST /api/hub/messages` — create a peer-to-peer community post, backed by `createFeedCommunityPost` (CSRF-guarded; rate-limit + moderation honored). Body accepts an optional `replyToPostId` (the quoted post's id) plus a display-only `quotedMessage` echoed back on the created message so the sender's optimistic copy renders the quote. An unknown/malformed `replyToPostId` is rejected with 400.
+- `GET /api/hub/last-seen` — read the member's last-seen marker for the Hub home channel (`{ ok, lastSeenAtIso }`); `lastSeenAtIso` is null when never recorded. Backed by `getHubLastSeen` over `feed_hub_last_seen`. Best-effort.
+- `POST /api/hub/last-seen` — move the member's last-seen marker to now (CSRF-guarded; optional `seenAtIso` clamped to server NOW() and never moved backwards). Backed by `updateHubLastSeen`. Best-effort.
 - `GET /api/hub/channels` — stub returning the single `community` channel (multi-channel deferred).
 - `GET /api/hub/dms` — stub returning an empty list (DMs deferred).
 - `GET /api/hub/bots` — stub returning an empty list (bots deferred).
@@ -136,7 +140,8 @@ Web entry routes:
 The Hub owns no message/channel/bot tables. Its channel is backed by the Feed schema (canonical in `ctf/schema.sql`):
 
 - `feed_items` — the blended timeline projection (`item_type` ∈ announcement | question | community).
-- `feed_community_posts` / `feed_community_replies` — peer-to-peer posts.
+- `feed_community_posts` / `feed_community_replies` — peer-to-peer posts. `feed_community_posts.reply_to_post_id` (nullable self-reference, `ON DELETE SET NULL`) records a Signal-style quoted reply between two peer posts.
+- `feed_hub_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id` PK, `last_seen_at`). Drives the single "New messages" divider in the Commons chat; read on entry, updated after viewing. Best-effort; a failure never breaks the chat.
 - `feed_questions` / `feed_answers` / `feed_answer_ratings` — AI Q&A and ratings.
 - `announcements` (+ revisions/state) — admin-only announcements.
 - `feed_render_config` — global singleton; `is_public BOOLEAN NOT NULL DEFAULT TRUE` marks the blended channel publicly viewable; `enabled_channels` gates rendering.
@@ -193,6 +198,7 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 
 ## Change Log
 
+- 2026-06-21: Added two Commons (Survivor Hub home) chat features (web + mobile-responsive; Android deferred via Parity Ticket). (1) Signal-style quoted reply: a per-peer-message "Reply" affordance sets a "Replying to …" composer banner (quote preview + cancel X); sending posts the message with `replyToPostId` and renders a compact quoted block (author + ~120-char snippet) above its body. Backed by the new nullable self-reference `feed_community_posts.reply_to_post_id` (`ON DELETE SET NULL`); the quote is resolved server-side and carried as `HubMessage.quotedMessage` plus a new `communityPostId` (the reply target id). `POST /api/hub/messages` and `POST /api/feed/community/posts` accept `replyToPostId`. (2) Unread divider: new table `feed_hub_last_seen` and `GET`/`POST /api/hub/last-seen` (member endpoint; CSRF on POST; marker clamped to NOW() and never moved backwards). The chat reads the marker on entry, draws a single "New messages" divider before the first entry newer than it (placed by the per-entry `epoch`), and marks seen once after viewing — all best-effort so a failure never breaks the chat. Files: `schema.sql`, `lib/feed/repository.ts`, `lib/feed/types.ts`, `lib/hub/types.ts`, `app/api/hub/messages/route.ts`, `app/api/hub/last-seen/route.ts`, `app/api/feed/community/posts/route.ts`, `components/community-shell/{shell-types.ts,use-home-chat.ts,shell-chat-panel.tsx,community-shell.module.css}`. `schema.demo.sql` regenerated; drift gate passes; typecheck clean.
 - 2026-06-18: Right-rail cleanup. Reframed the "About Survivor Hub" copy to be chat-first ("say what you need in the chat… we'll point you to the right place") instead of the off-brand "connects you with N live plugins… in one place" framing. Removed the "Ready Apps" list and the "· N ready apps" line from the signed-in profile card ("ready apps" read as meaningless); apps are reached via the Apps section. Dropped the now-unused `readyApps`/`implementedCount` props from `ShellRightRail` and their computation in `community-shell.tsx`. Presentation only — no API/route/schema change.
 - 2026-06-18: Fixed home-chat ordering and added auto-scroll. Concierge messages (`sendConciergeAsk`) were created without `sentAtIso`, and the stream's `toEpoch` falls back to the array index when a timestamp is missing — so a tapped chip's question/reply got a tiny epoch and sorted to the **top** of the chat instead of the bottom. They now carry a real `sentAtIso` and sort newest-last. Also added a bottom sentinel + `scrollIntoView` so the chat auto-scrolls to the latest entry when the stream grows (`shell-chat-panel.tsx`). Note: the home/Survivor Hub chat is the custom Feed-backed stream, not GetStream (Stream is only the LightHouse/Chyme DM surfaces); these are fixes to that custom stream, not a Stream migration. No API/route/schema change.
 - 2026-06-18: Hide the "From Survivor to Thriver" hero banner + stats on mobile in the signed-in home chat (`shell-chat-panel.tsx`, gated on `useIsMobile()`). On a phone it consumed most of the first screen before any chat was visible; desktop is unchanged. Presentation only — no API/route/schema change.
