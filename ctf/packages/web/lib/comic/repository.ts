@@ -32,6 +32,7 @@ import type {
   ComicMessageInput,
   ComicMessageRouteResult,
   ComicRateAnswerResult,
+  ComicRatedAnswerExample,
   ComicReviewItem,
   ComicReviewPage,
   ComicReviewResolution,
@@ -39,6 +40,7 @@ import type {
   ComicReviewResolveResult,
   ComicReviewStatus,
   ComicTrainingExample,
+  ComicTrainingStats,
   ComicTurnEngine,
 } from './types';
 
@@ -867,6 +869,100 @@ export async function listComicTrainingExamples(): Promise<ComicTrainingExample[
   );
 
   return result.rows.map((row) => ({ intentLabel: row.intent_label || 'general', text: row.text }));
+}
+
+type RatedAnswerExportRow = {
+  question_body: string;
+  answer_body: string;
+  rating: ComicAnswerRatingValue;
+  rated_at: Date;
+};
+
+// Export every answered @comic turn that carries a rating, paired with the asker's question text,
+// the published answer text, and the most-recent rating value + when it was rated. This is the human
+// feedback signal half of the training dataset (the other half is owner corrections, exported by
+// exportComicTrainingExamples). DE-IDENTIFIED ON PURPOSE: no user id and no other PII leaves this
+// query — only question/answer text + the rating value + timestamps. Each answer turn appears once;
+// when several askers rated the same answer the most-recent rating wins (DISTINCT ON, newest first).
+export async function exportComicRatedAnswers(): Promise<ComicRatedAnswerExample[]> {
+  const result = await queryDb<RatedAnswerExportRow>(
+    `
+      SELECT
+        uq.body AS question_body,
+        ans.body AS answer_body,
+        r.rating AS rating,
+        r.updated_at AS rated_at
+      FROM (
+        -- Most-recent rating per answered turn (collapse multiple askers to one signal).
+        SELECT DISTINCT ON (turn_id) turn_id, rating, updated_at
+        FROM comic_answer_ratings
+        ORDER BY turn_id, updated_at DESC
+      ) r
+      JOIN comic_turns ans ON ans.id = r.turn_id
+      -- The review that published this answer turn, and its asker question turn (never repointed).
+      JOIN comic_review_queue q ON q.answer_turn_id = ans.id AND q.status IN ('approved', 'corrected')
+      JOIN comic_turns qt ON qt.id = q.turn_id
+      -- The asker's question = the most recent user turn at/before the queued turn.
+      JOIN LATERAL (
+        SELECT ut.body
+        FROM comic_turns ut
+        WHERE ut.conversation_id = qt.conversation_id
+          AND ut.role = 'user'
+          AND ut.created_at <= qt.created_at
+        ORDER BY ut.created_at DESC
+        LIMIT 1
+      ) uq ON TRUE
+      ORDER BY r.updated_at DESC
+    `,
+  );
+
+  const examples: ComicRatedAnswerExample[] = [];
+  for (const row of result.rows) {
+    const question = row.question_body.replace(/\n/g, ' ').trim();
+    const answer = row.answer_body.replace(/\n/g, ' ').trim();
+    if (question.length === 0 || answer.length === 0) {
+      continue;
+    }
+    examples.push({ question, answer, rating: row.rating, ratedAtIso: toIso(row.rated_at) });
+  }
+
+  return examples;
+}
+
+type TrainingExamplesCountRow = { status: string; total: string };
+
+// At-a-glance counts of the accumulated training signal for the @comic admin dashboard: the total
+// non-discarded owner-correction examples (with a per-status breakdown) and the number of distinct
+// answered turns that carry at least one rating. Read-only, used to show "how much data so far".
+export async function getComicTrainingStats(): Promise<ComicTrainingStats> {
+  const examplesResult = await queryDb<TrainingExamplesCountRow>(
+    `
+      SELECT status, COUNT(*)::text AS total
+      FROM comic_training_examples
+      WHERE status <> 'discarded'
+      GROUP BY status
+    `,
+  );
+
+  const trainingExamplesByStatus: Record<string, number> = {};
+  let trainingExamplesTotal = 0;
+  for (const row of examplesResult.rows) {
+    const count = Number.parseInt(row.total ?? '0', 10);
+    const safeCount = Number.isFinite(count) ? count : 0;
+    trainingExamplesByStatus[row.status] = safeCount;
+    trainingExamplesTotal += safeCount;
+  }
+
+  const ratedResult = await queryDb<CountRow>(
+    `SELECT COUNT(DISTINCT turn_id)::text AS total FROM comic_answer_ratings`,
+  );
+  const ratedAnswersTotal = Number.parseInt(ratedResult.rows[0]?.total ?? '0', 10);
+
+  return {
+    trainingExamplesTotal,
+    trainingExamplesByStatus,
+    ratedAnswersTotal: Number.isFinite(ratedAnswersTotal) ? ratedAnswersTotal : 0,
+  };
 }
 
 export function isValidComicAnswerRating(value: string): value is ComicAnswerRatingValue {

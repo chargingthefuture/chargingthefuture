@@ -211,8 +211,17 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   pending review items (asker question + draft + intent/confidence + safety category).
 - `POST /api/comic/review/[turnId]/resolve` (`comic.review.resolve`) — admin. Approve / correct
   (edit) / reject a queued draft; a correction persists a `comic_training_examples` row.
-- `GET /api/comic/training/export` (`comic.training.export`) — admin. Rasa NLU YAML (or JSON
-  via `?format=json`) from accumulated turns + corrections; single-loop (no double counting).
+- `GET /api/comic/training/export` (`comic.training.export`) — admin. The de-identified training
+  dataset: owner corrections (asker questions grouped by intent label, the NLU YAML `nlu:` block /
+  the JSON `byIntent` map) **plus** the human feedback signal — every answered turn paired with its
+  question text, published answer text, and most-recent helpful/not_helpful/flagged rating + when it
+  was rated (`ratedAnswers` in JSON; YAML comments in the download). No user id or other PII — text +
+  rating value + timestamps only. JSON via `?format=json`; YAML is the default download.
+- `GET /api/comic/admin/ai-status` (`comic.ai.status`) — admin. Read-only live status of the Ollama
+  drafting backend (configured / reachable / latency), for the dashboard engine-status badge.
+- `GET /api/comic/admin/training-stats` (`comic.training.stats`) — admin. Read-only at-a-glance
+  counts for the dashboard: total non-discarded `comic_training_examples` (with a pending/exported
+  breakdown) and the number of distinct rated answered turns. Aggregate counts only — no PII.
 - `GET /api/comic/conversation` (`comic.conversation.read`) — member/approved-or-admin. The
   asker-facing read powering the unified stream: returns the **requesting user's own** @comic Q&A
   items as answered cards (approved/corrected reviews only) or pending "Reviewing for safety" cards.
@@ -280,15 +289,25 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
    correction / approved human-first turn; null while pending/rejected so an unreviewed draft is
    never surfaced. Named CHECK constraints (`comic_review_queue_status_check`) guard the status enum
    on legacy DBs.
-4. `comic_training_examples` — curated training data exported to Rasa (`id` uuid pk,
-   `source_turn_id` uuid FK→comic_turns, `intent_label` text, `text` text, `entities` jsonb
-   default `[]`, `story` jsonb null, `status` ∈ pending|exported|discarded, `exported_at` null,
-   `created_at`). Indexed on `intent_label`, `status`, `source_turn_id`.
-5. `comic_answer_ratings` — quality signal for answered turns (`user_id` text, `turn_id` uuid
-   FK→comic_turns ON DELETE CASCADE, `rating` ∈ helpful|not_helpful|flagged, `created_at`,
-   `updated_at`; composite pk `(user_id, turn_id)`). Indexed on `turn_id`. One rating per user per
-   answered turn; re-rating updates in place. Added 2026-05-31 with the web UI — `feed_answer_ratings`
-   is FK'd into `feed_answers` and cannot host comic turns, so comic gets its own ratings table.
+4. `comic_training_examples` — **training input #1: owner corrections.** Curated supervised
+   examples (`id` uuid pk, `source_turn_id` uuid FK→comic_turns, `intent_label` text, `text` text,
+   `entities` jsonb default `[]`, `story` jsonb null, `status` ∈ pending|exported|discarded,
+   `exported_at` null, `created_at`). Indexed on `intent_label`, `status`, `source_turn_id`. A row is
+   written whenever the owner *corrects* a draft in review (`resolveComicReview`). Exported by
+   `exportComicTrainingExamples()` as the intent→texts map.
+5. `comic_answer_ratings` — **training input #2: the human feedback signal.** One rating per answered
+   turn per user (`user_id` text, `turn_id` uuid FK→comic_turns ON DELETE CASCADE, `rating` ∈
+   helpful|not_helpful|flagged, `created_at`, `updated_at`; composite pk `(user_id, turn_id)`).
+   Indexed on `turn_id`. One rating per user per answered turn; re-rating updates in place. Added
+   2026-05-31 with the web UI — `feed_answer_ratings` is FK'd into `feed_answers` and cannot host
+   comic turns, so comic gets its own ratings table. **As of 2026-06-21 these ratings are part of the
+   training export:** `exportComicRatedAnswers()` joins each rated answered turn back to its question
+   and published answer text and the most-recent rating, de-identified (no user id, no other PII), and
+   `GET /api/comic/training/export` returns them alongside the owner corrections.
+
+Together, `comic_training_examples` (owner corrections) and `comic_answer_ratings` (helpful /
+not_helpful / flagged ratings) are the **two training inputs** for the @comic assistant. See the
+"Training dataset & how to begin fine-tuning" subsection below for how they are exported and used.
 
 **Rasa tracker store:** Rasa's own SQL event store, provisioned in the same Neon Postgres
 (managed by Rasa, not hand-authored here). **Still deferred** — the scaffolded Rasa service is
@@ -300,6 +319,53 @@ comic generation is **not** forced into that feed-shaped table; comic captures r
 its own `comic_turns` and emits a structured `[comic.inference]` console audit for parity (revisit
 if a comic-native inference log is needed). The feed `feed_answer_ratings` table is **not** reused
 for comic answers (its FK targets `feed_answers`); comic ratings live in `comic_answer_ratings`.
+
+### Training dataset & how to begin fine-tuning
+
+This subsection is the single place a future engineer (or the owner) needs to read to pick up the
+fine-tuning step. The model does **not** train itself: nothing auto-learns, nothing auto-notifies the
+owner. Fine-tuning is an owner-initiated step, done by hand when the owner decides there is enough
+data.
+
+**What the dataset is.** Two human signals, both accumulated as members and the owner use @comic:
+
+1. **Owner corrections** — every time the owner *corrects* a draft answer in the review dashboard, the
+   asker's question is saved as a row in `comic_training_examples` (with the intent label the owner's
+   resolution implied). This is the supervised "here is a better answer" signal.
+2. **Helpful / not-helpful / flagged ratings** — every time an asker rates an answer they received,
+   one row is saved/updated in `comic_answer_ratings` (one rating per person per answer). This is the
+   "did the answer actually help" signal.
+
+**Where each lives.** `comic_training_examples` and `comic_answer_ratings` (both in `ctf/schema.sql`).
+The export logic is in `ctf/packages/web/lib/comic/repository.ts`:
+`exportComicTrainingExamples()` (the corrections, grouped by intent) and `exportComicRatedAnswers()`
+(the rated answers, de-identified). The published answer and question text are read back from
+`comic_turns` / `comic_review_queue`.
+
+**How to export it.** Call `GET /api/comic/training/export` (admin only, same gate as the rest of the
+@comic admin). Two formats:
+  - `?format=json` → `{ ok, totalExamples, byIntent, ratedAnswers }`, where `byIntent` is the
+    corrections map (`intent → [question text]`) and `ratedAnswers` is
+    `{ question, answer, rating, ratedAt }[]` — every rated answer, de-identified.
+  - default (no `format`) → a downloadable NLU-style YAML file with the corrections as the `nlu:`
+    block and the rated answers appended as YAML comments so the file stays a valid training file
+    while still carrying the feedback signal.
+  No user id or any other PII is ever included in either format — question/answer text, the rating
+  value, and timestamps only.
+
+**Privacy note.** Because Ollama is self-hosted (server-side only, no third-party LLM egress), the
+exported text never has to leave our infrastructure to be used for training.
+
+**At-a-glance counter.** `GET /api/comic/admin/training-stats` returns
+`{ trainingExamplesTotal, trainingExamplesByStatus, ratedAnswersTotal }`. The @comic review dashboard
+shows this near the engine-status badge as "Training examples collected: N (… pending · … exported ·
+… rated answers)" so the owner can see at a glance how much data has accumulated. It is read-only and
+best-effort — if the count fails to load it is simply hidden, never blocking the review queue.
+
+**To begin fine-tuning** (owner-initiated, future): export the dataset via the route above, convert
+the corrections + rated answers into the chosen model's fine-tuning format, run the fine-tune against
+the self-hosted Ollama model, and swap the served model. None of this is automated yet by design;
+this counter and export exist so the data is ready the moment the owner chooses to start.
 
 ## Security, Privacy, and Compliance Controls
 
@@ -474,6 +540,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-06-21: **Helpful/not-helpful/flagged ratings now part of the training export, plus a "Training examples collected" counter.** (1) The training export (`GET /api/comic/training/export`) now includes the human feedback signal alongside owner corrections: new repository helper `exportComicRatedAnswers()` joins each rated answered turn (`comic_answer_ratings`) back to its question text + published answer text + most-recent helpful/not_helpful/flagged rating + when it was rated, de-identified (no user id, no other PII). JSON gains a `ratedAnswers: { question, answer, rating, ratedAt }[]` field; the YAML download appends the rated answers as comments so the file stays a valid NLU training file. (2) New admin-only read endpoint `GET /api/comic/admin/training-stats` (`getComicTrainingStats`) returns `{ trainingExamplesTotal, trainingExamplesByStatus, ratedAnswersTotal }`; the `/admin/comic` review dashboard shows "Training examples collected: N (… pending · … exported · … rated answers)" near the engine-status badge — read-only, best-effort (a failed fetch hides it). (3) Documented the two training inputs (`comic_training_examples` = owner corrections, `comic_answer_ratings` = ratings) in the Data Model section and added the "Training dataset & how to begin fine-tuning" subsection so a future engineer/owner can pick up the owner-initiated fine-tuning step. No schema change (reads/joins only). Command + access-policy contracts updated: `comic.training.export` bumped to 1.1.0 (now lists `ratedAnswers` and the wider `dataAccess`), new `comic.training.stats` command added.
 - 2026-06-21: **Applicable-plugin links on published answers.** A reviewer can now tag the plugins an answer points to, and the published answer renders them as tappable links. (1) Schema: added `linked_plugin_slugs jsonb not null default '[]'` to `comic_turns` (`schema.sql` CREATE + `ALTER … ADD COLUMN IF NOT EXISTS` companion, `schema.demo.sql` regenerated). (2) `ComicReviewResolveInput` gained `linkedPluginSlugs?: string[]`; the resolve route (`POST /api/comic/review/[turnId]/resolve`) parses it (string-array narrowing) and `resolveComicReview` validates the slugs against the visible plugin registry (`listPluginRegistry`) — dropping unknown/hidden slugs, deduping, and capping at 5 — then stores the result on the published answer turn (the reused AI draft for approve, or the freshly inserted human turn for correct / approved human-first). Reject stores nothing. (3) Read path: `listComicAskerStream` now selects `comic_turns.linked_plugin_slugs` on the answer turn and resolves each slug to `{ slug, name }` against one registry fetch per page, exposing `ComicAskerStreamItem.linkedPlugins` (empty for pending). The field is threaded through `/api/comic/conversation` → `useHomeChat` → `ComicStreamItem` to `ComicAnswerCard`, which renders each as a small `next/link` chip to `/apps/<slug>` (nothing when empty). (4) Dashboard: `comic-review-dashboard.tsx` fetches `/api/plugins` and shows an "Applicable plugins" toggle-chip picker in both the default (approve) view and the Edit view; the chosen slugs are sent as `linkedPluginSlugs` on approve and correct. (5) Contract: `comic.review.resolve` bumped to 1.1.0 with the new input and `comic_turns.linked_plugin_slugs` + `ctf_plugin_registry` in dataAccess. Android (RN dashboard + mobile comic card) is deferred — see the parity ticket on the PR.
 - 2026-06-21: **Regenerate a draft + show why the engine is unreachable.** (1) New admin-only `POST /api/comic/review/[turnId]/regenerate` (`regenerateComicDraft`) re-runs the model for a still-pending review and attaches the draft synchronously, so a backlog of draftless questions (the engine was down at ask time) can be cleared once it is healthy; the review dashboard gains a "Regenerate draft"/"Generate draft" button. If the engine is still unreachable it leaves the item human-first and says so. No schema change (writes a bot turn + sets `draft_turn_id`, same as the background path). (2) `pingOllama` now returns a `detail` string naming the failure (`HTTP 401 — check OLLAMA_API_KEY`, `HTTP 404 — check OLLAMA_BASE_URL / endpoint id`, `timeout`, etc.) plus the `provider` (runpod/native), so an "unreachable" status is debuggable — the admin landing badge and the `/admin/comic` queue badge now show the reason. This distinguishes a real outage from a config mistake (a wrong/missing RunPod API key or an out-of-date endpoint id while the RunPod endpoint itself is "Ready").
 
