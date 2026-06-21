@@ -15,7 +15,16 @@ const SUBTLE = '#6B7280';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
+  // box-sizing keeps padding inside the width; minWidth:0 lets the field shrink inside its grid track
+  // (grid/flex items default to min-width:auto, which is content-based). Without it an iOS
+  // `<input type="date">` — whose native control has a wide intrinsic minimum — forces its column wider
+  // than the phone and spills past the card. Normalizing the appearance stops the native date control
+  // from imposing that intrinsic width.
   boxSizing: 'border-box',
+  minWidth: 0,
+  maxWidth: '100%',
+  WebkitAppearance: 'none',
+  appearance: 'none',
   background: BG,
   border: `1px solid ${BORDER}`,
   color: TEXT,
@@ -92,9 +101,10 @@ export function PeerProgrammingAdminTopicForm({
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           gap: 16,
+          minWidth: 0,
         }}
       >
-        <label style={{ display: 'block' }}>
+        <label style={{ display: 'block', minWidth: 0 }}>
           <span style={labelTextStyle}>Week start date</span>
           <input
             type="date"
@@ -107,7 +117,7 @@ export function PeerProgrammingAdminTopicForm({
             Use the Monday of the target week. The room shows the topic for the current week only.
           </span>
         </label>
-        <label style={{ display: 'block' }}>
+        <label style={{ display: 'block', minWidth: 0 }}>
           <span style={labelTextStyle}>Title</span>
           <input
             type="text"
