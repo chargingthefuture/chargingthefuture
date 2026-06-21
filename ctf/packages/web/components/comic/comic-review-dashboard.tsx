@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
-  AlertTriangle, ArrowLeft, Check, FileText, Inbox, Pencil, RotateCcw,
+  AlertTriangle, ArrowLeft, Check, FileText, Home, Inbox, Pencil, RotateCcw,
   ShieldCheck, Sparkles, X,
 } from 'lucide-react';
 import type { ComicReviewItem } from '../../lib/comic/types';
@@ -272,7 +273,9 @@ export function ComicReviewDashboard() {
         <button type="button" className={`${styles.iconRailBtn} ${styles.iconRailBtnActive}`} aria-label="Review queue" aria-current="page">
           <Inbox size={20} />
         </button>
-        <div className={styles.iconRailAvatar} aria-hidden="true">O</div>
+        <Link href="/apps" className={styles.iconRailAvatar} aria-label="Back to the Hub" title="Back to the Hub">
+          <Home size={18} />
+        </Link>
       </aside>
 
       {/* Queue sidebar */}

@@ -37,10 +37,12 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
     return 'Now';
   }
 
-  return new Intl.DateTimeFormat('en', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+  // Full, unambiguous timestamp for a global audience: month spelled out, date, year, time, and the
+  // viewer's timezone — e.g. "June 21, 2026, 7:44 AM EDT". Built in two parts so the date and time are
+  // always joined by a comma (avoids the locale "at" separator).
+  const datePart = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date);
+  const timePart = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
+  return `${datePart}, ${timePart}`;
 }
 
 function getActionForText(text: string): MessageAction | null {
