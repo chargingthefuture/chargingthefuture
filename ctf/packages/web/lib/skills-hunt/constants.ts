@@ -18,6 +18,10 @@ export const SKILLS_HUNT_MAX_REVIEW_NOTES_LENGTH = 1000;
 export const SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION = 10;
 export const SKILLS_HUNT_MAX_PROPOSED_SKILLS_PER_SUBMISSION = 10;
 export const SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH = 40;
+// Taxonomy-picked skills carry the canonical taxonomy name, which may be longer than the
+// short free-text cap above (the taxonomy allows up to 120 chars). Validate picked skills
+// against this larger bound so a legitimate long skill name does not fail the submission.
+export const SKILLS_HUNT_MAX_TAXONOMY_SKILL_LABEL_LENGTH = 120;
 
 export const SKILLS_HUNT_SUBMISSION_LIMIT_7D = 10;
 export const SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE = 10;
