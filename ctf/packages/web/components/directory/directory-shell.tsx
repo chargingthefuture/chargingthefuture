@@ -37,6 +37,8 @@ type DirectoryListItem = {
   profileUrl: string | null;
   headline: string | null;
   bio: string | null;
+  source: string | null;
+  invitedByUsername: string | null;
 };
 
 export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
@@ -131,6 +133,8 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             profileUrl: item.profileUrl ?? null,
             headline: item.headline ?? null,
             bio: item.bio ?? null,
+            source: item.source ?? null,
+            invitedByUsername: item.invitedByUsername ?? null,
           }));
           setMembers(mapped);
         }
