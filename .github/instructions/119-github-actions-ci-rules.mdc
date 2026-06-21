@@ -22,6 +22,42 @@ sync whenever you add, remove, or rename a workflow.
 - Require Expo EAS preview builds for mobile pull requests that affect mobile code.
 - Require controlled EAS Update channel promotion for JavaScript/asset-only mobile updates.
 
+## Workflow Naming Convention (Critical — all agents)
+Every workflow's display `name:` (the top-of-file `name:` field that shows in the Actions tab and
+the manual "Run workflow" menu) must read **service-or-category first, then what it does**, joined by
+a spaced em dash:
+
+```
+name: <Service or category> — <What it does>
+```
+
+- **Service/category comes first.** Lead with the system the workflow acts on or the family it
+  belongs to — `Expo`, `Neon`, `Formance`, `Render`, `Bug Reports`, `Cleanup`, `Generate`,
+  `Inspect`, `GitHub Actions`, `GitHub Pages`. This groups related workflows together when the list
+  is sorted alphabetically, so a human scanning the Actions tab can find or run the right one fast.
+- **Separator is a spaced em dash** (` — `, the `—` character with one space on each side), not a
+  hyphen, colon, or slash.
+- **Right side says what it does**, in Title Case, short and plain — `Android Release`,
+  `Create Branch`, `Nightly Backup to Supabase`, `Deprecated Workflow Runs`.
+- This governs the human-readable `name:` only. It does **not** rename the workflow **file** or any
+  `job`/`step` id — those stay as they are unless a task explicitly asks to rename them.
+
+Examples (current workflows):
+
+```
+name: Expo — Android Release
+name: Expo — OTA Update
+name: Neon — Create Branch
+name: Formance — Nightly Backup to Supabase
+name: Cleanup — Deprecated Workflow Runs
+name: Bug Reports — Create Github Issues
+name: GitHub Actions — Budget Monitor
+name: GitHub Pages — Deploy Blog
+```
+
+When you **create** a new workflow or **rename** an existing one, set its `name:` in this shape, and
+update the Workflow Index ([`.github/workflows/README.md`](../workflows/README.md)) to match.
+
 ## Workflow Rules
 - Separate workflows for pull requests, main branch, and release promotion.
 - Use least-privilege GitHub tokens and scoped secrets.
