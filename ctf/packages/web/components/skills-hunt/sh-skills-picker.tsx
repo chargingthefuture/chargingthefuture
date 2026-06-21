@@ -9,13 +9,21 @@ type TaxonomyLoadState =
   | { status: "ready"; categories: Record<string, string[]> }
   | { status: "error" };
 
-// Fetch the canonical skills taxonomy once on mount and group it by sector for the picker.
-// On error or an empty result the picker still renders the free-text proposed-skills box so a
-// scout can proceed.
+// Cache the grouped taxonomy for the page session so the picker never has to show "Loading…"
+// again after the first fetch. Re-showing the loading state would collapse the category list,
+// which on a phone makes the page shrink and the scroll jump — the exact symptom of selecting a
+// skill re-rendering the picker.
+let cachedCategories: Record<string, string[]> | null = null;
+
+// Fetch the canonical skills taxonomy once and group it by sector for the picker. On error or an
+// empty result the picker still renders the free-text proposed-skills box so a scout can proceed.
 function useTaxonomy(): TaxonomyLoadState {
-  const [state, setState] = useState<TaxonomyLoadState>({ status: "loading" });
+  const [state, setState] = useState<TaxonomyLoadState>(
+    cachedCategories ? { status: "ready", categories: cachedCategories } : { status: "loading" },
+  );
 
   useEffect(() => {
+    if (cachedCategories) return;
     let active = true;
     void (async () => {
       try {
@@ -23,7 +31,9 @@ function useTaxonomy(): TaxonomyLoadState {
         if (!res.ok) throw new Error(`Taxonomy request failed (${res.status})`);
         const data = (await res.json()) as { items?: TaxonomyFlattenedRow[] };
         if (!active) return;
-        setState({ status: "ready", categories: groupTaxonomyBySector(data.items ?? []) });
+        const categories = groupTaxonomyBySector(data.items ?? []);
+        cachedCategories = categories;
+        setState({ status: "ready", categories });
       } catch {
         if (active) setState({ status: "error" });
       }
@@ -123,15 +133,15 @@ export function SkillsPicker(props: SkillsPickerProps) {
 
       <SelectedChips skills={skills} proposedSkills={proposedSkills} onToggleSkill={onToggleSkill} onRemoveProposed={onRemoveProposed} />
 
-      {canAddMore && taxonomy.status === "loading" && (
+      {taxonomy.status === "loading" && (
         <div style={{ fontSize: 12, color: "#6B7280", padding: "10px 0" }}>Loading skills…</div>
       )}
 
-      {canAddMore && taxonomy.status === "error" && (
+      {taxonomy.status === "error" && (
         <div style={{ fontSize: 12, color: "#F59E0B", padding: "6px 0", marginBottom: 4 }}>Could not load the skills list — add skills as free text below.</div>
       )}
 
-      {canAddMore && taxonomy.status === "ready" && hasCategories && (
+      {taxonomy.status === "ready" && hasCategories && (
         <div style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
           {Object.entries(categories).map(([category, categorySkills]) => (
             <CategoryRow key={category} category={category} categorySkills={categorySkills} skills={skills} isOpen={openCategory === category} canAddMore={canAddMore} onOpenCategory={onOpenCategory} onToggleSkill={onToggleSkill} />
