@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Code2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import type { AssignmentRunResult, PeerProgrammingTopic } from './pp-admin-shared';
+import type { AssignmentRunResult, PeerProgrammingCohort, PeerProgrammingTopic } from './pp-admin-shared';
 import { ppAdminMutate } from './pp-admin-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
@@ -40,6 +40,7 @@ export function PeerProgrammingAdminShell() {
   const defaultWeekStart = useMemo(() => currentWeekStartDate(), []);
 
   const [topic, setTopic] = useState<PeerProgrammingTopic | null>(null);
+  const [cohorts, setCohorts] = useState<PeerProgrammingCohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,17 +57,26 @@ export function PeerProgrammingAdminShell() {
     setTopic(data.topic ?? null);
   }, []);
 
+  const loadCohorts = useCallback(async () => {
+    const res = await fetch('/api/peer-programming/admin/cohorts');
+    if (!res.ok) {
+      throw new Error('Could not load the active cohorts.');
+    }
+    const data = (await res.json()) as { ok: boolean; cohorts: PeerProgrammingCohort[] };
+    setCohorts(data.cohorts ?? []);
+  }, []);
+
   useEffect(() => {
     void (async () => {
       try {
-        await loadTopic();
+        await Promise.all([loadTopic(), loadCohorts()]);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Could not load the admin data.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [loadTopic]);
+  }, [loadTopic, loadCohorts]);
 
   const submitTopic = useCallback(
     async (draft: {
@@ -124,10 +134,15 @@ export function PeerProgrammingAdminShell() {
           membersSelected: result.data.membersSelected ?? 0,
         });
         setNotice('Weekly assignment complete.');
+        try {
+          await loadCohorts();
+        } catch {
+          // The assignment succeeded; a cohort-list refresh failure is non-fatal.
+        }
       }
       setRunningAssignment(false);
     },
-    [],
+    [loadCohorts],
   );
 
   return (
@@ -279,6 +294,66 @@ export function PeerProgrammingAdminShell() {
                 lastResult={lastRun}
                 onRun={runAssignment}
               />
+            </section>
+
+            <section
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                borderRadius: 12,
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 4px' }}>
+                Active cohorts
+              </h2>
+              <p style={{ fontSize: 12, color: SUBTLE, margin: '0 0 12px', lineHeight: 1.5 }}>
+                Every cohort formed for the current week. Open any one to read along and manage it —
+                you are included in all of them.
+              </p>
+              {cohorts.length === 0 ? (
+                <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>
+                  No cohorts have formed for this week yet. Run the weekly assignment above to form them.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {cohorts.map((cohort) => (
+                    <div
+                      key={cohort.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        background: PANEL,
+                        border: `1px solid ${BORDER}`,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Cohort {cohort.cohortLabel}</span>
+                          {cohort.fallbackOpen ? (
+                            <span style={{ background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.3)', fontSize: 10, padding: '1px 7px', borderRadius: 10 }}>
+                              Open
+                            </span>
+                          ) : null}
+                        </div>
+                        <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>
+                          {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <Link
+                        href={`/apps/peer-programming?cohortId=${encodeURIComponent(cohort.id)}`}
+                        style={{ fontSize: 12, fontWeight: 700, color: COLOR, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                      >
+                        Open room →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </>
         )}
