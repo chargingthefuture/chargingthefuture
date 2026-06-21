@@ -32,6 +32,11 @@ export interface Member {
   profileUrl?: string | null;
   headline?: string | null;
   bio?: string | null;
+  // 'community-generated' marks a profile nominated through Skills Hunt; invitedByUsername is
+  // the nominating scout's handle. Both drive the "Community-generated profile / Nominated by
+  // @handle" label. Optional so list payloads that omit them still typecheck.
+  source?: string | null;
+  invitedByUsername?: string | null;
 }
 
 export interface Sector {
