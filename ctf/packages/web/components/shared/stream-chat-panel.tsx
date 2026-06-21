@@ -9,6 +9,22 @@ import {
   Window,
 } from 'stream-chat-react';
 import 'stream-chat-react/dist/css/v2/index.css';
+import './stream-chat-panel.css';
+
+// The logged-in author's own messages are always gray; everyone else's use the plugin accent.
+const OWN_BUBBLE_BG = 'rgba(255, 255, 255, 0.07)';
+
+// Pick a readable text color (near-black or white) for text sitting on the accent bubble, by the
+// accent's luminance — so a light accent (e.g. amber) gets dark text and a saturated one gets white.
+function readableTextOn(color: string): string {
+  const hex = color.trim().replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return '#FFFFFF';
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#111827' : '#FFFFFF';
+}
 
 export interface StreamChatPanelProps {
   streamApiKey: string;
@@ -68,13 +84,19 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   // The whole app is dark, so the chat must use Stream's dark theme (it used to render the light
   // theme, which looked like a white widget dropped into a dark plugin). The wrapper carries the
   // theme class and, when given, tints Stream's accent CSS variables to the plugin's brand color.
-  const themeVars = accentColor
-    ? ({
-        '--str-chat__primary-color': accentColor,
-        '--str-chat__active-primary-color': accentColor,
-        '--str-chat__message-send-color': accentColor,
-      } as React.CSSProperties)
-    : {};
+  const themeVars = {
+    // Own messages are gray everywhere; other people's messages take the plugin accent (below).
+    '--ctf-chat-own-bg': OWN_BUBBLE_BG,
+    ...(accentColor
+      ? {
+          '--str-chat__primary-color': accentColor,
+          '--str-chat__active-primary-color': accentColor,
+          '--str-chat__message-send-color': accentColor,
+          '--ctf-chat-other-bg': accentColor,
+          '--ctf-chat-other-fg': readableTextOn(accentColor),
+        }
+      : {}),
+  } as React.CSSProperties;
 
   return (
     <div className="str-chat__theme-dark" style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}>
