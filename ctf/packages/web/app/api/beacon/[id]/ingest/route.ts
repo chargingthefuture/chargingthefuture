@@ -41,7 +41,11 @@ export async function GET(_request: Request, context: RouteContext) {
       );
     }
 
-    const ingest = await ensureBeaconCallAndIngest({ eventId: event.id, hostUserId: gate.auth.userId });
+    const ingest = await ensureBeaconCallAndIngest({
+      eventId: event.id,
+      hostUserId: gate.auth.userId,
+      hostToken: credentials.hostToken,
+    });
     if (!ingest) {
       return NextResponse.json(
         { ok: false, code: BEACON_ERROR_CODE.streamUnavailable, message: 'Live video is not configured.' },
