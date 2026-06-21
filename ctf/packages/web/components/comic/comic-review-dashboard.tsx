@@ -33,12 +33,14 @@ function statusLabel(s: ServiceStatus): { text: string; color: string } {
   return { text: `reachable${s.latencyMs !== null ? ` · ${s.latencyMs}ms` : ''}`, color: '#22C55E' };
 }
 
-function ServiceStatusBadge({ name, status }: { name: string; status: ServiceStatus }) {
+function ServiceStatusBadge({ name, status, model }: { name: string; status: ServiceStatus; model?: string | null }) {
   const { text, color } = statusLabel(status);
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9CA3AF' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9CA3AF', flexWrap: 'wrap' }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} aria-hidden="true" />
-      <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>{name}</strong> {text}
+      <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>{name}:</strong>{' '}
+      <span style={{ color, fontWeight: 600 }}>{text}</span>
+      {model ? <span style={{ color: '#4B5563' }}>· {model}</span> : null}
     </span>
   );
 }
@@ -327,7 +329,7 @@ export function ComicReviewDashboard() {
           <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
           {aiStatus ? (
             <div style={{ margin: '8px 0 4px' }}>
-              <ServiceStatusBadge name="Ollama" status={aiStatus.ollama} />
+              <ServiceStatusBadge name="Chat AI engine (RunPod / Ollama)" status={aiStatus.ollama} model={aiStatus.ollama.model} />
             </div>
           ) : null}
           {pendingCount > 0 ? (
