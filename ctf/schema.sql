@@ -4509,4 +4509,39 @@ ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS m
 ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS beacon_events_admin_audit_trail_created_at_idx ON beacon_events_admin_audit_trail (created_at DESC);
+
+-- member_plugin_presence: a shared, cross-plugin index of where each member is active.
+-- Each plugin (or, for this first cut, a one-time backfill) writes one row per member-owned
+-- listing it holds. The Directory provider profile reads this index to show "Also active in"
+-- for a claimed profile, instead of querying every plugin's tables directly. Read-only from
+-- the Directory's point of view; rows are owned and maintained by the source plugins.
+CREATE TABLE IF NOT EXISTS member_plugin_presence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  plugin_slug TEXT NOT NULL,
+  ref_type TEXT NOT NULL,
+  ref_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  deep_link TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS plugin_slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS ref_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS ref_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS label TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS deep_link TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- One presence row per (member, plugin, ref_type, ref_id) so the backfill and future write hooks
+-- can upsert idempotently without creating duplicates.
+CREATE UNIQUE INDEX IF NOT EXISTS member_plugin_presence_unique_ref_idx
+  ON member_plugin_presence (user_id, plugin_slug, ref_type, ref_id);
+CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_presence (user_id);
 COMMIT;

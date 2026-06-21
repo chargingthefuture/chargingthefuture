@@ -1,11 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
 import { getDirectoryTokens, initials, type Member } from "./shared";
+import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
+import type { TrustUserExtension } from "@/lib/trust/types";
+
+// One cross-plugin presence entry returned by GET /api/presence/user/[userId].
+interface PresenceEntry {
+  pluginSlug: string;
+  refType: string;
+  refId: string;
+  label: string;
+  deepLink: string;
+}
+
+// The member's trust card and presence list are fetched client-side. Each fetch can be in one of a
+// few states; the panels only render once they have something to show, and a restricted/private
+// trust response renders a calm note rather than an error.
+type TrustState =
+  | { kind: "loading" }
+  | { kind: "ready"; trust: TrustUserExtension }
+  | { kind: "restricted" }
+  | { kind: "hidden" };
 
 export function DirectoryProfileDetail({
   member,
@@ -27,7 +48,60 @@ export function DirectoryProfileDetail({
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [attachSuccess, setAttachSuccess] = useState(false);
+  const claimedUserId = p.claimedByUserId;
+  const [presence, setPresence] = useState<PresenceEntry[]>([]);
+  const [trustState, setTrustState] = useState<TrustState>({ kind: "loading" });
   const showAttach = isAdmin && p.claimedByUserId == null && typeof onAttach === "function";
+
+  // Presence and the trust panel only apply to a claimed profile. Both are client fetches that
+  // degrade quietly: a presence failure leaves the list empty (the section hides), and a trust
+  // failure hides the trust panel — neither can crash the profile.
+  useEffect(() => {
+    if (!claimedUserId) {
+      setPresence([]);
+      setTrustState({ kind: "hidden" });
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadPresence(userId: string) {
+      try {
+        const res = await fetch(`/api/presence/user/${encodeURIComponent(userId)}`, { signal: controller.signal });
+        if (!res.ok) return;
+        const data = (await res.json()) as { presence?: PresenceEntry[] };
+        if (!controller.signal.aborted) setPresence(data.presence ?? []);
+      } catch {
+        // Aborted or unavailable: leave presence empty so the section simply does not render.
+      }
+    }
+
+    async function loadTrust(userId: string) {
+      setTrustState({ kind: "loading" });
+      try {
+        const res = await fetch(`/api/trust/user/${encodeURIComponent(userId)}`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        if (res.status === 403) {
+          // The member limits who can view their trust details — a calm state, not an error.
+          setTrustState({ kind: "restricted" });
+          return;
+        }
+        if (!res.ok) {
+          setTrustState({ kind: "hidden" });
+          return;
+        }
+        const trust = (await res.json()) as TrustUserExtension;
+        setTrustState({ kind: "ready", trust });
+      } catch {
+        if (!controller.signal.aborted) setTrustState({ kind: "hidden" });
+      }
+    }
+
+    void loadPresence(claimedUserId);
+    void loadTrust(claimedUserId);
+
+    return () => controller.abort();
+  }, [claimedUserId]);
   const profileUrl = p.profileUrl?.trim() ? p.profileUrl.trim() : null;
   const headline = p.headline?.trim() ? p.headline.trim() : null;
   const bio = p.bio?.trim() ? p.bio.trim() : null;
@@ -149,6 +223,46 @@ export function DirectoryProfileDetail({
               actually happens.
             </div>
           </section>
+
+          {/* Also active in + Trust — only for a claimed profile. Presence shows where else this
+              member is active across plugins; the trust card sits beside it as peer social proof.
+              Unclaimed profiles show neither (presence list is empty, trust is hidden). */}
+          {claimedUserId && (presence.length > 0 || trustState.kind !== "hidden") && (
+            <section style={{ marginTop: 24 }}>
+              <div style={sectionLabel}>Also active in</div>
+              {presence.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: trustState.kind === "hidden" ? 0 : 18 }}>
+                  {presence.map((entry) => (
+                    <Link
+                      key={`${entry.pluginSlug}:${entry.refType}:${entry.refId}`}
+                      href={entry.deepLink}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10,
+                        background: `${t.ACCENT}0A`, border: `1px solid ${t.ACCENT}25`,
+                        textDecoration: "none", color: t.TEXT,
+                      }}
+                    >
+                      <ExternalLink size={15} style={{ color: t.ACCENT, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: t.SUBTLE }}>{entry.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: t.FAINT, marginBottom: trustState.kind === "hidden" ? 0 : 18 }}>
+                  No activity in other plugins yet.
+                </div>
+              )}
+
+              {trustState.kind === "ready" && <TrustWidgetCard trust={trustState.trust} />}
+              {trustState.kind === "restricted" && (
+                <div style={{ padding: "14px 16px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>
+                  <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.5 }}>
+                    This member limits who can view their trust.
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {showAttach && (
             <div style={{ marginTop: 24, padding: "20px", borderRadius: 16, background: `${t.ACCENT}0A`, border: `1px solid ${t.ACCENT}30` }}>
