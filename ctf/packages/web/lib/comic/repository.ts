@@ -427,6 +427,69 @@ async function generateAndAttachDraft(input: {
   }
 }
 
+// Admin "Regenerate draft": re-run the model for a still-pending review and (re)attach its draft.
+// Unlike the background draft at ask time, this is synchronous so the dashboard learns the outcome.
+// Returns whether a real draft was attached; when the engine is unreachable (template fallback),
+// nothing is attached and { attached: false } is returned so the UI can say it is still down. Used
+// to clear a backlog of draftless questions once the engine (e.g. the RunPod endpoint) is healthy.
+export async function regenerateComicDraft(
+  actorId: string,
+  reviewId: string,
+): Promise<{ attached: boolean }> {
+  const reviewRes = await queryDb<{ id: string; turn_id: string; status: string }>(
+    `SELECT id, turn_id, status FROM comic_review_queue WHERE id = $1::uuid LIMIT 1`,
+    [reviewId],
+  );
+  const review = reviewRes.rows[0];
+  if (!review) {
+    throw new Error('review_not_found');
+  }
+  if (review.status !== 'pending') {
+    throw new Error('review_already_resolved');
+  }
+
+  const turnRes = await queryDb<{ conversation_id: string; body: string }>(
+    `SELECT conversation_id, body FROM comic_turns WHERE id = $1::uuid LIMIT 1`,
+    [review.turn_id],
+  );
+  const turn = turnRes.rows[0];
+  if (!turn) {
+    throw new Error('review_not_found');
+  }
+
+  const draft = await generateComicDraft(turn.body);
+  // Engine unreachable -> template fallback. Leave the item human-first rather than attaching a
+  // placeholder, exactly as the background path does.
+  if (draft.engine === 'template') {
+    return { attached: false };
+  }
+
+  await logComicInference({ actorId, draft });
+  await withDbTransaction(async (client) => {
+    const pending = await client.query<{ id: string }>(
+      `SELECT id FROM comic_review_queue WHERE id = $1::uuid AND status = 'pending' FOR UPDATE`,
+      [reviewId],
+    );
+    if (pending.rows.length === 0) {
+      // Resolved or removed between the check and now — leave it alone.
+      return;
+    }
+    const draftTurnId = await insertTurn(client, {
+      conversationId: turn.conversation_id,
+      role: 'bot',
+      body: draft.body,
+      intent: null,
+      nluConfidence: null,
+      engine: draft.engine,
+    });
+    await client.query(
+      `UPDATE comic_review_queue SET draft_turn_id = $2::uuid WHERE id = $1::uuid AND status = 'pending'`,
+      [reviewId, draftTurnId],
+    );
+  });
+  return { attached: true };
+}
+
 function clampPage(value: number | undefined): number {
   if (!value || !Number.isFinite(value) || value < 1) {
     return COMIC_DEFAULT_PAGE;

@@ -58,20 +58,45 @@ export function isOllamaConfigured(): boolean {
 // Lightweight liveness probe for the admin status panel. No inference, short timeout, never throws.
 // A RunPod serverless endpoint answers `GET /health`; a native Ollama host answers `GET /api/tags`.
 // Reuses ollamaHeaders() so the RunPod bearer (OLLAMA_API_KEY) is attached when needed.
-export async function pingOllama(): Promise<{ configured: boolean; reachable: boolean; latencyMs: number | null; model: string }> {
+export type OllamaPing = {
+  configured: boolean;
+  reachable: boolean;
+  latencyMs: number | null;
+  model: string;
+  provider: 'runpod' | 'native' | null;
+  // Why it is not reachable, so the admin can fix the right thing (e.g. "HTTP 401 — check
+  // OLLAMA_API_KEY", "HTTP 404 — check OLLAMA_BASE_URL / endpoint id", "timeout (5s)"). Null when
+  // reachable.
+  detail: string | null;
+};
+
+export async function pingOllama(): Promise<OllamaPing> {
   if (!isOllamaConfigured()) {
-    return { configured: false, reachable: false, latencyMs: null, model: OLLAMA_MODEL };
+    return { configured: false, reachable: false, latencyMs: null, model: OLLAMA_MODEL, provider: null, detail: 'OLLAMA_BASE_URL is not set' };
   }
+  const provider: 'runpod' | 'native' = ollamaProviderIsRunpod() ? 'runpod' : 'native';
   const base = OLLAMA_BASE_URL.replace(/\/$/, '');
-  const url = ollamaProviderIsRunpod() ? `${base}/health` : `${base}/api/tags`;
+  const url = provider === 'runpod' ? `${base}/health` : `${base}/api/tags`;
   const startedAt = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5_000);
   try {
     const response = await fetch(url, { headers: ollamaHeaders(), signal: controller.signal });
-    return { configured: true, reachable: response.ok, latencyMs: Date.now() - startedAt, model: OLLAMA_MODEL };
-  } catch {
-    return { configured: true, reachable: false, latencyMs: null, model: OLLAMA_MODEL };
+    const latencyMs = Date.now() - startedAt;
+    if (response.ok) {
+      return { configured: true, reachable: true, latencyMs, model: OLLAMA_MODEL, provider, detail: null };
+    }
+    // Non-2xx: name the likely fix so a real outage is distinguishable from a config mistake.
+    const hint =
+      response.status === 401 || response.status === 403
+        ? ' — check OLLAMA_API_KEY (the RunPod API key)'
+        : response.status === 404
+          ? ' — check OLLAMA_BASE_URL / the endpoint id'
+          : '';
+    return { configured: true, reachable: false, latencyMs, model: OLLAMA_MODEL, provider, detail: `HTTP ${response.status}${hint}` };
+  } catch (err) {
+    const detail = err instanceof Error && err.name === 'AbortError' ? 'timeout (5s) — endpoint cold or unreachable' : 'network error reaching the endpoint';
+    return { configured: true, reachable: false, latencyMs: null, model: OLLAMA_MODEL, provider, detail };
   } finally {
     clearTimeout(timeoutId);
   }
