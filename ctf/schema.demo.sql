@@ -1720,6 +1720,14 @@ CREATE TABLE IF NOT EXISTS announcements (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS id UUID;
+-- Repair legacy tables where `id` was added (above) before it had a default. Without a default, an
+-- INSERT that omits id stored NULL; the dependent announcement_revisions insert then failed on its
+-- NOT NULL announcement_id, so "Create draft" returned "Unable to create announcement draft.". Set
+-- the default, backfill any NULL ids, and enforce NOT NULL so drafts can be created on legacy DBs.
+-- All three statements are no-ops on a fresh DB (CREATE TABLE already gives id a default + PK).
+ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET DEFAULT gen_random_uuid();
+UPDATE announcements SET id = gen_random_uuid() WHERE id IS NULL;
+ALTER TABLE IF EXISTS announcements ALTER COLUMN id SET NOT NULL;
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
