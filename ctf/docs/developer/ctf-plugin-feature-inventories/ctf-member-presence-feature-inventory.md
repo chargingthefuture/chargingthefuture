@@ -81,10 +81,14 @@ fed by the existing `GET /api/trust/user/[userId]` route. The route's gating is 
 - Any other failure hides the trust panel.
 - Unclaimed profiles fetch neither presence nor trust.
 
-## Presence Sources (backfill coverage)
+## Presence Sources
 
-`scripts/backfillMemberPresence.mjs` reads each source and upserts one presence row per listing. It is
-idempotent (INSERT ... ON CONFLICT DO UPDATE on the unique ref index), so it is safe to re-run.
+A one-time backfill read each source below and upserted one presence row per listing to seed
+`member_plugin_presence` from data that existed before the live write hooks shipped. It was idempotent
+(INSERT ... ON CONFLICT DO UPDATE on the unique ref index). It has been run and its script
+(`scripts/backfillMemberPresence.mjs`) and the `Backfill Member Presence` GitHub Action have since been
+removed — going forward the live per-plugin write hooks keep the index current. The table records the
+source mapping the backfill used, which the live hooks mirror exactly.
 
 | Source | Table | Member user-id column | Active filter | Slug / deep link | ref_type | Label |
 |---|---|---|---|---|---|---|
@@ -103,8 +107,8 @@ Notes on sources:
 - TrustTransport `status` is a free-text column with no schema-level enum, so active filtering is done
   defensively by excluding terminal states (cancelled / canceled / completed / closed / withdrawn /
   declined / expired / rejected) rather than guessing the exact active set.
-- A missing source table in a given environment is logged and skipped by the backfill; the other
-  sources still run.
+- A missing source table in a given environment was logged and skipped by the backfill; the other
+  sources still ran.
 
 ## API Surface and Route Map
 
@@ -160,9 +164,9 @@ Created with the `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD C
 
 ## Seed Coverage Status
 
-No dedicated deterministic seed. The backfill (`scripts/backfillMemberPresence.mjs`) populates the
-index from whatever real listings exist in the target database, so presence coverage follows the
-seeded/real data of the source plugins. Re-running the backfill is safe and idempotent.
+No dedicated deterministic seed. A one-time backfill (since run and removed) populated the index from
+whatever real listings existed in the target database; from here the live per-plugin write hooks keep
+it current, so presence coverage follows the real data of the source plugins.
 
 ## Gaps and Known Technical Debt
 
@@ -200,9 +204,10 @@ seeded/real data of the source plugins. Re-running the backfill is safe and idem
 
 Deferred follow-ups (not yet done):
 
-8. TrustTransport ride-offer write hook: the driver offer is the one presence source still backfill-only
+8. TrustTransport ride-offer write hook: the driver offer is the one presence source with no live hook,
    because the web app has no create or remove path for an offer (offers exist only via seed scripts).
-   When such a path is added, wire the same record/clear hooks on `provider_user_id`.
+   The one-time backfill seeded any existing offers; new offers will not be indexed until such a path is
+   added, at which point wire the same record/clear hooks on `provider_user_id`.
 9. Presence/trust badges on other interaction surfaces: the Commons (SocketRelay) post author, the
    LightHouse host, the TrustTransport driver, and the Foundation provider — so presence and trust are
    visible where members actually meet, not only on the Directory profile.
@@ -221,3 +226,9 @@ Deferred follow-ups (not yet done):
   `claimRequest` / `resolveFulfillment` / `adminDeleteRequest`). Each write mirrors the backfill's exact
   label and deep link. The TrustTransport ride offer remains backfill-only: there is no web create or
   remove path for an offer to hook. No schema change.
+- 2026-06-21: Removed the one-time backfill. The owner ran the `Backfill Member Presence` GitHub Action
+  to seed `member_plugin_presence` from existing listings, so the script (`scripts/backfillMemberPresence.mjs`)
+  and the `.github/workflows/backfill-member-presence.yml` action have been deleted — the live write
+  hooks keep the index current from here. The four source repositories' comments that pointed at the
+  deleted script were reworded to describe the active-state rules inline. No code behavior or schema
+  change.
