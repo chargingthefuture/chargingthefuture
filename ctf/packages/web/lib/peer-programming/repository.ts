@@ -86,6 +86,39 @@ export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort
   return result.rows[0] ? mapCohortRow(result.rows[0]) : null;
 }
 
+// Every cohort for the current week, regardless of who is asking. This powers two things the
+// member-scoped getMyCohort cannot: the admin "manage every cohort" list, and the listen-in list
+// shown to a member who was not placed in a given cohort. Ordered by label so C1, C2, C3 read in
+// the order they were formed.
+export async function listActiveCohorts(): Promise<PeerProgrammingCohort[]> {
+  const weekStartDate = getWeekStartDate();
+  const result = await queryDb<CohortRow>(
+    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
+            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+     FROM peer_programming_cohorts c
+     WHERE c.week_start_date = $1
+     ORDER BY c.cohort_label ASC`,
+    [weekStartDate],
+  );
+
+  return result.rows.map(mapCohortRow);
+}
+
+// A single cohort by id (any week), with its live member count. Used to resolve the room a listener
+// or admin opens via ?cohortId= even when they are not a member of it.
+export async function getCohortById(cohortId: string): Promise<PeerProgrammingCohort | null> {
+  const result = await queryDb<CohortRow>(
+    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
+            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+     FROM peer_programming_cohorts c
+     WHERE c.id = $1
+     LIMIT 1`,
+    [cohortId],
+  );
+
+  return result.rows[0] ? mapCohortRow(result.rows[0]) : null;
+}
+
 export async function isCohortMember(cohortId: string, userId: string): Promise<boolean> {
   const result = await queryDb<{ exists: boolean }>(
     `SELECT EXISTS (

@@ -1486,6 +1486,42 @@
   white-space: pre-wrap;
 }
 
+/* Applicable-plugin links a reviewer tagged on the answer. A row of small, tappable chips that link
+   to each plugin's /apps/<slug> page. Hidden entirely when the list is empty. */
+.comicPluginLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.comicPluginLinksLabel {
+  font-size: 11px;
+  color: var(--ctf-text-muted);
+  margin-right: 2px;
+}
+
+.comicPluginLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.32);
+  color: #7DD3FC;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.comicPluginLink:hover {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: rgba(14, 165, 233, 0.5);
+}
+
 /* Rating row (helpful / not helpful / flag). */
 .comicRatingRow {
   display: flex;
