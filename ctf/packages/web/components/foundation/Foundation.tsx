@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { StreamChatPanel } from '../shared/stream-chat-panel';
+import { COLOR } from './foundation-ui';
 
 // Chat credentials type for StreamChatPanel
 export interface ChatCredentials {
@@ -108,6 +109,7 @@ export function Foundation() {
               streamToken={chatCredentials.streamToken}
               streamUserId={chatCredentials.streamUserId}
               streamChannelId={chatCredentials.streamChannelId}
+              accentColor={COLOR}
             />
           </div>
         )}

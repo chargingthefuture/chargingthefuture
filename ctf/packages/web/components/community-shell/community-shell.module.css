@@ -453,16 +453,18 @@
   color: var(--ctf-text-shell);
 }
 
+/* Chat bubble color convention: your own messages are gray; everyone else's use the hub's color
+   (purple). The radius/tail stays tied to position (others on the left, you on the right). */
 .chatBubbleHub {
   border-radius: 16px 16px 16px 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  border: none;
 }
 
 .chatBubbleUser {
   border-radius: 16px 16px 4px 16px;
-  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .chatActionBtn {

@@ -51,6 +51,7 @@ export function LighthouseChat({
             streamToken={chatCredentials.streamToken}
             streamUserId={chatCredentials.streamUserId}
             streamChannelId={chatCredentials.streamChannelId}
+            accentColor={COLOR}
           />
         ) : null}
       </div>

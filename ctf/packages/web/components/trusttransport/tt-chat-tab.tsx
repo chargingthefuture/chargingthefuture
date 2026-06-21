@@ -45,6 +45,7 @@ function ChatPane({ selected, creds, loading, error }: { selected: TripRequest |
         streamToken={creds.streamToken}
         streamUserId={creds.streamUserId}
         streamChannelId={creds.streamChannelId}
+        accentColor={COLOR}
       />
     );
   }

@@ -1,0 +1,21 @@
+/* CTF chat-bubble color convention for Direct Line (plugin) chats.
+ *
+ * The logged-in author's own messages are gray; everyone else's use the plugin's assigned color.
+ * The colors come from CSS variables set per instance on the theme wrapper (.str-chat__theme-dark)
+ * in stream-chat-panel.tsx, so each plugin resolves its own accent. When no accent is provided the
+ * rules fall back to Stream's default bubble color, so a panel without an accent looks unchanged.
+ *
+ * This file is imported after Stream's stylesheet so these rules win; it targets Stream's stable
+ * v12 message classes. */
+
+.str-chat__theme-dark .str-chat__message-bubble {
+  background-color: var(--ctf-chat-other-bg, var(--str-chat__message-bubble-background-color));
+}
+
+.str-chat__theme-dark .str-chat__message:not(.str-chat__message--me) .str-chat__message-text {
+  color: var(--ctf-chat-other-fg, inherit);
+}
+
+.str-chat__theme-dark .str-chat__message--me .str-chat__message-bubble {
+  background-color: var(--ctf-chat-own-bg, var(--str-chat__message-bubble-background-color));
+}
