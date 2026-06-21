@@ -20,6 +20,41 @@ This is a living tracker. Update the status column as work ships, and link the P
    list + input (`components/shared/stream-chat-panel.tsx`). These get the fuller Stream UI (thread
    view, reactions, typing, presence, search, etc.) since they have no bespoke design to protect.
 
+## Channel types in Stream (only `messaging` is used)
+
+Stream's "Channel Types" page lists five built-in types (`commerce`, `gaming`, `livestream`,
+`messaging`, `team`). A channel type is a template of default capabilities that every channel of that
+type inherits. **This product creates every chat channel as type `messaging`** — confirmed in code
+(every `.channel(...)` call passes `'messaging'`). The other four types are Stream's starter
+templates; the app never creates channels in them, so toggling their capabilities has no effect here.
+
+Two consequences for this plan:
+
+- **The toggles that matter are on `messaging`.** Enabling a capability there only *permits* it; the
+  feature still appears only once we build the UI (that UI is the work below). So turning everything on
+  for `messaging` is correct groundwork, not the feature itself.
+- **Enforce exclusions at the channel type where it's cheap.** We excluded uploads (#13/#14), so
+  turning **Uploads off** on `messaging` enforces "no uploads" at the source rather than relying on us
+  not building the UI.
+- **Voice is Peer Programming only (#12).** The clean way to scope voice to PP without enabling it
+  app-wide is a **dedicated `peer-programming` channel type** with audio/uploads enabled, used only by
+  PP channels, while the shared `messaging` type stays without it. The PP voice task uses this.
+
+## Commons topic filtering (one feed + topic filter)
+
+Owner decision (2026-06-21): members should be able to filter the Commons by topic ("all housing
+discussions", "all health discussions", etc.). We do this as **one unified feed with a topic filter**,
+not as separate topic rooms:
+
+- Commons posts are stored in our own `feed_community_posts` table, which already has a `category`
+  column (defaults to `'general'`). Topic is therefore already a field we own.
+- Build: let an author pick a topic when posting (extend `category` with a small fixed topic set), and
+  add topic chips/tabs at the top of Commons (All · Housing · Health · …) that filter via our API/DB.
+- Stream's Query Channels API is **not** used for this — it filters channels, not messages within a
+  channel, and Commons is one feed backed by our database. Query Channels is instead the right tool for
+  the cross-chat unread inbox / nav badges (#23): listing every channel a member belongs to with unread
+  counts.
+
 ## Surfaces in scope
 
 | Surface | How it uses Stream today | Approach |
@@ -108,9 +143,13 @@ across the relevant surfaces. A task with no dependency can run anytime / in par
 13. **Moderation cluster (#27, #28, #29, #30, #31).** Flag, mute, admin block/ban, automod + review
     queue, slow mode. Touches admin surfaces; sequence the review queue after flagging exists within
     this task.
-14. **Voice messages — Peer Programming only (#12).** Audio recording in the PP room. Scoped to PP.
-    No dependency.
-15. **Audit: Stream Feeds (#35) and Stream Video (#36).** Review where Feeds and Video are used today
+14. **Voice messages — Peer Programming only (#12).** Audio recording in the PP room. Scoped to PP by
+    giving Peer Programming its own `peer-programming` channel type (audio/uploads enabled) so voice
+    never reaches the shared `messaging` type. No dependency.
+15. **Commons topic filter.** Extend the existing `feed_community_posts.category` field with a small
+    fixed topic set, let authors pick a topic when posting, and add topic chips/tabs that filter the
+    Commons feed via our API/DB. One unified feed, not separate rooms. No dependency.
+16. **Audit: Stream Feeds (#35) and Stream Video (#36).** Review where Feeds and Video are used today
     and report any surface that should have them but doesn't. Report only; build follow-ups as
     separate tasks if gaps are found.
 
@@ -124,3 +163,7 @@ Programming.
 
 - 2026-06-21: Document created with the owner's marked exclusions and the two architecture decisions.
   Commons reply-to-message (#3) and unread divider (#22) already shipped in PR #695.
+- 2026-06-21: Added the "Channel types in Stream" section (only `messaging` is used; enforce
+  exclusions there; dedicated `peer-programming` type for voice) and the "Commons topic filtering"
+  section (one unified feed filtered on the existing `category` field; Query Channels reserved for the
+  cross-chat unread inbox). Added the Commons topic-filter build task.
