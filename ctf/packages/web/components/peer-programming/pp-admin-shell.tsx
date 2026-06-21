@@ -306,15 +306,15 @@ export function PeerProgrammingAdminShell() {
               }}
             >
               <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 4px' }}>
-                Active cohorts
+                Cohorts
               </h2>
               <p style={{ fontSize: 12, color: SUBTLE, margin: '0 0 12px', lineHeight: 1.5 }}>
-                Every cohort formed for the current week. Open any one to read along and manage it —
-                you are included in all of them.
+                Every cohort you have formed, most recent first. Open any one to read along and manage
+                it — you are included in all of them.
               </p>
               {cohorts.length === 0 ? (
                 <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>
-                  No cohorts have formed for this week yet. Run the weekly assignment above to form them.
+                  No cohorts have formed yet. Run the weekly assignment above to form them.
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -341,7 +341,7 @@ export function PeerProgrammingAdminShell() {
                           ) : null}
                         </div>
                         <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>
-                          {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
+                          Week of {cohort.weekStartDate} · {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
                         </div>
                       </div>
                       <Link

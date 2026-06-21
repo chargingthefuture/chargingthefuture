@@ -104,6 +104,24 @@ export async function listActiveCohorts(): Promise<PeerProgrammingCohort[]> {
   return result.rows.map(mapCohortRow);
 }
 
+// Every cohort across recent weeks, most recent first, for the admin "manage every cohort" surface.
+// listActiveCohorts is current-week-only (correct for a member's listen-in list), but an admin needs
+// to see a cohort they formed even after the week rolls over — otherwise a cohort made on a prior day
+// silently disappears from the admin list. Bounded to the last 12 weeks and 200 rows so it stays
+// cheap; within a week, labels read C1, C2, C3 in formation order.
+export async function listManagedCohorts(): Promise<PeerProgrammingCohort[]> {
+  const result = await queryDb<CohortRow>(
+    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
+            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+     FROM peer_programming_cohorts c
+     WHERE c.week_start_date >= (CURRENT_DATE - INTERVAL '84 days')
+     ORDER BY c.week_start_date DESC, c.cohort_label ASC
+     LIMIT 200`,
+  );
+
+  return result.rows.map(mapCohortRow);
+}
+
 // A single cohort by id (any week), with its live member count. Used to resolve the room a listener
 // or admin opens via ?cohortId= even when they are not a member of it.
 export async function getCohortById(cohortId: string): Promise<PeerProgrammingCohort | null> {
