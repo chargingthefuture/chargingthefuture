@@ -15,10 +15,11 @@
 
 ## Intent and Outcome
 
-Beacon lets an admin go live ad hoc — a one-way video broadcast from a phone or desktop — so the
-community can watch and take part in real time. Its flagship use is the **State of the TI Skills
-Economy** address (a "state of the union"-style update the owner gives whenever there is something to
-say, not on a fixed cadence).
+Beacon lets an admin go live ad hoc — a one-way broadcast — so the community can watch and take part
+in real time. The broadcast is primarily a **live demo of the app**: the admin streams their **phone
+screen** (or a desktop screen/window) to show features live, not just a face cam. Its flagship use is
+the **State of the TI Skills Economy** address (a "state of the union"-style update the owner gives
+whenever there is something to say, not on a fixed cadence).
 
 It exists because the previous approach (Twitch) had friction the community could not get past: Twitch
 required a phone number to sign up, and some people could not create an account at all, so they could
@@ -43,12 +44,26 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 6. **Chyme is untouched.** Beacon is a separate plugin; it does not change Chyme's audio rooms.
 7. **Admin moderation + a clear "live and public" indicator are in scope from v1** (mute, ban,
    slow-mode; an unmistakable on-screen marker that the broadcast is public).
+8. **Broadcast input = RTMP ingest (for the phone) + in-browser desktop screen-share.** The broadcast
+   is a live demo (screen content), and a phone's **web browser cannot capture the phone's screen**, so
+   the admin streams the phone screen by pushing it through a third-party mobile broadcaster app (e.g.
+   Larix Broadcaster) to a private RTMP URL + stream key that Beacon mints per event. For demos from a
+   computer, the Beacon admin page captures a desktop screen/window directly (browser screen-share) and
+   publishes via the Stream web SDK. Both feed the same livestream call. Native in-app phone screen
+   capture is explicitly out of scope for v1.
 
 ## Architecture
 
-- **Video = Stream Video, `livestream` call type.** The admin joins as the **host** role (publishes
-  camera/mic; "backstage" until they press Go Live, then `goLive()`). The call type's role permissions
-  forbid publishing for anyone who is not the host, enforced by server-minted tokens.
+- **Video = Stream Video, `livestream` call type.** The admin is the only publisher, via two input
+  paths into the same call:
+  - **Phone demo → RTMP ingest.** Beacon requests Stream's per-call RTMP ingest URL + stream key and
+    shows them to the admin; the admin pushes the phone screen from a mobile broadcaster app. Stream
+    distributes it to viewers.
+  - **Desktop demo → in-browser screen-share.** From `/admin/beacon`, the admin captures a desktop
+    screen/window (browser `getDisplayMedia`) and publishes through the Stream web SDK as the host.
+
+  The call uses "backstage" until the admin presses Go Live (`goLive()`). The call type's role
+  permissions forbid publishing for anyone who is not the host, enforced by server-minted tokens.
   - **Public viewers watch via the HLS playback URL** that Stream produces for a livestream call. HLS
     playback needs no Stream user token, which is exactly what makes anonymous public watching work
     and scales to many viewers.
@@ -78,8 +93,10 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## Target Admin Features (admin surface, `/admin/beacon`)
 
 1. **Create an event** (title + description).
-2. **Go Live** — broadcast camera/mic from phone or desktop (host role), which flips the event to
-   `live` and auto-posts the "live now" notice to the Commons.
+2. **Go Live** — for a phone demo, Beacon shows the per-event RTMP URL + stream key to paste into a
+   mobile broadcaster app; for a desktop demo, a "Share screen" button captures a screen/window in the
+   browser. Either way Go Live flips the event to `live` and auto-posts the "live now" notice to the
+   Commons. The host is the only publisher.
 3. **Read the live chat and respond** in real time.
 4. **Moderate** — mute a member, ban a member from the event chat, enable slow-mode.
 5. **End the event** — stops the broadcast and billing; on recording-ready, auto-posts the replay to
@@ -95,6 +112,8 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ### Admin routes (admin-gated)
 - `POST /api/beacon` — create an event (draft).
+- `GET /api/beacon/[id]/ingest` — return the per-event RTMP ingest URL + stream key (for the phone
+  broadcaster app) and a host token (for desktop in-browser screen-share). Admin-only.
 - `POST /api/beacon/[id]/go-live` — host token + `goLive()`; flips status to `live`; auto-posts to
   Commons.
 - `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
@@ -181,15 +200,17 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
    regenerate `schema.demo.sql`; confirm the drift gate. *(blocks the server lib)*
 3. **Contracts** — `BEACON_PLUGIN_COMMAND_CONTRACTS.yaml`, `BEACON_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`,
    `BEACON_PLUGIN_AUDIT_CONTRACTS.yaml`, `BEACON_PROFILE_AND_DELETION_CONTRACT.md`.
-4. **Server lib** (`lib/beacon/*`) — Stream Video livestream credential minting (host vs viewer
-   roles + the public HLS URL), call lifecycle (create → goLive → end), Stream Chat token minting for
-   members, recording handling, Commons auto-post helpers. *(depends on 2; blocks 5, 7, 8)*
-5. **API routes** — member/public (`current`, `chat-token`), admin (`create`, `go-live`, `end`,
-   `admin` list, `moderate`), and the `stream-webhook`. *(depends on 4)*
+4. **Server lib** (`lib/beacon/*`) — Stream Video livestream credential minting (host token + the
+   public HLS URL), the per-event **RTMP ingest URL + stream key**, call lifecycle (create → goLive →
+   end), Stream Chat token minting for members, recording handling, Commons auto-post helpers.
+   *(depends on 2; blocks 5, 7, 8)*
+5. **API routes** — member/public (`current`, `chat-token`), admin (`create`, `ingest`, `go-live`,
+   `end`, `admin` list, `moderate`), and the `stream-webhook`. *(depends on 4)*
 6. **Commons auto-post** — "live now" on go-live and "replay" on recording-ready, idempotent.
    *(depends on 5)*
-7. **Admin UI** (`/admin/beacon`) — create, Go Live broadcaster (phone/desktop), live chat + moderation,
-   end, history/recordings. *(depends on 4, 5)*
+7. **Admin UI** (`/admin/beacon`) — create; Go Live with both input paths (show the RTMP URL/key for a
+   phone broadcaster app, and a "Share screen" button for desktop in-browser screen-share); live chat +
+   moderation; end; history/recordings. *(depends on 4, 5)*
 8. **Viewer UI** (`/apps/beacon`) — public HLS player, idle state, member live chat/reactions, "live and
    public" indicator, replay. *(depends on 4, 5)*
 9. **Seed** — one past `ended` event with a recording.
@@ -203,6 +224,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   chat/react; ephemeral chat; one-way `livestream` broadcast; recording auto-posts to Commons; admin
   moderation + "live and public" indicator; Chyme untouched). Flagship event = the State of the TI
   Skills Economy address. Not yet built.
+- 2026-06-21: Clarified the broadcast is a live demo (screen content), not a face cam, and locked
+  the broadcast input: RTMP ingest for the phone (a phone web browser cannot capture its own
+  screen, so the admin pushes the phone screen from a mobile broadcaster app to a per-event RTMP URL +
+  key) plus in-browser desktop screen-share. Added the `GET /api/beacon/[id]/ingest` route and
+  updated the architecture, admin features, and build checklist. Native in-app phone screen capture is
+  out of scope for v1.
 - 2026-06-21: Web build shipped on branch `feat/beacon-plugin`. Added the `beacon` registry entry; the
   `beacon_events` and `beacon_events_admin_audit_trail` tables (CREATE/ALTER pattern, regenerated
   `schema.demo.sql`); the four `BEACON_*` contracts; the server lib (`lib/beacon/` — Stream Video
