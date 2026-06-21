@@ -605,6 +605,112 @@
   white-space: nowrap;
 }
 
+/* Reaction row under a peer bubble: a wrapping row of emoji pills plus a small "add reaction"
+   button. The optional picker reveals the fixed quick set. Kept consistent with the dark
+   Commons styling and the faint, hover-revealed reply affordance. */
+.chatReactionRow {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.chatReactionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--ctf-border, rgba(148, 163, 184, 0.25));
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ctf-text-secondary);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.chatReactionPill:hover,
+.chatReactionPill:focus-visible {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.chatReactionPillActive {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #38BDF8;
+}
+
+.chatReactionCount {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chatReactionAdd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--ctf-border, rgba(148, 163, 184, 0.25));
+  background: transparent;
+  border-radius: 999px;
+  color: var(--ctf-text-muted);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.1s, color 0.1s, background 0.1s, border-color 0.1s;
+}
+
+.chatRow:hover .chatReactionAdd,
+.chatReactionAdd:focus-visible,
+.chatReactionAdd[aria-expanded='true'] {
+  opacity: 1;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+/* The fixed quick-set picker that drops below the "add reaction" button. */
+.chatReactionPicker {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--ctf-border, rgba(148, 163, 184, 0.25));
+  background: var(--ctf-surface-raised, #1e293b);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.45);
+}
+
+.chatReactionPickerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.05s;
+}
+
+.chatReactionPickerBtn:hover,
+.chatReactionPickerBtn:focus-visible {
+  background: rgba(56, 189, 248, 0.16);
+  transform: scale(1.1);
+}
+
 /* The single "New messages" divider: a centered label on a hairline rule, marking where the
    member left off. Only one is ever rendered per stream. */
 .unreadDivider {

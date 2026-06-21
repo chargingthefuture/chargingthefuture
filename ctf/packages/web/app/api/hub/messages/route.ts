@@ -39,6 +39,10 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     ? { author: item.community.quotedPost.author, snippet: item.community.quotedPost.snippet }
     : null;
 
+  // Emoji reactions on the underlying community post, resolved server-side for the requesting
+  // member. Non-community messages carry an empty array.
+  const reactions = isCommunity && item.community ? item.community.reactions : [];
+
   return {
     id: item.id,
     userId: authorUserId,
@@ -49,6 +53,7 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     sentAtIso: item.publishedAtIso,
     communityPostId: isCommunity ? item.sourceCommunityPostId : null,
     quotedMessage,
+    reactions,
   };
 }
 
@@ -176,6 +181,8 @@ export async function POST(request: Request) {
       // Echo the quote the sender saw so the optimistic message renders it immediately. The
       // next polled read re-resolves it authoritatively from the stored reply_to_post_id.
       quotedMessage: replyToPostId ? echoedQuote : null,
+      // A freshly created post has no reactions yet.
+      reactions: [],
     };
 
     return NextResponse.json({ ok: true, message }, { status: 201 });

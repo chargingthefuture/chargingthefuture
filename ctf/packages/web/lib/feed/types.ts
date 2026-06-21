@@ -62,6 +62,15 @@ export type FeedQuotedPost = {
   snippet: string;
 };
 
+// An aggregate of one emoji's reactions on a community post: the emoji, how many members
+// reacted with it, and whether the requesting member is one of them. Only emojis with at least
+// one reaction appear; the array is ordered by the fixed reaction set (FEED_REACTION_EMOJIS).
+export type FeedReactionSummary = {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+};
+
 export type FeedCommunityDetail = {
   id: string;
   body: string;
@@ -73,6 +82,9 @@ export type FeedCommunityDetail = {
   // The post this one replies to (Signal-style quote), or null when it is not a reply.
   replyToPostId: string | null;
   quotedPost: FeedQuotedPost | null;
+  // Emoji reactions on this post, one entry per reacted emoji, ordered by the fixed reaction
+  // set. Always an array (never null); empty when the post has no reactions.
+  reactions: FeedReactionSummary[];
 };
 
 // The read-only shape shown to signed-out visitors on the public Commons. Community (peer) posts are
