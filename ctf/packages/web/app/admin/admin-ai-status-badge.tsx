@@ -6,16 +6,16 @@ import { useEffect, useState } from 'react';
 // serverless GPU endpoint in production). Shown on the admin landing so the owner sees whether
 // the assistant is live without clicking into the @comic admin page or inferring it from canned
 // answers. Read-only: it calls the admin-gated /api/comic/admin/ai-status probe once on mount.
-type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null; model: string };
+type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null; model: string; detail?: string | null };
 type AiStatusResponse = { ok: true; ollama: ServiceStatus };
 
 function describe(status: ServiceStatus | null, failed: boolean): { text: string; color: string } {
   if (failed) return { text: 'status unavailable', color: '#6B7280' };
   if (!status) return { text: 'checking…', color: '#6B7280' };
-  if (!status.configured) return { text: 'not configured', color: '#6B7280' };
-  // A RunPod serverless endpoint that is cold or down fails the /health probe — both read as
-  // "asleep or not responding" here; a retry usually wakes a cold endpoint.
-  if (!status.reachable) return { text: 'asleep or not responding', color: '#EF4444' };
+  if (!status.configured) return { text: status.detail ?? 'not configured', color: '#6B7280' };
+  // When the endpoint answers with an error (e.g. 401 bad key, 404 wrong id) or times out, show the
+  // reason so the owner fixes the right thing instead of guessing the engine is merely asleep.
+  if (!status.reachable) return { text: status.detail ? `not responding · ${status.detail}` : 'asleep or not responding', color: '#EF4444' };
   return { text: `reachable${status.latencyMs !== null ? ` · ${status.latencyMs}ms` : ''}`, color: '#22C55E' };
 }
 
