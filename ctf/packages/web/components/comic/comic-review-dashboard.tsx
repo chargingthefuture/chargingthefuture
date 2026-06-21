@@ -16,12 +16,12 @@ type ReviewListResponse = {
 
 type LoadState = 'loading' | 'ready' | 'error';
 
-type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null };
+type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null; detail?: string | null };
 type AiStatusResponse = { ok: true; ollama: ServiceStatus & { model: string } };
 
 function statusLabel(s: ServiceStatus): { text: string; color: string } {
-  if (!s.configured) return { text: 'not configured', color: '#6B7280' };
-  if (!s.reachable) return { text: 'unreachable', color: '#EF4444' };
+  if (!s.configured) return { text: s.detail ?? 'not configured', color: '#6B7280' };
+  if (!s.reachable) return { text: s.detail ? `unreachable · ${s.detail}` : 'unreachable', color: '#EF4444' };
   return { text: `reachable${s.latencyMs !== null ? ` · ${s.latencyMs}ms` : ''}`, color: '#22C55E' };
 }
 
@@ -93,6 +93,9 @@ export function ComicReviewDashboard() {
   const [editing, setEditing] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [aiStatus, setAiStatus] = useState<AiStatusResponse | null>(null);
+  // "Regenerate draft" in-flight + a note shown when the engine is still unreachable.
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenNote, setRegenNote] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -172,6 +175,7 @@ export function ComicReviewDashboard() {
       // the box with the question text, which would otherwise look like an AI draft.
       setCorrectedBody(selected.hasDraft ? selected.draftBody : '');
       setEditing(false);
+      setRegenNote(null);
     }
   }, [selected]);
 
@@ -216,6 +220,31 @@ export function ComicReviewDashboard() {
     },
     [selected, correctedBody, resolving, refresh],
   );
+
+  // Re-run the AI draft for the selected item — used after the engine (the RunPod/Ollama endpoint)
+  // was down at ask time and is back up. On success the item now shows an AI draft; if the engine is
+  // still unreachable, show a note and leave it human-first.
+  const regenerateSelected = useCallback(async () => {
+    if (!selected || regenerating) return;
+    setRegenerating(true);
+    setRegenNote(null);
+    setError(null);
+    try {
+      const result = await requestJson<{ ok: true; attached: boolean }>(
+        `/api/comic/review/${selected.reviewId}/regenerate`,
+        { method: 'POST', headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' } },
+      );
+      if (result.attached) {
+        await refresh();
+      } else {
+        setRegenNote('The AI engine is still unreachable, so no draft was generated. Try again once it is back up, or use Edit & approve.');
+      }
+    } catch (regenError) {
+      setError(regenError instanceof Error ? regenError.message : 'Unable to regenerate the draft.');
+    } finally {
+      setRegenerating(false);
+    }
+  }, [selected, regenerating, refresh]);
 
   const pendingCount = items.length;
 
@@ -513,6 +542,9 @@ export function ComicReviewDashboard() {
                         <Check size={16} /> Approve &amp; send
                       </button>
                     ) : null}
+                    <button type="button" className={styles.editBtn} disabled={resolving || regenerating} onClick={() => void regenerateSelected()}>
+                      <RotateCcw size={15} /> {regenerating ? 'Regenerating…' : selected.hasDraft ? 'Regenerate draft' : 'Generate draft'}
+                    </button>
                     <button type="button" className={styles.editBtn} disabled={resolving} onClick={() => setEditing(true)}>
                       <Pencil size={15} /> Edit &amp; approve
                     </button>
@@ -522,6 +554,12 @@ export function ComicReviewDashboard() {
                   </>
                 )}
               </div>
+
+              {regenNote ? (
+                <div className={styles.confHint} role="status" style={{ marginTop: 10 }}>
+                  <AlertTriangle size={13} /> {regenNote}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
