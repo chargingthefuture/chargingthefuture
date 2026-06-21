@@ -116,8 +116,8 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 | 21 | Channel member list / "who's here" | Build | All surfaces. |
 | 22 | Unread divider ("where you left off") | **Done (Commons)** / Build (plugin chats) | Commons shipped in PR #695. |
 | 23 | Unread count badges on the app nav | Build | Uses the last-seen endpoint from PR #695. |
-| 24 | Polls (create + vote) | Build | Turn on the dashboard toggle (currently off) + UI. |
-| 25 | Message reminders / "remind me" | Build | Turn on the dashboard toggle (currently off) + UI. |
+| 24 | Polls (create + vote) | **Done (plugin chats)** / Build (Commons) | Plugin chats shipped — polls are the stream-chat-react 12.16 default once the channel type permits them (owner enabled the toggle); the panel confirms the defaults and tints the poll card to the plugin accent. The Commons custom-design version is a separate follow-up. |
+| 25 | Message reminders / "remind me" | **Done (plugin chats)** / Build (Commons) | Plugin chats shipped — a "Remind me about this" message action. stream-chat 8.60 has no per-message reminder API (it lands in stream-chat 9.x / stream-chat-react 13.x), so it schedules an in-browser nudge for now, gated on the channel `reminders` config. The Commons version and the server-backed reminder after the version upgrade are separate follow-ups. |
 | 26 | Scheduled messages | Build | Turn on the dashboard toggle (currently off) + UI. |
 | 27 | Flag a message for review | Build | All surfaces. Feeds the moderation review queue (#30). |
 | 28 | Mute a user | Build | All surfaces. |
@@ -194,3 +194,12 @@ Programming.
   switched on by watching the channel with members and setting `enrichURLForPreview`; search is a
   compact strip calling `channel.search`. The Commons versions of all three remain separate follow-ups
   because Commons uses our own custom UI, not the Stream component.
+- 2026-06-21: Plugin-chat portions of polls (#24) and message reminders (#25) shipped in the shared
+  StreamChatPanel, so every Direct Line chat (TrustTransport, SocketRelay, LightHouse, Foundation)
+  gets them. Polls are the stream-chat-react 12.16 default once the channel type permits them (owner
+  enabled the toggle): the composer attachment menu shows "Create poll" and the message list renders
+  Stream's poll card with live voting; the panel only confirms the defaults run and tints the card to
+  the plugin accent. Reminders are a "Remind me about this" message action gated on the channel
+  `reminders` config; stream-chat 8.60 has no per-message reminder API (it arrives in stream-chat 9.x /
+  stream-chat-react 13.x), so it schedules an in-browser nudge for now. The Commons versions and the
+  server-backed reminder after the stream-chat upgrade remain separate follow-ups.
