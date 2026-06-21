@@ -6,7 +6,7 @@ import {
   AlertTriangle, ArrowLeft, Check, FileText, Home, Inbox, Pencil, RotateCcw,
   ShieldCheck, Sparkles, X,
 } from 'lucide-react';
-import type { ComicReviewItem } from '../../lib/comic/types';
+import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
 import styles from './comic-review-dashboard.module.css';
 
 type ReviewListResponse = {
@@ -14,6 +14,24 @@ type ReviewListResponse = {
   items: ComicReviewItem[];
   pagination: { page: number; pageSize: number; total: number };
 };
+
+type TrainingStatsResponse = { ok: true; stats: ComicTrainingStats };
+
+// Compact "Training examples collected: N" line for the queue header. Read-only and best-effort: the
+// caller only renders this when the stats fetch succeeded, so a failure simply hides the number.
+function TrainingStatsBadge({ stats }: { stats: ComicTrainingStats }) {
+  const pending = stats.trainingExamplesByStatus.pending ?? 0;
+  const exported = stats.trainingExamplesByStatus.exported ?? 0;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#9CA3AF', flexWrap: 'wrap' }}>
+      <strong style={{ color: '#E5E7EB', fontWeight: 600 }}>Training examples collected:</strong>{' '}
+      <span style={{ color: '#E5E7EB', fontWeight: 600 }}>{stats.trainingExamplesTotal}</span>
+      <span style={{ color: '#4B5563' }}>
+        ({pending} pending · {exported} exported · {stats.ratedAnswersTotal} rated answers)
+      </span>
+    </span>
+  );
+}
 
 // A plugin option for the "Applicable plugins" picker. Sourced from /api/plugins, which returns the
 // visible registry (operator-only plugins are filtered for non-admins; admins get the full list).
@@ -104,6 +122,8 @@ export function ComicReviewDashboard() {
   const [editing, setEditing] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [aiStatus, setAiStatus] = useState<AiStatusResponse | null>(null);
+  // At-a-glance "Training examples collected" counts. Best-effort: stays null (and hidden) on failure.
+  const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
   // "Regenerate draft" in-flight + a note shown when the engine is still unreachable.
   const [regenerating, setRegenerating] = useState(false);
   const [regenNote, setRegenNote] = useState<string | null>(null);
@@ -170,6 +190,22 @@ export function ComicReviewDashboard() {
       })
       .catch(() => {
         /* status badge is best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // At-a-glance counts of the collected training signal (owner corrections + rated answers). Same
+  // best-effort contract as the engine-status badge: a failure just leaves the counter hidden.
+  useEffect(() => {
+    let cancelled = false;
+    void requestJson<TrainingStatsResponse>('/api/comic/admin/training-stats')
+      .then((payload) => {
+        if (!cancelled) setTrainingStats(payload.stats);
+      })
+      .catch(() => {
+        /* training counter is best-effort */
       });
     return () => {
       cancelled = true;
@@ -333,6 +369,11 @@ export function ComicReviewDashboard() {
           {aiStatus ? (
             <div style={{ margin: '8px 0 4px' }}>
               <ServiceStatusBadge name="Chat AI engine (RunPod / Ollama)" status={aiStatus.ollama} model={aiStatus.ollama.model} />
+            </div>
+          ) : null}
+          {trainingStats ? (
+            <div style={{ margin: '0 0 4px' }}>
+              <TrainingStatsBadge stats={trainingStats} />
             </div>
           ) : null}
           {pendingCount > 0 ? (
