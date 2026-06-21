@@ -14,6 +14,7 @@ export type {
   FeedQuestionDetail,
   FeedCommunityReply,
   FeedCommunityDetail,
+  FeedQuotedPost,
   PublicCommunityPost,
   FeedPagination,
   FeedTimelineItem,

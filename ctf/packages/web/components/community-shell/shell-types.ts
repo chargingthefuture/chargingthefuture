@@ -14,6 +14,14 @@ export type ShellCurrentUser = {
   initial: string;
 };
 
+// A compact reference to the peer message this one quotes (Signal-style reply): the quoted
+// author's handle and a short snippet of its body. Resolved server-side and rendered as a
+// quoted block above the message body. Null/absent when the message is not a reply.
+export type ChatQuotedMessage = {
+  author: string;
+  snippet: string;
+};
+
 export type ChatMessage = {
   id: string;
   from: 'hub' | 'user';
@@ -25,9 +33,21 @@ export type ChatMessage = {
   senderLabel?: string;
   actionLabel?: string;
   actionSlug?: string;
+  // The underlying community post id, when this message is a peer post. This is the id a reply
+  // must reference. Absent for AI answers, concierge replies, and the empty-state prompt.
+  communityPostId?: string | null;
+  // The peer message this one quotes (Signal-style reply), or null/absent when not a reply.
+  quotedMessage?: ChatQuotedMessage | null;
 };
 
 export type ComicAnswerRating = 'helpful' | 'not_helpful' | 'flagged';
+
+// A plugin link shown beneath a published answer: the registry slug (builds the /apps/<slug> route)
+// and the display name (the chip label). Mirrors the server's ComicLinkedPlugin.
+export type ComicLinkedPlugin = {
+  slug: string;
+  name: string;
+};
 
 // An AI Assistant (@comic) Q&A item rendered inline in the unified stream. `pending` items show
 // the "Reviewing for safety" card and carry no answer text; `answered` items show the approved
@@ -40,6 +60,9 @@ export type ComicStreamItem = {
   answer: string | null;
   answerTurnId: string | null;
   currentUserRating: ComicAnswerRating | null;
+  // Applicable plugins the reviewer tagged on the answer, resolved to slug + display name. Empty
+  // array when none. Rendered as tappable plugin links under the answer text.
+  linkedPlugins: ComicLinkedPlugin[];
   askedAtIso: string;
   // Client-only flag for items optimistically added on submit, before the server stream catches up.
   optimistic?: boolean;

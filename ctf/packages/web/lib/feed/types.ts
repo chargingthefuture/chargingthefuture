@@ -53,6 +53,15 @@ export type FeedCommunityReply = {
   createdAtIso: string;
 };
 
+// A compact reference to the peer post this one quotes (Signal-style reply). Resolved
+// server-side to the quoted post's author handle and a short snippet of its body so the
+// client can render the quoted block without a second fetch. Null when nothing is quoted
+// or the quoted post was deleted (the foreign key is ON DELETE SET NULL).
+export type FeedQuotedPost = {
+  author: string;
+  snippet: string;
+};
+
 export type FeedCommunityDetail = {
   id: string;
   body: string;
@@ -61,6 +70,9 @@ export type FeedCommunityDetail = {
   authorUsername: string | null;
   replyCount: number;
   replies: FeedCommunityReply[];
+  // The post this one replies to (Signal-style quote), or null when it is not a reply.
+  replyToPostId: string | null;
+  quotedPost: FeedQuotedPost | null;
 };
 
 // The read-only shape shown to signed-out visitors on the public Commons. Community (peer) posts are
@@ -160,4 +172,7 @@ export type FeedQuestionInput = {
 export type FeedCommunityPostInput = {
   body: string;
   category?: FeedCommunityCategory;
+  // Optional id of the peer post this one quotes (Signal-style reply). Validated server-side
+  // to reference an existing post; ignored when absent.
+  replyToPostId?: string | null;
 };
