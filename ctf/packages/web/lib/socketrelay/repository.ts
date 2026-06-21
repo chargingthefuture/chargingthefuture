@@ -22,6 +22,42 @@ import type {
   SocketRelayResolveOutcome,
 } from './types';
 import { ensureSocketRelayFulfillmentChannel } from './stream';
+import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+
+// Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
+// owner as active in SocketRelay. Labels and deep link mirror scripts/backfillMemberPresence.mjs
+// exactly so live writes match the one-time backfill. The backfill counts a post as active presence
+// only while its status is 'open'; the live hooks record on 'open' and clear on any other status.
+const SOCKETRELAY_PRESENCE_SLUG = 'socketrelay';
+const SOCKETRELAY_PRESENCE_REF_TYPE = 'post';
+const SOCKETRELAY_PRESENCE_LABEL = 'Help post';
+const SOCKETRELAY_PRESENCE_DEEP_LINK = '/apps/socketrelay';
+
+// Keep the post owner's SocketRelay presence in step with a request's current status. Best-effort:
+// swallows its own failure and never breaks the caller's request operation.
+async function syncSocketRelayRequestPresence(
+  ownerUserId: string,
+  requestId: string,
+  status: string | null | undefined,
+): Promise<void> {
+  if ((status ?? '').toLowerCase() === 'open') {
+    await recordMemberPresence({
+      userId: ownerUserId,
+      pluginSlug: SOCKETRELAY_PRESENCE_SLUG,
+      refType: SOCKETRELAY_PRESENCE_REF_TYPE,
+      refId: requestId,
+      label: SOCKETRELAY_PRESENCE_LABEL,
+      deepLink: SOCKETRELAY_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: ownerUserId,
+      pluginSlug: SOCKETRELAY_PRESENCE_SLUG,
+      refType: SOCKETRELAY_PRESENCE_REF_TYPE,
+      refId: requestId,
+    });
+  }
+}
 
 type CountRow = { total: string };
 
@@ -354,7 +390,7 @@ export async function createRequest(actorUserId: string, actorUsername: string |
     throw new Error('invalid_request_price');
   }
 
-  return withDbTransaction(async (client) => {
+  const request = await withDbTransaction(async (client) => {
     const existing = await client.query<RequestRow>(
       `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
        FROM socketrelay_requests
@@ -396,6 +432,12 @@ export async function createRequest(actorUserId: string, actorUsername: string |
 
     return mapRequestRow(created.rows[0]);
   });
+
+  // Best-effort presence write after the post is durably committed: a new open post makes its owner
+  // active in SocketRelay. Never breaks request creation.
+  await syncSocketRelayRequestPresence(request.ownerUserId, request.id, request.status);
+
+  return request;
 }
 
 export async function listRequests(options?: {
@@ -496,7 +538,13 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
     ],
   );
 
-  return mapRequestRow(result.rows[0]);
+  const request = mapRequestRow(result.rows[0]);
+
+  // Best-effort presence sync after the durable update: keeps presence (and its label) in step with
+  // the post's current status. Never breaks the update.
+  await syncSocketRelayRequestPresence(request.ownerUserId, request.id, request.status);
+
+  return request;
 }
 
 export async function repostRequest(requestId: string, actorUserId: string, isAdmin: boolean): Promise<SocketRelayRequest> {
@@ -520,7 +568,13 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
     [requestId],
   );
 
-  return mapRequestRow(result.rows[0]);
+  const request = mapRequestRow(result.rows[0]);
+
+  // Best-effort presence write after the durable repost: the post is back to open, so its owner is
+  // active again in SocketRelay. Never breaks the repost.
+  await syncSocketRelayRequestPresence(request.ownerUserId, request.id, request.status);
+
+  return request;
 }
 
 export async function claimRequest(requestId: string, actorUserId: string): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
@@ -590,6 +644,10 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
     fulfillerDisplayName: created.fulfillment.fulfillerUserId,
   });
 
+  // Best-effort presence sync after the durable claim: the post left the open pool (status 'claimed'),
+  // so its owner's presence for this post is cleared. Never breaks the claim.
+  await syncSocketRelayRequestPresence(created.request.ownerUserId, created.request.id, created.request.status);
+
   return created;
 }
 
@@ -657,7 +715,7 @@ export async function resolveFulfillment(
   isAdmin: boolean,
   outcome: SocketRelayResolveOutcome,
 ): Promise<SocketRelayFulfillment> {
-  return withDbTransaction(async (client) => {
+  const { result, ownerUserId, requestId, requestStatus } = await withDbTransaction(async (client) => {
     // Lock the row inside the transaction and require it to still be active, so a concurrent or
     // retried resolve can't both pass checks and double-apply side effects (e.g. incrementing
     // reopened_count twice or inserting duplicate request events).
@@ -717,8 +775,20 @@ export async function resolveFulfillment(
       [fulfillment.requestId, actorUserId, reopen ? 'fulfillment_reopened' : 'fulfillment_closed', outcome],
     );
 
-    return mapFulfillmentRow(updated.rows[0]);
+    return {
+      result: mapFulfillmentRow(updated.rows[0]),
+      // The requester is the request owner (see this function's doc comment).
+      ownerUserId: fulfillment.requesterUserId,
+      requestId: fulfillment.requestId,
+      requestStatus: reopen ? 'open' : 'closed',
+    };
   });
+
+  // Best-effort presence sync after the durable resolve: a reopen puts the post back to open (owner
+  // active again); any close clears the owner's presence for this post. Never breaks the resolve.
+  await syncSocketRelayRequestPresence(ownerUserId, requestId, requestStatus);
+
+  return result;
 }
 
 export async function listFulfillmentMessages(fulfillmentId: string, actorUserId: string, isAdmin: boolean): Promise<SocketRelayMessage[]> {
@@ -834,6 +904,15 @@ export async function adminDeleteRequest(requestId: string): Promise<void> {
   if ((result.rowCount ?? 0) === 0) {
     throw new Error('request_not_found');
   }
+
+  // Best-effort presence clear after the post row is durably removed. Never breaks the delete.
+  const deleted = mapRequestRow(result.rows[0]);
+  await clearMemberPresence({
+    userId: deleted.ownerUserId,
+    pluginSlug: SOCKETRELAY_PRESENCE_SLUG,
+    refType: SOCKETRELAY_PRESENCE_REF_TYPE,
+    refId: deleted.id,
+  });
 }
 
 export async function insertSocketRelayAudit(input: AuditInput): Promise<void> {
