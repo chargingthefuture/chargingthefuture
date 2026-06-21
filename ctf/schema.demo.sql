@@ -2005,6 +2005,23 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS first_name TEX
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS last_name TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
+-- The legacy directory_profiles.description column (exists only on cloned data) is NOT NULL
+-- with no default. v3 inserts (e.g. Skills Hunt auto-generated profiles on accept) do not set
+-- it, so the insert fails on cloned databases and rolls back the whole operation. Drop the
+-- NOT NULL where the legacy column exists so those inserts succeed; v3 reads the blurb from
+-- bio (the description -> bio backfill lives in post/0006). Guarded + idempotent.
+DO $directory_profiles_description_nullable$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo'
+      AND table_name = 'directory_profiles'
+      AND column_name = 'description'
+  ) THEN
+    ALTER TABLE directory_profiles ALTER COLUMN description DROP NOT NULL;
+  END IF;
+END
+$directory_profiles_description_nullable$;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TEXT;
 -- is_public was removed 2026-05-18 — Directory is no longer public-facing;
 -- all authenticated members see all active profiles. Drop is idempotent.
