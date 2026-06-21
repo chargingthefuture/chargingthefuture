@@ -132,6 +132,30 @@ async function loadProfileSkills(client: PoolClient, profileId: string): Promise
   }));
 }
 
+// Free-text skills nominated for this profile through Skills Hunt that are not yet in
+// the canonical taxonomy. Join chain: the profile links to its originating Skills Hunt
+// submission via skills_hunt_directory_profiles.directory_profile_id, and the submission's
+// proposed (not-yet-promoted) skills live in skills_hunt_proposed_skill_promotions keyed by
+// source_submission_id. Surfaced as muted "pending review" chips so a community-generated
+// profile is never empty just because its nominated skill has not been promoted yet.
+async function loadProfilePendingSkills(client: PoolClient, profileId: string): Promise<string[]> {
+  const result = await client.query<{ skill_label: string }>(
+    `
+      SELECT DISTINCT prom.skill_label
+      FROM skills_hunt_directory_profiles shdp
+      JOIN skills_hunt_proposed_skill_promotions prom
+        ON prom.source_submission_id = shdp.submission_id
+      WHERE shdp.directory_profile_id = $1
+        AND prom.status <> 'promoted'
+        AND btrim(prom.skill_label) <> ''
+      ORDER BY prom.skill_label ASC
+    `,
+    [profileId],
+  );
+
+  return result.rows.map((row) => row.skill_label);
+}
+
 async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Promise<DirectoryProfile> {
   return {
     id: row.id,
@@ -146,6 +170,7 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     jobTitleId: row.job_title_id,
     jobTitleName: row.job_title_name,
     skills: await loadProfileSkills(client, row.id),
+    pendingSkills: await loadProfilePendingSkills(client, row.id),
     isActive: row.is_active,
     source: row.source ?? 'admin',
     invitedByUsername: row.invited_by_username ?? null,

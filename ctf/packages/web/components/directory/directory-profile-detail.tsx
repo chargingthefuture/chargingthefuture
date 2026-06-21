@@ -34,6 +34,7 @@ export function DirectoryProfileDetail({
   // A profile nominated through Skills Hunt is community-generated; show that and who
   // nominated it instead of a generic headline.
   const isCommunityGenerated = p.source === "community-generated";
+  const pendingSkills = p.pendingSkills ?? [];
 
   async function handleAttach() {
     const target = attachInput.trim();
@@ -122,13 +123,26 @@ export function DirectoryProfileDetail({
             </section>
           )}
 
-          {/* Specializations */}
+          {/* Specializations. Real taxonomy skills render as accent chips. A profile
+              nominated through Skills Hunt may also have free-text skills that are not yet
+              in the taxonomy (still a proposal in skills_hunt_proposed_skill_promotions);
+              those render as muted "pending review" chips so the section is never empty
+              just because a nominated skill has not been promoted yet. */}
           <section style={{ marginBottom: 24 }}>
             <div style={sectionLabel}>Specializations</div>
-            {p.skills.length > 0 ? (
+            {p.skills.length > 0 || pendingSkills.length > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {p.skills.map((s) => (
                   <Badge key={s} style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
+                ))}
+                {pendingSkills.map((s) => (
+                  <Badge
+                    key={`pending-${s}`}
+                    title="Nominated through Skills Hunt; not yet in the skills taxonomy."
+                    style={{ background: "rgba(255,255,255,0.04)", color: t.MUTED, border: `1px dashed ${t.BORDER}`, fontSize: 13, padding: "5px 12px", fontWeight: 500 }}
+                  >
+                    {s} <span style={{ color: t.FAINT, fontWeight: 400 }}>· pending review</span>
+                  </Badge>
                 ))}
               </div>
             ) : (

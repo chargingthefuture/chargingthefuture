@@ -25,6 +25,10 @@ export interface Member {
   sector: string;
   jobTitle: string;
   skills: string[];
+  // Free-text skills nominated through Skills Hunt that are not yet in the taxonomy.
+  // Rendered as muted "pending review" chips so a community-generated profile is never
+  // empty. Optional so list payloads that omit it still typecheck.
+  pendingSkills?: string[];
   claimedByUserId: string | null;
   // Every directory profile is sourced from a Quora profile, so the link is the
   // social proof and the way a viewer learns more before reaching out. Optional

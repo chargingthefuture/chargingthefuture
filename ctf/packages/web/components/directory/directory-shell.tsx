@@ -34,6 +34,7 @@ type DirectoryListItem = {
   jobTitleName: string | null;
   claimedByUserId: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
+  pendingSkills: string[];
   profileUrl: string | null;
   headline: string | null;
   bio: string | null;
@@ -129,6 +130,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             sector: item.sectorName ?? "",
             jobTitle: item.jobTitleName ?? "",
             skills: item.skills.map((s) => s.name),
+            pendingSkills: item.pendingSkills ?? [],
             claimedByUserId: item.claimedByUserId ?? null,
             profileUrl: item.profileUrl ?? null,
             headline: item.headline ?? null,
