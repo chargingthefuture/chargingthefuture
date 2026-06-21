@@ -47,13 +47,23 @@ export type HubLastSeenResponse = {
   lastSeenAtIso: string | null;
 };
 
-export type HubJoinResponse = {
-  ok: true;
-  streamApiKey: string;
-  streamChannelId: string;
-  streamUserId: string;
-  streamToken: string;
-};
+// The credentials the Commons live layer needs to open a Stream Chat connection.
+// `configured: true` carries a real key/token/channel minted server-side. `configured: false`
+// means Stream is not set up in this environment (no API key/secret), so the client must skip the
+// live connection and stay on polling — Commons never breaks when Stream is absent.
+export type HubJoinResponse =
+  | {
+    ok: true;
+    configured: true;
+    streamApiKey: string;
+    streamChannelId: string;
+    streamUserId: string;
+    streamToken: string;
+  }
+  | {
+    ok: true;
+    configured: false;
+  };
 
 export type HubChannelInfo = {
   slug: string;

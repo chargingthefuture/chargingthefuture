@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { HubJoinResponse } from 'lib/hub/types';
+import { getFeedStreamCredentials } from 'lib/feed/stream';
 import { requireHubAccess } from '../_lib';
 import { reportError } from 'lib/observability/report';
 
@@ -10,16 +11,30 @@ export async function POST() {
   }
 
   try {
-    // TODO: Create/fetch GetStream credentials for Hub scope.
-    // Hub manages its own GetStream channels and tokens, separate from any other plugin.
-    // For now, return stub credentials to satisfy type contract.
+    // The Commons home chat shares the Feed's community channel (ctf-feed-community). We mint real
+    // Stream credentials so the client can open a live connection beneath the existing custom UI and
+    // receive real-time events (new posts, typing). The Commons keeps its own design; this only adds
+    // the live layer on top.
+    const credentials = await getFeedStreamCredentials(
+      gate.identity.userId,
+      gate.identity.displayName,
+      'community',
+    );
+
+    // Stream not configured in this environment (no API key/secret). Tell the client clearly so it
+    // skips the live connection and stays on polling. Commons must never break when Stream is absent.
+    if (!credentials) {
+      const notConfigured: HubJoinResponse = { ok: true, configured: false };
+      return NextResponse.json(notConfigured, { status: 200 });
+    }
 
     const response: HubJoinResponse = {
       ok: true,
-      streamApiKey: 'todo-stream-api-key',
-      streamChannelId: 'hub-general',
-      streamUserId: `hub-${gate.identity.userId}`,
-      streamToken: 'todo-stream-token',
+      configured: true,
+      streamApiKey: credentials.streamApiKey,
+      streamChannelId: credentials.streamChannelId,
+      streamUserId: credentials.streamUserId,
+      streamToken: credentials.streamToken,
     };
 
     return NextResponse.json(response, { status: 200 });
