@@ -6,6 +6,7 @@ import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
+import { useExternalLink } from "@/components/hooks/useExternalLink";
 import { getDirectoryTokens, initials, type Member } from "./shared";
 
 export function DirectoryProfileDetail({
@@ -24,6 +25,10 @@ export function DirectoryProfileDetail({
   const p = member;
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
+  // Outbound links go through the shared confirmation (you are about to leave for an external site,
+  // with a copy-URL option) — required for accessibility and trauma-informed practice, so nobody is
+  // sent off-app to Quora without a clear, dismissible heads-up.
+  const { openExternal, ExternalLinkDialog } = useExternalLink();
   const [attachInput, setAttachInput] = useState("");
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -92,17 +97,17 @@ export function DirectoryProfileDetail({
 
           {/* Quora profile — every directory profile is sourced from Quora, so this is the social
               proof and the way to learn more before bartering, trading, or exchanging credits. */}
-          <a
-            href={profileUrl ?? undefined}
-            target={profileUrl ? "_blank" : undefined}
-            rel={profileUrl ? "noopener noreferrer" : undefined}
-            aria-disabled={profileUrl ? undefined : true}
+          <button
+            type="button"
+            onClick={() => { if (profileUrl) openExternal(profileUrl); }}
+            disabled={!profileUrl}
+            aria-label={profileUrl ? "View Quora profile — opens a confirmation before leaving for the external site" : "Quora profile not linked yet"}
             style={{
               display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderRadius: 12,
               background: profileUrl ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)",
               border: `1px solid ${profileUrl ? `${t.ACCENT}35` : t.BORDER}`,
-              textDecoration: "none", color: t.TEXT, marginBottom: 24,
-              pointerEvents: profileUrl ? "auto" : "none", opacity: profileUrl ? 1 : 0.6,
+              color: t.TEXT, marginBottom: 24, width: "100%", textAlign: "left",
+              cursor: profileUrl ? "pointer" : "default", opacity: profileUrl ? 1 : 0.6,
             }}
           >
             <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
@@ -114,7 +119,8 @@ export function DirectoryProfileDetail({
                 {profileUrl ? "Their Quora profile is the social proof — read more before you reach out." : "This profile has no Quora link on file."}
               </div>
             </div>
-          </a>
+          </button>
+          <ExternalLinkDialog />
 
           {/* About */}
           {bio && (
