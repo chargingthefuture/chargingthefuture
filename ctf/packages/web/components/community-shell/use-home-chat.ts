@@ -1,9 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { HubJoinResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { HubJoinResponse, HubLastSeenResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
-import type { ChatMessage, ComicAnswerRating, ComicStreamItem, ShellCurrentUser } from './shell-types';
+import type { ChatMessage, ChatQuotedMessage, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
+
+// The peer message the composer is currently replying to (Signal-style quote). Carries the
+// quoted post's id (the reply target) plus a quote preview for the composer banner.
+export type ReplyTarget = {
+  postId: string;
+  quote: ChatQuotedMessage;
+};
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
 
@@ -37,10 +44,12 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
     return 'Now';
   }
 
-  return new Intl.DateTimeFormat('en', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+  // Full, unambiguous timestamp for a global audience: month spelled out, date, year, time, and the
+  // viewer's timezone — e.g. "June 21, 2026, 7:44 AM EDT". Built in two parts so the date and time are
+  // always joined by a comma (avoids the locale "at" separator).
+  const datePart = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date);
+  const timePart = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
+  return `${datePart}, ${timePart}`;
 }
 
 function getActionForText(text: string): MessageAction | null {
@@ -95,6 +104,8 @@ function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessa
       message.displayName,
     ),
     sentAtIso: message.sentAtIso,
+    communityPostId: message.communityPostId,
+    quotedMessage: message.quotedMessage,
   };
 }
 
@@ -181,6 +192,7 @@ type ComicConversationResponse = {
     answer: string | null;
     answerTurnId: string | null;
     currentUserRating: ComicAnswerRating | null;
+    linkedPlugins: ComicLinkedPlugin[];
     askedAtIso: string;
   }>;
 };
@@ -204,6 +216,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const [consentModalOpen, setConsentModalOpen] = useState(false);
   // The question text held while the first-use consent modal is open. Confirming sends it.
   const [pendingConsentText, setPendingConsentText] = useState<string | null>(null);
+  // The peer message the composer is replying to (Signal-style quote), or null when none.
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  // The member's last-seen marker for the Hub channel, used to place the "New messages"
+  // divider. Read once on entry; null means "show everything as new" / not yet loaded.
+  const [lastSeenAtIso, setLastSeenAtIso] = useState<string | null>(null);
+  // Guards so we mark "seen" at most once per mount and never push the marker backwards.
+  const markedSeenRef = useRef(false);
 
   // Whether the composer currently contains an @comic mention — used to show the mention chip
   // affordance live as the asker types.
@@ -221,6 +240,39 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setComicItems((previous) => mergeComicItems(serverItems, previous));
   }, []);
 
+  // Read the member's last-seen marker once on entry so the chat can place the "New messages"
+  // divider. Best-effort: a failure leaves the marker null (everything reads as already seen,
+  // i.e. no divider) and never blocks the chat.
+  const refreshLastSeen = useCallback(async () => {
+    try {
+      const payload = await requestJson<HubLastSeenResponse>('/api/hub/last-seen');
+      setLastSeenAtIso(payload.lastSeenAtIso);
+    } catch {
+      setLastSeenAtIso(null);
+    }
+  }, []);
+
+  // Move the last-seen marker to now after the member has viewed the chat. Best-effort and at
+  // most once per mount; a failure is swallowed so it can never break the chat.
+  const markSeen = useCallback(() => {
+    if (markedSeenRef.current) return;
+    markedSeenRef.current = true;
+    void (async () => {
+      try {
+        await requestJson<HubLastSeenResponse>('/api/hub/last-seen', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-ctf-csrf': '1',
+          },
+          body: JSON.stringify({ seenAtIso: new Date().toISOString() }),
+        });
+      } catch {
+        // Best-effort: leave markedSeenRef set so a transient failure does not retry-spam.
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setConsentGranted(window.localStorage.getItem(consentStorageKey(currentUser.userId)) === '1');
@@ -234,8 +286,15 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setError(null);
     setMessages([]);
     setComicItems([]);
+    // Reset per-mount "seen" state so re-entering the chat reads the marker afresh and can
+    // mark seen once more.
+    markedSeenRef.current = false;
+    setLastSeenAtIso(null);
 
     async function bootstrapChat() {
+      // Read the last-seen marker before history settles so the divider can be placed on the
+      // first render of the stream. Best-effort; failure leaves it null (no divider).
+      void refreshLastSeen();
       try {
         await Promise.all([refreshHistory(), refreshComic().catch(() => undefined)]);
       } catch (loadError) {
@@ -282,7 +341,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         window.clearInterval(pollId);
       }
     };
-  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic]);
+  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen]);
 
   // Route an @comic question to the assistant. The server returns ONLY a holding response (202) —
   // never the unreviewed draft — so we optimistically render the pending "Reviewing for safety"
@@ -301,6 +360,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         answer: null,
         answerTurnId: null,
         currentUserRating: null,
+        linkedPlugins: [],
         askedAtIso: new Date().toISOString(),
         optimistic: true,
       };
@@ -351,10 +411,14 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       return;
     }
 
-    // No mention → peer-to-peer community post via the existing hub path.
+    // No mention → peer-to-peer community post via the existing hub path. Capture the active
+    // reply target (Signal-style quote) before clearing it, and send its post id + the quote
+    // the sender saw so the server stores the reference and the optimistic copy renders it.
+    const activeReply = replyTarget;
     setIsSending(true);
     setError(null);
     setInput('');
+    setReplyTarget(null);
 
     try {
       const payload = await requestJson<{ ok: true; message: HubMessage }>('/api/hub/messages', {
@@ -363,16 +427,37 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
           'content-type': 'application/json',
           'x-ctf-csrf': '1',
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(
+          activeReply
+            ? { text, replyToPostId: activeReply.postId, quotedMessage: activeReply.quote }
+            : { text },
+        ),
       });
       const savedMessage = mapStoredMessage(payload.message, currentUser.userId);
       setMessages((previous) => mergeMessages(previous, [savedMessage]));
     } catch (sendError) {
+      // Restore the reply target so the member can retry the reply.
+      if (activeReply) {
+        setReplyTarget(activeReply);
+      }
       setError(sendError instanceof Error ? sendError.message : 'Unable to send your message right now.');
     } finally {
       setIsSending(false);
     }
-  }, [consentGranted, currentUser.userId, input, isSending, routeToComic]);
+  }, [consentGranted, currentUser.userId, input, isSending, replyTarget, routeToComic]);
+
+  // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state.
+  // Only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to.
+  const beginReply = useCallback((message: ChatMessage) => {
+    if (!message.communityPostId) return;
+    const author = message.senderLabel ?? 'Community member';
+    const snippet = message.text.trim().slice(0, 120);
+    setReplyTarget({ postId: message.communityPostId, quote: { author, snippet } });
+  }, []);
+
+  const cancelReply = useCallback(() => {
+    setReplyTarget(null);
+  }, []);
 
   // Consent modal "Confirm": persist consent and send the held @comic question.
   const confirmConsent = useCallback(async () => {
@@ -496,6 +581,11 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     consentModalOpen,
     confirmConsent,
     dismissConsent,
+    replyTarget,
+    beginReply,
+    cancelReply,
+    lastSeenAtIso,
+    markSeen,
     isSending,
     isLoading: connectionState === 'loading',
     isLive: connectionState === 'live',

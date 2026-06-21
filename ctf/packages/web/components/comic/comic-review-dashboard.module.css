@@ -391,6 +391,44 @@
   line-height: 1.55;
 }
 
+/* Applicable-plugins picker: a row of toggle chips. Selected chips read as cyan/active; the picked
+   slugs are sent with the resolution so the published answer renders those plugin links. */
+.pluginPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pluginChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #1E2A3A;
+  color: #CBD5E1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pluginChip:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+.pluginChipActive {
+  background: rgba(14, 165, 233, 0.16);
+  border-color: rgba(14, 165, 233, 0.55);
+  color: #7DD3FC;
+}
+
+.pluginPickerHint {
+  font-size: 11px;
+  color: #6B7280;
+  margin-top: 6px;
+}
+
 .detailColHead {
   display: flex;
   align-items: center;

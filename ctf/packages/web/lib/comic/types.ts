@@ -77,6 +77,10 @@ export type ComicReviewResolveInput = {
   resolution: ComicReviewResolution;
   correctedBody?: string | null;
   reason?: string | null;
+  // Plugin slugs the reviewer tagged as applicable to this answer. Validated against the visible
+  // plugin registry, deduped, and capped server-side before being stored on the published answer
+  // turn; unknown/hidden slugs are dropped. Omitted/empty = no plugin links.
+  linkedPluginSlugs?: string[];
 };
 
 export type ComicReviewResolveResult = {
@@ -125,6 +129,13 @@ export type ComicRateAnswerResult = {
 // surfaced — a pending item carries no answer text (the asker never sees an unreviewed draft).
 export type ComicAskerStreamStatus = 'pending' | 'answered';
 
+// A resolved plugin link shown beneath a published answer: the registry slug + display name. The
+// slug builds the `/apps/<slug>` route; the name is the chip label.
+export type ComicLinkedPlugin = {
+  slug: string;
+  name: string;
+};
+
 export type ComicAskerStreamItem = {
   // The asker's question turn id (stable key for the stream item).
   questionTurnId: string;
@@ -135,6 +146,9 @@ export type ComicAskerStreamItem = {
   answer: string | null;
   answerTurnId: string | null;
   currentUserRating: ComicAnswerRatingValue | null;
+  // Applicable plugins the reviewer tagged on the published answer, resolved to slug + display name.
+  // Empty array when none (or while pending). Rendered as tappable plugin links under the answer.
+  linkedPlugins: ComicLinkedPlugin[];
   askedAtIso: string;
 };
 

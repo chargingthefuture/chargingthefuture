@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { AtSign, Reply, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
 import type { PublicCommunityPost } from '../../lib/feed/types';
@@ -192,6 +192,11 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     consentModalOpen,
     confirmConsent,
     dismissConsent,
+    replyTarget,
+    beginReply,
+    cancelReply,
+    lastSeenAtIso,
+    markSeen,
     isSending,
     isLoading,
     isLive,
@@ -234,11 +239,30 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
 
   const hasContent = streamEntries.length > 0;
 
+  // Index of the first stream entry newer than the member's last-seen marker — where the single
+  // "New messages" divider is drawn. -1 means "nothing new" (no divider). The marker is frozen
+  // for the life of this mount (captured once on entry) so the divider does not creep down as the
+  // member reads or as best-effort "mark seen" runs.
+  const unreadDividerIndex = useMemo<number>(() => {
+    if (!lastSeenAtIso) return -1;
+    const lastSeenEpoch = new Date(lastSeenAtIso).getTime();
+    if (Number.isNaN(lastSeenEpoch)) return -1;
+    return streamEntries.findIndex((entry) => entry.epoch > lastSeenEpoch);
+  }, [streamEntries, lastSeenAtIso]);
+
   // Auto-scroll the chat to the latest entry when the stream grows (a sent message, a concierge
   // reply, or new polled history), so members always land on what they saw last — like a normal chat.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [streamEntries.length]);
+
+  // Once the chat has content on screen, mark the channel as seen (best-effort, once per mount)
+  // so the next visit's "New messages" divider reflects where the member left off.
+  useEffect(() => {
+    if (hasContent) {
+      markSeen();
+    }
+  }, [hasContent, markSeen]);
 
   return (
     <div className={styles.chatPanelWrap}>
@@ -293,51 +317,85 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           </div>
         ) : null}
 
-        {streamEntries.map((entry) => {
+        {streamEntries.map((entry, index) => {
+          // A single "New messages" divider sits immediately before the first entry newer than
+          // the member's last-seen marker. Rendered ahead of whichever entry follows it.
+          const divider = index === unreadDividerIndex ? (
+            <div key="unread-divider" className={styles.unreadDivider} role="separator" aria-label="New messages">
+              <span className={styles.unreadDividerLabel}>New messages</span>
+            </div>
+          ) : null;
+
           if (entry.kind === 'comic') {
             const { item } = entry;
             if (item.status === 'answered') {
               return (
-                <ComicAnswerCard
-                  key={`comic-${item.questionTurnId}`}
-                  item={item}
-                  askedByLabel={currentUser.displayName}
-                  onRate={rateComicAnswer}
-                />
+                <Fragment key={`comic-${item.questionTurnId}`}>
+                  {divider}
+                  <ComicAnswerCard
+                    item={item}
+                    askedByLabel={currentUser.displayName}
+                    onRate={rateComicAnswer}
+                  />
+                </Fragment>
               );
             }
             return (
-              <ComicPendingCard
-                key={`comic-${item.questionTurnId}`}
-                item={item}
-                askedByLabel={currentUser.displayName}
-              />
+              <Fragment key={`comic-${item.questionTurnId}`}>
+                {divider}
+                <ComicPendingCard
+                  item={item}
+                  askedByLabel={currentUser.displayName}
+                />
+              </Fragment>
             );
           }
 
           const msg = entry.message;
           const senderName = msg.senderLabel ?? 'Survivor Hub';
+          // A peer post (it carries a community post id) can be replied to Signal-style.
+          const canReply = Boolean(msg.communityPostId);
           return (
-            <div
-              key={msg.id}
-              className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}
-            >
-              {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
-              <div className={styles.chatBubbleGroup}>
-                {msg.from === 'hub' ? <span className={styles.chatSender}>{senderName}</span> : null}
-                <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
-                  {msg.text}
+            <Fragment key={msg.id}>
+              {divider}
+              <div
+                className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}
+              >
+                {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
+                <div className={styles.chatBubbleGroup}>
+                  {msg.from === 'hub' ? <span className={styles.chatSender}>{senderName}</span> : null}
+                  {msg.quotedMessage ? (
+                    <div className={styles.chatQuotedBlock}>
+                      <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
+                      <span className={styles.chatQuotedSnippet}>{msg.quotedMessage.snippet}</span>
+                    </div>
+                  ) : null}
+                  <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
+                    {msg.text}
+                  </div>
+                  {msg.actionLabel && msg.actionSlug ? (
+                    <Link href={`/apps/${msg.actionSlug}`} className={styles.chatActionBtn}>
+                      {msg.actionLabel}
+                    </Link>
+                  ) : null}
+                  <div className={msg.from === 'user' ? `${styles.chatMetaRow} ${styles.chatMetaRowUser}` : styles.chatMetaRow}>
+                    <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
+                      {msg.time}
+                    </span>
+                    {canReply ? (
+                      <button
+                        type="button"
+                        className={styles.chatReplyBtn}
+                        onClick={() => beginReply(msg)}
+                        aria-label={`Reply to ${senderName}`}
+                      >
+                        <Reply size={12} /> Reply
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-                {msg.actionLabel && msg.actionSlug ? (
-                  <Link href={`/apps/${msg.actionSlug}`} className={styles.chatActionBtn}>
-                    {msg.actionLabel}
-                  </Link>
-                ) : null}
-                <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
-                  {msg.time}
-                </span>
               </div>
-            </div>
+            </Fragment>
           );
         })}
         <div ref={messagesEndRef} />
@@ -383,6 +441,25 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           </>
         )}
       </div>
+
+      {/* "Replying to …" banner: shows a one-line quote preview and a cancel (X). Sending while
+          this is set posts the message as a Signal-style reply to that peer post. */}
+      {replyTarget ? (
+        <div className={styles.composerReplyBanner}>
+          <div className={styles.composerReplyPreview}>
+            <span className={styles.composerReplyLabel}>Replying to {replyTarget.quote.author}</span>
+            <span className={styles.composerReplySnippet}>{replyTarget.quote.snippet}</span>
+          </div>
+          <button
+            type="button"
+            className={styles.composerReplyCancel}
+            onClick={cancelReply}
+            aria-label="Cancel reply"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : null}
 
       <div className={styles.chatInputWrap}>
         <label className={styles.visuallyHidden} htmlFor="chat-input">Share with the community, or type @comic to ask the AI Assistant</label>

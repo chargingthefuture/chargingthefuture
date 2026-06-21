@@ -21,12 +21,14 @@ import {
   passesComicModeration,
   stripComicMention,
 } from './policy';
+import { listPluginRegistry } from 'lib/plugins/repository';
 import type {
   ComicAnswerRatingValue,
   ComicAskerStreamItem,
   ComicAskerStreamPage,
   ComicAskerStreamStatus,
   ComicChannel,
+  ComicLinkedPlugin,
   ComicMessageInput,
   ComicMessageRouteResult,
   ComicRateAnswerResult,
@@ -41,6 +43,62 @@ import type {
   ComicTrainingStats,
   ComicTurnEngine,
 } from './types';
+
+// Cap on how many plugin links a reviewer can tag on one answer, so a published answer never grows
+// an unbounded row of chips.
+const COMIC_MAX_LINKED_PLUGINS = 5;
+
+// Validate reviewer-supplied plugin slugs against the visible plugin registry: trim, dedupe, drop
+// anything that is not a real visible plugin, and cap the count. Returns the surviving slugs in the
+// order the reviewer supplied them. An empty/invalid input yields an empty array.
+async function validateLinkedPluginSlugs(input: string[] | undefined): Promise<string[]> {
+  if (!Array.isArray(input) || input.length === 0) {
+    return [];
+  }
+
+  const registry = await listPluginRegistry();
+  const allowed = new Set(registry.map((plugin) => plugin.slug));
+
+  const seen = new Set<string>();
+  const validated: string[] = [];
+  for (const raw of input) {
+    if (typeof raw !== 'string') {
+      continue;
+    }
+    const slug = raw.trim();
+    if (slug.length === 0 || seen.has(slug) || !allowed.has(slug)) {
+      continue;
+    }
+    seen.add(slug);
+    validated.push(slug);
+    if (validated.length >= COMIC_MAX_LINKED_PLUGINS) {
+      break;
+    }
+  }
+
+  return validated;
+}
+
+// Resolve stored slugs to { slug, name } for rendering, in the stored order, dropping any slug that
+// is no longer a visible plugin. `nameBySlug` is passed in so the asker-stream read resolves a whole
+// page against one registry fetch.
+function resolveLinkedPlugins(slugs: unknown, nameBySlug: Map<string, string>): ComicLinkedPlugin[] {
+  if (!Array.isArray(slugs)) {
+    return [];
+  }
+  const resolved: ComicLinkedPlugin[] = [];
+  for (const raw of slugs) {
+    if (typeof raw !== 'string') {
+      continue;
+    }
+    const name = nameBySlug.get(raw);
+    if (name === undefined) {
+      continue;
+    }
+    resolved.push({ slug: raw, name });
+  }
+  return resolved;
+}
 
 type CountRow = { total: string };
 
@@ -611,6 +669,10 @@ export async function resolveComicReview(
 
   const correctedBody = normalizeNullableText(input.correctedBody);
   const reason = normalizeNullableText(input.reason);
+  // Validate the reviewer-chosen plugin slugs against the visible registry up front (outside the
+  // transaction): drop unknown/hidden slugs, dedupe, cap. The deduped, validated list is stored on
+  // the published answer turn below for approve and correct alike; reject stores nothing.
+  const linkedPluginSlugs = await validateLinkedPluginSlugs(input.linkedPluginSlugs);
 
   if (resolution === 'correct') {
     if (!correctedBody) {
@@ -729,6 +791,16 @@ export async function resolveComicReview(
           engine: 'human',
         });
       }
+    }
+
+    // Tag the published answer turn with the reviewer's applicable plugins. Applies to whichever
+    // turn became the answer: the reused AI draft (approve), or a freshly inserted human turn
+    // (correct / approved human-first). Reject has no answer turn, so nothing is tagged.
+    if (answerTurnId) {
+      await client.query(
+        `UPDATE comic_turns SET linked_plugin_slugs = $2::jsonb WHERE id = $1::uuid`,
+        [answerTurnId, JSON.stringify(linkedPluginSlugs)],
+      );
     }
 
     const updated = await client.query<{ decided_at: Date }>(
@@ -906,10 +978,11 @@ type AskerStreamRow = {
   corrected_body: string | null;
   answer_turn_id: string | null;
   answer_body: string | null;
+  answer_linked_plugin_slugs: unknown;
   rating: ComicAnswerRatingValue | null;
 };
 
-function mapAskerStreamRow(row: AskerStreamRow): ComicAskerStreamItem {
+function mapAskerStreamRow(row: AskerStreamRow, nameBySlug: Map<string, string>): ComicAskerStreamItem {
   // Only approved/corrected reviews with a linked, published answer turn surface answer text;
   // everything else is still pending and the asker must never see the unreviewed draft. The linked
   // answer turn already holds the published text (the corrected human turn for corrections, the bot
@@ -928,6 +1001,8 @@ function mapAskerStreamRow(row: AskerStreamRow): ComicAskerStreamItem {
     answer: status === 'answered' ? (answer ?? null) : null,
     answerTurnId: status === 'answered' ? row.answer_turn_id : null,
     currentUserRating: row.rating,
+    // Plugin links live on the published answer turn — surface them only for answered items.
+    linkedPlugins: status === 'answered' ? resolveLinkedPlugins(row.answer_linked_plugin_slugs, nameBySlug) : [],
     askedAtIso: toIso(row.asked_at),
   };
 }
@@ -953,6 +1028,7 @@ export async function listComicAskerStream(
         q.corrected_body AS corrected_body,
         ans.id AS answer_turn_id,
         ans.body AS answer_body,
+        ans.linked_plugin_slugs AS answer_linked_plugin_slugs,
         r.rating AS rating
       FROM comic_review_queue q
       JOIN comic_turns qt ON qt.id = q.turn_id
@@ -979,7 +1055,12 @@ export async function listComicAskerStream(
     [askerUserId, safeLimit],
   );
 
-  return { items: result.rows.map(mapAskerStreamRow) };
+  // Resolve plugin slugs to display names once for the whole page (one registry fetch). Unknown or
+  // now-hidden slugs are dropped when each row is mapped.
+  const registry = await listPluginRegistry();
+  const nameBySlug = new Map(registry.map((plugin) => [plugin.slug, plugin.name]));
+
+  return { items: result.rows.map((row) => mapAskerStreamRow(row, nameBySlug)) };
 }
 
 // Rate an answered @comic turn (helpful / not_helpful / flagged). The turn must be an answer the

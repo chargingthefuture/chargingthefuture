@@ -919,6 +919,7 @@ CREATE TABLE IF NOT EXISTS feed_community_posts (
   category TEXT NOT NULL DEFAULT 'general',
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
   reply_count INTEGER NOT NULL DEFAULT 0,
+  reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -929,6 +930,7 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS body TEXT NO
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -949,11 +951,22 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Per-member "last seen" marker for the Hub home channel, used to draw a single
+-- "New messages" divider where a member left off. One row per member; updated to NOW()
+-- after the member views the chat. Best-effort: a read/write failure must never break chat.
+CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
+  user_id TEXT PRIMARY KEY,
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_feed_questions_created_at ON feed_questions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answers_question_created_at ON feed_answers(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_answer_ratings_answer_id ON feed_answer_ratings(answer_id);
 CREATE INDEX IF NOT EXISTS idx_llm_inference_log_question_created_at ON llm_inference_log(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_community_posts_created_at ON feed_community_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_community_posts_reply_to ON feed_community_posts(reply_to_post_id);
 CREATE INDEX IF NOT EXISTS idx_feed_community_replies_post_created_at ON feed_community_replies(post_id, created_at ASC);
 
 -- === unlock tables (prod-compatible) ===
@@ -3835,6 +3848,10 @@ CREATE TABLE IF NOT EXISTS comic_turns (
   intent TEXT NULL,
   nlu_confidence NUMERIC(5,4) NULL,
   engine TEXT NOT NULL DEFAULT 'ollama' CHECK (engine IN ('rasa', 'ollama', 'template', 'human')),
+  -- Applicable plugins an admin tagged when publishing this answer turn (approve/correct). Stored as
+  -- a JSON array of plugin slugs (validated against the visible plugin registry, deduped, capped).
+  -- Rendered as tappable plugin links beneath the published answer. Empty array = no links.
+  linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
@@ -3844,6 +3861,7 @@ ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DE
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS intent TEXT NULL;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS nlu_confidence NUMERIC(5,4) NULL;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS engine TEXT NOT NULL DEFAULT 'ollama';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_comic_turns_conversation_id ON comic_turns(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_comic_turns_created_at ON comic_turns(created_at DESC);

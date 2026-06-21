@@ -85,8 +85,8 @@ contracts:
 
   - pluginId: comic
     command: comic.review.resolve
-    version: 1.0.0
-    description: Owner resolution of a pending AI Assistant draft — approve, correct (edit), or reject. A corrected resolution persists the asker's question as a training example for the training-data export.
+    version: 1.1.0
+    description: Owner resolution of a pending AI Assistant draft — approve, correct (edit), or reject. A corrected resolution persists the asker's question as a training example for the training-data export. On approve/correct the reviewer may tag applicable plugins; the validated slugs are stored on the published answer turn and rendered as tappable plugin links beneath the answer.
     inputSchema:
       reviewId:
         type: string
@@ -100,6 +100,15 @@ contracts:
         required: false
       reason:
         type: string
+        required: false
+      # Plugin slugs the reviewer tagged as applicable to this answer. Validated against the visible
+      # plugin registry, deduped, and capped (max 5) server-side before being stored on the published
+      # answer turn (comic_turns.linked_plugin_slugs). Unknown/hidden slugs are dropped. Ignored for a
+      # reject resolution (no answer is published).
+      linkedPluginSlugs:
+        type: array
+        items:
+          type: string
         required: false
     # A `correct` resolution must carry the reviewer's corrected text. Expressed as JSON-Schema
     # if/then and enforced in the resolve repository (`correction_required`) so the contract matches
@@ -124,7 +133,9 @@ contracts:
     dataAccess:
       - comic_review_queue
       - comic_turns
+      - comic_turns.linked_plugin_slugs
       - comic_training_examples
+      - ctf_plugin_registry
     purpose: assistant_human_review
     retentionClass: transactional_long_lived
     idempotency: false
