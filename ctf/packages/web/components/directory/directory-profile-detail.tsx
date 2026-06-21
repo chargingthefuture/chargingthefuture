@@ -6,6 +6,7 @@ import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
+import { useExternalLink } from "@/components/hooks/useExternalLink";
 import { getDirectoryTokens, initials, type Member } from "./shared";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import type { TrustUserExtension } from "@/lib/trust/types";
@@ -44,6 +45,10 @@ export function DirectoryProfileDetail({
   const p = member;
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
+  // Outbound links go through the shared confirmation (you are about to leave for an external site,
+  // with a copy-URL option) — required for accessibility and trauma-informed practice, so nobody is
+  // sent off-app to Quora without a clear, dismissible heads-up.
+  const { openExternal, ExternalLinkDialog } = useExternalLink();
   const [attachInput, setAttachInput] = useState("");
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
@@ -108,6 +113,7 @@ export function DirectoryProfileDetail({
   // A profile nominated through Skills Hunt is community-generated; show that and who
   // nominated it instead of a generic headline.
   const isCommunityGenerated = p.source === "community-generated";
+  const pendingSkills = p.pendingSkills ?? [];
 
   async function handleAttach() {
     const target = attachInput.trim();
@@ -164,17 +170,17 @@ export function DirectoryProfileDetail({
 
           {/* Quora profile — every directory profile is sourced from Quora, so this is the social
               proof and the way to learn more before bartering, trading, or exchanging credits. */}
-          <a
-            href={profileUrl ?? undefined}
-            target={profileUrl ? "_blank" : undefined}
-            rel={profileUrl ? "noopener noreferrer" : undefined}
-            aria-disabled={profileUrl ? undefined : true}
+          <button
+            type="button"
+            onClick={() => { if (profileUrl) openExternal(profileUrl); }}
+            disabled={!profileUrl}
+            aria-label={profileUrl ? "View Quora profile — opens a confirmation before leaving for the external site" : "Quora profile not linked yet"}
             style={{
               display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderRadius: 12,
               background: profileUrl ? `${t.ACCENT}12` : "rgba(255,255,255,0.02)",
               border: `1px solid ${profileUrl ? `${t.ACCENT}35` : t.BORDER}`,
-              textDecoration: "none", color: t.TEXT, marginBottom: 24,
-              pointerEvents: profileUrl ? "auto" : "none", opacity: profileUrl ? 1 : 0.6,
+              color: t.TEXT, marginBottom: 24, width: "100%", textAlign: "left",
+              cursor: profileUrl ? "pointer" : "default", opacity: profileUrl ? 1 : 0.6,
             }}
           >
             <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
@@ -186,7 +192,8 @@ export function DirectoryProfileDetail({
                 {profileUrl ? "Their Quora profile is the social proof — read more before you reach out." : "This profile has no Quora link on file."}
               </div>
             </div>
-          </a>
+          </button>
+          <ExternalLinkDialog />
 
           {/* About */}
           {bio && (
@@ -196,13 +203,26 @@ export function DirectoryProfileDetail({
             </section>
           )}
 
-          {/* Specializations */}
+          {/* Specializations. Real taxonomy skills render as accent chips. A profile
+              nominated through Skills Hunt may also have free-text skills that are not yet
+              in the taxonomy (still a proposal in skills_hunt_proposed_skill_promotions);
+              those render as muted "pending review" chips so the section is never empty
+              just because a nominated skill has not been promoted yet. */}
           <section style={{ marginBottom: 24 }}>
             <div style={sectionLabel}>Specializations</div>
-            {p.skills.length > 0 ? (
+            {p.skills.length > 0 || pendingSkills.length > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {p.skills.map((s) => (
                   <Badge key={s} style={{ background: `${t.ACCENT}15`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 13, padding: "5px 12px" }}>{s}</Badge>
+                ))}
+                {pendingSkills.map((s) => (
+                  <Badge
+                    key={`pending-${s}`}
+                    title="Nominated through Skills Hunt; not yet in the skills taxonomy."
+                    style={{ background: "rgba(255,255,255,0.04)", color: t.MUTED, border: `1px dashed ${t.BORDER}`, fontSize: 13, padding: "5px 12px", fontWeight: 500 }}
+                  >
+                    {s} <span style={{ color: t.FAINT, fontWeight: 400 }}>· pending review</span>
+                  </Badge>
                 ))}
               </div>
             ) : (
@@ -218,9 +238,12 @@ export function DirectoryProfileDetail({
               <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Want to work together?</div>
             </div>
             <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
-              The directory shows who is in the community and what they do. To barter, trade, or exchange
-              credits, reach out through their Quora profile above, or find them in the plugins where work
-              actually happens.
+              The directory shows who is in the community and what they do. Want a service or good from
+              this person? Look for them in{" "}
+              <Link href="/apps/foundation" style={{ color: t.ACCENT, fontWeight: 600, textDecoration: "none" }}>Foundation</Link>,
+              where members offer and exchange help — or browse{" "}
+              <Link href="/apps/foundation" style={{ color: t.ACCENT, fontWeight: 600, textDecoration: "none" }}>Foundation</Link>{" "}
+              to find someone else who can.
             </div>
           </section>
 
