@@ -162,13 +162,16 @@ export type BeaconIngest = {
 // for a phone broadcaster app. Recording is enabled so Stream delivers a recording-ready webhook
 // after the event ends. Returns null when Stream is not configured.
 //
-// TODO(beacon): confirm against the live Stream dashboard/SDK that GetCall with create=true on a
-// `livestream` call returns `call.ingress.rtmp.{address,stream_key}` and that the call type has
-// recording enabled (or set `settings_override.recording` here). The shape below follows Stream's
-// documented Video API; verify field names before the first real broadcast.
+// Source: Stream Video RTMP ingress docs (getstream.io/video/docs/api/streaming/rtmp/), confirmed
+// 2026-06-21. The RTMP ingest address is on the call response at `call.ingress.rtmp.address`. The
+// stream key is NOT a field on the response: the broadcaster authenticates the RTMP push with a host
+// user token used as the stream key, so the caller passes the host token it already minted. We read
+// the address defensively (optional-chained) and never fabricate it: an absent address yields an
+// empty string and the admin surface stays in its not-live state.
 export async function ensureBeaconCallAndIngest(input: {
   eventId: string;
   hostUserId: string;
+  hostToken: string;
 }): Promise<BeaconIngest | null> {
   const ctx = await resolveStreamRest();
   if (!ctx) {
@@ -192,8 +195,8 @@ export async function ensureBeaconCallAndIngest(input: {
   const ingress = (call.ingress ?? {}) as Record<string, unknown>;
   const rtmp = (ingress.rtmp ?? {}) as Record<string, unknown>;
   const address = typeof rtmp.address === 'string' ? rtmp.address : '';
-  const streamKey = typeof rtmp.stream_key === 'string' ? rtmp.stream_key : '';
-  return { rtmpIngestUrl: address, streamKey };
+  // The broadcaster app pushes RTMP to `address` and authenticates with the host token as stream key.
+  return { rtmpIngestUrl: address, streamKey: input.hostToken };
 }
 
 // Flip the call out of backstage so viewers can watch. Returns false when Stream is not configured.
@@ -203,8 +206,11 @@ export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
     return false;
   }
   const callId = beaconCallIdForEvent(eventId);
-  // TODO(beacon): confirm the goLive endpoint path; Stream documents
-  // POST /api/v2/video/call/{type}/{id}/go_live with optional start_hls/start_recording flags.
+  // Source: Stream Video broadcasting/HLS docs (getstream.io/video/docs/api/streaming/hls/),
+  // confirmed 2026-06-21. POST /api/v2/video/call/{type}/{id}/go_live flips the call out of backstage;
+  // start_hls begins the public HLS broadcast and start_recording begins the recording that feeds the
+  // recording-ready webhook. The response carries the updated call with `egress.hls.playlist_url`
+  // populated, which the public viewer reads via getBeaconHlsPlaybackUrl below.
   await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/go_live`, {
     method: 'POST',
     body: { start_hls: true, start_recording: true },
@@ -213,9 +219,10 @@ export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
 }
 
 // Return the public HLS playback URL for the live call so anonymous viewers can watch with no token.
-// TODO(beacon): confirm the field — Stream exposes HLS playlist URL on the call response (commonly
-// `call.egress.hls.playlist_url`). We never fabricate a URL: when absent this returns null and the
-// viewer shows the idle state.
+// Source: Stream Video HLS docs (getstream.io/video/docs/api/streaming/hls/), confirmed 2026-06-21.
+// The GET call response exposes the playlist URL at `call.egress.hls.playlist_url`. We read it
+// defensively (optional-chained) and never fabricate a URL: when absent this returns null and the
+// viewer stays in its idle/starting state.
 export async function getBeaconHlsPlaybackUrl(eventId: string): Promise<string | null> {
   const ctx = await resolveStreamRest();
   if (!ctx) {
@@ -240,8 +247,9 @@ export async function endBeaconCall(eventId: string): Promise<boolean> {
     return false;
   }
   const callId = beaconCallIdForEvent(eventId);
-  // TODO(beacon): confirm the end endpoint path; Stream documents
-  // POST /api/v2/video/call/{type}/{id}/mark_ended (or stop_live) to end a livestream.
+  // Source: Stream Video broadcasting docs (getstream.io/video/docs/api/streaming/), confirmed
+  // 2026-06-21. POST /api/v2/video/call/{type}/{id}/stop_live ends the live broadcast (stops HLS
+  // distribution and backstages the call), which stops the cost-driving distribution.
   await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/stop_live`, {
     method: 'POST',
     body: {},

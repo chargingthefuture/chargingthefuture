@@ -18,6 +18,14 @@ import type {
   FoundationQuoteState,
   FoundationThread,
 } from './types';
+import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+
+// Cross-plugin presence: a Foundation provider offering (one offered skill) marks the provider as
+// active in Foundation. One presence row is kept per offered skill, using the skill id as the ref id.
+const FOUNDATION_PRESENCE_SLUG = 'foundation';
+const FOUNDATION_PRESENCE_REF_TYPE = 'provider-skill';
+const FOUNDATION_PRESENCE_LABEL = 'Provider offering';
+const FOUNDATION_PRESENCE_DEEP_LINK = '/apps/foundation';
 import {
   createFoundationCallToken,
   createFoundationParticipantToken,
@@ -205,7 +213,7 @@ export async function listOwnOfferableSkills(
 export async function setOwnOfferedSkills(userId: string, skillIds: string[]): Promise<string[]> {
   const unique = Array.from(new Set(skillIds.filter((id) => typeof id === 'string' && id.trim().length > 0)));
 
-  return withDbTransaction(async (client) => {
+  const { accepted, previous } = await withDbTransaction(async (client) => {
     const eligible = await client.query<{ id: string }>(
       `
         SELECT s.id::text AS id
@@ -217,10 +225,18 @@ export async function setOwnOfferedSkills(userId: string, skillIds: string[]): P
       [userId],
     );
     const eligibleIds = new Set(eligible.rows.map((row) => row.id));
-    const accepted = unique.filter((id) => eligibleIds.has(id));
+    const acceptedIds = unique.filter((id) => eligibleIds.has(id));
+
+    // Capture the previously offered skill ids so presence rows for skills dropped from the set can be
+    // deactivated after commit.
+    const before = await client.query<{ skill_id: string }>(
+      `SELECT skill_id::text AS skill_id FROM foundation_provider_skills WHERE user_id = $1`,
+      [userId],
+    );
+    const previousIds = before.rows.map((row) => row.skill_id);
 
     await client.query('DELETE FROM foundation_provider_skills WHERE user_id = $1', [userId]);
-    for (const skillId of accepted) {
+    for (const skillId of acceptedIds) {
       await client.query(
         `INSERT INTO foundation_provider_skills (user_id, skill_id) VALUES ($1, $2::uuid)
          ON CONFLICT (user_id, skill_id) DO NOTHING`,
@@ -228,8 +244,35 @@ export async function setOwnOfferedSkills(userId: string, skillIds: string[]): P
       );
     }
 
-    return accepted;
+    return { accepted: acceptedIds, previous: previousIds };
   });
+
+  // Best-effort presence sync after the offered-skill set is durably replaced. One presence row per
+  // offered skill (ref id = skill id, mirroring the backfill). Record each currently offered skill and
+  // clear any skill that was offered before but is no longer in the set. Never breaks the save.
+  const acceptedSet = new Set(accepted);
+  for (const skillId of accepted) {
+    await recordMemberPresence({
+      userId,
+      pluginSlug: FOUNDATION_PRESENCE_SLUG,
+      refType: FOUNDATION_PRESENCE_REF_TYPE,
+      refId: skillId,
+      label: FOUNDATION_PRESENCE_LABEL,
+      deepLink: FOUNDATION_PRESENCE_DEEP_LINK,
+    });
+  }
+  for (const skillId of previous) {
+    if (!acceptedSet.has(skillId)) {
+      await clearMemberPresence({
+        userId,
+        pluginSlug: FOUNDATION_PRESENCE_SLUG,
+        refType: FOUNDATION_PRESENCE_REF_TYPE,
+        refId: skillId,
+      });
+    }
+  }
+
+  return accepted;
 }
 
 type FoundationThreadRow = {
