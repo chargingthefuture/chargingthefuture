@@ -1,0 +1,194 @@
+contracts:
+  - pluginId: beacon
+    command: event.current.get
+    version: 1.0.0
+    description: Return the currently-live Beacon event (or null) and the public HLS playback URL. Open to the public; no sign-in required.
+    inputSchema: {}
+    outputSchema:
+      event:
+        type: object
+      hlsPlaybackUrl:
+        type: string
+    dataAccess:
+      - beacon_events
+    purpose: public_viewer
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.chat-token.mint
+    version: 1.0.0
+    description: Mint a Stream Chat token for the live event chat channel. Requires a signed-in member, so only members can post; this is the sign-in-to-chat gate. Anonymous callers are denied.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      streamApiKey:
+        type: string
+      streamChannelId:
+        type: string
+      streamUserId:
+        type: string
+      streamToken:
+        type: string
+    dataAccess:
+      - beacon_events
+      - canonical_user_profile
+    purpose: member_chat
+    retentionClass: transactional_short_lived
+    idempotency: false
+
+  - pluginId: beacon
+    command: event.create
+    version: 1.0.0
+    description: Create a draft Beacon event (title plus optional description). Admin-only.
+    inputSchema:
+      title:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+    outputSchema:
+      event:
+        type: object
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: event_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: beacon
+    command: event.ingest.get
+    version: 1.0.0
+    description: Return the per-event RTMP ingest URL plus stream key (for a phone broadcaster app) and a host token (for desktop in-browser screen-share). Admin-only. Only the host token can publish.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      rtmpIngestUrl:
+        type: string
+      streamKey:
+        type: string
+      streamApiKey:
+        type: string
+      streamCallType:
+        type: string
+      streamCallId:
+        type: string
+      streamUserId:
+        type: string
+      hostToken:
+        type: string
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: broadcast_ingest
+    retentionClass: transactional_short_lived
+    idempotency: false
+
+  - pluginId: beacon
+    command: event.go-live
+    version: 1.0.0
+    description: Flip the event to live (Stream goLive on the livestream call) and auto-post a live-now notice to the Commons. Admin-only. Idempotent on the Commons post (stored on the event row).
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      event:
+        type: object
+    dataAccess:
+      - beacon_events
+      - feed_community_posts
+      - feed_items
+      - beacon_events_admin_audit_trail
+    purpose: event_lifecycle
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.end
+    version: 1.0.0
+    description: End the broadcast, stop the Stream call so video billing stops, and flip the event to ended. Admin-only.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      event:
+        type: object
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: event_lifecycle
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.admin.list
+    version: 1.0.0
+    description: List Beacon events newest-first, including past events and their recordings. Admin-only.
+    inputSchema: {}
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - beacon_events
+    purpose: event_administration
+    retentionClass: derived_medium_lived
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.moderate
+    version: 1.0.0
+    description: Moderate the live event chat — mute a member, ban a member from the event channel, or toggle slow-mode. Admin-only; targets the Stream Chat channel for the event.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+      action:
+        type: string
+        required: true
+        enum:
+          - mute
+          - ban
+          - slow_mode
+      targetUserId:
+        type: string
+        required: false
+      cooldownSeconds:
+        type: integer
+        required: false
+    outputSchema:
+      status:
+        type: string
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: chat_moderation
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: beacon
+    command: event.stream-webhook.ingest
+    version: 1.0.0
+    description: Ingest Stream Video webhook events (recording-ready and call lifecycle). Verifies the Stream signature, stores the recording URL on the event, and posts the replay to the Commons. Idempotent — never double-posts the replay.
+    inputSchema:
+      type:
+        type: string
+        required: true
+      call_cid:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - beacon_events
+      - feed_community_posts
+      - feed_items
+    purpose: recording_ingest
+    retentionClass: transactional_long_lived
+    idempotency: true

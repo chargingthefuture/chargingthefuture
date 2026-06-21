@@ -1,0 +1,130 @@
+auditEvents:
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.create
+    commandVersion: 1.0.0
+    purpose: event_lifecycle
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+    targetContext:
+      eventId: beacon_event_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.ingest.get
+    commandVersion: 1.0.0
+    purpose: broadcast_ingest
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+      - live_session_credential
+    targetContext:
+      eventId: beacon_event_identifier
+      streamCallId: stream_call_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.go-live
+    commandVersion: 1.0.0
+    purpose: event_lifecycle
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+      - commons_post_reference
+    targetContext:
+      eventId: beacon_event_identifier
+      commonsLivePostId: feed_post_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.end
+    commandVersion: 1.0.0
+    purpose: event_lifecycle
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+    targetContext:
+      eventId: beacon_event_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.moderate
+    commandVersion: 1.0.0
+    purpose: chat_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+      - chat_moderation_action
+    targetContext:
+      eventId: beacon_event_identifier
+      moderationAction: mute_ban_or_slow_mode
+      targetUserId: moderated_member_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: beacon
+    command: event.stream-webhook.ingest
+    commandVersion: 1.0.0
+    purpose: recording_ingest
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - beacon_event_record
+      - recording_reference
+      - commons_post_reference
+    targetContext:
+      eventId: beacon_event_identifier
+      commonsRecordingPostId: feed_post_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

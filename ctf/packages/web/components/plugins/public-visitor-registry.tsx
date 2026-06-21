@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { BeaconPublicShell } from '@/components/beacon/beacon-public-shell';
 import { ChymePublicShell } from '@/components/chyme/chyme-public-shell';
 import { ClicklogPublicShell } from '@/components/clicklog/clicklog-public-shell';
 import { ContributionsPublicShell } from '@/components/contributions/contributions-public-shell';
@@ -56,6 +57,7 @@ export type PublicVisitorShell = ComponentType<PublicVisitorShellProps>;
  * the access-denied wall.
  */
 const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
+  beacon: BeaconPublicShell,
   chyme: ChymePublicShell,
   clicklog: ClicklogPublicShell,
   contributions: ContributionsPublicShell,
