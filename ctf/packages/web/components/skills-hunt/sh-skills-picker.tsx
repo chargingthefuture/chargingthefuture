@@ -2,28 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { X, ChevronDown } from "lucide-react";
-import { COLOR, groupTaxonomyBySector, type TaxonomyFlattenedRow } from "./sh-shared";
+import { COLOR, groupSkillsByOccupation, groupTaxonomyBySector, type TaxonomyFlattenedRow } from "./sh-shared";
 
 type TaxonomyLoadState =
   | { status: "loading" }
-  | { status: "ready"; categories: Record<string, string[]> }
+  | { status: "ready"; categories: Record<string, string[]>; occupations: Record<string, string[]> }
   | { status: "error" };
 
 // Cache the grouped taxonomy for the page session so the picker never has to show "Loading…"
 // again after the first fetch. Re-showing the loading state would collapse the category list,
 // which on a phone makes the page shrink and the scroll jump — the exact symptom of selecting a
-// skill re-rendering the picker.
+// skill re-rendering the picker. Both groupings come from the one flattened fetch.
 let cachedCategories: Record<string, string[]> | null = null;
+let cachedOccupations: Record<string, string[]> | null = null;
 
 // Fetch the canonical skills taxonomy once and group it by sector for the picker. On error or an
 // empty result the picker still renders the free-text proposed-skills box so a scout can proceed.
 function useTaxonomy(): TaxonomyLoadState {
   const [state, setState] = useState<TaxonomyLoadState>(
-    cachedCategories ? { status: "ready", categories: cachedCategories } : { status: "loading" },
+    cachedCategories && cachedOccupations
+      ? { status: "ready", categories: cachedCategories, occupations: cachedOccupations }
+      : { status: "loading" },
   );
 
   useEffect(() => {
-    if (cachedCategories) return;
+    if (cachedCategories && cachedOccupations) return;
     let active = true;
     void (async () => {
       try {
@@ -31,9 +34,12 @@ function useTaxonomy(): TaxonomyLoadState {
         if (!res.ok) throw new Error(`Taxonomy request failed (${res.status})`);
         const data = (await res.json()) as { items?: TaxonomyFlattenedRow[] };
         if (!active) return;
-        const categories = groupTaxonomyBySector(data.items ?? []);
+        const rows = data.items ?? [];
+        const categories = groupTaxonomyBySector(rows);
+        const occupations = groupSkillsByOccupation(rows);
         cachedCategories = categories;
-        setState({ status: "ready", categories });
+        cachedOccupations = occupations;
+        setState({ status: "ready", categories, occupations });
       } catch {
         if (active) setState({ status: "error" });
       }
@@ -54,6 +60,7 @@ interface SkillsPickerProps {
   canAddMore: boolean;
   allSkillCount: number;
   onToggleSkill: (s: string) => void;
+  onAddOccupationSkills: (skillNames: string[]) => void;
   onRemoveProposed: (s: string) => void;
   onOpenCategory: (c: string | null) => void;
   onFreeText: (v: string) => void;
@@ -120,10 +127,12 @@ function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onO
 }
 
 export function SkillsPicker(props: SkillsPickerProps) {
-  const { skills, proposedSkills, freeText, openCategory, canAddMore, allSkillCount, onToggleSkill, onRemoveProposed, onOpenCategory, onFreeText, onAddProposed } = props;
+  const { skills, proposedSkills, freeText, openCategory, canAddMore, allSkillCount, onToggleSkill, onAddOccupationSkills, onRemoveProposed, onOpenCategory, onFreeText, onAddProposed } = props;
   const taxonomy = useTaxonomy();
   const categories = taxonomy.status === "ready" ? taxonomy.categories : {};
+  const occupations = taxonomy.status === "ready" ? taxonomy.occupations : {};
   const hasCategories = Object.keys(categories).length > 0;
+  const occupationNames = Object.keys(occupations);
   return (
     <div>
       <label style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", display: "block", marginBottom: 6 }}>
@@ -132,6 +141,26 @@ export function SkillsPicker(props: SkillsPickerProps) {
       </label>
 
       <SelectedChips skills={skills} proposedSkills={proposedSkills} onToggleSkill={onToggleSkill} onRemoveProposed={onRemoveProposed} />
+
+      {taxonomy.status === "ready" && occupationNames.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <label htmlFor="sh-occupation-prefill" style={{ fontSize: 11, color: "#9CA3AF", display: "block", marginBottom: 4 }}>
+            Know their profession? Add its skills <span style={{ color: "#4B5563" }}>(optional — fills the skills in for you)</span>
+          </label>
+          <select
+            id="sh-occupation-prefill"
+            value=""
+            disabled={!canAddMore}
+            onChange={(e) => { const occ = e.target.value; if (occ && occupations[occ]) onAddOccupationSkills(occupations[occ]); }}
+            style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: "#E8EAF0", outline: "none", cursor: canAddMore ? "pointer" : "default", opacity: canAddMore ? 1 : 0.5 }}
+          >
+            <option value="">Select a profession…</option>
+            {occupationNames.map((occ) => (
+              <option key={occ} value={occ}>{occ}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {taxonomy.status === "loading" && (
         <div style={{ fontSize: 12, color: "#6B7280", padding: "10px 0" }}>Loading skills…</div>

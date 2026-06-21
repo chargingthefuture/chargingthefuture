@@ -39,6 +39,21 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     setFreeText("");
   }
 
+  // Bulk-add the skills of a chosen profession (occupation). A convenience so a scout who knows
+  // someone is, say, a Pharmacist does not have to remember every skill: picking the profession
+  // fills its taxonomy skills into the existing skills field (deduped, and only up to the cap),
+  // which the scout can then trim. Nothing new is stored — the skills remain the source of truth.
+  function addOccupationSkills(skillNames: string[]) {
+    setSkills((prev) => {
+      const next = [...prev];
+      for (const name of skillNames) {
+        if (next.length + proposedSkills.length >= MAX_SKILLS) break;
+        if (!next.includes(name)) next.push(name);
+      }
+      return next;
+    });
+  }
+
   async function handleSubmit() {
     if (!activeRound || fullName.trim().length < 2 || allSkillCount === 0) return;
     setSubmitting(true);
@@ -79,6 +94,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     submitting, submitError, allSkillCount, canAddMore,
     onFullName: setFullName, onBio: setBio, onQuora: setQuora,
     onToggleSkill: toggleSkill,
+    onAddOccupationSkills: addOccupationSkills,
     onRemoveProposed: (s) => setProposed((prev) => prev.filter((x) => x !== s)),
     onOpenCategory: setOpenCategory, onFreeText: setFreeText, onAddProposed: addProposed,
     onSubmit: () => void handleSubmit(),
