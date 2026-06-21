@@ -3,6 +3,7 @@ import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { PublicShellFrame } from '@/components/plugins/public-shell-frame';
+import { BeaconShell } from '@/components/beacon/beacon-shell';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
@@ -143,8 +144,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   // shown the plugin's public landing page below (not the access-denied view), which
   // nudges them toward the Unlock flow; the Hub general channel is their support
   // surface. Chyme does not require a username so its anonymous public shell still works.
+  // Chyme and Beacon are watch-first surfaces that do not require a username to view, so anonymous
+  // and not-yet-named members can still watch the public broadcast.
   const decision = await evaluatePluginAccess({
-    requireUsername: selectedPlugin.slug !== 'chyme',
+    requireUsername: selectedPlugin.slug !== 'chyme' && selectedPlugin.slug !== 'beacon',
   });
 
   // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
@@ -192,6 +195,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
         requestedPluginSlug={selectedPlugin.slug}
       />
     );
+  }
+
+  if (selectedPlugin.slug === 'beacon') {
+    return <BeaconShell />;
   }
 
   if (selectedPlugin.slug === 'clicklog') {

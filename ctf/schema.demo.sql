@@ -4436,6 +4436,79 @@ FROM service_credits_wallets
 WHERE is_frozen = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 
+-- === beacon-plugin ===
+-- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
+-- (screen content), flagship use the "State of the TI Skills Economy" address. Watching is public
+-- (HLS, no sign-in); chatting/reacting needs a signed-in member (Stream Chat). Live chat is
+-- ephemeral (Stream only) and is NOT stored here — only the event lifecycle and the saved recording.
+BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS beacon_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'live', 'ended')),
+  host_user_id TEXT NOT NULL,
+  stream_call_type TEXT NOT NULL DEFAULT 'livestream',
+  stream_call_id TEXT NOT NULL,
+  started_at TIMESTAMPTZ,
+  ended_at TIMESTAMPTZ,
+  recording_url TEXT,
+  recording_ready_at TIMESTAMPTZ,
+  commons_live_post_id UUID,
+  commons_recording_post_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Guarded DDL so legacy DBs gain every column. Every ALTER carries a default (the id-default lesson
+-- from the announcements fix) so adding a column to a table with existing rows never fails.
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS host_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS stream_call_type TEXT NOT NULL DEFAULT 'livestream';
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS stream_call_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_url TEXT;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_ready_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_live_post_id UUID;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_recording_post_id UUID;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- At most one live event at a time keeps the public viewer unambiguous and bounds Stream video cost.
+CREATE UNIQUE INDEX IF NOT EXISTS beacon_events_one_live_idx ON beacon_events ((status = 'live')) WHERE status = 'live';
+CREATE INDEX IF NOT EXISTS beacon_events_status_idx ON beacon_events (status);
+CREATE INDEX IF NOT EXISTS beacon_events_created_at_idx ON beacon_events (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS beacon_events_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL DEFAULT 'allow' CHECK (policy_status IN ('allow', 'deny')),
+  reason TEXT NOT NULL DEFAULT '',
+  target_type TEXT NOT NULL DEFAULT '',
+  target_id TEXT NOT NULL DEFAULT '',
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT 'allow';
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS beacon_events_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS beacon_events_admin_audit_trail_created_at_idx ON beacon_events_admin_audit_trail (created_at DESC);
+COMMIT;
+
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──
 -- Directory: move the single v2 `display_name` field to honest v3
 -- `first_name` + `last_name` columns, then drop `display_name`.
