@@ -28,6 +28,57 @@ import type {
   TrustTransportTripStatus,
 } from './types';
 import { ensureTrustTransportTripChannel } from './stream';
+import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+
+// Cross-plugin presence: a TrustTransport ride request marks its requester (the rider) as active.
+// A request counts as active presence unless its status is terminal, so the live hooks clear presence
+// only when the request reaches one of those terminal states.
+const TRUSTTRANSPORT_PRESENCE_SLUG = 'trusttransport';
+const TRUSTTRANSPORT_REQUEST_REF_TYPE = 'request';
+const TRUSTTRANSPORT_REQUEST_LABEL = 'Ride request';
+const TRUSTTRANSPORT_PRESENCE_DEEP_LINK = '/apps/trusttransport';
+
+// Statuses that mean a request is no longer active presence — mirrors the backfill's terminal set.
+const TRUSTTRANSPORT_TERMINAL_STATUSES = new Set([
+  'cancelled',
+  'canceled',
+  'completed',
+  'closed',
+  'withdrawn',
+  'declined',
+  'expired',
+  'rejected',
+]);
+
+function isTrustTransportRequestActive(status: string | null | undefined): boolean {
+  return !TRUSTTRANSPORT_TERMINAL_STATUSES.has((status ?? '').toLowerCase());
+}
+
+// Keep the requester's TrustTransport presence in step with a request's current status. Best-effort:
+// swallows its own failure and never breaks the caller's request operation.
+async function syncTrustTransportRequestPresence(
+  requesterUserId: string,
+  requestId: string,
+  status: string | null | undefined,
+): Promise<void> {
+  if (isTrustTransportRequestActive(status)) {
+    await recordMemberPresence({
+      userId: requesterUserId,
+      pluginSlug: TRUSTTRANSPORT_PRESENCE_SLUG,
+      refType: TRUSTTRANSPORT_REQUEST_REF_TYPE,
+      refId: requestId,
+      label: TRUSTTRANSPORT_REQUEST_LABEL,
+      deepLink: TRUSTTRANSPORT_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: requesterUserId,
+      pluginSlug: TRUSTTRANSPORT_PRESENCE_SLUG,
+      refType: TRUSTTRANSPORT_REQUEST_REF_TYPE,
+      refId: requestId,
+    });
+  }
+}
 
 type CountRow = { total: string };
 
@@ -298,7 +349,7 @@ export async function createRequest(
 
   await ensureUserNotRestricted(actorUserId);
 
-  return withDbTransaction(async (client) => {
+  const request = await withDbTransaction(async (client) => {
     const existing = await client.query<RequestRow>(
       `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
        FROM trusttransport_requests
@@ -350,6 +401,12 @@ export async function createRequest(
 
     return mapRequestRow(created.rows[0]);
   });
+
+  // Best-effort presence write after the request is durably committed: a new open request makes the
+  // rider active in TrustTransport. Never breaks request creation.
+  await syncTrustTransportRequestPresence(request.requesterUserId, request.id, request.status);
+
+  return request;
 }
 
 export async function getRequestById(requestId: string): Promise<TrustTransportRequest | null> {
@@ -569,7 +626,7 @@ export async function updateTripStatus(
   nextStatus: TrustTransportTripStatus,
   note: string | null,
 ): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
-  return withDbTransaction(async (client) => {
+  const result = await withDbTransaction(async (client) => {
     const tripResult = await client.query<TripRow>(
       `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at
        FROM trusttransport_trips
@@ -635,6 +692,17 @@ export async function updateTripStatus(
       request: mapRequestRow(updatedRequestResult.rows[0]),
     };
   });
+
+  // Best-effort presence sync after the status change is durably committed: a trip moving the request
+  // to a terminal status (completed/cancelled) clears the rider's presence; otherwise it stays active.
+  // Never breaks the status update.
+  await syncTrustTransportRequestPresence(
+    result.request.requesterUserId,
+    result.request.id,
+    result.request.status,
+  );
+
+  return result;
 }
 
 export async function triggerEmergencyStop(tripId: string, actorUserId: string, isAdmin: boolean, notes: string | null) {
@@ -712,6 +780,10 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
      VALUES ($1::uuid, $2, 'order_cancelled', $3, 'cancelled', jsonb_build_object('reason', $4))`,
     [orderId, actorUserId, request.status, normalizeNullableText(reason)],
   );
+
+  // Best-effort presence clear after the request is durably set to cancelled. The requester (rider)
+  // owns the request regardless of whether an admin performed the cancel. Never breaks the cancel.
+  await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
 }
 
 export async function submitOrderRating(orderId: string, actorUserId: string, isAdmin: boolean, input: TrustTransportRatingInput) {
