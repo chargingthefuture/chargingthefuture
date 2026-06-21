@@ -3837,6 +3837,10 @@ CREATE TABLE IF NOT EXISTS comic_turns (
   intent TEXT NULL,
   nlu_confidence NUMERIC(5,4) NULL,
   engine TEXT NOT NULL DEFAULT 'ollama' CHECK (engine IN ('rasa', 'ollama', 'template', 'human')),
+  -- Applicable plugins an admin tagged when publishing this answer turn (approve/correct). Stored as
+  -- a JSON array of plugin slugs (validated against the visible plugin registry, deduped, capped).
+  -- Rendered as tappable plugin links beneath the published answer. Empty array = no links.
+  linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
@@ -3846,6 +3850,7 @@ ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DE
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS intent TEXT NULL;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS nlu_confidence NUMERIC(5,4) NULL;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS engine TEXT NOT NULL DEFAULT 'ollama';
+ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS linked_plugin_slugs JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS comic_turns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_comic_turns_conversation_id ON comic_turns(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_comic_turns_created_at ON comic_turns(created_at DESC);
