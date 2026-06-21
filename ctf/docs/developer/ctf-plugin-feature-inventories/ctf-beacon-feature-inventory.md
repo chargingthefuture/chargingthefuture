@@ -66,7 +66,9 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   permissions forbid publishing for anyone who is not the host, enforced by server-minted tokens.
   - **Public viewers watch via the HLS playback URL** that Stream produces for a livestream call. HLS
     playback needs no Stream user token, which is exactly what makes anonymous public watching work
-    and scales to many viewers.
+    and scales to many viewers. The viewer plays HLS natively on Safari/iOS and uses the `hls.js`
+    library on every other browser (loaded only in the browser, only when a live URL is present, and
+    torn down on unmount / URL change).
   - Signed-in members who want the lower-latency WebRTC view can still join as a viewer-role token, but
     the default public path is HLS.
 - **Chat/reactions = Stream Chat, `livestream` channel**, channel id derived from the event id. Only
@@ -239,6 +241,18 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   list, `[id]/moderate`, `stream-webhook`); idempotent Commons auto-post on go-live and
   recording-ready (post ids stored on the event row); the admin UI (`/admin/beacon`) and public viewer
   (`/apps/beacon`); the seed script; and the quota-impact note. A few Stream Video REST field/endpoint
-  names are marked `TODO(beacon)` to confirm against the live dashboard before the first real
-  broadcast; no URLs are fabricated when a field is absent. Android viewer parity deferred via a
-  parity ticket.
+  names were marked `TODO(beacon)` to confirm against the live docs before the first real broadcast;
+  no URLs are fabricated when a field is absent. Android viewer parity deferred via a parity ticket.
+- 2026-06-21: Resolved every `TODO(beacon)` and finished wiring the livestream end to end in code on
+  branch `feat/beacon-stream-api-wiring`. Confirmed the Stream Video REST shapes against Stream's
+  current docs and replaced each TODO with a one-line source comment: RTMP ingest at
+  `call.ingress.rtmp.address` with the host user token used as the stream key (so
+  `ensureBeaconCallAndIngest` now takes the host token rather than reading a non-existent
+  `rtmp.stream_key` field, and the ingest route passes it through); HLS playback at
+  `call.egress.hls.playlist_url`; the `go_live` (start_hls + start_recording) and `stop_live`
+  endpoints; and the `call.recording_ready` webhook payload (`call_cid`, `call_recording.url`). Added
+  `hls.js` as a web dependency and wired it into the public viewer: native HLS on Safari/iOS, `hls.js`
+  on every other browser, loaded on demand in the browser and destroyed on unmount / URL change.
+  Graceful degradation is unchanged — when Stream is unconfigured or a field is absent, every surface
+  stays in its calm not-live/idle state and nothing throws. Still requires the owner: the Stream
+  dashboard call-type/recording config and webhook registration, plus one live broadcast smoke test.

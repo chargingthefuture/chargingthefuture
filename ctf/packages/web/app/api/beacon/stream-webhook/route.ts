@@ -14,9 +14,10 @@ export const dynamic = 'force-dynamic';
 // URL and posts the replay to the Commons. Idempotent: the recording URL and the Commons post id are
 // each written only when still null, so a redelivered webhook never double-posts the replay.
 //
-// TODO(beacon): confirm the exact Stream webhook event name and recording payload shape. Stream
-// documents `call.recording_ready` carrying `call_cid` (e.g. "livestream:beacon-<id>") and a
-// `call_recording.url`. We read those defensively and never fabricate a URL.
+// Source: Stream Video recording docs (getstream.io/video/docs/react/advanced/recording/), confirmed
+// 2026-06-21. The event name is `call.recording_ready` (fired ~30s+ after the recording stops). The
+// payload carries `call_cid` (e.g. "livestream:beacon-<id>") identifying the call and the recording
+// URL at `call_recording.url`. We read those defensively and never fabricate a URL.
 export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get('x-signature');
