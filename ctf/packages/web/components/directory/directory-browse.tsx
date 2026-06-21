@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, CheckCircle, ChevronRight, Search } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Search } from "lucide-react";
 import { COLOR, SKILLS_HUNT_COLOR, initials, type Member, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryEmptyState } from "./directory-empty-state";
 
@@ -69,7 +69,6 @@ export function DirectoryBrowse({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: "#F9FAFB", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-                      <CheckCircle size={14} style={{ color: COLOR, flexShrink: 0 }} />
                     </div>
                     <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>{p.jobTitle}</div>
                     <Badge style={{ background: `${COLOR}10`, color: COLOR, border: `1px solid ${COLOR}25`, fontSize: 11 }}>{p.sector}</Badge>
