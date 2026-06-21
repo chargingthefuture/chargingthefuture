@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -158,9 +159,12 @@ export function DirectoryProfileDetail({
               <div style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT }}>Want to work together?</div>
             </div>
             <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
-              The directory shows who is in the community and what they do. To barter, trade, or exchange
-              credits, reach out through their Quora profile above, or find them in the plugins where work
-              actually happens.
+              The directory shows who is in the community and what they do. Want a service or good from
+              this person? Look for them in{" "}
+              <Link href="/apps/foundation" style={{ color: t.ACCENT, fontWeight: 600, textDecoration: "none" }}>Foundation</Link>,
+              where members offer and exchange help — or browse{" "}
+              <Link href="/apps/foundation" style={{ color: t.ACCENT, fontWeight: 600, textDecoration: "none" }}>Foundation</Link>{" "}
+              to find someone else who can.
             </div>
           </section>
 
