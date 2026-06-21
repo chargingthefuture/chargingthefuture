@@ -352,7 +352,11 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           }
 
           const msg = entry.message;
-          const senderName = msg.senderLabel ?? 'Survivor Hub';
+          // The author shown above the bubble. Your own messages are attributed to you (handle when
+          // we have it) so every message has a visible author, not just other people's — peer posts
+          // were rendering with no name on the sender's own side.
+          const ownLabel = currentUser.username ? `@${currentUser.username}` : currentUser.displayName;
+          const senderName = msg.from === 'user' ? ownLabel : (msg.senderLabel ?? 'Survivor Hub');
           // A peer post (it carries a community post id) can be replied to Signal-style.
           const canReply = Boolean(msg.communityPostId);
           return (
@@ -363,7 +367,7 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
               >
                 {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
                 <div className={styles.chatBubbleGroup}>
-                  {msg.from === 'hub' ? <span className={styles.chatSender}>{senderName}</span> : null}
+                  <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>{senderName}</span>
                   {msg.quotedMessage ? (
                     <div className={styles.chatQuotedBlock}>
                       <span className={styles.chatQuotedAuthor}>{msg.quotedMessage.author}</span>
