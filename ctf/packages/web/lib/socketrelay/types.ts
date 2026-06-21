@@ -35,6 +35,10 @@ export type SocketRelayRequest = {
   priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // When this post auto-expires (28 days after it was posted or last re-posted). `isExpired` is the
+  // derived state: true only while the post is still open and that moment has passed.
+  expiresAtIso: string | null;
+  isExpired: boolean;
 };
 
 // `tags` carries 1-3 free-text tags. `category` mirrors the first tag so older

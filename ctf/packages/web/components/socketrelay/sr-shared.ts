@@ -43,6 +43,10 @@ export type SrRequest = {
   priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // When the post auto-expires (28 days after posting/re-posting); `isExpired` is true only while it is
+  // still open and that moment has passed.
+  expiresAtIso: string | null;
+  isExpired: boolean;
 };
 
 export type SrResolveOutcome = "successful" | "no_longer_needed" | "unsuccessful_reopen" | "unsuccessful_close";

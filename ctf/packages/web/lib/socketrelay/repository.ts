@@ -87,6 +87,7 @@ type RequestRow = {
   price_currency: string | null;
   created_at: Date;
   updated_at: Date;
+  expires_at: Date | null;
 };
 
 type FulfillmentRow = {
@@ -197,6 +198,11 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
+    expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
+    // A post auto-expires 28 days after it is posted or re-posted. It only counts as expired while it is
+    // still open and waiting (a claimed/closed/cancelled post is not "expired"). Derived here so the
+    // whole app reads the same expiry without a scheduled job flipping a status column.
+    isExpired: row.status === 'open' && row.expires_at != null && new Date(row.expires_at).getTime() < Date.now(),
   };
 }
 
@@ -392,7 +398,7 @@ export async function createRequest(actorUserId: string, actorUsername: string |
 
   const request = await withDbTransaction(async (client) => {
     const existing = await client.query<RequestRow>(
-      `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+      `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
        FROM socketrelay_requests
        WHERE owner_user_id = $1 AND idempotency_key = $2
        LIMIT 1`,
@@ -406,9 +412,9 @@ export async function createRequest(actorUserId: string, actorUsername: string |
     const tags = normalizeTags(input.tags);
     const created = await client.query<RequestRow>(
       `INSERT INTO socketrelay_requests (
-         owner_user_id, owner_username, title, details, category, tags, city, is_public, status, idempotency_key, price_amount, price_currency
-       ) VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8, 'open', $9, $10, $11)
-       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+         owner_user_id, owner_username, title, details, category, tags, city, is_public, status, idempotency_key, price_amount, price_currency, expires_at
+       ) VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8, 'open', $9, $10, $11, NOW() + INTERVAL '28 days')
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
       [
         actorUserId,
         normalizeNullableText(actorUsername),
@@ -464,7 +470,7 @@ export async function listRequests(options?: {
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socketrelay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
        AND ($2::boolean = FALSE OR is_public = TRUE)
@@ -483,7 +489,7 @@ export async function listRequests(options?: {
 
 export async function getRequestById(requestId: string): Promise<SocketRelayRequest | null> {
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socketrelay_requests
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -524,7 +530,7 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
          price_currency = $9,
          updated_at = NOW()
      WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
     [
       requestId,
       normalizeText(input.title),
@@ -562,9 +568,10 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
      SET status = 'open',
          reopened_count = reopened_count + 1,
          claimed_fulfillment_id = NULL,
-         updated_at = NOW()
+         updated_at = NOW(),
+         expires_at = NOW() + INTERVAL '28 days'
      WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
     [requestId],
   );
 
@@ -580,7 +587,7 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
 export async function claimRequest(requestId: string, actorUserId: string): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
   const created = await withDbTransaction(async (client) => {
     const requestResult = await client.query<RequestRow>(
-      `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+      `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
        FROM socketrelay_requests
        WHERE id = $1::uuid
        LIMIT 1
@@ -602,6 +609,11 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
       throw new Error('request_not_claimable');
     }
 
+    // An open post past its 28-day expiry is no longer claimable — the owner must re-post it first.
+    if (requestRow.expires_at != null && new Date(requestRow.expires_at).getTime() < Date.now()) {
+      throw new Error('request_expired');
+    }
+
     const fulfillment = await client.query<FulfillmentRow>(
       `INSERT INTO socketrelay_fulfillments (request_id, requester_user_id, fulfiller_user_id, status)
        VALUES ($1::uuid, $2, $3, 'active')
@@ -620,7 +632,7 @@ export async function claimRequest(requestId: string, actorUserId: string): Prom
       `UPDATE socketrelay_requests
        SET status = 'claimed', claimed_fulfillment_id = $2::uuid, updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+       RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
       [requestId, fulfillment.rows[0].id],
     );
 
@@ -847,7 +859,7 @@ export async function listPublicRequests(options?: { page?: number; pageSize?: n
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socketrelay_requests
      WHERE is_public = TRUE AND status <> 'cancelled'
      ORDER BY created_at DESC
@@ -865,7 +877,7 @@ export async function listPublicRequests(options?: { page?: number; pageSize?: n
 
 export async function getPublicRequestById(requestId: string): Promise<SocketRelayPublicRequest | null> {
   const result = await queryDb<RequestRow>(
-    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at
+    `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socketrelay_requests
      WHERE id = $1::uuid AND is_public = TRUE AND status <> 'cancelled'
      LIMIT 1`,
@@ -897,7 +909,7 @@ export async function adminDeleteRequest(requestId: string): Promise<void> {
   const result = await queryDb<RequestRow>(
     `DELETE FROM socketrelay_requests
      WHERE id = $1::uuid
-     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at`,
+     RETURNING id, owner_user_id, owner_username, title, details, category, tags, city, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at`,
     [requestId],
   );
 

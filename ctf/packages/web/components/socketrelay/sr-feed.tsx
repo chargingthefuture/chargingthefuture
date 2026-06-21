@@ -6,13 +6,47 @@ import { MapPin, Share2 } from "lucide-react";
 import { COLOR, FAINT, SUBTLE, requestTags, settlementLabel, srHandle, timeAgo, type SrRequest } from "./sr-shared";
 import { ShareLink } from "@/components/shared/share-link";
 
-function CardAction({ open, isOwn, submitting, onClaim, onEdit }: { open: boolean; isOwn: boolean; submitting: boolean; onClaim: () => void; onEdit: () => void }) {
+const editButtonStyle = { padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
+
+function CardAction({
+  open,
+  expired,
+  isOwn,
+  submitting,
+  onClaim,
+  onEdit,
+  onRepost,
+}: {
+  open: boolean;
+  expired: boolean;
+  isOwn: boolean;
+  submitting: boolean;
+  onClaim: () => void;
+  onEdit: () => void;
+  onRepost: () => void;
+}) {
+  // An expired post is no longer in the active feed. The owner sees it under "Mine" with Re-post (which
+  // resets the 28-day clock and re-opens it) and Edit; nobody else can claim it.
+  if (expired) {
+    if (isOwn) {
+      return (
+        <>
+          <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Expired</div>
+          <button onClick={onRepost} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer" }}>
+            Re-post
+          </button>
+          <button onClick={onEdit} style={editButtonStyle}>Edit</button>
+        </>
+      );
+    }
+    return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Expired</div>;
+  }
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
   if (isOwn) {
     return (
       <>
         <div style={{ fontSize: 12, color: SUBTLE }}>Your request</div>
-        <button onClick={onEdit} style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+        <button onClick={onEdit} style={editButtonStyle}>
           Edit
         </button>
       </>
@@ -31,15 +65,19 @@ function RequestCard({
   submitting,
   onClaim,
   onEdit,
+  onRepost,
 }: {
   request: SrRequest;
   isOwn: boolean;
   submitting: boolean;
   onClaim: (id: string) => void;
   onEdit: (request: SrRequest) => void;
+  onRepost: (id: string) => void;
 }) {
   const r = request;
-  const open = r.status === "open";
+  const expired = r.isExpired;
+  // Expired posts dim and read as inactive, like a closed one.
+  const open = r.status === "open" && !expired;
   return (
     <div style={{ padding: "18px 20px", borderRadius: 14, background: open ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)", border: `1px solid ${COLOR}20`, opacity: open ? 1 : 0.6 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -52,7 +90,7 @@ function RequestCard({
               <Badge key={tag} style={{ background: "rgba(255,255,255,0.04)", color: "#9CA3AF", border: "1px solid rgba(255,255,255,0.06)", fontSize: 11 }}>{tag}</Badge>
             ))}
             <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 11 }}>{settlementLabel(r.priceCurrency, r.priceAmount)}</Badge>
-            <Badge style={{ background: open ? "#22C55E20" : "rgba(255,255,255,0.04)", color: open ? "#22C55E" : SUBTLE, border: `1px solid ${open ? "#22C55E40" : "rgba(255,255,255,0.06)"}`, fontSize: 11, textTransform: "capitalize" }}>{r.status}</Badge>
+            <Badge style={{ background: open ? "#22C55E20" : "rgba(255,255,255,0.04)", color: expired ? "#F59E0B" : open ? "#22C55E" : SUBTLE, border: `1px solid ${expired ? "#F59E0B40" : open ? "#22C55E40" : "rgba(255,255,255,0.06)"}`, fontSize: 11, textTransform: "capitalize" }}>{expired ? "expired" : r.status}</Badge>
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#F9FAFB", marginBottom: 4, lineHeight: 1.4 }}>{r.title}</div>
           {r.details && <div style={{ fontSize: 13, color: "#9CA3AF", marginBottom: 6, lineHeight: 1.5 }}>{r.details}</div>}
@@ -64,7 +102,7 @@ function RequestCard({
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
-          <CardAction open={open} isOwn={isOwn} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} />
+          <CardAction open={open} expired={expired} isOwn={isOwn} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
         </div>
       </div>
     </div>
@@ -78,6 +116,7 @@ export function SocketRelayFeed({
   onClaim,
   onPost,
   onEdit,
+  onRepost,
 }: {
   requests: SrRequest[];
   currentUserId: string | undefined;
@@ -85,6 +124,7 @@ export function SocketRelayFeed({
   onClaim: (id: string) => void;
   onPost: () => void;
   onEdit: (request: SrRequest) => void;
+  onRepost: (id: string) => void;
 }) {
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
@@ -103,7 +143,7 @@ export function SocketRelayFeed({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {requests.map((r) => (
-              <RequestCard key={r.id} request={r} isOwn={r.ownerUserId === currentUserId} submitting={submitting} onClaim={onClaim} onEdit={onEdit} />
+              <RequestCard key={r.id} request={r} isOwn={r.ownerUserId === currentUserId} submitting={submitting} onClaim={onClaim} onEdit={onEdit} onRepost={onRepost} />
             ))}
           </div>
         )}
