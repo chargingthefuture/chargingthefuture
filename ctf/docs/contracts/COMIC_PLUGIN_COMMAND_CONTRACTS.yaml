@@ -190,8 +190,16 @@ contracts:
 
   - pluginId: comic
     command: comic.training.export
-    version: 1.0.0
-    description: Export accumulated AI Assistant training examples (asker questions plus owner-assigned intent labels from corrections) as NLU-style training YAML (or JSON). Supersedes the feed category-only export by sourcing real turns and corrections.
+    version: 1.1.0
+    description: >-
+      Export accumulated AI Assistant training data as NLU-style training YAML (or JSON). The dataset
+      now has two parts. 1) Owner corrections — asker questions plus owner-assigned intent labels from
+      corrections (the byIntent map / the YAML nlu: block). 2) Rated answers — every answered turn
+      paired with its question text, the published answer text, and the most-recent helpful /
+      not_helpful / flagged rating plus when it was rated (ratedAnswers). The rated-answer data is
+      de-identified: no user id and no other PII is included, only question/answer text, the rating
+      value, and timestamps. Supersedes the feed category-only export by sourcing real turns,
+      corrections, and human feedback ratings.
     inputSchema:
       format:
         type: string
@@ -202,8 +210,40 @@ contracts:
         type: integer
       byIntent:
         type: object
+      ratedAnswers:
+        type: array
+        description: >-
+          De-identified answered turns with their rating: { question, answer, rating, ratedAt }. No
+          user id or other PII.
     dataAccess:
       - comic_training_examples
+      - comic_answer_ratings
+      - comic_turns
+      - comic_review_queue
     purpose: assistant_training_export
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.training.stats
+    version: 1.0.0
+    description: >-
+      Admin-only at-a-glance counts of the accumulated training signal for the @comic review
+      dashboard: the total non-discarded owner-correction training examples (with a per-status
+      breakdown of pending vs exported) and the number of distinct answered turns that carry at least
+      one rating. Read-only aggregate counts only — no question, answer, rating, or user data is
+      returned, so there is no PII.
+    inputSchema: {}
+    outputSchema:
+      trainingExamplesTotal:
+        type: integer
+      trainingExamplesByStatus:
+        type: object
+      ratedAnswersTotal:
+        type: integer
+    dataAccess:
+      - comic_training_examples
+      - comic_answer_ratings
+    purpose: assistant_training_stats
     retentionClass: derived_short_lived
     idempotency: true
