@@ -530,6 +530,9 @@ export async function listDirectoryForMember(
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
