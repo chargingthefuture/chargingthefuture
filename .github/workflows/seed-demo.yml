@@ -1,4 +1,4 @@
-name: Seed demo schema
+name: Demo — Seed Schema
 
 on:
   workflow_dispatch:

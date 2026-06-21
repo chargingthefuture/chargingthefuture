@@ -1,4 +1,4 @@
-name: Expo Update (OTA)
+name: Expo — OTA Update
 
 # Publishes a JavaScript/asset-only over-the-air update via EAS Update when
 # `main` is pushed. This does NOT rebuild native code — installed apps pick it up

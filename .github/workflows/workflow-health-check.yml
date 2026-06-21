@@ -1,4 +1,4 @@
-name: Workflow Health Check
+name: Github Actions — Workflow Health Check
 
 # Surfaces failing workflows so they don't go unnoticed. Every 8 hours (and on demand) it asks the
 # GitHub API for every active workflow's most recent run on `main`; any whose latest run failed or

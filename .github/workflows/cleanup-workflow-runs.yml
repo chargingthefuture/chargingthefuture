@@ -1,4 +1,4 @@
-name: Cleanup deprecated workflow runs
+name: Cleanup — Deprecated Workflow Runs
 
 # One-shot cleanup: deletes all GitHub Actions runs for workflows whose .yml
 # files have been removed, removing them from the Actions sidebar.
