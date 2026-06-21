@@ -22,6 +22,14 @@ export type ChatQuotedMessage = {
   snippet: string;
 };
 
+// An emoji reaction aggregate on a peer message: the emoji, how many members reacted with it,
+// and whether the current member is one of them. Only emojis with at least one reaction appear.
+export type ChatReactionSummary = {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+};
+
 export type ChatMessage = {
   id: string;
   from: 'hub' | 'user';
@@ -38,6 +46,9 @@ export type ChatMessage = {
   communityPostId?: string | null;
   // The peer message this one quotes (Signal-style reply), or null/absent when not a reply.
   quotedMessage?: ChatQuotedMessage | null;
+  // Emoji reactions on this peer post, ordered by the fixed reaction set. Absent/empty for
+  // messages that are not peer posts or that have no reactions.
+  reactions?: ChatReactionSummary[];
 };
 
 export type ComicAnswerRating = 'helpful' | 'not_helpful' | 'flagged';

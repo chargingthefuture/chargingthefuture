@@ -13,6 +13,8 @@ import {
   FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
   FEED_QUESTION_CATEGORIES,
+  FEED_REACTION_EMOJIS,
+  isAllowedFeedReactionEmoji,
 } from './constants';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
@@ -28,6 +30,7 @@ import type {
   FeedCommunityPostInput,
   FeedCommunityReply,
   FeedQuotedPost,
+  FeedReactionSummary,
   FeedConfig,
   FeedConfigInput,
   FeedEnabledChannel,
@@ -146,6 +149,20 @@ type FeedCommunityReplyRow = {
   body: string;
   created_at: Date;
 };
+
+type FeedReactionAggregateRow = {
+  post_id: string;
+  emoji: string;
+  count: string;
+  reacted: boolean;
+};
+
+// Order a post's reaction summaries by the fixed reaction set so the chips render in a stable,
+// predictable order regardless of how rows came back from the database.
+function orderReactionsByFixedSet(summaries: FeedReactionSummary[]): FeedReactionSummary[] {
+  const rank = new Map<string, number>(FEED_REACTION_EMOJIS.map((emoji, index) => [emoji, index]));
+  return [...summaries].sort((a, b) => (rank.get(a.emoji) ?? 999) - (rank.get(b.emoji) ?? 999));
+}
 
 function toIso(value: Date): string {
   return value.toISOString();
@@ -853,7 +870,7 @@ export async function listFeedTimeline(
 
     const communityDetails = new Map<string, FeedCommunityDetail>();
     if (communityIds.length > 0) {
-      const [postRows, replyRows] = await Promise.all([
+      const [postRows, replyRows, reactionRows] = await Promise.all([
         client.query<FeedCommunityPostRow>(
           `
             SELECT id, author_user_id, author_username, body, category, reply_count, reply_to_post_id, created_at
@@ -871,7 +888,31 @@ export async function listFeedTimeline(
           `,
           [communityIds],
         ),
+        // Aggregate reactions for every visible community post in one batched query.
+        // BOOL_OR(user_id = $2) tells us whether the requesting member reacted with each emoji.
+        client.query<FeedReactionAggregateRow>(
+          `
+            SELECT post_id, emoji, COUNT(*)::text AS count, BOOL_OR(user_id = $2) AS reacted
+            FROM feed_community_post_reactions
+            WHERE post_id = ANY($1::uuid[])
+            GROUP BY post_id, emoji
+          `,
+          [communityIds, userId],
+        ),
       ]);
+
+      // Build post id → ordered reaction summaries. Only emojis with at least one reaction
+      // appear; posts with none get an empty array below.
+      const reactionsByPost = new Map<string, FeedReactionSummary[]>();
+      for (const row of reactionRows.rows) {
+        const current = reactionsByPost.get(row.post_id) ?? [];
+        current.push({
+          emoji: row.emoji,
+          count: Number.parseInt(row.count, 10),
+          reactedByMe: row.reacted,
+        });
+        reactionsByPost.set(row.post_id, current);
+      }
 
       const repliesByPost = new Map<string, FeedCommunityReply[]>();
       for (const row of replyRows.rows) {
@@ -928,6 +969,7 @@ export async function listFeedTimeline(
           // reference resolves to null and no quote block is rendered.
           replyToPostId: quotedPost ? row.reply_to_post_id : null,
           quotedPost,
+          reactions: orderReactionsByFixedSet(reactionsByPost.get(row.id) ?? []),
         });
       }
     }
@@ -1551,6 +1593,60 @@ export async function replyToFeedCommunityPost(
       replyId: inserted.rows[0].id,
       createdAtIso: toIso(inserted.rows[0].created_at),
     };
+  });
+}
+
+// Toggle a member's emoji reaction on a community post. The emoji must be in the fixed quick
+// set and the post must exist. INSERT ... ON CONFLICT DO NOTHING adds the reaction; when the
+// row already existed (nothing inserted) the existing one is removed instead — so a second tap
+// of the same emoji clears it. Returns whether the post is now reacted with that emoji.
+export async function toggleCommunityPostReaction(
+  userId: string,
+  postId: string,
+  emoji: string,
+): Promise<{ reacted: boolean }> {
+  if (!isAllowedFeedReactionEmoji(emoji)) {
+    throw new Error('reaction_emoji_invalid');
+  }
+
+  const normalizedPostId = normalizeUuid(postId);
+  if (normalizedPostId === null) {
+    throw new Error('post_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const post = await client.query<{ id: string }>(
+      'SELECT id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
+      [normalizedPostId],
+    );
+    if (post.rows.length === 0) {
+      throw new Error('post_not_found');
+    }
+
+    const inserted = await client.query<{ id: string }>(
+      `
+        INSERT INTO feed_community_post_reactions (post_id, user_id, emoji)
+        VALUES ($1::uuid, $2, $3)
+        ON CONFLICT (post_id, user_id, emoji) DO NOTHING
+        RETURNING id
+      `,
+      [normalizedPostId, userId, emoji],
+    );
+
+    if (inserted.rows.length > 0) {
+      return { reacted: true };
+    }
+
+    // The reaction already existed: a second tap removes it (toggle off).
+    await client.query(
+      `
+        DELETE FROM feed_community_post_reactions
+        WHERE post_id = $1::uuid AND user_id = $2 AND emoji = $3
+      `,
+      [normalizedPostId, userId, emoji],
+    );
+
+    return { reacted: false };
   });
 }
 

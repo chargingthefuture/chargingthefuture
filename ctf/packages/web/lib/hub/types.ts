@@ -6,6 +6,15 @@ export type HubQuotedMessage = {
   snippet: string;
 };
 
+// An emoji reaction aggregate on a Hub peer message (community post): the emoji, the count of
+// members who reacted, and whether the requesting member is one of them. Only emojis with at
+// least one reaction appear. Mirrors the feed FeedReactionSummary.
+export type HubReactionSummary = {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+};
+
 // Hub-owned message types
 export type HubMessage = {
   id: string;
@@ -21,6 +30,9 @@ export type HubMessage = {
   communityPostId: string | null;
   // The peer post this message quotes (Signal-style reply), or null when it is not a reply.
   quotedMessage: HubQuotedMessage | null;
+  // Emoji reactions on this message's underlying community post, ordered by the fixed reaction
+  // set. Always an array; empty for non-community messages and posts with no reactions.
+  reactions: HubReactionSummary[];
 };
 
 export type HubMessagesResponse = {

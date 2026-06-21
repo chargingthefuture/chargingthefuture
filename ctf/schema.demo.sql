@@ -951,6 +951,23 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Emoji reactions on community (peer) posts. Stored in our own database (not Stream).
+-- One row per (post, member, emoji) — the unique index makes a reaction a toggle: a second
+-- tap of the same emoji removes the row. The emoji is constrained to a small fixed quick set
+-- at the application layer (see FEED_REACTION_EMOJIS).
+CREATE TABLE IF NOT EXISTS feed_community_post_reactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS post_id UUID;
+ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Per-member "last seen" marker for the Hub home channel, used to draw a single
 -- "New messages" divider where a member left off. One row per member; updated to NOW()
 -- after the member views the chat. Best-effort: a read/write failure must never break chat.
@@ -968,6 +985,8 @@ CREATE INDEX IF NOT EXISTS idx_llm_inference_log_question_created_at ON llm_infe
 CREATE INDEX IF NOT EXISTS idx_feed_community_posts_created_at ON feed_community_posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_community_posts_reply_to ON feed_community_posts(reply_to_post_id);
 CREATE INDEX IF NOT EXISTS idx_feed_community_replies_post_created_at ON feed_community_replies(post_id, created_at ASC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_community_post_reactions_unique ON feed_community_post_reactions(post_id, user_id, emoji);
+CREATE INDEX IF NOT EXISTS idx_feed_community_post_reactions_post ON feed_community_post_reactions(post_id);
 
 -- === unlock tables (prod-compatible) ===
 CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
