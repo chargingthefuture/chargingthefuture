@@ -5,6 +5,8 @@ import {
   Channel,
   MessageList,
   MessageInput,
+  Thread,
+  Window,
 } from 'stream-chat-react';
 import 'stream-chat-react/dist/css/v2/index.css';
 
@@ -78,8 +80,16 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
     <div className="str-chat__theme-dark" style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}>
       <Chat client={client}>
         <Channel channel={channel}>
-          <MessageList />
-          <MessageInput />
+          {/* Window holds the main conversation; it yields to the Thread panel when a reply thread is
+              open (the thread slides over on phone-width, sits beside on desktop). Wrapping the list +
+              input in Window — and rendering a sibling Thread — is what turns on Stream's threaded
+              replies. Reactions, the typing indicator, and read state come with the v12 MessageList
+              defaults once the channel type allows them (the messaging type does). */}
+          <Window>
+            <MessageList />
+            <MessageInput />
+          </Window>
+          <Thread />
         </Channel>
       </Chat>
     </div>
