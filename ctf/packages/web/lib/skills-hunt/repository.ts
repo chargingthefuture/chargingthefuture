@@ -66,6 +66,7 @@ import {
   SKILLS_HUNT_MAX_PROPOSED_SKILLS_PER_SUBMISSION,
   SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION,
   SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH,
+  SKILLS_HUNT_MAX_TAXONOMY_SKILL_LABEL_LENGTH,
   SKILLS_HUNT_MIN_FULL_NAME_LENGTH,
   SKILLS_HUNT_MAX_PAGE_SIZE,
   SKILLS_HUNT_MAX_REVIEW_NOTES_LENGTH,
@@ -520,16 +521,22 @@ export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boole
   const quoraProfileUrl = typeof input.quoraProfileUrl === 'string' ? input.quoraProfileUrl.trim() : '';
   const hasValidUrl = isLengthInRange(quoraProfileUrl, 1, SKILLS_HUNT_MAX_URL_LENGTH);
 
-  // Spec §2.1: ≥1 taxonomy-or-proposed skill, sum capped at 10, each ≤ 40 chars.
+  // Spec §2.1: ≥1 skill, sum capped at 10. Free-text proposed skills keep the short 40-char
+  // cap; taxonomy-picked skills carry the canonical taxonomy name and may be longer (up to the
+  // taxonomy's 120-char max), so a legitimate long skill name no longer fails the submission.
   const totalSkills = skills.length + proposedSkills.length;
-  const allSkillsWithinLabelLimit = [...skills, ...proposedSkills].every(
+  const pickedWithinLabelLimit = skills.every(
+    (label) => label.length <= SKILLS_HUNT_MAX_TAXONOMY_SKILL_LABEL_LENGTH,
+  );
+  const proposedWithinLabelLimit = proposedSkills.every(
     (label) => label.length <= SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH,
   );
   const hasValidSkills =
     totalSkills > 0
     && totalSkills <= SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION
     && proposedSkills.length <= SKILLS_HUNT_MAX_PROPOSED_SKILLS_PER_SUBMISSION
-    && allSkillsWithinLabelLimit;
+    && pickedWithinLabelLimit
+    && proposedWithinLabelLimit;
 
   const hasValidClaimedProfessions = claimedProfessions.length <= 20;
   const hasUnsafeText = hasUnsafeCollectionText([
