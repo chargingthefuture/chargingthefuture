@@ -15,6 +15,7 @@ const SUBTLE = '#6B7280';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
+  boxSizing: 'border-box',
   background: BG,
   border: `1px solid ${BORDER}`,
   color: TEXT,
