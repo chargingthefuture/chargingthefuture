@@ -249,6 +249,8 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     comicItems,
     input,
     setInput,
+    notifyTyping,
+    typingUsers,
     sendMessage,
     sendConciergeAsk,
     starterPrompts,
@@ -269,6 +271,14 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
     error,
   } = useHomeChat(currentUser);
   const supportStatus = isLive ? 'live support connected' : isLoading ? 'connecting live support…' : 'community support syncing';
+  // "X is typing…" line shown above the composer when the live connection is up and someone else is
+  // typing. One name reads "X is typing…", two read "X and Y are typing…", more collapse to a count.
+  const typingLabel = useMemo<string | null>(() => {
+    if (typingUsers.length === 0) return null;
+    if (typingUsers.length === 1) return `${typingUsers[0].name} is typing…`;
+    if (typingUsers.length === 2) return `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`;
+    return `${typingUsers[0].name} and ${typingUsers.length - 1} others are typing…`;
+  }, [typingUsers]);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -538,6 +548,19 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
         </div>
       ) : null}
 
+      {/* Subtle "X is typing…" line, only when the live connection surfaces someone typing. Kept on
+          one quiet line above the composer so it sits with the existing dark design. */}
+      {typingLabel ? (
+        <div className={styles.typingIndicator} role="status" aria-live="polite">
+          <span className={styles.typingDots} aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          {typingLabel}
+        </div>
+      ) : null}
+
       <div className={styles.chatInputWrap}>
         <label className={styles.visuallyHidden} htmlFor="chat-input">Share with the community, or type @comic to ask the AI Assistant</label>
         <input
@@ -546,7 +569,11 @@ function AuthenticatedChatPanel({ stats, plugins, currentUser }: AuthenticatedCh
           className={styles.chatInput}
           placeholder="Share with the community, or type @comic to ask…"
           value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => {
+            setInput(event.target.value);
+            // Emit a typing event on the live channel (no-op in polling-only mode).
+            notifyTyping();
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               // While the first-use consent modal is open, Enter belongs to the modal ("turn it

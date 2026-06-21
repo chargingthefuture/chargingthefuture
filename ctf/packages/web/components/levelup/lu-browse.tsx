@@ -42,9 +42,12 @@ export function LevelUpBrowse({
 
   return (
     <>
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+      {/* Auto-fit grid so the four stat cards lay out 4-across on desktop and wrap to 2×2 on a phone,
+          instead of a fixed flex row that runs off the side of the screen (the app viewport hides
+          horizontal overflow, so an off-screen card would be unreachable). */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
         {stats.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} style={{ flex: 1, background: SURFACE, borderRadius: 10, padding: "14px 16px", border: `1px solid ${BORDER}` }}>
+          <div key={label} style={{ background: SURFACE, borderRadius: 10, padding: "14px 16px", border: `1px solid ${BORDER}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <Icon size={14} color={color} />
               <span style={{ fontSize: 12, color: SUBTLE }}>{label}</span>
@@ -82,7 +85,7 @@ export function LevelUpBrowse({
           <div style={{ fontSize: 13, marginTop: 4 }}>Try a different track or search term</div>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
           {cohorts.map((cohort) => (
             <LevelUpCohortCard
               key={cohort.id}

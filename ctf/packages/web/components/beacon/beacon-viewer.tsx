@@ -7,6 +7,7 @@
 // the last replay when nothing is live.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Radio, Lock } from 'lucide-react';
+import type Hls from 'hls.js';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BEACON_COLOR } from 'lib/beacon/constants';
 
@@ -45,6 +46,7 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   const [chat, setChat] = useState<ChatCredentials | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   const loadCurrent = useCallback(async () => {
     try {
@@ -70,18 +72,50 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   const hlsUrl = liveEvent ? current?.hlsPlaybackUrl ?? null : null;
   const replay = current?.replay ?? null;
 
-  // Attach the HLS source. Safari/iOS play HLS natively; other browsers need hls.js, which is not a
-  // dependency here, so we set the source directly and note the limitation rather than failing.
-  // TODO(beacon): add hls.js (or a lightweight HLS player) for non-Safari browsers if telemetry shows
-  // viewers on Chrome/Firefox cannot play the native source.
+  // Attach the HLS source. Safari/iOS play HLS (application/vnd.apple.mpegurl) natively, so we set the
+  // source directly. Every other browser (Chrome/Firefox/Edge) cannot play HLS natively, so we attach
+  // the playlist with hls.js, which is loaded only in the browser and only when needed. The hls.js
+  // instance is torn down on unmount or whenever the URL changes so we never leak a media session.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !hlsUrl) return;
+    if (!video || !hlsUrl) {
+      return;
+    }
+
+    // Native HLS (Safari/iOS): point the element straight at the playlist.
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = hlsUrl;
-    } else {
-      video.src = hlsUrl;
+      return () => {
+        video.removeAttribute('src');
+        video.load();
+      };
     }
+
+    // Non-Safari: load hls.js on demand and attach the playlist. Loading is async, so guard against a
+    // URL change or unmount that happens before the import resolves.
+    let cancelled = false;
+    void import('hls.js').then(({ default: Hls }) => {
+      if (cancelled || !videoRef.current) {
+        return;
+      }
+      if (!Hls.isSupported()) {
+        // Last-resort fallback: let the browser try the native source even though it likely cannot.
+        videoRef.current.src = hlsUrl;
+        return;
+      }
+      const hls = new Hls({ enableWorker: true });
+      hlsRef.current = hls;
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(videoRef.current);
+    });
+
+    return () => {
+      cancelled = true;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, [hlsUrl]);
 
   // A member opts into chat by requesting a token (this is the sign-in-to-chat gate server-side).

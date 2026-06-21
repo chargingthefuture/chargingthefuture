@@ -2843,6 +2843,9 @@ CREATE TABLE IF NOT EXISTS socketrelay_requests (
   idempotency_key TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- A post is automatically treated as expired once expires_at passes (28 days after it was posted or
+  -- last re-posted). Expiry is derived at read time from this column, so no scheduled job is needed.
+  expires_at TIMESTAMPTZ,
   UNIQUE (owner_user_id, idempotency_key)
 );
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS id UUID;
@@ -2860,6 +2863,10 @@ ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS claimed_fulf
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Auto-expiry (28 days). Nullable so it can be backfilled from each existing post's created_at without a
+-- blocking default; new posts and re-posts always set it explicitly in code.
+ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+UPDATE socketrelay_requests SET expires_at = created_at + INTERVAL '28 days' WHERE expires_at IS NULL;
 -- Multi-currency (issue #120): SocketRelay is mutual aid and posts are free. These OPTIONAL columns let a
 -- request name an offered reward when one exists; "Free" must render from the ABSENCE of a price (NULL),
 -- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
