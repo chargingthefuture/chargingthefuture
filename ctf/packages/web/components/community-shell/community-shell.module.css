@@ -540,6 +540,11 @@
   margin-bottom: 3px;
 }
 
+/* Your own messages sit on the right, so their author label aligns right to match. */
+.chatSenderUser {
+  text-align: right;
+}
+
 /* Footer row under a chat bubble: the timestamp plus the per-message "Reply" affordance.
    The reply button is faint until the row is hovered/focused so it does not crowd the chat. */
 .chatMetaRow {
