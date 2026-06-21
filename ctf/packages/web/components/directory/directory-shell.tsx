@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronLeft, Search, Bell, Settings } from "lucide-react";
+import { BookOpen, ChevronLeft, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { BG, getDirectoryTokens, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
@@ -243,21 +243,17 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      {/* Icon rail */}
+      {/* Icon rail — the logo links back to /apps, and the bottom holds the real signed-in account
+          (Clerk), matching the other plugin shells. The previous rail had a dead notifications and
+          settings button and a hardcoded "S" avatar, which is why it read as wrong. */}
       <aside style={{ width: 72, background: t.RAIL, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-          <BookOpen size={20} style={{ color: t.ACCENT }} />
-        </div>
+        <Link href="/apps" aria-label="Back to apps" title="Back to apps" style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: t.ACCENT, textDecoration: "none" }}>
+          <BookOpen size={20} />
+        </Link>
         <div style={{ flex: 1 }} />
-        <button aria-label="Notifications" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
-          <Bell size={18} />
-        </button>
-        <button aria-label="Settings" style={{ width: 44, height: 44, borderRadius: 12, background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.MUTED }}>
-          <Settings size={18} />
-        </button>
-        <Avatar style={{ width: 36, height: 36, marginTop: 4 }}>
-          <AvatarFallback style={{ background: `${t.ACCENT}30`, color: t.ACCENT, fontSize: 14, fontWeight: 700 }}>S</AvatarFallback>
-        </Avatar>
+        <span title="Your account — edit name, username, and email" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <UserButton appearance={{ elements: { avatarBox: { width: 36, height: 36 } } }} />
+        </span>
       </aside>
 
       {/* Sidebar */}
