@@ -2,6 +2,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import styles from './admin-landing.module.css';
+import { AdminAiStatusBadge } from './admin-ai-status-badge';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,6 +88,8 @@ export default async function AdminPage() {
           </div>
           <span className={styles.badge}>ADMIN</span>
         </div>
+
+        <AdminAiStatusBadge />
 
         <ul className={styles.grid}>
           {ADMIN_AREAS.map((area) => (
