@@ -21,9 +21,7 @@ import type {
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a Foundation provider offering (one offered skill) marks the provider as
-// active in Foundation. Labels and deep link mirror scripts/backfillMemberPresence.mjs exactly so
-// live writes match the one-time backfill. The backfill keys one presence row per offered skill,
-// using the skill id as the ref id.
+// active in Foundation. One presence row is kept per offered skill, using the skill id as the ref id.
 const FOUNDATION_PRESENCE_SLUG = 'foundation';
 const FOUNDATION_PRESENCE_REF_TYPE = 'provider-skill';
 const FOUNDATION_PRESENCE_LABEL = 'Provider offering';

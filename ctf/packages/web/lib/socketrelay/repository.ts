@@ -25,9 +25,8 @@ import { ensureSocketRelayFulfillmentChannel } from './stream';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
-// owner as active in SocketRelay. Labels and deep link mirror scripts/backfillMemberPresence.mjs
-// exactly so live writes match the one-time backfill. The backfill counts a post as active presence
-// only while its status is 'open'; the live hooks record on 'open' and clear on any other status.
+// owner as active in SocketRelay. A post counts as active presence only while its status is 'open';
+// the live hooks record on 'open' and clear on any other status.
 const SOCKETRELAY_PRESENCE_SLUG = 'socketrelay';
 const SOCKETRELAY_PRESENCE_REF_TYPE = 'post';
 const SOCKETRELAY_PRESENCE_LABEL = 'Help post';

@@ -31,9 +31,8 @@ import { ensureTrustTransportTripChannel } from './stream';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a TrustTransport ride request marks its requester (the rider) as active.
-// Labels and deep link mirror scripts/backfillMemberPresence.mjs exactly so live writes match the
-// one-time backfill. The backfill counts a request as active presence unless its status is terminal,
-// so the live hooks clear presence only when the request reaches one of those terminal states.
+// A request counts as active presence unless its status is terminal, so the live hooks clear presence
+// only when the request reaches one of those terminal states.
 const TRUSTTRANSPORT_PRESENCE_SLUG = 'trusttransport';
 const TRUSTTRANSPORT_REQUEST_REF_TYPE = 'request';
 const TRUSTTRANSPORT_REQUEST_LABEL = 'Ride request';
