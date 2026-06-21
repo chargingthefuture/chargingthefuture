@@ -67,12 +67,18 @@
 - Rollback strategy: revert the branch, or unset the production Stream credentials to disable the
   broadcast path while leaving the rest of the app intact.
 
-## Open confirmations (TODO before first real broadcast)
+## Open confirmations (owner action before first real broadcast)
 
-- Confirm the Stream Video `livestream` call-type config in the dashboard (host-only publish; viewer
-  role cannot publish) and that recording is enabled (or set via `settings_override.recording`).
-- Confirm the exact Video REST field names this build reads defensively: `call.ingress.rtmp.address`
-  / `stream_key`, the HLS `call.egress.hls.playlist_url`, the `go_live` / `stop_live` endpoints, and
-  the `call.recording_ready` webhook payload (`call_cid`, `call_recording.url`). These are marked
-  `TODO(beacon)` in `lib/beacon/stream.ts` and the webhook route; no URLs are fabricated when a field
-  is absent.
+- The Video REST field names and endpoints this build reads are confirmed against Stream's current
+  docs (2026-06-21) and the in-code `TODO(beacon)` markers are resolved: RTMP ingest at
+  `call.ingress.rtmp.address` with a host user token used as the stream key; HLS at
+  `call.egress.hls.playlist_url`; the `go_live` (start_hls + start_recording) and `stop_live`
+  endpoints; and the `call.recording_ready` webhook payload (`call_cid`, `call_recording.url`). Each
+  field is read defensively; no URL is fabricated when a field is absent.
+- Still needs the owner in the Stream dashboard: confirm the `livestream` call-type config (host-only
+  publish; viewer role cannot publish) and that recording is enabled (or rely on the
+  `settings_override.recording` this build sets), and register the recording webhook endpoint
+  (`/api/beacon/stream-webhook`) so `call.recording_ready` is delivered and signed.
+- Still needs a live smoke test: one real broadcast end to end (go live from a phone broadcaster app
+  over RTMP, watch the public HLS on a non-Safari browser, end the event, confirm the replay posts to
+  the Commons) to prove the wiring against the live service.
