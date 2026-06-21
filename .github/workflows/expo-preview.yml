@@ -1,4 +1,4 @@
-name: Expo Preview APK
+name: Expo — Preview APK
 
 # Builds an installable Android APK in Expo's cloud (EAS) for a pull request that
 # touches the mobile app, then posts a comment with the install link so a

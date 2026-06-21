@@ -1,4 +1,4 @@
-name: Build and push Docker images
+name: Render — Build and push Docker images
 
 # Builds each service image on push to main (with path filtering so Ollama
 # only rebuilds when its Dockerfile changes) and pushes to GHCR. Render is

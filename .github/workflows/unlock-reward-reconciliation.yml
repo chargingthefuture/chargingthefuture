@@ -1,4 +1,4 @@
-name: Unlock reward reconciliation
+name: Unlock — Reward Reconciliation
 
 # Self-heals missed Unlock approval rewards. The approval handler mints the 100-credit ServiceCredits
 # reward as a best-effort follow-up; if that mint fails, the approval still stands but the reward never

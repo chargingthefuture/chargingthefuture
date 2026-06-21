@@ -1,4 +1,4 @@
-name: GitHub Actions Billing Token Rotation Reminder
+name: GitHub Actions — Billing Token Rotation Reminder
 on:
   schedule:
     - cron: "0 12 * * 1"

@@ -1,4 +1,4 @@
-name: Cleanup Old Artifacts and Close CI Budget Issues
+name: Cleanup — Old Artifacts and Close CI Budget Issues
 
 on:
   workflow_dispatch:

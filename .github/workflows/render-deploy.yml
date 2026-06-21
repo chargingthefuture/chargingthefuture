@@ -1,4 +1,4 @@
-name: Render deploy
+name: Render — Deploy Re-fresh (not an image rebuild)
 
 # Redeploys a Render service without rebuilding the Docker image (it re-pulls
 # the existing …:latest image from GHCR). Use this to ship images that were
@@ -17,8 +17,6 @@ on:
         type: choice
         options:
           - ctf-web
-          - ctf-ollama
-          - ctf-formance-ledger
           - all
 
 jobs:
@@ -32,8 +30,6 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID_CTF_WEB: ${{ secrets.RENDER_SERVICE_ID_CTF_WEB }}
-          RENDER_SERVICE_ID_OLLAMA: ${{ secrets.RENDER_SERVICE_ID_OLLAMA }}
-          RENDER_SERVICE_ID_CTF_FORMANCE: ${{ secrets.RENDER_SERVICE_ID_CTF_FORMANCE }}
           SERVICE: ${{ inputs.service }}
         run: |
           deploy() {
@@ -43,11 +39,7 @@ jobs:
 
           case "$SERVICE" in
             ctf-web)             deploy ctf-web             "$RENDER_SERVICE_ID_CTF_WEB" ;;
-            ctf-ollama)          deploy ctf-ollama          "$RENDER_SERVICE_ID_OLLAMA" ;;
-            ctf-formance-ledger) deploy ctf-formance-ledger "$RENDER_SERVICE_ID_CTF_FORMANCE" ;;
             all)
               deploy ctf-web             "$RENDER_SERVICE_ID_CTF_WEB"
-              deploy ctf-ollama          "$RENDER_SERVICE_ID_OLLAMA"
-              deploy ctf-formance-ledger "$RENDER_SERVICE_ID_CTF_FORMANCE"
               ;;
           esac

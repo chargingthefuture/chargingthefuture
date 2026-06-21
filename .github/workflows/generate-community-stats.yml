@@ -1,4 +1,4 @@
-name: Generate Community Stats Draft
+name: Generate — Community Stats Draft
 
 # Weekly sibling of generate-product-update.yml. Instead of turning commits into
 # a product update, this turns privacy-safe, whole-community activity totals

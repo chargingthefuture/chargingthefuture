@@ -1,4 +1,4 @@
-name: Create Neon branch
+name: Neon — Create Branch
 
 # Creates a fresh Postgres branch in Neon (e.g. a clean clone of production) via the
 # Neon API, so the v2 -> v3 cutover can be applied to a throwaway copy.

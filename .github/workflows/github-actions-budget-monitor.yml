@@ -1,4 +1,4 @@
-name: GitHub Actions Budget Monitor
+name: GitHub Actions — Budget Monitor
 
 on:
   schedule:

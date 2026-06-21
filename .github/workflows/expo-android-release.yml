@@ -1,4 +1,4 @@
-name: Expo Android Release
+name: Expo — Android Release
 
 # Builds a signed production Android APK in Expo's cloud (EAS) and attaches it to
 # a GitHub Release when a tag like `mobile-v1.2.3` is pushed. This is the "real
