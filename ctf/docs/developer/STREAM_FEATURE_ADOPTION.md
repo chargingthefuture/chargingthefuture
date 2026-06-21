@@ -40,6 +40,24 @@ Two consequences for this plan:
   app-wide is a **dedicated `peer-programming` channel type** with audio/uploads enabled, used only by
   PP channels, while the shared `messaging` type stays without it. The PP voice task uses this.
 
+### Why Peer Programming uses `messaging`-style text and a `default` video call, not `livestream`
+
+"Livestream" exists in two Stream products and PP wants neither:
+
+- **Chat → `livestream` channel type** is a *text* type for one-to-many broadcast chat (Twitch-style:
+  a few post, a large anonymous audience watches). PP's text isn't even a Stream channel today — it
+  lives in our own `peer_programming_messages` table with custom UI. If it ever moved onto Stream Chat,
+  the right type would be `messaging` (a small, two-way cohort with typing, read receipts, threads),
+  not `livestream`.
+- **Video → `livestream` call type** is a *video* broadcast (a host publishes; others only watch). PP
+  video uses call type `'default'` (`pp-session-call.tsx`), a meeting where every member is a two-way
+  participant — correct for a ≤12-person cohort talking as equals.
+
+The one trigger that would justify `livestream`: if we later let listen-in non-members **watch the
+live cohort video** (members on camera, listeners watching only). That audience-watching pattern is
+what the `livestream` video call type is for, and we'd switch PP's call type for that case. The text
+listen-in shipped in PR #692 needs no type change — it is read-only text gated in our own code.
+
 ## Commons topic filtering (one feed + topic filter)
 
 Owner decision (2026-06-21): members should be able to filter the Commons by topic ("all housing
@@ -167,3 +185,6 @@ Programming.
   exclusions there; dedicated `peer-programming` type for voice) and the "Commons topic filtering"
   section (one unified feed filtered on the existing `category` field; Query Channels reserved for the
   cross-chat unread inbox). Added the Commons topic-filter build task.
+- 2026-06-21: Added the "why `messaging`-style text + `default` video, not `livestream`" note for Peer
+  Programming, with the one trigger (broadcasting cohort video to listen-in watchers) that would
+  justify the `livestream` video call type.
