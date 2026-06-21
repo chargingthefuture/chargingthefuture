@@ -22,8 +22,6 @@ import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from '
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a LightHouse property listing marks its host as active in LightHouse.
-// Labels and deep link mirror scripts/backfillMemberPresence.mjs exactly so live writes match the
-// one-time backfill.
 const LIGHTHOUSE_PRESENCE_SLUG = 'lighthouse';
 const LIGHTHOUSE_PRESENCE_REF_TYPE = 'property';
 const LIGHTHOUSE_PRESENCE_LABEL = 'Housing listing';
