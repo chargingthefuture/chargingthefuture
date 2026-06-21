@@ -8,6 +8,11 @@ name: Backfill member presence (one-time)
 on:
   workflow_dispatch:
 
+# Minimal token scope: this workflow only reads the repo and runs a script against the database
+# secret; it never writes back to the repository.
+permissions:
+  contents: read
+
 jobs:
   backfill:
     runs-on: ubuntu-latest
