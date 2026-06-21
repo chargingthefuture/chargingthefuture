@@ -14,6 +14,14 @@ type ReviewListResponse = {
   pagination: { page: number; pageSize: number; total: number };
 };
 
+// A plugin option for the "Applicable plugins" picker. Sourced from /api/plugins, which returns the
+// visible registry (operator-only plugins are filtered for non-admins; admins get the full list).
+type PluginOption = { slug: string; name: string };
+
+type PluginsResponse = {
+  plugins: Array<{ slug: string; name: string }>;
+};
+
 type LoadState = 'loading' | 'ready' | 'error';
 
 type ServiceStatus = { configured: boolean; reachable: boolean; latencyMs: number | null; detail?: string | null };
@@ -98,6 +106,11 @@ export function ComicReviewDashboard() {
   // "Regenerate draft" in-flight + a note shown when the engine is still unreachable.
   const [regenerating, setRegenerating] = useState(false);
   const [regenNote, setRegenNote] = useState<string | null>(null);
+  // The plugin registry options for the "Applicable plugins" picker, and the slugs the reviewer has
+  // toggled on for the selected item. The chosen slugs are sent with approve/correct so the
+  // published answer renders those plugin links.
+  const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
+  const [selectedPluginSlugs, setSelectedPluginSlugs] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -162,6 +175,24 @@ export function ComicReviewDashboard() {
     };
   }, []);
 
+  // Load the plugin registry once for the "Applicable plugins" picker. Best-effort: a failure just
+  // leaves the picker empty and never blocks reviewing.
+  useEffect(() => {
+    let cancelled = false;
+    void requestJson<PluginsResponse>('/api/plugins')
+      .then((payload) => {
+        if (!cancelled && Array.isArray(payload.plugins)) {
+          setPluginOptions(payload.plugins.map((plugin) => ({ slug: plugin.slug, name: plugin.name })));
+        }
+      })
+      .catch(() => {
+        /* picker is best-effort */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const selected = useMemo(
     () => items.find((item) => item.reviewId === selectedId) ?? null,
     [items, selectedId],
@@ -178,8 +209,19 @@ export function ComicReviewDashboard() {
       setCorrectedBody(selected.hasDraft ? selected.draftBody : '');
       setEditing(false);
       setRegenNote(null);
+      // Seed the "Applicable plugins" picker from any links already tagged on the item; a pending
+      // review has none yet, so this clears the picker for a fresh selection.
+      const seeded = (selected as { linkedPlugins?: Array<{ slug: string }> }).linkedPlugins;
+      setSelectedPluginSlugs(Array.isArray(seeded) ? seeded.map((plugin) => plugin.slug) : []);
     }
   }, [selected]);
+
+  // Toggle a plugin slug in the "Applicable plugins" picker.
+  const togglePluginSlug = useCallback((slug: string) => {
+    setSelectedPluginSlugs((previous) =>
+      previous.includes(slug) ? previous.filter((value) => value !== slug) : [...previous, slug],
+    );
+  }, []);
 
   const resolveSelected = useCallback(
     async (resolution: 'approve' | 'correct' | 'reject') => {
@@ -200,9 +242,14 @@ export function ComicReviewDashboard() {
       setResolving(true);
       setError(null);
 
-      const requestBody: { resolution: string; correctedBody?: string } = { resolution };
+      const requestBody: { resolution: string; correctedBody?: string; linkedPluginSlugs?: string[] } = { resolution };
       if (resolution === 'correct') {
         requestBody.correctedBody = correctedBody.trim();
+      }
+      // Send the chosen applicable plugins when publishing (approve/correct). The server validates
+      // them against the registry, dedupes, and caps before storing them on the published answer.
+      if (resolution === 'approve' || resolution === 'correct') {
+        requestBody.linkedPluginSlugs = selectedPluginSlugs;
       }
 
       try {
@@ -220,7 +267,7 @@ export function ComicReviewDashboard() {
         setResolving(false);
       }
     },
-    [selected, correctedBody, resolving, refresh],
+    [selected, correctedBody, resolving, refresh, selectedPluginSlugs],
   );
 
   // Re-run the AI draft for the selected item — used after the engine (the RunPod/Ollama endpoint)
@@ -519,6 +566,38 @@ export function ComicReviewDashboard() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Applicable plugins — shown in both the default (approve) view and the Edit view.
+                  The chosen plugins are sent on approve/correct and render as tappable links under
+                  the published answer. */}
+              <div>
+                <div className={styles.detailLabel}>Applicable plugins</div>
+                {pluginOptions.length > 0 ? (
+                  <>
+                    <div className={styles.pluginPicker} role="group" aria-label="Applicable plugins">
+                      {pluginOptions.map((plugin) => {
+                        const active = selectedPluginSlugs.includes(plugin.slug);
+                        return (
+                          <button
+                            key={plugin.slug}
+                            type="button"
+                            className={active ? `${styles.pluginChip} ${styles.pluginChipActive}` : styles.pluginChip}
+                            aria-pressed={active}
+                            onClick={() => togglePluginSlug(plugin.slug)}
+                          >
+                            {plugin.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className={styles.pluginPickerHint}>
+                      Pick the plugins this answer points to (up to 5). They show as tappable links beneath the answer.
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.pluginPickerHint}>Plugin list unavailable right now.</div>
+                )}
               </div>
 
               {/* Actions */}

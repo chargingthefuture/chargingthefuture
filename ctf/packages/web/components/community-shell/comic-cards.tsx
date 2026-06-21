@@ -1,6 +1,7 @@
 'use client';
 
-import { Flag, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, Flag, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
 import type { ComicAnswerRating, ComicStreamItem } from './shell-types';
 import styles from './community-shell.module.css';
 
@@ -52,6 +53,17 @@ export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardP
         <span className={styles.comicCardQa}>A: </span>
         {item.answer}
       </p>
+
+      {item.linkedPlugins.length > 0 ? (
+        <div className={styles.comicPluginLinks} aria-label="Applicable plugins">
+          <span className={styles.comicPluginLinksLabel}>Explore:</span>
+          {item.linkedPlugins.map((plugin) => (
+            <Link key={plugin.slug} href={`/apps/${plugin.slug}`} className={styles.comicPluginLink}>
+              {plugin.name} <ArrowRight size={12} />
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       {ratable && item.answerTurnId ? (
         <div className={styles.comicRatingRow} role="group" aria-label="Rate this answer">
