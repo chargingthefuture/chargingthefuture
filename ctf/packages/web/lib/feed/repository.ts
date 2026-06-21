@@ -27,6 +27,7 @@ import type {
   FeedCommunityDetail,
   FeedCommunityPostInput,
   FeedCommunityReply,
+  FeedQuotedPost,
   FeedConfig,
   FeedConfigInput,
   FeedEnabledChannel,
@@ -119,8 +120,24 @@ type FeedCommunityPostRow = {
   body: string;
   category: FeedCommunityCategory;
   reply_count: number;
+  reply_to_post_id: string | null;
   created_at: Date;
 };
+
+// Max length of the quoted-post snippet carried to the client for a Signal-style reply.
+const FEED_QUOTE_SNIPPET_MAX_LENGTH = 120;
+
+function buildQuoteSnippet(body: string): string {
+  const normalized = normalizeText(body);
+  if (normalized.length <= FEED_QUOTE_SNIPPET_MAX_LENGTH) {
+    return normalized;
+  }
+  return `${normalized.slice(0, FEED_QUOTE_SNIPPET_MAX_LENGTH - 1).trimEnd()}…`;
+}
+
+function quotedAuthorLabel(username: string | null): string {
+  return username ? `@${username}` : 'Community member';
+}
 
 type FeedCommunityReplyRow = {
   id: string;
@@ -149,6 +166,16 @@ function normalizeNullableText(value: string | null | undefined): string | null 
 
 function isValidIsoDatetime(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function normalizeUuid(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
 }
 
 function normalizeStringArray(value: unknown): string[] {
@@ -547,7 +574,13 @@ export function validateFeedQuestionInput(input: FeedQuestionInput): boolean {
 
 export function validateFeedCommunityPostInput(input: FeedCommunityPostInput): boolean {
   const body = normalizeText(input.body ?? '');
-  return body.length > 0 && body.length <= FEED_MAX_COMMUNITY_POST_LENGTH;
+  const bodyOk = body.length > 0 && body.length <= FEED_MAX_COMMUNITY_POST_LENGTH;
+  // replyToPostId is optional; when present it must be null or a well-formed UUID. The
+  // referenced post's existence is checked inside the transaction in createFeedCommunityPost.
+  const replyOk = input.replyToPostId === undefined
+    || input.replyToPostId === null
+    || normalizeUuid(input.replyToPostId) !== null;
+  return bodyOk && replyOk;
 }
 
 export function validateFeedCommunityReplyBody(body: string): boolean {
@@ -823,7 +856,7 @@ export async function listFeedTimeline(
       const [postRows, replyRows] = await Promise.all([
         client.query<FeedCommunityPostRow>(
           `
-            SELECT id, author_user_id, author_username, body, category, reply_count, created_at
+            SELECT id, author_user_id, author_username, body, category, reply_count, reply_to_post_id, created_at
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
           `,
@@ -853,7 +886,36 @@ export async function listFeedTimeline(
         repliesByPost.set(row.post_id, current);
       }
 
+      // Resolve each quoted (replied-to) post's author handle and a short snippet of its
+      // body. The quoted post may sit outside this timeline page, so look up the referenced
+      // ids directly. Build a map id → { author, snippet } once.
+      const quotedIds = Array.from(
+        new Set(postRows.rows.flatMap((row) => (row.reply_to_post_id ? [row.reply_to_post_id] : []))),
+      );
+      const quotedById = new Map<string, FeedQuotedPost>();
+      if (quotedIds.length > 0) {
+        const quotedRows = await client.query<{
+          id: string;
+          author_username: string | null;
+          body: string;
+        }>(
+          `
+            SELECT id, author_username, body
+            FROM feed_community_posts
+            WHERE id = ANY($1::uuid[])
+          `,
+          [quotedIds],
+        );
+        for (const row of quotedRows.rows) {
+          quotedById.set(row.id, {
+            author: quotedAuthorLabel(row.author_username),
+            snippet: buildQuoteSnippet(row.body),
+          });
+        }
+      }
+
       for (const row of postRows.rows) {
+        const quotedPost = row.reply_to_post_id ? quotedById.get(row.reply_to_post_id) ?? null : null;
         communityDetails.set(row.id, {
           id: row.id,
           body: row.body,
@@ -862,6 +924,10 @@ export async function listFeedTimeline(
           authorUsername: row.author_username,
           replyCount: row.reply_count,
           replies: repliesByPost.get(row.id) ?? [],
+          // The foreign key is ON DELETE SET NULL: if the quoted post was deleted, the
+          // reference resolves to null and no quote block is rendered.
+          replyToPostId: quotedPost ? row.reply_to_post_id : null,
+          quotedPost,
         });
       }
     }
@@ -1388,6 +1454,23 @@ export async function createFeedCommunityPost(
       throw new Error('content_policy_violation');
     }
 
+    // Signal-style reply: when a quoted post id is given it must be a valid UUID that
+    // references an existing post. An unknown/malformed id is rejected rather than stored
+    // as a dangling reference.
+    const replyToPostId = normalizeUuid(input.replyToPostId);
+    if (input.replyToPostId !== undefined && input.replyToPostId !== null && replyToPostId === null) {
+      throw new Error('reply_target_invalid');
+    }
+    if (replyToPostId !== null) {
+      const target = await client.query<{ id: string }>(
+        'SELECT id FROM feed_community_posts WHERE id = $1::uuid LIMIT 1',
+        [replyToPostId],
+      );
+      if (target.rows.length === 0) {
+        throw new Error('reply_target_not_found');
+      }
+    }
+
     const allowed = await evaluateFeedRateLimit(client, {
       userId: actorId,
       tableName: 'feed_community_posts',
@@ -1400,11 +1483,11 @@ export async function createFeedCommunityPost(
 
     const inserted = await client.query<{ id: string; created_at: Date }>(
       `
-        INSERT INTO feed_community_posts (author_user_id, author_username, body, category, moderation_status)
-        VALUES ($1, $2, $3, $4, 'accepted')
+        INSERT INTO feed_community_posts (author_user_id, author_username, body, category, moderation_status, reply_to_post_id)
+        VALUES ($1, $2, $3, $4, 'accepted', $5::uuid)
         RETURNING id, created_at
       `,
-      [actorId, actorUsername, body, category],
+      [actorId, actorUsername, body, category, replyToPostId],
     );
 
     const postId = inserted.rows[0].id;
@@ -1469,6 +1552,36 @@ export async function replyToFeedCommunityPost(
       createdAtIso: toIso(inserted.rows[0].created_at),
     };
   });
+}
+
+// Read a member's last-seen marker for the Hub home channel. Returns null when the member
+// has never been recorded (so the caller shows every message as new). Best-effort: callers
+// must treat a thrown error as "no marker" and never let it break the chat.
+export async function getHubLastSeen(userId: string): Promise<string | null> {
+  const result = await queryDb<{ last_seen_at: Date }>(
+    'SELECT last_seen_at FROM feed_hub_last_seen WHERE user_id = $1 LIMIT 1',
+    [userId],
+  );
+  return result.rows.length > 0 ? toIso(result.rows[0].last_seen_at) : null;
+}
+
+// Move a member's last-seen marker to now (or to the supplied time, capped at now). Used after
+// the member views the Hub chat so the "New messages" divider reflects where they left off.
+export async function updateHubLastSeen(userId: string, seenAtIso?: string | null): Promise<string> {
+  const parsed = typeof seenAtIso === 'string' && isValidIsoDatetime(seenAtIso) ? new Date(seenAtIso) : null;
+  // Never let a client push the marker into the future; clamp to server NOW().
+  const useClientTime = parsed !== null && parsed.getTime() <= Date.now();
+  const result = await queryDb<{ last_seen_at: Date }>(
+    `
+      INSERT INTO feed_hub_last_seen (user_id, last_seen_at)
+      VALUES ($1, COALESCE($2::timestamptz, NOW()))
+      ON CONFLICT (user_id)
+      DO UPDATE SET last_seen_at = GREATEST(feed_hub_last_seen.last_seen_at, EXCLUDED.last_seen_at)
+      RETURNING last_seen_at
+    `,
+    [userId, useClientTime && parsed ? parsed.toISOString() : null],
+  );
+  return toIso(result.rows[0].last_seen_at);
 }
 
 export async function emitMembershipEvent(input: {

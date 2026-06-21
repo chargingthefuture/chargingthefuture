@@ -33,6 +33,12 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     ? `${item.title}\n\n${item.body}`
     : item.body;
 
+  // A peer post may quote another peer post (Signal-style reply). The quoted author handle
+  // and short snippet are resolved server-side in the feed repository and carried here.
+  const quotedMessage = isCommunity && item.community?.quotedPost
+    ? { author: item.community.quotedPost.author, snippet: item.community.quotedPost.snippet }
+    : null;
+
   return {
     id: item.id,
     userId: authorUserId,
@@ -41,6 +47,8 @@ function mapTimelineItemToHubMessage(item: FeedTimelineItem): HubMessage {
     avatarUrl: null,
     text,
     sentAtIso: item.publishedAtIso,
+    communityPostId: isCommunity ? item.sourceCommunityPostId : null,
+    quotedMessage,
   };
 }
 
@@ -86,7 +94,30 @@ export async function GET(request: Request) {
 
 type MessageRequestBody = {
   text?: unknown;
+  // Optional id of the peer post this one quotes (Signal-style reply).
+  replyToPostId?: unknown;
+  // Optional author + snippet of the quoted post, echoed back on the created message so the
+  // sender's optimistic copy can render the quote block immediately. Display-only; the
+  // authoritative quote is re-resolved server-side on the next polled read.
+  quotedMessage?: unknown;
 };
+
+function readQuotedMessage(value: unknown): HubMessage['quotedMessage'] {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const quoted = value as { author?: unknown; snippet?: unknown };
+  if (typeof quoted.author !== 'string' || typeof quoted.snippet !== 'string') {
+    return null;
+  }
+  const author = quoted.author.trim();
+  const snippet = quoted.snippet.trim();
+  if (author.length === 0 || snippet.length === 0) {
+    return null;
+  }
+  // Cap the echoed snippet so a crafted request cannot inflate the message payload.
+  return { author: author.slice(0, 160), snippet: snippet.slice(0, 160) };
+}
 
 export async function POST(request: Request) {
   const gate = await requireHubAccess();
@@ -113,7 +144,9 @@ export async function POST(request: Request) {
   }
 
   const text = typeof body.text === 'string' ? body.text.trim() : '';
-  const input = { body: text };
+  const replyToPostId = typeof body.replyToPostId === 'string' ? body.replyToPostId.trim() : null;
+  const echoedQuote = readQuotedMessage(body.quotedMessage);
+  const input = { body: text, replyToPostId };
   if (!text || !validateFeedCommunityPostInput(input)) {
     return NextResponse.json(
       {
@@ -139,6 +172,10 @@ export async function POST(request: Request) {
       avatarUrl: null,
       text,
       sentAtIso: result.createdAtIso,
+      communityPostId: result.postId,
+      // Echo the quote the sender saw so the optimistic message renders it immediately. The
+      // next polled read re-resolves it authoritatively from the stored reply_to_post_id.
+      quotedMessage: replyToPostId ? echoedQuote : null,
     };
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
@@ -154,6 +191,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Post blocked by content moderation.' },
         { status: 422 },
+      );
+    }
+    if (code === 'reply_target_invalid' || code === 'reply_target_not_found') {
+      return NextResponse.json(
+        { ok: false, message: 'The message you are replying to is no longer available.' },
+        { status: 400 },
       );
     }
 

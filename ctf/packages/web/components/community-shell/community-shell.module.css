@@ -538,6 +538,151 @@
   margin-bottom: 3px;
 }
 
+/* Footer row under a chat bubble: the timestamp plus the per-message "Reply" affordance.
+   The reply button is faint until the row is hovered/focused so it does not crowd the chat. */
+.chatMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chatMetaRowUser {
+  flex-direction: row-reverse;
+}
+
+.chatReplyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ctf-text-muted);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.1s, color 0.1s, background 0.1s;
+}
+
+.chatRow:hover .chatReplyBtn,
+.chatReplyBtn:focus-visible {
+  opacity: 1;
+  color: #38BDF8;
+  background: rgba(14, 165, 233, 0.1);
+}
+
+/* The quoted block that sits above a message that is a Signal-style reply: a thin accent rail
+   on the left, the quoted author in accent, and a one-line snippet of the quoted body. */
+.chatQuotedBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid rgba(56, 189, 248, 0.6);
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.chatQuotedAuthor {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38BDF8;
+}
+
+.chatQuotedSnippet {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ctf-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The single "New messages" divider: a centered label on a hairline rule, marking where the
+   member left off. Only one is ever rendered per stream. */
+.unreadDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+}
+
+.unreadDivider::before,
+.unreadDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(56, 189, 248, 0.35);
+}
+
+.unreadDividerLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #38BDF8;
+  white-space: nowrap;
+}
+
+/* The composer "Replying to …" banner: a one-line quote preview and a cancel (X), sitting just
+   above the input. Mirrors the quoted-block accent so the reply context reads as one idea. */
+.composerReplyBanner {
+  margin: 0 20px 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid rgba(56, 189, 248, 0.6);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.composerReplyPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.composerReplyLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38BDF8;
+}
+
+.composerReplySnippet {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ctf-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composerReplyCancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ctf-text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.composerReplyCancel:hover,
+.composerReplyCancel:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ctf-text-shell);
+}
+
 .chatSuggestions {
   padding: 0 20px 8px;
   display: flex;
