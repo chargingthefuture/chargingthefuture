@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HubJoinResponse, HubLastSeenResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
+import { connectHubLive, type HubLiveConnection, type HubTypingUser } from '../../lib/hub/live-stream';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
+
+// Poll cadence: the 10s poll is the only refresh path when the live Stream connection is absent or
+// degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
+// slow backstop only, so it runs far less often to cut request volume.
+const POLL_INTERVAL_FALLBACK_MS = 10_000;
+const POLL_INTERVAL_LIVE_MS = 30_000;
 
 // The peer message the composer is currently replying to (Signal-style quote). Carries the
 // quoted post's id (the reply target) plus a quote preview for the composer banner.
@@ -256,6 +263,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const [lastSeenAtIso, setLastSeenAtIso] = useState<string | null>(null);
   // Guards so we mark "seen" at most once per mount and never push the marker backwards.
   const markedSeenRef = useRef(false);
+  // Other members currently typing in the Commons, surfaced as "X is typing…" above the composer.
+  // Only populated when the live Stream connection is up; empty in polling-only mode.
+  const [typingUsers, setTypingUsers] = useState<HubTypingUser[]>([]);
+  // The live Stream connection handle for the current mount (null when not connected / polling only).
+  // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
+  // re-rendering or re-subscribing.
+  const liveConnectionRef = useRef<HubLiveConnection | null>(null);
 
   // Whether the composer currently contains an @comic mention — used to show the mention chip
   // affordance live as the asker types.
@@ -266,6 +280,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
     setMessages((previous) => mergeMessages(previous, nextMessages));
   }, [currentUser.userId]);
+
+  // The live Stream event handler must always call the freshest refreshHistory without resubscribing
+  // each time the callback identity changes, so keep the latest reference in a ref.
+  const refreshHistoryRef = useRef(refreshHistory);
+  useEffect(() => {
+    refreshHistoryRef.current = refreshHistory;
+  }, [refreshHistory]);
 
   const refreshComic = useCallback(async () => {
     const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30');
@@ -306,6 +327,18 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     })();
   }, []);
 
+  // Emit a typing event as the member writes in the composer. No-op when there is no live
+  // connection (polling-only mode), so the composer can call it unconditionally on every keystroke.
+  const notifyTyping = useCallback(() => {
+    liveConnectionRef.current?.sendTyping();
+  }, []);
+
+  // Tell the channel the member has stopped typing (e.g. after sending). Best-effort; no-op when not
+  // live.
+  const notifyStopTyping = useCallback(() => {
+    liveConnectionRef.current?.stopTyping();
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setConsentGranted(window.localStorage.getItem(consentStorageKey(currentUser.userId)) === '1');
@@ -336,12 +369,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         }
       }
 
-      try {
-        const join = await requestJson<HubJoinResponse>('/api/hub/join', { method: 'POST' });
-        if (!active) return;
-        void join;
-        setConnectionState('live');
-        setError(null);
+      // Both the live path and the polling-only path keep a poll running. `intervalMs` is short when
+      // we are polling-only and long when a healthy live connection is the primary refresh path.
+      const startPoll = (intervalMs: number) => {
         pollId = window.setInterval(() => {
           void refreshHistory().catch(() => {
             // Keep polling while the shell is mounted.
@@ -349,20 +379,62 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
           void refreshComic().catch(() => {
             // The comic stream poll is best-effort; failures must not break hub polling.
           });
-        }, 10000);
+        }, intervalMs);
+      };
+
+      try {
+        const join = await requestJson<HubJoinResponse>('/api/hub/join', { method: 'POST' });
+        if (!active) return;
+        setConnectionState('live');
+        setError(null);
+
+        // Try to open the live Stream connection only when the server actually minted credentials.
+        // When Stream is not configured (configured: false) we never attempt a connection and simply
+        // poll — Commons must keep working without Stream.
+        let live: HubLiveConnection | null = null;
+        if (join.configured) {
+          live = await connectHubLive(
+            {
+              streamApiKey: join.streamApiKey,
+              streamToken: join.streamToken,
+              streamUserId: join.streamUserId,
+              streamChannelId: join.streamChannelId,
+            },
+            {
+              // A new post (or a recovered connection) pulls fresh history right away, so posts appear
+              // immediately instead of waiting for the next poll.
+              onActivity: () => {
+                void refreshHistoryRef.current().catch(() => undefined);
+              },
+              onTypingChange: (typing) => {
+                if (active) setTypingUsers(typing);
+              },
+            },
+          );
+        }
+
+        if (!active) {
+          // Unmounted while connecting; tear the connection down rather than leak it.
+          if (live) void live.disconnect();
+          return;
+        }
+
+        if (live) {
+          liveConnectionRef.current = live;
+          // Live connection drives refreshes; the poll becomes a slow backstop.
+          startPoll(POLL_INTERVAL_LIVE_MS);
+        } else {
+          // Stream not configured, or the live connection failed to open: silently stay on the
+          // frequent poll. The chat is fully functional this way.
+          setTypingUsers([]);
+          startPoll(POLL_INTERVAL_FALLBACK_MS);
+        }
       } catch (joinError) {
         if (!active) return;
 
         setConnectionState('fallback');
         setError(joinError instanceof Error ? joinError.message : 'Live chat is reconnecting.');
-        pollId = window.setInterval(() => {
-          void refreshHistory().catch(() => {
-            // Polling keeps trying in fallback mode.
-          });
-          void refreshComic().catch(() => {
-            // Best-effort comic refresh in fallback mode.
-          });
-        }, 15000);
+        startPoll(POLL_INTERVAL_FALLBACK_MS);
       }
     }
 
@@ -372,6 +444,12 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       active = false;
       if (pollId) {
         window.clearInterval(pollId);
+      }
+      // Disconnect the live Stream client on unmount so we never leak a connection.
+      const live = liveConnectionRef.current;
+      liveConnectionRef.current = null;
+      if (live) {
+        void live.disconnect();
       }
     };
   }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen]);
@@ -452,6 +530,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setError(null);
     setInput('');
     setReplyTarget(null);
+    // The member just sent; clear the typing indicator on the live channel right away.
+    notifyStopTyping();
 
     try {
       const payload = await requestJson<{ ok: true; message: HubMessage }>('/api/hub/messages', {
@@ -477,7 +557,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     } finally {
       setIsSending(false);
     }
-  }, [consentGranted, currentUser.userId, input, isSending, replyTarget, routeToComic]);
+  }, [consentGranted, currentUser.userId, input, isSending, notifyStopTyping, replyTarget, routeToComic]);
 
   // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state.
   // Only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to.
@@ -643,6 +723,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     comicItems,
     input,
     setInput,
+    notifyTyping,
+    typingUsers,
     sendMessage,
     sendConciergeAsk,
     starterPrompts,

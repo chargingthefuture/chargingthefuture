@@ -136,10 +136,16 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 Each task is intended to ship as its own small PR, grouped so a single PR touches one feature cluster
 across the relevant surfaces. A task with no dependency can run anytime / in parallel.
 
-1. **Commons live Stream layer (foundation).** Add a live Stream Chat client connection beneath the
-   existing custom Commons UI (keep the design; read live events, do not swap components). This is the
-   prerequisite for real-time Commons features (reactions sync, typing, read receipts, delivery,
-   presence). No dependency. **Blocks:** the Commons portion of tasks 2, 6, 7.
+1. **Commons live Stream layer (foundation).** Done (branch `feat/commons-live-stream-layer`,
+   2026-06-21). Added a live Stream Chat client connection beneath the existing custom Commons UI
+   (kept the design; read live events, did not swap components): `POST /api/hub/join` now mints real
+   `ctf-feed-community` credentials, the Commons hook opens a `stream-chat` connection and refreshes
+   history on `message.new`/reconnect, the 10s poll slows to a 30s backstop while live, and a subtle
+   "X is typing…" line surfaces typing — all with a clean fall-back to polling when Stream is
+   unconfigured. Read receipts (#18), delivery status (#19), and presence dots (#20) were left as
+   deferred follow-ups for the presence cluster (task 6). This is the prerequisite for real-time
+   Commons features (reactions sync, typing, read receipts, delivery, presence). No dependency.
+   **Blocks:** the Commons portion of tasks 2, 6, 7.
 2. **Reactions (#1).** Plugin chats: enable in the richer Stream UI. Commons: render a reaction bar on
    the custom cards. Commons portion is blocked by task 1.
 3. **Threads + quoted reply for plugin chats (#2, #3).** Add `Thread`/`Window` to the plugin chats;
@@ -188,3 +194,9 @@ Programming.
 - 2026-06-21: Added the "why `messaging`-style text + `default` video, not `livestream`" note for Peer
   Programming, with the one trigger (broadcasting cohort video to listen-in watchers) that would
   justify the `livestream` video call type.
+- 2026-06-21: Task 1 (Commons live Stream layer) shipped on branch `feat/commons-live-stream-layer`.
+  `POST /api/hub/join` mints real `ctf-feed-community` credentials (or reports `configured: false`);
+  the Commons hook opens a `stream-chat` connection, refreshes history on `message.new`/reconnect,
+  slows the poll to a 30s backstop while live, and surfaces a typing indicator — falling back to
+  polling when Stream is unconfigured. Read receipts, delivery status, and presence dots deferred to
+  task 6. Quota note: `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
