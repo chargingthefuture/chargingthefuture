@@ -707,20 +707,27 @@ export async function getHierarchy(includeInactive = false): Promise<TaxonomyHie
 }
 
 export async function getFlattened(includeInactive = false, includeAliases = false): Promise<TaxonomyFlattenedItem[]> {
+  // Read the live base tables (skills -> job titles -> sectors) rather than the
+  // skills_taxonomy_flattened_projection table. That projection is never populated by any
+  // code path, so reading it returned an empty list even when the taxonomy is fully seeded —
+  // which left the Skills Hunt nomination picker with no categories (free-text only). Joining
+  // the base tables gives the same flat shape and always reflects the current taxonomy.
   const result = await queryDb<FlattenedRow>(
     `
       SELECT
-        sector_id,
-        sector_name,
-        job_title_id,
-        job_title_name,
-        skill_id,
-        skill_name,
-        skill_aliases,
-        is_active
-      FROM skills_taxonomy_flattened_projection
-      WHERE ($1::boolean OR is_active = true)
-      ORDER BY sector_name ASC, job_title_name ASC, skill_name ASC
+        sec.id AS sector_id,
+        sec.name AS sector_name,
+        jt.id AS job_title_id,
+        jt.name AS job_title_name,
+        sk.id AS skill_id,
+        sk.name AS skill_name,
+        sk.aliases AS skill_aliases,
+        (sk.is_active AND jt.is_active AND sec.is_active) AS is_active
+      FROM skills_taxonomy_skills sk
+      JOIN skills_taxonomy_job_titles jt ON jt.id = sk.job_title_id
+      JOIN skills_taxonomy_sectors sec ON sec.id = jt.sector_id
+      WHERE ($1::boolean OR (sk.is_active AND jt.is_active AND sec.is_active))
+      ORDER BY sec.name ASC, jt.name ASC, sk.name ASC
     `,
     [includeInactive],
   );
