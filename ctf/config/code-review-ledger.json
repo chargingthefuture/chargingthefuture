@@ -1,0 +1,4 @@
+{
+  "_comment": "Rotation state for the scheduled code-review sweep. Each run reviews the least-recently-reviewed slice of the codebase, then stamps it here so the next run moves on. New slices found under the configured roots start unreviewed (lastReviewedAt: null) and are picked first; slices whose directory no longer exists are pruned. Maintained by ctf/scripts/reviewCodebaseSlice.mjs and committed back by .github/workflows/code-review-sweep.yml. Safe to edit by hand.",
+  "slices": []
+}

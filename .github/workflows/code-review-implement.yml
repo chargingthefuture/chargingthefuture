@@ -1,0 +1,112 @@
+name: Code Review — Open PR for Actionable Finding
+
+# Turns ONE code-review finding into a pull request. It only ever runs against an issue the
+# sweep (code-review-sweep.yml) labelled `code-review:actionable` — meaning the reviewer
+# judged the fix small, safe, and self-contained. This is the autonomous-coding step, so
+# it is manual-dispatch on purpose: you kick each build until the pipeline is trusted.
+# Enable a schedule later if you want it hands-off.
+#
+# To target a specific issue, pass its number; otherwise the oldest actionable issue is
+# picked. Uses the external Claude Code GitHub Action — the same one bug-reports-build.yml
+# uses. Pin it to a version you trust before relying on it in production.
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Code-review issue number to build (blank = oldest actionable)"
+        required: false
+        type: string
+
+jobs:
+  build-actionable-finding:
+    name: Build actionable finding and open PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # Decide which actionable issue to build. Skips the job cleanly if there is none.
+      - name: Select actionable issue
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+          REQUESTED: ${{ inputs.issue_number }}
+        run: |
+          if [ -n "$REQUESTED" ]; then
+            echo "number=$REQUESTED" >> "$GITHUB_OUTPUT"
+            echo "Selected requested issue #$REQUESTED."
+            exit 0
+          fi
+          NUM=$(gh issue list --repo "$REPO" --label "code-review:actionable" --state open \
+            --json number,createdAt --limit 50 \
+            --jq 'sort_by(.createdAt) | .[0].number // empty')
+          if [ -z "$NUM" ]; then
+            echo "number=" >> "$GITHUB_OUTPUT"
+            echo "No issues labelled code-review:actionable; nothing to build."
+          else
+            echo "number=$NUM" >> "$GITHUB_OUTPUT"
+            echo "Selected oldest actionable issue #$NUM."
+          fi
+
+      - name: Implement finding and open PR
+        if: steps.pick.outputs.number != ''
+        # Pin this to a version you trust before relying on it in production.
+        uses: anthropics/claude-code-action@v1
+        env:
+          # Use the PAT for git/gh so the push and PR trigger CI (the default token does not).
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        with:
+          anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_PAT }}
+          prompt: |
+            You are implementing one code-review finding for the "Charging the Future" app.
+            Follow the repository rules in CLAUDE.md and .github/instructions exactly.
+
+            The work item is issue #${{ steps.pick.outputs.number }} in this repo
+            `${{ github.repository }}`. Do this in order:
+
+            1. Read the full issue: `gh issue view ${{ steps.pick.outputs.number }} --repo ${{ github.repository }}`.
+               It describes the finding, the files involved, and the suggested fix.
+            2. Implement the SMALLEST change that resolves the finding. Do not refactor beyond
+               what the fix needs. If the finding turns out to be wrong or already fixed, do not
+               open a PR — comment that on the issue and stop.
+            3. Create a DESCRIPTIVE branch — `fix/<short-kebab-summary>` for a bug,
+               `refactor/<...>` for a cleanup, `docs/<...>` for docs — never random words or an
+               opaque slug. Commit with a clear message.
+            4. Run `pnpm --filter @ctf/web typecheck` and fix any errors before pushing.
+            5. Push the branch and open a pull request on `${{ github.repository }}` with a
+               Conventional-Commit title and a description that includes the line
+               `Parity Status: web + mobile-responsive + android complete` (or a `Parity Ticket:`
+               line if UI parity is deferred). Link the issue with `Closes #${{ steps.pick.outputs.number }}`.
+            6. Pick the lane per CLAUDE.md: if the change is low-risk (restyle, copy, refactor,
+               docs, type/lint/test), open it ready for review and enable auto-merge. If it is
+               risky (money/ledger, auth, CSRF, data deletion, schema/migrations, new or changed
+               API contracts, or brand-new stateful logic), open it ready for review but do NOT
+               enable auto-merge — leave it for the owner.
+            7. Comment the PR URL on the issue, then relabel it: add `code-review:built`, remove
+               `code-review:actionable`
+               (`gh issue edit ${{ steps.pick.outputs.number }} --repo ${{ github.repository }} --add-label code-review:built --remove-label code-review:actionable`).
+
+            If the fix would be large or risky beyond a small self-contained change, do NOT
+            guess: comment on the issue explaining the blocker and stop without opening a PR.
