@@ -27,6 +27,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "decimal.js": "^10.6.0",
     "getstream": "^8.7.0",
+    "hls.js": "^1.5.18",
     "lucide-react": "^1.8.0",
     "next": "^16.2.4",
     "node-cron": "^3.0.0",
