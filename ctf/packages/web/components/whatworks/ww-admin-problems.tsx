@@ -4,7 +4,7 @@
 // are the admin-owned categories that members attach suggestions to; this is where they are
 // created, renamed, and deactivated.
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { AdminProblem } from './ww-admin-shared';
 
 const COLOR = '#84CC16';
@@ -31,14 +31,22 @@ type Props = {
   busyId: string | null;
   creating: boolean;
   onCreate: (draft: CreateDraft) => Promise<boolean>;
+  onEdit: (problem: AdminProblem, patch: CreateDraft) => Promise<boolean>;
   onToggleActive: (problem: AdminProblem) => void;
   onDelete: (problem: AdminProblem) => void;
 };
 
-export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, onToggleActive, onDelete }: Props) {
+export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, onEdit, onToggleActive, onDelete }: Props) {
   const [emoji, setEmoji] = useState('');
   const [title, setTitle] = useState('');
   const [context, setContext] = useState('');
+
+  // Inline edit of an existing problem. editingId marks which card is in edit mode; the draft fields
+  // are seeded from the problem and saved through the same PATCH the deactivate toggle already uses.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editEmoji, setEditEmoji] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editContext, setEditContext] = useState('');
 
   async function create(): Promise<void> {
     if (!title.trim() || creating) return;
@@ -48,6 +56,19 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
       setTitle('');
       setContext('');
     }
+  }
+
+  function startEdit(problem: AdminProblem): void {
+    setEditingId(problem.id);
+    setEditEmoji(problem.emoji ?? '');
+    setEditTitle(problem.title);
+    setEditContext(problem.context ?? '');
+  }
+
+  async function saveEdit(problem: AdminProblem): Promise<void> {
+    if (!editTitle.trim()) return;
+    const ok = await onEdit(problem, { emoji: editEmoji.trim(), title: editTitle.trim(), context: editContext.trim() });
+    if (ok) setEditingId(null);
   }
 
   return (
@@ -75,6 +96,26 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
       ) : (
         problems.map((problem) => {
           const busy = busyId === problem.id;
+          if (editingId === problem.id) {
+            const canSave = Boolean(editTitle.trim()) && !busy;
+            return (
+              <div key={problem.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${COLOR}40` }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <input value={editEmoji} onChange={(event) => setEditEmoji(event.target.value)} placeholder="Emoji" aria-label="Edit emoji" style={{ ...inputStyle, width: 80, flexShrink: 0 }} />
+                  <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} placeholder="Problem title" aria-label="Edit problem title" style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
+                </div>
+                <textarea value={editContext} onChange={(event) => setEditContext(event.target.value)} placeholder="Short context shown under the title" aria-label="Edit problem context" rows={2} style={{ ...inputStyle, width: '100%', marginTop: 8, resize: 'vertical', boxSizing: 'border-box' }} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button type="button" disabled={!canSave} onClick={() => void saveEdit(problem)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: canSave ? 'pointer' : 'not-allowed', opacity: canSave ? 1 : 0.6 }}>
+                    <Check size={13} /> {busy ? 'Saving…' : 'Save'}
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => setEditingId(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                    <X size={13} /> Cancel
+                  </button>
+                </div>
+              </div>
+            );
+          }
           return (
             <div key={problem.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
@@ -91,6 +132,9 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
                 </div>
               </div>
               <div style={{ display: 'flex', flexShrink: 0, flexDirection: 'column', gap: 8 }}>
+                <button type="button" disabled={busy} onClick={() => startEdit(problem)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                  <Pencil size={13} /> Edit
+                </button>
                 <button type="button" disabled={busy} onClick={() => onToggleActive(problem)} style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                   {problem.is_active ? 'Deactivate' : 'Activate'}
                 </button>
