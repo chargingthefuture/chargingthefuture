@@ -1,8 +1,8 @@
 # Beacon Plugin Feature Inventory (CTF v3)
 
-> **Status: PLANNED — not yet built.** This document is the agreed plan and the single source of
-> truth for the Beacon plugin. All owner decisions below are locked (2026-06-21). The build follows
-> the Build Checklist at the bottom, in dependency order, after the in-flight Commons work merges.
+> Status: web built (admin broadcaster + public viewer); Android viewer parity deferred. This
+> document is the single source of truth for the Beacon plugin. All owner decisions below are locked
+> (2026-06-21).
 
 ## Scope and Boundary
 
@@ -156,14 +156,19 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
 
 ## Web and Android Delivery Status
 
-- Web (desktop + mobile-responsive): **planned, not started.**
-- Android (React Native): **deferred** — viewer parity tracked by a parity ticket opened with the
-  build PR.
+- Web (desktop + mobile-responsive): built. Admin broadcaster at `/admin/beacon` (create, go-live
+  with RTMP url/key plus desktop screen-share, live chat + moderation, end, history). Public viewer
+  at `/apps/beacon` (HLS player, "live and public" indicator, member live chat, idle/replay state).
+  Both are mobile-responsive.
+- Android (React Native): deferred — viewer parity tracked by a parity ticket opened with the build
+  PR.
 
 ## Seed Coverage Status
 
-Planned: a seed for one past `ended` event with a recording URL, so the viewer idle state and the
-admin history list render with real data in demos.
+`ctf/scripts/seedBeaconPhase0.mjs` inserts one past `ended` event ("State of the TI Skills Economy")
+with a recording URL and a deterministic UUID, plus one matching admin audit row. This makes the
+viewer idle/replay state and the admin history list render with real data in demos. Re-runnable
+(`ON CONFLICT (id) DO NOTHING`). No per-member rows are seeded (Beacon stores none).
 
 ## Trust Signal
 
@@ -219,9 +224,21 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   chat/react; ephemeral chat; one-way `livestream` broadcast; recording auto-posts to Commons; admin
   moderation + "live and public" indicator; Chyme untouched). Flagship event = the State of the TI
   Skills Economy address. Not yet built.
-- 2026-06-21: Clarified the broadcast is a **live demo (screen content), not a face cam**, and locked
-  the broadcast input: **RTMP ingest for the phone** (a phone web browser cannot capture its own
+- 2026-06-21: Clarified the broadcast is a live demo (screen content), not a face cam, and locked
+  the broadcast input: RTMP ingest for the phone (a phone web browser cannot capture its own
   screen, so the admin pushes the phone screen from a mobile broadcaster app to a per-event RTMP URL +
-  key) **plus in-browser desktop screen-share**. Added the `GET /api/beacon/[id]/ingest` route and
+  key) plus in-browser desktop screen-share. Added the `GET /api/beacon/[id]/ingest` route and
   updated the architecture, admin features, and build checklist. Native in-app phone screen capture is
   out of scope for v1.
+- 2026-06-21: Web build shipped on branch `feat/beacon-plugin`. Added the `beacon` registry entry; the
+  `beacon_events` and `beacon_events_admin_audit_trail` tables (CREATE/ALTER pattern, regenerated
+  `schema.demo.sql`); the four `BEACON_*` contracts; the server lib (`lib/beacon/` — Stream Video
+  livestream lifecycle over the REST API, host token, public HLS URL, per-event RTMP ingest, member
+  Stream Chat token, recording handling, webhook signature verify, Commons auto-post helpers); the API
+  routes (`current`, `[id]/chat-token`, create, `[id]/ingest`, `[id]/go-live`, `[id]/end`, `admin`
+  list, `[id]/moderate`, `stream-webhook`); idempotent Commons auto-post on go-live and
+  recording-ready (post ids stored on the event row); the admin UI (`/admin/beacon`) and public viewer
+  (`/apps/beacon`); the seed script; and the quota-impact note. A few Stream Video REST field/endpoint
+  names are marked `TODO(beacon)` to confirm against the live dashboard before the first real
+  broadcast; no URLs are fabricated when a field is absent. Android viewer parity deferred via a
+  parity ticket.

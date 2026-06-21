@@ -132,6 +132,12 @@
       "mobileFeatureDirs": ["bug-reporting"],
       "requiresMobileSurface": false,
       "requiresExplicitWebShell": false
+    },
+    {
+      "slug": "beacon",
+      "mobileFeatureDirs": ["beacon"],
+      "requiresMobileSurface": false,
+      "requiresExplicitWebShell": true
     }
   ]
 }

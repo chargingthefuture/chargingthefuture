@@ -1,0 +1,318 @@
+import { createHmac } from 'crypto';
+import { StreamChat } from 'stream-chat';
+import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { BEACON_CHAT_CHANNEL_TYPE, BEACON_STREAM_CALL_TYPE } from './constants';
+
+// Beacon's Stream Video integration. Beacon is a one-way `livestream`: only the admin host
+// publishes; everyone else watches. Watching is public over HLS (no user token needed), which is
+// what lets anonymous viewers in and keeps cost off WebRTC fan-out. Chatting needs a signed-in
+// member (a Stream Chat token, minted only for members).
+//
+// There is no @stream-io/node-sdk in the workspace, so server-side call lifecycle (create, goLive,
+// end), the per-event RTMP ingest, and the HLS playback URL are driven against Stream's documented
+// Video REST API using a server-auth JWT signed with the app secret. Every entry point degrades to
+// null/throw-free behavior when Stream is not configured (resolveStreamCredentials() returns null),
+// exactly like the Peer Programming stream helper.
+
+const STREAM_VIDEO_BASE_URL = 'https://video.stream-io-api.com';
+
+// A Stream call id accepts [0-9a-zA-Z_-]; event ids are UUIDs (already safe) but coerce defensively.
+export function beaconCallIdForEvent(eventId: string): string {
+  const cleaned = `beacon-${eventId}`.replace(/[^0-9a-zA-Z_-]/g, '-');
+  return cleaned.length > 0 ? cleaned : 'beacon-event';
+}
+
+function beaconStreamUserId(userId: string): string {
+  return `beacon-${userId}`.replace(/[^0-9a-zA-Z_@.-]/g, '-');
+}
+
+function base64Url(input: Buffer | string): string {
+  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Mint a Stream server-auth JWT (no user; `server` audience) signed with the app secret, for
+// server-to-server Video REST calls. Stream's server SDKs send exactly this token.
+function mintServerToken(apiSecret: string): string {
+  const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = base64Url(JSON.stringify({ server: true, iat: Math.floor(Date.now() / 1000) }));
+  const signature = base64Url(createHmac('sha256', apiSecret).update(`${header}.${payload}`).digest());
+  return `${header}.${payload}.${signature}`;
+}
+
+type StreamRestContext = {
+  apiKey: string;
+  apiSecret: string;
+  serverToken: string;
+};
+
+async function resolveStreamRest(): Promise<StreamRestContext | null> {
+  const credentials = await resolveStreamCredentials();
+  if (!credentials) {
+    return null;
+  }
+  return {
+    apiKey: credentials.apiKey,
+    apiSecret: credentials.apiSecret,
+    serverToken: mintServerToken(credentials.apiSecret),
+  };
+}
+
+async function streamVideoFetch(
+  ctx: StreamRestContext,
+  path: string,
+  init: { method: string; body?: unknown },
+): Promise<Record<string, unknown>> {
+  const url = `${STREAM_VIDEO_BASE_URL}${path}${path.includes('?') ? '&' : '?'}api_key=${encodeURIComponent(ctx.apiKey)}`;
+  const response = await fetch(url, {
+    method: init.method,
+    headers: {
+      Authorization: ctx.serverToken,
+      'stream-auth-type': 'jwt',
+      'Content-Type': 'application/json',
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    cache: 'no-store',
+  });
+  const text = await response.text();
+  const parsed = text.length > 0 ? (JSON.parse(text) as Record<string, unknown>) : {};
+  if (!response.ok) {
+    const message = typeof parsed.message === 'string' ? parsed.message : `Stream Video request failed (${response.status}).`;
+    throw new Error(message);
+  }
+  return parsed;
+}
+
+export type BeaconHostCredentials = {
+  streamApiKey: string;
+  streamCallType: string;
+  streamCallId: string;
+  streamUserId: string;
+  hostToken: string;
+};
+
+// Mint a host (publisher) token scoped to the host user id. The Stream JWT works for both Video and
+// Chat (same app secret), so this token lets the admin publish the in-browser screen-share and act
+// as the chat channel moderator. Viewers never receive this token — they watch over public HLS.
+export async function createBeaconHostCredentials(input: {
+  userId: string;
+  name: string;
+  eventId: string;
+}): Promise<BeaconHostCredentials | null> {
+  const credentials = await resolveStreamCredentials();
+  if (!credentials) {
+    return null;
+  }
+  const chatClient = new StreamChat(credentials.apiKey, credentials.apiSecret);
+  try {
+    const streamUserId = beaconStreamUserId(input.userId);
+    await chatClient.upsertUser({ id: streamUserId, name: input.name, role: 'admin' });
+    return {
+      streamApiKey: credentials.apiKey,
+      streamCallType: BEACON_STREAM_CALL_TYPE,
+      streamCallId: beaconCallIdForEvent(input.eventId),
+      streamUserId,
+      hostToken: chatClient.createToken(streamUserId),
+    };
+  } finally {
+    await chatClient.disconnectUser();
+  }
+}
+
+export type BeaconMemberChatCredentials = {
+  streamApiKey: string;
+  streamChannelType: string;
+  streamChannelId: string;
+  streamUserId: string;
+  streamToken: string;
+};
+
+// Mint a Stream Chat token for a signed-in member so they can post in the live event chat. Anonymous
+// viewers never reach this path (the route requires a member), which is the sign-in-to-chat gate.
+export async function createBeaconMemberChatCredentials(input: {
+  userId: string;
+  name: string;
+  eventId: string;
+}): Promise<BeaconMemberChatCredentials | null> {
+  const credentials = await resolveStreamCredentials();
+  if (!credentials) {
+    return null;
+  }
+  const chatClient = new StreamChat(credentials.apiKey, credentials.apiSecret);
+  try {
+    const streamUserId = beaconStreamUserId(input.userId);
+    await chatClient.upsertUser({ id: streamUserId, name: input.name });
+    return {
+      streamApiKey: credentials.apiKey,
+      streamChannelType: BEACON_CHAT_CHANNEL_TYPE,
+      streamChannelId: beaconCallIdForEvent(input.eventId),
+      streamUserId,
+      streamToken: chatClient.createToken(streamUserId),
+    };
+  } finally {
+    await chatClient.disconnectUser();
+  }
+}
+
+export type BeaconIngest = {
+  rtmpIngestUrl: string;
+  streamKey: string;
+};
+
+// Create (or get) the Beacon livestream call and return its per-event RTMP ingest URL + stream key
+// for a phone broadcaster app. Recording is enabled so Stream delivers a recording-ready webhook
+// after the event ends. Returns null when Stream is not configured.
+//
+// TODO(beacon): confirm against the live Stream dashboard/SDK that GetCall with create=true on a
+// `livestream` call returns `call.ingress.rtmp.{address,stream_key}` and that the call type has
+// recording enabled (or set `settings_override.recording` here). The shape below follows Stream's
+// documented Video API; verify field names before the first real broadcast.
+export async function ensureBeaconCallAndIngest(input: {
+  eventId: string;
+  hostUserId: string;
+}): Promise<BeaconIngest | null> {
+  const ctx = await resolveStreamRest();
+  if (!ctx) {
+    return null;
+  }
+  const callId = beaconCallIdForEvent(input.eventId);
+  const created = await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}`, {
+    method: 'POST',
+    body: {
+      data: {
+        created_by_id: beaconStreamUserId(input.hostUserId),
+        settings_override: {
+          // Backstage on: the call is not visible to viewers until goLive() is called.
+          backstage: { enabled: true },
+          recording: { mode: 'available' },
+        },
+      },
+    },
+  });
+  const call = (created.call ?? {}) as Record<string, unknown>;
+  const ingress = (call.ingress ?? {}) as Record<string, unknown>;
+  const rtmp = (ingress.rtmp ?? {}) as Record<string, unknown>;
+  const address = typeof rtmp.address === 'string' ? rtmp.address : '';
+  const streamKey = typeof rtmp.stream_key === 'string' ? rtmp.stream_key : '';
+  return { rtmpIngestUrl: address, streamKey };
+}
+
+// Flip the call out of backstage so viewers can watch. Returns false when Stream is not configured.
+export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
+  const ctx = await resolveStreamRest();
+  if (!ctx) {
+    return false;
+  }
+  const callId = beaconCallIdForEvent(eventId);
+  // TODO(beacon): confirm the goLive endpoint path; Stream documents
+  // POST /api/v2/video/call/{type}/{id}/go_live with optional start_hls/start_recording flags.
+  await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/go_live`, {
+    method: 'POST',
+    body: { start_hls: true, start_recording: true },
+  });
+  return true;
+}
+
+// Return the public HLS playback URL for the live call so anonymous viewers can watch with no token.
+// TODO(beacon): confirm the field — Stream exposes HLS playlist URL on the call response (commonly
+// `call.egress.hls.playlist_url`). We never fabricate a URL: when absent this returns null and the
+// viewer shows the idle state.
+export async function getBeaconHlsPlaybackUrl(eventId: string): Promise<string | null> {
+  const ctx = await resolveStreamRest();
+  if (!ctx) {
+    return null;
+  }
+  const callId = beaconCallIdForEvent(eventId);
+  const result = await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}`, {
+    method: 'GET',
+  });
+  const call = (result.call ?? {}) as Record<string, unknown>;
+  const egress = (call.egress ?? {}) as Record<string, unknown>;
+  const hls = (egress.hls ?? {}) as Record<string, unknown>;
+  const playlistUrl = typeof hls.playlist_url === 'string' ? hls.playlist_url : '';
+  return playlistUrl.length > 0 ? playlistUrl : null;
+}
+
+// End the call so Stream stops distribution and billing stops. This is the cost-critical path: the
+// End-event route must call this. Returns false when Stream is not configured (nothing to stop).
+export async function endBeaconCall(eventId: string): Promise<boolean> {
+  const ctx = await resolveStreamRest();
+  if (!ctx) {
+    return false;
+  }
+  const callId = beaconCallIdForEvent(eventId);
+  // TODO(beacon): confirm the end endpoint path; Stream documents
+  // POST /api/v2/video/call/{type}/{id}/mark_ended (or stop_live) to end a livestream.
+  await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/stop_live`, {
+    method: 'POST',
+    body: {},
+  });
+  return true;
+}
+
+export type BeaconModerationAction = 'mute' | 'ban' | 'slow_mode';
+
+// Moderate the event chat channel: mute or ban a member, or toggle slow-mode. The admin host is the
+// channel's server-side moderator. Returns false when Stream is not configured.
+export async function moderateBeaconChat(input: {
+  eventId: string;
+  hostUserId: string;
+  action: BeaconModerationAction;
+  targetUserId?: string | null;
+  cooldownSeconds?: number | null;
+}): Promise<boolean> {
+  const credentials = await resolveStreamCredentials();
+  if (!credentials) {
+    return false;
+  }
+  const chatClient = new StreamChat(credentials.apiKey, credentials.apiSecret);
+  try {
+    const channelId = beaconCallIdForEvent(input.eventId);
+    const channel = chatClient.channel(BEACON_CHAT_CHANNEL_TYPE, channelId);
+    const target = input.targetUserId ? beaconStreamUserId(input.targetUserId) : null;
+    if (input.action === 'mute' && target) {
+      await chatClient.muteUser(target, beaconStreamUserId(input.hostUserId));
+      return true;
+    }
+    if (input.action === 'ban' && target) {
+      // Ban from this event's channel only — Beacon is per-event, not a global ban. The channel-level
+      // banUser scopes the ban to this channel.
+      await channel.banUser(target, { banned_by_id: beaconStreamUserId(input.hostUserId) });
+      return true;
+    }
+    if (input.action === 'slow_mode') {
+      const seconds = input.cooldownSeconds && input.cooldownSeconds > 0 ? input.cooldownSeconds : 0;
+      if (seconds > 0) {
+        await channel.enableSlowMode(seconds);
+      } else {
+        await channel.disableSlowMode();
+      }
+      return true;
+    }
+    return false;
+  } finally {
+    await chatClient.disconnectUser();
+  }
+}
+
+// Verify the Stream webhook signature. Stream signs the raw body with the app secret (HMAC-SHA256)
+// and sends it in the `x-signature` header. A request whose signature does not match is rejected.
+export async function verifyBeaconWebhookSignature(rawBody: string, signature: string | null): Promise<boolean> {
+  if (!signature) {
+    return false;
+  }
+  const credentials = await resolveStreamCredentials();
+  if (!credentials) {
+    return false;
+  }
+  const expected = createHmac('sha256', credentials.apiSecret).update(rawBody).digest('hex');
+  // Length-guard before compare so a malformed signature can't throw.
+  if (expected.length !== signature.length) {
+    return false;
+  }
+  // Constant-time-ish compare.
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i += 1) {
+    mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return mismatch === 0;
+}

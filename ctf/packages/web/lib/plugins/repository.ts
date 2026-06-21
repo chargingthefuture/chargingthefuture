@@ -218,6 +218,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     navRank: 220,
     isVisible: false,
   },
+  {
+    slug: 'beacon',
+    name: 'Beacon',
+    summary: 'Live one-way broadcasts from the team. Watch publicly with just a link; sign in to chat and react.',
+    availabilityState: 'implemented_shell',
+    navRank: 230,
+    isVisible: true,
+  },
 ];
 
 const pluginAliasMap: Record<string, string> = {
