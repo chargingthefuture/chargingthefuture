@@ -16,7 +16,7 @@ function toLocalInputValue(source: string | Date): string {
 
 const field: React.CSSProperties = {
   width: "100%", padding: "9px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)", color: "#E8EAF0", fontSize: 13, outline: "none", boxSizing: "border-box",
+  border: "1px solid rgba(255,255,255,0.12)", color: "#E8EAF0", fontSize: 13, outline: "none", boxSizing: "border-box", minWidth: 0,
 };
 const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#9CA3AF", marginBottom: 5 };
 const help: React.CSSProperties = { fontSize: 11, color: "#6B7280", marginTop: 4 };
@@ -107,7 +107,7 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
         <textarea id="shr-desc" style={{ ...field, minHeight: 60, resize: "vertical" }} value={v.description} onChange={(e) => set({ description: e.target.value })} placeholder="What this round is about" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <label style={label} htmlFor="shr-status">Status</label>
           <select id="shr-status" style={field} value={v.status} onChange={(e) => set({ status: e.target.value as SkillsHuntRoundStatus })}>
             <option value="draft">Draft</option>
@@ -116,11 +116,11 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
             <option value="archived">Archived</option>
           </select>
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <label style={label} htmlFor="shr-start">Starts</label>
           <input id="shr-start" type="datetime-local" style={field} value={v.startsAt} onChange={(e) => set({ startsAt: e.target.value })} />
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <label style={label} htmlFor="shr-end">Ends</label>
           <input id="shr-end" type="datetime-local" style={field} value={v.endsAt} onChange={(e) => set({ endsAt: e.target.value })} />
         </div>
