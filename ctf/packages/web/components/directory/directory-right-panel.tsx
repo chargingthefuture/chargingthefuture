@@ -31,7 +31,6 @@ export function DirectoryRightPanel({
             <div style={{ fontSize: 13, fontWeight: 600, color: "#E8EAF0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
             <div style={{ fontSize: 11, color: "#6B7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.jobTitle}</div>
           </div>
-          <CheckCircle size={12} style={{ color: COLOR, flexShrink: 0 }} />
         </div>
       ))}
       {members.length === 0 && !loadingMembers && (
