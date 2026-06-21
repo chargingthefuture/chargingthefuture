@@ -1,0 +1,48 @@
+name: Backfill member presence (one-time)
+
+# One-time backfill of the member_plugin_presence index from existing member-owned listings, so the
+# Directory "Also active in" surface is populated for listings created before the live write-hooks
+# shipped. Run it once from the Actions tab (Run workflow) after deploy. It is idempotent, so a
+# re-run is safe. This workflow and the script it runs are removed in a follow-up once it has run.
+
+on:
+  workflow_dispatch:
+
+# Minimal token scope: this workflow only reads the repo and runs a script against the database
+# secret; it never writes back to the repository.
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: |
+          cd ctf
+          pnpm install
+
+      - name: Run the presence backfill
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          DB="${DATABASE_URL_DIRECT:-$DATABASE_URL}"
+          if [ -z "$DB" ]; then
+            echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
+            exit 1
+          fi
+          cd ctf
+          DATABASE_URL="$DB" node scripts/backfillMemberPresence.mjs
+          echo "Member presence backfill complete."
