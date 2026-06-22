@@ -21,7 +21,7 @@ try {
 // runtime and API calls carry a verified bearer token. Profile is informational
 // only (preview and production both point at the same production config).
 
-const profile = process.env.MOBILE_ENV_TARGET || process.env.EAS_BUILD_PROFILE || 'preview';
+const profile = process.env.MOBILE_ENV_TARGET || 'preview';
 
 function requireVar(key) {
   if (!process.env[key]) {
