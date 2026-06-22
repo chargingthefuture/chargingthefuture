@@ -8,8 +8,8 @@ name: Peer Programming — Weekly Cohort Assignment
 # The manual admin run on the Peer Programming admin screen still works as a fallback/override.
 #
 # What it needs (Settings → Secrets and variables → Actions):
-#   App URL  — the workflow reads the APP_BASE_URL variable, then the NEXT_PUBLIC_APP_URL secret. Set
-#              either one to your production base URL (e.g. https://app.example.com).
+#   NEXT_PUBLIC_APP_URL secret — your production base URL (e.g. https://app.example.com). This is the
+#              same secret the image build already uses; nothing new to add.
 #   CRON_SECRET secret — must match the CRON_SECRET the app reads at runtime (set the SAME value in the
 #              app's runtime secrets). The route rejects the call without it.
 #
@@ -36,12 +36,12 @@ jobs:
     steps:
       - name: Call the weekly assignment route
         env:
-          APP_BASE_URL: ${{ vars.APP_BASE_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
-          if [ -z "${APP_BASE_URL:-}" ]; then
-            echo "::warning::Peer Programming weekly assignment skipped: no app URL configured (set the APP_BASE_URL variable or the NEXT_PUBLIC_APP_URL secret)."
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::warning::Peer Programming weekly assignment skipped: NEXT_PUBLIC_APP_URL is not set in GitHub Actions secrets."
             echo "Skipped: app URL not configured." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -51,7 +51,7 @@ jobs:
             exit 0
           fi
           code=$(curl -sS -o /tmp/assignment.json -w '%{http_code}' -X POST \
-            "${APP_BASE_URL%/}/api/internal/peer-programming/assignments/run" \
+            "${APP_URL%/}/api/internal/peer-programming/assignments/run" \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H 'Content-Type: application/json' \
             -d '{}')
