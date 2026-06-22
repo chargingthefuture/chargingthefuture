@@ -6,8 +6,9 @@ name: Code Review — Sweep and File Issues
 # code or opens a PR — findings it judges to have a small, safe fix get the
 # `code-review:actionable` label, which `code-review-implement.yml` can turn into a PR.
 #
-# Manual-dispatch by default so you control cost and cadence (you said you'd rather kick it
-# than have it run on every merge). To make it hands-off, uncomment the schedule below. See
+# Runs on a daily schedule (one slice per run) and can also be kicked by hand. The schedule
+# is deliberately modest — one bounded model call per day — so it works through the codebase
+# over time without much cost. Change or remove the cron below to adjust the cadence. See
 # ctf/scripts/reviewCodebaseSlice.mjs.
 on:
   workflow_dispatch:
@@ -20,8 +21,8 @@ on:
         description: "Print findings only — do not file issues or advance the ledger"
         type: boolean
         default: false
-  # schedule:
-  #   - cron: "23 6 * * *"   # daily at 06:23 UTC — uncomment to run hands-off
+  schedule:
+    - cron: "23 6 * * *"   # daily at 06:23 UTC (one slice per run)
 
 permissions:
   issues: write
