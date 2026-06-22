@@ -3,7 +3,7 @@
 // decide what's worth acting on without opening the Security tab.
 //
 // It reads three alert feeds from the app repo via the API:
-//   - Dependabot vulnerabilities (vulnerable dependencies)
+//   - Dependabot alerts (vulnerable dependencies AND malware advisories)
 //   - Code scanning alerts (CodeQL findings in your own code)
 //   - Secret scanning alerts (credentials committed to the repo)
 //
@@ -90,14 +90,34 @@ function listWithOverflow(lines) {
   return [...lines.slice(0, MAX_LISTED), `- …and ${lines.length - MAX_LISTED} more`];
 }
 
+// A Dependabot alert is malware when its advisory is classified as malware. These are the
+// most urgent: a dependency that is actively malicious, not just vulnerable.
+function isMalware(alert) {
+  const cls = alert.security_advisory?.classifications;
+  return Array.isArray(cls) && cls.some((c) => /malware/i.test(String(c)));
+}
+
 function dependabotSection() {
   const res = ghApiPaged(`/repos/${APP_REPO}/dependabot/alerts?state=open`);
   if (!res.ok) {
-    return { lines: ['_Could not read Dependabot alerts (feature off or token lacks permission)._', `_(${res.error})_`], actionable: 0 };
+    return { lines: ['_Could not read Dependabot alerts (feature off or token lacks permission)._', `_(${res.error})_`], actionable: 0, malware: 0 };
   }
-  const counts = countBySeverity(res.data.map((a) => a.security_advisory?.severity));
-  const head = `**Critical: ${counts.critical} · High: ${counts.high} · Medium: ${counts.medium} · Low: ${counts.low}**`;
-  const actNow = res.data
+  const malware = res.data.filter(isMalware);
+  const vulns = res.data.filter((a) => !isMalware(a));
+  const counts = countBySeverity(vulns.map((a) => a.security_advisory?.severity));
+  const head = `**Malware: ${malware.length} · Critical: ${counts.critical} · High: ${counts.high} · Medium: ${counts.medium} · Low: ${counts.low}**`;
+  const lines = [head, ''];
+
+  if (malware.length) {
+    const malLines = malware.map((a) => {
+      const pkg = a.dependency?.package?.name || '(unknown package)';
+      const summary = (a.security_advisory?.summary || '').replace(/\s+/g, ' ').slice(0, 120);
+      return `- \`${pkg}\` — ${summary} (${a.html_url})`;
+    });
+    lines.push('### ⚠️ Malware — remove these dependencies immediately', ...listWithOverflow(malLines), '');
+  }
+
+  const actNow = vulns
     .filter((a) => ['critical', 'high'].includes(a.security_advisory?.severity))
     .sort((a, b) => bySeverity(a.security_advisory?.severity, b.security_advisory?.severity))
     .map((a) => {
@@ -108,13 +128,12 @@ function dependabotSection() {
       const summary = (a.security_advisory?.summary || '').replace(/\s+/g, ' ').slice(0, 120);
       return `- [${sev}] \`${pkg}\` — ${fixNote} — ${summary} (${a.html_url})`;
     });
-  const lines = [head, ''];
   if (actNow.length) {
-    lines.push('### Critical & High — worth acting on', ...listWithOverflow(actNow));
+    lines.push('### Critical & High vulnerabilities — worth acting on', ...listWithOverflow(actNow));
   } else {
-    lines.push('_No open Critical or High dependency alerts. (Medium/Low counts above.)_');
+    lines.push('_No open Critical or High dependency vulnerabilities. (Medium/Low counts above.)_');
   }
-  return { lines, actionable: counts.critical + counts.high };
+  return { lines, actionable: counts.critical + counts.high, malware: malware.length };
 }
 
 function codeScanningSection() {
@@ -181,12 +200,19 @@ async function main() {
   const dep = dependabotSection();
   const code = codeScanningSection();
   const secret = secretScanningSection();
-  const totalActionable = dep.actionable + code.actionable + secret.actionable;
+  const totalActionable = dep.actionable + dep.malware + code.actionable + secret.actionable;
 
   const body = [
     `_Security findings in \`${APP_REPO}\` as of ${today}. Filed privately because the app repo is public — do not copy alert details into public issues or PRs._`,
     '',
-    '## Dependabot — vulnerable dependencies',
+    '## What this triage covers',
+    '- ✅ Dependabot **malware** advisories — always listed, top priority',
+    '- ✅ Dependabot **vulnerabilities** — Critical/High listed; Medium/Low as counts',
+    '- ✅ **Code scanning** (CodeQL) alerts — rule, severity, and location',
+    '- ✅ **Secret scanning** alerts — type, state, and link only (never the value)',
+    '- ❌ **Code quality** findings — no stable API; check the Security tab directly',
+    '',
+    '## Dependabot — malware and vulnerable dependencies',
     '',
     ...dep.lines,
     '',
@@ -200,8 +226,7 @@ async function main() {
     '',
     '---',
     'Filed by `.github/workflows/security-findings-triage.yml`. Updated in place each run; closed',
-    'automatically when there is nothing Critical/High and no secret alerts. "Code quality"',
-    'findings have no stable API and are not included — check the Security tab for those.',
+    'automatically when there is no malware, nothing Critical/High, and no open secret alerts.',
   ].join('\n');
 
   const bodyFile = join(tmpdir(), 'security-triage-body.md');
@@ -209,10 +234,10 @@ async function main() {
 
   ensureLabel('security-triage', 'b60205', 'Always-current digest of open security findings');
   const existing = findExistingIssue();
-  const title = `Security findings triage — ${dep.actionable} dep, ${code.actionable} code, ${secret.actionable} secret (Critical/High)`;
+  const title = `Security findings triage — ${dep.malware} malware · ${dep.actionable} dep · ${code.actionable} code · ${secret.actionable} secret`;
 
   if (totalActionable === 0 && existing) {
-    gh(['issue', 'comment', String(existing), '--repo', TRIAGE_REPO, '--body', `Cleared as of ${today}: no Critical/High dependency or code-scanning alerts and no open secret alerts. Closing.`]);
+    gh(['issue', 'comment', String(existing), '--repo', TRIAGE_REPO, '--body', `Cleared as of ${today}: no malware, no Critical/High dependency or code-scanning alerts, and no open secret alerts. Closing.`]);
     gh(['issue', 'close', String(existing), '--repo', TRIAGE_REPO]);
     console.log('surfaceSecurityFindings: all clear; closed the triage issue.');
     return;
