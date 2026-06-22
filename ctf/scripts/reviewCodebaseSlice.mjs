@@ -14,8 +14,9 @@
 //   2. Pick the slice to review: an in-progress (partial) slice first, then any
 //      never-reviewed slice, then the least-recently-reviewed one. This guarantees every
 //      slice gets at least one pass before any gets a second.
-//   3. Send that slice's source to Claude (up to a per-run byte budget) and ask for
-//      concrete, high-signal findings, including mismatches between the layers.
+//   3. Send that slice's source to Claude (up to a per-run byte budget), along with the
+//      plugin's declared contracts as read-only reference, and ask for concrete, high-signal
+//      findings — including mismatches between the layers and code that violates a contract.
 //   4. File one GitHub issue per finding, labelled `code-review`. Findings the model judges
 //      to have a small, safe, self-contained fix also get `code-review:actionable`, which
 //      the implement workflow can turn into a pull request.
@@ -36,6 +37,7 @@
 //   CODE_REVIEW_SLICE      Review this exact plugin/module name instead of the rotation pick.
 //   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 8). Highest severity first.
 //   CODE_REVIEW_MAX_BYTES  Per-run source byte budget (default: 200000 ≈ most whole plugins).
+//   CODE_REVIEW_CONTRACTS_MAX_BYTES  Cap on contract reference bytes (default: 60000).
 //   CODE_REVIEW_DRY_RUN    "1" to print findings without filing issues or touching the ledger.
 
 import { execFileSync } from 'node:child_process';
@@ -53,7 +55,20 @@ const MODEL = (process.env.CODE_REVIEW_MODEL || 'claude-sonnet-4-6').trim();
 const FORCED_SLICE = (process.env.CODE_REVIEW_SLICE || '').trim();
 const MAX_ISSUES = Number(process.env.CODE_REVIEW_MAX_ISSUES || '8');
 const MAX_BYTES = Number(process.env.CODE_REVIEW_MAX_BYTES || '200000');
+const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES || '60000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
+
+// A plugin's declared contracts are sent as read-only reference so the reviewer can check
+// the code against them. Looked up by exact filename (prefix = SLICE_NAME upper-snake);
+// modules without contracts simply get none. Sent on every run for the slice, separate from
+// the code byte budget, and capped so they don't crowd out the code.
+const CONTRACTS_DIR = 'ctf/docs/contracts';
+const CONTRACT_SUFFIXES = [
+  '_PLUGIN_COMMAND_CONTRACTS.yaml',
+  '_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml',
+  '_PLUGIN_AUDIT_CONTRACTS.yaml',
+  '_PROFILE_AND_DELETION_CONTRACT.md',
+];
 
 // Folders with the same name under these layers are grouped into one slice. A name in two
 // or more layers is treated as a plugin; a name in one layer is a standalone module.
@@ -242,7 +257,37 @@ function gatherChunk(fileList, cursor, budget) {
   return { text, startIdx: cursor, endIdx: i, nextCursor: complete ? 0 : i, complete, truncatedFile };
 }
 
-async function askClaude(slice, source, chunkNote) {
+// A plugin's declared contracts (by exact filename), as read-only reference text.
+function gatherContracts(sliceName) {
+  const prefix = sliceName.toUpperCase().replace(/-/g, '_');
+  let text = '';
+  const files = [];
+  for (const suffix of CONTRACT_SUFFIXES) {
+    if (text.length >= CONTRACTS_MAX_BYTES) {
+      break;
+    }
+    const rel = `${CONTRACTS_DIR}/${prefix}${suffix}`;
+    let body;
+    try {
+      body = readFileSync(join(repoRoot, rel), 'utf8');
+    } catch {
+      continue; // this contract does not exist for this slice
+    }
+    const header = `\n----- CONTRACT: ${rel} -----\n`;
+    const room = CONTRACTS_MAX_BYTES - text.length - header.length;
+    if (room <= 0) {
+      break;
+    }
+    if (body.length > room) {
+      body = `${body.slice(0, room)}\n... (contract truncated) ...`;
+    }
+    text += header + body;
+    files.push(rel);
+  }
+  return { text, files };
+}
+
+async function askClaude(slice, source, chunkNote, contractsText) {
   const layers = slice.paths.join('\n  ');
   const system = [
     'You are a senior engineer doing a code review of one plugin/module of "Charging the',
@@ -254,6 +299,14 @@ async function askClaude(slice, source, chunkNote) {
     "  - a lib/server function's contract changed but a caller still uses the old shape;",
     '  - an auth, permission, or input-validation check present on one path but missing on another;',
     '  - web and mobile implementing the same feature differently (parity drift).',
+    '',
+    'When DECLARED CONTRACTS are shown below, treat them as the source of truth and flag code',
+    'that violates them:',
+    '  - a route/command that reads or writes data not listed in its contract dataAccess;',
+    '  - auth/role enforcement on an endpoint that does not match the access-policy contract;',
+    '  - a state change the audit contract says must emit an audit event, but the code does not;',
+    '  - data the deletion contract says must be removed that the code never deletes.',
+    '',
     'Also report within-file problems: real bugs, security/correctness issues, missing error',
     'handling, clear dead code, obvious simplifications, and TypeScript type-safety violations',
     '(no `any` without an eslint-disable + reason).',
@@ -266,6 +319,13 @@ async function askClaude(slice, source, chunkNote) {
     `Review the ${slice.type} \`${slice.name}\`. It spans these folders:`,
     `  ${layers}`,
     chunkNote,
+    ...(contractsText
+      ? [
+          '',
+          'DECLARED CONTRACTS for this plugin (reference — the source of truth for what it may do; not under review):',
+          contractsText,
+        ]
+      : []),
     '',
     'The source files follow, each after a "===== FILE: <path> =====" header. Some long files',
     'may be truncated; do not flag truncation itself as a problem.',
@@ -424,8 +484,10 @@ async function main() {
     ? `This run covers the whole slice (${fileList.length} file(s)).`
     : `This run covers ${covered}${chunk.complete ? ' (final part)' : ' — the rest continues next run'}.`;
 
-  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered} with ${MODEL}.`);
-  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote));
+  const contracts = gatherContracts(slice.name);
+  const contractNote = contracts.files.length ? ` + ${contracts.files.length} contract file(s)` : '';
+  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote} with ${MODEL}.`);
+  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote, contracts.text));
 
   if (findings.length === 0) {
     console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);
