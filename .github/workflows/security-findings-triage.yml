@@ -1,0 +1,33 @@
+name: Security — Findings Triage
+
+# Reads the app repo's open Dependabot, code scanning (CodeQL), and secret scanning alerts
+# and writes ONE always-current triage issue in the PRIVATE triage repo, so the owner can
+# decide what's worth acting on without opening the Security tab. Files privately because
+# this repo is public; the raw secret value is never read or printed. See
+# ctf/scripts/surfaceSecurityFindings.mjs.
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 13 * * 1"   # Mondays 13:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  surface:
+    name: Surface open security findings into the triage repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Surface security findings
+        env:
+          # GH_PAT can read this repo's security alerts and write issues on the private
+          # triage repo. The automatic Actions token cannot do the cross-repo write.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node ctf/scripts/surfaceSecurityFindings.mjs
