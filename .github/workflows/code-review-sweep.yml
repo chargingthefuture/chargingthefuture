@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       slice:
-        description: "Review this exact slice path (blank = least-recently-reviewed)"
+        description: "Review this exact plugin/module name (blank = least-recently-reviewed)"
         required: false
         type: string
       dry_run:

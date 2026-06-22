@@ -1,22 +1,30 @@
 #!/usr/bin/env node
-// Review ONE slice of the codebase and file GitHub issues for the findings.
+// Review ONE plugin (or standalone module) of the codebase and file GitHub issues for the
+// findings.
 //
-// This is the "code review" half of an incremental review pipeline that runs on a
-// schedule (or by hand) instead of on every merge:
+// This is the "code review" half of an incremental review pipeline that runs on a schedule
+// (or by hand) instead of on every merge:
 //
-//   1. Discover candidate slices (immediate subdirectories of a few source roots).
-//   2. Pick the least-recently-reviewed slice, using the rotation ledger at
-//      ctf/config/code-review-ledger.json (new slices are reviewed first).
-//   3. Send that slice's source to Claude and ask for concrete, high-signal findings.
-//   4. File one GitHub issue per finding, labelled `code-review`. Findings the model
-//      judges to have a small, safe, self-contained fix also get `code-review:actionable`,
-//      which the implement workflow can turn into a pull request.
-//   5. Stamp the slice as reviewed in the ledger so the next run moves on.
+//   1. Discover slices by grouping folders by NAME across the source layers
+//      (app/api, components, lib, mobile/src/features). A name that appears in several
+//      layers is a plugin and is reviewed as ONE holistic slice (its API + server logic +
+//      web UI + mobile feature together), so cross-layer bugs are visible. A name that
+//      appears in only one layer is a standalone module (e.g. `auth`, `ui`, `chatbot`) and
+//      is its own slice, so features outside any plugin still get reviewed.
+//   2. Pick the slice to review: an in-progress (partial) slice first, then any
+//      never-reviewed slice, then the least-recently-reviewed one. This guarantees every
+//      slice gets at least one pass before any gets a second.
+//   3. Send that slice's source to Claude (up to a per-run byte budget) and ask for
+//      concrete, high-signal findings, including mismatches between the layers.
+//   4. File one GitHub issue per finding, labelled `code-review`. Findings the model judges
+//      to have a small, safe, self-contained fix also get `code-review:actionable`, which
+//      the implement workflow can turn into a pull request.
+//   5. Stamp the slice in the rotation ledger. A slice too big for one run carries over:
+//      its remaining files are reviewed on the next run(s), and it is only marked fully
+//      reviewed once every file has been covered (nothing is silently dropped).
 //
-// It never writes code or opens a PR. It is deliberately bounded (one slice per run, a
-// cap on issues filed, a byte cap on the source sent) so a single run costs little. It
-// no-ops safely when its environment is not configured, so it is harmless to schedule
-// before the secrets are in place.
+// It never writes code or opens a PR. It no-ops safely when its environment is not
+// configured, so it is harmless to schedule before the secrets are in place.
 //
 // Required environment:
 //   ANTHROPIC_API_KEY    For the model call.
@@ -25,14 +33,14 @@
 // Optional environment:
 //   GITHUB_REPOSITORY      owner/repo (default: chargingthefuture/chargingthefuture).
 //   CODE_REVIEW_MODEL      Model id (default: claude-sonnet-4-6). Use a cheaper model to cut cost.
-//   CODE_REVIEW_SLICE      Review this exact slice path instead of the rotation pick.
-//   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 6). Highest severity first.
-//   CODE_REVIEW_MAX_BYTES  Most source bytes to send to the model (default: 60000).
+//   CODE_REVIEW_SLICE      Review this exact plugin/module name instead of the rotation pick.
+//   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 8). Highest severity first.
+//   CODE_REVIEW_MAX_BYTES  Per-run source byte budget (default: 200000 ≈ most whole plugins).
 //   CODE_REVIEW_DRY_RUN    "1" to print findings without filing issues or touching the ledger.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,11 +51,12 @@ const ledgerPath = join(repoRoot, 'ctf/config/code-review-ledger.json');
 const REPO = (process.env.GITHUB_REPOSITORY || 'chargingthefuture/chargingthefuture').trim();
 const MODEL = (process.env.CODE_REVIEW_MODEL || 'claude-sonnet-4-6').trim();
 const FORCED_SLICE = (process.env.CODE_REVIEW_SLICE || '').trim();
-const MAX_ISSUES = Number(process.env.CODE_REVIEW_MAX_ISSUES || '6');
-const MAX_BYTES = Number(process.env.CODE_REVIEW_MAX_BYTES || '60000');
+const MAX_ISSUES = Number(process.env.CODE_REVIEW_MAX_ISSUES || '8');
+const MAX_BYTES = Number(process.env.CODE_REVIEW_MAX_BYTES || '200000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
 
-// Immediate subdirectories of these roots become the slices we rotate through.
+// Folders with the same name under these layers are grouped into one slice. A name in two
+// or more layers is treated as a plugin; a name in one layer is a standalone module.
 const SLICE_ROOTS = [
   'ctf/packages/web/app/api',
   'ctf/packages/web/components',
@@ -80,9 +89,9 @@ function isDir(path) {
   }
 }
 
-// Immediate subdirectories of the configured roots, as repo-relative paths.
+// Group folders by name across the layers. Returns a Map of name -> { name, type, paths }.
 function discoverSlices() {
-  const slices = [];
+  const byName = new Map();
   for (const root of SLICE_ROOTS) {
     const rootAbs = join(repoRoot, root);
     if (!isDir(rootAbs)) {
@@ -92,12 +101,20 @@ function discoverSlices() {
       if (SKIP_DIRS.has(name) || name.startsWith('.')) {
         continue;
       }
-      if (isDir(join(rootAbs, name))) {
-        slices.push(`${root}/${name}`);
+      if (!isDir(join(rootAbs, name))) {
+        continue;
       }
+      if (!byName.has(name)) {
+        byName.set(name, { name, type: 'module', paths: [] });
+      }
+      byName.get(name).paths.push(`${root}/${name}`);
     }
   }
-  return slices.sort();
+  for (const slice of byName.values()) {
+    slice.paths.sort();
+    slice.type = slice.paths.length >= 2 ? 'plugin' : 'module';
+  }
+  return byName;
 }
 
 function loadLedger() {
@@ -116,27 +133,44 @@ function saveLedger(ledger) {
   writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
 }
 
-// Add newly discovered slices, drop ones whose directory is gone.
+// Keep rotation state for every discovered slice; drop slices whose folders are all gone.
+// `cursor` is the index into the slice's file list where the next run resumes; `partial`
+// means a run covered only part of the slice and it must be continued.
 function reconcileSlices(ledger, discovered) {
-  const known = new Map(ledger.slices.map((s) => [s.path, s]));
+  const known = new Map(ledger.slices.map((s) => [s.name, s]));
   const result = [];
-  for (const path of discovered) {
-    result.push(known.get(path) || { path, lastReviewedAt: null, lastRunIssues: 0 });
+  for (const name of [...discovered.keys()].sort()) {
+    const existing = known.get(name);
+    if (existing) {
+      existing.type = discovered.get(name).type;
+      if (typeof existing.cursor !== 'number') existing.cursor = 0;
+      if (typeof existing.partial !== 'boolean') existing.partial = false;
+      result.push(existing);
+    } else {
+      result.push({ name, type: discovered.get(name).type, lastReviewedAt: null, lastRunIssues: 0, cursor: 0, partial: false });
+    }
   }
   ledger.slices = result;
   return ledger;
 }
 
-// Least-recently-reviewed first; never-reviewed (null) beats any timestamp.
+// In-progress (partial) slice first, then never-reviewed, then least-recently-reviewed.
 function pickSlice(ledger) {
   if (FORCED_SLICE) {
     return (
-      ledger.slices.find((s) => s.path === FORCED_SLICE) || {
-        path: FORCED_SLICE,
+      ledger.slices.find((s) => s.name === FORCED_SLICE) || {
+        name: FORCED_SLICE,
+        type: 'module',
         lastReviewedAt: null,
         lastRunIssues: 0,
+        cursor: 0,
+        partial: false,
       }
     );
+  }
+  const partial = ledger.slices.find((s) => s.partial);
+  if (partial) {
+    return partial;
   }
   const sorted = [...ledger.slices].sort((a, b) => {
     if (!a.lastReviewedAt) return -1;
@@ -165,56 +199,76 @@ function walkSourceFiles(dirAbs, out) {
   return out;
 }
 
-// Concatenate the slice's source up to the byte cap, with a header per file. Returns the
-// text plus the count of files included, so the model sees real code, not a guess.
-function gatherSliceSource(slicePath) {
-  const sliceAbs = join(repoRoot, slicePath);
-  if (!isDir(sliceAbs)) {
-    return { text: '', fileCount: 0, truncated: false };
+// Deterministic, repo-relative file list across all of a slice's folders.
+function buildFileList(paths) {
+  const files = [];
+  for (const rel of paths) {
+    const abs = join(repoRoot, rel);
+    if (isDir(abs)) {
+      walkSourceFiles(abs, files);
+    }
   }
-  const files = walkSourceFiles(sliceAbs, []).sort();
-  let text = '';
-  let fileCount = 0;
-  let truncated = false;
-  for (const fileAbs of files) {
-    if (text.length >= MAX_BYTES) {
-      truncated = true;
-      break;
-    }
-    const rel = relative(repoRoot, fileAbs);
-    const header = `\n===== FILE: ${rel} =====\n`;
-    const remaining = MAX_BYTES - text.length - header.length;
-    if (remaining <= 0) {
-      truncated = true;
-      break;
-    }
-    let body = readFileSync(fileAbs, 'utf8');
-    if (body.length > remaining) {
-      body = `${body.slice(0, remaining)}\n... (file truncated) ...`;
-      truncated = true;
-    }
-    text += header + body;
-    fileCount += 1;
-  }
-  return { text, fileCount, truncated };
+  return files
+    .map((abs) => ({ abs, rel: relative(repoRoot, abs) }))
+    .sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 }
 
-async function askClaude(slicePath, source) {
+// Concatenate files from `cursor` up to the byte budget, with a header per file. A single
+// file larger than the budget is included truncated so the run always makes progress.
+function gatherChunk(fileList, cursor, budget) {
+  let text = '';
+  let i = cursor;
+  let truncatedFile = null;
+  for (; i < fileList.length; i++) {
+    const { abs, rel } = fileList[i];
+    const header = `\n===== FILE: ${rel} =====\n`;
+    if (text.length > 0 && text.length + header.length >= budget) {
+      break;
+    }
+    let body = readFileSync(abs, 'utf8');
+    const room = budget - text.length - header.length;
+    if (body.length > room) {
+      if (text.length === 0) {
+        body = `${body.slice(0, Math.max(room, 0))}\n... (file truncated to fit the run budget) ...`;
+        truncatedFile = rel;
+        text += header + body;
+        i += 1;
+      }
+      break;
+    }
+    text += header + body;
+  }
+  const complete = i >= fileList.length;
+  return { text, startIdx: cursor, endIdx: i, nextCursor: complete ? 0 : i, complete, truncatedFile };
+}
+
+async function askClaude(slice, source, chunkNote) {
+  const layers = slice.paths.join('\n  ');
   const system = [
-    'You are a senior engineer doing a code review of one slice of "Charging the Future",',
-    'an open-source Next.js + React Native app. Follow the repository rules in CLAUDE.md.',
+    'You are a senior engineer doing a code review of one plugin/module of "Charging the',
+    'Future", an open-source Next.js + React Native app. Follow the repository rules in CLAUDE.md.',
     '',
-    'Report only concrete, high-signal findings: real bugs, security or correctness problems,',
-    'missing error handling, clear dead code, obvious simplifications, and TypeScript',
-    'type-safety violations (no `any` without an eslint-disable + reason). Do NOT report pure',
-    'style or formatting nits, and do not invent problems. If the slice looks fine, return [].',
+    'You are shown the whole slice across its layers at once. Look hard for bugs that live at',
+    'the SEAMS between layers, not just within one file:',
+    '  - the API route returns one shape but the web component or mobile screen expects another;',
+    "  - a lib/server function's contract changed but a caller still uses the old shape;",
+    '  - an auth, permission, or input-validation check present on one path but missing on another;',
+    '  - web and mobile implementing the same feature differently (parity drift).',
+    'Also report within-file problems: real bugs, security/correctness issues, missing error',
+    'handling, clear dead code, obvious simplifications, and TypeScript type-safety violations',
+    '(no `any` without an eslint-disable + reason).',
     '',
-    'Write every field in plain language. No jargon. Be specific and brief.',
+    'Do NOT report pure style or formatting nits, and do not invent problems. If the slice looks',
+    'fine, return []. Write every field in plain language. Be specific and brief.',
   ].join('\n');
 
   const user = [
-    `Review the slice \`${slicePath}\`. The source files follow, each after a "===== FILE: <path> =====" header.`,
-    'Some long files may be truncated; do not flag truncation itself as a problem.',
+    `Review the ${slice.type} \`${slice.name}\`. It spans these folders:`,
+    `  ${layers}`,
+    chunkNote,
+    '',
+    'The source files follow, each after a "===== FILE: <path> =====" header. Some long files',
+    'may be truncated; do not flag truncation itself as a problem.',
     '',
     source,
     '',
@@ -263,8 +317,8 @@ function parseFindings(raw) {
   return findings;
 }
 
-function fingerprint(slicePath, title) {
-  return createHash('sha1').update(`${slicePath}\n${title}`).digest('hex').slice(0, 16);
+function fingerprint(sliceName, title) {
+  return createHash('sha1').update(`${sliceName}\n${title}`).digest('hex').slice(0, 16);
 }
 
 function ensureLabel(name, color, description) {
@@ -295,13 +349,13 @@ function existingFingerprints() {
   }
 }
 
-function buildIssueBody(slicePath, finding, fp) {
+function buildIssueBody(slice, finding, fp) {
   const files = Array.isArray(finding.files) && finding.files.length
     ? finding.files.map((f) => `\`${f}\``).join(', ')
     : '(not specified)';
   return [
     `<!-- code-review-fingerprint: ${fp} -->`,
-    `Automated code review of \`${slicePath}\`.`,
+    `Automated code review of the ${slice.type} \`${slice.name}\` (${slice.paths.length} folder(s)).`,
     '',
     `**Severity:** ${finding.severity || 'unknown'}`,
     `**Category:** ${finding.category || 'unknown'}`,
@@ -323,14 +377,13 @@ function buildIssueBody(slicePath, finding, fp) {
   ].join('\n');
 }
 
-function fileIssue(slicePath, finding, fp) {
-  const base = slicePath.split('/').pop();
-  const title = `Code review (${base}): ${finding.title}`;
+function fileIssue(slice, finding, fp) {
+  const title = `Code review (${slice.name}): ${finding.title}`;
   const labels = ['code-review'];
   if (finding.actionable === true) {
     labels.push('code-review:actionable');
   }
-  const args = ['issue', 'create', '--repo', REPO, '--title', title, '--body', buildIssueBody(slicePath, finding, fp)];
+  const args = ['issue', 'create', '--repo', REPO, '--title', title, '--body', buildIssueBody(slice, finding, fp)];
   for (const label of labels) {
     args.push('--label', label);
   }
@@ -338,7 +391,8 @@ function fileIssue(slicePath, finding, fp) {
 }
 
 async function main() {
-  const ledger = reconcileSlices(loadLedger(), discoverSlices());
+  const discovered = discoverSlices();
+  const ledger = reconcileSlices(loadLedger(), discovered);
   if (ledger.slices.length === 0) {
     console.log('reviewCodebaseSlice: no slices discovered under the configured roots.');
     return;
@@ -349,28 +403,38 @@ async function main() {
     console.log('reviewCodebaseSlice: nothing to review.');
     return;
   }
+  // pickSlice may synthesize a forced slice that is not in `discovered`; fill its folders.
+  slice.paths = (discovered.get(slice.name) || { paths: [] }).paths;
 
-  const { text, fileCount, truncated } = gatherSliceSource(slice.path);
-  if (fileCount === 0) {
-    console.log(`reviewCodebaseSlice: ${slice.path} has no source files; marking reviewed.`);
+  const fileList = buildFileList(slice.paths);
+  if (fileList.length === 0) {
+    console.log(`reviewCodebaseSlice: ${slice.name} has no source files; marking reviewed.`);
     slice.lastReviewedAt = new Date().toISOString();
     slice.lastRunIssues = 0;
+    slice.cursor = 0;
+    slice.partial = false;
     if (!DRY_RUN) saveLedger(ledger);
     return;
   }
 
-  console.log(`reviewCodebaseSlice: reviewing ${slice.path} (${fileCount} file(s)${truncated ? ', truncated' : ''}) with ${MODEL}.`);
-  const findings = parseFindings(await askClaude(slice.path, text));
+  const start = typeof slice.cursor === 'number' && slice.cursor < fileList.length ? slice.cursor : 0;
+  const chunk = gatherChunk(fileList, start, MAX_BYTES);
+  const covered = `files ${chunk.startIdx + 1}–${chunk.endIdx} of ${fileList.length}`;
+  const chunkNote = chunk.complete && start === 0
+    ? `This run covers the whole slice (${fileList.length} file(s)).`
+    : `This run covers ${covered}${chunk.complete ? ' (final part)' : ' — the rest continues next run'}.`;
+
+  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered} with ${MODEL}.`);
+  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote));
 
   if (findings.length === 0) {
-    console.log(`reviewCodebaseSlice: no findings for ${slice.path}.`);
+    console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);
   }
-
   // Highest severity first, so the per-run cap keeps the issues that matter most.
   findings.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 3) - (SEVERITY_RANK[b.severity] ?? 3));
 
   if (DRY_RUN) {
-    console.log(JSON.stringify({ slice: slice.path, findings }, null, 2));
+    console.log(JSON.stringify({ slice: slice.name, covered, complete: chunk.complete, findings }, null, 2));
     return;
   }
 
@@ -381,27 +445,35 @@ async function main() {
   let filed = 0;
   for (const finding of findings) {
     if (filed >= MAX_ISSUES) {
-      console.log(`reviewCodebaseSlice: hit MAX_ISSUES (${MAX_ISSUES}); remaining findings deferred to next sweep of this slice.`);
+      console.log(`reviewCodebaseSlice: hit MAX_ISSUES (${MAX_ISSUES}); remaining findings deferred.`);
       break;
     }
     if (!finding.title) {
       continue;
     }
-    const fp = fingerprint(slice.path, finding.title);
+    const fp = fingerprint(slice.name, finding.title);
     if (seen.has(fp)) {
       console.log(`reviewCodebaseSlice: skip duplicate "${finding.title}".`);
       continue;
     }
-    const url = fileIssue(slice.path, finding, fp);
+    const url = fileIssue(slice, finding, fp);
     seen.add(fp);
     filed += 1;
     console.log(`reviewCodebaseSlice: filed ${url}`);
   }
 
-  slice.lastReviewedAt = new Date().toISOString();
   slice.lastRunIssues = filed;
+  if (chunk.complete) {
+    slice.lastReviewedAt = new Date().toISOString();
+    slice.cursor = 0;
+    slice.partial = false;
+    console.log(`reviewCodebaseSlice: completed ${slice.name}; filed ${filed} issue(s).`);
+  } else {
+    slice.cursor = chunk.nextCursor;
+    slice.partial = true;
+    console.log(`reviewCodebaseSlice: ${slice.name} carries over from file ${chunk.nextCursor + 1}; filed ${filed} issue(s).`);
+  }
   saveLedger(ledger);
-  console.log(`reviewCodebaseSlice: filed ${filed} issue(s) for ${slice.path}.`);
 }
 
 main().catch((error) => {
