@@ -180,6 +180,23 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     }
   }
 
+  // Re-post an expired (or closed) request: re-opens it and resets the 28-day clock. Owner-only on the
+  // server; here it is offered only on the member's own expired posts.
+  async function handleRepost(requestId: string) {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/socketrelay/requests/${requestId}/repost`, {
+        method: "POST",
+        headers: { "x-ctf-csrf": "1" },
+      });
+      if (res.ok) await fetchData(false);
+    } catch {
+      // Refresh will reflect the latest state.
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleClaim(requestId: string) {
     setSubmitting(true);
     try {
@@ -252,10 +269,21 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     );
   }
 
-  const openCount = requests.filter((r) => r.status === "open").length;
-  const categories = deriveCategories(requests, category);
+  // An expired post (open but past its 28-day life) is no longer "active", so it does not count toward
+  // the open badge and does not appear in the active feed — only under the member's own "Mine" filter.
+  const openCount = requests.filter((r) => r.status === "open" && !r.isExpired).length;
+  // "Mine" is a leading filter (only when signed in) so a member can always find their own posts — on a
+  // small phone screen especially — to edit or re-post them, instead of hunting through the whole feed.
+  const baseCategories = deriveCategories(requests, category === "Mine" ? "All" : category);
+  const categories = userId ? ["All", "Mine", ...baseCategories.filter((c) => c !== "All")] : baseCategories;
   const visible = requests.filter((r) => {
-    if (category !== "All" && !requestTags(r).some((tag) => tag.toLowerCase() === category.toLowerCase())) return false;
+    if (category === "Mine") {
+      if (r.ownerUserId !== userId) return false;
+    } else {
+      // Active feed: expired posts drop out for everyone (the owner manages them under "Mine").
+      if (r.isExpired) return false;
+      if (category !== "All" && !requestTags(r).some((tag) => tag.toLowerCase() === category.toLowerCase())) return false;
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       if (!`${r.title} ${r.details} ${r.city ?? ""}`.toLowerCase().includes(q)) return false;
@@ -273,6 +301,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
           onClaim={(id) => void handleClaim(id)}
           onPost={() => setTab("post")}
           onEdit={startEdit}
+          onRepost={(id) => void handleRepost(id)}
         />
       )}
       {tab === "post" && (

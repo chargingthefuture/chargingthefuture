@@ -109,6 +109,30 @@ scheme (`RAILWAY_*` / `VERCEL_*` are retired). Render injects the Infisical
 without explicit user consent. New keys are added in Infisical (and documented
 here) only with the owner's approval.
 
+### No new variant for a value that already exists — and no dual-source fallbacks (Critical — all agents)
+
+Agents keep injecting a brand-new environment variable name for a value that already has one, then
+wiring a dual-source fallback so the new name is preferred and the existing one is the backstop. This
+is **not allowed** without the owner explicitly asking for it and saying yes.
+
+- **Reuse the existing key. Do not invent a synonym.** If the production base URL is already
+  available as the `NEXT_PUBLIC_APP_URL` secret, a workflow that needs it must read
+  `${{ secrets.NEXT_PUBLIC_APP_URL }}` directly. Do **not** introduce a new `APP_BASE_URL` (or any
+  other renamed variant) for the same value.
+- **No fallback expressions that add a new name.** Do not write
+  `${{ vars.NEW_NAME || secrets.EXISTING }}` in a workflow, or `process.env.NEW_NAME ?? process.env.EXISTING`
+  in code, where `NEW_NAME` is a name you are inventing for a value that already exists under
+  `EXISTING`. The `||`/`??` chain looks harmless but it quietly creates a third config knob for one
+  value, and the owner then has to guess which of several names is actually read.
+- **The legitimate exception (allowed):** one logical value that genuinely lives under *different
+  names in genuinely different sources/environments*. For example the app URL is `APP_URL` in
+  Infisical (the app runtime) and `NEXT_PUBLIC_APP_URL` in GitHub Actions secrets — those are two real
+  stores, so a reader bridging exactly those two is fine. What is forbidden is adding *another* name
+  on top of an existing one in the *same* store for the *same* value.
+- **If you think a new variable or a fallback is genuinely warranted, ask first.** State the value, the
+  name(s) it already has, and why a new one is needed; only add it after the owner says yes. This is the
+  same approval bar as renaming a key (above).
+
 ### Stream and Formance staging keys
 The single `production` Infisical environment additionally holds the demo/staging
 credential set for the two integrations that need it:

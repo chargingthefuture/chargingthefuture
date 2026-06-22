@@ -116,8 +116,8 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 | 21 | Channel member list / "who's here" | Build | All surfaces. |
 | 22 | Unread divider ("where you left off") | **Done (Commons)** / Build (plugin chats) | Commons shipped in PR #695. |
 | 23 | Unread count badges on the app nav | Build | Uses the last-seen endpoint from PR #695. |
-| 24 | Polls (create + vote) | Build | Turn on the dashboard toggle (currently off) + UI. |
-| 25 | Message reminders / "remind me" | Build | Turn on the dashboard toggle (currently off) + UI. |
+| 24 | Polls (create + vote) | **Done (plugin chats)** / Build (Commons) | Plugin chats shipped — polls are the stream-chat-react 12.16 default once the channel type permits them (owner enabled the toggle); the panel confirms the defaults and tints the poll card to the plugin accent. The Commons custom-design version is a separate follow-up. |
+| 25 | Message reminders / "remind me" | **Done (plugin chats)** / Build (Commons) | Plugin chats shipped — a "Remind me about this" message action. stream-chat 8.60 has no per-message reminder API (it lands in stream-chat 9.x / stream-chat-react 13.x), so it schedules an in-browser nudge for now, gated on the channel `reminders` config. The Commons version and the server-backed reminder after the version upgrade are separate follow-ups. |
 | 26 | Scheduled messages | Build | Turn on the dashboard toggle (currently off) + UI. |
 | 27 | Flag a message for review | Build | All surfaces. Feeds the moderation review queue (#30). |
 | 28 | Mute a user | Build | All surfaces. |
@@ -136,10 +136,16 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 Each task is intended to ship as its own small PR, grouped so a single PR touches one feature cluster
 across the relevant surfaces. A task with no dependency can run anytime / in parallel.
 
-1. **Commons live Stream layer (foundation).** Add a live Stream Chat client connection beneath the
-   existing custom Commons UI (keep the design; read live events, do not swap components). This is the
-   prerequisite for real-time Commons features (reactions sync, typing, read receipts, delivery,
-   presence). No dependency. **Blocks:** the Commons portion of tasks 2, 6, 7.
+1. **Commons live Stream layer (foundation).** Done (branch `feat/commons-live-stream-layer`,
+   2026-06-21). Added a live Stream Chat client connection beneath the existing custom Commons UI
+   (kept the design; read live events, did not swap components): `POST /api/hub/join` now mints real
+   `ctf-feed-community` credentials, the Commons hook opens a `stream-chat` connection and refreshes
+   history on `message.new`/reconnect, the 10s poll slows to a 30s backstop while live, and a subtle
+   "X is typing…" line surfaces typing — all with a clean fall-back to polling when Stream is
+   unconfigured. Read receipts (#18), delivery status (#19), and presence dots (#20) were left as
+   deferred follow-ups for the presence cluster (task 6). This is the prerequisite for real-time
+   Commons features (reactions sync, typing, read receipts, delivery, presence). No dependency.
+   **Blocks:** the Commons portion of tasks 2, 6, 7.
 2. **Reactions (#1).** Plugin chats: enable in the richer Stream UI. Commons: render a reaction bar on
    the custom cards. Commons portion is blocked by task 1.
 3. **Threads + quoted reply for plugin chats (#2, #3).** Add `Thread`/`Window` to the plugin chats;
@@ -188,9 +194,24 @@ Programming.
 - 2026-06-21: Added the "why `messaging`-style text + `default` video, not `livestream`" note for Peer
   Programming, with the one trigger (broadcasting cohort video to listen-in watchers) that would
   justify the `livestream` video call type.
+- 2026-06-21: Task 1 (Commons live Stream layer) shipped on branch `feat/commons-live-stream-layer`.
+  `POST /api/hub/join` mints real `ctf-feed-community` credentials (or reports `configured: false`);
+  the Commons hook opens a `stream-chat` connection, refreshes history on `message.new`/reconnect,
+  slows the poll to a 30s backstop while live, and surfaces a typing indicator — falling back to
+  polling when Stream is unconfigured. Read receipts, delivery status, and presence dots deferred to
+  task 6. Quota note: `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
 - 2026-06-21: Plugin-chat portions of @mentions (#4), in-channel message search (#9), and link
   preview cards (#15) shipped in the shared StreamChatPanel, so every Direct Line chat (TrustTransport,
   SocketRelay, LightHouse, Foundation) gets them. @mentions and link previews are Stream v12 defaults
   switched on by watching the channel with members and setting `enrichURLForPreview`; search is a
   compact strip calling `channel.search`. The Commons versions of all three remain separate follow-ups
   because Commons uses our own custom UI, not the Stream component.
+- 2026-06-21: Plugin-chat portions of polls (#24) and message reminders (#25) shipped in the shared
+  StreamChatPanel, so every Direct Line chat (TrustTransport, SocketRelay, LightHouse, Foundation)
+  gets them. Polls are the stream-chat-react 12.16 default once the channel type permits them (owner
+  enabled the toggle): the composer attachment menu shows "Create poll" and the message list renders
+  Stream's poll card with live voting; the panel only confirms the defaults run and tints the card to
+  the plugin accent. Reminders are a "Remind me about this" message action gated on the channel
+  `reminders` config; stream-chat 8.60 has no per-message reminder API (it arrives in stream-chat 9.x /
+  stream-chat-react 13.x), so it schedules an in-browser nudge for now. The Commons versions and the
+  server-backed reminder after the stream-chat upgrade remain separate follow-ups.

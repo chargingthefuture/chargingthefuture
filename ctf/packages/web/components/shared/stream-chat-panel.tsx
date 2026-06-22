@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StreamChat } from 'stream-chat';
 import {
   Chat,
@@ -9,9 +9,13 @@ import {
   Window,
   useChannelActionContext,
   useChannelStateContext,
+  type CustomMessageActions,
 } from 'stream-chat-react';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './stream-chat-panel.css';
+
+// How far ahead the "Remind me about this" action schedules its nudge (30 minutes).
+const REMINDER_DELAY_MS = 30 * 60 * 1000;
 
 // The logged-in author's own messages are always gray; everyone else's use the plugin accent.
 const OWN_BUBBLE_BG = 'rgba(255, 255, 255, 0.07)';
@@ -170,6 +174,160 @@ const ChannelSearchBar: React.FC = () => {
   );
 };
 
+// A message a member asked to be reminded about, plus the timer that fires the reminder. The timer id
+// is kept so the reminder can be cancelled on unmount and never fires into a torn-down panel.
+interface ActiveReminder {
+  id: string;
+  label: string;
+  timeoutId: ReturnType<typeof setTimeout>;
+}
+
+// A small one-line confirmation that floats over the message list after a member sets or fires a
+// reminder, then clears itself. It uses the plugin accent variables so it matches the rest of the
+// panel and never blocks the conversation underneath.
+const ReminderToast: React.FC<{ text: string; onDismiss: () => void }> = ({ text, onDismiss }) => (
+  <div className="ctf-chat-reminder-toast" role="status">
+    <span className="ctf-chat-reminder-toast__text">{text}</span>
+    <button
+      type="button"
+      className="ctf-chat-reminder-toast__close"
+      onClick={onDismiss}
+      aria-label="Dismiss reminder"
+    >
+      ×
+    </button>
+  </div>
+);
+
+// Builds the conversation's message-action menu and reminder behaviour, scoped to one channel.
+//
+// stream-chat-react 12.16 / stream-chat 8.60 do not yet ship Stream's server-backed message
+// reminders (the per-message reminder API — client.reminders / message.reminder — and the built-in
+// "remind me" action arrived in stream-chat 9.x and stream-chat-react 13.x). Until that upgrade, this
+// surfaces the same member-facing capability locally: a "Remind me about this" entry in each
+// message's actions menu that schedules an in-browser nudge (a desktop notification when the member
+// has granted permission, otherwise an in-panel toast). The reminder is gated on the channel's own
+// `reminders` config flag, so it only appears when the channel type permits reminders and is simply
+// absent — never a crash — when it does not.
+//
+// Returns the customMessageActions map to hand to <MessageList /> (empty when reminders are off, which
+// MessageList treats as "no extra actions"), plus the live toast node to render over the list.
+function useReminderActions(
+  // The Stream Channel value is loosely typed throughout this panel; only getConfig() is read here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  channel: any,
+): { customMessageActions: CustomMessageActions; toast: React.ReactNode } {
+  const [toastText, setToastText] = useState<string | null>(null);
+  const remindersRef = useRef<ActiveReminder[]>([]);
+
+  // The channel type permits reminders only when its config says so; getConfig() reads the watched
+  // channel's config without a network call. When it is false (or the config is missing) the action
+  // is not offered at all, so the panel degrades gracefully on channels without the capability.
+  const remindersEnabled = Boolean(channel?.getConfig?.()?.reminders);
+
+  // Clear any still-pending reminder timers when the panel unmounts so none fire after teardown.
+  useEffect(() => {
+    return () => {
+      for (const reminder of remindersRef.current) clearTimeout(reminder.timeoutId);
+      remindersRef.current = [];
+    };
+  }, []);
+
+  const fireReminder = useCallback((label: string) => {
+    const body = label ? `Reminder: ${label}` : 'Reminder about a message you saved.';
+    // Use a desktop notification when the member has already granted permission; otherwise fall back
+    // to the in-panel toast. Never prompt for permission here — that belongs to an explicit opt-in,
+    // not a side effect of setting a reminder.
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try {
+        new Notification('Direct Line reminder', { body });
+        return;
+      } catch {
+        // Fall through to the toast if the notification cannot be constructed.
+      }
+    }
+    setToastText(body);
+  }, []);
+
+  const customMessageActions = useMemo<CustomMessageActions>(() => {
+    const actions: CustomMessageActions = {};
+    if (!remindersEnabled) return actions;
+    // The key is the label shown in the message actions menu; the handler schedules the nudge.
+    actions['Remind me about this'] = (message) => {
+      const preview = (message?.text || '').trim();
+      const label = preview.length > 80 ? `${preview.slice(0, 77)}…` : preview;
+      const timeoutId = setTimeout(() => {
+        fireReminder(label);
+        remindersRef.current = remindersRef.current.filter((r) => r.id !== message.id);
+      }, REMINDER_DELAY_MS);
+      // Replace any existing reminder for the same message so it cannot stack duplicates.
+      const existing = remindersRef.current.find((r) => r.id === message.id);
+      if (existing) clearTimeout(existing.timeoutId);
+      remindersRef.current = [
+        ...remindersRef.current.filter((r) => r.id !== message.id),
+        { id: message.id, label, timeoutId },
+      ];
+      setToastText('Reminder set — you’ll be nudged about this message in 30 minutes.');
+    };
+    return actions;
+  }, [remindersEnabled, fireReminder]);
+
+  // Auto-clear the toast a few seconds after it appears so it never lingers over the conversation.
+  useEffect(() => {
+    if (!toastText) return;
+    const timer = setTimeout(() => setToastText(null), 5000);
+    return () => clearTimeout(timer);
+  }, [toastText]);
+
+  const toast = toastText ? (
+    <ReminderToast text={toastText} onDismiss={() => setToastText(null)} />
+  ) : null;
+
+  return { customMessageActions, toast };
+}
+
+// The live conversation under <Channel>: search bar, message list, composer, and thread panel, plus
+// the reminder action wired into the message-action menu and its floating toast. It is a child of
+// <Channel> so the Stream contexts (state, action) are available to ChannelSearchBar; it takes the
+// channel directly to read the reminders config without another network call. Polls need no wiring
+// here — see the comment on the <Window> block.
+const ConversationBody: React.FC<{
+  // The Stream Channel value is loosely typed throughout this panel; passed straight to the hook.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  channel: any;
+}> = ({ channel }) => {
+  const { customMessageActions, toast } = useReminderActions(channel);
+  return (
+    <>
+      {/* Window holds the main conversation; it yields to the Thread panel when a reply thread is
+          open (the thread slides over on phone-width, sits beside on desktop). Wrapping the list +
+          input in Window — and rendering a sibling Thread — is what turns on Stream's threaded
+          replies. Reactions, the typing indicator, and read state come with the v12 MessageList
+          defaults once the channel type allows them (the messaging type does).
+          ChannelSearchBar sits at the top of the Window so in-channel search lives above the list.
+          @mention autocomplete is the MessageInput default once members are loaded (see watch() in
+          the panel), and link preview cards render in the MessageList via the default Attachment Card.
+          Polls (create + vote) are entirely default in stream-chat-react 12.16: the composer's
+          AttachmentSelector shows a "Create poll" entry whenever the channel config allows polls and
+          the member holds the send-poll capability (uploads are off, so it is the only entry there),
+          and MessageList renders the default Poll card with live voting for any message that carries a
+          poll. The owner enabled polls on the messaging channel type, so no extra wiring is needed; the
+          affordance is simply absent on channels that do not permit polls. The reminder action is the
+          only message action passed in — it is empty (no extra action) when the channel does not permit
+          reminders. */}
+      <div className="ctf-chat-conversation">
+        <Window>
+          <ChannelSearchBar />
+          <MessageList customMessageActions={customMessageActions} />
+          <MessageInput />
+        </Window>
+        {toast}
+      </div>
+      <Thread />
+    </>
+  );
+};
+
 export interface StreamChatPanelProps {
   streamApiKey: string;
   streamToken: string;
@@ -255,20 +413,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
             while composing and in the conversation. The messaging channel type already permits URL
             enrichment in the dashboard, so no dashboard change is needed. */}
         <Channel channel={channel} enrichURLForPreview>
-          {/* Window holds the main conversation; it yields to the Thread panel when a reply thread is
-              open (the thread slides over on phone-width, sits beside on desktop). Wrapping the list +
-              input in Window — and rendering a sibling Thread — is what turns on Stream's threaded
-              replies. Reactions, the typing indicator, and read state come with the v12 MessageList
-              defaults once the channel type allows them (the messaging type does).
-              ChannelSearchBar sits at the top of the Window so in-channel search lives above the list.
-              @mention autocomplete is the MessageInput default once members are loaded (see watch()
-              above), and link preview cards render in the MessageList via the default Attachment Card. */}
-          <Window>
-            <ChannelSearchBar />
-            <MessageList />
-            <MessageInput />
-          </Window>
-          <Thread />
+          <ConversationBody channel={channel} />
         </Channel>
       </Chat>
     </div>

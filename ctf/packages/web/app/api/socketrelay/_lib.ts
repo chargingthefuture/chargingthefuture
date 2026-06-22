@@ -113,6 +113,13 @@ export function socketRelayErrorResponse(error: unknown, fallbackMessage: string
     );
   }
 
+  if (code === 'request_expired') {
+    return NextResponse.json(
+      { ok: false, code: SOCKETRELAY_ERROR_CODE.requestExpired, message: 'This request has expired. The person who posted it can re-post it.' },
+      { status: 409 },
+    );
+  }
+
   if (code === 'actor_is_owner') {
     return NextResponse.json(
       { ok: false, code: SOCKETRELAY_ERROR_CODE.actorIsOwner, message: 'Request owner cannot claim fulfillment.' },
