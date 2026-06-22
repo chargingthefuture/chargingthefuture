@@ -24,8 +24,8 @@ jobs:
     env:
       # TARGET DB to restore INTO — a new/recovery database, never production.
       FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_RESTORE_TARGET_DATABASE_URL }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.SUPABASE_URL_FALLBACK }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY_FALLBACK }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       FORMANCE_BACKUP_FILE: ${{ inputs.backup_file }}
       FORMANCE_RESTORE_CONFIRM: '1'
     steps:

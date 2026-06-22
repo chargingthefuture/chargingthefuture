@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Formance Postgres connection string (service-level, read access)
-      FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_DATABASE_URL || secrets.FORMANCE_DATABASE_URL_FALLBACK }}
+      FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_DATABASE_URL }}
       # Supabase project URL (https://xyzcompany.supabase.co)
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.SUPABASE_URL_FALLBACK }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       # Supabase service role key (write access to storage)
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY_FALLBACK }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
