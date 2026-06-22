@@ -85,29 +85,17 @@ export function getAppUrl(): string | undefined {
  * @returns The resolved provider config, or `null` when nothing is configured.
  */
 export function getConfiguredAuthProvider(): AuthProviderRuntimeConfig | null {
-  const publishableKey = firstNonEmptyTrimmed(
-    process.env.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY,
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-  );
-  const signInUrl = normalizeUrl(
-    firstNonEmptyTrimmed(
-      process.env.NEXT_PUBLIC_AUTH_SIGN_IN_URL,
-      process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
-    ),
-  );
+  const publishableKey = firstNonEmptyTrimmed(process.env.NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY);
+  const signInUrl = normalizeUrl(firstNonEmptyTrimmed(process.env.NEXT_PUBLIC_AUTH_SIGN_IN_URL));
   const afterSignOutUrl = normalizeUrl(
-    firstNonEmptyTrimmed(
-      process.env.NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL,
-      process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL,
-      signInUrl,
-    ),
+    firstNonEmptyTrimmed(process.env.NEXT_PUBLIC_AUTH_AFTER_SIGN_OUT_URL, signInUrl),
   );
   const providerName = firstNonEmptyTrimmed(process.env.NEXT_PUBLIC_AUTH_PROVIDER) ?? 'clerk';
 
   // The secret key is server-only and must NEVER be inlined into a client/edge
   // bundle, so it is read dynamically from the runtime environment (non-public
   // vars are available in `process.env` at runtime, including in middleware).
-  const secretKey = getEnvValue('AUTH_SECRET_KEY', 'CLERK_SECRET_KEY');
+  const secretKey = getEnvValue('AUTH_SECRET_KEY');
 
   if (!publishableKey && !secretKey && !signInUrl && !afterSignOutUrl) {
     return null;
