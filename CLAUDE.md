@@ -17,6 +17,43 @@ buzzwords. State the result or the next step in plain words, then stop. This is 
 hook `.claude/hooks/check-no-pleasantries.mjs`, which blocks a reply that contains a banned term and
 asks for a plain restatement.
 
+### Banned-term dictionary (every reply, all agents)
+
+The Stop hook `.claude/hooks/check-no-pleasantries.mjs` holds the canonical list and is the source of
+truth; if this copy and the hook ever differ, the hook wins. Keep the two in sync — when you change
+one, change the other. The hook scans the whole reply and matches the term even inside quotes, so do
+not reach for a banned word even to talk about it; use the replacement below instead.
+
+**Pleasantries, feelings, and sign-offs — never use any of these (in any reply):**
+
+- thanks / thank you
+- you're welcome / you are welcome
+- no problem
+- my pleasure
+- glad
+- happy to
+- excited
+- delighted
+- sorry
+- apology / apologies / apologize / apologise (any form)
+- cheers
+- congrats / congratulations
+- "I appreciate" / "we appreciate" (only the first-person form is banned; "the rate appreciates" is fine)
+- "hope this / hope that / hope you / hope it …"
+- feel free
+- warm / best / kind / kindest regards
+- looking forward
+
+**Excluded vocabulary — banned word → use instead:**
+
+- flywheel → a plain description of the loop (e.g. "each answer improves the next")
+- punch list → list
+- stale → drop the word; if you mean something specific, name it (out-of-date, superseded, no longer current)
+- console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
+
+When the hook blocks a reply, restate the result in plain, factual language — none of the terms above,
+no jargon, no first-person feeling words — then stop.
+
 ## Design Pass Gating (Critical — Read Before Touching UI)
 
 **Production-era policy (owner-directed, 2026-06-17): production is the single source of truth; the design gate is loosened; the design repo and Replit design agent are deprecated.** We no longer maintain two design versions. Do **not** stop for a design pass, do **not** require a mockup in the `design/` submodule before building UI, and do **not** announce `DESIGN PASS REQUIRED`. The `design/` submodule and `ctf/agents/design.agent.md` are **reference/inspiration only** (design guide, tokens, component patterns) — not authoritative, not synced.
