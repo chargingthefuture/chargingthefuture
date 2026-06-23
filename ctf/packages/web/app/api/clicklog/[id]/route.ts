@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveRequestIdentity } from 'lib/auth/request-identity';
 import { deleteIncident, getIncidentById } from 'lib/clicklog/repository';
 import { canDeleteIncident } from 'lib/clicklog/policy';
+import { requireClicklogAccess } from '../_lib';
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const identity = await resolveRequestIdentity();
-  if (!identity.userId) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const gate = await requireClicklogAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
   const { id } = await context.params;
   if (!id) {
@@ -20,10 +20,10 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   if (!incident.user_id) {
     return NextResponse.json({ error: 'Incident has no owner' }, { status: 500 });
   }
-  if (!canDeleteIncident(identity.userId, incident.user_id, identity.isAdmin)) {
+  if (!canDeleteIncident(gate.auth.userId, incident.user_id, gate.auth.isAdmin)) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
   }
-  const deleted = await deleteIncident(id, identity.userId);
+  const deleted = await deleteIncident(id, gate.auth.userId);
   if (!deleted) {
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
