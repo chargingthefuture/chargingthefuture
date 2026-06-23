@@ -93,8 +93,8 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 
 | # | Feature | Decision | Notes |
 |---|---|---|---|
-| 1 | Emoji reactions on messages | Build | All surfaces. The headline "inviting" feature. |
-| 2 | Threaded replies (thread panel) | Build | All surfaces. |
+| 1 | Emoji reactions on messages | **Done (plugin chats: web + Android)** / Build (Commons) | The headline "inviting" feature. Plugin chats: web shipped in the shared `stream-chat-panel.tsx`; mobile (Android) parity shipped in the shared `StreamChatView.tsx` (#699) — long-press reaction picker is the SDK default once `OverlayProvider` wraps the channel. Commons (custom UI) shipped emoji reactions separately. |
+| 2 | Threaded replies (thread panel) | **Done (plugin chats: web + Android)** / Build (Commons) | Plugin chats: web shipped `Window` + `Thread` in `stream-chat-panel.tsx`; mobile (Android) parity shipped in `StreamChatView.tsx` (#699) — `thread`/`threadList` on `<Channel>` + `<MessageList onThreadSelect>` + `<Thread />`. Commons thread view still to do. |
 | 3 | Quoted reply (inline "replying to…") | **Done (Commons)** / Build (plugin chats) | Commons shipped in PR #695. Plugin chats still to do. |
 | 4 | @mentions with autocomplete + highlight | Done (plugin chats) / Build (Commons) | Plugin chats shipped in the shared StreamChatPanel: typing `@` suggests channel members and mentions render highlighted, the Stream default once the channel is watched with its member list. Commons (custom UI) is a separate follow-up. |
 | 5 | Edit your own message | Build | All surfaces. |
@@ -215,3 +215,17 @@ Programming.
   `reminders` config; stream-chat 8.60 has no per-message reminder API (it arrives in stream-chat 9.x /
   stream-chat-react 13.x), so it schedules an in-browser nudge for now. The Commons versions and the
   server-backed reminder after the stream-chat upgrade remain separate follow-ups.
+- 2026-06-23: Android parity for the plugin-chat richer layout — threaded replies (#2) and reactions
+  (#1) — shipped in the shared mobile chat `StreamChatView.tsx` (#699), so every Direct Line chat
+  (TrustTransport, SocketRelay, LightHouse, Foundation, chyme) on Android matches the web's `Window` +
+  `Thread` layout. The minimal `<Chat><Channel><MessageList/><MessageInput/></Channel></Chat>` is now
+  wrapped in `OverlayProvider` (required for the long-press reaction picker and thread navigation);
+  `thread`/`threadList` go to `<Channel>`, `<MessageList onThreadSelect>` opens a reply thread, and
+  `<Thread />` renders it with a "Back" affordance. Reactions, the typing indicator, and read state are
+  the `stream-chat-react-native` 8.13 defaults once `OverlayProvider` wraps the channel — no extra prop
+  needed. The accent/gray bubble convention is preserved: the "others take the plugin accent" theme now
+  travels through `OverlayProvider value={{ style }}` (replacing the prior `ThemeProvider` wrapper) so
+  the overlay and thread inherit it, and the member's own bubbles stay gray via the unchanged
+  Channel-level `myMessageTheme`. Presentation / SDK-layout only — no new Stream API calls, no quota
+  impact (`ctf/docs/quota-impact/2026-06-23-mobile-stream-chat-threads-reactions.md`). The Commons
+  threads/reactions versions (custom UI) remain separate follow-ups.
