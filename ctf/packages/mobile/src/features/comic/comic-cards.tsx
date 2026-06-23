@@ -67,6 +67,17 @@ export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardP
         {item.answer}
       </Text>
 
+      {item.linkedPlugins.length > 0 ? (
+        <View style={styles.linkedPluginsRow}>
+          {item.linkedPlugins.map((plugin) => (
+            <View key={plugin.slug} style={styles.linkedPluginChip}>
+              <Ionicons name="link" size={10} color={CYAN} />
+              <Text style={styles.linkedPluginText}>{plugin.name}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {ratable && item.answerTurnId ? (
         <View style={styles.ratingRow}>
           <Pressable
@@ -248,6 +259,24 @@ const styles = StyleSheet.create({
     color: BODY,
     lineHeight: 21,
   },
+  linkedPluginsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  linkedPluginChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: `${CYAN}12`,
+    borderWidth: 1,
+    borderColor: `${CYAN}30`,
+  },
+  linkedPluginText: { fontSize: 11, fontWeight: '600', color: CYAN },
   pendingText: {
     fontSize: 12,
     color: '#7DD3FC',
