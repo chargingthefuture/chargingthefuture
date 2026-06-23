@@ -59,8 +59,12 @@ export async function POST(request: Request) {
   // `{ "deleteClerk": false }` to delete only the database data and keep the Clerk account.
   const deleteClerk = body.deleteClerk !== false;
 
+  // Track which step is running so a failure response can say whether the ServiceCredits reclaim
+  // request or the data deletion threw — the generic 503 alone was undiagnosable from the Actions log.
+  let step = 'reclaim_request';
   try {
     const reclaim = await markFullAccountDeletionRequested(userId);
+    step = 'data_deletion';
     const deletion = await deleteAllAccountData(userId, reclaim.requestedAtIso);
 
     let clerkDeleted = false;
@@ -104,19 +108,23 @@ export async function POST(request: Request) {
       clerkError,
     });
   } catch (error) {
-    reportError(error, { area: 'account', op: 'operator_delete' });
+    reportError(error, { area: 'account', op: 'operator_delete', extra: { step } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',
       actorId: OPERATOR_ACTOR_ID,
       status: 'allow',
       reason: 'operator_account_deletion',
-      target: { scope: 'account', userId },
+      target: { scope: 'account', userId, step },
       result: 'failure',
       errorCategory: 'persistence_error',
     });
+    // Surface the failing step and the underlying error so the operator can diagnose from the run
+    // log. This route is secret-gated and operator-only; the message is a DB/runtime error string
+    // (no secrets), not a stack trace.
+    const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { ok: false, code: 'account_delete_failed', message: 'Unable to complete operator account deletion.' },
+      { ok: false, code: 'account_delete_failed', step, message: 'Unable to complete operator account deletion.', detail },
       { status: 503 },
     );
   }
