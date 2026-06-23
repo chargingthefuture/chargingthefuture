@@ -4,7 +4,7 @@
 // Real-data-only: timeline dates and quoraProfileUrl are absent from /api/unlock/status
 // and are therefore omitted (no fabrication).
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -268,12 +268,14 @@ function StatusView({ status, onResubmitted }: { status: UnlockStatus; onResubmi
   );
 }
 
-// Root screen — orchestrates state transitions
-export const Unlock: React.FC = () => {
+// Root screen — orchestrates state transitions.
+// `onStatusChanged` (optional) fires after each status reload so a host gate
+// (e.g. the app-wide Unlock wall) can re-evaluate access without a restart.
+export const Unlock: React.FC<{ onStatusChanged?: () => void }> = ({ onStatusChanged }) => {
   const [phase, setPhase] = useState<'loading' | 'public' | 'submit' | 'status'>('loading');
   const [unlockStatus, setUnlockStatus] = useState<UnlockStatus | null>(null);
 
-  async function loadStatus() {
+  const loadStatus = useCallback(async () => {
     try {
       const st = await fetchUnlockStatus();
       setUnlockStatus(st);
@@ -282,10 +284,12 @@ export const Unlock: React.FC = () => {
       const msg = e instanceof Error ? e.message : '';
       const isAuthErr = msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized') || msg.includes('Forbidden');
       setPhase(isAuthErr ? 'public' : 'submit');
+    } finally {
+      onStatusChanged?.();
     }
-  }
+  }, [onStatusChanged]);
 
-  useEffect(() => { void loadStatus(); }, []);
+  useEffect(() => { void loadStatus(); }, [loadStatus]);
 
   if (phase === 'loading') return <LoadingView />;
   if (phase === 'public') return <PublicView />;
