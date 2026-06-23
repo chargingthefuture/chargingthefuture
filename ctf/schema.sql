@@ -3823,6 +3823,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_adapter_outbox_command_idem
   ON service_credits_adapter_outbox (command_name, idempotency_key);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_command_idempotency_actor_command_idem
   ON service_credits_command_idempotency (actor_id, command_name, idempotency_key);
+-- Same gap on the account-deletion reclaim insert: markFullAccountDeletionRequested upserts the
+-- reclaim row with `ON CONFLICT (account_id, deletion_request_id)`, but that unique index was never
+-- created either — so every full-account deletion (self-service and the operator delete-account
+-- workflow) threw "no unique or exclusion constraint matching the ON CONFLICT specification" at the
+-- reclaim step and never completed. Add the missing index.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_account_deletion_reclaims_account_request
+  ON service_credits_account_deletion_reclaims (account_id, deletion_request_id);
 DO $sc_cmd_idem_command_nullable$
 BEGIN
   IF EXISTS (
