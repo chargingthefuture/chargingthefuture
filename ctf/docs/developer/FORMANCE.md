@@ -23,7 +23,7 @@ see the note in `render.yaml`.
 | Container image, pinned digest, runtime flags, start command | `ctf/ops/formance/Dockerfile.ledger` |
 | Image build → GHCR | `.github/workflows/build-images.yml` (`build-formance-ledger`) → `ghcr.io/chargingthefuture/ctf-formance-ledger:latest` |
 | Service definition (image, env) | **Railway** service `ctf-formance-ledger` (deployed from the GHCR image; see "Deploy on Railway" below) |
-| Nightly backup automation | `ctf/scripts/backupFormanceToSupabase.mjs` + `.github/workflows/backup-formance-supabase.yml` |
+| Nightly backup automation | `ctf/scripts/backupFormanceToPrivateRepo.mjs` + `.github/workflows/backup-formance.yml` |
 
 State lives entirely in a Railway-managed Postgres. `AUTO_UPGRADE=true` runs schema
 migrations on container start. `FORMANCE_POSTGRES_URI` is set on the Railway ledger
@@ -76,7 +76,7 @@ it as a Docker-image service; no Dockerfile build happens on Railway.
    below). The image's entrypoint also auto-creates the book on start, so this is a
    verify-and-smoke-test step.
 7. **Repoint the backup** secret `FORMANCE_DATABASE_URL` (used by
-   `backup-formance-supabase.yml`) at the Railway Postgres connection string.
+   `backup-formance.yml`) at the Railway Postgres connection string.
 
 Note on networking: with the web app on Render and the ledger on Railway, the
 web→ledger call crosses providers, so it uses the ledger's **public https** URL with
@@ -144,33 +144,46 @@ public Railway https URL.
 
 ## Backup & Restore
 
-A GitHub Actions workflow runs `backupFormanceToSupabase.mjs` daily at 03:00 UTC:
-`pg_dump` (compressed) → upload to `backups/formance/` in Supabase Storage.
+A GitHub Actions workflow (`backup-formance.yml`) runs
+`backupFormanceToPrivateRepo.mjs` daily at 03:00 UTC: `pg_dump --format=custom`
+→ uploaded as a **GitHub Release asset** on a **private backup repo**. Each
+nightly run creates a release tagged `formance-backup-<iso>` whose single asset
+is `formance-backup-<iso>.dump`.
 
-Required secrets: `FORMANCE_DATABASE_URL` (read access), `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY` (write access to the `backups` bucket).
+Required secrets: `FORMANCE_DATABASE_URL` (read access), `GH_PAT` (a token with
+`contents: write` on the backup repo), `BACKUP_REPO` (the backup repo as
+`owner/name`).
+
+Owner setup (one-time): create a **PRIVATE** GitHub repo to hold the backups,
+set `BACKUP_REPO` (= `owner/name`) as a GitHub Actions secret, and make sure
+`GH_PAT` has `contents: write` on that repo. If any required secret is missing
+the backup job fails red — backups must fail loudly, never silently.
 
 Manual backup:
 
 ```bash
 FORMANCE_DATABASE_URL=postgres://user:pass@host:port/db \
-SUPABASE_URL=https://xyz.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=<key> \
-node ctf/scripts/backupFormanceToSupabase.mjs
+GH_PAT=<token-with-contents-write> \
+BACKUP_REPO=owner/name \
+node ctf/scripts/backupFormanceToPrivateRepo.mjs
 ```
 
-Restore:
+Restore (downloads a release asset and `pg_restore`s it; confirm-gated):
 
 ```bash
-supabase storage download backups/formance/formance-backup-YYYY-MM-DDTHHMMSSZ.dump
-pg_restore --clean --no-owner --no-privileges \
-  --dbname=postgres://user:pass@host:port/db \
-  formance-backup-YYYY-MM-DDTHHMMSSZ.dump
+FORMANCE_DATABASE_URL=postgres://user:pass@host:port/target-db \
+GH_PAT=<token-with-read-access> \
+BACKUP_REPO=owner/name \
+FORMANCE_RESTORE_CONFIRM=1 \
+node ctf/scripts/restoreFormanceFromPrivateRepo.mjs
+# Optional: FORMANCE_BACKUP_TAG=formance-backup-<iso> to pin a release
+#           (blank = latest); FORMANCE_BACKUP_FILE=<asset name> to pin an asset.
 ```
 
-Verify: confirm the daily workflow succeeded, list `backups/formance/`, and
-periodically test-restore to staging. For data-loss incidents, follow this
-procedure alongside the escalation/audit steps in [REVERT_PROTOCOL.md](./REVERT_PROTOCOL.md).
+Verify: confirm the daily workflow succeeded, check the latest release on the
+private backup repo, and periodically test-restore to staging. For data-loss
+incidents, follow this procedure alongside the escalation/audit steps in
+[REVERT_PROTOCOL.md](./REVERT_PROTOCOL.md).
 
 ## Operational Controls
 

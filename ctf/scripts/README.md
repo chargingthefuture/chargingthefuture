@@ -11,7 +11,7 @@ Monorepo scripts for build, migration, seeding, and CI gates.
 | Schema/Migration | `runAllMigrations.mjs`, `runMigrationFile.mjs`, `audit_schema_drift.sh` | DB migrations and drift checks               |
 | Seeding          | `seedChyme.mjs`, `seedClicklog.mjs`, ... | Deterministic per-plugin seed data           |
 | Skills Taxonomy (Data)  | `skills-lock.json`                | Skills system lockfile                       |
-| Formance/Ledger  | `backupFormanceToSupabase.mjs`, `restoreFormanceFromSupabase.mjs`, `formanceBootstrap.sh` | Backup, restore, and ledger management |
+| Formance/Ledger  | `backupFormanceToPrivateRepo.mjs`, `restoreFormanceFromPrivateRepo.mjs`, `formanceBootstrap.sh` | Backup (to a private repo Release), restore, and ledger management |
 | Performance/Budget| `performanceBudgetAudit.mjs`, `githubActionsBudgetMonitor.mjs` | Performance and budget audits                |
 
 ## Environment Variables

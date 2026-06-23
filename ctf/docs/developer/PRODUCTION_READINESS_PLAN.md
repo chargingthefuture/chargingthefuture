@@ -153,15 +153,15 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
 - [x] `ctf-web` deploy green on Render (`/api/health`)
 - [x] Removed dead `ctf/render.yaml` (root `render.yaml` is canonical)
 - [x] **Formance disaster recovery (#106)**: runbook at `ctf/ops/formance/DISASTER_RECOVERY.md`. Backup
-      verified (nightly `pg_dump -Fc` → Supabase, `backup-formance-supabase.yml`, with verification); added
-      the restore half (`restoreFormanceFromSupabase.mjs`, confirm-gated) and three automated spin-up paths
-      (Neon branch / `pg_restore` / `formanceBootstrap.sh`). Fixed `formanceBootstrap.sh` to create **both**
-      ledger books (`ctf-main` + `ctf-demo`) idempotently and to stop posting a smoke transaction into the
-      **production** ledger (smoke is now opt-in and demo-only). Removed the stale duplicate
-      `formance-backup.sh`; added `formance:backup`/`formance:restore` npm scripts.
+      verified (nightly `pg_dump -Fc` → a private GitHub repo Release asset, `backup-formance.yml`, with
+      verification); added the restore half (`restoreFormanceFromPrivateRepo.mjs`, confirm-gated) and three
+      automated spin-up paths (Neon branch / `pg_restore` / `formanceBootstrap.sh`). Fixed
+      `formanceBootstrap.sh` to create **both** ledger books (`ctf-main` + `ctf-demo`) idempotently and to
+      stop posting a smoke transaction into the **production** ledger (smoke is now opt-in and demo-only).
+      Removed the superseded duplicate `formance-backup.sh`; added `formance:backup`/`formance:restore` npm scripts.
   - [x] **#106 owner action** (done): enable Neon PITR (longest retention) on the Formance project as the primary
         safety net, and learn `neonctl branches create` for instant clones — see the runbook's
-        "Recommended: also enable Neon's native backups". The `pg_dump`→Supabase dump stays as the portable
+        "Recommended: also enable Neon's native backups". The `pg_dump`→private-repo dump stays as the portable
         offsite secondary.
 - [x] **Feature-flag infra (epic #103)**: OpenFeature client + self-hosted Unleash provider landed
       (web/mobile/agents share the flag-key registry); `UNLEASH_API_*` wired via Infisical → Render Sync.

@@ -14,7 +14,8 @@
 
 - All flows trauma-informed and privacy-first
 - Clear legal disclaimers and warnings
-- No data storage until Supabase document-storage integration is wired
+- No data storage; the will is local-only (print/export). The earlier Supabase
+  document-storage integration was removed and is not yet replaced.
 
 ## Documentation
 
@@ -30,3 +31,4 @@
 ## Change Log
 
 - 2026-05-18: Removed "Planned Features" section to comply with Rule 120 forbidden patterns. Added module-vs-plugin scope note; this file documents a shared library, not a registered plugin.
+- 2026-06-23: Removed the Supabase document-storage integration (`supabase-client.ts`, `save-to-supabase.ts`, and the "Save to Supabase" call in `index.tsx`) as part of removing all Supabase usage. The will is now local-only (print/export); persistence is not yet replaced.
