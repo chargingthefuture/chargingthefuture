@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { StreamChat } from 'stream-chat';
 import {
+  OverlayProvider,
   Chat,
   Channel,
   MessageList,
   MessageInput,
-  ThemeProvider,
+  Thread,
   type DeepPartial,
   type Theme,
+  type ThreadContextValue,
 } from 'stream-chat-react-native';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 
 export interface StreamChatViewProps {
   streamApiKey: string;
@@ -26,6 +28,10 @@ export interface StreamChatViewProps {
 const OWN_BUBBLE_BG = 'rgba(255,255,255,0.06)';
 const OWN_BUBBLE_BORDER = 'rgba(255,255,255,0.12)';
 
+// The selected parent message when a reply thread is open. onThreadSelect hands back the thread
+// context's `thread` value (the parent message), or null when there is no open thread.
+type ThreadMessage = ThreadContextValue['thread'];
+
 export const StreamChatView: React.FC<StreamChatViewProps> = ({
   streamApiKey,
   streamToken,
@@ -38,6 +44,7 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
   const [client, setClient] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [channel, setChannel] = useState<any>(null);
+  const [thread, setThread] = useState<ThreadMessage>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +80,12 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
   if (error) return <Text>{error}</Text>;
   if (!client || !channel) return <Text>Chat unavailable.</Text>;
 
-  // Others' bubbles take the plugin accent (base theme); own messages override back to gray.
+  // Others' bubbles take the plugin accent; the member's own messages override back to gray.
+  // The accent theme is supplied through OverlayProvider's `value.style` — the SDK's global theme —
+  // which replaces the previous ThemeProvider wrapper. Routing it through the OverlayProvider means
+  // the long-press reaction overlay and the thread view inherit the same accent bubbles as the main
+  // list. The member's own bubbles stay gray via the Channel-level `myMessageTheme`, which the SDK
+  // layers on top of the global theme exactly as before.
   const othersTheme: DeepPartial<Theme> = {
     messageSimple: { content: { containerInner: { backgroundColor: accentColor, borderColor: accentColor } } },
   };
@@ -83,16 +95,44 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
     },
   };
 
+  const threadOpen = Boolean(thread);
+
   return (
     <View style={{ flex: 1 }}>
-      <Chat client={client}>
-        <ThemeProvider style={othersTheme}>
-          <Channel channel={channel} myMessageTheme={myMessageTheme}>
-            <MessageList />
-            <MessageInput />
+      {/* OverlayProvider is required for the long-press reaction picker, the message-action menu, and
+          the thread view to render above the chat. Reactions need no extra prop: long-pressing a
+          message shows the reaction picker by default once OverlayProvider wraps the channel and the
+          channel type (messaging) permits reactions. Typing indicators and read state are the SDK's
+          MessageList defaults. The accent bubble theme is passed here as the global style. */}
+      <OverlayProvider value={{ style: othersTheme }}>
+        <Chat client={client}>
+          {/* thread + threadList tell the channel a reply thread is open so its list and input target
+              that thread; myMessageTheme keeps the member's own bubbles gray over the accent theme. */}
+          <Channel channel={channel} thread={thread} threadList={threadOpen} myMessageTheme={myMessageTheme}>
+            {threadOpen ? (
+              <View style={{ flex: 1 }}>
+                {/* Back to the main conversation from an open thread. */}
+                <Pressable
+                  onPress={() => setThread(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to conversation"
+                  style={{ paddingVertical: 12, paddingHorizontal: 16 }}
+                >
+                  <Text style={{ color: accentColor, fontSize: 15, fontWeight: '600' }}>‹ Back</Text>
+                </Pressable>
+                <Thread />
+              </View>
+            ) : (
+              <>
+                {/* onThreadSelect opens the reply thread for the tapped message; the SDK's "reply in
+                    thread" message action hands the parent message back here to render <Thread />. */}
+                <MessageList onThreadSelect={setThread} />
+                <MessageInput />
+              </>
+            )}
           </Channel>
-        </ThemeProvider>
-      </Chat>
+        </Chat>
+      </OverlayProvider>
     </View>
   );
 };
