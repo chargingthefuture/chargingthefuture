@@ -4,7 +4,7 @@ on:
   pull_request:
     # No paths filter on purpose: CI must run on EVERY PR to main so its required
     # status checks always report. With a paths filter, a PR that only touches an
-    # unlisted file (e.g. .coderabbit.yaml, .claude/**) never triggers CI, so the
+    # unlisted file (e.g. .claude/**, a docs-only file) never triggers CI, so the
     # required checks stay "expected" forever and the PR can never merge. Instead,
     # the heavy jobs (modularity-governance, quality-gates) skip fast for non-code
     # changes via the `changes` job below — and a skipped required job counts as a

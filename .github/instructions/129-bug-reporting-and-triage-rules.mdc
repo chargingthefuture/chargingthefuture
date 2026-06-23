@@ -49,7 +49,7 @@ Owner approves by adding the label `approved-to-build` (one tap; no typing)
         │
         ▼
 Build workflow spawns a build agent: creates branch + PR on the PUBLIC app repo
-   (the PR contains code, never the user's raw words) → existing CodeRabbit / auto-merge lanes
+   (the PR contains code, never the user's raw words) → existing code-review / auto-merge lanes
 ```
 
 ## Non-negotiable decisions

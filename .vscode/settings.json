@@ -62,10 +62,6 @@
   "terminal.integrated.defaultLocation": "view",
   "terminal.integrated.splitCside": "horizontal",
   "markdown.preview.breaks": true,
-  "[markdown]": {
-    "editor.defaultFormatter": "coderabbit.coderabbit-vscode",
-    "editor.formatOnSave": true
-  },
   "markdown.extension.preview.autoShowPreviewToSide": true,
   "files.autoSave": "afterDelay",
   "editor.minimap.enabled": false,

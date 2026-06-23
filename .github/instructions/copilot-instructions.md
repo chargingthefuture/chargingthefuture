@@ -204,13 +204,17 @@ After that both go green. The whole fix costs about one title edit, one descript
 empty commit. If you can set the PR body at creation time, put the Conventional-Commit title and the
 `Parity Status:` line in up front so both pass on the first run and no empty commit is needed.
 
-### Code Review (CodeRabbit disabled)
+### Code Review (CodeRabbit removed — replaced by the in-repo code-review pipeline)
 
-**CodeRabbit review is DISABLED (owner directive, 2026-06-20): the owner uses a different
-code-review tool.** Do **not** apply the `coderabbit` label, do **not** open PRs as drafts to wait
-for a CodeRabbit review, and do **not** comment `@coderabbitai`. The `.coderabbit.yaml` auto-review is
-off and the CLI/pacing workflows (`coderabbit-review.yml`, `pace-coderabbit-reviews.yml`) have been
-removed.
+**CodeRabbit has been removed from this repo (owner directive): it is replaced by the in-repo
+code-review pipeline.** Its config (`.coderabbit.yaml`), the VS Code extension, the devcontainer CLI
+install, and the old `coderabbit-review.yml` / `pace-coderabbit-reviews.yml` workflows are all gone.
+Do **not** re-add a `.coderabbit.yaml`, apply a `coderabbit` label, open PRs as drafts to wait for a
+CodeRabbit review, or comment `@coderabbitai`. Code review now runs from
+`.github/workflows/code-review-sweep.yml` (reviews one plugin/module per run and files `code-review`
+issues) and `code-review-implement.yml` (turns an actionable finding into a PR). Note: removing these
+repo files does not uninstall the CodeRabbit GitHub App — if it is still installed at the org/UI
+level, uninstall it there so it cannot resume reviewing with default settings.
 
 #### Two lanes by risk
 
