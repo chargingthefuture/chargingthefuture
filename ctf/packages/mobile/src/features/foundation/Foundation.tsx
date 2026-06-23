@@ -5,10 +5,18 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
+  Pressable,
+  ActivityIndicator,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
-import type { Provider, QuoteHistoryItem } from './api';
-import { fetchProviders, fetchQuoteHistory } from './api';
+import type { OfferableSkill, Provider, QuoteHistoryItem } from './api';
+import {
+  fetchProviders,
+  fetchQuoteHistory,
+  fetchOfferableSkills,
+  setOfferedSkills,
+} from './api';
 import { FoundationLoading } from './FoundationLoading';
 import { FoundationEmpty } from './FoundationEmpty';
 import { FoundationProviderCard } from './FoundationProviderCard';
@@ -21,7 +29,13 @@ const TEXT_DIM = '#9CA3AF';
 const SUBTLE = '#6B7280';
 const COLOR = '#F59E0B';
 
-type Tab = 'browse' | 'quotes';
+type Tab = 'browse' | 'quotes' | 'offer';
+
+const TAB_LABEL: Record<Tab, string> = {
+  browse: 'Browse',
+  quotes: 'Quotes',
+  offer: 'Offer skills',
+};
 
 /**
  * Foundation main screen — mirrors MobileFoundation.tsx mockup.
@@ -42,6 +56,15 @@ export function Foundation() {
   const [page] = useState(1);
   const [tab, setTab] = useState<Tab>('browse');
   const [selected, setSelected] = useState<Provider | null>(null);
+  // Active skill filter on the browse list (tapped from a provider's offered-skill chip).
+  const [skillFilter, setSkillFilter] = useState<{ id: string; name: string } | null>(null);
+  // "Offer skills" surface state.
+  const [offerSkills, setOfferSkills] = useState<OfferableSkill[]>([]);
+  const [offerSelected, setOfferSelected] = useState<Set<string>>(new Set());
+  const [offerLoading, setOfferLoading] = useState(false);
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [offerError, setOfferError] = useState<string | null>(null);
+  const [offerSavedMsg, setOfferSavedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +73,7 @@ export function Foundation() {
       setError(null);
       try {
         const [searchResult, historyResult] = await Promise.all([
-          fetchProviders(query, page),
+          fetchProviders(query, page, skillFilter?.id ?? null),
           fetchQuoteHistory(),
         ]);
         if (!cancelled) {
@@ -67,7 +90,59 @@ export function Foundation() {
     }
     void load();
     return () => { cancelled = true; };
-  }, [query, page]);
+  }, [query, page, skillFilter]);
+
+  // Load the member's own Directory skills (with their offered flag) when the Offer-skills tab opens.
+  useEffect(() => {
+    if (tab !== 'offer') return;
+    let cancelled = false;
+    setOfferLoading(true);
+    setOfferError(null);
+    setOfferSavedMsg(null);
+    fetchOfferableSkills()
+      .then((skills) => {
+        if (cancelled) return;
+        setOfferSkills(skills);
+        setOfferSelected(new Set(skills.filter((s) => s.offered).map((s) => s.id)));
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setOfferError(e instanceof Error ? e.message : 'Unable to load your skills.');
+      })
+      .finally(() => {
+        if (!cancelled) setOfferLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [tab]);
+
+  const onFilterSkill = (skillId: string, name: string) => {
+    setSkillFilter({ id: skillId, name });
+    setTab('browse');
+  };
+
+  const toggleOffer = (id: string) => {
+    setOfferSavedMsg(null);
+    setOfferSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const saveOffers = async () => {
+    setOfferSaving(true);
+    setOfferError(null);
+    setOfferSavedMsg(null);
+    try {
+      const accepted = await setOfferedSkills(Array.from(offerSelected));
+      setOfferSelected(new Set(accepted));
+      setOfferSavedMsg('Saved. These are the skills people can contact you about.');
+    } catch (e: unknown) {
+      setOfferError(e instanceof Error ? e.message : 'Unable to save your offered skills.');
+    } finally {
+      setOfferSaving(false);
+    }
+  };
 
   if (selected) {
     return (
@@ -125,14 +200,14 @@ export function Foundation() {
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {(['browse', 'quotes'] as Tab[]).map((t) => (
+        {(['browse', 'quotes', 'offer'] as Tab[]).map((t) => (
           <TouchableOpacity
             key={t}
             onPress={() => setTab(t)}
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
           >
             <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive]}>
-              {t === 'browse' ? 'Browse' : 'Quotes'}
+              {TAB_LABEL[t]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -140,18 +215,83 @@ export function Foundation() {
 
       {/* Content */}
       {tab === 'browse' ? (
-        providers.length === 0 ? (
-          <FoundationEmpty />
-        ) : (
-          <FlatList
-            data={providers}
-            keyExtractor={(item) => item.profileId}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
-              <FoundationProviderCard provider={item} onPress={setSelected} />
-            )}
-          />
-        )
+        <View style={styles.browseWrap}>
+          {skillFilter ? (
+            <View style={styles.filterBar}>
+              <Text style={styles.filterLabel} numberOfLines={1}>
+                Offering: {skillFilter.name}
+              </Text>
+              <Pressable
+                style={styles.filterClear}
+                onPress={() => setSkillFilter(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Clear skill filter"
+              >
+                <Text style={styles.filterClearText}>Clear ×</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {providers.length === 0 ? (
+            <FoundationEmpty />
+          ) : (
+            <FlatList
+              data={providers}
+              keyExtractor={(item) => item.profileId}
+              contentContainerStyle={styles.list}
+              renderItem={({ item }) => (
+                <FoundationProviderCard provider={item} onPress={setSelected} onFilterSkill={onFilterSkill} />
+              )}
+            />
+          )}
+        </View>
+      ) : tab === 'offer' ? (
+        <ScrollView contentContainerStyle={styles.list}>
+          <Text style={styles.offerIntro}>
+            Choose which of your Directory skills you&#39;re willing to be contacted about through
+            Foundation. Only the skills you turn on appear on your provider card.
+          </Text>
+          {offerLoading ? (
+            <ActivityIndicator color={COLOR} style={styles.offerSpinner} />
+          ) : offerError ? (
+            <Text style={styles.offerError}>{offerError}</Text>
+          ) : offerSkills.length === 0 ? (
+            <Text style={styles.offerEmpty}>
+              You have no Directory skills yet. Add skills to your Directory profile first, then come
+              back to offer them here.
+            </Text>
+          ) : (
+            <>
+              <View style={styles.offerChipWrap}>
+                {offerSkills.map((skill) => {
+                  const on = offerSelected.has(skill.id);
+                  return (
+                    <Pressable
+                      key={skill.id}
+                      style={[styles.offerChip, on ? styles.offerChipOn : null]}
+                      onPress={() => toggleOffer(skill.id)}
+                    >
+                      <Text style={[styles.offerChipText, on ? styles.offerChipTextOn : null]}>
+                        {on ? '✓ ' : ''}{skill.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {offerSavedMsg ? <Text style={styles.offerSaved}>{offerSavedMsg}</Text> : null}
+              <TouchableOpacity
+                style={[styles.offerSaveBtn, offerSaving ? styles.offerSaveBtnBusy : null]}
+                onPress={() => { void saveOffers(); }}
+                disabled={offerSaving}
+              >
+                {offerSaving ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.offerSaveText}>Save offered skills</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
       ) : (
         <FlatList
           data={quotes}
@@ -196,7 +336,7 @@ export function Foundation() {
 
       {/* Bottom nav */}
       <View style={styles.bottomNav}>
-        {(['browse', 'quotes'] as Tab[]).map((t) => (
+        {(['browse', 'quotes', 'offer'] as Tab[]).map((t) => (
           <TouchableOpacity
             key={t}
             onPress={() => setTab(t)}
@@ -204,11 +344,11 @@ export function Foundation() {
           >
             <View style={[styles.navIconWrap, tab === t && styles.navIconWrapActive]}>
               <Text style={[styles.navIcon, tab === t && styles.navIconActive]}>
-                {t === 'browse' ? '&#128269;' : '&#128196;'}
+                {t === 'browse' ? '🔍' : t === 'quotes' ? '📄' : '🛠'}
               </Text>
             </View>
             <Text style={[styles.navLabel, tab === t && styles.navLabelActive]}>
-              {t === 'browse' ? 'Browse' : 'Quotes'}
+              {TAB_LABEL[t]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -348,6 +488,103 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  browseWrap: {
+    flex: 1,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: `${COLOR}15`,
+    borderWidth: 1,
+    borderColor: `${COLOR}35`,
+  },
+  filterLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR,
+  },
+  filterClear: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  filterClearText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLOR,
+  },
+  offerIntro: {
+    fontSize: 13,
+    color: TEXT_DIM,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  offerSpinner: {
+    marginTop: 20,
+  },
+  offerError: {
+    fontSize: 13,
+    color: COLOR,
+    marginTop: 8,
+  },
+  offerEmpty: {
+    fontSize: 13,
+    color: SUBTLE,
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  offerChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  offerChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  offerChipOn: {
+    backgroundColor: `${COLOR}20`,
+    borderColor: `${COLOR}55`,
+  },
+  offerChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: SUBTLE,
+  },
+  offerChipTextOn: {
+    color: COLOR,
+  },
+  offerSaved: {
+    fontSize: 12,
+    color: '#22C55E',
+    marginBottom: 12,
+  },
+  offerSaveBtn: {
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: COLOR,
+    alignItems: 'center',
+  },
+  offerSaveBtnBusy: {
+    opacity: 0.6,
+  },
+  offerSaveText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#fff',
   },
   emptyQuotes: {
     flex: 1,
