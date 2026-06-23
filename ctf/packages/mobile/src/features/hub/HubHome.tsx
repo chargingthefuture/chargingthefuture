@@ -12,7 +12,14 @@ import {
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
 import { useAuth } from '../../auth/auth-context';
-import { fetchHubMessages, sendHubMessage, toggleHubReaction, HUB_REACTION_EMOJIS } from './api';
+import {
+  fetchHubMessages,
+  sendHubMessage,
+  toggleHubReaction,
+  fetchHubLastSeen,
+  markHubSeen,
+  HUB_REACTION_EMOJIS,
+} from './api';
 import type { HubMessage, HubReactionEmoji, HubReactionSummary } from './api';
 
 // The Hub stream is feed-backed and flattened on the server to one author shape per message:
@@ -75,6 +82,8 @@ function MessageCard({
   theme,
   canReact,
   onToggleReaction,
+  canReply,
+  onReply,
 }: {
   message: HubMessage;
   s: Styles;
@@ -82,14 +91,16 @@ function MessageCard({
   theme: ThemeName;
   canReact: boolean;
   onToggleReaction: (_message: HubMessage, _emoji: HubReactionEmoji) => void;
+  canReply: boolean;
+  onReply: (_message: HubMessage) => void;
 }) {
   const official = isOfficial(message);
   // Official posts use the Hub brand (chyme accent in comic). Community posts use the
   // success/green accent. Both come from the active theme so they switch with the toggle.
   const accent = official ? getAppAccent('chyme', theme) : tokens.success;
-  // Only peer posts (community posts) can be reacted to; announcements / AI answers cannot.
+  // Only peer posts (community posts) can be reacted to / replied to; announcements / AI cannot.
   const isPeer = message.communityPostId != null;
-  const showReactionRow = isPeer && (message.reactions.length > 0 || canReact);
+  const showActionsRow = isPeer && (message.reactions.length > 0 || canReact || canReply);
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -112,9 +123,15 @@ function MessageCard({
           <Text style={s.cardTime}>{formatTime(message.sentAtIso)}</Text>
         </View>
       </View>
+      {message.quotedMessage && (
+        <View style={s.quotedBlock}>
+          <Text style={s.quotedAuthor} numberOfLines={1}>{message.quotedMessage.author}</Text>
+          <Text style={s.quotedSnippet} numberOfLines={2}>{message.quotedMessage.snippet}</Text>
+        </View>
+      )}
       <Text style={s.cardBody}>{message.text}</Text>
 
-      {showReactionRow && (
+      {showActionsRow && (
         <View style={s.reactionRow}>
           {message.reactions.map((rx) => (
             <Pressable
@@ -153,6 +170,16 @@ function MessageCard({
               ))}
             </View>
           )}
+          {canReply && (
+            <Pressable
+              style={s.replyBtn}
+              onPress={() => onReply(message)}
+              accessibilityRole="button"
+              accessibilityLabel="Reply to this post"
+            >
+              <Text style={s.replyBtnText}>↩ Reply</Text>
+            </Pressable>
+          )}
         </View>
       )}
     </View>
@@ -184,7 +211,12 @@ export const HubHome = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<HubMessage | null>(null);
+  // The id of the first message newer than the member's last-seen marker; a single "New messages"
+  // divider is drawn before it. Computed once on entry so it does not jump as new posts arrive.
+  const [dividerBeforeId, setDividerBeforeId] = useState<string | null>(null);
   const seenKeys = useRef<Set<string>>(new Set());
+  const dividerComputedRef = useRef(false);
 
   const mergeMessages = useCallback((incoming: HubMessage[]) => {
     const merged: HubMessage[] = [];
@@ -218,14 +250,32 @@ export const HubHome = () => {
     return () => clearInterval(timer);
   }, [load]);
 
+  // Once the first batch of messages is in, read the last-seen marker, place the unread divider
+  // before the first newer message, then move the marker forward. Best-effort: if the marker read
+  // fails (or the member has none), no divider shows and the chat is unaffected.
+  useEffect(() => {
+    if (dividerComputedRef.current || loading || messages.length === 0) return;
+    dividerComputedRef.current = true;
+    void (async () => {
+      const lastSeen = await fetchHubLastSeen();
+      if (lastSeen) {
+        const lastSeenMs = new Date(lastSeen).getTime();
+        const firstUnseen = messages.find((m) => new Date(m.sentAtIso).getTime() > lastSeenMs);
+        setDividerBeforeId(firstUnseen ? firstUnseen.id : null);
+      }
+      void markHubSeen();
+    })();
+  }, [loading, messages]);
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
     setSending(true);
     setSendError(null);
     try {
-      const result = await sendHubMessage(text);
+      const result = await sendHubMessage(text, replyTo?.communityPostId ?? null);
       setInput('');
+      setReplyTo(null);
       // Optimistically append; dedup against the next poll by tuple key.
       const key = dedupKey(result.message);
       if (!seenKeys.current.has(key)) {
@@ -237,7 +287,7 @@ export const HubHome = () => {
     } finally {
       setSending(false);
     }
-  }, [input, sending]);
+  }, [input, sending, replyTo]);
 
   const handleToggleReaction = useCallback(
     async (message: HubMessage, emoji: HubReactionEmoji) => {
@@ -287,14 +337,25 @@ export const HubHome = () => {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <MessageCard
-              message={item}
-              s={s}
-              tokens={tokens}
-              theme={theme}
-              canReact={isAuthenticated}
-              onToggleReaction={handleToggleReaction}
-            />
+            <>
+              {item.id === dividerBeforeId && (
+                <View style={s.unreadDivider}>
+                  <View style={s.unreadDividerLine} />
+                  <Text style={s.unreadDividerText}>New messages</Text>
+                  <View style={s.unreadDividerLine} />
+                </View>
+              )}
+              <MessageCard
+                message={item}
+                s={s}
+                tokens={tokens}
+                theme={theme}
+                canReact={isAuthenticated}
+                onToggleReaction={handleToggleReaction}
+                canReply={isAuthenticated}
+                onReply={setReplyTo}
+              />
+            </>
           )}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
@@ -304,6 +365,27 @@ export const HubHome = () => {
       {isAuthenticated ? (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {sendError && <Text style={s.sendError}>{sendError}</Text>}
+          {replyTo && (
+            <View style={s.replyBanner}>
+              <View style={s.replyBannerBar} />
+              <View style={s.replyBannerBody}>
+                <Text style={s.replyBannerLabel} numberOfLines={1}>
+                  Replying to {replyTo.displayName}
+                </Text>
+                <Text style={s.replyBannerSnippet} numberOfLines={1}>
+                  {replyTo.text}
+                </Text>
+              </View>
+              <Pressable
+                style={s.replyBannerCancel}
+                onPress={() => setReplyTo(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel reply"
+              >
+                <Text style={s.replyBannerCancelText}>×</Text>
+              </Pressable>
+            </View>
+          )}
           <View style={s.composer}>
             <TextInput
               style={s.input}
@@ -428,6 +510,48 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     },
     reactionPickerItem: { paddingHorizontal: 4, paddingVertical: 2 },
     reactionPickerEmoji: { fontSize: 18 },
+    replyBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: t.radiusChip,
+    },
+    replyBtnText: { fontSize: 11, fontWeight: '700', color: t.textSecondary },
+    quotedBlock: {
+      borderLeftWidth: 3,
+      borderLeftColor: `${t.success}66`,
+      backgroundColor: t.isComic ? `${t.success}10` : 'rgba(255,255,255,0.03)',
+      borderRadius: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      marginBottom: 8,
+    },
+    quotedAuthor: { fontSize: 11, fontWeight: '700', color: t.success, marginBottom: 1 },
+    quotedSnippet: { fontSize: 12, color: t.textSecondary },
+    unreadDivider: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+    unreadDividerLine: { flex: 1, height: 1, backgroundColor: `${t.danger}55` },
+    unreadDividerText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: t.danger,
+      letterSpacing: t.isComic ? 0.6 : 0.3,
+      textTransform: 'uppercase',
+    },
+    replyBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: t.surfaceAlt,
+      borderTopWidth: t.isComic ? 2 : 1,
+      borderTopColor: t.isComic ? t.border : t.borderFaint,
+    },
+    replyBannerBar: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: t.success },
+    replyBannerBody: { flex: 1 },
+    replyBannerLabel: { fontSize: 12, fontWeight: '700', color: t.success },
+    replyBannerSnippet: { fontSize: 12, color: t.textSecondary, marginTop: 1 },
+    replyBannerCancel: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+    replyBannerCancelText: { fontSize: 18, color: t.textSecondary },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
     errorText: { fontSize: 14, color: t.danger, textAlign: 'center', marginBottom: 16 },
     retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: r, backgroundColor: t.isComic ? `${t.border}14` : 'rgba(124,58,237,0.2)', borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? t.border : 'rgba(124,58,237,0.4)' },

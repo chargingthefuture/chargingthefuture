@@ -22,6 +22,14 @@ export type HubReactionSummary = {
   reactedByMe: boolean;
 };
 
+// A compact reference to the peer post this message quotes (Signal-style reply), resolved
+// server-side so the chat can render the quoted block without a second fetch. Mirrors the web
+// HubQuotedMessage. Null when the message is not a reply.
+export type HubQuotedMessage = {
+  author: string;
+  snippet: string;
+};
+
 // One message in the blended Hub stream. Matches lib/hub/types HubMessage on the web side.
 // `displayName` is "Survivor Hub" for announcements and AI Q&A, "Community member" for peer posts.
 export type HubMessage = {
@@ -32,9 +40,11 @@ export type HubMessage = {
   avatarUrl: string | null;
   text: string;
   sentAtIso: string;
-  // The underlying community post id when this message is a peer post (the id the reactions route
-  // takes); null for announcements / AI answers, which cannot be reacted to.
+  // The underlying community post id when this message is a peer post (the id the reactions and
+  // reply routes take); null for announcements / AI answers, which cannot be reacted/replied to.
   communityPostId: string | null;
+  // The peer post this message quotes (Signal-style reply), or null when it is not a reply.
+  quotedMessage: HubQuotedMessage | null;
   // Emoji reactions on this message's community post, ordered by the fixed set. Always an array;
   // empty for non-peer messages and posts with no reactions.
   reactions: HubReactionSummary[];
@@ -63,14 +73,18 @@ export type HubSendResult = {
 // Sending from the composer creates a peer-to-peer community post. Mirrors the web POST contract:
 // the x-ctf-csrf header is required, and the server normalizes the new post to the same public
 // author shape the polled copy uses so the optimistic send and the polled copy dedup cleanly.
-export async function sendHubMessage(text: string): Promise<HubSendResult> {
+// `replyToPostId` quotes another peer post (Signal-style reply); null for a top-level post.
+export async function sendHubMessage(
+  text: string,
+  replyToPostId: string | null = null,
+): Promise<HubSendResult> {
   const res = await authedFetch(`${HUB_API_BASE}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, replyToPostId }),
   });
 
   if (!res.ok) {
@@ -112,4 +126,34 @@ export async function toggleHubReaction(
   }
   const data = (await res.json()) as { ok: boolean; reacted: boolean };
   return { reacted: data.reacted };
+}
+
+// The member's last-seen marker for the Hub home channel, used to draw the "New messages" divider.
+// Best-effort: returns null on any failure (the divider simply does not show).
+export async function fetchHubLastSeen(): Promise<string | null> {
+  try {
+    const res = await authedFetch(`${HUB_API_BASE}/last-seen`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { ok?: boolean; lastSeenAtIso?: string | null };
+    return data.lastSeenAtIso ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Move the member's last-seen marker forward (defaults to NOW server-side). Best-effort; a failure
+// is ignored so the chat never breaks. The server clamps to NOW() and never moves it backwards.
+export async function markHubSeen(): Promise<void> {
+  try {
+    await authedFetch(`${HUB_API_BASE}/last-seen`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ctf-csrf': '1',
+      },
+      body: JSON.stringify({}),
+    });
+  } catch {
+    // ignore — the divider is best-effort
+  }
 }
