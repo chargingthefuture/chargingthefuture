@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import type { Provider } from './api';
 
 const TEXT = '#F9FAFB';
@@ -19,6 +19,7 @@ function initials(name: string): string {
 interface FoundationProviderCardProps {
   provider: Provider;
   onPress: (_provider: Provider) => void;
+  onFilterSkill?: (_skillId: string, _name: string) => void;
 }
 
 /**
@@ -26,8 +27,9 @@ interface FoundationProviderCardProps {
  * Renders only real backend fields: displayName, headline.
  * Fields with no backend backing (rating, availability, price, job count) are omitted.
  */
-export function FoundationProviderCard({ provider, onPress }: FoundationProviderCardProps) {
+export function FoundationProviderCard({ provider, onPress, onFilterSkill }: FoundationProviderCardProps) {
   const initText = initials(provider.displayName);
+  const offeredSkills = provider.offeredSkills ?? [];
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(provider)} activeOpacity={0.8}>
       {/* Avatar */}
@@ -48,6 +50,21 @@ export function FoundationProviderCard({ provider, onPress }: FoundationProvider
           <Text style={styles.headline} numberOfLines={1}>
             {provider.headline}
           </Text>
+        ) : null}
+        {offeredSkills.length > 0 ? (
+          <View style={styles.skillRow}>
+            {offeredSkills.map((skill) => (
+              <Pressable
+                key={skill.id}
+                style={styles.skillChip}
+                onPress={() => onFilterSkill?.(skill.id, skill.name)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter providers by ${skill.name}`}
+              >
+                <Text style={styles.skillChipText}>{skill.name}</Text>
+              </Pressable>
+            ))}
+          </View>
         ) : null}
         {/* score is internal — not rendered; rating/availability/price have no backing field — omitted */}
       </View>
@@ -108,6 +125,25 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 12,
     color: SUBTLE,
+  },
+  skillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  skillChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: `${COLOR}12`,
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+  },
+  skillChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLOR,
   },
   chevron: {
     color: '#4B5563',

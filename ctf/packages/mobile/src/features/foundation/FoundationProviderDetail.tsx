@@ -89,6 +89,20 @@ export function FoundationProviderDetail({ provider, onBack }: FoundationProvide
           </View>
         ) : null}
 
+        {/* Offered skills */}
+        {provider.offeredSkills && provider.offeredSkills.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Willing to be contacted about</Text>
+            <View style={styles.skillRow}>
+              {provider.offeredSkills.map((skill) => (
+                <View key={skill.id} style={styles.skillChip}>
+                  <Text style={styles.skillChipText}>{skill.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity
@@ -228,6 +242,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: TEXT_DIM,
     lineHeight: 22,
+  },
+  skillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  skillChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: `${COLOR}12`,
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+  },
+  skillChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR,
   },
   actions: {
     gap: 10,
