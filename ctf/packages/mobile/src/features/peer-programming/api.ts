@@ -90,6 +90,73 @@ export async function fetchRoom(cohortId?: string | null): Promise<RoomData> {
   };
 }
 
+// The credential shape returned by POST /api/peer-programming/session/join when the call is allowed.
+// The same Stream token works for video; the call id is derived server-side from the caller's cohort,
+// so the caller can only ever join their own cohort's call.
+export type PeerProgrammingSessionCredentials = {
+  cohortId: string;
+  displayName: string;
+  streamApiKey: string;
+  streamCallId: string;
+  streamUserId: string;
+  streamToken: string;
+};
+
+// The three non-success outcomes the Session tab must distinguish:
+//   no-cohort        — the route returned 404 (the member is not in a cohort yet).
+//   stream-disabled  — the route returned 503 (GetStream is not configured server-side).
+//   error            — any other failure (network, auth, unexpected status).
+export type PeerProgrammingSessionJoinResult =
+  | { status: 'ok'; credentials: PeerProgrammingSessionCredentials }
+  | { status: 'no-cohort' }
+  | { status: 'stream-disabled' }
+  | { status: 'error'; message: string };
+
+// Mint live-video credentials for the caller's cohort session. Mirrors the web Session tab's
+// handleJoin: POST through authedFetch (Clerk bearer + CSRF header), then map 404 -> no-cohort,
+// 503 -> stream-disabled, missing fields -> error.
+export async function joinSession(): Promise<PeerProgrammingSessionJoinResult> {
+  let res: Response;
+  try {
+    res = await authedFetch(`${BASE}/session/join`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ctf-csrf': '1',
+      },
+    });
+  } catch {
+    return { status: 'error', message: 'Could not reach the live session. Check your connection and try again.' };
+  }
+
+  if (res.status === 404) {
+    return { status: 'no-cohort' };
+  }
+  if (res.status === 503) {
+    return { status: 'stream-disabled' };
+  }
+
+  const data = (await res.json().catch(() => null)) as
+    | (Partial<PeerProgrammingSessionCredentials> & { message?: string })
+    | null;
+
+  if (!res.ok || !data?.streamApiKey || !data.streamCallId || !data.streamToken || !data.streamUserId) {
+    return { status: 'error', message: data?.message ?? 'Could not start the live session.' };
+  }
+
+  return {
+    status: 'ok',
+    credentials: {
+      cohortId: data.cohortId ?? '',
+      displayName: data.displayName ?? 'Member',
+      streamApiKey: data.streamApiKey,
+      streamCallId: data.streamCallId,
+      streamUserId: data.streamUserId,
+      streamToken: data.streamToken,
+    },
+  };
+}
+
 export async function postMessage(
   cohortId: string,
   body: string,
