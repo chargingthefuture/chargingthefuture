@@ -8,6 +8,7 @@ import {
   listActiveCohorts,
   listMessages,
 } from 'lib/peer-programming/repository';
+import { buildCohortRosters } from 'lib/peer-programming/roster';
 import { reportError } from 'lib/observability/report';
 
 // How the requester relates to the cohort they are viewing:
@@ -48,11 +49,15 @@ export async function GET(request: Request) {
     }
 
     const messages = cohort ? await listMessages(cohort.id) : [];
+    // Who is in the open cohort, with resolved usernames, so members (and listeners) can see who
+    // their cohort-mates are. Membership is not secret. Empty when no cohort is open.
+    const members = cohort ? (await buildCohortRosters([cohort.id])).get(cohort.id) ?? [] : [];
 
     return NextResponse.json({
       ok: true,
       topic,
       cohort,
+      members,
       messages,
       // The full set of running cohorts for the week so the room can show "listen in on a running
       // cohort" to a member who was not placed here, and so an admin can reach every cohort.

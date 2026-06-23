@@ -2,16 +2,22 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import type {
   PeerProgrammingCohort,
+  PeerProgrammingCohortMember,
   PeerProgrammingCohortSummary,
   PeerProgrammingTopic,
 } from './api';
 
 const COLOR = '#6EE7B7';
 
+function memberName(member: PeerProgrammingCohortMember): string {
+  return member.username ?? `Member ${member.userId.slice(0, 6)}`;
+}
+
 type Props = {
   cohort: PeerProgrammingCohort | null;
   topic: PeerProgrammingTopic | null;
   cohorts: PeerProgrammingCohortSummary[];
+  members: PeerProgrammingCohortMember[];
   currentCohortId: string | null;
   myCohortId: string | null;
   onListenIn: (_cohortId: string) => void;
@@ -21,6 +27,7 @@ export const PeerProgrammingCohortTab = ({
   cohort,
   topic,
   cohorts,
+  members,
   currentCohortId,
   myCohortId,
   onListenIn,
@@ -50,6 +57,14 @@ export const PeerProgrammingCohortTab = ({
             {topic.guidance.length > 0 && (
               <Text style={styles.topicGuidance}>{topic.guidance}</Text>
             )}
+          </View>
+        )}
+        {members.length > 0 && (
+          <View style={styles.rosterBox}>
+            <Text style={styles.rosterLabel}>In this cohort</Text>
+            {members.map((m) => (
+              <Text key={m.userId} style={styles.rosterMember}>· {memberName(m)}</Text>
+            ))}
           </View>
         )}
       </View>
@@ -135,6 +150,21 @@ const styles = StyleSheet.create({
   topicLabel: { fontSize: 11, color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   topicTitle: { fontSize: 14, fontWeight: '700', color: '#F9FAFB', marginBottom: 6 },
   topicGuidance: { fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
+  rosterBox: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    paddingTop: 12,
+    marginTop: 12,
+  },
+  rosterLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  rosterMember: { fontSize: 13, color: '#E8EAF0', lineHeight: 20 },
   runningSection: { marginTop: 16 },
   runningTitle: {
     fontSize: 11,

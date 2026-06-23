@@ -149,6 +149,7 @@ export function PeerProgrammingCohortsTab({
   onJoinSession,
   feedback,
   cohorts,
+  members,
   myCohortId,
   openCohortId,
   onOpenCohort,
@@ -160,6 +161,7 @@ export function PeerProgrammingCohortsTab({
   onJoinSession: () => void;
   feedback: FeedbackFormProps;
   cohorts: CohortSummary[];
+  members: { userId: string; username: string | null }[];
   myCohortId: string | null;
   openCohortId: string | null;
   onOpenCohort: (cohortId: string | null) => void;
@@ -183,6 +185,19 @@ export function PeerProgrammingCohortsTab({
           </div>
         ) : room && room.cohortId ? (
           <AssignedCohort room={room} participantCount={participantCount} onJoin={onJoinSession} />
+        ) : null}
+
+        {members.length > 0 ? (
+          <div style={{ padding: "14px 18px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>In this cohort</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {members.map((m) => (
+                <span key={m.userId} style={{ fontSize: 13, color: "#E8EAF0", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "4px 10px" }}>
+                  {m.username ?? `Member ${m.userId.slice(0, 6)}`}
+                </span>
+              ))}
+            </div>
+          </div>
         ) : null}
 
         <RunningCohorts

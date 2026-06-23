@@ -118,6 +118,7 @@ export const PeerProgramming = () => {
             cohort={room.cohort}
             topic={room.topic}
             cohorts={room.cohorts}
+            members={room.members}
             currentCohortId={room.cohort?.id ?? null}
             myCohortId={room.myCohortId}
             onListenIn={listenIn}

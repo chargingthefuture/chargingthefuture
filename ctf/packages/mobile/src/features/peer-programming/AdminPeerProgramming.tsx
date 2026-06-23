@@ -16,8 +16,15 @@ import {
   runAdminAssignment,
   upsertAdminTopic,
   type AssignmentRunResult,
+  type CohortMember,
   type ManagedCohort,
 } from './admin-api';
+
+// A cohort member's display name: their resolved @username, or a short id fallback when Clerk could
+// not resolve them.
+function memberName(member: CohortMember): string {
+  return member.username ?? `Member ${member.userId.slice(0, 6)}`;
+}
 import type { PeerProgrammingTopic } from './api';
 
 const COLOR = '#6EE7B7';
@@ -281,16 +288,23 @@ export const AdminPeerProgramming = () => {
         ) : (
           cohorts.map((c) => (
             <View key={c.id} style={styles.cohortRow}>
-              <View style={styles.cohortLeft}>
-                <Text style={styles.cohortLabel}>{c.cohortLabel}</Text>
-                <Text style={styles.cohortMeta}>
-                  Week of {c.weekStartDate} · {c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}
-                </Text>
-              </View>
-              {c.fallbackOpen ? (
-                <View style={styles.cohortOpenBadge}>
-                  <Text style={styles.cohortOpenText}>Open</Text>
+              <View style={styles.cohortTopRow}>
+                <View style={styles.cohortLeft}>
+                  <Text style={styles.cohortLabel}>{c.cohortLabel}</Text>
+                  <Text style={styles.cohortMeta}>
+                    Week of {c.weekStartDate} · {c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}
+                  </Text>
                 </View>
+                {c.fallbackOpen ? (
+                  <View style={styles.cohortOpenBadge}>
+                    <Text style={styles.cohortOpenText}>Open</Text>
+                  </View>
+                ) : null}
+              </View>
+              {c.members.length > 0 ? (
+                <Text style={styles.cohortMembers}>
+                  Members: {c.members.map(memberName).join(', ')}
+                </Text>
               ) : null}
             </View>
           ))
@@ -337,14 +351,18 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
   cohortRow: {
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    gap: 6,
+  },
+  cohortTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
   },
+  cohortMembers: { fontSize: 12, color: '#D1D5DB', lineHeight: 18 },
   cohortLeft: { flex: 1 },
   cohortLabel: { fontSize: 14, fontWeight: '700', color: TEXT },
   cohortMeta: { fontSize: 12, color: SUBTLE, marginTop: 1 },
