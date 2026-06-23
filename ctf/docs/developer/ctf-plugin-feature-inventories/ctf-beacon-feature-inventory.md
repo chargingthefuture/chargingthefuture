@@ -162,8 +162,14 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
   with RTMP url/key plus desktop screen-share, live chat + moderation, end, history). Public viewer
   at `/apps/beacon` (HLS player, "live and public" indicator, member live chat, idle/replay state).
   Both are mobile-responsive.
-- Android (React Native): deferred — viewer parity tracked by a parity ticket opened with the build
-  PR.
+- Android (React Native): viewer built (issue #712). `src/features/beacon/` — `BeaconApi.ts` (the
+  public `GET /api/beacon/current` and the member `POST /api/beacon/[id]/chat-token`) and a `Beacon.tsx`
+  viewer screen registered in the mobile navigator (`App.tsx`). Same three states as web: live (HLS
+  player via `expo-video` + the "live and public" indicator + member live chat through the reused
+  `StreamChatView`; anonymous viewers see a sign-in-to-chat prompt and still watch), replay (plays the
+  recording URL when one is present), idle ("no live event right now"). Admin broadcasting is not on
+  mobile — the admin pushes the phone screen through a third-party RTMP app per the plan. The HLS player
+  is a native module (`expo-video`); it runs only in an EAS dev/production build, not Expo Go.
 
 ## Seed Coverage Status
 
@@ -256,3 +262,20 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   Graceful degradation is unchanged — when Stream is unconfigured or a field is absent, every surface
   stays in its calm not-live/idle state and nothing throws. Still requires the owner: the Stream
   dashboard call-type/recording config and webhook registration, plus one live broadcast smoke test.
+- 2026-06-23: Android viewer parity shipped on branch `feat/mobile-beacon-viewer` (issue #712). Added
+  `ctf/packages/mobile/src/features/beacon/` — `BeaconApi.ts` (the public `GET /api/beacon/current` and
+  the member-only `POST /api/beacon/[id]/chat-token`, both through `authedFetch`), `Beacon.tsx` (the
+  viewer screen), `BeaconVideo.tsx` (the HLS surface), and `index.ts`. The screen polls
+  `/api/beacon/current` every 15 seconds (matching web) and renders the same three states: live (HLS
+  player + "live and public" indicator + member live chat / sign-in prompt), replay (plays the recording
+  URL when present), idle. Member chat reuses the shared `StreamChatView`; a signed-in member requests a
+  chat token (the server-side member gate), an anonymous viewer sees a sign-in-to-chat prompt and still
+  watches over HLS. Registered Beacon in the mobile navigator (`App.tsx`) and flipped
+  `requiresMobileSurface` to `true` in `config/plugin-parity-contracts.json`. Added a new native
+  dependency, `expo-video` (the current Expo player; `expo-av` is not published for this Expo SDK), to
+  play `.m3u8` HLS on iOS/Android. It is a native module: it does NOT run in Expo Go and needs an EAS
+  rebuild — the owner must run `expo install expo-video` (or `pnpm install`) and an EAS dev/production
+  build before the mobile viewer plays video. A matching quota-impact note is at
+  `ctf/docs/quota-impact/2026-06-23-mobile-beacon-viewer.md`. Public/anonymous viewing is HLS only (no
+  Stream chat connection); only a signed-in viewer of a live event opens a Stream Chat connection,
+  bounded by concurrent live-event viewers, mirroring the web viewer.

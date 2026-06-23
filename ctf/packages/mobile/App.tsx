@@ -22,6 +22,7 @@ import { ServiceCredits, AdminServiceCredits } from './src/features/service-cred
 import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock, AdminUnlock } from './src/features/unlock';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
+import { Beacon } from './src/features/beacon';
 import { AccountData } from './src/features/account-data';
 import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
@@ -30,6 +31,7 @@ import { LoadingScreen } from './src/components/shared/LoadingScreen';
 type FeatureKey =
   | 'home'
   | 'chyme'
+  | 'beacon'
   | 'skills-taxonomy'
   | 'directory'
   | 'directory-admin'
@@ -65,6 +67,7 @@ type FeatureKey =
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
   { key: 'chyme', label: 'Chyme' },
+  { key: 'beacon', label: 'Beacon' },
   { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
   { key: 'directory', label: 'Directory' },
   { key: 'directory-admin', label: 'Directory Admin' },
@@ -119,6 +122,8 @@ function AppShell() {
         return <HubHome />;
       case 'chyme':
         return <ChymeRoom />;
+      case 'beacon':
+        return <Beacon />;
       case 'skills-taxonomy':
         return <SkillsTaxonomy />;
       case 'directory':

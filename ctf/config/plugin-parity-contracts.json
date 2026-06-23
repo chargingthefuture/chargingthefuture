@@ -136,7 +136,7 @@
     {
       "slug": "beacon",
       "mobileFeatureDirs": ["beacon"],
-      "requiresMobileSurface": false,
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     }
   ]
