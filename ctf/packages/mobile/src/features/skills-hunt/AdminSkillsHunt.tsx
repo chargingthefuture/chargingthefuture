@@ -7,8 +7,14 @@ import {
   fetchAdminSubmissions,
   reviewAdminSubmission,
   type ReviewAction,
+  type RoundRewardSummary,
   type SubmissionStatusFilter,
 } from './admin-api';
+
+// Always render ServiceCredits in full words (never the bare "SC" code, never a fiat equivalent).
+function creditsLabel(amount: number): string {
+  return `${amount} ServiceCredits`;
+}
 
 const COLOR = '#FBBF24';
 const BG = '#0F1117';
@@ -32,6 +38,8 @@ export const AdminSkillsHunt = () => {
   const [activeRoundId, setActiveRoundId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<SubmissionStatusFilter>('pending');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [roundDetail, setRoundDetail] = useState<Round | null>(null);
+  const [rewardSummary, setRewardSummary] = useState<RoundRewardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +76,8 @@ export const AdminSkillsHunt = () => {
     }
     setForbidden(false);
     setSubmissions(result.items);
+    setRoundDetail(result.round);
+    setRewardSummary(result.rewardSummary);
   }, [auth, activeRoundId, statusFilter]);
 
   useEffect(() => {
@@ -184,6 +194,37 @@ export const AdminSkillsHunt = () => {
         </View>
       </View>
 
+      {roundDetail ? (
+        <View style={styles.rewardCard}>
+          <Text style={styles.rewardTitle}>Reward</Text>
+          {(roundDetail.rewardCreditsPerAccept ?? 0) > 0 ? (
+            <>
+              <Text style={styles.rewardLine}>
+                {creditsLabel(roundDetail.rewardCreditsPerAccept ?? 0)} per accepted nomination
+                {roundDetail.rewardPerUserRoundCap != null
+                  ? ` · cap ${creditsLabel(roundDetail.rewardPerUserRoundCap)} per scout`
+                  : ''}
+              </Text>
+              {rewardSummary ? (
+                <Text style={styles.rewardMeta}>
+                  Paid so far: {creditsLabel(rewardSummary.totalCreditsPaid)} across{' '}
+                  {rewardSummary.rewardedSubmissionCount}{' '}
+                  {rewardSummary.rewardedSubmissionCount === 1 ? 'nomination' : 'nominations'}
+                </Text>
+              ) : null}
+              <Text style={styles.rewardNote}>
+                The scout is paid from the treasury when you accept — minting is automatic and
+                idempotent.
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.rewardMeta}>
+              This round pays no reward. Set an amount on the web admin to pay scouts on accept.
+            </Text>
+          )}
+        </View>
+      ) : null}
+
       {submissions.length === 0 ? (
         <Text style={styles.emptyText}>No submissions matching this filter.</Text>
       ) : (
@@ -199,6 +240,11 @@ export const AdminSkillsHunt = () => {
             </Text>
             {submission.skills.length > 0 ? (
               <Text style={styles.cardMeta}>Skills: {submission.skills.join(', ')}</Text>
+            ) : null}
+            {submission.creditGranted ? (
+              <View style={styles.paidPill}>
+                <Text style={styles.paidPillText}>✓ Paid {creditsLabel(submission.creditAmount ?? 0)}</Text>
+              </View>
             ) : null}
             {submission.status === 'pending' ? (
               <View style={styles.actionRow}>
@@ -271,6 +317,34 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  rewardCard: {
+    backgroundColor: `${COLOR}10`,
+    borderWidth: 1,
+    borderColor: `${COLOR}35`,
+    borderRadius: 14,
+    padding: 16,
+    gap: 6,
+  },
+  rewardTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLOR,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  rewardLine: { fontSize: 14, fontWeight: '700', color: TEXT },
+  rewardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
+  rewardNote: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
+  paidPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(34,197,94,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.3)',
+  },
+  paidPillText: { fontSize: 11, fontWeight: '700', color: '#22C55E' },
   pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
     borderWidth: 1,

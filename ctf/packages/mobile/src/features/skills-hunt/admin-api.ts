@@ -18,10 +18,20 @@ export type RoundsFetchResult = {
   message: string | null;
 };
 
+// Running reward tally for a round (admin moderation view). Mirrors the web getRoundRewardSummary.
+export type RoundRewardSummary = {
+  totalCreditsPaid: number;
+  rewardedSubmissionCount: number;
+};
+
 export type SubmissionsFetchResult = {
   ok: boolean;
   forbidden: boolean;
   items: Submission[];
+  // The round's reward config and the running reward total, so the moderation view can show what
+  // scouts are paid. Null when the fetch was forbidden or failed.
+  round: Round | null;
+  rewardSummary: RoundRewardSummary | null;
   message: string | null;
 };
 
@@ -47,13 +57,24 @@ export async function fetchAdminSubmissions(
     `${ADMIN_API_BASE}/rounds/${roundId}/submissions?status=${status}&pageSize=100`,
   );
   if (res.status === 401 || res.status === 403) {
-    return { ok: false, forbidden: true, items: [], message: 'Admin access is required.' };
+    return { ok: false, forbidden: true, items: [], round: null, rewardSummary: null, message: 'Admin access is required.' };
   }
   if (!res.ok) {
-    return { ok: false, forbidden: false, items: [], message: `Could not load submissions (${res.status}).` };
+    return { ok: false, forbidden: false, items: [], round: null, rewardSummary: null, message: `Could not load submissions (${res.status}).` };
   }
-  const data = (await res.json()) as { items?: Submission[] };
-  return { ok: true, forbidden: false, items: data.items ?? [], message: null };
+  const data = (await res.json()) as {
+    items?: Submission[];
+    round?: Round | null;
+    rewardSummary?: RoundRewardSummary | null;
+  };
+  return {
+    ok: true,
+    forbidden: false,
+    items: data.items ?? [],
+    round: data.round ?? null,
+    rewardSummary: data.rewardSummary ?? null,
+    message: null,
+  };
 }
 
 // POST a moderation decision for one submission. Carries the CSRF confirmation

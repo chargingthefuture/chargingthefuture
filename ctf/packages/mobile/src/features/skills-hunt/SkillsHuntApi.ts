@@ -19,6 +19,11 @@ export type Round = {
   status: 'draft' | 'active' | 'closed' | 'archived';
   startsAtIso: string;
   endsAtIso: string;
+  // Whole ServiceCredits paid to the scout when a nomination is accepted (0 = no reward). Optional
+  // because scout-facing round payloads may omit it; default to 0 when reading.
+  rewardCreditsPerAccept?: number;
+  // Optional ceiling on total reward credits one scout can earn in this round (null = no cap).
+  rewardPerUserRoundCap?: number | null;
 };
 
 export type LeaderboardItem = {
@@ -46,6 +51,11 @@ export type Submission = {
   pointsAwarded: number;
   urlValidationResult: 'valid' | 'invalid' | 'dead' | null;
   createdAtIso: string;
+  // Reward payout for this accepted nomination (admin view): whether the scout was paid, how many
+  // ServiceCredits, and when. Optional because the scout-facing list omits them.
+  creditGranted?: boolean;
+  creditAmount?: number;
+  creditGrantedAtIso?: string | null;
 };
 
 export type Achievement = {
