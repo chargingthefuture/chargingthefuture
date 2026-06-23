@@ -14,9 +14,11 @@ import {
   listMyRequests,
   listRequests,
   fulfillRequest,
+  repostRequest,
   socketRelayHandle,
   settlementLabel,
   updateRequest,
+  type SocketRelayError,
   type SocketRelayRequest,
 } from './api';
 import { deriveTagChips, requestTags, suggestTags } from './tags';
@@ -46,6 +48,7 @@ export function SocketRelay() {
   const [error, setError] = useState<string | null>(null);
   const [helped, setHelped] = useState<string[]>([]);
   const [fulfilling, setFulfilling] = useState<string | null>(null);
+  const [reposting, setReposting] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('All');
 
@@ -93,10 +96,30 @@ export function SocketRelay() {
     try {
       await fulfillRequest(requestId);
       setHelped((prev) => [...prev, requestId]);
-    } catch {
-      // silently ignore — optimistic UI is not rolled back to avoid flash
+    } catch (e) {
+      // If the post expired between loading the feed and claiming it, the server rejects with a
+      // 409 request_expired; reload so the now-inactive post drops out of the feed. Other failures
+      // are ignored so the optimistic UI is not rolled back with a flash.
+      if ((e as SocketRelayError)?.code === 'request_expired') {
+        loadFeed();
+      }
     } finally {
       setFulfilling(null);
+    }
+  };
+
+  // Re-post an expired request the member owns: resets the 28-day clock server-side and swaps the
+  // refreshed (now-active) request into the feed in place, with no full-screen reload.
+  const handleRepost = async (requestId: string) => {
+    if (reposting) return;
+    setReposting(requestId);
+    try {
+      const updated = await repostRequest(requestId);
+      setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    } catch {
+      // Leave the card in its expired state; the owner can try again.
+    } finally {
+      setReposting(null);
     }
   };
 
@@ -192,6 +215,9 @@ export function SocketRelay() {
       );
     }
     const visible = requests.filter((r) => {
+      // Expired posts are inactive: hide everyone else's. The member's own expired posts stay so
+      // they can be re-posted from their card.
+      if (r.isExpired && !myRequestIds.includes(r.id)) return false;
       if (
         tagFilter !== 'All' &&
         !requestTags(r).some((t) => t.toLowerCase() === tagFilter.toLowerCase())
@@ -252,6 +278,11 @@ export function SocketRelay() {
                       <Text style={styles.statusBadgeText}>{r.status}</Text>
                     </View>
                   )}
+                  {r.isExpired && (
+                    <View style={styles.expiredBadge}>
+                      <Text style={styles.expiredBadgeText}>Expired</Text>
+                    </View>
+                  )}
                 </View>
 
                 <Text style={styles.cardTitle}>{r.title}</Text>
@@ -273,15 +304,34 @@ export function SocketRelay() {
                 </Text>
 
                 {myRequestIds.includes(r.id) ? (
-                  <TouchableOpacity
-                    style={styles.editBtn}
-                    onPress={() => startEdit(r)}
-                    disabled={r.status !== 'open'}
-                  >
-                    <Text style={styles.editBtnText}>
-                      {r.status === 'open' ? 'Edit Your Request' : 'Your request'}
-                    </Text>
-                  </TouchableOpacity>
+                  r.isExpired ? (
+                    <>
+                      <TouchableOpacity
+                        style={styles.repostBtn}
+                        onPress={() => handleRepost(r.id)}
+                        disabled={reposting === r.id}
+                      >
+                        {reposting === r.id ? (
+                          <ActivityIndicator size="small" color={COLOR} />
+                        ) : (
+                          <Text style={styles.repostBtnText}>Re-post</Text>
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.editBtn} onPress={() => startEdit(r)}>
+                        <Text style={styles.editBtnText}>Edit</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={() => startEdit(r)}
+                      disabled={r.status !== 'open'}
+                    >
+                      <Text style={styles.editBtnText}>
+                        {r.status === 'open' ? 'Edit Your Request' : 'Your request'}
+                      </Text>
+                    </TouchableOpacity>
+                  )
                 ) : (
                   <TouchableOpacity
                     style={[
@@ -292,7 +342,8 @@ export function SocketRelay() {
                     disabled={
                       helped.includes(r.id) ||
                       fulfilling === r.id ||
-                      r.status !== 'open'
+                      r.status !== 'open' ||
+                      r.isExpired
                     }
                   >
                     {fulfilling === r.id ? (
@@ -306,9 +357,11 @@ export function SocketRelay() {
                       >
                         {helped.includes(r.id)
                           ? '✓ Fulfilled'
-                          : r.status === 'open'
-                            ? 'I Can Help'
-                            : 'Closed'}
+                          : r.isExpired
+                            ? 'Expired'
+                            : r.status === 'open'
+                              ? 'I Can Help'
+                              : 'Closed'}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -598,6 +651,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   statusBadgeText: { fontSize: 10, color: '#9CA3AF' },
+  expiredBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(244,63,94,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(244,63,94,0.30)',
+  },
+  expiredBadgeText: { fontSize: 10, color: '#F43F5E', fontWeight: '600' },
   cardTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -631,6 +693,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editBtnText: { fontSize: 12, fontWeight: '700', color: '#9CA3AF' },
+  repostBtn: {
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: `${COLOR}15`,
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  repostBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
   cancelEditBtn: {
     paddingVertical: 12,
     borderRadius: 12,
