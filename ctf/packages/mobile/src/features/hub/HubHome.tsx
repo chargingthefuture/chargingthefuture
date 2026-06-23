@@ -21,6 +21,27 @@ import {
   HUB_REACTION_EMOJIS,
 } from './api';
 import type { HubMessage, HubReactionEmoji, HubReactionSummary } from './api';
+import {
+  fetchHubJoin,
+  connectHubLive,
+  type HubLiveConnection,
+  type HubTypingUser,
+} from './live-stream';
+
+// Poll cadence: the poll is the only refresh path when the live Stream connection is absent or
+// degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
+// slow backstop only, so it runs far less often to cut request volume. Mirrors the web shell.
+const POLL_INTERVAL_FALLBACK_MS = 15_000;
+const POLL_INTERVAL_LIVE_MS = 30_000;
+
+// Render "X is typing…" / "X and Y are typing…" / "N people are typing…" from the set of other
+// members currently typing. Empty list renders nothing.
+function formatTypingLabel(users: HubTypingUser[]): string | null {
+  if (users.length === 0) return null;
+  if (users.length === 1) return `${users[0].name} is typing…`;
+  if (users.length === 2) return `${users[0].name} and ${users[1].name} are typing…`;
+  return `${users.length} people are typing…`;
+}
 
 // The Hub stream is feed-backed and flattened on the server to one author shape per message:
 // "Survivor Hub" for admin announcements + AI Q&A, "Community member" for peer-to-peer posts.
@@ -223,6 +244,13 @@ export const HubHome = () => {
   const [dividerBeforeId, setDividerBeforeId] = useState<string | null>(null);
   const seenKeys = useRef<Set<string>>(new Set());
   const dividerComputedRef = useRef(false);
+  // Other members currently typing in the Commons, surfaced as "X is typing…" above the composer.
+  // Only populated when the live Stream connection is up; empty in polling-only mode.
+  const [typingUsers, setTypingUsers] = useState<HubTypingUser[]>([]);
+  // The live Stream connection handle for the current mount (null when not connected / polling only).
+  // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
+  // re-rendering or re-subscribing.
+  const liveConnectionRef = useRef<HubLiveConnection | null>(null);
 
   const mergeMessages = useCallback((incoming: HubMessage[]) => {
     const merged: HubMessage[] = [];
@@ -249,12 +277,95 @@ export const HubHome = () => {
     }
   }, [mergeMessages]);
 
+  // A live Stream `message.new` event must always call the freshest `load` without resubscribing
+  // each time the callback identity changes, so keep the latest reference in a ref.
+  const loadRef = useRef(load);
   useEffect(() => {
-    load();
-    // Poll while the screen is mounted, mirroring the web shell's polling cadence.
-    const timer = setInterval(load, 15000);
-    return () => clearInterval(timer);
+    loadRef.current = load;
   }, [load]);
+
+  // Refresh the feed, the poll, and the best-effort live Stream layer for the life of the screen.
+  // The live layer is purely additive: when POST /api/hub/join mints credentials the client opens a
+  // single Stream Chat connection to the shared `ctf-feed-community` channel so new posts appear
+  // immediately and members see a typing indicator. When Stream is not configured, or the connection
+  // fails, the screen silently stays on the frequent poll — exactly as before. A Stream failure can
+  // never break or blank the Hub.
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    // Both the live path and the polling-only path keep a poll running. `intervalMs` is short when we
+    // are polling-only and long when a healthy live connection is the primary refresh path.
+    const startPoll = (intervalMs: number) => {
+      timer = setInterval(() => {
+        void loadRef.current();
+      }, intervalMs);
+    };
+
+    void (async () => {
+      // Load the first batch right away so the chat renders without waiting for the join handshake.
+      await load();
+      if (!active) return;
+
+      // Try to open the live connection only when the server actually minted credentials. When Stream
+      // is not configured (or the call fails) `fetchHubJoin` returns null and we simply poll.
+      let live: HubLiveConnection | null = null;
+      const credentials = await fetchHubJoin();
+      if (active && credentials) {
+        live = await connectHubLive(credentials, {
+          // A new post (or a recovered connection) pulls fresh history right away, so posts appear
+          // immediately instead of waiting for the next poll.
+          onActivity: () => {
+            void loadRef.current();
+          },
+          onTypingChange: (typing) => {
+            if (active) setTypingUsers(typing);
+          },
+        });
+      }
+
+      if (!active) {
+        // Unmounted while connecting; tear the connection down rather than leak it.
+        if (live) void live.disconnect();
+        return;
+      }
+
+      if (live) {
+        liveConnectionRef.current = live;
+        // Live connection drives refreshes; the poll becomes a slow backstop.
+        startPoll(POLL_INTERVAL_LIVE_MS);
+      } else {
+        // Stream not configured, or the live connection failed to open: silently stay on the
+        // frequent poll. The chat is fully functional this way.
+        setTypingUsers([]);
+        startPoll(POLL_INTERVAL_FALLBACK_MS);
+      }
+    })();
+
+    return () => {
+      active = false;
+      if (timer) clearInterval(timer);
+      // Disconnect the live Stream client on unmount so we never leak a connection.
+      const live = liveConnectionRef.current;
+      liveConnectionRef.current = null;
+      if (live) void live.disconnect();
+    };
+    // `load` is stable (it depends only on the stable mergeMessages); re-running this effect would
+    // tear down and reopen the live connection, so we intentionally bind it once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Emit a typing event as the member writes in the composer. No-op when there is no live connection
+  // (polling-only mode), so the composer can call it unconditionally on every keystroke.
+  const notifyTyping = useCallback(() => {
+    liveConnectionRef.current?.sendTyping();
+  }, []);
+
+  // Tell the channel the member has stopped typing (e.g. after sending). Best-effort; no-op when not
+  // live.
+  const notifyStopTyping = useCallback(() => {
+    liveConnectionRef.current?.stopTyping();
+  }, []);
 
   // Once the first batch of messages is in, read the last-seen marker, place the unread divider
   // before the first newer message, then move the marker forward. Best-effort: if the marker read
@@ -278,6 +389,8 @@ export const HubHome = () => {
     if (!text || sending) return;
     setSending(true);
     setSendError(null);
+    // The member just sent; clear the typing indicator on the live channel right away.
+    notifyStopTyping();
     try {
       const result = await sendHubMessage(text, replyTo?.communityPostId ?? null);
       setInput('');
@@ -293,7 +406,7 @@ export const HubHome = () => {
     } finally {
       setSending(false);
     }
-  }, [input, sending, replyTo]);
+  }, [input, sending, replyTo, notifyStopTyping]);
 
   const handleToggleReaction = useCallback(
     async (message: HubMessage, emoji: HubReactionEmoji) => {
@@ -312,6 +425,8 @@ export const HubHome = () => {
   );
 
   const hubAccent = getAppAccent('chyme', theme);
+  // "X is typing…" line, present only while the live connection is up and others are typing.
+  const typingLabel = formatTypingLabel(typingUsers);
 
   return (
     <View style={s.screen}>
@@ -369,6 +484,14 @@ export const HubHome = () => {
         />
       )}
 
+      {typingLabel && (
+        <View style={s.typingRow}>
+          <Text style={s.typingText} numberOfLines={1}>
+            {typingLabel}
+          </Text>
+        </View>
+      )}
+
       {isAuthenticated ? (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {sendError && <Text style={s.sendError}>{sendError}</Text>}
@@ -397,7 +520,11 @@ export const HubHome = () => {
             <TextInput
               style={s.input}
               value={input}
-              onChangeText={setInput}
+              onChangeText={(text) => {
+                setInput(text);
+                // Best-effort live typing event; a no-op in polling-only mode.
+                notifyTyping();
+              }}
               placeholder="Share an update with the community…"
               placeholderTextColor={tokens.textMuted}
               multiline
@@ -581,6 +708,8 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     emptyTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary, marginBottom: 10, textAlign: 'center' },
     emptyBody: { fontSize: 14, color: t.textSecondary, lineHeight: 22, textAlign: 'center' },
     sendError: { fontSize: 12, color: t.danger, paddingHorizontal: 16, paddingTop: 8 },
+    typingRow: { paddingHorizontal: 16, paddingVertical: 4 },
+    typingText: { fontSize: 12, fontStyle: 'italic', color: t.textSecondary },
     composer: {
       flexDirection: 'row',
       alignItems: 'flex-end',
