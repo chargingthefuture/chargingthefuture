@@ -19,6 +19,13 @@ export function mentionsComic(text: string): boolean {
 
 export type ComicAnswerRating = 'helpful' | 'not_helpful' | 'flagged';
 
+// A resolved plugin link shown beneath a published answer: the registry slug + display name.
+// Mirrors the web ComicLinkedPlugin.
+export type ComicLinkedPlugin = {
+  slug: string;
+  name: string;
+};
+
 // One Q&A item in the asker's own @comic stream. Mirrors the server ComicAskerStreamItem: a
 // pending item carries no answer text (the asker never sees an unreviewed draft).
 export type ComicStreamItem = {
@@ -29,6 +36,9 @@ export type ComicStreamItem = {
   answer: string | null;
   answerTurnId: string | null;
   currentUserRating: ComicAnswerRating | null;
+  // Plugins the reviewer tagged as applicable to the published answer, resolved to slug + name.
+  // Empty while pending or when none were tagged. Shown as plugin links beneath the answer.
+  linkedPlugins: ComicLinkedPlugin[];
   askedAtIso: string;
 };
 
@@ -207,10 +217,13 @@ export type ComicReviewResolveResult = {
 
 // Resolve a queued draft: approve, correct (edit), or reject. A correction persists a training
 // example server-side. The `reviewId` is the dynamic path segment (named turnId on the route).
+// `linkedPluginSlugs` tags the plugins applicable to the published answer (validated + capped
+// server-side; dropped for a reject).
 export async function resolveComicReview(
   reviewId: string,
   resolution: ComicReviewResolution,
   correctedBody?: string | null,
+  linkedPluginSlugs?: string[],
 ): Promise<ComicReviewResolveResult> {
   const res = await authedFetch(`${BASE}/review/${reviewId}/resolve`, {
     method: 'POST',
@@ -218,7 +231,11 @@ export async function resolveComicReview(
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
-    body: JSON.stringify({ resolution, correctedBody: correctedBody ?? null }),
+    body: JSON.stringify({
+      resolution,
+      correctedBody: correctedBody ?? null,
+      linkedPluginSlugs: linkedPluginSlugs ?? [],
+    }),
   });
   if (!res.ok) {
     if (res.status === 409) {
@@ -227,4 +244,24 @@ export async function resolveComicReview(
     throw new Error(`Unable to resolve the review item: ${res.status}`);
   }
   return (await res.json()) as ComicReviewResolveResult;
+}
+
+// One plugin option for the review dashboard's "Applicable plugins" picker. The visible registry
+// (GET /api/plugins) filters operator-only plugins for non-admins; admins get the full list.
+export type ComicPluginOption = {
+  slug: string;
+  name: string;
+};
+
+// Fetch the visible plugin registry for the picker. Best-effort: returns [] on any failure so the
+// picker simply shows nothing rather than blocking the dashboard.
+export async function fetchVisiblePlugins(): Promise<ComicPluginOption[]> {
+  try {
+    const res = await authedFetch('/api/plugins');
+    if (!res.ok) return [];
+    const data = (await res.json()) as { plugins?: { slug: string; name: string }[] };
+    return (data.plugins ?? []).map((p) => ({ slug: p.slug, name: p.name }));
+  } catch {
+    return [];
+  }
 }

@@ -10,8 +10,18 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fetchComicReviewQueue, fetchComicTrainingStats, resolveComicReview } from './api';
-import type { ComicReviewItem, ComicReviewResolution, ComicTrainingStats } from './api';
+import {
+  fetchComicReviewQueue,
+  fetchComicTrainingStats,
+  fetchVisiblePlugins,
+  resolveComicReview,
+} from './api';
+import type {
+  ComicPluginOption,
+  ComicReviewItem,
+  ComicReviewResolution,
+  ComicTrainingStats,
+} from './api';
 
 // Owner Review & Correction Dashboard (mobile). Matches the locked MobileAIReviewConsole /
 // MobileAIReviewConsoleEmpty mockups. Admin-gated server-side; a non-admin sees an access notice.
@@ -194,6 +204,10 @@ export const ComicReviewDashboard = () => {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
+  // The visible plugin registry for the "Applicable plugins" picker, and the reviewer's current
+  // selection for the item being resolved (reset when the selected item changes).
+  const [plugins, setPlugins] = useState<ComicPluginOption[]>([]);
+  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -205,8 +219,9 @@ export const ComicReviewDashboard = () => {
         if (prev && result.items.some((entry) => entry.reviewId === prev)) return prev;
         return result.items[0]?.reviewId ?? null;
       });
-      // Best-effort training-examples counter; never blocks the queue (returns null on any failure).
+      // Best-effort training-examples counter and plugin list; never block the queue.
       setTrainingStats(await fetchComicTrainingStats());
+      setPlugins(await fetchVisiblePlugins());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load the review queue.');
     } finally {
@@ -223,6 +238,16 @@ export const ComicReviewDashboard = () => {
     [items, selectedId],
   );
 
+  // A fresh plugin selection per item being reviewed (the queue holds unresolved drafts, which carry
+  // no tags yet).
+  useEffect(() => {
+    setSelectedSlugs([]);
+  }, [selectedId]);
+
+  const togglePluginSlug = useCallback((slug: string) => {
+    setSelectedSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+  }, []);
+
   const performResolve = useCallback(
     async (resolution: ComicReviewResolution) => {
       if (!selected || busy) return;
@@ -233,6 +258,8 @@ export const ComicReviewDashboard = () => {
           selected.reviewId,
           resolution,
           resolution === 'correct' ? draft : null,
+          // Tags only apply to a published answer; the server drops them for a reject.
+          resolution === 'reject' ? [] : selectedSlugs,
         );
         setEditing(false);
         setDraft('');
@@ -243,7 +270,7 @@ export const ComicReviewDashboard = () => {
         setBusy(false);
       }
     },
-    [selected, busy, draft, load],
+    [selected, busy, draft, load, selectedSlugs],
   );
 
   // Confirm before any action that changes what a survivor sees: publishing (approve/correct) sends
@@ -436,6 +463,27 @@ export const ComicReviewDashboard = () => {
             <ProvenanceRow item={selected} />
           </>
         )}
+
+        {plugins.length > 0 ? (
+          <View style={styles.pluginPickerWrap}>
+            <Text style={styles.sectionLabel}>Applicable plugins</Text>
+            <Text style={styles.pluginPickerHint}>Tag the plugins this answer points to (optional).</Text>
+            <View style={styles.pluginChipWrap}>
+              {plugins.map((p) => {
+                const on = selectedSlugs.includes(p.slug);
+                return (
+                  <Pressable
+                    key={p.slug}
+                    style={[styles.pluginChip, on ? styles.pluginChipOn : null]}
+                    onPress={() => togglePluginSlug(p.slug)}
+                  >
+                    <Text style={[styles.pluginChipText, on ? styles.pluginChipTextOn : null]}>{p.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={styles.actions}>
@@ -656,6 +704,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginTop: 8,
   },
+  pluginPickerWrap: { marginTop: 14 },
+  pluginPickerHint: { fontSize: 11, color: SUBTLE, marginBottom: 8 },
+  pluginChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pluginChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  pluginChipOn: {
+    backgroundColor: `${ACCENT}1F`,
+    borderColor: `${ACCENT}66`,
+  },
+  pluginChipText: { fontSize: 12, fontWeight: '600', color: SUBTLE },
+  pluginChipTextOn: { color: ACCENT_LIGHT },
   questionBox: {
     paddingHorizontal: 14,
     paddingVertical: 13,
