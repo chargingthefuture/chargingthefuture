@@ -29,6 +29,10 @@ export interface DirectoryListItem {
   jobTitleId: string | null;
   jobTitleName: string | null;
   skills: DirectorySkill[];
+  // Free-text skills nominated through Skills Hunt that are not yet in the taxonomy (still a
+  // proposal in skills_hunt_proposed_skill_promotions). Rendered as muted "pending review" chips so
+  // a community-generated profile's Specializations is never empty. Optional for older payloads.
+  pendingSkills?: string[];
   isActive: boolean;
   source: DirectoryProfileSource;
   invitedByUsername: string | null;
