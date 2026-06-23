@@ -39,6 +39,35 @@ export async function fetchAdminTopic(): Promise<TopicFetchResult> {
   return { ok: true, forbidden: false, topic: data.topic ?? null, message: null };
 }
 
+// A cohort row for the admin "Active cohorts" list. Mirrors the web listManagedCohorts shape.
+export type ManagedCohort = {
+  id: string;
+  cohortLabel: string;
+  weekStartDate: string;
+  memberCount: number;
+  fallbackOpen: boolean;
+};
+
+export type ManagedCohortsResult = {
+  ok: boolean;
+  forbidden: boolean;
+  cohorts: ManagedCohort[];
+  message: string | null;
+};
+
+// GET every cohort for the week (admin-only). Returns forbidden:true for non-admins.
+export async function fetchManagedCohorts(): Promise<ManagedCohortsResult> {
+  const res = await authedFetch(`${BASE}/cohorts`);
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, forbidden: true, cohorts: [], message: 'Admin access is required.' };
+  }
+  if (!res.ok) {
+    return { ok: false, forbidden: false, cohorts: [], message: `Could not load cohorts (${res.status}).` };
+  }
+  const data = (await res.json()) as { ok: boolean; cohorts?: ManagedCohort[] };
+  return { ok: true, forbidden: false, cohorts: data.cohorts ?? [], message: null };
+}
+
 export type TopicUpsertInput = {
   weekStartDate: string;
   title: string;

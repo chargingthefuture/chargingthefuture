@@ -1,42 +1,88 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import type { PeerProgrammingCohort, PeerProgrammingTopic } from './api';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import type {
+  PeerProgrammingCohort,
+  PeerProgrammingCohortSummary,
+  PeerProgrammingTopic,
+} from './api';
 
 const COLOR = '#6EE7B7';
 
 type Props = {
-  cohort: PeerProgrammingCohort;
+  cohort: PeerProgrammingCohort | null;
   topic: PeerProgrammingTopic | null;
+  cohorts: PeerProgrammingCohortSummary[];
+  currentCohortId: string | null;
+  myCohortId: string | null;
+  onListenIn: (_cohortId: string) => void;
 };
 
-export const PeerProgrammingCohortTab = ({ cohort, topic }: Props) => (
+export const PeerProgrammingCohortTab = ({
+  cohort,
+  topic,
+  cohorts,
+  currentCohortId,
+  myCohortId,
+  onListenIn,
+}: Props) => (
   <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
     <View style={styles.infoBox}>
       <Text style={styles.infoTitle}>Deterministic Placement</Text>
       <Text style={styles.infoDesc}>Every survivor gets placed in a cohort. No one left behind.</Text>
     </View>
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardLeft}>
-          <Text style={styles.cohortLabel}>{cohort.cohortLabel}</Text>
-          <Text style={styles.weekText}>Week of {cohort.weekStartDate}</Text>
+    {cohort !== null && (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardLeft}>
+            <Text style={styles.cohortLabel}>{cohort.cohortLabel}</Text>
+            <Text style={styles.weekText}>Week of {cohort.weekStartDate}</Text>
+          </View>
+          <View style={[styles.statusBadge, cohort.fallbackOpen ? styles.statusOpen : styles.statusActive]}>
+            <Text style={[styles.statusText, cohort.fallbackOpen ? styles.statusOpenText : styles.statusActiveText]}>
+              {cohort.fallbackOpen ? '⏳ Open' : '🔴 Active'}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, cohort.fallbackOpen ? styles.statusOpen : styles.statusActive]}>
-          <Text style={[styles.statusText, cohort.fallbackOpen ? styles.statusOpenText : styles.statusActiveText]}>
-            {cohort.fallbackOpen ? '⏳ Open' : '🔴 Active'}
-          </Text>
-        </View>
+        {topic !== null && (
+          <View style={styles.topicBox}>
+            <Text style={styles.topicLabel}>This week's topic</Text>
+            <Text style={styles.topicTitle}>{topic.title}</Text>
+            {topic.guidance.length > 0 && (
+              <Text style={styles.topicGuidance}>{topic.guidance}</Text>
+            )}
+          </View>
+        )}
       </View>
-      {topic !== null && (
-        <View style={styles.topicBox}>
-          <Text style={styles.topicLabel}>This week's topic</Text>
-          <Text style={styles.topicTitle}>{topic.title}</Text>
-          {topic.guidance.length > 0 && (
-            <Text style={styles.topicGuidance}>{topic.guidance}</Text>
-          )}
-        </View>
-      )}
-    </View>
+    )}
+
+    {cohorts.length > 0 && (
+      <View style={styles.runningSection}>
+        <Text style={styles.runningTitle}>Running cohorts this week</Text>
+        {cohorts.map((c) => {
+          const isCurrent = c.id === currentCohortId;
+          const isMine = c.id === myCohortId;
+          return (
+            <View key={c.id} style={styles.runningRow}>
+              <View style={styles.runningLeft}>
+                <Text style={styles.runningLabel}>{c.cohortLabel}</Text>
+                <Text style={styles.runningMeta}>
+                  {c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}
+                  {c.fallbackOpen ? ' · open' : ''}
+                  {isMine ? ' · yours' : ''}
+                </Text>
+              </View>
+              {isCurrent ? (
+                <Text style={styles.runningHere}>Viewing</Text>
+              ) : (
+                <Pressable style={styles.listenBtn} onPress={() => onListenIn(c.id)}>
+                  <Text style={styles.listenBtnText}>Listen in</Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    )}
   </ScrollView>
 );
 
@@ -89,4 +135,39 @@ const styles = StyleSheet.create({
   topicLabel: { fontSize: 11, color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   topicTitle: { fontSize: 14, fontWeight: '700', color: '#F9FAFB', marginBottom: 6 },
   topicGuidance: { fontSize: 12, color: '#9CA3AF', lineHeight: 18 },
+  runningSection: { marginTop: 16 },
+  runningTitle: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  runningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    marginBottom: 8,
+  },
+  runningLeft: { flex: 1 },
+  runningLabel: { fontSize: 14, fontWeight: '700', color: '#F9FAFB', marginBottom: 2 },
+  runningMeta: { fontSize: 11, color: '#6B7280' },
+  runningHere: { fontSize: 12, fontWeight: '700', color: COLOR },
+  listenBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: `${COLOR}15`,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+  },
+  listenBtnText: { fontSize: 12, fontWeight: '700', color: COLOR },
 });

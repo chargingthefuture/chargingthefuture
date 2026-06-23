@@ -33,20 +33,52 @@ export type PeerProgrammingMessage = {
   createdAtIso: string;
 };
 
+// How the viewer relates to the cohort whose room is open:
+//   member   — placed in this cohort (can post; mobile is read-only today regardless).
+//   admin    — an admin opening another cohort read-only.
+//   listener — any signed-in member reading along on a running cohort they were not placed in.
+export type PeerProgrammingRoomAccess = 'member' | 'admin' | 'listener';
+
+// One running cohort for the week, used for the "listen in" list. Mirrors the web RoomCohortSummary.
+export type PeerProgrammingCohortSummary = {
+  id: string;
+  cohortLabel: string;
+  memberCount: number;
+  fallbackOpen: boolean;
+};
+
 export type RoomData = {
   ok: boolean;
   topic: PeerProgrammingTopic | null;
   cohort: PeerProgrammingCohort | null;
   messages: PeerProgrammingMessage[];
   fallbackOpen: boolean;
+  // The full set of running cohorts this week (for the "listen in" list).
+  cohorts: PeerProgrammingCohortSummary[];
+  // The viewer's own cohort id, or null when they were not placed in one.
+  myCohortId: string | null;
+  // The viewer's access to the open cohort's room.
+  access: PeerProgrammingRoomAccess;
+  isMember: boolean;
 };
 
-export async function fetchRoom(): Promise<RoomData> {
-  const res = await authedFetch(`${BASE}/room`);
+// Open the room. With no `cohortId`, the viewer sees their own cohort. With a `cohortId`, an admin
+// or any signed-in member opens that cohort read-only ("listen in").
+export async function fetchRoom(cohortId?: string | null): Promise<RoomData> {
+  const url = cohortId ? `${BASE}/room?cohortId=${encodeURIComponent(cohortId)}` : `${BASE}/room`;
+  const res = await authedFetch(url);
   if (!res.ok) {
     throw new Error(`room_fetch_failed:${res.status}`);
   }
-  return res.json() as Promise<RoomData>;
+  const data = (await res.json()) as RoomData;
+  // Defensive defaults for the newer fields so older responses never crash the screen.
+  return {
+    ...data,
+    cohorts: data.cohorts ?? [],
+    myCohortId: data.myCohortId ?? null,
+    access: data.access ?? (data.cohort ? 'member' : 'listener'),
+    isMember: data.isMember ?? false,
+  };
 }
 
 export async function postMessage(
