@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { TrustStatusBadge } from './TrustStatusBadge';
 import { TrustVisibilityBadge } from './TrustVisibilityBadge';
 
 export interface TrustEvidenceItem {
@@ -26,8 +25,7 @@ export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, c
   return (
     <View style={styles.panel}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Trust & Verification</Text>
-        <TrustStatusBadge trustStatus={trust.trustStatus} />
+        <Text style={styles.headerText}>Trust</Text>
         <View style={styles.visibilityRow}>
           <Text style={styles.visibilityLabel}>Visibility:</Text>
           <TrustVisibilityBadge trustVisibility={trust.trustVisibility} />
@@ -37,7 +35,6 @@ export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, c
         <View style={compact ? styles.emptyCompact : styles.empty}>
           <Text style={styles.emptyTitle}>No trust signals yet</Text>
           <Text style={styles.emptyDesc}>Signals appear as you participate in the community.</Text>
-          <Text style={styles.emptyDesc}>Verification is handled manually by admins.</Text>
           <Text style={styles.emptyDesc}>Visible to: {trust.trustVisibility.charAt(0).toUpperCase() + trust.trustVisibility.slice(1)}</Text>
         </View>
       ) : (
