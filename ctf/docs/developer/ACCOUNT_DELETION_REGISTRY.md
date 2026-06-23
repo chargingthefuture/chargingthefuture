@@ -88,6 +88,16 @@ calls that reclaim flow first, then runs the orchestrator; the engine never move
 Both require an authenticated caller (self-service only — a deletion only ever touches the caller's
 own rows) and the same-origin `x-ctf-csrf: 1` guard used elsewhere.
 
+- `POST /api/internal/account/delete` — the **operator** counterpart, for clearing a duplicate
+  account by id. Runs the same flow as `full-account` (reclaim + `deleteAllAccountData`) but the
+  target `userId` comes from the request body, and by default it also deletes the Clerk identity
+  (`createClerkClient().users.deleteUser`); pass `{ "deleteClerk": false }` to delete only the
+  database data. It is **not** user-authenticated: it is guarded by a dedicated
+  `Authorization: Bearer <ACCOUNT_DELETE_SECRET>` (kept separate from `CRON_SECRET` because the action
+  is irreversible). Called only by the manual `Delete Account (manual)` GitHub Actions workflow
+  (`.github/workflows/delete-account.yml`), which fails red (never skips) when the secret/URL is
+  missing so a misfire is never mistaken for a completed deletion.
+
 ## What is intentionally NOT here yet
 
 - The **Account & Data UI** (web + mobile) — design-gated; no mockup exists in the `design/`

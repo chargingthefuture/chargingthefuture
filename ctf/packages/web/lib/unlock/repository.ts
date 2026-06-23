@@ -128,6 +128,28 @@ export async function getEffectiveUnlockAccessTier(userId: string): Promise<Unlo
   return result.rows[0]?.access_tier ?? null;
 }
 
+// Of the given user ids, which have full (approved) Unlock access. One query against the stored
+// submission tier (set to `approved_full` on approval). Used to keep not-yet-unlocked people — e.g. a
+// v2 user who signed into v3 but never completed Unlock — out of flows that should be unlocked-only,
+// such as Peer Programming cohort assignment. Returns a Set for O(1) membership checks.
+export async function listUnlockedUserIds(userIds: string[]): Promise<Set<string>> {
+  const unlocked = new Set<string>();
+  const unique = Array.from(
+    new Set(userIds.map((value) => value.trim()).filter((value) => value.length > 0)),
+  );
+  if (unique.length === 0) return unlocked;
+
+  const result = await queryDb<{ user_id: string }>(
+    `SELECT user_id
+       FROM unlock_verification_submissions
+      WHERE user_id = ANY($1::text[])
+        AND access_tier = 'approved_full'`,
+    [unique],
+  );
+  for (const row of result.rows) unlocked.add(row.user_id);
+  return unlocked;
+}
+
 export async function getUnlockStatusForUser(userId: string): Promise<UnlockStatus> {
   const accessTier = await getEffectiveUnlockAccessTier(userId);
   const result = await queryDb<Pick<UnlockSubmissionRow, 'review_status' | 'unlock_window_expires_at' | 'reminder_stage' | 'incentive_granted_at'>>(
