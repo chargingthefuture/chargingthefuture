@@ -84,6 +84,7 @@ function MessageCard({
   onToggleReaction,
   canReply,
   onReply,
+  currentUserId,
 }: {
   message: HubMessage;
   s: Styles;
@@ -93,18 +94,22 @@ function MessageCard({
   onToggleReaction: (_message: HubMessage, _emoji: HubReactionEmoji) => void;
   canReply: boolean;
   onReply: (_message: HubMessage) => void;
+  currentUserId?: string;
 }) {
   const official = isOfficial(message);
   // Official posts use the Hub brand (chyme accent in comic). Community posts use the
   // success/green accent. Both come from the active theme so they switch with the toggle.
   const accent = official ? getAppAccent('chyme', theme) : tokens.success;
+  // Bubble color convention (web parity): the logged-in member's own community posts are gray;
+  // everyone else's use the hub/community color. Official posts keep the Hub brand treatment.
+  const isOwn = !official && currentUserId != null && message.userId === currentUserId;
   // Only peer posts (community posts) can be reacted to / replied to; announcements / AI cannot.
   const isPeer = message.communityPostId != null;
   const showActionsRow = isPeer && (message.reactions.length > 0 || canReact || canReply);
   const [showPicker, setShowPicker] = useState(false);
 
   return (
-    <View style={[s.card, official ? s.cardOfficial : s.cardCommunity]}>
+    <View style={[s.card, official ? s.cardOfficial : isOwn ? s.cardCommunityOwn : s.cardCommunity]}>
       <View style={s.cardHeader}>
         <View style={[s.avatar, { backgroundColor: tokens.isComic ? `${accent}18` : `${accent}22`, borderWidth: tokens.isComic ? 1 : 0, borderColor: `${accent}40` }]}>
           <Text style={[s.avatarText, { color: tokens.isComic ? tokens.textPrimary : accent }]}>
@@ -202,7 +207,8 @@ function EmptyState({ s }: { s: Styles }) {
 
 export const HubHome = () => {
   const { tokens, theme } = useTheme();
-  const { isAuthenticated, signIn } = useAuth();
+  const { isAuthenticated, signIn, user } = useAuth();
+  const currentUserId = user?.id;
   const s = useMemo(() => makeStyles(tokens, theme), [tokens, theme]);
 
   const [messages, setMessages] = useState<HubMessage[]>([]);
@@ -354,6 +360,7 @@ export const HubHome = () => {
                 onToggleReaction={handleToggleReaction}
                 canReply={isAuthenticated}
                 onReply={setReplyTo}
+                currentUserId={currentUserId}
               />
             </>
           )}
@@ -456,7 +463,9 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     list: { padding: 16, gap: 10 },
     card: { borderRadius: r, borderWidth: t.isComic ? 1.5 : 1, padding: 14, marginBottom: 10 },
     cardOfficial: { backgroundColor: t.isComic ? `${official}10` : 'rgba(124,58,237,0.07)', borderColor: t.isComic ? `${official}50` : 'rgba(124,58,237,0.22)' },
-    cardCommunity: { backgroundColor: t.surface, borderColor: t.isComic ? `${t.border}40` : t.borderFaint },
+    // Others' community posts use the hub/community color; the member's own use a neutral gray.
+    cardCommunity: { backgroundColor: `${t.success}12`, borderColor: `${t.success}30` },
+    cardCommunityOwn: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.10)' },
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
     avatar: { width: 28, height: 28, borderRadius: t.isComic ? 0 : 8, alignItems: 'center', justifyContent: 'center' },
     avatarText: { fontSize: 11, fontWeight: '800' },
