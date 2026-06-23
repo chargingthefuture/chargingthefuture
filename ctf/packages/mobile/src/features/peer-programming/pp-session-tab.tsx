@@ -8,6 +8,9 @@ type Props = {
   cohort: PeerProgrammingCohort;
   topic: PeerProgrammingTopic | null;
   messages: PeerProgrammingMessage[];
+  // True when the viewer is listening in on a cohort they were not placed in (or an admin viewing
+  // another cohort): the session is read-only.
+  readOnly?: boolean;
 };
 
 const MessageRow = ({ item }: { item: PeerProgrammingMessage }) => (
@@ -24,12 +27,17 @@ const MessageRow = ({ item }: { item: PeerProgrammingMessage }) => (
   </View>
 );
 
-export const PeerProgrammingSessionTab = ({ cohort, topic, messages }: Props) => (
+export const PeerProgrammingSessionTab = ({ cohort, topic, messages, readOnly }: Props) => (
   <View style={styles.root}>
     <View style={styles.sessionHeader}>
       <Text style={styles.sessionTitle}>{cohort.cohortLabel}</Text>
       {topic !== null && <Text style={styles.sessionSubtitle}>{topic.title}</Text>}
     </View>
+    {readOnly ? (
+      <View style={styles.listenNotice}>
+        <Text style={styles.listenNoticeText}>👂 You&#39;re listening in — read-only.</Text>
+      </View>
+    ) : null}
     {messages.length === 0 ? (
       <View style={styles.emptyState}>
         <Text style={styles.emptyText}>No messages yet. Be the first to post in your cohort.</Text>
@@ -56,6 +64,14 @@ const styles = StyleSheet.create({
   },
   sessionTitle: { fontSize: 15, fontWeight: '700', color: '#F9FAFB', marginBottom: 2 },
   sessionSubtitle: { fontSize: 12, color: '#9CA3AF' },
+  listenNotice: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: `${COLOR}12`,
+    borderBottomWidth: 1,
+    borderBottomColor: `${COLOR}25`,
+  },
+  listenNoticeText: { fontSize: 12, fontWeight: '600', color: COLOR },
   list: { flex: 1 },
   messageList: { padding: 16 },
   messageRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },

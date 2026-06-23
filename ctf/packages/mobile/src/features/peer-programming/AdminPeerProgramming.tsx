@@ -12,9 +12,11 @@ import {
 import { usePluginAuth } from './usePluginAuth';
 import {
   fetchAdminTopic,
+  fetchManagedCohorts,
   runAdminAssignment,
   upsertAdminTopic,
   type AssignmentRunResult,
+  type ManagedCohort,
 } from './admin-api';
 import type { PeerProgrammingTopic } from './api';
 
@@ -55,6 +57,7 @@ export const AdminPeerProgramming = () => {
   const [idsText, setIdsText] = useState('');
   const [runningAssignment, setRunningAssignment] = useState(false);
   const [lastRun, setLastRun] = useState<AssignmentRunResult | null>(null);
+  const [cohorts, setCohorts] = useState<ManagedCohort[]>([]);
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -75,6 +78,9 @@ export const AdminPeerProgramming = () => {
       setRevisionNote(result.topic.revisionNote ?? '');
       setPublish(result.topic.status === 'published');
     }
+    // Best-effort: the "Active cohorts" list never blocks the topic/assignment tools.
+    const cohortsResult = await fetchManagedCohorts();
+    setCohorts(cohortsResult.cohorts);
     setLoading(false);
   }, [auth]);
 
@@ -267,6 +273,29 @@ export const AdminPeerProgramming = () => {
           </Text>
         ) : null}
       </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Active cohorts</Text>
+        {cohorts.length === 0 ? (
+          <Text style={styles.cardMeta}>No cohorts for this week yet. Run the weekly assignment to create them.</Text>
+        ) : (
+          cohorts.map((c) => (
+            <View key={c.id} style={styles.cohortRow}>
+              <View style={styles.cohortLeft}>
+                <Text style={styles.cohortLabel}>{c.cohortLabel}</Text>
+                <Text style={styles.cohortMeta}>
+                  Week of {c.weekStartDate} · {c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}
+                </Text>
+              </View>
+              {c.fallbackOpen ? (
+                <View style={styles.cohortOpenBadge}>
+                  <Text style={styles.cohortOpenText}>Open</Text>
+                </View>
+              ) : null}
+            </View>
+          ))
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -307,6 +336,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
+  cohortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+  },
+  cohortLeft: { flex: 1 },
+  cohortLabel: { fontSize: 14, fontWeight: '700', color: TEXT },
+  cohortMeta: { fontSize: 12, color: SUBTLE, marginTop: 1 },
+  cohortOpenBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: `${COLOR}20`,
+    borderWidth: 1,
+    borderColor: `${COLOR}40`,
+  },
+  cohortOpenText: { fontSize: 10, fontWeight: '700', color: COLOR },
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
   input: {
