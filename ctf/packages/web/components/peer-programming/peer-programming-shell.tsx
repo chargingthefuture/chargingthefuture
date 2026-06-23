@@ -20,12 +20,15 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 type RoomApiTopic = { title: string } | null;
 type RoomApiCohort = { id: string; cohortLabel: string; memberCount: number; fallbackOpen: boolean } | null;
 type RoomApiMessage = { id: string; authorUserId: string; body: string; createdAtIso: string; parentMessageId: string | null };
+// A cohort member surfaced to the roster: user id + resolved display name (null when unresolved).
+type RoomMember = { userId: string; username: string | null };
 type RoomApiResponse = {
   ok: boolean;
   topic: RoomApiTopic;
   cohort: RoomApiCohort;
   messages: RoomApiMessage[];
   cohorts?: CohortSummary[];
+  members?: RoomMember[];
   myCohortId?: string | null;
   access?: RoomAccess;
 };
@@ -34,6 +37,7 @@ type RoomData = {
   room: Room;
   messages: Message[];
   cohorts: CohortSummary[];
+  members: RoomMember[];
   myCohortId: string | null;
   access: RoomAccess;
 };
@@ -67,6 +71,7 @@ async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Pro
     room,
     messages: mapMessages(data.messages ?? []),
     cohorts: data.cohorts ?? [],
+    members: data.members ?? [],
     myCohortId: data.myCohortId ?? null,
     access: data.access ?? (data.cohort ? "member" : "listener"),
   };
@@ -104,6 +109,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [cohorts, setCohorts] = useState<CohortSummary[]>([]);
+  const [members, setMembers] = useState<RoomMember[]>([]);
   const [myCohortId, setMyCohortId] = useState<string | null>(null);
   const [access, setAccess] = useState<RoomAccess>("listener");
   // Which cohort's room is open. null = the viewer's own cohort (the default room).
@@ -135,6 +141,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         setRoom(data.room);
         setMessages(data.messages);
         setCohorts(data.cohorts);
+        setMembers(data.members);
         setMyCohortId(data.myCohortId);
         setAccess(data.access);
       } catch (e: unknown) {
@@ -158,6 +165,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       setRoom(data.room);
       setMessages(data.messages);
       setCohorts(data.cohorts);
+      setMembers(data.members);
       setMyCohortId(data.myCohortId);
       setAccess(data.access);
       setActiveCohortId(cohortId);
@@ -251,6 +259,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             error: feedbackError,
           }}
           cohorts={cohorts}
+          members={members}
           myCohortId={myCohortId}
           openCohortId={activeCohortId}
           onOpenCohort={(id) => void openCohort(id)}

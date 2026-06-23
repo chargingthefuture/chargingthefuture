@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { insertPeerProgrammingAudit, runWeeklyAssignment } from 'lib/peer-programming/repository';
 import { getActiveUserIdsLastDays } from 'lib/engagement/login-activity';
+import { listUnlockedUserIds } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
 // Cron-only: forms this week's Peer Programming cohorts from the last-7-days active set, without an
@@ -26,7 +27,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const activeUserIds = await getActiveUserIdsLastDays(7);
+  // Only unlocked (approved_full) members may be placed into cohorts. The recent-login set includes
+  // people who signed in but never completed Unlock (e.g. a v2 account returning to v3), so filter
+  // them out before forming cohorts.
+  const activeCandidates = await getActiveUserIdsLastDays(7);
+  const unlocked = await listUnlockedUserIds(activeCandidates);
+  const activeUserIds = activeCandidates.filter((value) => unlocked.has(value.trim()));
   const membersSelected = new Set(
     activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0),
   ).size;
