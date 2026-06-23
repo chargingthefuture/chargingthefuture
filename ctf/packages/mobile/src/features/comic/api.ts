@@ -171,6 +171,30 @@ export async function fetchComicReviewQueue(): Promise<{ items: ComicReviewItem[
   return { items: data.items ?? [], forbidden: false };
 }
 
+// At-a-glance counter of the collected training signal (owner corrections + rated answers). Mirrors
+// the web ComicTrainingStats.
+export type ComicTrainingStats = {
+  // Total non-discarded owner-correction training examples.
+  trainingExamplesTotal: number;
+  // Breakdown of those training examples by status ('pending' | 'exported').
+  trainingExamplesByStatus: Record<string, number>;
+  // Distinct answered turns that carry at least one rating.
+  ratedAnswersTotal: number;
+};
+
+// Best-effort admin training-examples counter for the review dashboard. Admin-gated server-side
+// (401/403 for non-admins). Returns null on any failure so the dashboard simply hides the line.
+export async function fetchComicTrainingStats(): Promise<ComicTrainingStats | null> {
+  try {
+    const res = await authedFetch(`${BASE}/admin/training-stats`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { ok?: boolean; stats?: ComicTrainingStats };
+    return data.stats ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export type ComicReviewResolution = 'approve' | 'correct' | 'reject';
 
 export type ComicReviewResolveResult = {
