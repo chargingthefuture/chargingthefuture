@@ -47,6 +47,12 @@ export type PeerProgrammingCohortSummary = {
   fallbackOpen: boolean;
 };
 
+// A cohort member: user id + resolved display name (null when Clerk could not resolve it).
+export type PeerProgrammingCohortMember = {
+  userId: string;
+  username: string | null;
+};
+
 export type RoomData = {
   ok: boolean;
   topic: PeerProgrammingTopic | null;
@@ -55,6 +61,8 @@ export type RoomData = {
   fallbackOpen: boolean;
   // The full set of running cohorts this week (for the "listen in" list).
   cohorts: PeerProgrammingCohortSummary[];
+  // Who is in the open cohort (resolved usernames), so members see their cohort-mates.
+  members: PeerProgrammingCohortMember[];
   // The viewer's own cohort id, or null when they were not placed in one.
   myCohortId: string | null;
   // The viewer's access to the open cohort's room.
@@ -75,6 +83,7 @@ export async function fetchRoom(cohortId?: string | null): Promise<RoomData> {
   return {
     ...data,
     cohorts: data.cohorts ?? [],
+    members: data.members ?? [],
     myCohortId: data.myCohortId ?? null,
     access: data.access ?? (data.cohort ? 'member' : 'listener'),
     isMember: data.isMember ?? false,
