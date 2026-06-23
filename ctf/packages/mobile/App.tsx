@@ -1,6 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AppState,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
 import { ComicReviewDashboard } from './src/features/comic';
 import { HubHome } from './src/features/hub';
@@ -21,6 +29,7 @@ import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
 import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock, AdminUnlock } from './src/features/unlock';
+import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { Beacon } from './src/features/beacon';
 import { AccountData } from './src/features/account-data';
@@ -111,10 +120,63 @@ export default function App() {
   );
 }
 
+// Result of the client-side Unlock check. `walled` mirrors the web redirect in
+// app/page.tsx: a signed-in non-admin whose tier is neither approved_full nor
+// locked_support_only cannot reach the plugin navigator.
+type UnlockGate = { loading: boolean; walled: boolean };
+
 function AppShell() {
-  const { isLoading } = useAuth();
+  const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens } = useTheme();
   const [selected, setSelected] = useState<FeatureKey>('home');
+
+  const isAdmin = Boolean(user?.isAdmin);
+
+  // Client-side Unlock wall. The server 403 gates are the real enforcement; this
+  // only mirrors the web redirect so a not-yet-approved member does not see the
+  // plugin navigator. Defaults to not-walled and fails open on any fetch error.
+  const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false });
+  const fetchSeq = useRef(0);
+
+  const refreshUnlockGate = useCallback(async () => {
+    // Only signed-in non-admins need a check. Admins always pass; signed-out
+    // users keep the existing sign-in path untouched.
+    if (!isAuthenticated || isAdmin) {
+      setUnlockGate({ loading: false, walled: false });
+      return;
+    }
+    const seq = ++fetchSeq.current;
+    setUnlockGate((prev) => ({ loading: true, walled: prev.walled }));
+    try {
+      const status = await fetchUnlockStatus();
+      if (seq !== fetchSeq.current) return;
+      const tier: UnlockAccessTier | null = status.accessTier;
+      const passes = tier === 'approved_full' || tier === 'locked_support_only';
+      setUnlockGate({ loading: false, walled: !passes });
+    } catch (error) {
+      // Fail open: never lock out an approved member because of a flaky status
+      // call. The server-side gates still enforce real access.
+      console.error('[unlock] status fetch failed; failing open (not walling)', error);
+      if (seq !== fetchSeq.current) return;
+      setUnlockGate({ loading: false, walled: false });
+    }
+  }, [isAuthenticated, isAdmin]);
+
+  // Fetch the unlock status once after auth bootstrap, and whenever the
+  // signed-in identity changes.
+  useEffect(() => {
+    if (isLoading) return;
+    void refreshUnlockGate();
+  }, [isLoading, refreshUnlockGate]);
+
+  // Re-check when the app returns to the foreground so a member approved while
+  // away passes on the next return without a full restart.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void refreshUnlockGate();
+    });
+    return () => sub.remove();
+  }, [refreshUnlockGate]);
 
   const featureView = useMemo(() => {
     switch (selected) {
@@ -196,11 +258,21 @@ function AppShell() {
     }
   }, [selected]);
 
-  // While the app is bootstrapping (restoring any stored sign-in session), show
-  // the universal "Exit Their Economy / Exit The Psyop" loading screen so the
-  // loading state is consistent app-wide and matches web.
-  if (isLoading) {
+  // While the app is bootstrapping (restoring any stored sign-in session), or
+  // while the first unlock-status check is in flight for a signed-in non-admin,
+  // show the universal "Exit Their Economy / Exit The Psyop" loading screen so
+  // the loading state is consistent app-wide and matches web — and so the
+  // navigator never flashes before the gate resolves.
+  if (isLoading || unlockGate.loading) {
     return <LoadingScreen />;
+  }
+
+  // Unlock wall: a signed-in non-admin whose tier is neither approved_full nor
+  // locked_support_only sees the Unlock screen full-screen instead of the
+  // plugin navigator, matching the web redirect to /plugin/unlock. A successful
+  // submission re-runs the check so an approval mid-session lets them through.
+  if (unlockGate.walled) {
+    return <Unlock onStatusChanged={refreshUnlockGate} />;
   }
 
   return (
