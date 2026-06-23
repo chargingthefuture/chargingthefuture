@@ -41,7 +41,7 @@
 
 - Build requires **8GB RAM** (`NODE_OPTIONS=--max-old-space-size=8192`)
 - Infisical currently self-hosted on Railway; need migration path
-- **~20 external service dependencies** (Clerk, GetStream, Formance, Supabase, Sentry, etc.)
+- **~20 external service dependencies** (Clerk, GetStream, Formance, Sentry, etc.)
 - **Multi-environment** (staging + production)
 - **Single entry point:** Next.js app at `ctf/packages/web`
 
@@ -130,7 +130,7 @@
         ↓
 ┌─ External Services (unchanged) ───────────────────────────┐
 │ - Clerk (auth)                   - Sentry (observability) │
-│ - GetStream (chat/video/feeds)   - Supabase (storage)    │
+│ - GetStream (chat/video/feeds)   - Backups (private repo)│
 │ - Formance (ledger)              - etc. (20 total)       │
 └────────────────────────────────────────────────────────────┘
 ```

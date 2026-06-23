@@ -35,7 +35,7 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 
 | File | Name (shown in the Actions tab) | When it runs | What it does |
 |---|---|---|---|
-| `backup-formance-supabase.yml` | Formance — Nightly Backup to Supabase | Daily 3:00 AM UTC; manual | Backs up the Formance Postgres database to Supabase storage with `pg_dump`. |
+| `backup-formance.yml` | Formance — Nightly Backup to Private Repo | Daily 3:00 AM UTC; manual | Backs up the Formance Postgres database with `pg_dump` and uploads the dump as a Release asset on a private backup repo. |
 | `bug-reports-build.yml` | Bug Reports — Open PR for Approved Fix | Manual | Uses Claude to build an owner-approved bug fix from the private triage repo, runs typecheck, and opens a PR. |
 | `bug-reports-create-issues.yml` | Bug Reports — Create Github Issues | Every 15 min; manual | Moves clean, user-filed bug reports from the app database into the private triage repo as issues (text redacted). |
 | `bug-reports-triage.yml` | Bug Reports — Triage | Every 30 min; manual | Looks at open `needs-triage` issues and posts a proposed fix plan — no code, no PR. |
@@ -60,13 +60,12 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `render-debug-agent.yml` | Render — Debug Agent | Manual | Pulls logs from a Render service, diagnoses errors, and opens a PR with proposed fixes. |
 | `render-deploy-watch.yml` | Render — Watch Deploy | Push to `main`; manual | Watches the Render API for the current commit's deploy and polls until it is live or failed. Does not build or deploy. |
 | `render-deploy.yml` | Render — Deploy Re-fresh (not an image rebuild) | Manual (pick a service) | Redeploys a Render service **without rebuilding** — re-pulls the existing `…:latest` image and picks up new environment variables. |
-| `restore-formance-supabase.yml` | Formance — Restore from Supabase | Manual (optional backup filename) | Restores a Formance `pg_dump` backup into a target database for disaster recovery or a fresh environment. |
+| `restore-formance.yml` | Formance — Restore from Private Repo | Manual (optional release tag / asset filename) | Restores a Formance `pg_dump` backup (a Release asset on the private backup repo) into a target database for disaster recovery or a fresh environment. |
 | `route-weather-briefing.yml` | Route Weather Briefing | Daily 10:00 UTC; manual | Builds a plain-text weather report for a set route and sends it to a phone via `ntfy.sh`. |
 | `security-compliance.yml` | Security and Compliance | Push/PRs to `main` (code paths); Mondays 4:30 AM UTC; manual | Runs dependency review on PRs, `gitleaks` secret scanning, and collects compliance-rule artifacts. |
 | `security-findings-triage.yml` | Security — Findings Triage | Mondays 13:00 UTC; manual | Reads the repo's open Dependabot (malware + vulnerabilities), code scanning (CodeQL), and secret-scanning alerts and writes one always-current triage issue in the private triage repo (never prints secret values). |
 | `seed-demo.yml` | Demo — Seed Schema | Manual (demo owner id) | Regenerates the demo schema, brings the demo database up to date, and runs the demo seed script for a given user. |
 | `skills-proposal-issues.yml` | Skills Hunt — Propose Skill Promotions | Every 6 hours at :17; manual | Turns free-text "proposed" skills from accepted Skills Hunt nominations into GitHub issues proposing they join the canonical taxonomy, with an AI-suggested sector + occupation. Only files issues — never writes the taxonomy. |
-| `supabase-keepalive.yml` | Supabase — Keepalive | Mon & Thu 6:00 AM UTC; manual | Runs `select 1` against the Supabase Postgres database so the free project is not paused for inactivity (Storage writes from the nightly backup don't count). Reads no data, writes nothing. |
 | `unlock-reward-reconciliation.yml` | Unlock — Reward Reconciliation | Hourly at :17; manual | Self-heals missed Unlock approval rewards by minting any pending ServiceCredits rewards (safe to repeat). |
 | `update-neon-db.yml` | Neon — Update DB (Migrations + schema.sql) | Push to `main` touching schema/migrations; manual | Applies pre-schema migrations, the canonical `schema.sql`, then post-schema migrations to the Neon database in order (all safe to repeat). |
 | `workflow-health-check.yml` | Github Actions — Workflow Health Check | Every 8 hours; manual | Checks each active workflow's most recent run on `main`, collects failures into one always-current triage issue, and closes it when everything is green. |

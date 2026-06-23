@@ -38,7 +38,7 @@ name: <Service or category> — <What it does>
 - **Separator is a spaced em dash** (` — `, the `—` character with one space on each side), not a
   hyphen, colon, or slash.
 - **Right side says what it does**, in Title Case, short and plain — `Android Release`,
-  `Create Branch`, `Nightly Backup to Supabase`, `Deprecated Workflow Runs`.
+  `Create Branch`, `Nightly Backup to Private Repo`, `Deprecated Workflow Runs`.
 - This governs the human-readable `name:` only. It does **not** rename the workflow **file** or any
   `job`/`step` id — those stay as they are unless a task explicitly asks to rename them.
 
@@ -48,7 +48,7 @@ Examples (current workflows):
 name: Expo — Android Release
 name: Expo — OTA Update
 name: Neon — Create Branch
-name: Formance — Nightly Backup to Supabase
+name: Formance — Nightly Backup to Private Repo
 name: Cleanup — Deprecated Workflow Runs
 name: Bug Reports — Create Github Issues
 name: GitHub Actions — Budget Monitor

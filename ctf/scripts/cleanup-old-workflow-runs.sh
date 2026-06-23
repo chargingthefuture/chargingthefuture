@@ -16,7 +16,7 @@ REPO="chargingthefuture"
 
 # Active workflow paths — runs for these are preserved
 ACTIVE_PATHS=(
-  ".github/workflows/backup-formance-supabase.yml"
+  ".github/workflows/backup-formance.yml"
   ".github/workflows/build-images.yml"
   ".github/workflows/ci.yml"
   ".github/workflows/cleanup-artifacts.yml"
