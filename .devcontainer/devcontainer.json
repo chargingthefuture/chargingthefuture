@@ -32,8 +32,7 @@
     "vscode": {
       "extensions": [
         "github.copilot",
-        "github.copilot-chat",
-        "coderabbit.coderabbit-vscode"
+        "github.copilot-chat"
       ]
     }
   },
