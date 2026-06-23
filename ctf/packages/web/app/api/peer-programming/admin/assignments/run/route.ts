@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingAdminAccess } from 'lib/peer-programming/_lib';
 import { insertPeerProgrammingAudit, runWeeklyAssignment } from 'lib/peer-programming/repository';
 import { getActiveUserIdsLastDays } from 'lib/engagement/login-activity';
+import { listUnlockedUserIds } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
 type AssignmentBody = {
@@ -28,9 +29,18 @@ export async function POST(request: Request) {
   }
 
   const useManualOverride = Boolean(body.allowManualOverride) && Array.isArray(body.activeUserIds);
-  const activeUserIds = useManualOverride
+  const resolvedUserIds = useManualOverride
     ? (body.activeUserIds ?? [])
     : await getActiveUserIdsLastDays(7);
+
+  // Only unlocked (approved_full) members may be placed into cohorts. Filter the recent-login set so
+  // a not-yet-unlocked person (e.g. a v2 account returning to v3) is never assigned. A manual admin
+  // override is an explicit choice, so it is passed through as-is.
+  let activeUserIds = resolvedUserIds;
+  if (!useManualOverride) {
+    const unlocked = await listUnlockedUserIds(resolvedUserIds);
+    activeUserIds = resolvedUserIds.filter((value) => unlocked.has(value.trim()));
+  }
 
   const membersSelected = new Set(
     activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0),
