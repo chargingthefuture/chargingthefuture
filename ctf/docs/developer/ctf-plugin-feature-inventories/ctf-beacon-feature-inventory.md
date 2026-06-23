@@ -279,3 +279,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   `ctf/docs/quota-impact/2026-06-23-mobile-beacon-viewer.md`. Public/anonymous viewing is HLS only (no
   Stream chat connection); only a signed-in viewer of a live event opens a Stream Chat connection,
   bounded by concurrent live-event viewers, mirroring the web viewer.
+- 2026-06-23: Split the mobile `Beacon.tsx` viewer into smaller per-state pieces so it stays under the
+  modularity governance limits (the single render function had a cyclomatic complexity of 18, over the
+  limit of 10). No behavior change: `Beacon.tsx` keeps the polling, chat-token lifecycle, and
+  loading/live/idle selection; the markup moved into `BeaconLiveView.tsx` (live badge, video/starting
+  frame, fineprint, and chat panel), `BeaconIdleView.tsx` (the no-live-event empty state plus the
+  optional replay), and `BeaconChatGate.tsx` (the signed-in-vs-anonymous chat body). The HLS player,
+  the live/replay/idle logic, and the member-only chat behavior are unchanged. Also recorded the
+  missing `expo-video` entry in `pnpm-lock.yaml` (its `package.json` specifier was added with the
+  viewer but the lockfile had not been updated), so a frozen-lockfile install resolves it.

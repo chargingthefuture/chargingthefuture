@@ -11,23 +11,20 @@
  *   live    → HLS player + a clear "● Live · public" indicator. A signed-in member also
  *             gets the live chat (Stream Chat, reused StreamChatView with threads/
  *             reactions); an anonymous viewer sees a "sign in to chat" prompt instead of
- *             the composer. Public watching always works signed-out.
+ *             the composer. Public watching always works signed-out. (BeaconLiveView)
  *   replay  → when nothing is live but the response carries the last replay's recording
- *             URL, that recording is playable.
- *   idle    → a calm "no live event right now" empty state.
+ *             URL, that recording is playable. (BeaconIdleView)
+ *   idle    → a calm "no live event right now" empty state. (BeaconIdleView)
  *
  * Watching is public (HLS needs no Stream token); chatting requires a signed-in member.
  * The chat token route (POST /api/beacon/[id]/chat-token) is the server-side member gate.
+ *
+ * This file owns the polling, chat-token lifecycle, and which state to show; the actual
+ * markup for each state lives in BeaconLiveView / BeaconIdleView (and BeaconChatGate) so
+ * no single function exceeds the modularity governance limits.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   getBeaconChatCredentials,
   getBeaconCurrent,
@@ -35,8 +32,8 @@ import {
   type BeaconCurrentResponse,
   type BeaconEventLike,
 } from './BeaconApi';
-import { BeaconVideo } from './BeaconVideo';
-import { StreamChatView } from '../../components/shared/StreamChatView';
+import { BeaconLiveView } from './BeaconLiveView';
+import { BeaconIdleView } from './BeaconIdleView';
 import { useAuth } from '../../auth/auth-context';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 
@@ -121,88 +118,18 @@ export const Beacon: React.FC = () => {
           <ActivityIndicator size="large" color={accent} />
         </View>
       ) : liveEvent ? (
-        <View style={styles.liveBlock}>
-          <View style={[styles.liveBadge, { borderColor: accent, backgroundColor: accent + '22' }]}>
-            <View style={[styles.liveDot, { backgroundColor: accent }]} />
-            <Text style={[styles.liveBadgeText, { color: accent }]}>LIVE AND PUBLIC</Text>
-          </View>
-
-          <Text style={[styles.eventTitle, { color: tokens.textPrimary }]}>{liveEvent.title}</Text>
-          {liveEvent.description ? (
-            <Text style={[styles.eventDesc, { color: tokens.textSecondary }]}>
-              {liveEvent.description}
-            </Text>
-          ) : null}
-
-          {hlsUrl ? (
-            <BeaconVideo source={hlsUrl} autoPlay muted />
-          ) : (
-            <View style={styles.startingFrame}>
-              <Text style={[styles.startingText, { color: tokens.textSecondary }]}>
-                The broadcast is starting…
-              </Text>
-            </View>
-          )}
-
-          <Text style={[styles.fineprint, { color: tokens.textMuted }]}>
-            This broadcast and its chat are public. The event is recorded; the replay is posted to
-            the Commons.
-          </Text>
-
-          <View style={[styles.chatPanel, { borderColor: tokens.border, backgroundColor: tokens.surface }]}>
-            <View style={[styles.chatHeader, { borderBottomColor: tokens.border }]}>
-              <Text style={[styles.chatHeaderText, { color: tokens.textPrimary }]}>Live chat</Text>
-            </View>
-            {isAuthenticated ? (
-              chat ? (
-                <View style={styles.chatBody}>
-                  <StreamChatView
-                    streamApiKey={chat.streamApiKey}
-                    streamToken={chat.streamToken}
-                    streamUserId={chat.streamUserId}
-                    streamChannelId={chat.streamChannelId}
-                    channelType={chat.streamChannelType}
-                    accentColor={accent}
-                  />
-                </View>
-              ) : (
-                <View style={styles.chatCenter}>
-                  <Text style={[styles.chatCenterText, { color: tokens.textSecondary }]}>
-                    {chatError ?? 'Connecting to chat…'}
-                  </Text>
-                </View>
-              )
-            ) : (
-              <View style={styles.chatCenter}>
-                <Text style={[styles.signInLead, { color: tokens.textSecondary }]}>
-                  Sign in to chat and react. Anyone can watch — chatting is for members.
-                </Text>
-                <TouchableOpacity
-                  style={[styles.signInBtn, { borderColor: accent, backgroundColor: accent + '20' }]}
-                  onPress={() => void signIn()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Sign in to chat"
-                >
-                  <Text style={[styles.signInBtnText, { color: accent }]}>Sign in to chat</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
+        <BeaconLiveView
+          tokens={tokens}
+          accent={accent}
+          liveEvent={liveEvent}
+          hlsUrl={hlsUrl}
+          isAuthenticated={isAuthenticated}
+          chat={chat}
+          chatError={chatError}
+          onSignIn={() => void signIn()}
+        />
       ) : (
-        <View style={styles.idleCard}>
-          <Text style={[styles.idleTitle, { color: tokens.textPrimary }]}>No live event right now</Text>
-          <Text style={[styles.idleBody, { color: tokens.textSecondary }]}>
-            When the team goes live, it will appear here.
-          </Text>
-          {replay?.recordingUrl ? (
-            <View style={styles.replayBlock}>
-              <Text style={[styles.replayLabel, { color: tokens.textSecondary }]}>Last replay</Text>
-              <BeaconVideo source={replay.recordingUrl} autoPlay={false} muted={false} />
-              <Text style={[styles.replayTitle, { color: tokens.textPrimary }]}>{replay.title}</Text>
-            </View>
-          ) : null}
-        </View>
+        <BeaconIdleView tokens={tokens} replay={replay} />
       )}
     </ScrollView>
   );
@@ -223,62 +150,5 @@ function makeStyles(t: ThemeTokens) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    liveBlock: { gap: 10 },
-    liveBadge: {
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      borderWidth: 1,
-      borderRadius: t.isComic ? t.radiusChip : 999,
-      paddingVertical: 4,
-      paddingHorizontal: 12,
-    },
-    liveDot: { width: 8, height: 8, borderRadius: 4 },
-    liveBadgeText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-    eventTitle: { fontSize: 18, fontWeight: '700', marginTop: 4 },
-    eventDesc: { fontSize: 14, marginBottom: 2 },
-    startingFrame: {
-      width: '100%',
-      aspectRatio: 16 / 9,
-      backgroundColor: '#000',
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    startingText: { fontSize: 14 },
-    fineprint: { fontSize: 12, marginTop: 2 },
-    chatPanel: {
-      marginTop: 8,
-      borderWidth: 1,
-      borderRadius: t.radius,
-      overflow: 'hidden',
-    },
-    chatHeader: { padding: 12, borderBottomWidth: 1 },
-    chatHeaderText: { fontSize: 14, fontWeight: '700' },
-    chatBody: { height: 360 },
-    chatCenter: { padding: 24, alignItems: 'center', justifyContent: 'center', gap: 12 },
-    chatCenterText: { fontSize: 14, textAlign: 'center' },
-    signInLead: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-    signInBtn: {
-      borderWidth: 1,
-      borderRadius: t.radius,
-      paddingVertical: 9,
-      paddingHorizontal: 18,
-    },
-    signInBtnText: { fontSize: 14, fontWeight: '700' },
-    idleCard: {
-      marginTop: 16,
-      padding: 24,
-      borderRadius: t.radius,
-      borderWidth: 1,
-      borderColor: t.border,
-      alignItems: 'center',
-    },
-    idleTitle: { fontSize: 16, fontWeight: '700' },
-    idleBody: { fontSize: 14, marginTop: 6, textAlign: 'center' },
-    replayBlock: { marginTop: 20, alignSelf: 'stretch', gap: 8 },
-    replayLabel: { fontSize: 13, fontWeight: '700' },
-    replayTitle: { fontSize: 14, fontWeight: '600' },
   });
 }
