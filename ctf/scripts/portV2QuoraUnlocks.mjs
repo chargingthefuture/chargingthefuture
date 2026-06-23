@@ -55,9 +55,11 @@ async function main() {
     );
   }
 
-  // v2 members who submitted a Quora URL.
+  // v2 members who submitted a Quora URL. `username` is pulled too so a dry run can show who each
+  // user id belongs to (Clerk cannot be searched by id from the dashboard); it comes from the v2
+  // users table and may be null for an account that never set one.
   const candidates = await pool.query(
-    `SELECT id::text AS user_id, quora_profile_url
+    `SELECT id::text AS user_id, username, quora_profile_url
        FROM public.users
       WHERE quora_profile_url IS NOT NULL
         AND TRIM(quora_profile_url) <> ''`,
@@ -71,9 +73,15 @@ async function main() {
   console.log(`[quora-port] v2 users with a Quora URL: ${candidates.rows.length}`);
   console.log(`[quora-port] already have a v3 Unlock submission (skip): ${candidates.rows.length - toPort.length}`);
   console.log(`[quora-port] to port (new approved submissions): ${toPort.length}`);
-  console.log('[quora-port] sample user ids:', toPort.slice(0, 5).map((r) => r.user_id));
 
   if (!APPLY) {
+    // Dry run: print the full mapping so the operator can confirm who each user id is and match it
+    // against the v2 Quora column before applying. The Quora URL shown is the value this port will
+    // store; username is the v2 handle (or "(no username)" when the v2 row never set one).
+    console.log('[quora-port] candidates — user_id | username | quora_profile_url:');
+    for (const row of toPort) {
+      console.log(`  ${row.user_id} | ${row.username || '(no username)'} | ${row.quora_profile_url}`);
+    }
     console.log('[quora-port] DRY RUN — nothing written. Re-run with APPLY=1 to insert the approved submissions.');
     return;
   }
