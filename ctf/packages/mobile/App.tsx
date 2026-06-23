@@ -122,7 +122,7 @@ function AppShell() {
       case 'skills-taxonomy':
         return <SkillsTaxonomy />;
       case 'directory':
-        return <DirectoryList />;
+        return <DirectoryList onNavigateToFoundation={() => setSelected('foundation')} />;
       case 'directory-admin':
         return <AdminDirectory />;
       case 'feed-announcements':

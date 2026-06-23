@@ -73,9 +73,11 @@ function DirectoryEmpty({ onRetry }: { onRetry: () => void }) {
 function ProfileDetail({
   profile,
   onBack,
+  onNavigateToFoundation,
 }: {
   profile: DirectoryListItem;
   onBack: () => void;
+  onNavigateToFoundation?: () => void;
 }) {
   const acceptsCredits = !!(
     profile.serviceCreditsAddress ||
@@ -87,6 +89,9 @@ function ProfileDetail({
   const isCommunity = profile.source === 'community-generated';
   // handle: unclaimed_handle for community profiles; omit otherwise
   const handle = isCommunity && profile.unclaimedHandle ? `@${profile.unclaimedHandle}` : null;
+  // Skills nominated through Skills Hunt but not yet in the taxonomy — shown as muted "pending
+  // review" chips so a community-generated profile's Skills section is never empty.
+  const pendingSkills = profile.pendingSkills ?? [];
 
   return (
     <View style={styles.root}>
@@ -144,7 +149,7 @@ function ProfileDetail({
             </View>
           ) : null}
           {/* Skills */}
-          {profile.skills.length > 0 ? (
+          {profile.skills.length > 0 || pendingSkills.length > 0 ? (
             <View style={styles.detailSection}>
               <Text style={styles.detailSectionLabel}>Skills</Text>
               <View style={styles.skillsRow}>
@@ -152,6 +157,16 @@ function ProfileDetail({
                   <React.Fragment key={s.id}>
                     <View style={styles.skillChip}>
                       <Text style={styles.skillChipText}>{s.name}</Text>
+                    </View>
+                  </React.Fragment>
+                ))}
+                {pendingSkills.map((s) => (
+                  <React.Fragment key={`pending-${s}`}>
+                    <View style={styles.pendingSkillChip}>
+                      <Text style={styles.pendingSkillChipText}>
+                        {s}
+                        <Text style={styles.pendingSkillChipMuted}> · pending review</Text>
+                      </Text>
                     </View>
                   </React.Fragment>
                 ))}
@@ -165,6 +180,23 @@ function ProfileDetail({
               <Text style={styles.detailBio}>{profile.bio}</Text>
             </View>
           ) : null}
+          {/* How to connect — the directory is read-only, so reaching out happens through Foundation,
+              where members offer and exchange help. */}
+          <View style={styles.connectBox}>
+            <Text style={styles.connectTitle}>✨ Want to work together?</Text>
+            <Text style={styles.connectBody}>
+              The directory shows who is in the community and what they do. Want a service or good
+              from this person? Find members who offer and exchange help in{' '}
+              <Text
+                style={styles.connectLink}
+                onPress={onNavigateToFoundation}
+                accessibilityRole={onNavigateToFoundation ? 'link' : undefined}
+              >
+                Foundation
+              </Text>
+              .
+            </Text>
+          </View>
           {/* Privacy note */}
           <View style={styles.privacyBox}>
             <Text style={styles.privacyTitle}>🔒 Privacy Guaranteed</Text>
@@ -231,7 +263,11 @@ function ProfileCard({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-export const DirectoryList = () => {
+export const DirectoryList = ({
+  onNavigateToFoundation,
+}: {
+  onNavigateToFoundation?: () => void;
+} = {}) => {
   const [profiles, setProfiles] = useState<DirectoryListItem[]>([]);
   const [sectors, setSectors] = useState<DirectorySector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -267,7 +303,13 @@ export const DirectoryList = () => {
   }, [load]);
 
   if (selected) {
-    return <ProfileDetail profile={selected} onBack={() => setSelected(null)} />;
+    return (
+      <ProfileDetail
+        profile={selected}
+        onBack={() => setSelected(null)}
+        onNavigateToFoundation={onNavigateToFoundation}
+      />
+    );
   }
 
   return (
@@ -632,6 +674,30 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   skillChipText: { fontSize: 11, color: COLOR },
+  pendingSkillChip: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  pendingSkillChipText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+  pendingSkillChipMuted: { fontSize: 11, color: '#6B7280', fontWeight: '400' },
+  connectBox: {
+    backgroundColor: `${COLOR}0F`,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${COLOR}25`,
+    padding: 14,
+    marginBottom: 20,
+  },
+  connectTitle: { fontSize: 13, fontWeight: '700', color: COLOR, marginBottom: 6 },
+  connectBody: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
+  connectLink: { color: COLOR, fontWeight: '600' },
   detailBio: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
 
   privacyBox: {
