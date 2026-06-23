@@ -12,6 +12,7 @@ import {
   type ThreadContextValue,
 } from 'stream-chat-react-native';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
+import { StreamChatSearch } from './StreamChatSearch';
 
 export interface StreamChatViewProps {
   streamApiKey: string;
@@ -55,7 +56,11 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
       .connectUser({ id: streamUserId }, streamToken)
       .then(() => {
         const ch = chatClient.channel(channelType, streamChannelId);
-        return ch.watch().then(() => {
+        // Watch with presence so the channel state carries its member list. The default '@' mention
+        // trigger in MessageInput reads the channel members to suggest people, so members must be
+        // loaded for the autocomplete list to offer anyone; watch({ presence: true }) populates
+        // channel.state.members (matching the web panel).
+        return ch.watch({ presence: true }).then(() => {
           if (!isMounted) return;
           setChannel(ch);
           setClient(chatClient);
@@ -99,11 +104,17 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
 
   return (
     <View style={{ flex: 1 }}>
-      {/* OverlayProvider is required for the long-press reaction picker, the message-action menu, and
-          the thread view to render above the chat. Reactions need no extra prop: long-pressing a
-          message shows the reaction picker by default once OverlayProvider wraps the channel and the
-          channel type (messaging) permits reactions. Typing indicators and read state are the SDK's
-          MessageList defaults. The accent bubble theme is passed here as the global style. */}
+      {/* OverlayProvider is required for the long-press reaction picker, the message-action menu, the
+          thread view, and the @mention suggestion popup to render above the chat. Reactions need no
+          extra prop: long-pressing a message shows the reaction picker by default once OverlayProvider
+          wraps the channel and the channel type (messaging) permits reactions. @mention autocomplete
+          is also a MessageInput default — typing '@' opens the member suggestion list (the SDK's
+          built-in '@' trigger reads the watched channel's members; see watch({ presence: true })
+          above), and that popup renders within this OverlayProvider. Link previews are automatic too:
+          Stream enriches URLs server-side into og_scrape attachments, which the default MessageList
+          Attachment renderer draws as preview Cards — no prop needed. Typing indicators and read state
+          are the SDK's MessageList defaults. The accent bubble theme is passed here as the global
+          style. */}
       <OverlayProvider value={{ style: othersTheme }}>
         <Chat client={client}>
           {/* thread + threadList tell the channel a reply thread is open so its list and input target
@@ -124,6 +135,12 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
               </View>
             ) : (
               <>
+                {/* In-channel message search. stream-chat-react-native ships no drop-in search UI
+                    (unlike the web SDK), so StreamChatSearch is a lightweight equivalent: it runs
+                    channel.search(term) scoped to this channel on demand and lists the matches with
+                    author + timestamp. It sits above the list so a member can search the conversation
+                    they are reading. Search calls are user-initiated, not per-render. */}
+                <StreamChatSearch channel={channel} accentColor={accentColor} />
                 {/* onThreadSelect opens the reply thread for the tapped message; the SDK's "reply in
                     thread" message action hands the parent message back here to render <Thread />. */}
                 <MessageList onThreadSelect={setThread} />
