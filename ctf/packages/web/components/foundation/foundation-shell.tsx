@@ -15,6 +15,36 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 
+// Turn a failed Foundation API response into a clear member-facing message by reading the route's
+// JSON `code`, instead of always showing a generic "could not open a connection". The most common
+// case is requesting a quote from your own profile, which the server denies as a policy.
+async function foundationErrorMessage(res: Response, fallback: string): Promise<string> {
+  let code = "";
+  let message = "";
+  try {
+    const body = (await res.json()) as { code?: string; message?: string };
+    code = body.code ?? "";
+    message = body.message ?? "";
+  } catch {
+    /* non-JSON body — fall back below */
+  }
+  switch (code) {
+    case "FOUNDATION_POLICY_DENIED":
+      return "You can't request a quote from your own profile.";
+    case "FOUNDATION_PROVIDER_NOT_FOUND":
+      return "This provider's profile could not be found.";
+    case "FOUNDATION_RATE_LIMIT_EXCEEDED":
+      return "You're sending requests too quickly — wait a moment and try again.";
+    case "FOUNDATION_STREAM_UNAVAILABLE":
+    case "FOUNDATION_PERSISTENCE_UNAVAILABLE":
+      return "Connections are temporarily unavailable. Please try again shortly.";
+    case "FOUNDATION_CSRF_DENIED":
+      return "Your session needs a refresh — reload the page and try again.";
+    default:
+      return message || fallback;
+  }
+}
+
 function Centered({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, color }}>
@@ -94,7 +124,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         headers: CSRF_HEADERS,
         body: JSON.stringify({ providerId: provider.profileId }),
       });
-      if (!threadRes.ok) throw new Error("Could not open a connection with this provider.");
+      if (!threadRes.ok) throw new Error(await foundationErrorMessage(threadRes, "Could not open a connection with this provider."));
       const threadData = (await threadRes.json()) as { thread?: { id?: string } };
       const threadId = threadData.thread?.id;
       if (!threadId) throw new Error("Connection response was incomplete.");
@@ -105,7 +135,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         headers: CSRF_HEADERS,
         body: JSON.stringify({ threadId, serviceType }),
       });
-      if (!quoteRes.ok) throw new Error("Could not submit the quote request.");
+      if (!quoteRes.ok) throw new Error(await foundationErrorMessage(quoteRes, "Could not submit the quote request."));
 
       setQuoteSuccess(true);
       await loadQuotes();
