@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   AppState,
   SafeAreaView,
@@ -8,6 +8,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
 import { ComicReviewDashboard } from './src/features/comic';
@@ -31,6 +33,7 @@ import { Levelup, AdminLevelup } from './src/features/levelup';
 import { Unlock, AdminUnlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
+import { Beacon } from './src/features/beacon';
 import { AccountData } from './src/features/account-data';
 import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
@@ -39,6 +42,7 @@ import { LoadingScreen } from './src/components/shared/LoadingScreen';
 type FeatureKey =
   | 'home'
   | 'chyme'
+  | 'beacon'
   | 'skills-taxonomy'
   | 'directory'
   | 'directory-admin'
@@ -74,6 +78,7 @@ type FeatureKey =
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
   { key: 'chyme', label: 'Chyme' },
+  { key: 'beacon', label: 'Beacon' },
   { key: 'skills-taxonomy', label: 'Skills Taxonomy' },
   { key: 'directory', label: 'Directory' },
   { key: 'directory-admin', label: 'Directory Admin' },
@@ -115,6 +120,59 @@ export default function App() {
       </ThemeProvider>
     </AuthProvider>
   );
+}
+
+// Maps each navigation key to the screen it renders. A plain lookup table (no
+// branching) keeps the per-render selection trivial; the rendered output is
+// identical to the previous switch. `setSelected` is threaded through only for
+// the directory screen, which navigates to the foundation screen on tap.
+type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
+
+function buildFeatureViews(
+  setSelected: (_next: FeatureKey) => void,
+  feedStackStyle: StyleProp<ViewStyle>,
+): FeatureRenderers {
+  return {
+    home: () => <HubHome />,
+    chyme: () => <ChymeRoom />,
+    beacon: () => <Beacon />,
+    'skills-taxonomy': () => <SkillsTaxonomy />,
+    directory: () => <DirectoryList onNavigateToFoundation={() => setSelected('foundation')} />,
+    'directory-admin': () => <AdminDirectory />,
+    'feed-announcements': () => (
+      <ScrollView contentContainerStyle={feedStackStyle}>
+        <Feed />
+        <Announcements />
+      </ScrollView>
+    ),
+    workforce: () => <WorkforceDashboard />,
+    'skills-hunt': () => <SkillsHunt />,
+    foundation: () => <Foundation />,
+    lighthouse: () => <Lighthouse />,
+    socketrelay: () => <SocketRelay />,
+    trusttransport: () => <TrustTransport />,
+    'trusttransport-admin': () => <AdminTrustTransport />,
+    'peer-programming': () => <PeerProgramming />,
+    mood: () => <Mood />,
+    gentlepulse: () => <GentlePulse />,
+    'weekly-performance': () => <WeeklyPerformance />,
+    'weekly-performance-admin': () => <AdminWeeklyPerformance />,
+    gdp: () => <Gdp />,
+    'gdp-rate-admin': () => <GdpRateAdmin />,
+    'service-credits': () => <ServiceCredits />,
+    'service-credits-admin': () => <AdminServiceCredits />,
+    levelup: () => <Levelup />,
+    unlock: () => <Unlock />,
+    'unlock-admin': () => <AdminUnlock />,
+    'account-data': () => <AccountData />,
+    'comic-review': () => <ComicReviewDashboard />,
+    'peer-programming-admin': () => <AdminPeerProgramming />,
+    'socketrelay-admin': () => <AdminSocketRelay />,
+    'skills-hunt-admin': () => <AdminSkillsHunt />,
+    'lighthouse-admin': () => <AdminLighthouse />,
+    'workforce-admin': () => <AdminWorkforce />,
+    'levelup-admin': () => <AdminLevelup />,
+  };
 }
 
 // Result of the client-side Unlock check. `walled` mirrors the web redirect in
@@ -176,81 +234,11 @@ function AppShell() {
   }, [refreshUnlockGate]);
 
   const featureView = useMemo(() => {
-    switch (selected) {
-      case 'home':
-        return <HubHome />;
-      case 'chyme':
-        return <ChymeRoom />;
-      case 'skills-taxonomy':
-        return <SkillsTaxonomy />;
-      case 'directory':
-        return <DirectoryList onNavigateToFoundation={() => setSelected('foundation')} />;
-      case 'directory-admin':
-        return <AdminDirectory />;
-      case 'feed-announcements':
-        return (
-          <ScrollView contentContainerStyle={styles.feedStack}>
-            <Feed />
-            <Announcements />
-          </ScrollView>
-        );
-      case 'workforce':
-        return <WorkforceDashboard />;
-      case 'skills-hunt':
-        return <SkillsHunt />;
-      case 'foundation':
-        return <Foundation />;
-      case 'lighthouse':
-        return <Lighthouse />;
-      case 'socketrelay':
-        return <SocketRelay />;
-      case 'trusttransport':
-        return <TrustTransport />;
-      case 'trusttransport-admin':
-        return <AdminTrustTransport />;
-      case 'peer-programming':
-        return <PeerProgramming />;
-      case 'mood':
-        return <Mood />;
-      case 'gentlepulse':
-        return <GentlePulse />;
-      case 'weekly-performance':
-        return <WeeklyPerformance />;
-      case 'weekly-performance-admin':
-        return <AdminWeeklyPerformance />;
-      case 'gdp':
-        return <Gdp />;
-      case 'gdp-rate-admin':
-        return <GdpRateAdmin />;
-      case 'service-credits':
-        return <ServiceCredits />;
-      case 'service-credits-admin':
-        return <AdminServiceCredits />;
-      case 'levelup':
-        return <Levelup />;
-      case 'unlock':
-        return <Unlock />;
-      case 'unlock-admin':
-        return <AdminUnlock />;
-      case 'account-data':
-        return <AccountData />;
-      case 'comic-review':
-        return <ComicReviewDashboard />;
-      case 'peer-programming-admin':
-        return <AdminPeerProgramming />;
-      case 'socketrelay-admin':
-        return <AdminSocketRelay />;
-      case 'skills-hunt-admin':
-        return <AdminSkillsHunt />;
-      case 'lighthouse-admin':
-        return <AdminLighthouse />;
-      case 'workforce-admin':
-        return <AdminWorkforce />;
-      case 'levelup-admin':
-        return <AdminLevelup />;
-      default:
-        return <ChymeRoom />;
-    }
+    const renderers = buildFeatureViews(setSelected, styles.feedStack);
+    const render = renderers[selected];
+    // Every FeatureKey has an entry; the fallback preserves the previous switch's
+    // default (Chyme) for any unexpected value.
+    return render ? render() : <ChymeRoom />;
   }, [selected]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or

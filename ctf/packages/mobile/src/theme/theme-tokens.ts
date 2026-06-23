@@ -59,6 +59,8 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   comic: { standard: '#38BDF8', comic: '#7A6A50' },
   // Account & Data uses comic-danger for its destructive zone.
   'account-data': { standard: '#D946EF', comic: '#B91C1C' },
+  // Beacon uses the same amber accent as the web viewer (BEACON_COLOR = #F59E0B).
+  beacon: { standard: '#F59E0B', comic: '#7A4A05' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };
