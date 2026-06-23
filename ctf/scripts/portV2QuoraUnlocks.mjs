@@ -4,9 +4,10 @@
 // screen and receive their 100-credit grant — without each having to re-submit.
 //
 // Context: v3's database is a clone of v2 prod, so the legacy `public.users` table is still present,
-// including the `quora_profile_url` each member submitted in v2. This reads those and, for any user
-// who does NOT already have a v3 Unlock submission, inserts an APPROVED submission
-// (review_status = 'approved', access_tier = 'approved_full') carrying that Quora URL.
+// including each member's v2 `is_approved` flag and `quora_profile_url`. This reads the rows that
+// were APPROVED in v2 and have a Quora URL, and for any such user who does NOT already have a v3
+// Unlock submission, inserts an APPROVED submission (review_status = 'approved',
+// access_tier = 'approved_full') carrying that Quora URL. Members v2 never approved are not ported.
 //
 // It does NOT mint credits itself. The existing `reconcileUnlockRewards` job grants the 100-credit
 // incentive idempotently for every approved-but-uncredited submission, so the next reconcile run
@@ -55,13 +56,15 @@ async function main() {
     );
   }
 
-  // v2 members who submitted a Quora URL. `username` is pulled too so a dry run can show who each
-  // user id belongs to (Clerk cannot be searched by id from the dashboard); it comes from the v2
-  // users table and may be null for an account that never set one.
+  // v2 members who were APPROVED in v2 AND submitted a Quora URL. Gating on is_approved is the
+  // point: it ports (auto-approves + later grants 100 credits to) only people v2 actually approved,
+  // not anyone who merely pasted a URL. `user_id` is selected for the insert key only; it is never
+  // printed (an opaque Clerk id is meaningless to a human and the Actions log is public).
   const candidates = await pool.query(
-    `SELECT id::text AS user_id, username, quora_profile_url
+    `SELECT id::text AS user_id, quora_profile_url
        FROM public.users
-      WHERE quora_profile_url IS NOT NULL
+      WHERE is_approved IS TRUE
+        AND quora_profile_url IS NOT NULL
         AND TRIM(quora_profile_url) <> ''`,
   );
 
@@ -70,17 +73,17 @@ async function main() {
   const existingIds = new Set(existing.rows.map((r) => r.user_id));
   const toPort = candidates.rows.filter((r) => r.user_id && !existingIds.has(r.user_id));
 
-  console.log(`[quora-port] v2 users with a Quora URL: ${candidates.rows.length}`);
+  console.log(`[quora-port] v2 APPROVED users with a Quora URL: ${candidates.rows.length}`);
   console.log(`[quora-port] already have a v3 Unlock submission (skip): ${candidates.rows.length - toPort.length}`);
   console.log(`[quora-port] to port (new approved submissions): ${toPort.length}`);
 
   if (!APPLY) {
-    // Dry run: print the full mapping so the operator can confirm who each user id is and match it
-    // against the v2 Quora column before applying. The Quora URL shown is the value this port will
-    // store; username is the v2 handle (or "(no username)" when the v2 row never set one).
-    console.log('[quora-port] candidates — user_id | username | quora_profile_url:');
+    // Dry run: print ONLY the Quora URLs (one per line) — the public profile links the members
+    // submitted, which the operator can match directly against v2's Quora column before applying.
+    // No user ids and no emails: the Actions log on this public repo is world-readable.
+    console.log('[quora-port] Quora URLs to port (compare against v2 — order is not significant):');
     for (const row of toPort) {
-      console.log(`  ${row.user_id} | ${row.username || '(no username)'} | ${row.quora_profile_url}`);
+      console.log(`  ${row.quora_profile_url}`);
     }
     console.log('[quora-port] DRY RUN — nothing written. Re-run with APPLY=1 to insert the approved submissions.');
     return;
