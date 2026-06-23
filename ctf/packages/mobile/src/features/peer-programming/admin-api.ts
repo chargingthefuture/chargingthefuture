@@ -39,6 +39,13 @@ export async function fetchAdminTopic(): Promise<TopicFetchResult> {
   return { ok: true, forbidden: false, topic: data.topic ?? null, message: null };
 }
 
+// A cohort member surfaced to a roster: user id + resolved display name (null when it could not be
+// resolved, e.g. a Clerk lookup failure — show a short id instead).
+export type CohortMember = {
+  userId: string;
+  username: string | null;
+};
+
 // A cohort row for the admin "Active cohorts" list. Mirrors the web listManagedCohorts shape.
 export type ManagedCohort = {
   id: string;
@@ -46,6 +53,8 @@ export type ManagedCohort = {
   weekStartDate: string;
   memberCount: number;
   fallbackOpen: boolean;
+  // Who is assigned to this cohort (resolved usernames). Membership is not secret.
+  members: CohortMember[];
 };
 
 export type ManagedCohortsResult = {
@@ -64,8 +73,9 @@ export async function fetchManagedCohorts(): Promise<ManagedCohortsResult> {
   if (!res.ok) {
     return { ok: false, forbidden: false, cohorts: [], message: `Could not load cohorts (${res.status}).` };
   }
-  const data = (await res.json()) as { ok: boolean; cohorts?: ManagedCohort[] };
-  return { ok: true, forbidden: false, cohorts: data.cohorts ?? [], message: null };
+  const data = (await res.json()) as { ok: boolean; cohorts?: (Omit<ManagedCohort, 'members'> & { members?: CohortMember[] })[] };
+  const cohorts: ManagedCohort[] = (data.cohorts ?? []).map((cohort) => ({ ...cohort, members: cohort.members ?? [] }));
+  return { ok: true, forbidden: false, cohorts, message: null };
 }
 
 export type TopicUpsertInput = {

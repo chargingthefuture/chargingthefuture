@@ -25,6 +25,15 @@ const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
 
+// A cohort member surfaced in the admin roster: user id + resolved display name (null when Clerk
+// could not resolve it). Membership is not secret — an admin sees who is assigned, not just a count.
+type CohortMember = { userId: string; username: string | null };
+type AdminCohort = PeerProgrammingCohort & { members?: CohortMember[] };
+
+function memberName(member: CohortMember): string {
+  return member.username ?? `Member ${member.userId.slice(0, 6)}`;
+}
+
 // Monday (UTC) of the current week — matches the server's getWeekStartDate so the
 // form defaults to the week the room actually reads.
 function currentWeekStartDate(now = new Date()): string {
@@ -40,7 +49,7 @@ export function PeerProgrammingAdminShell() {
   const defaultWeekStart = useMemo(() => currentWeekStartDate(), []);
 
   const [topic, setTopic] = useState<PeerProgrammingTopic | null>(null);
-  const [cohorts, setCohorts] = useState<PeerProgrammingCohort[]>([]);
+  const [cohorts, setCohorts] = useState<AdminCohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -62,7 +71,7 @@ export function PeerProgrammingAdminShell() {
     if (!res.ok) {
       throw new Error('Could not load the active cohorts.');
     }
-    const data = (await res.json()) as { ok: boolean; cohorts: PeerProgrammingCohort[] };
+    const data = (await res.json()) as { ok: boolean; cohorts: AdminCohort[] };
     setCohorts(data.cohorts ?? []);
   }, []);
 
@@ -343,6 +352,11 @@ export function PeerProgrammingAdminShell() {
                         <div style={{ fontSize: 12, color: SUBTLE, marginTop: 2 }}>
                           Week of {cohort.weekStartDate} · {cohort.memberCount} member{cohort.memberCount !== 1 ? 's' : ''}
                         </div>
+                        {cohort.members && cohort.members.length > 0 ? (
+                          <div style={{ fontSize: 12, color: '#D1D5DB', marginTop: 4 }}>
+                            Members: {cohort.members.map(memberName).join(', ')}
+                          </div>
+                        ) : null}
                       </div>
                       <Link
                         href={`/apps/peer-programming?cohortId=${encodeURIComponent(cohort.id)}`}

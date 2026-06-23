@@ -137,6 +137,29 @@ export async function getCohortById(cohortId: string): Promise<PeerProgrammingCo
   return result.rows[0] ? mapCohortRow(result.rows[0]) : null;
 }
 
+// Member user ids for a set of cohorts, grouped by cohort, in placement order. One query; the caller
+// resolves ids to usernames (Clerk) separately so the repository stays DB-only.
+export async function listCohortMemberUserIds(cohortIds: string[]): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  for (const id of cohortIds) map.set(id, []);
+  if (cohortIds.length === 0) return map;
+
+  const result = await queryDb<{ cohort_id: string; user_id: string }>(
+    `SELECT cohort_id::text AS cohort_id, user_id
+       FROM peer_programming_cohort_members
+      WHERE cohort_id = ANY($1::uuid[])
+      ORDER BY created_at ASC`,
+    [cohortIds],
+  );
+
+  for (const row of result.rows) {
+    const existing = map.get(row.cohort_id);
+    if (existing) existing.push(row.user_id);
+    else map.set(row.cohort_id, [row.user_id]);
+  }
+  return map;
+}
+
 export async function isCohortMember(cohortId: string, userId: string): Promise<boolean> {
   const result = await queryDb<{ exists: boolean }>(
     `SELECT EXISTS (
