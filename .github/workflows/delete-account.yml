@@ -1,0 +1,90 @@
+name: Delete Account (manual)
+
+# Manually delete one user's account by Clerk user id — for clearing a DUPLICATE account you find in
+# v3. This is destructive and irreversible: it deletes all of that user's app data (every plugin,
+# driven by the deletion registry) and, by default, the Clerk identity too. Money is never touched —
+# wallets/ledgers are retained and settled by the existing ServiceCredits reclaim flow.
+#
+# How to run (from the GitHub mobile app or web): Actions → "Delete Account (manual)" → Run workflow →
+# paste the Clerk user id twice (the second box is a confirmation so a mistyped id can't delete the
+# wrong person), then Run. Set "also_delete_clerk" to false to delete only the database data and keep
+# the Clerk account.
+#
+# What it needs (Settings → Secrets and variables → Actions):
+#   NEXT_PUBLIC_APP_URL secret — your production base URL (same secret the other workflows use).
+#   ACCOUNT_DELETE_SECRET secret — a NEW secret you generate (e.g. `openssl rand -hex 32`). Set the
+#              SAME value here AND in the app's runtime secrets. It is deliberately separate from
+#              CRON_SECRET so this irreversible action does not share a credential with the cron jobs.
+#
+# If either secret is missing the run FAILS (red) instead of skipping — this is a manual, destructive
+# action, so a silent skip must never be mistaken for a completed deletion. Nothing is deleted on a
+# failed run. (Scheduled crons skip-with-warning to avoid red-failure spam; a manual delete does not.)
+
+on:
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: 'Clerk user id to delete (e.g. user_xxx). Deletes ALL of this user’s data. Irreversible.'
+        required: true
+      confirm_user_id:
+        description: 'Type the SAME user id again to confirm.'
+        required: true
+      also_delete_clerk:
+        description: 'Also delete the Clerk identity (set false to delete only the database data).'
+        type: boolean
+        default: true
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delete-account
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    name: Delete one account
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm the user id matches
+        env:
+          USER_ID: ${{ github.event.inputs.user_id }}
+          CONFIRM_USER_ID: ${{ github.event.inputs.confirm_user_id }}
+        run: |
+          set -euo pipefail
+          if [ "${USER_ID}" != "${CONFIRM_USER_ID}" ]; then
+            echo "::error::user_id and confirm_user_id do not match. Aborting without deleting anything."
+            exit 1
+          fi
+          echo "Confirmed target: ${USER_ID}"
+
+      - name: Call the account-delete route
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          ACCOUNT_DELETE_SECRET: ${{ secrets.ACCOUNT_DELETE_SECRET }}
+          USER_ID: ${{ github.event.inputs.user_id }}
+          DELETE_CLERK: ${{ github.event.inputs.also_delete_clerk }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::error::NEXT_PUBLIC_APP_URL is not set in GitHub Actions secrets. Cannot run the deletion. Nothing was deleted."
+            exit 1
+          fi
+          if [ -z "${ACCOUNT_DELETE_SECRET:-}" ]; then
+            echo "::error::ACCOUNT_DELETE_SECRET is not set in GitHub Actions secrets. Add it here AND match it in the app runtime, then re-run. Nothing was deleted."
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/account/delete" \
+            -H "Authorization: Bearer ${ACCOUNT_DELETE_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"userId\":\"${USER_ID}\",\"deleteClerk\":${DELETE_CLERK}}")
+          echo "HTTP ${code}"
+          cat /tmp/delete.json
+          echo
+          if [ "${code}" != "200" ]; then
+            echo "::error::Account delete failed with HTTP ${code}. 503 = ACCOUNT_DELETE_SECRET not set in the app runtime; 403 = the secret here does not match the app runtime value; check the route is deployed."
+            exit 1
+          fi
+          echo "Deleted account ${USER_ID}: $(cat /tmp/delete.json)" >> "$GITHUB_STEP_SUMMARY"
