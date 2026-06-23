@@ -1,0 +1,52 @@
+name: ServiceCredits — Account-Deletion Reclaim Sweep
+
+# After an account is fully deleted, its ServiceCredits balance is reclaimed to treasury — but only
+# after a 7-day grace window, via the internal execute route. This sweep drains the queued reclaims
+# daily so a deleted member's credits actually leave circulation once the window elapses. It is
+# idempotent: the execute route enforces the window, moves the balance, and flips the outbox row to
+# `delivered`, so re-running never double-reclaims, and reclaims not yet due simply retry next day.
+#
+# What it needs (Settings → Secrets and variables → Actions):
+#   DATABASE_URL                    the app database.
+#   NEXT_PUBLIC_APP_URL             the production base URL (same secret the other workflows use).
+#   SERVICE_CREDITS_INTERNAL_TOKEN  must match the value the app runtime checks on the execute route.
+#
+# If any is missing the run skips with a visible warning (the script exits 0) instead of failing red.
+
+on:
+  schedule:
+    - cron: '20 4 * * *' # daily at 04:20 UTC, offset from the other scheduled jobs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: service-credits-reclaim-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Drain queued deletion reclaims
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run the reclaim sweep
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          SERVICE_CREDITS_INTERNAL_TOKEN: ${{ secrets.SERVICE_CREDITS_INTERNAL_TOKEN }}
+        run: node ctf/scripts/executeServiceCreditsReclaims.mjs

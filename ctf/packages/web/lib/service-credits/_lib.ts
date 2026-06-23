@@ -56,6 +56,10 @@ const SERVICE_CREDITS_ERROR_RESPONSES: Record<string, { code: string; message: s
   credit_limit_above_max: { code: 'service_credits_credit_limit_above_max', message: 'That credit limit is above the maximum allowed by policy.', status: 409 },
   wallet_frozen: { code: 'service_credits_wallet_frozen', message: 'This wallet is frozen and cannot spend.', status: 403 },
   account_restricted: { code: 'service_credits_account_restricted', message: 'This account is restricted and cannot spend.', status: 403 },
+  // Account-deletion reclaim "not yet" states — distinct from a real failure so the reclaim sweep can
+  // skip them quietly and retry on the next run instead of treating every pre-window run as an error.
+  reclaim_window_not_elapsed: { code: 'service_credits_reclaim_window_not_elapsed', message: 'The deletion reclaim grace window (7 days) has not elapsed yet.', status: 409 },
+  active_escrow_holds: { code: 'service_credits_active_escrow_holds', message: 'The account has active escrow holds; the reclaim is deferred until they clear.', status: 409 },
 };
 
 export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: string): NextResponse {
