@@ -71,10 +71,21 @@ async function main() {
   // Those who already have a v3 Unlock submission are skipped (never overwrite / double-grant).
   const existing = await pool.query(`SELECT user_id FROM unlock_verification_submissions`);
   const existingIds = new Set(existing.rows.map((r) => r.user_id));
-  const toPort = candidates.rows.filter((r) => r.user_id && !existingIds.has(r.user_id));
+
+  // Accounts that were fully deleted must never be re-ported: their v2 `public.users` row still
+  // exists (v2 data was kept), but the account is gone, so porting would resurrect an Unlock
+  // submission and re-grant 100 credits to a deleted account (e.g. a duplicate cleaned up via the
+  // Delete Account workflow). Exclude any user with an account-scope deletion event.
+  const deleted = await pool.query(`SELECT user_id FROM account_deletion_events WHERE scope = 'account'`);
+  const deletedIds = new Set(deleted.rows.map((r) => r.user_id));
+
+  const toPort = candidates.rows.filter(
+    (r) => r.user_id && !existingIds.has(r.user_id) && !deletedIds.has(r.user_id),
+  );
 
   console.log(`[quora-port] v2 APPROVED users with a Quora URL: ${candidates.rows.length}`);
-  console.log(`[quora-port] already have a v3 Unlock submission (skip): ${candidates.rows.length - toPort.length}`);
+  console.log(`[quora-port] already have a v3 Unlock submission (skip): ${candidates.rows.filter((r) => existingIds.has(r.user_id)).length}`);
+  console.log(`[quora-port] account deleted — skip (never re-port): ${candidates.rows.filter((r) => !existingIds.has(r.user_id) && deletedIds.has(r.user_id)).length}`);
   console.log(`[quora-port] to port (new approved submissions): ${toPort.length}`);
 
   if (!APPLY) {
