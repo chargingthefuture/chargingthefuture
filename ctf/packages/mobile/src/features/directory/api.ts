@@ -4,6 +4,7 @@
 // base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
 
 import { authedFetch } from '../../auth/authedFetch';
+import type { TrustUserExtension } from '../trust/api';
 
 const API_BASE = '/api/directory';
 
@@ -107,6 +108,52 @@ export async function fetchDirectoryAnnouncements(): Promise<DirectoryAnnounceme
   }
   const data = (await res.json()) as { items: DirectoryAnnouncement[] };
   return data.items;
+}
+
+// ── Cross-plugin presence + member trust (profile detail) ─────────────────────
+
+// A single cross-plugin presence entry: where a member is active, with a deep link into that plugin.
+// Mirrors the web MemberPresenceEntry returned by GET /api/presence/user/[userId].
+export interface MemberPresenceEntry {
+  pluginSlug: string;
+  refType: string;
+  refId: string;
+  label: string;
+  deepLink: string;
+}
+
+// Where else this member is active across plugins. Best-effort: the route returns an empty list on
+// failure, and any error here resolves to [] so the profile still renders.
+export async function fetchMemberPresence(userId: string): Promise<MemberPresenceEntry[]> {
+  try {
+    const res = await authedFetch(`/api/presence/user/${encodeURIComponent(userId)}`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as { presence?: MemberPresenceEntry[] };
+    return data.presence ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// Another member's trust panel. GET /api/trust/user/[userId]:
+//   200 → the trust object (visible: the member is public, or the viewer is the owner / an admin)
+//   403 → restricted (the member limits who can view their trust)
+//   else (401 / 503 / network) → hidden (show nothing)
+export type MemberTrustState =
+  | { kind: 'ready'; trust: TrustUserExtension }
+  | { kind: 'restricted' }
+  | { kind: 'hidden' };
+
+export async function fetchMemberTrust(userId: string): Promise<MemberTrustState> {
+  try {
+    const res = await authedFetch(`/api/trust/user/${encodeURIComponent(userId)}`);
+    if (res.status === 403) return { kind: 'restricted' };
+    if (!res.ok) return { kind: 'hidden' };
+    const trust = (await res.json()) as TrustUserExtension;
+    return { kind: 'ready', trust };
+  } catch {
+    return { kind: 'hidden' };
+  }
 }
 
 // ── Admin client ────────────────────────────────────────────────────────────

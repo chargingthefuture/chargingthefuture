@@ -17,8 +17,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type { DirectoryListItem, DirectorySector } from './api';
-import { fetchDirectoryList, fetchDirectorySectors } from './api';
+import type {
+  DirectoryListItem,
+  DirectorySector,
+  MemberPresenceEntry,
+  MemberTrustState,
+} from './api';
+import {
+  fetchDirectoryList,
+  fetchDirectorySectors,
+  fetchMemberPresence,
+  fetchMemberTrust,
+} from './api';
+import { TrustEvidencePanel } from '../trust/TrustEvidencePanel';
 
 const COLOR = '#93C5FD';
 const COMMUNITY_COLOR = '#FBBF24';
@@ -92,6 +103,34 @@ function ProfileDetail({
   // Skills nominated through Skills Hunt but not yet in the taxonomy — shown as muted "pending
   // review" chips so a community-generated profile's Skills section is never empty.
   const pendingSkills = profile.pendingSkills ?? [];
+
+  // Cross-plugin presence + trust — only for a claimed profile. Presence shows where else this
+  // member is active; the trust card sits below as peer social proof. Both are best-effort reads.
+  const claimedUserId = profile.claimedByUserId;
+  const [presence, setPresence] = useState<MemberPresenceEntry[]>([]);
+  const [trustState, setTrustState] = useState<MemberTrustState>({ kind: 'hidden' });
+
+  useEffect(() => {
+    if (!claimedUserId) {
+      setPresence([]);
+      setTrustState({ kind: 'hidden' });
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const [p, t] = await Promise.all([
+        fetchMemberPresence(claimedUserId),
+        fetchMemberTrust(claimedUserId),
+      ]);
+      if (!cancelled) {
+        setPresence(p);
+        setTrustState(t);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [claimedUserId]);
 
   return (
     <View style={styles.root}>
@@ -197,6 +236,40 @@ function ProfileDetail({
               .
             </Text>
           </View>
+          {/* Also active in + Trust — only for a claimed profile. Presence shows where else this
+              member is active across plugins; the trust card sits below as peer social proof.
+              Unclaimed profiles show neither. */}
+          {claimedUserId && (presence.length > 0 || trustState.kind !== 'hidden') ? (
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionLabel}>Also active in</Text>
+              {presence.length > 0 ? (
+                <View style={styles.presenceList}>
+                  {presence.map((entry) => (
+                    <React.Fragment key={`${entry.pluginSlug}:${entry.refType}:${entry.refId}`}>
+                      <View style={styles.presenceRow}>
+                        <Text style={styles.presenceIcon}>↗</Text>
+                        <Text style={styles.presenceLabel} numberOfLines={1}>
+                          {entry.label}
+                        </Text>
+                      </View>
+                    </React.Fragment>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.presenceEmpty}>No activity in other plugins yet.</Text>
+              )}
+              {trustState.kind === 'ready' ? (
+                <TrustEvidencePanel trust={trustState.trust} compact />
+              ) : null}
+              {trustState.kind === 'restricted' ? (
+                <View style={styles.trustRestricted}>
+                  <Text style={styles.trustRestrictedText}>
+                    This member limits who can view their trust.
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           {/* Privacy note */}
           <View style={styles.privacyBox}>
             <Text style={styles.privacyTitle}>🔒 Privacy Guaranteed</Text>
@@ -698,6 +771,31 @@ const styles = StyleSheet.create({
   connectTitle: { fontSize: 13, fontWeight: '700', color: COLOR, marginBottom: 6 },
   connectBody: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
   connectLink: { color: COLOR, fontWeight: '600' },
+  presenceList: { marginBottom: 14 },
+  presenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: `${COLOR}0A`,
+    borderWidth: 1,
+    borderColor: `${COLOR}25`,
+    marginBottom: 8,
+  },
+  presenceIcon: { fontSize: 14, color: COLOR },
+  presenceLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+  presenceEmpty: { fontSize: 13, color: '#6B7280', marginBottom: 14 },
+  trustRestricted: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  trustRestrictedText: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
   detailBio: { fontSize: 13, color: '#9CA3AF', lineHeight: 20 },
 
   privacyBox: {
