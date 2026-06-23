@@ -1,28 +1,25 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveRequestIdentity } from 'lib/auth/request-identity';
 import { createIncident, getIncidentsByUser, getIncidentCount } from 'lib/clicklog/repository';
-import { canCreateIncident } from 'lib/clicklog/policy';
 import { MAX_NOTES_LENGTH } from 'lib/clicklog/constants';
+import { requireClicklogAccess } from './_lib';
 
 export async function GET() {
-  const identity = await resolveRequestIdentity();
-  if (!identity.userId) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const gate = await requireClicklogAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
-  const incidents = await getIncidentsByUser(identity.userId);
-  const count = await getIncidentCount(identity.userId);
+  const userId = gate.auth.userId;
+  const incidents = await getIncidentsByUser(userId);
+  const count = await getIncidentCount(userId);
   return NextResponse.json({ incidents, count });
 }
 
 export async function POST(req: NextRequest) {
-  const identity = await resolveRequestIdentity();
-  if (!identity.userId) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const gate = await requireClicklogAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
-  if (!canCreateIncident(identity.userId)) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-  }
+  const userId = gate.auth.userId;
   let body;
   try {
     body = await req.json();
@@ -46,7 +43,6 @@ export async function POST(req: NextRequest) {
   if (metadata.notes && metadata.notes.length > MAX_NOTES_LENGTH) {
     return NextResponse.json({ error: 'Notes too long' }, { status: 400 });
   }
-  const incident = await createIncident({ userId: identity.userId, metadata });
+  const incident = await createIncident({ userId, metadata });
   return NextResponse.json({ incident });
 }
-// (all logic is now inside GET/POST handlers)
