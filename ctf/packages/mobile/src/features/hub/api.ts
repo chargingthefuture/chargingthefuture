@@ -9,6 +9,19 @@ import { authedFetch } from '../../auth/authedFetch';
 
 export const HUB_API_BASE = '/api/hub';
 
+// The fixed quick set of emoji reactions, in display order. Mirrors the web FEED_REACTION_EMOJIS;
+// the server rejects anything outside this set (400).
+export const HUB_REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '😢'] as const;
+export type HubReactionEmoji = (typeof HUB_REACTION_EMOJIS)[number];
+
+// An emoji reaction aggregate on a Hub peer post: the emoji, how many members reacted with it, and
+// whether the signed-in member is one of them. Mirrors the web HubReactionSummary.
+export type HubReactionSummary = {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+};
+
 // One message in the blended Hub stream. Matches lib/hub/types HubMessage on the web side.
 // `displayName` is "Survivor Hub" for announcements and AI Q&A, "Community member" for peer posts.
 export type HubMessage = {
@@ -19,6 +32,12 @@ export type HubMessage = {
   avatarUrl: string | null;
   text: string;
   sentAtIso: string;
+  // The underlying community post id when this message is a peer post (the id the reactions route
+  // takes); null for announcements / AI answers, which cannot be reacted to.
+  communityPostId: string | null;
+  // Emoji reactions on this message's community post, ordered by the fixed set. Always an array;
+  // empty for non-peer messages and posts with no reactions.
+  reactions: HubReactionSummary[];
 };
 
 export type HubMessagesResponse = {
@@ -68,4 +87,29 @@ export async function sendHubMessage(text: string): Promise<HubSendResult> {
   }
 
   return (await res.json()) as HubSendResult;
+}
+
+// Toggle the signed-in member's emoji reaction on a Hub peer post. A second tap of the same emoji
+// removes it. Mirrors POST /api/hub/messages/[postId]/reactions; returns whether the reaction is now
+// on (`reacted: true`) or off. The emoji must be in HUB_REACTION_EMOJIS or the server rejects (400).
+export async function toggleHubReaction(
+  postId: string,
+  emoji: HubReactionEmoji,
+): Promise<{ reacted: boolean }> {
+  const res = await authedFetch(`${HUB_API_BASE}/messages/${encodeURIComponent(postId)}/reactions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify({ emoji }),
+  });
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('Sign in to react to community posts.');
+    }
+    throw new Error(`Unable to react: ${res.status}`);
+  }
+  const data = (await res.json()) as { ok: boolean; reacted: boolean };
+  return { reacted: data.reacted };
 }

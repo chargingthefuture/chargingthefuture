@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeName, type ThemeTokens } from '../../theme';
 import { useAuth } from '../../auth/auth-context';
-import { fetchHubMessages, sendHubMessage } from './api';
-import type { HubMessage } from './api';
+import { fetchHubMessages, sendHubMessage, toggleHubReaction, HUB_REACTION_EMOJIS } from './api';
+import type { HubMessage, HubReactionEmoji, HubReactionSummary } from './api';
 
 // The Hub stream is feed-backed and flattened on the server to one author shape per message:
 // "Survivor Hub" for admin announcements + AI Q&A, "Community member" for peer-to-peer posts.
@@ -46,11 +46,51 @@ function dedupKey(message: HubMessage): string {
 
 type Styles = ReturnType<typeof makeStyles>;
 
-function MessageCard({ message, s, tokens, theme }: { message: HubMessage; s: Styles; tokens: ThemeTokens; theme: ThemeName }) {
+// Recompute a message's reactions after the member toggles `emoji`, mirroring the server's toggle:
+// a tap adds the member's reaction (or removes it if already on). Used for an instant optimistic
+// update; the 15s poll reconciles other members' counts.
+function applyReactionToggle(message: HubMessage, emoji: HubReactionEmoji): HubMessage {
+  const existing = message.reactions.find((r) => r.emoji === emoji);
+  let reactions: HubReactionSummary[];
+  if (existing && existing.reactedByMe) {
+    const nextCount = existing.count - 1;
+    reactions =
+      nextCount <= 0
+        ? message.reactions.filter((r) => r.emoji !== emoji)
+        : message.reactions.map((r) => (r.emoji === emoji ? { ...r, count: nextCount, reactedByMe: false } : r));
+  } else if (existing) {
+    reactions = message.reactions.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, reactedByMe: true } : r));
+  } else {
+    reactions = [...message.reactions, { emoji, count: 1, reactedByMe: true }];
+  }
+  const order = HUB_REACTION_EMOJIS as readonly string[];
+  reactions = reactions.slice().sort((a, b) => order.indexOf(a.emoji) - order.indexOf(b.emoji));
+  return { ...message, reactions };
+}
+
+function MessageCard({
+  message,
+  s,
+  tokens,
+  theme,
+  canReact,
+  onToggleReaction,
+}: {
+  message: HubMessage;
+  s: Styles;
+  tokens: ThemeTokens;
+  theme: ThemeName;
+  canReact: boolean;
+  onToggleReaction: (_message: HubMessage, _emoji: HubReactionEmoji) => void;
+}) {
   const official = isOfficial(message);
   // Official posts use the Hub brand (chyme accent in comic). Community posts use the
   // success/green accent. Both come from the active theme so they switch with the toggle.
   const accent = official ? getAppAccent('chyme', theme) : tokens.success;
+  // Only peer posts (community posts) can be reacted to; announcements / AI answers cannot.
+  const isPeer = message.communityPostId != null;
+  const showReactionRow = isPeer && (message.reactions.length > 0 || canReact);
+  const [showPicker, setShowPicker] = useState(false);
 
   return (
     <View style={[s.card, official ? s.cardOfficial : s.cardCommunity]}>
@@ -73,6 +113,48 @@ function MessageCard({ message, s, tokens, theme }: { message: HubMessage; s: St
         </View>
       </View>
       <Text style={s.cardBody}>{message.text}</Text>
+
+      {showReactionRow && (
+        <View style={s.reactionRow}>
+          {message.reactions.map((rx) => (
+            <Pressable
+              key={rx.emoji}
+              style={[s.reactionPill, rx.reactedByMe ? s.reactionPillActive : null]}
+              onPress={canReact ? () => onToggleReaction(message, rx.emoji as HubReactionEmoji) : undefined}
+              disabled={!canReact}
+            >
+              <Text style={s.reactionEmoji}>{rx.emoji}</Text>
+              <Text style={[s.reactionCount, rx.reactedByMe ? s.reactionCountActive : null]}>{rx.count}</Text>
+            </Pressable>
+          ))}
+          {canReact && (
+            <Pressable
+              style={s.reactionAdd}
+              onPress={() => setShowPicker((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Add a reaction"
+            >
+              <Text style={s.reactionAddText}>{showPicker ? '×' : '＋'}</Text>
+            </Pressable>
+          )}
+          {canReact && showPicker && (
+            <View style={s.reactionPicker}>
+              {HUB_REACTION_EMOJIS.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  style={s.reactionPickerItem}
+                  onPress={() => {
+                    setShowPicker(false);
+                    onToggleReaction(message, emoji);
+                  }}
+                >
+                  <Text style={s.reactionPickerEmoji}>{emoji}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -157,6 +239,22 @@ export const HubHome = () => {
     }
   }, [input, sending]);
 
+  const handleToggleReaction = useCallback(
+    async (message: HubMessage, emoji: HubReactionEmoji) => {
+      const postId = message.communityPostId;
+      if (!postId) return;
+      // Optimistic: update this message's reactions immediately, then confirm with the server. On
+      // failure, reload so the UI reverts to the server truth.
+      setMessages((prev) => prev.map((m) => (m.id === message.id ? applyReactionToggle(m, emoji) : m)));
+      try {
+        await toggleHubReaction(postId, emoji);
+      } catch {
+        load();
+      }
+    },
+    [load],
+  );
+
   const hubAccent = getAppAccent('chyme', theme);
 
   return (
@@ -188,7 +286,16 @@ export const HubHome = () => {
         <FlatList
           data={messages}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <MessageCard message={item} s={s} tokens={tokens} theme={theme} />}
+          renderItem={({ item }) => (
+            <MessageCard
+              message={item}
+              s={s}
+              tokens={tokens}
+              theme={theme}
+              canReact={isAuthenticated}
+              onToggleReaction={handleToggleReaction}
+            />
+          )}
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
         />
@@ -278,6 +385,49 @@ function makeStyles(t: ThemeTokens, theme: ThemeName) {
     officialBadgeText: { fontSize: 10, fontWeight: t.isComic ? '700' : '600', color: t.isComic ? t.border : '#A78BFA', letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
     cardTime: { fontSize: 11, color: t.textSecondary, marginTop: 1 },
     cardBody: { fontSize: 13, color: t.isComic ? t.textPrimary : '#D1D5DB', lineHeight: 21 },
+    reactionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+    reactionPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: t.radiusChip,
+      backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: t.isComic ? `${t.border}40` : 'rgba(255,255,255,0.1)',
+    },
+    reactionPillActive: {
+      backgroundColor: `${t.success}1F`,
+      borderColor: `${t.success}66`,
+    },
+    reactionEmoji: { fontSize: 13 },
+    reactionCount: { fontSize: 11, fontWeight: '700', color: t.textSecondary },
+    reactionCountActive: { color: t.success },
+    reactionAdd: {
+      width: 28,
+      height: 26,
+      borderRadius: t.radiusChip,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: t.isComic ? `${t.border}40` : 'rgba(255,255,255,0.1)',
+    },
+    reactionAddText: { fontSize: 14, fontWeight: '700', color: t.textSecondary },
+    reactionPicker: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+      borderRadius: t.radiusChip,
+      backgroundColor: t.surfaceAlt,
+      borderWidth: 1,
+      borderColor: t.isComic ? t.border : t.borderFaint,
+    },
+    reactionPickerItem: { paddingHorizontal: 4, paddingVertical: 2 },
+    reactionPickerEmoji: { fontSize: 18 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
     errorText: { fontSize: 14, color: t.danger, textAlign: 'center', marginBottom: 16 },
     retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: r, backgroundColor: t.isComic ? `${t.border}14` : 'rgba(124,58,237,0.2)', borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? t.border : 'rgba(124,58,237,0.4)' },
