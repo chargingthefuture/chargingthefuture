@@ -23,6 +23,11 @@ export type SocketRelayRequest = {
   priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // When the post auto-expires (28 days after it was posted or last re-posted), or null for older
+  // rows the server has not stamped. `isExpired` is the server's derived flag: an open post past its
+  // expiry. Expired posts drop out of the active feed; only the owner can re-post to reset the clock.
+  expiresAtIso: string | null;
+  isExpired: boolean;
 };
 
 // `tags` carries 1-3 free-text tags; the server keeps the legacy single
@@ -150,6 +155,10 @@ export async function updateRequest(
   return data.item;
 }
 
+// An error carrying the server's SocketRelay error code, so callers can react to specific cases
+// (e.g. `request_expired` when a post expired between loading the feed and claiming it).
+export type SocketRelayError = Error & { code?: string };
+
 export async function fulfillRequest(requestId: string): Promise<void> {
   const res = await authedFetch(`${BASE}/requests/${requestId}/fulfill`, {
     method: 'POST',
@@ -159,7 +168,29 @@ export async function fulfillRequest(requestId: string): Promise<void> {
     },
     body: JSON.stringify({}),
   });
-  if (!res.ok) throw new Error('Failed to fulfill request');
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as { code?: string; message?: string } | null;
+    const error: SocketRelayError = new Error(payload?.message ?? 'Failed to fulfill request');
+    error.code = payload?.code;
+    throw error;
+  }
+}
+
+// Re-post a request the member owns: resets the 28-day expiry clock so an expired post becomes active
+// again. Mirrors the web POST /api/socketrelay/requests/:id/repost; returns the refreshed request.
+export async function repostRequest(requestId: string): Promise<SocketRelayRequest> {
+  const data = await authedFetchJson<{ ok: boolean; item: SocketRelayRequest }>(
+    `${BASE}/requests/${requestId}/repost`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ctf-csrf': '1',
+      },
+      body: JSON.stringify({}),
+    },
+  );
+  return data.item;
 }
 
 // The signed-in member's Direct Lines: every fulfillment they're part of, whether they posted the

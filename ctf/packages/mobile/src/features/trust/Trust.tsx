@@ -85,11 +85,8 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
           </View>
           <View>
             <Text style={styles.headerTitle}>Trust</Text>
-            <Text style={styles.headerSubtitle}>Verification &amp; signals</Text>
+            <Text style={styles.headerSubtitle}>Signals</Text>
           </View>
-        </View>
-        <View style={styles.unverifiedBadge}>
-          <Text style={styles.unverifiedBadgeText}>Unverified</Text>
         </View>
       </View>
 
@@ -144,7 +141,6 @@ function TrustEmptyView({ visibility }: { visibility: string }) {
 // ── Main (populated) state ────────────────────────────────────────────────────
 
 function TrustMainView({ trust }: { trust: TrustUserExtension }) {
-  const verified = trust.trustStatus === 'verified';
   const visibility = trust.trustVisibility;
 
   return (
@@ -157,32 +153,8 @@ function TrustMainView({ trust }: { trust: TrustUserExtension }) {
           </View>
           <View>
             <Text style={styles.headerTitle}>Trust</Text>
-            <Text style={styles.headerSubtitle}>Verification &amp; signals</Text>
+            <Text style={styles.headerSubtitle}>Signals</Text>
           </View>
-        </View>
-        <View style={verified ? styles.verifiedBadge : styles.unverifiedBadge}>
-          <Text style={verified ? styles.verifiedBadgeText : styles.unverifiedBadgeText}>
-            {verified ? 'Verified' : 'Unverified'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Score card
-          NOTE: Last Active, Activity, Transactions, Active Plugins values from the design mockup
-          have no backing API field in trust_user_extension. Omitted per real-data-only rule.
-          Signal progress / donePct also omitted — no backing checklist in the API.
-      */}
-      <View style={styles.scoreCard}>
-        <Text style={styles.sectionLabel}>TRUST SCORE</Text>
-        <View style={styles.statusRow}>
-          <View style={[styles.statusDot, { backgroundColor: verified ? BRAND : SUBTLE }]} />
-          <Text style={[styles.statusText, { color: verified ? BRAND : SUBTLE }]}>
-            {verified
-              ? 'Verified member'
-              : trust.trustStatus === 'flagged'
-              ? 'Account flagged'
-              : 'Verification pending'}
-          </Text>
         </View>
       </View>
 
@@ -394,30 +366,6 @@ const styles = StyleSheet.create({
   iconText: { fontSize: 18 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT },
   headerSubtitle: { fontSize: 11, color: SUBTLE },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: BRAND + '15',
-    borderWidth: 1,
-    borderColor: BRAND + '30',
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  verifiedBadgeText: { fontSize: 12, fontWeight: '600', color: BRAND },
-  unverifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  unverifiedBadgeText: { fontSize: 11, fontWeight: '600', color: SUBTLE },
   // Empty state
   emptyIllustration: { alignItems: 'center', textAlign: 'center', marginVertical: 24, paddingHorizontal: 16 },
   emptyCircleOuter: {
@@ -473,10 +421,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 3, backgroundColor: BRAND },
-  // Status row (for populated state score card)
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 14, fontWeight: '600' },
   // Visibility card (empty state)
   visCard: {
     marginHorizontal: 16,

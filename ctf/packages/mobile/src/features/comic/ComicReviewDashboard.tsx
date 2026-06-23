@@ -10,8 +10,8 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fetchComicReviewQueue, resolveComicReview } from './api';
-import type { ComicReviewItem, ComicReviewResolution } from './api';
+import { fetchComicReviewQueue, fetchComicTrainingStats, resolveComicReview } from './api';
+import type { ComicReviewItem, ComicReviewResolution, ComicTrainingStats } from './api';
 
 // Owner Review & Correction Dashboard (mobile). Matches the locked MobileAIReviewConsole /
 // MobileAIReviewConsoleEmpty mockups. Admin-gated server-side; a non-admin sees an access notice.
@@ -111,10 +111,31 @@ function DashboardHeader({ count, allClear }: { count: number; allClear: boolean
   );
 }
 
-function EmptyDashboard() {
+// Compact "Training examples collected: N" line under the header. Read-only and best-effort: the
+// caller passes null when the stats fetch failed (or the viewer is not an admin), so the line hides.
+function TrainingStatsLine({ stats }: { stats: ComicTrainingStats | null }) {
+  if (!stats) return null;
+  const pending = stats.trainingExamplesByStatus.pending ?? 0;
+  const exported = stats.trainingExamplesByStatus.exported ?? 0;
+  return (
+    <View style={styles.trainingStatsLine}>
+      <Ionicons name="school-outline" size={12} color={SUBTLE} />
+      <Text style={styles.trainingStatsText} numberOfLines={2}>
+        <Text style={styles.trainingStatsStrong}>Training examples collected: </Text>
+        <Text style={styles.trainingStatsStrong}>{stats.trainingExamplesTotal}</Text>
+        <Text style={styles.trainingStatsDim}>
+          {` (${pending} pending · ${exported} exported · ${stats.ratedAnswersTotal} rated answers)`}
+        </Text>
+      </Text>
+    </View>
+  );
+}
+
+function EmptyDashboard({ trainingStats }: { trainingStats: ComicTrainingStats | null }) {
   return (
     <View style={styles.screen}>
       <DashboardHeader count={0} allClear />
+      <TrainingStatsLine stats={trainingStats} />
       <View style={styles.emptyWrap}>
         <View style={styles.emptyIcon}>
           <Ionicons name="checkmark-circle" size={38} color="#22C55E" />
@@ -172,6 +193,7 @@ export const ComicReviewDashboard = () => {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -183,6 +205,8 @@ export const ComicReviewDashboard = () => {
         if (prev && result.items.some((entry) => entry.reviewId === prev)) return prev;
         return result.items[0]?.reviewId ?? null;
       });
+      // Best-effort training-examples counter; never blocks the queue (returns null on any failure).
+      setTrainingStats(await fetchComicTrainingStats());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to load the review queue.');
     } finally {
@@ -294,12 +318,13 @@ export const ComicReviewDashboard = () => {
   }
 
   if (items.length === 0 || !selected) {
-    return <EmptyDashboard />;
+    return <EmptyDashboard trainingStats={trainingStats} />;
   }
 
   return (
     <View style={styles.screen}>
       <DashboardHeader count={items.length} allClear={false} />
+      <TrainingStatsLine stats={trainingStats} />
 
       <ScrollView
         horizontal
@@ -538,6 +563,28 @@ const styles = StyleSheet.create({
   },
   countTextClear: {
     color: '#22C55E',
+  },
+  trainingStatsLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: PANEL,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+  },
+  trainingStatsText: {
+    flexShrink: 1,
+    fontSize: 11,
+    color: SUBTLE,
+  },
+  trainingStatsStrong: {
+    color: '#E5E7EB',
+    fontWeight: '600',
+  },
+  trainingStatsDim: {
+    color: '#4B5563',
   },
   chipsBar: {
     flexGrow: 0,

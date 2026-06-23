@@ -25,7 +25,6 @@ jobs:
       - name: Evaluate GitHub Actions budget
         id: budget
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTIONS_MONITOR_TOKEN: ${{ secrets.GH_ACTIONS_BILLING_TOKEN }}
           GITHUB_ACTIONS_MONITOR_SCOPE: org
           GITHUB_ACTIONS_BUDGET_MINUTES: "2000"

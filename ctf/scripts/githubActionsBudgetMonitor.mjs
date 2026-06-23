@@ -264,7 +264,7 @@ function buildSummaryMarkdown({
 
 async function main() {
   const [ownerFromRepo, repository] = (process.env.GITHUB_REPOSITORY ?? "/").split("/");
-  const owner = process.env.GITHUB_ACTIONS_MONITOR_OWNER || process.env.GITHUB_REPOSITORY_OWNER || ownerFromRepo;
+  const owner = process.env.GITHUB_ACTIONS_MONITOR_OWNER || ownerFromRepo;
 
   if (!owner) {
     throw new Error("Missing owner context. Set GITHUB_ACTIONS_MONITOR_OWNER or GITHUB_REPOSITORY.");
@@ -281,7 +281,7 @@ async function main() {
   };
 
   const degradedReasons = [];
-  const token = process.env.GITHUB_ACTIONS_MONITOR_TOKEN || process.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_ACTIONS_MONITOR_TOKEN;
 
   let usage;
   if (!token) {
