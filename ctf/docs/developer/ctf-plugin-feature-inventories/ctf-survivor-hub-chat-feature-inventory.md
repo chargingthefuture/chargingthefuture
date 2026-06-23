@@ -180,7 +180,10 @@ The previously-specified `hub_channels` / `hub_bots` / `hub_bot_routes` / `hub_d
   posts render with their author. The dead GetStream-based survivor-hub-chat mobile fixtures were
   removed. The single AI Assistant (`@comic`) surfaces — answer cards, the "Reviewing for safety"
   pending card, the `@comic` composer, consent, and ratings — are delivered separately in the comic
-  Android parity work (see `ctf-comic-feature-inventory.md`).
+  Android parity work (see `ctf-comic-feature-inventory.md`). The live Stream layer is now at parity
+  too (#730): `HubHome` opens a best-effort `stream-chat` connection to `ctf-feed-community` via
+  `POST /api/hub/join` for instant new-post updates and a typing indicator, and falls back to the 15s
+  poll when Stream is not configured or the connection fails.
 - Public unauthenticated read of the blended channel is **not** part of this Android pass: like web,
   `GET /api/hub/messages` still requires a signed-in session. As of 2026-06-09 the Hub routes use the
   `support_only` access tier, so both fully-approved members and not-yet-verified `locked_support_only`
@@ -200,10 +203,29 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 2. Mobile Hub parity: delivered. The mobile home reads/writes the feed-backed channel via `GET/POST /api/hub/messages` (`ctf/packages/mobile/src/features/hub/`). The parity contract reconciliation was done on the existing `feed-announcements` entry (its `mobileFeatureDirs` now includes `hub`) rather than a standalone `hub` contract entry, because the web/Android parity gate requires every contract slug to exist in the plugin registry and the Hub is the home route (`/`), not a navigable app tile with its own registry slug.
 3. Separate channels, direct messages, and system bots were dropped from the MVP (single blended channel). Revisit splitting into multiple Hub channels after feedback.
 4. `GET /api/hub/channels|dms|bots` are stubs (single-channel / empty); they can be removed or formalized when/if multi-channel returns.
-5. Live-layer follow-ups deferred from the foundation pass (task 1): read receipts (#18) and delivery status (#19) are not implemented in Commons — Commons messages live in our own `feed_community_posts`, not as Stream messages, so "seen"/"delivered" would need a separate model and are deferred. Online presence dots on peer avatars (#20) are also deferred: avatars are keyed by our own author identity, and the watched channel's `presence` set is keyed by Stream user ids (`feed-<userId>`), so mapping presence onto our cards is not clean enough to force in the foundation pass. Typing (#17) is delivered; these three are tracked for the presence cluster (task 6).
+5. Live-layer follow-ups deferred from the foundation pass (task 1): read receipts (#18) and delivery status (#19) are not implemented in Commons — Commons messages live in our own `feed_community_posts`, not as Stream messages, so "seen"/"delivered" would need a separate model and are deferred. Online presence dots on peer avatars (#20) are also deferred: avatars are keyed by our own author identity, and the watched channel's `presence` set is keyed by Stream user ids (`feed-<userId>`), so mapping presence onto our cards is not clean enough to force in the foundation pass. Typing (#17) is delivered (web and now Android, #730); these three are tracked for the presence cluster (task 6). The same three (read receipts, delivery status, presence dots) are likewise deferred on mobile to match web.
 
 ## Change Log
 
+- 2026-06-23: **Android parity — Commons live Stream layer + typing indicator (#730).** The React
+  Native Hub home (`ctf/packages/mobile/src/features/hub/HubHome.tsx` + a new `live-stream.ts`) now
+  matches the web Commons live layer. On entry it calls `POST /api/hub/join` through `authedFetch`
+  (`fetchHubJoin`) for real Stream credentials and, when Stream is configured, opens one `stream-chat`
+  connection to the shared `ctf-feed-community` channel (the same `StreamChat.getInstance(apiKey)` +
+  `connectUser({ id: streamUserId }, streamToken)` + `channel('messaging', streamChannelId).watch()`
+  pattern the Direct Line / TrustTransport mobile tabs use). A `message.new` (and
+  `connection.recovered`) event triggers the existing `load()` so new posts appear immediately, and
+  the 15s poll slows to a 30s backstop while the live connection is healthy. Typing: composer
+  keystrokes call `channel.keystroke()`; incoming `typing.start`/`typing.stop` surface a subtle
+  "X is typing…" line above the composer (collapsing to "X and Y are typing…" / "N people are
+  typing…"), cleared on send and absent in polling-only mode. Polling fallback preserved: when
+  `POST /api/hub/join` returns `configured: false`, or the join call / connect / watch fails,
+  `fetchHubJoin`/`connectHubLive` resolve to null and the screen silently stays on the 15s poll —
+  the live layer is purely additive and a Stream failure never breaks or blanks the Hub. The
+  connection disconnects on unmount. Matches the web's deferred set: no online-presence dots, read
+  receipts, or delivery status. No schema, route, or contract change — binds the existing
+  `/api/hub/join` route. This opens a live Stream connection per mobile Hub viewer; see the quota note
+  `ctf/docs/quota-impact/2026-06-23-mobile-commons-live-stream.md`. Mobile typecheck + lint clean.
 - 2026-06-23: **Android parity — chat bubble color convention (#702).** Styling only, mirroring the web: the logged-in member's own messages are gray; everyone else's use the plugin color. (1) Mobile hub chat (`HubHome.tsx`): a community (peer) post from the current member (`message.userId === useAuth().user.id`) renders a neutral gray bubble; everyone else's community post takes the hub/community accent tint; official announcement/AI cards keep the Hub brand treatment. (2) Direct Line chat (`components/shared/StreamChatView.tsx`, used by chyme): a new optional `accentColor` prop themes the GetStream message list so other people's bubbles take the plugin accent (base `ThemeProvider` theme) while the member's own stay gray (`myMessageTheme`). No API/schema/contract change and no new Stream calls — purely presentation, so no quota impact.
 - 2026-06-23: **Android parity — Commons reply-to-message + unread divider (#693).** The React Native hub home (`packages/mobile/src/features/hub/HubHome.tsx` + `api.ts`) now matches the web Commons. (1) Signal-style reply: each peer bubble has a "Reply" affordance that sets a "Replying to …" composer banner (author + snippet + cancel ×); sending passes `replyToPostId` (the target's `communityPostId`) to `sendHubMessage`, and a message with a resolved `quotedMessage` (`{ author, snippet }`, new on the mobile `HubMessage`) renders a quoted block above its body. (2) Unread divider: new `fetchHubLastSeen()` / `markHubSeen()` clients over `GET`/`POST /api/hub/last-seen`; on entry the screen reads the marker, draws a single "New messages" divider before the first message newer than it (computed once so it does not jump as posts arrive), then moves the marker forward — all best-effort so a failure never breaks the chat. No schema, route, or contract change — binds the existing reply/last-seen routes.
 - 2026-06-23: **Android parity — emoji reactions on Commons community posts (#704).** The React Native hub home (`packages/mobile/src/features/hub/HubHome.tsx` + `api.ts`) now renders the same reaction row under each peer bubble as the web Commons. The mobile `HubMessage` gained `communityPostId` and `reactions` (`{ emoji, count, reactedByMe }[]`, already returned by `GET /api/hub/messages`); a peer post (`communityPostId != null`) shows each reacted emoji as a pill (emoji + count, highlighted when the member reacted) plus an "add reaction" affordance that reveals the fixed quick set `HUB_REACTION_EMOJIS` (👍 ❤️ 😂 🎉 🙏 😢). Tapping a pill or picker emoji calls the new `toggleHubReaction(postId, emoji)` (`POST /api/hub/messages/:postId/reactions`, `{ emoji }` → `{ ok, reacted }`), flips the reaction optimistically, and reconciles via the existing 15s poll; a failure reloads to the server truth. Reactions show read-only for signed-out viewers (toggling requires sign-in). No schema, route, or contract change — binds the existing table/route.
