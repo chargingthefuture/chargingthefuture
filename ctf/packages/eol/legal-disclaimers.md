@@ -4,5 +4,5 @@
 - Document validity varies by jurisdiction; consult a qualified attorney for review.
 - Some documents may require witnesses or notarization to be legally binding.
 - Digital signatures may not be valid in all locations.
-- The information you provide is not stored unless you explicitly export or save it (Supabase storage coming soon).
+- The information you provide is not stored; the will is local-only — print or export it to keep a copy.
 - For complex or high-value estates, always seek professional legal counsel.

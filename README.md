@@ -91,7 +91,7 @@ Production deployment uses:
 - **[Render](https://render.com)** — All services (web, workers, ledger, LLM inference)
 - **[Infisical](https://infisical.com)** (self-hosted on Railway) — Single source of truth for secrets
 - **[Neon](https://neon.tech)** — PostgreSQL database with connection pooling
-- **[Supabase Storage](https://supabase.com)** — Formance ledger backups
+- **Private GitHub repo** — Formance ledger backups (stored as Release assets)
 
 See `render.yaml` for service definitions and `ctf/docs/developer/` for runbooks.
 

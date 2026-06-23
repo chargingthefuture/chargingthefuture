@@ -25,12 +25,17 @@ able to recover or clone the ledger in an automated, repeatable way.
 
 ## Backups (in place)
 
-- **Nightly `pg_dump`** → Supabase Storage: `.github/workflows/backup-formance-supabase.yml`
-  runs `scripts/backupFormanceToSupabase.mjs` daily at 03:00 UTC (and on manual
-  dispatch). It does `pg_dump --format=custom` of `FORMANCE_DATABASE_URL`, uploads to
-  the Supabase `backups/formance/` bucket, and verifies the object exists.
+- **Nightly `pg_dump`** → GitHub Release asset on a **private backup repo**:
+  `.github/workflows/backup-formance.yml` runs `scripts/backupFormanceToPrivateRepo.mjs`
+  daily at 03:00 UTC (and on manual dispatch). It does `pg_dump --format=custom` of
+  `FORMANCE_DATABASE_URL`, creates a release tagged `formance-backup-<iso>` on the
+  backup repo, uploads the dump as that release's asset, and verifies the asset exists.
   Run manually: `pnpm --filter <root> formance:backup` (needs `FORMANCE_DATABASE_URL`,
-  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+  `GH_PAT` with `contents: write` on the backup repo, `BACKUP_REPO` = `owner/name`).
+- **Owner setup (one-time):** create a **PRIVATE** GitHub repo, set `BACKUP_REPO`
+  (= `owner/name`) as a GitHub Actions secret, and ensure `GH_PAT` has
+  `contents: write` on that repo. If any required secret is missing the backup job
+  fails red — backups must fail loudly.
 - The custom-format dump is a complete, restorable snapshot (schema + every ledger
   book + all transactions).
 
@@ -43,12 +48,12 @@ For production financial data, use **defense in depth**:
    Restoring a snapshot is the fastest way back from "we corrupted/dropped data at
    14:32 today." (Railway's point-in-time/snapshot capabilities depend on the plan —
    confirm what's available and set retention accordingly.)
-2. **`pg_dump` → Supabase — portable offsite secondary (already in place).** Keep it:
+2. **`pg_dump` → private GitHub repo Release — portable offsite secondary (already in place).** Keep it:
    it is provider-independent (restore to *any* Postgres, not just Railway) and
    survives a Railway-account-level incident. This is the cross-provider escape hatch.
 
 Keep both 1 (Railway snapshots) and 2 (pg_dump). Railway snapshots are the day-to-day
-recovery tool; the Supabase dump is the offsite escape hatch.
+recovery tool; the private-repo dump is the offsite escape hatch.
 
 ## Spin up a new environment (automated, pick one path)
 
@@ -59,22 +64,23 @@ recovery tool; the Supabase dump is the offsite escape hatch.
 3. Deploy the ledger image. `AUTO_UPGRADE` reconciles the schema; the named ledgers and
    data are already present from the snapshot. Done.
 
-### Path B — Restore from the Supabase dump (cross-provider DR)
+### Path B — Restore from the private-repo dump (cross-provider DR)
 
 1. Provision a fresh Postgres (new Railway Postgres) and set `FORMANCE_DATABASE_URL`
    to it.
 2. `FORMANCE_RESTORE_CONFIRM=1 pnpm --filter <root> formance:restore`
-   (`scripts/restoreFormanceFromSupabase.mjs` — downloads the latest dump, or a specific
-   one via `FORMANCE_BACKUP_FILE`, and `pg_restore`s it). Needs `SUPABASE_URL` +
-   `SUPABASE_SERVICE_ROLE_KEY`. The dump includes the system schema + ledger books +
-   data, so no separate bootstrap is needed.
+   (`scripts/restoreFormanceFromPrivateRepo.mjs` — downloads the latest release's dump,
+   or a specific one via `FORMANCE_BACKUP_TAG` / `FORMANCE_BACKUP_FILE`, and `pg_restore`s
+   it). Needs `GH_PAT` (read access to the backup repo) + `BACKUP_REPO` (`owner/name`).
+   The dump includes the system schema + ledger books + data, so no separate bootstrap
+   is needed.
 
-   **Easiest trigger:** the manual GitHub Actions workflow `restore-formance-supabase.yml`
-   (Actions → "Restore Formance from Supabase" → Run workflow). It restores into the
+   **Easiest trigger:** the manual GitHub Actions workflow `restore-formance.yml`
+   (Actions → "Formance — Restore from Private Repo" → Run workflow). It restores into the
    `FORMANCE_RESTORE_TARGET_DATABASE_URL` **secret** — distinct from the prod
    `FORMANCE_DATABASE_URL`, so it can never overwrite production — and sets the confirm flag
    for you. Set that secret to the new environment's Railway Postgres URL before running; the optional
-   `backup_file` input pins a specific dump (blank = latest).
+   `backup_tag` input pins a release (blank = latest) and `backup_file` pins a specific asset.
 3. Deploy the ledger image pointed at that DB.
 
 ### Path C — Net-new empty environment (no data to restore)
@@ -91,7 +97,7 @@ recovery tool; the Supabase dump is the offsite escape hatch.
 
 ## Safety rails
 
-- **Restore is confirm-gated**: `restoreFormanceFromSupabase.mjs` refuses to run without
+- **Restore is confirm-gated**: `restoreFormanceFromPrivateRepo.mjs` refuses to run without
   `FORMANCE_RESTORE_CONFIRM=1`, and `pg_restore --clean` overwrites the target — only
   point it at a NEW/recovery database, never production unless you are intentionally
   rolling production back.

@@ -1,19 +1,28 @@
-name: Formance — Restore from Supabase
+name: Formance — Restore from Private Repo
 
 # On-demand restore of a Formance pg_dump backup (produced by
-# backup-formance-supabase.yml) into a TARGET database — for disaster recovery or
+# backup-formance.yml) into a TARGET database — for disaster recovery or
 # spinning up a fresh Formance environment. Manual trigger only.
+#
+# The backup is a GitHub Release asset on the PRIVATE BACKUP_REPO.
 #
 # Safety: it restores into FORMANCE_RESTORE_TARGET_DATABASE_URL — a DISTINCT
 # secret from the backup's FORMANCE_DATABASE_URL — so a misconfiguration can never
 # overwrite the production ledger. Point that secret at the NEW environment's Railway
 # Postgres connection string before running. See ctf/ops/formance/DISASTER_RECOVERY.md.
+#
+# Required secrets: GH_PAT (read access to BACKUP_REPO), BACKUP_REPO (owner/name),
+# FORMANCE_RESTORE_TARGET_DATABASE_URL (the target DB to restore INTO).
 
 on:
   workflow_dispatch:
     inputs:
+      backup_tag:
+        description: 'Release tag to restore (e.g. formance-backup-<ts>). Blank = latest release.'
+        required: false
+        type: string
       backup_file:
-        description: 'Specific backup filename (e.g. formance-backup-<ts>.dump). Blank = latest.'
+        description: 'Specific asset filename (e.g. formance-backup-<ts>.dump). Blank = the dump on the chosen release.'
         required: false
         type: string
 
@@ -24,8 +33,11 @@ jobs:
     env:
       # TARGET DB to restore INTO — a new/recovery database, never production.
       FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_RESTORE_TARGET_DATABASE_URL }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Token with read access to the private backup repo
+      GH_PAT: ${{ secrets.GH_PAT }}
+      # Private backup repo as owner/name
+      BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
+      FORMANCE_BACKUP_TAG: ${{ inputs.backup_tag }}
       FORMANCE_BACKUP_FILE: ${{ inputs.backup_file }}
       FORMANCE_RESTORE_CONFIRM: '1'
     steps:
@@ -70,10 +82,10 @@ jobs:
         id: restore
         run: |
           set -e
-          # Capture stderr to a file AND print it to the console on failure, so
-          # the real reason shows up directly in the job log (not only in the
+          # Capture stderr to a file AND print it to the job log on failure, so
+          # the real reason shows up directly in the log (not only in the
           # uploaded artifact, which needs a separate download to read).
-          if ! node ctf/scripts/restoreFormanceFromSupabase.mjs 2> restore-error.log; then
+          if ! node ctf/scripts/restoreFormanceFromPrivateRepo.mjs 2> restore-error.log; then
             echo "::error::Formance restore failed. Error output from the restore script:"
             cat restore-error.log >&2
             exit 1

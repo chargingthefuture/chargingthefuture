@@ -1,7 +1,17 @@
-name: Formance — Nightly Backup to Supabase
+name: Formance — Nightly Backup to Private Repo
 
-# Nightly backup of Formance Postgres to Supabase Storage.
+# Nightly backup of Formance Postgres to a PRIVATE GitHub repo as a Release asset.
 # Runs daily at 3am UTC and on manual dispatch.
+#
+# Required secrets (Settings → Secrets and variables → Actions):
+#   FORMANCE_DATABASE_URL — Formance Postgres connection string (read access).
+#   GH_PAT                — a token with `contents: write` on the backup repo.
+#   BACKUP_REPO           — the PRIVATE backup repo as `owner/name`.
+#
+# Owner setup: create a PRIVATE GitHub repo to hold the backups, set BACKUP_REPO
+# (= owner/name) as an Actions secret, and make sure GH_PAT has contents: write
+# on that repo. If any required secret is missing the backup script exits
+# non-zero and this job FAILS red — backups must fail loudly, never silently.
 
 on:
   schedule:
@@ -10,15 +20,15 @@ on:
 
 jobs:
   backup-formance:
-    name: Backup Formance Postgres to Supabase
+    name: Backup Formance Postgres to Private Repo
     runs-on: ubuntu-latest
     env:
       # Formance Postgres connection string (service-level, read access)
       FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_DATABASE_URL }}
-      # Supabase project URL (https://xyzcompany.supabase.co)
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      # Supabase service role key (write access to storage)
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Token with contents: write on the private backup repo
+      GH_PAT: ${{ secrets.GH_PAT }}
+      # Private backup repo as owner/name
+      BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,10 +66,10 @@ jobs:
         id: backup
         run: |
           set -e
-          # Capture stderr to a file AND print it to the console on failure, so
-          # the real reason shows up directly in the job log (not only in the
+          # Capture stderr to a file AND print it to the job log on failure, so
+          # the real reason shows up directly in the log (not only in the
           # uploaded artifact, which needs a separate download to read).
-          if ! node ctf/scripts/backupFormanceToSupabase.mjs 2> backup-error.log; then
+          if ! node ctf/scripts/backupFormanceToPrivateRepo.mjs 2> backup-error.log; then
             echo "::error::Formance backup failed. Error output from the backup script:"
             cat backup-error.log >&2
             exit 1
