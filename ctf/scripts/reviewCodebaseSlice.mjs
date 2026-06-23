@@ -56,6 +56,10 @@ const FORCED_SLICE = (process.env.CODE_REVIEW_SLICE || '').trim();
 const MAX_ISSUES = Number(process.env.CODE_REVIEW_MAX_ISSUES || '8');
 const MAX_BYTES = Number(process.env.CODE_REVIEW_MAX_BYTES || '200000');
 const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES || '60000');
+// The model's findings JSON must fit in one response. 4000 was too small for a whole-plugin
+// review: the JSON truncated mid-string and JSON.parse threw, failing the whole run. Give it ample
+// room (Sonnet allows far more), overridable for cost tuning.
+const MAX_OUTPUT_TOKENS = Number(process.env.CODE_REVIEW_MAX_OUTPUT_TOKENS || '16000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
 
 // A plugin's declared contracts are sent as read-only reference so the reviewer can check
@@ -354,7 +358,7 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: MAX_OUTPUT_TOKENS,
       system,
       messages: [{ role: 'user', content: user }],
     }),
@@ -364,17 +368,86 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
   }
   const result = await response.json();
+  // A `max_tokens` stop means the JSON may be cut off mid-array; parseFindings salvages the
+  // complete findings rather than failing the run, but log it so the truncation is visible.
+  if (result.stop_reason === 'max_tokens') {
+    console.warn('reviewCodebaseSlice: model response hit max_tokens; findings JSON may be truncated and will be salvaged.');
+  }
   return result.content[0].text.trim();
 }
 
 function parseFindings(raw) {
   const fenced = raw.match(/^```(?:json)?\s*\n([\s\S]*?)\n?```$/i);
-  const text = fenced ? fenced[1].trim() : raw;
-  const findings = JSON.parse(text);
-  if (!Array.isArray(findings)) {
-    throw new Error('Model did not return a JSON array.');
+  const text = (fenced ? fenced[1] : raw).trim();
+  try {
+    const findings = JSON.parse(text);
+    if (!Array.isArray(findings)) {
+      throw new Error('Model did not return a JSON array.');
+    }
+    return findings;
+  } catch (error) {
+    // The response can be truncated (model hit max_tokens) or otherwise malformed, which used to
+    // fail the whole run. Salvage the complete finding objects parsed before the break instead of
+    // dropping the entire review. If nothing is recoverable, re-throw the original error.
+    const salvaged = salvageFindings(text);
+    if (salvaged.length > 0) {
+      console.warn(
+        `reviewCodebaseSlice: findings JSON was not fully valid (${error?.message || error}); ` +
+          `salvaged ${salvaged.length} complete finding(s).`,
+      );
+      return salvaged;
+    }
+    throw error;
   }
-  return findings;
+}
+
+// Recover as many complete top-level objects as possible from a (possibly truncated) JSON array.
+// Walks the text tracking string/escape state and brace depth; every time depth returns to 0 at an
+// object close, that object is complete and is parsed on its own. A trailing partial object (the
+// truncation point) is simply skipped.
+function salvageFindings(text) {
+  const start = text.indexOf('[');
+  if (start === -1) {
+    return [];
+  }
+  const objects = [];
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let objStart = -1;
+  for (let i = start + 1; i < text.length; i += 1) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      if (inString) escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) {
+      continue;
+    }
+    if (ch === '{') {
+      if (depth === 0) objStart = i;
+      depth += 1;
+    } else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0 && objStart !== -1) {
+        try {
+          objects.push(JSON.parse(text.slice(objStart, i + 1)));
+        } catch {
+          // An individually malformed object is skipped, not fatal.
+        }
+        objStart = -1;
+      }
+    }
+  }
+  return objects;
 }
 
 function fingerprint(sliceName, title) {
