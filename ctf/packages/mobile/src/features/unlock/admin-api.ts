@@ -52,6 +52,38 @@ export async function fetchPendingSubmissions(): Promise<SubmissionsFetchResult>
   return { ok: true, forbidden: false, items: data.submissions ?? [], message: null };
 }
 
+// Result of an on-demand reward reconcile. Mirrors the web reconcileUnlockRewards summary.
+export type UnlockReconcileResult = {
+  scanned: number;
+  granted: number;
+  alreadyGranted: number;
+  failed: number;
+};
+
+// POST to mint any approved-but-uncredited verification reward on demand. Admin-session gated (no
+// CRON_SECRET); runs the same idempotent reconcileUnlockRewards server-side, so it can never
+// double-grant. Carries the CSRF confirmation header.
+export async function reconcileRewards(): Promise<UnlockReconcileResult> {
+  const res = await authedFetch(`${ADMIN_API_BASE}/reconcile-rewards`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-ctf-csrf': '1',
+    },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    throw new Error(`reconcile_rewards_failed:${res.status}`);
+  }
+  const data = (await res.json()) as Partial<UnlockReconcileResult>;
+  return {
+    scanned: data.scanned ?? 0,
+    granted: data.granted ?? 0,
+    alreadyGranted: data.alreadyGranted ?? 0,
+    failed: data.failed ?? 0,
+  };
+}
+
 // POST a review decision for one submission. Carries the CSRF confirmation header.
 export async function reviewSubmission(
   submissionId: number,

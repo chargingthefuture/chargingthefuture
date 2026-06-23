@@ -11,6 +11,7 @@ import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   fetchPendingSubmissions,
+  reconcileRewards,
   reviewSubmission,
   type UnlockAdminSubmission,
   type UnlockReviewDecision,
@@ -32,6 +33,7 @@ export const AdminUnlock = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [acting, setActing] = useState<number | null>(null);
+  const [reconciling, setReconciling] = useState(false);
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -71,7 +73,37 @@ export const AdminUnlock = () => {
     [auth, load],
   );
 
+  const runReconcile = useCallback(async () => {
+    if (!auth?.userId) return;
+    setReconciling(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await reconcileRewards();
+      setNotice(
+        `Retried rewards — scanned ${result.scanned}, granted ${result.granted}, ` +
+          `already granted ${result.alreadyGranted}, failed ${result.failed}.`,
+      );
+      await load();
+    } catch {
+      setError('Could not retry pending rewards. Try again.');
+    } finally {
+      setReconciling(false);
+    }
+  }, [auth, load]);
+
   // State-changing decisions require an explicit confirm gesture.
+  const confirmReconcile = useCallback(() => {
+    Alert.alert(
+      'Retry pending rewards',
+      'Mint any approved-but-uncredited verification reward now? Safe to run repeatedly — it never double-grants.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Retry rewards', style: 'default', onPress: () => void runReconcile() },
+      ],
+    );
+  }, [runReconcile]);
+
   const confirmReview = useCallback(
     (submission: UnlockAdminSubmission, reviewStatus: UnlockReviewDecision) => {
       const verb = reviewStatus === 'approved' ? 'Approve' : 'Reject';
@@ -115,6 +147,18 @@ export const AdminUnlock = () => {
         automatically and arrive within {UNLOCK_REWARD_SLA_HOURS} hours — if a reward is still pending it
         will be retried in the background.
       </Text>
+
+      <Pressable
+        style={[styles.reconcileBtn, reconciling ? styles.btnBusy : null]}
+        onPress={confirmReconcile}
+        disabled={reconciling}
+      >
+        {reconciling ? (
+          <ActivityIndicator size="small" color={COLOR} />
+        ) : (
+          <Text style={styles.reconcileBtnText}>Retry pending rewards</Text>
+        )}
+      </Pressable>
 
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
@@ -206,6 +250,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  reconcileBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    backgroundColor: `${COLOR}1F`,
+    borderColor: `${COLOR}4D`,
+  },
+  reconcileBtnText: { fontSize: 13, fontWeight: '700', color: COLOR },
   emptyText: { fontSize: 13, color: SUBTLE },
   sectionHeading: { fontSize: 16, fontWeight: '700', color: TEXT },
   card: {
