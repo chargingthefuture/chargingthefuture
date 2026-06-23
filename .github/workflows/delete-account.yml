@@ -84,7 +84,7 @@ jobs:
           cat /tmp/delete.json
           echo
           if [ "${code}" != "200" ]; then
-            echo "::error::Account delete failed with HTTP ${code}. 503 = ACCOUNT_DELETE_SECRET not set in the app runtime; 403 = the secret here does not match the app runtime value; check the route is deployed."
+            echo "::error::Account delete failed (HTTP ${code}). Read the JSON above: code 'account_delete_not_configured' = ACCOUNT_DELETE_SECRET missing in the app runtime; HTTP 403 = the secret here does not match the app runtime value; code 'account_delete_failed' means the deletion itself threw — its 'step' (reclaim_request | data_deletion) and 'detail' fields say why."
             exit 1
           fi
           echo "Deleted account ${USER_ID}: $(cat /tmp/delete.json)" >> "$GITHUB_STEP_SUMMARY"
