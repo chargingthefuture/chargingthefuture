@@ -1,0 +1,49 @@
+contracts:
+  - pluginId: member-blocks
+    command: member.block.create
+    version: 1.0.0
+    description: Create a one-way, private block of another member. Idempotent; rejects a self-block.
+    inputSchema:
+      blockedUserId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - member_blocks
+    purpose: member_safety_boundary
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: member-blocks
+    command: member.block.remove
+    version: 1.0.0
+    description: Remove (unblock) a block the member created. Idempotent; succeeds even if no block existed.
+    inputSchema:
+      blockedUserId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - member_blocks
+    purpose: member_safety_boundary
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: member-blocks
+    command: member.block.list
+    version: 1.0.0
+    description: List the blocks the signed-in member created, newest first, each with the blocked member's resolved display label.
+    inputSchema: {}
+    outputSchema:
+      blocks:
+        type: array
+    dataAccess:
+      - member_blocks
+      - directory_profiles
+    purpose: member_safety_boundary
+    retentionClass: derived_short_lived
+    idempotency: true

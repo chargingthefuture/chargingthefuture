@@ -595,3 +595,22 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   indexed query per call). This is the foundational layer only: no API routes, UI, or surface wiring
   yet (tasks 2–5 — block/unblock API + manage-list, the optional safety-report escalation, wiring the
   check into each member-to-member surface, and admin global-ban tooling). Owner-review lane.
+- 2026-06-24: **Member blocking — block/unblock API + manage-list UI landed (issue #809, task 2 of 5).**
+  Built on the task-1 core. Added three repository functions to
+  `ctf/packages/web/lib/blocks/repository.ts` — `blockUser` (idempotent insert with
+  `ON CONFLICT DO NOTHING`, rejects a self-block), `unblockUser` (idempotent delete), and
+  `listBlocksForUser` (the member's own blocks, newest first, each resolved to a Directory display
+  name with a neutral "Member" fallback). Added the cross-cutting API under `/api/account/blocks`
+  (`GET` list + `POST` create) and `/api/account/blocks/[blockedUserId]` (`DELETE` unblock), reusing
+  the account-area `requireAccountAccess` (any signed-in member, not unlock-gated) and the shared
+  `ensureMutationCsrf` (`x-ctf-csrf` header + same-origin) on every state-changing call. Added a
+  reusable `BlockMemberButton` (with a plain-language confirm dialog) under `components/blocks/`, a
+  mobile-responsive "Blocked members" manage-list at `/account/blocks` (loading / empty / error /
+  populated states, an Unblock control per row), one create-entry-point on the Directory profile
+  detail of another member, and a "Blocked members" link in the account hub's Data & privacy section.
+  Wired `member_blocks` into the account deletion registry (a member's own blocks are removed on
+  account deletion). Added the `member.block.create` / `member.block.remove` / `member.block.list`
+  command and access-policy contracts plus a profile/deletion contract under `ctf/docs/contracts/`.
+  Android parity deferred (Parity Ticket #809). Still to come: task 3 (optional safety-report
+  escalation), task 4 (wiring `isBlockedBetween` into each surface), task 5 (admin global ban).
+  Owner-review lane.

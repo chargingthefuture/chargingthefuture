@@ -254,6 +254,23 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'member-blocks',
+    name: 'Blocked members',
+    dataSummary: 'The members you have blocked (your own private list — never shared with anyone).',
+    // Cross-cutting member safety control (issue #809). A block is the member's own boundary, so the
+    // member may clear their blocks on their own, and they are also removed on full-account deletion.
+    // Only the rows this user *created* (blocker_user_id) are their data; rows where someone else
+    // blocked this user (blocked_user_id) are that other member's private boundary and are NOT cleared
+    // here — when that other member deletes their account, their own blocker rows are removed by this
+    // same entry. A leftover reverse-direction row pointing at a deleted user is harmless (the user is
+    // gone); cleaning those up is a noted follow-up, not done here, so service-scope deletion never
+    // touches another member's blocks.
+    serviceScopeSupported: true,
+    tables: [
+      del('member_blocks', 'blocker_user_id', 'The blocks you created.'),
+    ],
+  },
+  {
     slug: 'workforce',
     name: 'Workforce',
     dataSummary: 'Your workforce extension record, plus any leftover rows from the legacy workforce profile/recruitment tables (now unused — the workforce view is read-only over your Directory profile).',

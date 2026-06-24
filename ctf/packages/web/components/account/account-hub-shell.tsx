@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import { ChevronRight, Database, Home, ShieldCheck, Sparkles, UserCircle } from 'lucide-react';
+import { ChevronRight, Database, Home, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
 import { TrustRightRailCard } from '@/components/shared/trust/TrustRightRailCard';
@@ -107,6 +107,13 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
             icon={<Database size={18} />}
             title="Your data &amp; deletion"
             desc="See everything the platform stores about you, and delete it — one service or your whole account."
+            tok={tok}
+          />
+          <AccountLinkRow
+            href="/account/blocks"
+            icon={<ShieldOff size={18} />}
+            title="Blocked members"
+            desc="See who you&apos;ve blocked and unblock them. Blocked people can&apos;t see or contact you, and they&apos;re never told."
             tok={tok}
             last
           />

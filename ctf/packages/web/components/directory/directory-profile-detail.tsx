@@ -10,6 +10,7 @@ import { useExternalLink } from "@/components/hooks/useExternalLink";
 import { getDirectoryTokens, initials, type Member } from "./shared";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
+import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import type { TrustUserExtension } from "@/lib/trust/types";
 
 // One cross-plugin presence entry returned by GET /api/presence/user/[userId].
@@ -268,6 +269,16 @@ export function DirectoryProfileDetail({
               to find someone else who can.
             </div>
           </section>
+
+          {/* Block — only when viewing another member's claimed profile (never your own, never an
+              unclaimed profile). Blocking is a baseline safety control: the button records a one-way
+              block and is invisible to the person blocked. Enforcement across surfaces is wired
+              separately (issue #809 task 4); this is the create-entry-point so the flow is reachable. */}
+          {claimedUserId && !isOwnProfile && (
+            <section style={{ marginTop: 24, display: "flex", justifyContent: "flex-start" }}>
+              <BlockMemberButton targetUserId={claimedUserId} displayName={p.name} />
+            </section>
+          )}
 
           {/* Also active in + Trust — only for a claimed profile. Presence shows where else this
               member is active across plugins; the trust card sits beside it as peer social proof.

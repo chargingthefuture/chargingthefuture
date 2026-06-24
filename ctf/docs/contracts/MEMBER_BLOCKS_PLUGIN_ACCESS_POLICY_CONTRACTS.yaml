@@ -1,0 +1,77 @@
+policies:
+  - pluginId: member-blocks
+    command: member.block.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      selfBlockForbidden: enforced
+      unlockGated: false
+    consentRequirements:
+      scopes:
+        - member_safety_boundary
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - self_block
+      - missing_csrf_confirmation
+      - cross_origin_request
+
+  - pluginId: member-blocks
+    command: member.block.remove
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      blockOwnershipRequired: enforced
+      unlockGated: false
+    consentRequirements:
+      scopes:
+        - member_safety_boundary
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - missing_csrf_confirmation
+      - cross_origin_request
+
+  - pluginId: member-blocks
+    command: member.block.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      ownBlocksOnly: enforced
+      unlockGated: false
+    consentRequirements:
+      scopes:
+        - member_safety_boundary
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
