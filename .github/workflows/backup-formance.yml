@@ -44,13 +44,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install PostgreSQL client 17
+      - name: Install PostgreSQL client 18
         # The runner's bundled pg_dump may be missing or older than the
-        # Formance Postgres server on Railway (Postgres 16/17). pg_dump refuses to
+        # Formance Postgres server (now Postgres 18). pg_dump refuses to
         # dump a server newer than itself, which fails the job in seconds. Install
         # the client matching the newest server from the official PostgreSQL apt
         # repository and put it first on PATH. A newer client dumps older
-        # servers fine.
+        # servers fine, so bump this whenever the server's major version moves up.
         run: |
           set -e
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -59,8 +59,8 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
 
       - name: Run Formance backup script
         id: backup
