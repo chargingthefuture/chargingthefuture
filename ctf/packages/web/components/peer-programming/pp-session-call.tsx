@@ -1,6 +1,6 @@
 'use client';
 
-// Live video session for a Peer Programming cohort. Joins the cohort's GetStream
+// Live video session for a PeerProgramming cohort. Joins the cohort's GetStream
 // (Stream) video call using credentials minted by POST /api/peer-programming/session/join,
 // and renders one video tile per participant. Camera and microphone start enabled so
 // joining puts the member on screen; they can mute/stop from the controls.

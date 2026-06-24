@@ -1,15 +1,15 @@
-# Peer Programming Profile and Deletion Contract (Draft)
+# PeerProgramming Profile and Deletion Contract (Draft)
 
 ## 1) Plugin Metadata
 
-- Plugin Name: Peer Programming
+- Plugin Name: PeerProgramming
 - Service Key (lowercase, stable): `peer-programming`
 - Owner Team: Collaboration Platform (proposed)
 - Rollout Stage: Planning
 
 ## 2) Canonical Profile Usage
 
-Rule 114 baseline: Peer Programming uses one canonical profile and plugin extension by `user_id`.
+Rule 114 baseline: PeerProgramming uses one canonical profile and plugin extension by `user_id`.
 
 - Read fields:
   - `user_id`
@@ -70,7 +70,7 @@ Rule 114 baseline: Peer Programming uses one canonical profile and plugin extens
 
 ## 5) Service-Scoped Deletion Contract
 
-When user deletes Peer Programming usage only:
+When user deletes PeerProgramming usage only:
 
 - Delete immediately:
   - `peer_programming_user_extension`
@@ -85,7 +85,7 @@ When user deletes Peer Programming usage only:
   - canonical profile
   - session data owned by other participants
 - User-facing confirmation text:
-  - “Delete Peer Programming plugin data only? Your account remains active.”
+  - “Delete PeerProgramming plugin data only? Your account remains active.”
 
 ## 6) Full-Account Deletion Contract
 
@@ -96,7 +96,7 @@ When user requests full account deletion:
 - Cross-service dependencies:
   - full-account orchestrator coordinates deletion lifecycle across all plugins
 - Final expected state:
-  - no recoverable user-scoped Peer Programming data except policy-required audit evidence
+  - no recoverable user-scoped PeerProgramming data except policy-required audit evidence
 
 ## 7) Rejoin/Re-enable Behavior
 
@@ -137,7 +137,7 @@ If user returns after service-scoped deletion:
 - Migration file(s):
   - All schema changes are made directly in `ctf/schema.sql` (canonical source of truth).
 - Rollback approach:
-  - reverse-order rollback for Peer Programming-only extension/deletion tables
+  - reverse-order rollback for PeerProgramming-only extension/deletion tables
 - Backfill required? (yes/no):
   - no
 

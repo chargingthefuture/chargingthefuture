@@ -110,7 +110,7 @@ export function DirectoryProfileDetail({
   const profileUrl = p.profileUrl?.trim() ? p.profileUrl.trim() : null;
   const headline = p.headline?.trim() ? p.headline.trim() : null;
   const bio = p.bio?.trim() ? p.bio.trim() : null;
-  // A profile nominated through Skills Hunt is community-generated; show that and who
+  // A profile nominated through SkillsHunt is community-generated; show that and who
   // nominated it instead of a generic headline.
   const isCommunityGenerated = p.source === "community-generated";
   const pendingSkills = p.pendingSkills ?? [];
@@ -204,7 +204,7 @@ export function DirectoryProfileDetail({
           )}
 
           {/* Specializations. Real taxonomy skills render as accent chips. A profile
-              nominated through Skills Hunt may also have free-text skills that are not yet
+              nominated through SkillsHunt may also have free-text skills that are not yet
               in the taxonomy (still a proposal in skills_hunt_proposed_skill_promotions);
               those render as muted "pending review" chips so the section is never empty
               just because a nominated skill has not been promoted yet. */}
@@ -218,7 +218,7 @@ export function DirectoryProfileDetail({
                 {pendingSkills.map((s) => (
                   <Badge
                     key={`pending-${s}`}
-                    title="Nominated through Skills Hunt; not yet in the skills taxonomy."
+                    title="Nominated through SkillsHunt; not yet in the skills taxonomy."
                     style={{ background: "rgba(255,255,255,0.04)", color: t.MUTED, border: `1px dashed ${t.BORDER}`, fontSize: 13, padding: "5px 12px", fontWeight: 500 }}
                   >
                     {s} <span style={{ color: t.FAINT, fontWeight: 400 }}>· pending review</span>

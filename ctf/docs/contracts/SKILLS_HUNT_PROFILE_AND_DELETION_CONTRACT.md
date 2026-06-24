@@ -1,17 +1,17 @@
-# Skills Hunt Profile and Deletion Contract (Draft)
+# SkillsHunt Profile and Deletion Contract (Draft)
 
 This draft uses `PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
 
 ## 1) Plugin Metadata
 
-- Plugin Name: Skills Hunt
+- Plugin Name: SkillsHunt
 - Service Key (lowercase, stable): `skills-hunt`
 - Owner Team: Community Growth Platform (proposed), Trust & Safety Moderation (proposed)
 - Rollout Stage: Planning (pre-runtime)
 
 ## 2) Canonical Profile Usage
 
-Skills Hunt uses canonical profile fields for account identity, role checks, and user-scoped reward/notification ownership.
+SkillsHunt uses canonical profile fields for account identity, role checks, and user-scoped reward/notification ownership.
 
 - Read fields:
   - `user_id`
@@ -77,7 +77,7 @@ Skills Hunt uses canonical profile fields for account identity, role checks, and
 
 ## 5) Service-Scoped Deletion Contract
 
-When user deletes Skills Hunt plugin usage only:
+When user deletes SkillsHunt plugin usage only:
 
 - Delete immediately:
   - user-scoped notification records in `skills_hunt_notifications`
@@ -92,20 +92,20 @@ When user deletes Skills Hunt plugin usage only:
   - Directory authoritative ownership records
   - non-user-scoped round governance records
 - User-facing confirmation text:
-  - “Delete Skills Hunt plugin data only? Your account and other services remain active.”
+  - “Delete SkillsHunt plugin data only? Your account and other services remain active.”
 
 ## 6) Full-Account Deletion Contract
 
 When user requests full account deletion:
 
 - Additional records removed vs service-scoped deletion:
-  - remaining user-linked Skills Hunt notifications and achievements
+  - remaining user-linked SkillsHunt notifications and achievements
   - user ownership links in plugin tables where hard delete is policy-allowed
 - Cross-service dependencies:
   - full-account orchestrator must coordinate canonical identity and plugin deletions
   - Directory profile ownership/claim logic remains Directory-governed
 - Final expected state:
-  - no recoverable user-scoped Skills Hunt data linked to deleted account except policy-required compliance artifacts
+  - no recoverable user-scoped SkillsHunt data linked to deleted account except policy-required compliance artifacts
 
 ## 7) Rejoin/Re-enable Behavior
 

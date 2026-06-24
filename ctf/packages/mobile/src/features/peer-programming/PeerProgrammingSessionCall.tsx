@@ -1,5 +1,5 @@
 /**
- * PeerProgrammingSessionCall — the live video call for a Peer Programming cohort on
+ * PeerProgrammingSessionCall — the live video call for a PeerProgramming cohort on
  * Android (React Native). It mirrors the working web call
  * (ctf/packages/web/components/peer-programming/pp-session-call.tsx) and reuses the
  * Chyme audio-room lifecycle pattern (ChymeAudioRoom.tsx): join the cohort's Stream

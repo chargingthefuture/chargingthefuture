@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Turn free-text "proposed" skills from accepted Skills Hunt nominations into GitHub
+// Turn free-text "proposed" skills from accepted SkillsHunt nominations into GitHub
 // issues that propose adding them to the canonical skills taxonomy, each with an
 // AI-suggested sector + occupation.
 //

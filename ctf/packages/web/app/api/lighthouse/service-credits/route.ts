@@ -51,6 +51,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'service_credits' });
-    return NextResponse.json({ ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
+    return NextResponse.json({ ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Unable to send ServiceCredits.' }, { status: 503 });
   }
 }

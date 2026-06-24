@@ -23,7 +23,7 @@ Lifecycle/governance references applied:
 2. Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters.
 3. Stream-backed room join/token flow via `POST /api/chyme/join`, using shared Stream wrappers in `packages/shared`.
 4. Service-scoped deletion request via `DELETE /api/account/chyme-profile`.
-5. Full-account deletion request initiation via `DELETE /api/account/full-account`, including Service Credits reclaim dependency queueing in existing reclaim/outbox tables.
+5. Full-account deletion request initiation via `DELETE /api/account/full-account`, including ServiceCredits reclaim dependency queueing in existing reclaim/outbox tables.
 6. Web UI surface includes participant list, join-call action, chat panel, and deletion actions.
 7. Android UI surface includes room summary, participant roster, chat send/read, join action, and deletion actions using runtime-configured provider-neutral identity headers.
 
@@ -75,7 +75,7 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 6. `service_credits_account_deletion_reclaims`
    - Downstream reclaim dependency record created when full-account deletion is requested.
 7. `service_credits_adapter_outbox`
-   - Queue used to hand the reclaim dependency to the existing Service Credits execution flow.
+   - Queue used to hand the reclaim dependency to the existing ServiceCredits execution flow.
 
 ## Security, Privacy, and Compliance Controls (Target)
 
@@ -84,7 +84,7 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 3. Identity handle source is the canonical auth-provider username/handle for username/`@mention` semantics, aligned to `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`.
 4. Message payloads are trimmed server-side and rejected when empty.
 5. Service deletion runs in transaction and records deletion event for audit trail.
-6. Full-account endpoint records the Chyme deletion request and queues the downstream Service Credits reclaim dependency.
+6. Full-account endpoint records the Chyme deletion request and queues the downstream ServiceCredits reclaim dependency.
 7. Stream integration is routed through shared wrappers/adapters in `ctf/packages/shared`.
 
 ## Web and Android Delivery Status
@@ -129,7 +129,7 @@ Current status:
 - 2026-05-29: Design-sync reconcile to `c5d83c0`. Removed user-facing "GetStream" wording from `chyme-live-shell`: "Social Audio · GetStream Powered" → "Social Audio · End-to-End Encrypted", the chat "GetStream" badge → "Encrypted", and "Audio via GetStream" → "Audio — encrypted". Copy-only.
 - 2026-05-29: Web UI circle-back. Aligned `chyme-live-shell` to the `Chyme.tsx` mockup by replacing emoji glyphs with the mockup's lucide-react icons (Radio, Mic/MicOff, Hand, Phone, MessageSquare, Hash, Send, Volume2, Users, Lock, RefreshCw); structure and palette already matched. API wiring unchanged.
 - 2026-05-17: Updated inventory to enforce Rule 120 living-snapshot model. Removed Phase language (Delivery Phasing section); confirmed implementation is complete across web and Android. Renamed section to "Gaps and Known Technical Debt" (Rule 120 format).
-- 2026-04-05: Completed Android parity on the real Chyme API surface, queued Service Credits reclaim dependency on full-account delete, and aligned Chyme docs to `ctf/schema.sql` plus shared Stream wrappers.
+- 2026-04-05: Completed Android parity on the real Chyme API surface, queued ServiceCredits reclaim dependency on full-account delete, and aligned Chyme docs to `ctf/schema.sql` plus shared Stream wrappers.
 - 2026-02-25: Created initial Chyme CTF rewrite inventory and documented governance/parity requirements.
 
 
@@ -231,4 +231,4 @@ Current status:
 - 2026-03-01: Replaced implemented-baseline validation checklist with fresh-start implementation checklist and baseline prerequisite gate.
 - 2026-03-01: Completed Phase 0 web/API/migration/policy/audit scope and recorded Android parity deferment owner/date.
 - 2026-03-02: Added Chyme closure handoff evidence and second-pass runtime de-scaffolding updates (join call state persistence).
-- 2026-04-05: Closed Android deferment, wired Service Credits reclaim dependency queueing for full-account delete, and added release evidence for schema/quota/validation alignment.
+- 2026-04-05: Closed Android deferment, wired ServiceCredits reclaim dependency queueing for full-account delete, and added release evidence for schema/quota/validation alignment.

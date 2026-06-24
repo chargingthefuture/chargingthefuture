@@ -1,4 +1,4 @@
-// Service Credits transaction support
+// ServiceCredits transaction support
 export type ChymeServiceCreditsTransaction = {
   id: string;
   fromUserId: string;

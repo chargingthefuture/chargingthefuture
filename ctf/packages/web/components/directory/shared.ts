@@ -25,7 +25,7 @@ export interface Member {
   sector: string;
   jobTitle: string;
   skills: string[];
-  // Free-text skills nominated through Skills Hunt that are not yet in the taxonomy.
+  // Free-text skills nominated through SkillsHunt that are not yet in the taxonomy.
   // Rendered as muted "pending review" chips so a community-generated profile is never
   // empty. Optional so list payloads that omit it still typecheck.
   pendingSkills?: string[];
@@ -36,7 +36,7 @@ export interface Member {
   profileUrl?: string | null;
   headline?: string | null;
   bio?: string | null;
-  // 'community-generated' marks a profile nominated through Skills Hunt; invitedByUsername is
+  // 'community-generated' marks a profile nominated through SkillsHunt; invitedByUsername is
   // the nominating scout's handle. Both drive the "Community-generated profile / Nominated by
   // @handle" label. Optional so list payloads that omit them still typecheck.
   source?: string | null;

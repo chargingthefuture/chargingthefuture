@@ -1,6 +1,6 @@
-# Service Credits Plugin Artifacts
+# ServiceCredits Plugin Artifacts
 
-This index links to canonical artifacts for Service Credits.
+This index links to canonical artifacts for ServiceCredits.
 
 ## Contracts
 - [Command Contracts(../../contracts/SERVICE_CREDITS_PLUGIN_COMMAND_CONTRACTS.yaml)

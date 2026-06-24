@@ -10,14 +10,14 @@ import {
 } from "./foundation-ui";
 
 const INFO_MSGS = [
-  { id: 1, text: "Foundation connects you with trade providers from the community — electricians, plumbers, carpenters, and more. Pay with Service Credits. What do you need help with?" },
+  { id: 1, text: "Foundation connects you with trade providers from the community — electricians, plumbers, carpenters, and more. Pay with ServiceCredits. What do you need help with?" },
   { id: 2, text: "Search by trade or keyword, then open a provider to request a quote.", action: "Browse Providers" },
 ];
 
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
   "Get quotes from community providers",
-  "Accept a quote and pay with Service Credits",
+  "Accept a quote and pay with ServiceCredits",
 ];
 
 export function BrowsePanel({

@@ -140,7 +140,7 @@ export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmi
         label="Monthly rent"
         value={form.monthlyRent}
         onChange={(v) => setField('monthlyRent', v)}
-        placeholder="0 for Service Credits / free"
+        placeholder="0 for ServiceCredits / free"
         keyboardType="numeric"
       />
       <Field

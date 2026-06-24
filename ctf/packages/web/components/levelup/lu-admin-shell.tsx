@@ -4,7 +4,7 @@
 //
 // Binds only endpoints that exist today:
 //   - GET  /api/levelup/cohorts               (cohort list, read access)
-//   - POST /api/levelup/admin/adjust-credits  (admin Service Credits adjustment)
+//   - POST /api/levelup/admin/adjust-credits  (admin ServiceCredits adjustment)
 //
 // KPIs are rendered from the server-fetched panel data (no read API exists for
 // them yet — see the inventory's Gaps section). The cohort list is read-only
@@ -92,7 +92,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
   }, [loadCohorts]);
 
   const parsedAmount = Number(amountText);
-  // Grant-only: LevelUp never removes a member's Service Credits from the UI
+  // Grant-only: LevelUp never removes a member's ServiceCredits from the UI
   // ("earn or earn nothing"). Only a positive amount is accepted here.
   const amountValid = amountText.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount > 0;
   const formReady =
@@ -136,7 +136,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
       return;
     }
     setNotice(
-      `Grant recorded: +${magnitude} Service Credits for member ${targetUserId.trim()}.`,
+      `Grant recorded: +${magnitude} ServiceCredits for member ${targetUserId.trim()}.`,
     );
     setTargetUserId('');
     setAmountText('');
@@ -199,11 +199,11 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
           )}
         </div>
 
-        {/* Service Credits grant (grant-only — never removes credits) */}
+        {/* ServiceCredits grant (grant-only — never removes credits) */}
         <div style={{ padding: '16px 18px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Grant member Service Credits</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Grant member ServiceCredits</h2>
           <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
-            LevelUp only ever grants Service Credits to a member — it never removes them. Enter an
+            LevelUp only ever grants ServiceCredits to a member — it never removes them. Enter an
             amount greater than zero. Every grant is recorded against a governance ticket and is
             written to the audit log.
           </p>
@@ -267,7 +267,7 @@ export function LevelupAdminShell({ kpis }: { kpis: AdminKpis }) {
           {confirming ? (
             <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)' }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: '#FBBF24', marginBottom: 4 }}>
-                Confirm: this will add {magnitude} Service Credits to member {targetUserId.trim()}.
+                Confirm: this will add {magnitude} ServiceCredits to member {targetUserId.trim()}.
               </p>
               <p style={{ fontSize: 12, color: 'rgba(251,191,36,0.85)', marginBottom: 12 }}>
                 Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}

@@ -123,7 +123,7 @@ export function ServiceCredits() {
             <Text style={{ fontSize: 18 }}>⚡</Text>
           </View>
           <View>
-            <Text style={styles.headerTitle}>Service Credits</Text>
+            <Text style={styles.headerTitle}>ServiceCredits</Text>
             <Text style={styles.headerSubtitle}>Utility token ecosystem</Text>
           </View>
         </View>

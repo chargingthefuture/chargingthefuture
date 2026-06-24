@@ -57,9 +57,9 @@ Each agent handoff should include:
 
 1. **Checkpoint BF (end Phase -1):** Lock baseline auth + deployment assumptions for Clerk, Railway, Vercel, and Expo.
 2. **Checkpoint A (end Phase 0):** Lock and publish stable consumer contracts for Chyme, Taxonomy, Directory, and Feed/Announcements.
-3. **Checkpoint B (mid Phase 1):** Verify downstream adapters (Workforce, Skills Hunt, Foundation) against frozen upstream contracts.
+3. **Checkpoint B (mid Phase 1):** Verify downstream adapters (Workforce, SkillsHunt, Foundation) against frozen upstream contracts.
 4. **Checkpoint C (Phase 2 ongoing):** Run shared deny-taxonomy and parity drift checks across independent plugin teams.
-5. **Checkpoint D (Phase 3):** Validate finance/accounting semantics between GDP and Service Credits before release-candidate cut.
+5. **Checkpoint D (Phase 3):** Validate finance/accounting semantics between GDP and ServiceCredits before release-candidate cut.
 
 ## Dispatch notes
 

@@ -25,6 +25,6 @@ export async function GET() {
     return NextResponse.json({ ok: true, cohorts: cohortsWithMembers });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'admin-cohorts' });
-    return peerProgrammingErrorResponse(error, 'Peer programming cohorts unavailable.');
+    return peerProgrammingErrorResponse(error, 'PeerProgramming cohorts unavailable.');
   }
 }

@@ -1,6 +1,6 @@
-# Peer Programming Plugin Artifacts
+# PeerProgramming Plugin Artifacts
 
-This index links to canonical artifacts for Peer Programming.
+This index links to canonical artifacts for PeerProgramming.
 
 ## Contracts
 - [Command Contracts(../../contracts/PEER_PROGRAMMING_PLUGIN_COMMAND_CONTRACTS.yaml)

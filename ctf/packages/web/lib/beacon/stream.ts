@@ -12,7 +12,7 @@ import { BEACON_CHAT_CHANNEL_TYPE, BEACON_STREAM_CALL_TYPE } from './constants';
 // end), the per-event RTMP ingest, and the HLS playback URL are driven against Stream's documented
 // Video REST API using a server-auth JWT signed with the app secret. Every entry point degrades to
 // null/throw-free behavior when Stream is not configured (resolveStreamCredentials() returns null),
-// exactly like the Peer Programming stream helper.
+// exactly like the PeerProgramming stream helper.
 
 const STREAM_VIDEO_BASE_URL = 'https://video.stream-io-api.com';
 

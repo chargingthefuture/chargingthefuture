@@ -21,7 +21,7 @@ export const LighthousePublicState: React.FC<Props> = ({ onSignIn, onJoin }) => 
     </View>
     <Text style={styles.description}>
       Safe, verified housing. Your location is never shared without consent.
-      Trauma-informed hosts. Service Credits accepted.
+      Trauma-informed hosts. ServiceCredits accepted.
     </Text>
     <TouchableOpacity style={styles.joinBtn} activeOpacity={0.8} onPress={onJoin}>
       <Text style={styles.joinBtnText}>Join the Hub — Free</Text>

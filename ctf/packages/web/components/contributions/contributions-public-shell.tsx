@@ -21,7 +21,7 @@ const PREVIEW_GOALS = [
 ];
 
 const INTRO =
-  'The platform is free and will stay that way. Members who are able can help with infrastructure costs through gift cards, a Quora comment, or a GitHub star. Every contribution is private and confirmed contributions earn Service Credits as a thank-you.';
+  'The platform is free and will stay that way. Members who are able can help with infrastructure costs through gift cards, a Quora comment, or a GitHub star. Every contribution is private and confirmed contributions earn ServiceCredits as a thank-you.';
 
 function GoalBar({
   label,

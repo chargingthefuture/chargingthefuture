@@ -52,7 +52,7 @@ export interface Property {
   rentCurrency?: string | null;
   // Currencies this listing accepts (currencies.code). Independent of rentCurrency.
   acceptedCurrencies?: string[];
-  // Computed server-side: listing accepts ServiceCredits. Drives the "Accepts Service Credits" badge.
+  // Computed server-side: listing accepts ServiceCredits. Drives the "Accepts ServiceCredits" badge.
   acceptsServiceCredits?: boolean;
   // Legacy alias kept for older call sites; prefer acceptsServiceCredits.
   credits?: boolean;

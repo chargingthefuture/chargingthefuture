@@ -5,7 +5,7 @@
 - Plugin name: `SocketRelay`
 - Plugin slug: `socketrelay`
 - Owned surfaces: `/apps/socketrelay` (web), `packages/mobile/src/features/socketrelay` (Android), `/api/socketrelay/*` routes, `socketrelay_*` tables.
-- Not owned: identity (Clerk), service credits ledger (service-credits plugin), email/SMS transport (notifications integration).
+- Not owned: identity (Clerk), ServiceCredits ledger (service-credits plugin), email/SMS transport (notifications integration).
 
 ## Intent and Outcome
 

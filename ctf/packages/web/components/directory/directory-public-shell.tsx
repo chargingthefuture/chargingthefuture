@@ -62,14 +62,14 @@ function DesktopDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
         </div>
       </div>
 
-      {/* Skills Hunt pinned reward card */}
+      {/* SkillsHunt pinned reward card */}
       <div style={{ margin: '0 64px 28px', padding: '20px 24px', borderRadius: 16, background: `linear-gradient(135deg, ${HUNT_COLOR}12 0%, rgba(59,130,246,0.06) 100%)`, border: `1px solid ${HUNT_COLOR}30`, display: 'flex', gap: 20, alignItems: 'center' }}>
         <div style={{ width: 48, height: 48, borderRadius: 14, background: `${HUNT_COLOR}20`, border: `1px solid ${HUNT_COLOR}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Search size={22} style={{ color: HUNT_COLOR }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: TEXT }}>Skills Hunt — Community Reward</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: TEXT }}>SkillsHunt — Community Reward</div>
           </div>
           <div style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.5 }}>
             Know a survivor with skills the community needs? Sign in to submit their public profile and help grow the Directory. Earn points, badges, and prizes.
@@ -112,13 +112,13 @@ function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 
-      {/* Skills Hunt pinned reward card */}
+      {/* SkillsHunt pinned reward card */}
       <div style={{ margin: '0 16px 16px', padding: '14px 16px', borderRadius: 14, background: `linear-gradient(135deg, ${HUNT_COLOR}12 0%, rgba(59,130,246,0.05) 100%)`, border: `1px solid ${HUNT_COLOR}30` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: `${HUNT_COLOR}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Search size={14} style={{ color: HUNT_COLOR }} />
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: TEXT }}>Skills Hunt</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: TEXT }}>SkillsHunt</div>
         </div>
         <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5, marginBottom: 10 }}>
           Know a survivor? Sign in to submit their public profile and help grow the Directory. Earn points &amp; badges.

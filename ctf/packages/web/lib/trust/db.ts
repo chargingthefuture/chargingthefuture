@@ -52,12 +52,12 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 //   - service_credits_*        → completed transfers received + distinct payers; disputes withhold clean-record
 //   - lighthouse_matches       → accepted/completed LightHouse matches
 //   - trusttransport_trips     → completed TrustTransport trips
-//   - skills_hunt_submissions  → accepted Skills Hunt submissions
+//   - skills_hunt_submissions  → accepted SkillsHunt submissions
 //   - levelup_enrollments      → completed LevelUp cohorts
 //   - chyme_room_members       → Chyme rooms joined
 //   - directory_profiles       → claimed Directory profile
 //   - whatworks_endorsements   → WhatWorks endorsements
-//   - peer_programming_cohort_members → Peer Programming cohorts joined
+//   - peer_programming_cohort_members → PeerProgramming cohorts joined
 //   - contributions_submissions→ confirmed contributions
 //   - foundation_connection_threads → connections where the member is the PROVIDER (provider side only)
 // Only coarse COUNTs are read — never amounts, balances, or sensitive per-row detail — and no numeric
@@ -266,12 +266,12 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
   const participationSignals: { count: number; type: string; verb: string; singular: string; plural: string }[] = [
     { count: metrics.lighthouseMatchesAccepted, type: 'engagement-lighthouse-matches', verb: 'Accepted', singular: 'LightHouse match', plural: 'LightHouse matches' },
     { count: metrics.trustTransportTripsCompleted, type: 'engagement-trusttransport-trips', verb: 'Completed', singular: 'TrustTransport trip', plural: 'TrustTransport trips' },
-    { count: metrics.skillsHuntSubmissionsAccepted, type: 'engagement-skillshunt-submissions', verb: 'Accepted', singular: 'Skills Hunt submission', plural: 'Skills Hunt submissions' },
+    { count: metrics.skillsHuntSubmissionsAccepted, type: 'engagement-skillshunt-submissions', verb: 'Accepted', singular: 'SkillsHunt submission', plural: 'SkillsHunt submissions' },
     { count: metrics.levelupCohortsCompleted, type: 'engagement-levelup-cohorts', verb: 'Completed', singular: 'LevelUp cohort', plural: 'LevelUp cohorts' },
     { count: metrics.chymeRoomsJoined, type: 'engagement-chyme-rooms', verb: 'Joined', singular: 'Chyme room', plural: 'Chyme rooms' },
     { count: metrics.directoryProfilesClaimed, type: 'engagement-directory-profile', verb: 'Claimed', singular: 'Directory profile', plural: 'Directory profiles' },
     { count: metrics.whatWorksEndorsements, type: 'engagement-whatworks-endorsements', verb: 'Endorsed', singular: 'WhatWorks product', plural: 'WhatWorks products' },
-    { count: metrics.peerProgrammingCohortsJoined, type: 'engagement-peerprogramming-cohorts', verb: 'Joined', singular: 'Peer Programming cohort', plural: 'Peer Programming cohorts' },
+    { count: metrics.peerProgrammingCohortsJoined, type: 'engagement-peerprogramming-cohorts', verb: 'Joined', singular: 'PeerProgramming cohort', plural: 'PeerProgramming cohorts' },
     { count: metrics.contributionsConfirmed, type: 'engagement-contributions', verb: 'Confirmed', singular: 'contribution', plural: 'contributions' },
     { count: metrics.foundationConnectionsAsProvider, type: 'engagement-foundation-provider', verb: 'Connected with', singular: 'member as a Foundation provider', plural: 'members as a Foundation provider' },
   ];
