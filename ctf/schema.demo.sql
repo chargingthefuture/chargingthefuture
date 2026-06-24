@@ -2708,6 +2708,9 @@ CREATE TABLE IF NOT EXISTS foundation_user_extension (
   accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb,
   trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb,
   service_deleted_at TIMESTAMPTZ,
+  instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  instant_call_rate_credits INTEGER,
+  instant_call_interval_minutes INTEGER NOT NULL DEFAULT 10,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
@@ -2717,6 +2720,14 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessi
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Foundation instant 1:1 call opt-in (issue #808): a provider may opt in to take an immediate,
+-- paid, time-metered live call. instant_call_enabled is the on/off switch; instant_call_rate_credits
+-- is the whole-number ServiceCredits charge per block (nullable, only meaningful when enabled, >= 1
+-- enforced in the app); instant_call_interval_minutes is the per-block length in minutes (default 10).
+-- The ring/call/billing live in later tasks — these columns only hold the provider's settings.
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_rate_credits INTEGER;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_interval_minutes INTEGER NOT NULL DEFAULT 10;
 -- Multi-currency (issue #120): a Foundation provider can list a service rate on their profile.
 -- rate_amount is the listed amount; rate_currency names its currency (FK -> currencies.code). The quote
 -- process stays free-text/manual this version (no structured quote amount). "Accepts ServiceCredits" is a
@@ -3821,6 +3832,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_adapter_outbox_command_idem
   ON service_credits_adapter_outbox (command_name, idempotency_key);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_command_idempotency_actor_command_idem
   ON service_credits_command_idempotency (actor_id, command_name, idempotency_key);
+-- Same gap on the account-deletion reclaim insert: markFullAccountDeletionRequested upserts the
+-- reclaim row with `ON CONFLICT (account_id, deletion_request_id)`, but that unique index was never
+-- created either — so every full-account deletion (self-service and the operator delete-account
+-- workflow) threw "no unique or exclusion constraint matching the ON CONFLICT specification" at the
+-- reclaim step and never completed. Add the missing index.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_account_deletion_reclaims_account_request
+  ON service_credits_account_deletion_reclaims (account_id, deletion_request_id);
 DO $sc_cmd_idem_command_nullable$
 BEGIN
   IF EXISTS (
@@ -4549,6 +4567,76 @@ ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS updated_at
 CREATE UNIQUE INDEX IF NOT EXISTS member_plugin_presence_unique_ref_idx
   ON member_plugin_presence (user_id, plugin_slug, ref_type, ref_id);
 CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_presence (user_id);
+
+-- member_blocks: product-wide, cross-cutting member blocking (issue #809, owner-signed model
+-- 2026-06-24). One member (blocker_user_id) blocks another (blocked_user_id). A block is created
+-- one-way and is invisible to the blocked person, but enforcement is SYMMETRIC: once A blocks B,
+-- neither A nor B can see or contact the other on any member-to-member surface. The shared helper
+-- `isBlockedBetween(a, b)` (ctf/packages/web/lib/blocks/repository.ts) is the single check every
+-- surface consults, mirroring how unlock gating is one shared check.
+--
+-- No `reason` column: ordinary blocks are private and the admin never reads them. A member may block
+-- anyone for any reason. The optional "report as suspected predator/trafficker" escalation is a
+-- SEPARATE mechanism (a member safety report kept apart from this table) built in a later task; it is
+-- deliberately not stored here so ordinary blocks stay out of the admin's view.
+--
+-- user_id columns are TEXT to line up with the user-id type used elsewhere (e.g.
+-- foundation_provider_skills.user_id, directory_profiles.claimed_by_user_id) so joins/casts match.
+CREATE TABLE IF NOT EXISTS member_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  blocker_user_id TEXT NOT NULL,
+  blocked_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT member_blocks_blocker_blocked_unique UNIQUE (blocker_user_id, blocked_user_id),
+  CONSTRAINT member_blocks_no_self_block CHECK (blocker_user_id <> blocked_user_id)
+);
+
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS blocker_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS blocked_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Converge a legacy table that predates the unique constraint / self-block check. Guarded so a fresh
+-- table (which already has them from CREATE TABLE) does not double-add, and a legacy one gains them.
+DO $member_blocks_unique_constraint$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'member_blocks_blocker_blocked_unique'
+      AND table_name = 'member_blocks'
+  ) THEN
+    BEGIN
+      ALTER TABLE member_blocks
+        ADD CONSTRAINT member_blocks_blocker_blocked_unique UNIQUE (blocker_user_id, blocked_user_id);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$member_blocks_unique_constraint$;
+
+DO $member_blocks_no_self_block$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'member_blocks_no_self_block'
+  ) THEN
+    BEGIN
+      ALTER TABLE member_blocks
+        ADD CONSTRAINT member_blocks_no_self_block CHECK (blocker_user_id <> blocked_user_id);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$member_blocks_no_self_block$;
+
+-- The symmetric lookup (`WHERE (blocker=$1 AND blocked=$2) OR (blocker=$2 AND blocked=$1)`) runs on
+-- many hot paths, so index it both ways. The unique constraint already covers the
+-- (blocker_user_id, blocked_user_id) direction; this composite index covers the reverse direction so
+-- the OR-query is index-served regardless of which user is the blocker.
+CREATE INDEX IF NOT EXISTS member_blocks_blocked_blocker_idx
+  ON member_blocks (blocked_user_id, blocker_user_id);
 COMMIT;
 
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──
