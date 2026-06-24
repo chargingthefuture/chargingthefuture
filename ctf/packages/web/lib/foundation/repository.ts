@@ -614,6 +614,52 @@ export async function sendMessageToThread(input: {
   });
 }
 
+// Re-mint fresh Stream credentials for a member opening an existing connection thread's Direct Line.
+// The caller must be a participant of the thread (the survivor or the provider); otherwise this
+// throws 'thread_not_found' so a non-participant cannot learn the channel id. No new Stream channel
+// is created here — the channel already exists from the Request-Quote handoff; this only looks up the
+// thread's stream_channel_id and issues a token for this member.
+export async function getThreadCredentialsForParticipant(input: {
+  threadId: string;
+  actorUserId: string;
+  actorDisplayName: string;
+}): Promise<{
+  streamApiKey: string;
+  streamUserId: string;
+  streamToken: string;
+  streamChannelId: string;
+}> {
+  return withDbTransaction(async (client) => {
+    const thread = await client.query<{ stream_channel_id: string }>(
+      `
+        SELECT t.stream_channel_id
+        FROM foundation_connection_threads t
+        JOIN foundation_thread_participants p ON p.thread_id = t.id
+        WHERE t.id = $1::uuid
+          AND p.user_id = $2
+        LIMIT 1
+      `,
+      [input.threadId, input.actorUserId],
+    );
+
+    if (thread.rows.length === 0) {
+      throw new Error('thread_not_found');
+    }
+
+    const credentials = await createFoundationParticipantToken(input.actorUserId, input.actorDisplayName);
+    if (!credentials) {
+      throw new Error('stream_unavailable');
+    }
+
+    return {
+      streamApiKey: credentials.streamApiKey,
+      streamUserId: credentials.streamUserId,
+      streamToken: credentials.streamToken,
+      streamChannelId: thread.rows[0].stream_channel_id,
+    };
+  });
+}
+
 async function assertCallParticipantThread(client: PoolClient, threadId: string, actorUserId: string): Promise<void> {
   const thread = await client.query<FoundationThreadRow>(
     `
