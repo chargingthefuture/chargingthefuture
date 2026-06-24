@@ -116,8 +116,12 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - `POST /api/beacon` — create an event (draft).
 - `GET /api/beacon/[id]/ingest` — return the per-event RTMP ingest URL + stream key (for the phone
   broadcaster app) and a host token (for desktop in-browser screen-share). Admin-only.
-- `POST /api/beacon/[id]/go-live` — host token + `goLive()`; flips status to `live`; auto-posts to
-  Commons.
+- `POST /api/beacon/[id]/go-live` — flip the call out of backstage (`goLive` with an empty body, no
+  HLS/recording yet); flips status to `live`; auto-posts to Commons. The host stage mounts after this
+  succeeds, so there is no publisher yet — HLS/recording start later via `start-broadcast`.
+- `POST /api/beacon/[id]/start-broadcast` — start the public HLS broadcast + recording once a host is
+  publishing media to the call (called by the in-browser screen-share when sharing begins). Admin-only,
+  idempotent.
 - `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
 - `GET /api/beacon/admin` — list events.
 - `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat.
@@ -288,3 +292,18 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   the live/replay/idle logic, and the member-only chat behavior are unchanged. Also recorded the
   missing `expo-video` entry in `pnpm-lock.yaml` (its `package.json` specifier was added with the
   viewer but the lockfile had not been updated), so a frozen-lockfile install resolves it.
+- 2026-06-24: Fixed go-live so a broadcast can actually start (branch
+  `fix/beacon-go-live-egress-timing`). The bug: `go-live` asked Stream to start HLS + recording at the
+  moment the admin clicked "Go live", but the in-browser screen-share host mounts only after go-live
+  succeeds, so there was no publisher yet and Stream rejected the request — every broadcast failed with a
+  generic "Could not start the broadcast." Now `goLiveBeaconCall` only flips the call out of backstage
+  (empty body, no HLS/recording), and a new `startBeaconBroadcastEgress` plus the new admin route
+  `POST /api/beacon/[id]/start-broadcast` start HLS + recording once a host is actually publishing —
+  triggered automatically the first time the in-browser screen-share goes live (a once-per-session
+  guard, errors swallowed since egress is additive). Both admin error paths now surface the underlying
+  Stream message instead of the generic text. Also: when the ingest fetch fails, the admin shell stops
+  before calling go-live (it no longer overwrites the real error), and selecting an event (Open / Create
+  draft) scrolls the Broadcast section into view so mobile users see the change. Added the
+  `event.start-broadcast` command, access-policy, and audit contract entries. Note: HLS/recording are
+  started once when a publisher is present (replacing the call that always failed), so net Stream usage
+  is unchanged-to-positive with no new recurring calls.

@@ -3,7 +3,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Hammer, FileText, Wrench } from "lucide-react";
+import { Hammer, FileText, Wrench, MessageSquare } from "lucide-react";
 import {
   COLOR, initials, quoteStatus, formatQuoteDate,
   type ProviderView, type QuoteView,
@@ -96,10 +96,11 @@ export function BrowsePanel({
 }
 
 export function QuotesPanel({
-  quotes, onBrowse,
+  quotes, onBrowse, onOpenDirectLine,
 }: {
   quotes: QuoteView[];
   onBrowse: () => void;
+  onOpenDirectLine: (quote: QuoteView) => void;
 }) {
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
@@ -141,6 +142,12 @@ export function QuotesPanel({
                     <div style={{ fontSize: 12, color: "#6B7280" }}>Requested {formatQuoteDate(q.createdAtIso)}</div>
                   </div>
                   <Badge style={{ background: status.bg, color: status.fg, border: `1px solid ${status.bd}`, fontSize: 11 }}>{status.label}</Badge>
+                  <button
+                    onClick={() => onOpenDirectLine(q)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    <MessageSquare size={14} /> Direct Line
+                  </button>
                 </div>
               );
             })}

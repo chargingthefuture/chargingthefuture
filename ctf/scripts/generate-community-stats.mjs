@@ -52,9 +52,10 @@ const pool = new Pool({
  * that throws is skipped with a note rather than failing the whole draft, so a
  * missing table on a legacy database can't block the post.
  *
- * SocketRelay and Directory are the two flagship signals. Marketplace plugins
- * (LightHouse, Foundation, TrustTransport, Workforce) are easy follow-ups —
- * add them the same way once their headline count is chosen.
+ * SocketRelay and Directory are the two flagship signals; Service Credits adds
+ * the community-currency signal. Other marketplace plugins (LightHouse,
+ * Foundation, TrustTransport, Workforce) are easy follow-ups — add them the
+ * same way once their headline count is chosen.
  */
 const STAT_PROVIDERS = [
   {
@@ -114,6 +115,32 @@ const STAT_PROVIDERS = [
         facts.push({ label: 'most listed skills right now', value: named });
       }
       return facts;
+    },
+  },
+  {
+    slug: 'service-credits',
+    displayName: 'Service Credits',
+    async collect(client) {
+      // Service Credits is the community's internal currency. Every query here is a
+      // whole-community aggregate — a count of wallets, the total members are holding, and how
+      // many balances moved this week. No individual wallet, balance, or transfer is exposed.
+      const holders = await client.query(
+        `SELECT COUNT(*)::int AS n FROM service_credits_wallets WHERE available_balance > 0`,
+      );
+      // It is mutual credit, so balances can go negative and the system nets to about zero — a
+      // raw SUM would read as ~0. Sum only the positive balances to show what members are holding.
+      const held = await client.query(
+        `SELECT COALESCE(SUM(GREATEST(available_balance, 0)), 0)::int AS n FROM service_credits_wallets`,
+      );
+      const activeThisWeek = await client.query(
+        `SELECT COUNT(*)::int AS n FROM service_credits_wallets
+         WHERE updated_at >= NOW() - INTERVAL '7 days'`,
+      );
+      return [
+        { label: 'members holding Service Credits', value: holders.rows[0].n },
+        { label: 'Service Credits members are holding right now', value: held.rows[0].n },
+        { label: 'members whose Service Credits balance changed in the last 7 days', value: activeThisWeek.rows[0].n },
+      ];
     },
   },
 ];

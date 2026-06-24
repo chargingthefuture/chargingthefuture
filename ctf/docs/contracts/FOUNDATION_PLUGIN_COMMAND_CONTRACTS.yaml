@@ -70,6 +70,31 @@ contracts:
     idempotency: true
 
   - pluginId: foundation
+    command: foundation.connection.thread.token.create
+    version: 1.0.0
+    description: Re-mint fresh Stream credentials for a participant re-opening an existing connection thread's Direct Line. Creates no new channel; only issues a token for the already-existing channel.
+    inputSchema:
+      threadId:
+        type: string
+        required: true
+    outputSchema:
+      streamApiKey:
+        type: string
+      streamUserId:
+        type: string
+      streamToken:
+        type: string
+      streamChannelId:
+        type: string
+    dataAccess:
+      - foundation_connection_threads
+      - foundation_thread_participants
+      - stream_chat_channel_metadata
+    purpose: survivor_provider_communication
+    retentionClass: communication_short_lived
+    idempotency: true
+
+  - pluginId: foundation
     command: foundation.connection.message.send
     version: 1.0.0
     description: Send a 1:1 text message in a Foundation connection thread through shared Stream adapters.

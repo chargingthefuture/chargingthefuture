@@ -110,6 +110,23 @@ contracts:
     idempotency: true
 
   - pluginId: beacon
+    command: event.start-broadcast
+    version: 1.0.0
+    description: Start the public HLS broadcast and recording once a host is publishing media to the livestream call. Admin-only. Idempotent.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: event_lifecycle
+    idempotency: true
+
+  - pluginId: beacon
     command: event.end
     version: 1.0.0
     description: End the broadcast, stop the Stream call so video billing stops, and flip the event to ended. Admin-only.

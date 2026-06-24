@@ -12,7 +12,7 @@
 // Binds the Beacon API routes: POST /api/beacon, GET /api/beacon/admin, GET /api/beacon/[id]/ingest,
 // POST /api/beacon/[id]/go-live, POST /api/beacon/[id]/end, POST /api/beacon/[id]/moderate, and the
 // member chat token route for the admin's own chat view.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Radio, Copy, Check } from 'lucide-react';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
@@ -89,6 +89,7 @@ export function BeaconAdminShell() {
   const [chat, setChat] = useState<ChatCredentials | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [moderateTarget, setModerateTarget] = useState('');
+  const broadcastSectionRef = useRef<HTMLElement | null>(null);
 
   const loadEvents = useCallback(async () => {
     const res = await fetch('/api/beacon/admin', { cache: 'no-store' });
@@ -110,6 +111,15 @@ export function BeaconAdminShell() {
   }, [loadEvents]);
 
   const activeEvent = events.find((event) => event.id === activeEventId) ?? null;
+
+  // When an event is selected (Open in the history list, or Create draft), scroll the Broadcast
+  // section into view. On mobile the Broadcast section renders above the Event history, so without
+  // this the selection happens off-screen and Open looks like it did nothing.
+  useEffect(() => {
+    if (activeEventId && broadcastSectionRef.current) {
+      broadcastSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeEventId]);
 
   const createEvent = useCallback(async () => {
     if (title.trim().length === 0) {
@@ -152,6 +162,9 @@ export function BeaconAdminShell() {
     setError(null);
     setNotice(null);
     const data = await loadIngest(eventId);
+    // Ingest failed (loadIngest already set the error banner). Stop here — calling go-live now would
+    // overwrite the real ingest error with a generic one and try to go live on a call that is not set up.
+    if (!data) return;
     const result = await adminMutate<{ event: BeaconEvent }>(`/api/beacon/${eventId}/go-live`, 'POST');
     if (!result.ok) {
       setError(result.message ?? 'Could not start the broadcast.');
@@ -243,7 +256,7 @@ export function BeaconAdminShell() {
         </section>
 
         {activeEvent && activeEvent.status !== 'ended' ? (
-          <section style={cardStyle}>
+          <section ref={broadcastSectionRef} style={cardStyle}>
             <h2 style={cardTitleStyle}>Broadcast: {activeEvent.title}</h2>
             {activeEvent.status === 'draft' ? (
               <button type="button" onClick={() => void goLive(activeEvent.id)} style={primaryButtonStyle}>Go live</button>
@@ -262,7 +275,7 @@ export function BeaconAdminShell() {
             {host ? (
               <div style={{ marginTop: 18 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
-                <BeaconHostStage credentials={host} />
+                <BeaconHostStage credentials={host} eventId={activeEvent.id} />
               </div>
             ) : null}
 
