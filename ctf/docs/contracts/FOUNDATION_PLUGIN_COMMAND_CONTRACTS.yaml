@@ -31,10 +31,19 @@ contracts:
         type: string
       rankingSignals:
         type: object
+      viewerUserId:
+        type: string
+      instantCallEnabled:
+        type: boolean
+      instantCallRateCredits:
+        type: integer
+      instantCallIntervalMinutes:
+        type: integer
     dataAccess:
       - foundation_provider_search_index
       - directory_provider_profiles_read_model
       - directory_service_regions_read_model
+      - foundation_user_extension
     purpose: survivor_provider_matching
     retentionClass: derived_short_lived
     idempotency: true
@@ -487,3 +496,5 @@ changelog:
     change: Initial Foundation v1 command contracts added for provider search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting, and capacity governance.
   - date: 2026-06-24
     change: Added provider instant 1:1 call settings commands (foundation.provider.instant-call.get / .set, issue #808) — the provider opt-in toggle, rate in ServiceCredits, and per-block interval. Settings only; no call or billing logic.
+  - date: 2026-06-24
+    change: foundation.search.providers now also returns each provider's read-only instant-call availability (instantCallEnabled, instantCallRateCredits, instantCallIntervalMinutes) read from foundation_user_extension, plus viewerUserId so the client can hide "Connect now" on the viewer's own card (Foundation "Connect now" button, issue #808). Read-only; the call lifecycle and billing are later tasks of #808.

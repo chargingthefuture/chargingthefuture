@@ -82,9 +82,16 @@ type FoundationProviderRow = {
   bio: string | null;
   score: number;
   offered_skills: { id: string; name: string }[] | null;
+  instant_call_enabled: boolean | null;
+  instant_call_rate_credits: number | null;
+  instant_call_interval_minutes: number | null;
 };
 
 function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchItem {
+  // The instant-call fields are a read-only mirror of the provider's own settings (Foundation
+  // "Connect now", issue #808). A provider with no foundation_user_extension row reads the off
+  // default. The rate is only meaningful when enabled; the call lifecycle is a later task of #808.
+  const rate = row.instant_call_rate_credits;
   return {
     profileId: row.profile_id,
     providerUserId: row.provider_user_id,
@@ -93,6 +100,9 @@ function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchIte
     bio: row.bio,
     score: Number(row.score),
     offeredSkills: Array.isArray(row.offered_skills) ? row.offered_skills : [],
+    instantCallEnabled: Boolean(row.instant_call_enabled),
+    instantCallRateCredits: rate === null || rate === undefined ? null : Number(rate),
+    instantCallIntervalMinutes: Number(row.instant_call_interval_minutes ?? FOUNDATION_INSTANT_CALL_DEFAULT_INTERVAL),
   };
 }
 
@@ -151,8 +161,12 @@ export async function searchProviders(input: {
             FROM foundation_provider_skills fps
             JOIN skills_taxonomy_skills s ON s.id = fps.skill_id
             WHERE fps.user_id = dp.claimed_by_user_id
-          ), '[]'::jsonb) AS offered_skills
+          ), '[]'::jsonb) AS offered_skills,
+          fue.instant_call_enabled,
+          fue.instant_call_rate_credits,
+          fue.instant_call_interval_minutes
         FROM directory_profiles dp
+        LEFT JOIN foundation_user_extension fue ON fue.user_id = dp.claimed_by_user_id
         WHERE dp.is_active = TRUE
           AND dp.claimed_by_user_id IS NOT NULL
           AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)

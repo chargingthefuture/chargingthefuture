@@ -15,6 +15,13 @@ export type FoundationProviderSearchItem = {
   score: number;
   // The skills this provider has opted in to be contacted about (their Foundation offer).
   offeredSkills: FoundationOfferedSkill[];
+  // Read-only mirror of the provider's instant 1:1 call settings (Foundation "Connect now", issue
+  // #808). instantCallEnabled is the provider's opt-in; instantCallRateCredits is whole ServiceCredits
+  // per block (only meaningful when enabled); instantCallIntervalMinutes is the block length. The call
+  // lifecycle and any charge are later tasks of #808 — these fields only describe availability.
+  instantCallEnabled: boolean;
+  instantCallRateCredits: number | null;
+  instantCallIntervalMinutes: number;
 };
 
 export type FoundationThread = {
