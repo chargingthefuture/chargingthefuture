@@ -3,16 +3,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Hammer, FileText, Wrench, Send, Plus, ArrowUpRight } from "lucide-react";
+import { Hammer, FileText, Wrench } from "lucide-react";
 import {
   COLOR, initials, quoteStatus, formatQuoteDate,
   type ProviderView, type QuoteView,
 } from "./foundation-ui";
-
-const INFO_MSGS = [
-  { id: 1, text: "Foundation connects you with trade providers from the community — electricians, plumbers, carpenters, and more. Pay with Service Credits. What do you need help with?" },
-  { id: 2, text: "Search by trade or keyword, then open a provider to request a quote.", action: "Browse Providers" },
-];
 
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
@@ -153,55 +148,5 @@ export function QuotesPanel({
         )}
       </div>
     </ScrollArea>
-  );
-}
-
-export function ChatPanel({
-  input, onInput, onSend, onBrowse,
-}: {
-  input: string;
-  onInput: (v: string) => void;
-  onSend: () => void;
-  onBrowse: () => void;
-}) {
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScrollArea style={{ flex: 1, minHeight: 0, padding: "16px 24px" }}>
-        <div style={{ paddingBottom: 8 }}>
-          {INFO_MSGS.map((msg) => (
-            <div key={msg.id} style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: `${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Hammer size={14} style={{ color: COLOR }} />
-              </div>
-              <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ padding: "12px 16px", borderRadius: "16px 16px 16px 4px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.06)", fontSize: 14, lineHeight: 1.6, color: "#E8EAF0" }}>
-                  {msg.text}
-                </div>
-                {msg.action && (
-                  <button onClick={onBrowse} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: `${COLOR}15`, border: `1px solid ${COLOR}30`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>
-                    {msg.action} <ArrowUpRight size={13} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-      <div style={{ padding: "8px 24px 20px", flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14 }}>
-          <Plus size={18} style={{ color: "#4B5563" }} />
-          <input
-            value={input}
-            onChange={(e) => onInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") onSend(); }}
-            placeholder="Describe what you need help with…"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: "#E8EAF0" }}
-          />
-          <button onClick={onSend} aria-label="Send" style={{ width: 32, height: 32, borderRadius: 8, background: input.trim() ? COLOR : "rgba(255,255,255,0.06)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <Send size={14} style={{ color: input.trim() ? "#fff" : "#4B5563" }} />
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
