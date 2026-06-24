@@ -85,6 +85,11 @@ as public trust evidence — **ClickLog** (safety incidents), **Mood** (mental-h
 what a member is going through; their activity is still reflected by the universal login signal. Plugins
 with no per-member participation (Workforce, Weekly Performance, Feed/Announcements, Skills Taxonomy, GDP)
 and Comic (fuzzy completion) are not applicable. **Foundation** surfaces the provider side only (seeker-side help-seeking is excluded for privacy).
+**Member blocking and safety reports** (cross-cutting safety control, issue #809; `member_blocks`,
+`member_safety_reports`) are **not applicable** and are **never** surfaced as Trust evidence — a block is a
+private boundary the blocked person is never told about, and a safety report (suspected predator / human
+trafficker) is sensitive safety/verification participation that must never become public evidence (rule
+132). No numeric score, no count, no categorical signal is derived from either table.
 
 Only coarse COUNTs are read (never amounts, balances, or sensitive per-row detail), so no money figure or
 private detail crosses into Trust. Real-data-only rule: any signal whose backing rows are absent (count of

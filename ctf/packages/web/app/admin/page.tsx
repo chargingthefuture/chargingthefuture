@@ -30,6 +30,7 @@ const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
   { href: '/admin/feed-announcements', name: 'Feed Announcements', description: 'Post and manage announcements in the community feed.' },
   { href: '/admin/beacon', name: 'Beacon', description: 'Go live and run broadcast events; manage recordings.' },
   { href: '/admin/bug-reports', name: 'Bug Reports', description: 'Review reports flagged for a human and track ones sent to triage.' },
+  { href: '/admin/safety', name: 'Safety Reports', description: 'Review members flagged as a safety concern when blocked.' },
 ];
 
 export default async function AdminPage() {

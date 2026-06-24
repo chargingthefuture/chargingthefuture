@@ -265,8 +265,17 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     // same entry. A leftover reverse-direction row pointing at a deleted user is harmless (the user is
     // gone); cleaning those up is a noted follow-up, not done here, so service-scope deletion never
     // touches another member's blocks.
+    //
+    // Safety reports (issue #809, task 3) follow the same reporter-owns-their-row rule: a report this
+    // member FILED (reporter_user_id) is their own action and is deleted with their account. A report
+    // ABOUT this member (reported_user_id) is the ADMIN'S safety evidence raised by another member —
+    // it is NOT deleted here, the same way audit/accountability records are retained for compliance.
+    // Removing it would erase the owner's record of a predator/trafficker concern and would also let
+    // someone delete-and-rejoin to clear reports against them. Reverse-direction reports about a
+    // now-deleted account simply point at a gone user, which is harmless evidence.
     serviceScopeSupported: true,
     tables: [
+      del('member_safety_reports', 'reporter_user_id', 'Safety reports you filed about another member.'),
       del('member_blocks', 'blocker_user_id', 'The blocks you created.'),
     ],
   },

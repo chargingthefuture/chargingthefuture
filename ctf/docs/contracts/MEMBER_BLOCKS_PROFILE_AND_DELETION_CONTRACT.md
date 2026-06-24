@@ -5,8 +5,8 @@
 - Feature Name: Member Blocking (cross-cutting safety control, not a plugin)
 - Service Key (lowercase, stable): `member-blocks`
 - Issue: #809 (owner-signed model, 2026-06-24)
-- Rollout Stage: API + manage-list UI (task 2). Enforcement across surfaces (task 4) and the optional
-  safety escalation (task 3) are separate, later tasks.
+- Rollout Stage: API + manage-list UI (task 2) and the optional safety escalation (task 3) are built.
+  Enforcement across surfaces (task 4) and the admin global ban (task 5) are separate, later tasks.
 
 ## 2) What this stores
 
@@ -17,9 +17,22 @@
   - `created_at` (timestamptz) — when the block was created.
   - Unique on `(blocker_user_id, blocked_user_id)`; CHECK forbids a self-block.
 - No `reason` column. Ordinary blocks are private; the admin never reads them. A member may block
-  anyone for any reason and none is recorded. The optional "report as suspected predator/trafficker"
-  escalation is a separate mechanism (a member safety report kept apart from this table), built in a
-  later task, so ordinary blocks stay out of the admin's view.
+  anyone for any reason and none is recorded.
+- Table: `member_safety_reports` (issue #809, task 3) — the optional safety escalation, kept
+  DELIBERATELY SEPARATE from `member_blocks` so ordinary blocks stay out of the admin's view. A row
+  is written here only when the blocking member flags the block as a safety concern (suspected
+  predator / human trafficker); it is then admin-visible.
+  - `id` (uuid, primary key)
+  - `reporter_user_id` (text) — the member who raised the concern (the blocker).
+  - `reported_user_id` (text) — the member the concern is about (the blocked person).
+  - `detail` (text, nullable) — optional free-text context the reporter added.
+  - `status` (text, default `open`) — `open` | `reviewed` | `dismissed`; CHECK keeps it in-range.
+  - `created_at` (timestamptz), `reviewed_at` (timestamptz, nullable), `reviewed_by_user_id` (text,
+    nullable) — stamped when an admin moves a report out of `open`.
+  - Indexed on `(status, created_at DESC)` for the admin queue read and on `reported_user_id` for the
+    per-member repeat count. CHECK forbids a self-report.
+  - The block and the safety report are written in ONE transaction, so a report can never exist
+    without its block and a report-insert failure rolls the block back.
 
 ## 3) Resolving the blocked member's display label
 
@@ -34,6 +47,12 @@ On full-account deletion, the member's own blocks are removed. This is wired int
 deletion registry (`ctf/packages/web/lib/account/deletion-registry.ts`) as the `member-blocks` entry:
 
 - `member_blocks` — `delete` where `blocker_user_id = <user>` (the blocks the member created).
+- `member_safety_reports` — `delete` where `reporter_user_id = <user>` (the safety reports the member
+  filed about others). Reports ABOUT the member (`reported_user_id = <user>`) are the admin's safety
+  evidence raised by someone else and are **NOT** deleted: retained like an audit/accountability
+  record, because erasing them would destroy the owner's record of a predator/trafficker concern and
+  would let a flagged member delete-and-rejoin to clear reports against them. A retained report that
+  points at a now-deleted account is harmless evidence (the account is gone).
 
 Scope notes:
 

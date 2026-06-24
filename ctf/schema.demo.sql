@@ -4637,6 +4637,86 @@ $member_blocks_no_self_block$;
 -- the OR-query is index-served regardless of which user is the blocker.
 CREATE INDEX IF NOT EXISTS member_blocks_blocked_blocker_idx
   ON member_blocks (blocked_user_id, blocker_user_id);
+
+-- member_safety_reports: the optional safety escalation on the member-block flow (issue #809, task 3,
+-- owner-signed model 2026-06-24). This table is DELIBERATELY SEPARATE from member_blocks. An ordinary
+-- block is the member's own private boundary and the admin never sees it; only when the blocking
+-- member flags the block as a safety concern ("suspected predator / human trafficker") is a row
+-- written here, and only those rows ever reach the admin. Keeping the two tables apart is what
+-- guarantees ordinary blocks stay out of the admin's view while a safety report always reaches the
+-- owner so they can ban globally (the global ban itself is task 5, built later).
+--
+-- reporter_user_id  — the member who raised the concern (the blocker).
+-- reported_user_id  — the member the concern is about (the blocked person).
+-- detail            — optional free-text context the reporter chose to add (nullable).
+-- status            — open | reviewed | dismissed. New reports are 'open'; the admin marks them
+--                     reviewed or dismissed from the admin queue. CHECK keeps the value in-range.
+-- reviewed_at / reviewed_by_user_id — stamped when an admin moves a report out of 'open'.
+--
+-- user_id columns are TEXT to line up with member_blocks and the user-id type used elsewhere.
+CREATE TABLE IF NOT EXISTS member_safety_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_user_id TEXT NOT NULL,
+  reported_user_id TEXT NOT NULL,
+  detail TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by_user_id TEXT,
+  CONSTRAINT member_safety_reports_status_check CHECK (status IN ('open', 'reviewed', 'dismissed')),
+  CONSTRAINT member_safety_reports_no_self_report CHECK (reporter_user_id <> reported_user_id)
+);
+
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS reporter_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS reported_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS detail TEXT;
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS member_safety_reports ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
+
+-- Converge a legacy table that predates the CHECK constraints. Guarded so a fresh table (which
+-- already has them from CREATE TABLE) does not double-add, and a legacy one gains them.
+DO $member_safety_reports_status_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'member_safety_reports_status_check'
+  ) THEN
+    BEGIN
+      ALTER TABLE member_safety_reports
+        ADD CONSTRAINT member_safety_reports_status_check CHECK (status IN ('open', 'reviewed', 'dismissed'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$member_safety_reports_status_check$;
+
+DO $member_safety_reports_no_self_report$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'member_safety_reports_no_self_report'
+  ) THEN
+    BEGIN
+      ALTER TABLE member_safety_reports
+        ADD CONSTRAINT member_safety_reports_no_self_report CHECK (reporter_user_id <> reported_user_id);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$member_safety_reports_no_self_report$;
+
+-- The admin queue reads open reports first (status filter + newest-first), and counts open reports
+-- per reported member so a repeat offender stands out. Index status for the queue read, and
+-- reported_user_id for the per-member repeat count.
+CREATE INDEX IF NOT EXISTS member_safety_reports_status_idx
+  ON member_safety_reports (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS member_safety_reports_reported_user_idx
+  ON member_safety_reports (reported_user_id);
 COMMIT;
 
 -- ── post migration: 0001_directory_display_name_to_first_last.sql ──

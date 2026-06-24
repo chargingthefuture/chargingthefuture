@@ -614,3 +614,25 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   Android parity deferred (Parity Ticket #809). Still to come: task 3 (optional safety-report
   escalation), task 4 (wiring `isBlockedBetween` into each surface), task 5 (admin global ban).
   Owner-review lane.
+- 2026-06-24: **Member blocking — optional safety escalation to the admin landed (issue #809, task 3
+  of 5).** Built on the task-1/task-2 core. No existing reporting mechanism fit (bug-reports are app
+  bugs, skills-hunt reports are about submissions, trusttransport incidents are ride incidents,
+  lighthouse blocks are plugin-local), so added the minimal `member_safety_reports` table the model
+  prescribes — deliberately SEPARATE from `member_blocks` so ordinary blocks stay private and only a
+  flagged block reaches the admin. The block-create flow (`POST /api/account/blocks`) now takes an
+  optional `{ safetyConcern, safetyDetail }`; when set, the block and a safety report are written in
+  one transaction (atomic — a report cannot exist without its block, and a report-insert failure
+  rolls the block back so the member can retry). An ordinary block is unchanged and writes nothing
+  here. `BlockMemberButton` gained an optional, clearly-secondary "report as suspected predator /
+  human trafficker" checkbox plus an optional note, default off, with plain copy that an ordinary
+  block notifies no one. Added an admin-only queue at `/admin/safety` (open reports first, resolved
+  reporter + reported display names via a `directory_profiles` LEFT JOIN with a neutral fallback, a
+  per-reported-member open-report count so a repeat offender stands out, mark reviewed / dismissed)
+  backed by admin-gated `GET /api/safety/admin/reports` and `POST /api/safety/admin/reports/[id]/review`
+  (CSRF on write), and a card on the admin landing. This surface is read + triage only; the global
+  ban is task 5. Deletion: a member's filed reports (`reporter_user_id`) are removed on account
+  deletion; reports ABOUT a member (`reported_user_id`) are retained as the admin's safety evidence.
+  Trust recorded not-applicable (rule 132 — safety participation is never public). Added the
+  `member.safety-report.create` / `admin.safety-report.list` / `admin.safety-report.review` command
+  and access-policy contracts and updated the profile/deletion contract. Android parity deferred
+  (Parity Ticket #809). Owner-review lane.
