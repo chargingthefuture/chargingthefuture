@@ -162,7 +162,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     const tabs: { key: Tab; label: string }[] = [
       { key: "browse", label: "Browse" },
       { key: "matches", label: "Matches" },
-      { key: "chat", label: "Chat" },
+      { key: "chat", label: "Direct Line" },
       { key: "host", label: "List" },
     ];
     const filters: { key: ListingFilter; label: string }[] = [

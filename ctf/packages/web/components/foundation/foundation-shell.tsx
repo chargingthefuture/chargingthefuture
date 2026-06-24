@@ -11,6 +11,7 @@ import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
 import { BrowsePanel, QuotesPanel } from "./foundation-panels";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
+import { DirectLineFromQuote, DirectLineFromThread, type DirectLineCredentials } from "./foundation-direct-line";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
@@ -67,6 +68,11 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [submitting, setSubmitting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
+  // The Direct Line opened straight after Request Quote, holding the Stream credentials the thread
+  // POST returned, plus the provider name to show in the heading.
+  const [activeDirectLine, setActiveDirectLine] = useState<{ credentials: DirectLineCredentials; subtitle: string | null } | null>(null);
+  // The Direct Line re-opened from a Quotes row — only the thread id; credentials are fetched fresh.
+  const [quoteDirectLine, setQuoteDirectLine] = useState<{ threadId: string; subtitle: string | null } | null>(null);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
@@ -124,7 +130,12 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         body: JSON.stringify({ providerId: provider.profileId }),
       });
       if (!threadRes.ok) throw new Error(await foundationErrorMessage(threadRes, "Could not open a connection with this provider."));
-      const threadData = (await threadRes.json()) as { thread?: { id?: string } };
+      const threadData = (await threadRes.json()) as {
+        thread?: { id?: string; streamChannelId?: string };
+        streamApiKey?: string;
+        streamUserId?: string;
+        streamToken?: string;
+      };
       const threadId = threadData.thread?.id;
       if (!threadId) throw new Error("Connection response was incomplete.");
 
@@ -137,9 +148,27 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       if (!quoteRes.ok) throw new Error(await foundationErrorMessage(quoteRes, "Could not submit the quote request."));
 
       setQuoteSuccess(true);
-      await loadQuotes();
+      // Refresh quotes in the background; do not block landing in the Direct Line on it.
+      void loadQuotes();
       setSelected(null);
-      setTab("quotes");
+
+      // Take the member straight into the Direct Line using the credentials the thread POST already
+      // returned. Fall back to the Quotes tab only if Stream credentials were not issued (e.g. Stream
+      // is unconfigured), so the request is never lost.
+      const channelId = threadData.thread?.streamChannelId;
+      if (threadData.streamApiKey && threadData.streamUserId && threadData.streamToken && channelId) {
+        setActiveDirectLine({
+          credentials: {
+            streamApiKey: threadData.streamApiKey,
+            streamUserId: threadData.streamUserId,
+            streamToken: threadData.streamToken,
+            streamChannelId: channelId,
+          },
+          subtitle: provider.displayName,
+        });
+      } else {
+        setTab("quotes");
+      }
     } catch (e: unknown) {
       setQuoteError(e instanceof Error ? e.message : "Failed to request quote.");
     } finally {
@@ -153,6 +182,28 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 
   if (error) {
     return <Centered color="#EF4444">{error}</Centered>;
+  }
+
+  // Direct Line opened straight after Request Quote (uses the credentials the POST returned).
+  if (activeDirectLine) {
+    return (
+      <DirectLineFromQuote
+        credentials={activeDirectLine.credentials}
+        subtitle={activeDirectLine.subtitle}
+        onBack={() => { setActiveDirectLine(null); setTab("quotes"); }}
+      />
+    );
+  }
+
+  // Direct Line re-opened from a Quotes row (fetches fresh credentials by thread id).
+  if (quoteDirectLine) {
+    return (
+      <DirectLineFromThread
+        threadId={quoteDirectLine.threadId}
+        subtitle={quoteDirectLine.subtitle}
+        onBack={() => setQuoteDirectLine(null)}
+      />
+    );
   }
 
   if (selected) {
@@ -172,7 +223,13 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     <>
       {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
       {tab === "offer" && <OfferSkillsPanel />}
-      {tab === "quotes" && <QuotesPanel quotes={quotes} onBrowse={() => setTab("browse")} />}
+      {tab === "quotes" && (
+        <QuotesPanel
+          quotes={quotes}
+          onBrowse={() => setTab("browse")}
+          onOpenDirectLine={(q) => setQuoteDirectLine({ threadId: q.threadId, subtitle: q.serviceType })}
+        />
+      )}
     </>
   );
 

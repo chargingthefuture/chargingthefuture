@@ -35,7 +35,7 @@ export const LighthouseStreamTab = () => {
     return <View><Text style={{ color: 'red' }}>{error}</Text></View>;
   }
   if (!credentials) {
-    return <View><Text>Chat not configured.</Text></View>;
+    return <View><Text>Direct Line not configured.</Text></View>;
   }
   return (
     <>

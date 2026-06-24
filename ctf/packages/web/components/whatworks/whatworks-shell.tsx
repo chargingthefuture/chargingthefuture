@@ -5,7 +5,7 @@
 // Layout + tokens are matched to design/.../survivor-hub/WhatWorks.tsx.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ListChecks, Search, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ListChecks, Plus, Search, ShieldCheck } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import {
@@ -230,6 +230,17 @@ export function WhatWorksShell() {
                 style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: t.TITLE, fontFamily: 'inherit' }}
               />
             </div>
+          </div>
+          {/* The Suggest entry point lives in the desktop sidebar; mobile has no sidebar, so add it
+              here so a phone user can still add an item to the shared list. */}
+          <div style={{ padding: '0 12px 10px' }}>
+            <button
+              type="button"
+              onClick={() => setShowSuggest(true)}
+              style={{ width: '100%', padding: '10px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            >
+              <Plus size={15} /> Suggest an item
+            </button>
           </div>
         </div>
         <div style={{ padding: '16px' }}>
