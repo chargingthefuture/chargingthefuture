@@ -41,7 +41,7 @@ export interface QuoteView {
   createdAtIso: string;
 }
 
-export type FoundationTab = "browse" | "quotes" | "chat" | "offer";
+export type FoundationTab = "browse" | "quotes" | "offer";
 
 /** Trade filters map to the search `q` param; "All Trades" clears it. */
 export const TRADES = [

@@ -59,6 +59,33 @@ policies:
       - rate_limit_exceeded
 
   - pluginId: foundation
+    command: foundation.connection.thread.token.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      threadMembership: required
+      directoryDataAccess: read_only_projection
+    consentRequirements:
+      scopes:
+        - survivor_provider_contact
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+      dataResidencyMode: participant_region_pinning
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_thread_participant
+      - cross_workspace_access
+      - stream_quota_red_state
+
+  - pluginId: foundation
     command: foundation.connection.message.send
     version: 1.0.0
     requiredRoles:
