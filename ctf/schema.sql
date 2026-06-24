@@ -2710,6 +2710,9 @@ CREATE TABLE IF NOT EXISTS foundation_user_extension (
   accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb,
   trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb,
   service_deleted_at TIMESTAMPTZ,
+  instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  instant_call_rate_credits INTEGER,
+  instant_call_interval_minutes INTEGER NOT NULL DEFAULT 10,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
@@ -2719,6 +2722,14 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessi
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Foundation instant 1:1 call opt-in (issue #808): a provider may opt in to take an immediate,
+-- paid, time-metered live call. instant_call_enabled is the on/off switch; instant_call_rate_credits
+-- is the whole-number ServiceCredits charge per block (nullable, only meaningful when enabled, >= 1
+-- enforced in the app); instant_call_interval_minutes is the per-block length in minutes (default 10).
+-- The ring/call/billing live in later tasks — these columns only hold the provider's settings.
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_rate_credits INTEGER;
+ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_interval_minutes INTEGER NOT NULL DEFAULT 10;
 -- Multi-currency (issue #120): a Foundation provider can list a service rate on their profile.
 -- rate_amount is the listed amount; rate_currency names its currency (FK -> currencies.code). The quote
 -- process stays free-text/manual this version (no structured quote amount). "Accepts ServiceCredits" is a

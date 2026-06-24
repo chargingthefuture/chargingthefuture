@@ -412,6 +412,53 @@ contracts:
     retentionClass: audit_long_lived
     idempotency: false
 
+  - pluginId: foundation
+    command: foundation.provider.instant-call.get
+    version: 1.0.0
+    description: Read the signed-in member's own Foundation instant 1:1 call settings (whether they are reachable for an immediate paid call, the rate in ServiceCredits, and the per-block interval in minutes).
+    inputSchema: {}
+    outputSchema:
+      enabled:
+        type: boolean
+      rateCredits:
+        type: integer
+      intervalMinutes:
+        type: integer
+    dataAccess:
+      - foundation_user_extension
+    purpose: provider_self_settings
+    retentionClass: profile_long_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.provider.instant-call.set
+    version: 1.0.0
+    description: Save the signed-in member's own Foundation instant 1:1 call settings. When enabled, rateCredits must be a whole number of ServiceCredits of at least 1; intervalMinutes must be a whole number between 5 and 60.
+    inputSchema:
+      enabled:
+        type: boolean
+        required: true
+      rateCredits:
+        type: integer
+        required: false
+      intervalMinutes:
+        type: integer
+        required: true
+    outputSchema:
+      enabled:
+        type: boolean
+      rateCredits:
+        type: integer
+      intervalMinutes:
+        type: integer
+    dataAccess:
+      - foundation_user_extension
+    purpose: provider_self_settings
+    retentionClass: profile_long_lived
+    idempotency: true
+
 changelog:
   - date: 2026-02-24
     change: Initial Foundation v1 command contracts added for provider search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting, and capacity governance.
+  - date: 2026-06-24
+    change: Added provider instant 1:1 call settings commands (foundation.provider.instant-call.get / .set, issue #808) — the provider opt-in toggle, rate in ServiceCredits, and per-block interval. Settings only; no call or billing logic.
