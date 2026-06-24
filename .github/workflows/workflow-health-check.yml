@@ -36,6 +36,13 @@ jobs:
               owner, repo, per_page: 100,
             });
 
+            // A workflow that genuinely runs on `main` (on push, or on a daily/weekly schedule)
+            // produces a fresh run well inside this window. A PR-only workflow's most recent run
+            // on `main` is frozen history from whenever it last had a push trigger, so it would
+            // otherwise be flagged forever even though it can no longer fail on main. Ignore any
+            // latest-main run older than this so those orphaned runs drop off the triage list.
+            const staleAfterMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+
             const failing = [];
             for (const wf of workflows) {
               if (wf.state !== 'active') continue;
@@ -53,6 +60,8 @@ jobs:
                 continue;
               }
               if (!latest || latest.status !== 'completed') continue;
+              const when = latest.run_started_at || latest.created_at;
+              if (when && Date.now() - new Date(when).getTime() > staleAfterMs) continue;
               if (latest.conclusion === 'failure' || latest.conclusion === 'timed_out') {
                 failing.push({
                   name: wf.name,

@@ -6,15 +6,46 @@ on:
     - cron: '0 2 * * 0' # weekly, Sundays at 2am UTC (was daily; the artifact-removal action paginates
                         # every run/artifact in the repo each time, which was burning GitHub API rate limit)
 
+permissions:
+  actions: write  # delete old workflow artifacts
+  issues: write   # comment on and close resolved CI budget monitor issues
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
       - name: Delete old workflow artifacts
-        uses: c-hive/gha-remove-artifacts@v1
+        # Was `c-hive/gha-remove-artifacts@v1`, which walked every workflow run and
+        # every artifact in the repo on each run and exhausted the GitHub API rate
+        # limit ("API rate limit exceeded for installation"), failing the job. This
+        # lists artifacts directly from the repo-level endpoint (one paginated call,
+        # not a per-run crawl) and deletes any older than the cutoff below.
+        uses: actions/github-script@v7
         with:
-          age: '1d' # delete artifacts older than 1 day
-          skip-tags: 'false'
+          script: |
+            const maxAgeMs = 24 * 60 * 60 * 1000; // delete artifacts older than 1 day
+            const cutoff = Date.now() - maxAgeMs;
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 },
+            );
+            let deleted = 0;
+            for (const artifact of artifacts) {
+              if (artifact.expired) continue;
+              if (new Date(artifact.created_at).getTime() >= cutoff) continue;
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner, repo, artifact_id: artifact.id,
+                });
+                deleted += 1;
+              } catch (e) {
+                // A concurrent run may have removed it, or it expired between the
+                // list and the delete — skip and keep going rather than fail the job.
+                core.warning(`Could not delete artifact ${artifact.id} (${artifact.name}): ${e.message}`);
+              }
+            }
+            core.info(`Deleted ${deleted} artifact(s) older than 1 day (of ${artifacts.length} surveyed).`);
 
       - name: Find open CI budget monitor issues
         id: find_issues
