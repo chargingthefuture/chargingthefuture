@@ -2,7 +2,7 @@ contracts:
   - pluginId: peer-programming
     command: cohort.weekly.select
     version: 1.0.0
-    description: Select weekly active users (login within the last 7 days) and form cohorts with target size of 5 members. Triggered either by an admin from the Peer Programming admin screen, or automatically once a week by the scheduler (the `system` role) via the secret-guarded internal route. Idempotent per week.
+    description: Select weekly active users (login within the last 7 days) and form cohorts with target size of 5 members. Triggered either by an admin from the PeerProgramming admin screen, or automatically once a week by the scheduler (the `system` role) via the secret-guarded internal route. Idempotent per week.
     inputSchema:
       workspaceId:
         type: string

@@ -23,7 +23,7 @@ function SignalLine({ ownerSignalUrl, signalInstructions, t }: { ownerSignalUrl:
         <a href={ownerSignalUrl} target="_blank" rel="noopener noreferrer" style={{ color: SIGNAL_BLUE, fontWeight: 600, wordBreak: 'break-all' }}>
           {ownerSignalUrl}
         </a>{' '}
-        Once the card is matched to your submission, your Service Credits will be added.
+        Once the card is matched to your submission, your ServiceCredits will be added.
       </p>
     );
   }
@@ -31,7 +31,7 @@ function SignalLine({ ownerSignalUrl, signalInstructions, t }: { ownerSignalUrl:
   const fallback =
     signalInstructions.trim().length > 0
       ? signalInstructions
-      : "Send your gift card code directly to the platform owner on Signal. The contact details are in the owner's platform profile. Once the card is matched to your submission, your Service Credits will be added.";
+      : "Send your gift card code directly to the platform owner on Signal. The contact details are in the owner's platform profile. Once the card is matched to your submission, your ServiceCredits will be added.";
 
   return <p style={{ margin: '0 0 12px', fontSize: 13, color: t.MUTED, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{fallback}</p>;
 }
@@ -57,7 +57,7 @@ function CreditsPending({ t, compact }: { t: ContributionsTokens; compact?: bool
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: `${t.ACCENT}08`, borderRadius: 10, border: `1px solid ${t.ACCENT}20`, marginBottom: 28 }}>
       <Clock size={16} color={STATUS_PENDING} />
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 2 }}>Service Credits pending confirmation</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 2 }}>ServiceCredits pending confirmation</div>
         <div style={{ fontSize: 12, color: t.MUTED }}>{compact ? 'Credits will appear in your wallet after confirmation.' : 'Once your gift card is matched, your credits will appear in your wallet automatically.'}</div>
       </div>
     </div>

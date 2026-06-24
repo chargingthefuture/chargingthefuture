@@ -247,7 +247,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   so `LighthouseProperty` now carries `rentCurrency`, `acceptedCurrencies`, and `acceptsServiceCredits`.
   Display: the browse card and property detail format rent in its own currency (fiat symbol, or the
   ServiceCredits label — never a "$" for ServiceCredits; 0 = "Free"; blank when unset) using a
-  `code -> Currency` map the shell fetches once from `/api/currencies`; the "Accepts Service Credits"
+  `code -> Currency` map the shell fetches once from `/api/currencies`; the "Accepts ServiceCredits"
   badge and the Credits filter now read `acceptsServiceCredits` (legacy `credits` field kept as a
   fallback). The admin hide/unhide resend preserves both currency fields. `lighthouse.property.create`
   command contract `inputSchema` and `dataAccess` updated to include the currency fields and the

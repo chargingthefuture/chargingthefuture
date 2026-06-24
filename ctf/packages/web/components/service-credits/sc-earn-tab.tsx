@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { COLOR } from "./sc-shared";
 import { PEER_TO_PEER_AREAS, PLATFORM_EARN_METHODS } from "./service-credits.constants";
 
-// Honest earn model: the platform funds only a few rewards (verify your account, Skills Hunt, and
+// Honest earn model: the platform funds only a few rewards (verify your account, SkillsHunt, and
 // fundraiser contributions). Everything else is peer-to-peer — you earn the same way you spend, by
 // being paid by another member. Platform-reward cards link to where they happen.
 export function ServiceCreditsEarnTab() {

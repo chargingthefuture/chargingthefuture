@@ -535,7 +535,7 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
             <Text style={{ fontSize: 16, color: COLOR }}>🔍</Text>
           </View>
           <View>
-            <Text style={styles.headerTitle}>Skills Hunt</Text>
+            <Text style={styles.headerTitle}>SkillsHunt</Text>
             <Text style={styles.headerSub}>Nominate · connect · build</Text>
           </View>
         </View>

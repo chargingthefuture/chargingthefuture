@@ -24,7 +24,7 @@ export function LighthouseBrowse({
     <div style={{ padding: 24 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${COLOR}15 0%,rgba(234,179,8,0.05) 100%)`, border: `1px solid ${COLOR}25` }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: "#F9FAFB", marginBottom: 4 }}>Find Safe, Verified Housing</div>
-        <div style={{ fontSize: 14, color: "#9CA3AF" }}>{totalCount} listings · {creditsCount} accept Service Credits · Privacy by design</div>
+        <div style={{ fontSize: 14, color: "#9CA3AF" }}>{totalCount} listings · {creditsCount} accept ServiceCredits · Privacy by design</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
         {properties.length === 0 ? (

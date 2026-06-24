@@ -2,7 +2,7 @@ contracts:
   - pluginId: service-credits
     command: wallet.create
     version: 1.0.0
-    description: Create or activate a Service Credits wallet bound to a canonical user profile.
+    description: Create or activate a ServiceCredits wallet bound to a canonical user profile.
     inputSchema:
       userId:
         type: string
@@ -39,7 +39,7 @@ contracts:
   - pluginId: service-credits
     command: wallet.balance.get
     version: 1.0.0
-    description: Retrieve current available, held, and total Service Credits wallet balance.
+    description: Retrieve current available, held, and total ServiceCredits wallet balance.
     inputSchema:
       walletId:
         type: string
@@ -235,7 +235,7 @@ contracts:
   - pluginId: service-credits
     command: governance.mint.grant
     version: 1.1.0
-    description: Grant newly issued service credits under governance policy controls. When issuance enforcement is on, the grant is denied with mint_budget_exceeded if it would push minting over the per-period budget configured in treasury policy.
+    description: Grant newly issued ServiceCredits under governance policy controls. When issuance enforcement is on, the grant is denied with mint_budget_exceeded if it would push minting over the per-period budget configured in treasury policy.
     inputSchema:
       targetWalletId:
         type: string
@@ -272,7 +272,7 @@ contracts:
   - pluginId: service-credits
     command: governance.burn
     version: 1.0.0
-    description: Burn service credits from a wallet under governance policy controls.
+    description: Burn ServiceCredits from a wallet under governance policy controls.
     inputSchema:
       targetWalletId:
         type: string

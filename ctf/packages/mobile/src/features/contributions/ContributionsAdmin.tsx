@@ -249,7 +249,7 @@ export const ContributionsAdmin: React.FC = () => {
 
       {tab === 'settings' && (
         <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 14 }}>
-          <Text style={st.sectionHeading}>Service Credits</Text>
+          <Text style={st.sectionHeading}>ServiceCredits</Text>
           {config ? (
             <View style={st.infoCard}>
               <Text style={st.infoRow}>Credits per dollar: {config.creditsPerUsd}</Text>

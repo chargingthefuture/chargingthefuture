@@ -96,7 +96,7 @@ async function seed() {
       );
 
       await client.query('COMMIT');
-      console.log('Seeded service credits wallets, transfers, and ledger entries.');
+      console.log('Seeded ServiceCredits wallets, transfers, and ledger entries.');
     } catch (err) {
       try {
         await client.query('ROLLBACK');

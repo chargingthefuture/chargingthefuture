@@ -6,7 +6,7 @@ import { reportError } from 'lib/observability/report';
 export const dynamic = 'force-dynamic';
 
 // Admin-only, read-only report of the external ledger (Formance) configuration so the owner can see,
-// from the Service Credits admin page, whether the ledger mirror is wired up.
+// from the ServiceCredits admin page, whether the ledger mirror is wired up.
 export async function GET() {
   const gate = await requireServiceCreditsAdminAccess();
   if (!gate.allowed) {

@@ -1,8 +1,8 @@
 // Workforce-driven rare-skill snapshot.
 //
-// Skills Hunt rewards the Rare Skill bonus when a submitter includes a skill
+// SkillsHunt rewards the Rare Skill bonus when a submitter includes a skill
 // that Workforce currently identifies as under-recruited. The mapping is:
-// occupation_name (Workforce) → skill_name (Skills Hunt taxonomy / free-text).
+// occupation_name (Workforce) → skill_name (SkillsHunt taxonomy / free-text).
 // An occupation is considered "rare" when its recruited share is strictly
 // under 50% of the profiles attached to it.
 //

@@ -72,7 +72,7 @@ function getActionForText(text: string): MessageAction | null {
   }
 
   if (normalized.includes('service credit')) {
-    return { actionLabel: 'Open Service Credits →', actionSlug: 'service-credits' };
+    return { actionLabel: 'Open ServiceCredits →', actionSlug: 'service-credits' };
   }
 
   if (normalized.includes('directory') || normalized.includes('provider')) {

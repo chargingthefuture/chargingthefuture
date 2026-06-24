@@ -2,7 +2,7 @@
 //
 // Binds only endpoints that exist today:
 //   - GET  /api/levelup/cohorts                  (cohort list, read access)
-//   - POST /api/levelup/admin/adjust-credits     (admin Service Credits adjustment)
+//   - POST /api/levelup/admin/adjust-credits     (admin ServiceCredits adjustment)
 //
 // The cohort list shape mirrors listCohorts() in lib/levelup/repository.ts.
 
@@ -31,7 +31,7 @@ export type AdminKpis = {
   avgDaysToFirstTrainerPayout: number;
 };
 
-// What the operator typed for a Service Credits adjustment. `amount` may be
+// What the operator typed for a ServiceCredits adjustment. `amount` may be
 // positive (grant to the member) or negative (claw back from the member to the
 // LevelUp treasury) — exactly what POST /adjust-credits accepts.
 export type AdjustCreditsInput = {

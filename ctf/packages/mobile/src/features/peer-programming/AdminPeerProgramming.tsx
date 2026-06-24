@@ -159,14 +159,14 @@ export const AdminPeerProgramming = () => {
   if (!auth?.isAuthenticated || forbidden) {
     return (
       <View style={styles.center}>
-        <Text style={styles.noticeText}>The Peer Programming admin tools are available to admins only.</Text>
+        <Text style={styles.noticeText}>The PeerProgramming admin tools are available to admins only.</Text>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Peer Programming Admin</Text>
+      <Text style={styles.title}>PeerProgramming Admin</Text>
       <Text style={styles.subtitle}>
         Set the weekly topic and run cohort assignment for this week&rsquo;s active members.
       </Text>

@@ -1,6 +1,6 @@
 'use client';
 
-// Peer Programming admin surface. Dark admin design system (rule 131), mirroring the
+// PeerProgramming admin surface. Dark admin design system (rule 131), mirroring the
 // designed admin shells (see unlock-admin-shell). Mobile-responsive single column.
 //
 // Binds only endpoints that exist today:
@@ -16,7 +16,7 @@ import { ppAdminMutate } from './pp-admin-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
 
-// Admin design tokens (shared admin look from the design system). Peer Programming accent is mint.
+// Admin design tokens (shared admin look from the design system). PeerProgramming accent is mint.
 const COLOR = '#6EE7B7';
 const BG = '#0F1117';
 const PANEL = '#0D0F14';
@@ -188,7 +188,7 @@ export function PeerProgrammingAdminShell() {
             <Code2 size={18} color={COLOR} />
           </div>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800 }}>Peer Programming Admin</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>PeerProgramming Admin</div>
             <div style={{ fontSize: 12, color: SUBTLE }}>Weekly topic &amp; cohort assignment</div>
           </div>
           <span

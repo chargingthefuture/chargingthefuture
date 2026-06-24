@@ -1,4 +1,4 @@
-// Shared constants, types, and helpers for the Skills Hunt web shell.
+// Shared constants, types, and helpers for the SkillsHunt web shell.
 // Palette/layout derive from design/.../survivor-hub/SkillsHunt.tsx.
 import { Search, Trophy, Target, Users } from "lucide-react";
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
@@ -26,8 +26,8 @@ export const BG = "#0F1117";
 export const BIO_MAX = 280;
 export const MAX_SKILLS = 10;
 
-// Theme-aware chrome tokens for the Skills Hunt shell. Default keeps the shipped values (accent
-// stays #FBBF24); comic uses the shared comic surface tokens plus the Skills Hunt comic-ink accent.
+// Theme-aware chrome tokens for the SkillsHunt shell. Default keeps the shipped values (accent
+// stays #FBBF24); comic uses the shared comic surface tokens plus the SkillsHunt comic-ink accent.
 export type SkillsHuntTokens = PluginShellTokens;
 
 export function getSkillsHuntTokens(theme: ThemeName): SkillsHuntTokens {

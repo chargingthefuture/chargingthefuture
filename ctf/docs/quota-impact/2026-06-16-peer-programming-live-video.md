@@ -1,8 +1,8 @@
-# Stream Quota Impact Note — Peer Programming live video Session
+# Stream Quota Impact Note — PeerProgramming live video Session
 
 ## Summary
 
-- Feature/Change: Wire real GetStream video into the Peer Programming Session tab. A new
+- Feature/Change: Wire real GetStream video into the PeerProgramming Session tab. A new
   `POST /api/peer-programming/session/join` mints per-cohort video call credentials, and the web
   Session tab joins a live call instead of showing a static placeholder.
 - PR: #556
@@ -38,7 +38,7 @@
 
 - What degrades first: if Stream is not configured (no API key/secret), `session/join` returns 503
   and the join button surfaces "Live video is not configured." The async text room and all other
-  Peer Programming features keep working — video is additive.
+  PeerProgramming features keep working — video is additive.
 - User-visible messaging behavior: a member with no cohort sees "Join a cohort to access live
   sessions" (404 from the route); a connect failure shows the Stream error in place with a Back
   control.
@@ -60,4 +60,4 @@
   configured) branches; the client renders the error/back state without crashing. No automated test
   harness for live Stream calls (consistent with the existing Chyme/Lighthouse video surfaces).
 - Rollback strategy: revert the PR, or unset the production Stream credentials to disable the join
-  path while leaving the rest of Peer Programming intact.
+  path while leaving the rest of PeerProgramming intact.

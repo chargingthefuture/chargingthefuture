@@ -134,7 +134,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
   },
   {
     slug: 'service-credits',
-    name: 'Service Credits',
+    name: 'ServiceCredits',
     blurb: 'Earn and spend credits inside the network — no cash needed.',
     keywords: [
       'broke', 'no cash', 'no money', 'without cash', 'can’t afford', 'cant afford',
@@ -165,7 +165,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
   },
   {
     slug: 'skills-hunt',
-    name: 'Skills Hunt',
+    name: 'SkillsHunt',
     blurb: 'Learn a skill, peer-taught and free.',
     keywords: [
       'learn something', 'want to learn', 'what’s out there', 'whats out there', 'teach me',
@@ -195,7 +195,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
   },
   {
     slug: 'peer-programming',
-    name: 'Peer Programming',
+    name: 'PeerProgramming',
     blurb: 'Weekly small-group sessions to actually finish things.',
     keywords: [
       'never finish', 'can’t finish', 'cant finish', 'accountability', 'do better around people',

@@ -28,7 +28,7 @@ function isAuthorized(request: Request): boolean {
 export async function POST(request: Request, context: ReclaimParams) {
   if (!isAuthorized(request)) {
     return NextResponse.json(
-      { ok: false, code: 'service_credits_invalid_internal_token', message: 'Invalid service credits internal token.' },
+      { ok: false, code: 'service_credits_invalid_internal_token', message: 'Invalid ServiceCredits internal token.' },
       { status: 403 },
     );
   }

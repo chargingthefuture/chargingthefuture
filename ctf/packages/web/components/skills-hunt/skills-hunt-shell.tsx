@@ -35,7 +35,7 @@ function ShellHeader({ t, activeRound }: { t: SkillsHuntTokens; activeRound: Ski
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Search size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Skills Hunt</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>SkillsHunt</div>
         <div style={{ fontSize: 12, color: t.MUTED }}>
           {activeRound ? activeRound.name : "Nominate survivors · build the Directory · grow the economy"}
         </div>
@@ -262,7 +262,7 @@ export function SkillsHuntShell({
               <ChevronLeft size={20} />
             </Link>
             <Search size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Skills Hunt</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>SkillsHunt</span>
             <PluginAdminButton href="/admin/skills-hunt" isAdmin={showModeratorTools} accent={t.ACCENT} />
             <button type="button" onClick={() => setNotifOpen((o) => !o)} aria-label="Notifications" style={{ position: "relative", width: 38, height: 38, borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={18} />

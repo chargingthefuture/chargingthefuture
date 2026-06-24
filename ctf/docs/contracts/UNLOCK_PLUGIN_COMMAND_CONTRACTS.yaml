@@ -104,7 +104,7 @@ contracts:
   - pluginId: unlock
     command: unlock.incentive.approval.credit-grant
     version: 1.0.0
-    description: Grant one-time service credits incentive after approved verification.
+    description: Grant one-time ServiceCredits incentive after approved verification.
     inputSchema:
       userId:
         type: string

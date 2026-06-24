@@ -1,4 +1,4 @@
--- Skills Hunt: rename `display_name` to `full_name` on `skills_hunt_submissions`.
+-- SkillsHunt: rename `display_name` to `full_name` on `skills_hunt_submissions`.
 --
 -- Why this exists:
 --   The owner relabeled the nominee's name field from "Display name" to

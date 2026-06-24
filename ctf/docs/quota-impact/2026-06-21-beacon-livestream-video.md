@@ -62,7 +62,7 @@
 
 - Tests added for degraded mode: covered by each route's explicit 503 branch when Stream is not
   configured, and by the viewer's idle state when `current` returns no live event. No automated test
-  harness for live Stream calls (consistent with the existing Chyme / Peer Programming video
+  harness for live Stream calls (consistent with the existing Chyme / PeerProgramming video
   surfaces).
 - Rollback strategy: revert the branch, or unset the production Stream credentials to disable the
   broadcast path while leaving the rest of the app intact.

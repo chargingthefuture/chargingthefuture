@@ -76,7 +76,7 @@ export async function evaluatePluginAccess(
 
   // A signed-in member reached an authorized surface — record them as active today
   // (deduplicated to one row per member per day). This populates the `login_events`
-  // table that the active-member window reads, which Peer Programming cohort
+  // table that the active-member window reads, which PeerProgramming cohort
   // assignment and the Weekly Performance review both depend on. Recorded before the
   // unlock/role gates so any signed-in member counts as active, and fire-and-forget so
   // it never blocks or breaks the access decision.

@@ -12,7 +12,7 @@ import {
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
   "Get quotes from community providers",
-  "Accept a quote and pay with Service Credits",
+  "Accept a quote and pay with ServiceCredits",
 ];
 
 export function BrowsePanel({

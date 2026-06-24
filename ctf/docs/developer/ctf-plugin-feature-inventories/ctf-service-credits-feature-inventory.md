@@ -1,10 +1,10 @@
-# Service Credits Plugin Feature Inventory (CTF Rewrite)
+# ServiceCredits Plugin Feature Inventory (CTF Rewrite)
 
 ## Scope and Boundary
 
 - Rewrite target only: `ctf/`
 - Legacy reference excluded from implementation: `platform/`
-- Plugin name: `Service Credits`
+- Plugin name: `ServiceCredits`
 - Plugin slug / service key: `service-credits`
 - Primary mission scope:
   - provide a survivor-safe internal credits economy for cross-plugin transactions,
@@ -14,7 +14,7 @@
 
 ## Intent and Outcome
 
-The Service Credits plugin is the mandatory value-transfer rail for plugin-to-plugin economic flows in CTF.
+The ServiceCredits plugin is the mandatory value-transfer rail for plugin-to-plugin economic flows in CTF.
 
 It must:
 
@@ -156,7 +156,7 @@ Internal routes:
 
 ### 3.3 Formance-First Adapter Seam Notes
 
-1. The Service Credits domain never calls an external ledger provider directly.
+1. The ServiceCredits domain never calls an external ledger provider directly.
 2. External ledger operations execute through a Formance-first adapter seam with stable internal command contracts.
 3. Adapter fallbacks must preserve command schema and policy/audit behavior.
 4. Provider-specific IDs remain adapter-internal and must not leak into user-facing API contracts.
@@ -172,7 +172,7 @@ Must follow single-profile rule:
 
 1. Reuse canonical user profile for identity and access context.
 2. Add plugin extension data linked by `user_id` only where required.
-3. Do not introduce a standalone Service Credits profile duplicating canonical fields.
+3. Do not introduce a standalone ServiceCredits profile duplicating canonical fields.
 
 Extension entity:
 
@@ -251,7 +251,7 @@ Android pixel pass complete (2026-05-31): `MockServiceCredits.tsx` retired. Real
 
 ## 8) Seed Coverage Status
 
-Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via the platform's deterministic test ledger; a plugin-specific `seedServiceCreditsPhase*.mjs` script is not currently provided.
+ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via the platform's deterministic test ledger; a plugin-specific `seedServiceCreditsPhase*.mjs` script is not currently provided.
 
 ---
 
@@ -269,7 +269,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 - 2026-06-23: Built the missing reclaim-execution sweep so deleted accounts' credits actually leave circulation. Account deletion only *enqueued* the reclaim (a `queued` row in `service_credits_adapter_outbox`); the internal execute route that moves the balance to treasury after the 7-day grace window (`SERVICE_CREDITS_RECLAIM_WINDOW_DAYS`) was never called by anything, so deleted members' balances stayed in their wallets and in circulation indefinitely. New `ctf/scripts/executeServiceCreditsReclaims.mjs` + `.github/workflows/service-credits-reclaim-sweep.yml` (daily + manual) drain the queued reclaims by POSTing each to the execute route; idempotent (the route enforces the window, moves the balance, and flips the outbox to `delivered`), so re-running never double-reclaims and pre-window rows retry next day. Also added distinct error-map entries for `reclaim_window_not_elapsed` and `active_escrow_holds` (both 409) so the sweep can tell an expected "not due yet" from a real failure instead of seeing a generic 500. Needs `DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, and `SERVICE_CREDITS_INTERNAL_TOKEN`. No ledger-logic change — it only drives the existing executor.
 - 2026-06-23: Added the missing unique index that blocked every full-account deletion. `markFullAccountDeletionRequested` upserts the ServiceCredits reclaim row with `ON CONFLICT (account_id, deletion_request_id)`, but `service_credits_account_deletion_reclaims` never had a unique index on those columns, so both the self-service `DELETE /api/account/full-account` and the operator delete-account workflow threw "no unique or exclusion constraint matching the ON CONFLICT specification" at the reclaim step and never completed (the symptom surfaced when deleting a duplicate account). `schema.sql` now adds `uq_service_credits_account_deletion_reclaims_account_request` via guarded `CREATE UNIQUE INDEX IF NOT EXISTS`. Requires running Update Neon DB to take effect. No code change — same class of fix as the 2026-06-19 mint-idempotency indexes.
 - 2026-06-19: Fixed `governance_ticket_id` type so automated mints stop failing. The column was typed `UUID`, but every automated `mintGrant` caller passes a non-UUID ticket reference (unlock `unlock:submission:<id>`, levelup `levelup:…`, contributions `contribution-<id>`) and the admin governance route accepts free text, so each governance-event INSERT threw `invalid input syntax for type uuid` and the mint failed. Best-effort callers swallowed the error, so the only visible symptom was members stuck at "Reward pending" after an Unlock approval. `schema.sql` now declares `governance_ticket_id TEXT` for fresh databases and converts any legacy UUID column to TEXT with a guarded `DO` block (idempotent; `uuid::text` preserves existing values). Requires running the production schema update (Update Neon DB) to take effect. Unblocks the Unlock approval reward, LevelUp credit releases, contribution rewards, and admin governance mint/burn with non-UUID tickets. No code change.
-- 2026-06-19: Corrected the Earn tab to the real model and cleaned up the shell chrome (owner-confirmed). The Earn tab previously listed operator rewards the platform does not actually pay (Peer Programming +500, Verify Provider +50, Refer a Survivor +100, GentlePulse streak +150). The only platform-funded rewards are: verifying your account via Quora (+100, one-time, the Unlock incentive), taking part in Skills Hunt (per round), and contributing during a community fundraiser (seasonal — next one starts July). Everything else is peer-to-peer: members earn the same way they spend, by being paid by another member (LightHouse/TrustTransport/Directory/Foundation/SocketRelay). Platform-reward cards now link to where they happen. Chrome: removed the chat-styled "Info" tab (icon rail + tab + `sc-info-tab.tsx` + `INFO_MSGS`); the wallet tab uses a distinct `Wallet` icon so the coin no longer appears twice; removed the dead Bell/Settings rail buttons; the static "S" avatar is now the live Clerk account menu; and the left sidebar sections are now real clickable controls that switch the view (My Wallet → wallet, Earn & Spend → earn, The Economy → economy) instead of inert labels. UI/content only — no schema, route, transfer, or ledger change. Web typecheck passes.
+- 2026-06-19: Corrected the Earn tab to the real model and cleaned up the shell chrome (owner-confirmed). The Earn tab previously listed operator rewards the platform does not actually pay (PeerProgramming +500, Verify Provider +50, Refer a Survivor +100, GentlePulse streak +150). The only platform-funded rewards are: verifying your account via Quora (+100, one-time, the Unlock incentive), taking part in SkillsHunt (per round), and contributing during a community fundraiser (seasonal — next one starts July). Everything else is peer-to-peer: members earn the same way they spend, by being paid by another member (LightHouse/TrustTransport/Directory/Foundation/SocketRelay). Platform-reward cards now link to where they happen. Chrome: removed the chat-styled "Info" tab (icon rail + tab + `sc-info-tab.tsx` + `INFO_MSGS`); the wallet tab uses a distinct `Wallet` icon so the coin no longer appears twice; removed the dead Bell/Settings rail buttons; the static "S" avatar is now the live Clerk account menu; and the left sidebar sections are now real clickable controls that switch the view (My Wallet → wallet, Earn & Spend → earn, The Economy → economy) instead of inert labels. UI/content only — no schema, route, transfer, or ledger change. Web typecheck passes.
 - 2026-06-17: Restyled the `/admin/service-credits` surface (admin shell plus every `sca-*` panel and the shared `sca-fields`) to the shared dark admin design system (icon header with `ADMIN` badge, dark panel/surface tokens, stat blocks, dark form inputs) per rule 131. Visual only — every confirmation gate, idempotency key, audit-trail write, CSRF header, and endpoint is unchanged, and no credit-to-fiat equivalence is shown. The mockup's static disputes queue with Resolve/Deny pills and a manual "@handle" issuance widget have no backing list endpoint, so they were not added; the existing operator forms (keyed on a known case or account) are kept. Web typecheck + eslint clean.
 - 2026-06-15: Wallet freeze migrated to the platform-wide account-restriction signal (#528). `setWalletFrozen` now calls the shared `restrictAccount`/`unrestrictAccount` at `trading` scope; `createTransfer` checks `account_restrictions` (throws `account_restricted`) instead of `service_credits_wallets.is_frozen`; `getCreditLimitInfo`'s `frozen` reads the shared signal. The `/admin/wallet-status` endpoint and the web + Android freeze UI are unchanged. The `is_frozen` columns are retired in code (not dropped) and backfilled into `account_restrictions`. See `account-restrictions-spec.md`.
 - 2026-06-15: Flat-equal credit limit (no score), wallet freeze, and GDP boundary. The mutual-credit limit is flat and equal — every member gets the same `mutualCredit.defaultLimit`, with a per-account override for deliberate human decisions only; there is no behavioural/earned score (reconciles the platform's no-credit/social-score commitment). Added a wallet freeze (`is_frozen` on `service_credits_wallets`, rejected with `wallet_frozen` on both rails) with `POST /api/service-credits/admin/wallet-status`; and `GET /api/service-credits/admin/credit-limits?targetUserId=` returning the member's limit, whether it is the policy default, and freeze state. Admin UI: a look-up summary in the credit-limits panel and a new freeze/unfreeze panel. Documented the clean GDP↔circulation boundary in the monetary policy spec (circulation is credits-only; GDP touches SC only via the LevelUp trainer-split governance events; all new SC ledger entries stay `service_credits_non_gdp`). Web typecheck clean.
@@ -279,10 +279,10 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 - 2026-06-12: Android API clients (`api.ts`, `admin-api.ts`) now call the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain dev-only fetch against hardcoded emulator/localhost URLs. The admin functions no longer take a token argument (the wrapper supplies the live token); `AdminServiceCredits.tsx` call sites updated. No backend, schema, or contract change.
 - 2026-06-06: Admin UI built out on web + Android. Web `/admin/service-credits` was a stub (treasury-policy-key count only); replaced with a real operator dashboard: `components/service-credits/service-credits-admin-shell.tsx` (thin shell, `useIsMobile()`-responsive), `sca-treasury-panel.tsx` (treasury policy GET/PUT + fee collection), `sca-governance-panel.tsx` (mint grant + burn), `sca-disputes-panel.tsx` (dispute adjustment), `sca-fields.tsx` (shared field + two-step confirm + feedback), `sca-shared.ts` (CSRF-carrying mutate helper, idempotency-key generator, response types). All files within rule-116 limits. Android adds `src/features/service-credits/AdminServiceCredits.tsx` + `admin-api.ts`, exported from the feature `index.ts` and registered in `App.tsx` as a `service-credits-admin` view. Wired endpoints (all admin-gated; mutations carry `x-ctf-csrf: '1'`): `GET/PUT /admin/treasury`, `POST /admin/treasury/fees/collect`, `POST /admin/governance/mint-grants`, `POST /admin/governance/burns`, `POST /admin/disputes/adjustments`. Every state-changing action requires an explicit confirm step that restates exactly what will change (amount, source/destination members, ticket/case ID); no credits→fiat equivalence is rendered and no amounts are fabricated. Omitted from the design mockups (`design/.../survivor-hub/MobileServiceCreditsAdmin.tsx`) for lack of a backing endpoint: the summary tiles (in-circulation / issued-this-week / disputes-open / resolved totals), the disputes queue list, and the per-row resolve/deny buttons — there is no list/read endpoint for disputes or for circulation/issuance totals. Endpoint/contract gap recorded in the API Surface section: a stale `GET /admin/audit-events` route-map line was removed (no such route exists in code). Gates: web `pnpm run typecheck` clean and `eslint app/admin/service-credits components/service-credits --max-warnings=0` clean; mobile `tsc --noEmit` clean and eslint on new files clean; `check-eof-format.sh` clean. No `key` prop placed on any RN host component.
 - 2026-05-31: Android pixel pass — retired `MockServiceCredits.tsx`; built real screen (`ServiceCredits.tsx`, `sc-wallet-tab.tsx`, `sc-earn-tab.tsx`, `sc-send-tab.tsx`, `sc-styles.ts`) plus real `api.ts` binding `GET /api/service-credits/wallet` and `POST /api/service-credits/transfers`. Omitted fabricated stats and transaction list (no ledger-entries read API). CSRF header mirrored from web transfer route. All files within rule-116 limits. Gates: tsc --noEmit clean (pre-existing TS5101 deprecation only); check-eof-format clean; check-web-android-parity passes.
-- 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/ServiceCredits.tsx` and decomposed the 556-line monolith into modular sub-components (`sc-shared.ts`, `sc-icon-rail`, `sc-sidebar`, `sc-wallet-tab`, `sc-earn-tab`, `sc-info-tab`, `sc-send-panel`, thin shell) within rule-116 limits. Fixed a real transfer bug: the prior shell POSTed `{ toUserId, amount }` with no `idempotencyKey` and no `x-ctf-csrf` header, so `/api/service-credits/transfers` rejected every peer transfer (CSRF + required-field 400s); the Send panel now sends `{ recipientUserId, amount, idempotencyKey }` with the CSRF header. Brand: fixed "Service Credits" → "ServiceCredits" in the info copy; balances render as "credits" only (no fiat). Per real-data-only, omitted the design's hardcoded platform stats and the non-functional per-row "Start"/chat actions; aria-labels added to icon rail + transfer inputs. Dropped unused `userId`/`isAdmin` props at the call site. No schema/route/contract changes.
+- 2026-05-30: Web pixel pass — aligned the shell to `design/.../survivor-hub/ServiceCredits.tsx` and decomposed the 556-line monolith into modular sub-components (`sc-shared.ts`, `sc-icon-rail`, `sc-sidebar`, `sc-wallet-tab`, `sc-earn-tab`, `sc-info-tab`, `sc-send-panel`, thin shell) within rule-116 limits. Fixed a real transfer bug: the prior shell POSTed `{ toUserId, amount }` with no `idempotencyKey` and no `x-ctf-csrf` header, so `/api/service-credits/transfers` rejected every peer transfer (CSRF + required-field 400s); the Send panel now sends `{ recipientUserId, amount, idempotencyKey }` with the CSRF header. Brand: fixed "ServiceCredits" → "ServiceCredits" in the info copy; balances render as "credits" only (no fiat). Per real-data-only, omitted the design's hardcoded platform stats and the non-functional per-row "Start"/chat actions; aria-labels added to icon rail + transfer inputs. Dropped unused `userId`/`isAdmin` props at the call site. No schema/route/contract changes.
 - 2026-05-18: Replaced "Web and Android Parity Plan" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-backlog language. Renamed "Gaps, Ambiguities, and Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and removed Android-parity-timeline-pending entry per Rule 105.
 - 2026-02-25: Added approved account-deletion treasury reclaim policy.
-- 2026-02-24: Initial Service Credits CTF rewrite inventory created.
+- 2026-02-24: Initial ServiceCredits CTF rewrite inventory created.
 
 
 ## Build Checklist
@@ -293,7 +293,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 - [ ] Confirm implementation scope is `ctf/` only.
   - Acceptance criteria:
     - No code changes required in `platform/`.
-- [ ] Confirm Service Credits plugin ID and command namespace.
+- [ ] Confirm ServiceCredits plugin ID and command namespace.
   - Acceptance criteria:
     - Stable plugin ID `service-credits` and command naming convention approved.
 - [ ] Confirm Formance-first adapter seam policy.
@@ -302,13 +302,13 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 
 ### Contract Lock
 
-- [ ] Define Service Credits plugin command contracts for v1.
+- [ ] Define ServiceCredits plugin command contracts for v1.
   - Acceptance criteria:
     - Every command includes required fields from `201-plugin-command-schema-template.mdc`.
-- [ ] Define access policy contracts for v1 Service Credits commands.
+- [ ] Define access policy contracts for v1 ServiceCredits commands.
   - Acceptance criteria:
     - Every command includes roles, attribute checks, consent/legal basis, region controls, and deny conditions from `202-plugin-access-policy-schema-template.mdc`.
-- [ ] Define audit event contracts for v1 Service Credits commands.
+- [ ] Define audit event contracts for v1 ServiceCredits commands.
   - Acceptance criteria:
     - Every command logs allow/deny + result using `203-plugin-audit-schema-template.mdc`.
 - [ ] Resolve non-fiat and cross-plugin policy decisions.
@@ -317,7 +317,7 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
 
 ### Schema and Integration
 
-- [ ] Design Service Credits extension model on canonical profile.
+- [ ] Design ServiceCredits extension model on canonical profile.
   - Acceptance criteria:
     - No duplicate standalone profile table; extension keyed by `user_id`.
 - [ ] Define core wallet, transfer, escrow, governance, treasury, and dispute entities.
@@ -379,8 +379,8 @@ Service Credits seeds wallets, transfers, escrow holds, and dispute fixtures via
     - Data classes and retention classes are declared and policy-aligned per command.
 - [ ] Validate deletion behavior for plugin-scoped and full-account flows.
   - Acceptance criteria:
-    - Service Credits extension/domain deletion behavior is documented and compliant.
-- [ ] Define full-account deletion reclaim entry criteria (`pending_deletion`) for Service Credits balances.
+    - ServiceCredits extension/domain deletion behavior is documented and compliant.
+- [ ] Define full-account deletion reclaim entry criteria (`pending_deletion`) for ServiceCredits balances.
   - Acceptance criteria:
     - Reclaim flow only executes for accounts in `pending_deletion` state and rejects non-pending states deterministically.
 - [ ] Enforce 7-day full-account deletion reclaim window.

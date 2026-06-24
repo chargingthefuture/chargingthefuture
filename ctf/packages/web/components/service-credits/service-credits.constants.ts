@@ -21,8 +21,8 @@ export const PLATFORM_EARN_METHODS: {
     href: '/plugin/unlock',
   },
   {
-    title: 'Take part in Skills Hunt',
-    detail: 'Earn credits by competing in Skills Hunt rounds.',
+    title: 'Take part in SkillsHunt',
+    detail: 'Earn credits by competing in SkillsHunt rounds.',
     credits: 'Per round',
     note: 'ongoing',
     color: '#FBBF24',

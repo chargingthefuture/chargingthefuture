@@ -68,7 +68,7 @@ function LevelupEmpty({ onBrowse }: { onBrowse: () => void }) {
       <View style={styles.emptyBox}>
         <Text style={styles.emptyBoxTitle}>No courses started</Text>
         <Text style={styles.emptyBoxBody}>
-          Enrol in a survivor-led course and earn Service Credits on completion.
+          Enrol in a survivor-led course and earn ServiceCredits on completion.
         </Text>
       </View>
       <TouchableOpacity style={styles.browseBtn} onPress={onBrowse}>
