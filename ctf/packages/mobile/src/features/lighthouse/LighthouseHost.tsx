@@ -124,7 +124,7 @@ export const LighthouseHost: React.FC = () => {
               <Text style={styles.listingTitle}>{p.title}</Text>
               <Text style={styles.listingMeta}>
                 {[p.city, p.state].filter(Boolean).join(', ') || 'Location not set'}
-                {p.monthlyRent ? ` · $${p.monthlyRent}/mo` : ' · Service Credits / free'}
+                {p.monthlyRent ? ` · $${p.monthlyRent}/mo` : ' · ServiceCredits / free'}
               </Text>
             </View>
           ))}

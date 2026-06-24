@@ -71,7 +71,7 @@ export function ContributionsAdminSettings({ t, config, saving, error, onSave, i
       {!isMobile && <h1 style={{ margin: '0 0 22px', fontSize: 16, fontWeight: 700, color: t.TITLE }}>Settings</h1>}
 
       <div style={cardStyle}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 16 }}>Service Credits</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 16 }}>ServiceCredits</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <label style={{ fontSize: 12, color: t.MUTED, flex: 1 }}>Credits per dollar (gift card)</label>
           {numInput(t, creditsPerUsd, setCreditsPerUsd)}

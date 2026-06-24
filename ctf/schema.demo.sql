@@ -520,7 +520,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
   UNIQUE (mission_id, user_id)
 );
 -- Proposed-skill promotion tracker: one row per distinct free-text "proposed" skill
--- harvested from accepted Skills Hunt nominations that is NOT yet in the canonical
+-- harvested from accepted SkillsHunt nominations that is NOT yet in the canonical
 -- taxonomy. A scheduled pipeline (ctf/scripts/proposeSkillPromotions.mjs) files one
 -- GitHub issue per row proposing the skill be added to the taxonomy, with an
 -- AI-suggested sector + occupation. The pipeline only files issues; it never writes
@@ -1376,7 +1376,7 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- === service credits tables ===
+-- === ServiceCredits tables ===
 CREATE TABLE IF NOT EXISTS service_credits_wallets (
   user_id TEXT PRIMARY KEY,
   available_balance NUMERIC NOT NULL DEFAULT 0,
@@ -1839,18 +1839,18 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('skills-taxonomy',    'Skills Taxonomy',      'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
   ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
-  ('skills-hunt',        'Skills Hunt',          'Discover skills across the network.',                     'implemented_shell', 60,  TRUE),
+  ('skills-hunt',        'SkillsHunt',          'Discover skills across the network.',                     'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),
   ('socketrelay',        'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
   ('trusttransport',     'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
-  ('peer-programming',   'Peer Programming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
+  ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
   ('gentlepulse',        'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
-  ('service-credits',    'Service Credits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
+  ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
@@ -2046,7 +2046,7 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS last_name TEXT
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 -- The legacy directory_profiles.description column (exists only on cloned data) is NOT NULL
--- with no default. v3 inserts (e.g. Skills Hunt auto-generated profiles on accept) do not set
+-- with no default. v3 inserts (e.g. SkillsHunt auto-generated profiles on accept) do not set
 -- it, so the insert fails on cloned databases and rolls back the whole operation. Drop the
 -- NOT NULL where the legacy column exists so those inserts succeed; v3 reads the blurb from
 -- bio (the description -> bio backfill lives in post/0006). Guarded + idempotent.
@@ -2075,7 +2075,7 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_addres
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS service_credits_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Skills Hunt + Clerk username co-change (2026-05-11). See
+-- SkillsHunt + Clerk username co-change (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §4.
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'admin';
 DO $directory_profiles_source_check$
@@ -3215,7 +3215,7 @@ WHERE ctid IN (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
   ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
--- === PEER PROGRAMMING MODULE ===
+-- === PeerProgramming MODULE ===
 CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start_date DATE NOT NULL,
@@ -3656,7 +3656,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url DRO
 ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url_normalized DROP DEFAULT;
 ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN signature_hash DROP DEFAULT;
 
--- Skills Hunt v2 (2026-05-11). See
+-- SkillsHunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS participation_points INTEGER NOT NULL DEFAULT 0;
@@ -3709,7 +3709,7 @@ BEGIN
 END
 $skills_hunt_achievements_round_fk$;
 
--- Skills Hunt v2 Missions (post-design lock 2026-05-11). Defensive ALTERs
+-- SkillsHunt v2 Missions (post-design lock 2026-05-11). Defensive ALTERs
 -- so legacy DBs that already created the tables get any later additions.
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS color_hex TEXT;
@@ -4764,7 +4764,7 @@ $socketrelay_user_extension_drop_display_name$;
 
 
 -- ── post migration: 0004_skills_hunt_submissions_display_name_to_full_name.sql ──
--- Skills Hunt: rename `display_name` to `full_name` on `skills_hunt_submissions`.
+-- SkillsHunt: rename `display_name` to `full_name` on `skills_hunt_submissions`.
 --
 -- Why this exists:
 --   The owner relabeled the nominee's name field from "Display name" to

@@ -7,7 +7,7 @@ import type { Cohort } from './api';
 //
 // Binds only endpoints that exist today:
 //   GET  /api/levelup/cohorts               (cohort list, read access)
-//   POST /api/levelup/admin/adjust-credits  (Service Credits adjustment)
+//   POST /api/levelup/admin/adjust-credits  (ServiceCredits adjustment)
 //
 // No admin KPI read endpoint exists yet, so the mobile screen shows the cohort
 // overview and the adjustment action only.
@@ -49,7 +49,7 @@ export type AdjustCreditsResult =
   | { ok: true; message: null }
   | { ok: false; message: string };
 
-// POST a Service Credits adjustment. Carries the CSRF confirmation header the API
+// POST a ServiceCredits adjustment. Carries the CSRF confirmation header the API
 // requires (`x-ctf-csrf: '1'`). A positive amount grants credits to the member; a
 // negative amount removes credits from the member into the LevelUp treasury.
 export async function adjustMemberCredits(

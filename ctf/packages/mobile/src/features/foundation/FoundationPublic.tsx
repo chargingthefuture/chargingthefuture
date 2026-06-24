@@ -28,7 +28,7 @@ export function FoundationPublic({ onSignIn }: { onSignIn?: () => void }) {
       {/* Hero copy */}
       <View style={styles.hero}>
         <Text style={styles.heroBody}>
-          Electricians, plumbers, carpenters, and more — fellow community members. Pay with Service Credits.
+          Electricians, plumbers, carpenters, and more — fellow community members. Pay with ServiceCredits.
         </Text>
         <TouchableOpacity style={styles.joinBtn} onPress={onSignIn}>
           <Text style={styles.joinBtnText}>Join the Hub — Free</Text>

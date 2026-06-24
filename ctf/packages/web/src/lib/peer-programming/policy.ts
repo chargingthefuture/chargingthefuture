@@ -1,4 +1,4 @@
-// Policy logic for Peer Programming plugin
+// Policy logic for PeerProgramming plugin
 // Placeholder for access control, role checks, etc.
 import { Cohort } from './types';
 export function canJoinCohort(userId: string, cohort: Cohort): boolean {

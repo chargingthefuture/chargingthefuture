@@ -1,4 +1,4 @@
-// Shared constants and types for the Skills Hunt admin/moderation shell.
+// Shared constants and types for the SkillsHunt admin/moderation shell.
 import type { SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
 
 export const COLOR = "#FBBF24";

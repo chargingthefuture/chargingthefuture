@@ -1,6 +1,6 @@
 # Formance Ledger
 
-Single reference for the Formance ledger that backs Service Credits. Deployment
+Single reference for the Formance ledger that backs ServiceCredits. Deployment
 mechanics live in code — this doc covers only what code does not: the runtime
 contract, one-time ledger bootstrap, and backup/restore.
 
@@ -98,7 +98,7 @@ Optional:
 - `SERVICE_CREDITS_REQUIRE_FORMANCE` (force prestart validation outside production)
 - `SERVICE_CREDITS_INTERNAL_TOKEN` (required for the internal reclaim endpoint)
 
-Behavior: Service Credits value-moving commands fail closed when Formance is
+Behavior: ServiceCredits value-moving commands fail closed when Formance is
 unavailable. Missing config → `service_credits_external_ledger_not_configured`;
 upstream rejection/unavailable → `service_credits_external_ledger_unavailable`
 (deterministic 503 deny on `POST /api/service-credits/transfers`).

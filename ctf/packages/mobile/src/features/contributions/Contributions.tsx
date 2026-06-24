@@ -154,7 +154,7 @@ function Confirmation({ data, onViewHistory }: { data: FundraiserResponse; onVie
   const instructions =
     data.signalInstructions.trim().length > 0
       ? data.signalInstructions
-      : "Send your gift card code directly to the platform owner on Signal. The contact details are in the owner's platform profile. Once the card is matched to your submission, your Service Credits will be added.";
+      : "Send your gift card code directly to the platform owner on Signal. The contact details are in the owner's platform profile. Once the card is matched to your submission, your ServiceCredits will be added.";
   return (
     <ScrollView style={{ flex: 1, backgroundColor: BG }} contentContainerStyle={{ padding: 18, paddingTop: 28 }}>
       <View style={{ alignItems: 'center', marginBottom: 28 }}>
@@ -173,7 +173,7 @@ function Confirmation({ data, onViewHistory }: { data: FundraiserResponse; onVie
             <Text style={st.signalLink} onPress={() => void Linking.openURL(ownerSignalUrl)}>
               {ownerSignalUrl}
             </Text>{' '}
-            Once the card is matched to your submission, your Service Credits will be added.
+            Once the card is matched to your submission, your ServiceCredits will be added.
           </Text>
         ) : (
           <Text style={st.bodyText}>{instructions}</Text>
@@ -185,7 +185,7 @@ function Confirmation({ data, onViewHistory }: { data: FundraiserResponse; onVie
       </View>
 
       <View style={st.pendingCard}>
-        <Text style={st.pendingTitle}>Service Credits pending confirmation</Text>
+        <Text style={st.pendingTitle}>ServiceCredits pending confirmation</Text>
         <Text style={st.bodyText}>Credits will appear in your wallet after confirmation.</Text>
       </View>
 
@@ -321,7 +321,7 @@ export const Contributions: React.FC = () => {
         {tab === 'contribute' && (
           <>
             <View style={st.noteBox}>
-              <Text style={st.noteText}>Confirmed contributions earn Service Credits as a thank-you. Credits can't be turned back into cash.</Text>
+              <Text style={st.noteText}>Confirmed contributions earn ServiceCredits as a thank-you. Credits can't be turned back into cash.</Text>
             </View>
             {paths.map((p) => {
               const disabled = p.key === 'github_star' && alreadyCredited;

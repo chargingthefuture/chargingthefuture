@@ -61,7 +61,7 @@ export function LighthousePropertyDetail({
                 if (rent === "Free") return <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>Free</div>;
                 return <div style={{ fontSize: 32, fontWeight: 800, color: COLOR, marginBottom: 4 }}>{rent}<span style={{ fontSize: 14, color: "#6B7280", fontWeight: 400 }}>/mo</span></div>;
               })()}
-              {listingAcceptsCredits(l) && <div style={{ fontSize: 12, color: "#F59E0B", marginBottom: 16 }}>✓ Accepts Service Credits</div>}
+              {listingAcceptsCredits(l) && <div style={{ fontSize: 12, color: "#F59E0B", marginBottom: 16 }}>✓ Accepts ServiceCredits</div>}
               {isOwn ? (
                 <>
                   <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 12, lineHeight: 1.6 }}>This is your listing.</div>

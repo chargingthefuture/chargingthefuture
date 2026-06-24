@@ -171,9 +171,9 @@ This folder contains the rewrite monorepo scaffold for:
   - `GET/PUT /api/trusttransport/admin/market-config`
   - `GET /api/trusttransport/admin/audit-events`
 
-## Service Credits Formance Ledger Requirement
+## ServiceCredits Formance Ledger Requirement
 
-- Service Credits value-moving transfer flows require Formance ledger posting.
+- ServiceCredits value-moving transfer flows require Formance ledger posting.
 - Full reference (runtime contract, bootstrap, backup/restore): `ctf/docs/developer/FORMANCE.md`
 - Deployment is defined in code: `ctf/ops/formance/Dockerfile.ledger` and the `ctf-formance-ledger` service in `render.yaml`.
 - Required env vars: `FORMANCE_API_URL` (Render internal URL of `ctf-formance-ledger`), `FORMANCE_LEDGER`, `FORMANCE_API_TOKEN`. Never route Formance ↔ CTF traffic through a public domain.

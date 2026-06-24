@@ -75,7 +75,7 @@ function DesktopLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; 
           <span style={{ color: COLOR }}>your location stays private</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: SUBTLE, maxWidth: 520 }}>
-          All listings are privacy-minimized. Your location is never shared without consent. Trauma-informed hosts. Service Credits accepted. Month-to-month options available.
+          All listings are privacy-minimized. Your location is never shared without consent. Trauma-informed hosts. ServiceCredits accepted. Month-to-month options available.
         </p>
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           {verifyUrl ? (
@@ -127,7 +127,7 @@ function MobileLightHousePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           <span style={{ fontSize: 20, fontWeight: 800 }}>LightHouse</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Privacy-first housing</span>
-        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>Safe, verified housing. Your location is never shared without consent. Trauma-informed hosts. Service Credits accepted.</p>
+        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>Safe, verified housing. Your location is never shared without consent. Trauma-informed hosts. ServiceCredits accepted.</p>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
       </div>
 

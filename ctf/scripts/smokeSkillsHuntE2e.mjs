@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Skills Hunt end-to-end smoke check.
+ * SkillsHunt end-to-end smoke check.
  *
  * Verifies the full chain that the rewrite checklist asks for:
  *
@@ -49,7 +49,7 @@ async function main() {
 
   const client = new Client({ connectionString: url });
   await client.connect();
-  console.log('Skills Hunt end-to-end smoke check\n');
+  console.log('SkillsHunt end-to-end smoke check\n');
 
   try {
     // 1. Round is listable as active.
@@ -144,7 +144,7 @@ async function main() {
 
     // 7. Audit log row was written for the seed flow (regulatory retention).
     // Tighten the predicate so the assertion is meaningful: require ≥ 1 row
-    // for the seed actor on a Skills Hunt command.
+    // for the seed actor on a SkillsHunt command.
     await assertRow(
       'audit log retained at least one entry for the seed actor',
       client.query(
@@ -156,7 +156,7 @@ async function main() {
       { total: (v) => v > 0 },
     );
 
-    console.log('\nAll Skills Hunt smoke assertions passed.');
+    console.log('\nAll SkillsHunt smoke assertions passed.');
   } finally {
     await client.end();
   }

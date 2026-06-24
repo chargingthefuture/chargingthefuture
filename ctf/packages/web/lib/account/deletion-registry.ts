@@ -175,7 +175,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   },
   {
     slug: 'peer-programming',
-    name: 'Peer Programming',
+    name: 'PeerProgramming',
     dataSummary: 'Your cohort membership, room messages, feedback, and notifications.',
     serviceScopeSupported: true,
     tables: [
@@ -271,7 +271,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   },
   {
     slug: 'skills-hunt',
-    name: 'Skills Hunt',
+    name: 'SkillsHunt',
     dataSummary: 'Your submissions, achievements, notifications, leaderboard entries, and mission progress.',
     serviceScopeSupported: true,
     tables: [

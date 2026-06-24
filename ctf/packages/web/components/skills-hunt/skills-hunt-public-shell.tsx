@@ -10,7 +10,7 @@ const COLOR = '#FBBF24';
 const TEXT = '#F9FAFB';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// Static description of how Skills Hunt works (marketing copy, not user data).
+// Static description of how SkillsHunt works (marketing copy, not user data).
 const HOW_IT_WORKS = [
   {
     step: '1',
@@ -46,7 +46,7 @@ function DesktopSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
       {/* Top bar */}
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <Search size={18} color={COLOR} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>Skills Hunt</span>
+        <span style={{ fontSize: 16, fontWeight: 700 }}>SkillsHunt</span>
         <div style={{ marginLeft: 'auto' }}>
           {verifyUrl ? (
             <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
@@ -83,7 +83,7 @@ function DesktopSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; 
         {/* How it works */}
         <div style={{ width: 300, flexShrink: 0 }}>
           <div style={{ padding: '20px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${COLOR}20` }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 14 }}>How Skills Hunt works</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: COLOR, marginBottom: 14 }}>How SkillsHunt works</div>
             {HOW_IT_WORKS.map((item) => (
               <div key={item.step} style={{ display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
@@ -149,7 +149,7 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
       {/* Header */}
       <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <Search size={20} color={COLOR} />
-        <span style={{ fontSize: 20, fontWeight: 800 }}>Skills Hunt</span>
+        <span style={{ fontSize: 20, fontWeight: 800 }}>SkillsHunt</span>
       </div>
 
       {/* Hero */}
@@ -192,7 +192,7 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
 }
 
 /**
- * Signed-out visitor view for Skills Hunt. Pixel-faithful to the SkillsHuntPublic
+ * Signed-out visitor view for SkillsHunt. Pixel-faithful to the SkillsHuntPublic
  * (desktop) and MobileSkillsHuntPublic (phone) design mockups, with every sign-in
  * affordance pointing at the real hosted sign-in URL.
  *

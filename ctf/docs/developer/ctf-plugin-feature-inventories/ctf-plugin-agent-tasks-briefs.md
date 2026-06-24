@@ -770,7 +770,7 @@ Start gate:
 - Phase 3 — start with/after GDP policy and accounting semantics lock.
 
 Scope:
-- Implement wallet/balance/transfers/escrow/disputes/governance/treasury/deletion-reclaim flows for Service Credits.
+- Implement wallet/balance/transfers/escrow/disputes/governance/treasury/deletion-reclaim flows for ServiceCredits.
 
 Must follow:
 - Rule precedence from #file:index.mdc.

@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'foundation', op: 'service_credits' });
-    console.error('[Foundation] Service credits transfer failed:', error);
-    return NextResponse.json({ ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Unable to send service credits.' }, { status: 503 });
+    console.error('[Foundation] ServiceCredits transfer failed:', error);
+    return NextResponse.json({ ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Unable to send ServiceCredits.' }, { status: 503 });
   }
 }

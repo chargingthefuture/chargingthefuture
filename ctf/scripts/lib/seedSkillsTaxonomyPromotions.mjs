@@ -2,7 +2,7 @@
 // canonical skills taxonomy (sector -> occupation/job title -> skill).
 //
 // Background: the taxonomy is normally synced from the legacy platform dataset by
-// syncSkillsTaxonomyFromLegacy.mjs. Free-text skills nominated through Skills Hunt
+// syncSkillsTaxonomyFromLegacy.mjs. Free-text skills nominated through SkillsHunt
 // that are not yet in the taxonomy are tracked in skills_hunt_proposed_skill_promotions
 // and surfaced as GitHub "skill proposal" issues by proposeSkillPromotions.mjs. When the
 // owner approves a proposal, the skill must be added to the taxonomy in a durable,

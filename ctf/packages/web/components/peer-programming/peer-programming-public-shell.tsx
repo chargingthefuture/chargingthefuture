@@ -33,7 +33,7 @@ function DesktopPeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: str
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10 }}>
         <Users size={18} color={COLOR} />
-        <span style={{ fontSize: 16, fontWeight: 700 }}>Peer Programming</span>
+        <span style={{ fontSize: 16, fontWeight: 700 }}>PeerProgramming</span>
         <div style={{ marginLeft: 'auto' }}>
           {verifyUrl ? (
             <a href={verifyUrl} style={{ padding: '8px 20px', borderRadius: 8, background: COLOR, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>Finish verifying</a>
@@ -85,7 +85,7 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Users size={20} color={COLOR} />
-          <span style={{ fontSize: 20, fontWeight: 800 }}>Peer Programming</span>
+          <span style={{ fontSize: 20, fontWeight: 800 }}>PeerProgramming</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>Deterministic global cohorts</span>
         <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>12-person weekly cohorts across 47 countries. You&apos;re always placed — no competitive selection, guaranteed spot.</p>
@@ -113,7 +113,7 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
 }
 
 /**
- * Signed-out visitor view for Peer Programming. Renders the public marketing
+ * Signed-out visitor view for PeerProgramming. Renders the public marketing
  * experience pixel-faithful to the PeerProgrammingPublic (desktop) and
  * MobilePeerProgrammingPublic (phone) design mockups, with sign-in affordances
  * pointing at the real hosted sign-in URL. It shows no private or per-user data:

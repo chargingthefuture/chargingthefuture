@@ -33,7 +33,7 @@ const STATUS_CFG: Record<DisplayStatus, { color: string; bg: string; label: stri
   rejected: { color: '#EF4444', bg: 'rgba(239,68,68,0.08)', label: 'Rejected' },
 };
 
-const BENEFITS = ['Full Directory access', 'Skills Hunt participation', 'ServiceCredits trading', 'Plugin marketplace', 'GDP contribution'];
+const BENEFITS = ['Full Directory access', 'SkillsHunt participation', 'ServiceCredits trading', 'Plugin marketplace', 'GDP contribution'];
 
 function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
   if (r === 'approved') return 'approved';

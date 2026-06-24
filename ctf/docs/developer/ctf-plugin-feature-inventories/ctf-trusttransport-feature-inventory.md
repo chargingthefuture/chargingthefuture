@@ -5,7 +5,7 @@
 - Plugin name: `TrustTransport`
 - Plugin slug: `trusttransport`
 - Owned surfaces: `/apps/trusttransport` (web), `packages/mobile/src/features/trusttransport` (Android), `/api/trusttransport/*` routes, `trusttransport_*` tables.
-- Not owned: identity (Clerk), service credits ledger (service-credits plugin), notifications/email transport (notifications integration).
+- Not owned: identity (Clerk), ServiceCredits ledger (service-credits plugin), notifications/email transport (notifications integration).
 - Primary mission scope: peer-to-peer rides, package delivery, and food delivery.
 
 ## Intent and Outcome

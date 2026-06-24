@@ -1,6 +1,6 @@
-# Skills Hunt Plugin Artifacts
+# SkillsHunt Plugin Artifacts
 
-This index links to canonical artifacts for Skills Hunt.
+This index links to canonical artifacts for SkillsHunt.
 
 ## Contracts
 - [Command Contracts(../../contracts/SKILLS_HUNT_PLUGIN_COMMAND_CONTRACTS.yaml)

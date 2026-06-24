@@ -65,7 +65,7 @@ export const AdminLevelup = () => {
   }, [authLoading, load]);
 
   const parsedAmount = Number(amountText);
-  // Grant-only: LevelUp never removes a member's Service Credits from the UI
+  // Grant-only: LevelUp never removes a member's ServiceCredits from the UI
   // ("earn or earn nothing"). Only a positive amount is accepted here.
   const amountValid =
     amountText.trim().length > 0 && Number.isFinite(parsedAmount) && parsedAmount > 0;
@@ -107,7 +107,7 @@ export const AdminLevelup = () => {
       return;
     }
     setNotice(
-      `Grant recorded: +${magnitude} Service Credits for member ${targetUserId.trim()}.`,
+      `Grant recorded: +${magnitude} ServiceCredits for member ${targetUserId.trim()}.`,
     );
     setTargetUserId('');
     setAmountText('');
@@ -136,7 +136,7 @@ export const AdminLevelup = () => {
       <View style={styles.headerRow}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.title}>LevelUp Admin</Text>
-          <Text style={styles.subtitle}>Cohort overview and Service Credits grants.</Text>
+          <Text style={styles.subtitle}>Cohort overview and ServiceCredits grants.</Text>
         </View>
         <View style={styles.adminBadge}>
           <Text style={styles.adminBadgeText}>ADMIN</Text>
@@ -172,11 +172,11 @@ export const AdminLevelup = () => {
         )}
       </View>
 
-      {/* Service Credits grant (grant-only — never removes credits) */}
+      {/* ServiceCredits grant (grant-only — never removes credits) */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Grant member Service Credits</Text>
+        <Text style={styles.cardTitle}>Grant member ServiceCredits</Text>
         <Text style={styles.cardMeta}>
-          LevelUp only ever grants Service Credits to a member — it never removes them. Enter an amount
+          LevelUp only ever grants ServiceCredits to a member — it never removes them. Enter an amount
           greater than zero. Every grant is recorded against a governance ticket and written to the
           audit log.
         </Text>
@@ -228,7 +228,7 @@ export const AdminLevelup = () => {
         {confirming ? (
           <View style={styles.confirmBox}>
             <Text style={styles.confirmText}>
-              Confirm: this will add {magnitude} Service Credits to member {targetUserId.trim()}.
+              Confirm: this will add {magnitude} ServiceCredits to member {targetUserId.trim()}.
             </Text>
             <Text style={styles.confirmMeta}>
               Reason: {reason.trim()} · Governance ticket: {governanceTicketId.trim()}

@@ -88,7 +88,7 @@ export const PeerProgramming = () => {
           <Text style={styles.headerIconText}>PP</Text>
         </View>
         <View>
-          <Text style={styles.headerTitle}>Peer Programming</Text>
+          <Text style={styles.headerTitle}>PeerProgramming</Text>
         </View>
       </View>
       <View style={styles.navBar}>

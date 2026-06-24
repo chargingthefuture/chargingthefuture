@@ -1,6 +1,6 @@
 import type { PeerProgrammingTopic } from './api';
 
-// Admin client for the Peer Programming plugin. Mirrors the web admin routes under
+// Admin client for the PeerProgramming plugin. Mirrors the web admin routes under
 // ctf/packages/web/app/api/peer-programming/admin/*. Admin access is enforced
 // server-side; a 401/403 surfaces as a "forbidden" notice in the screen.
 // All calls go through authedFetch so the Clerk bearer token is attached and the

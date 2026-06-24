@@ -3,11 +3,13 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Shield } from "lucide-react";
 import { COLOR, FONT, initials, type ProviderView } from "./foundation-ui";
+import { ConnectNowButton, canOfferConnectNow } from "./foundation-connect-now";
 
 export function ProviderProfile({
-  provider, submitting, quoteError, quoteSuccess, onBack, onRequestQuote,
+  provider, viewerUserId = null, submitting, quoteError, quoteSuccess, onBack, onRequestQuote,
 }: {
   provider: ProviderView;
+  viewerUserId?: string | null;
   submitting: boolean;
   quoteError: string | null;
   quoteSuccess: boolean;
@@ -40,6 +42,9 @@ export function ProviderProfile({
               >
                 {submitting ? "Requesting…" : "Request Quote"}
               </button>
+              {canOfferConnectNow(provider, viewerUserId) ? (
+                <ConnectNowButton provider={provider} />
+              ) : null}
             </div>
           </div>
           {quoteError && <div style={{ fontSize: 13, color: "#EF4444", marginBottom: 12 }}>{quoteError}</div>}

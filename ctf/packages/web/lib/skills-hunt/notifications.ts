@@ -1,4 +1,4 @@
-// Skills Hunt — in-DB notification fan-out.
+// SkillsHunt — in-DB notification fan-out.
 //
 // All five spec triggers (accept, reject, leaderboard-top10 change,
 // round-ending-24h, achievement-unlocked) plus mission-complete write rows
@@ -46,7 +46,7 @@ export async function emitSubmissionAccepted(
     userId,
     SKILLS_HUNT_NOTIFICATION_KIND.submissionAccepted,
     'Submission accepted',
-    `Your Skills Hunt submission was accepted with ${pointsAwarded} points.`,
+    `Your SkillsHunt submission was accepted with ${pointsAwarded} points.`,
     { submissionId, pointsAwarded },
   );
 }
@@ -61,7 +61,7 @@ export async function emitSubmissionRejected(
     userId,
     SKILLS_HUNT_NOTIFICATION_KIND.submissionRejected,
     'Submission rejected',
-    'Your Skills Hunt submission was rejected during moderation review.',
+    'Your SkillsHunt submission was rejected during moderation review.',
     { submissionId },
   );
 }

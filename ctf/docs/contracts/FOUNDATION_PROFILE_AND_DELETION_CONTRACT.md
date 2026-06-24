@@ -128,7 +128,7 @@ When user requests full account deletion:
   - Foundation pseudonymized remnants removed where policy allows hard delete
 - Cross-service dependencies:
   - full-account orchestrator must sequence canonical identity deletion with all plugin contracts
-  - Service Credits reclaim/finalization is required before account deletion can be marked `completed`
+  - ServiceCredits reclaim/finalization is required before account deletion can be marked `completed`
   - Foundation must consume orchestrator status transitions and emit deletion audit events
 - Final expected state:
   - no recoverable Foundation user-scoped data linked to deleted identity

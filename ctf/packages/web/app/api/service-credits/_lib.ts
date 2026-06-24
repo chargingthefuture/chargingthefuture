@@ -53,7 +53,7 @@ export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: str
   }
 
   if (error instanceof Error && error.message === 'invalid_payload') {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'Invalid service credits payload.' }, { status: 400 });
+    return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'Invalid ServiceCredits payload.' }, { status: 400 });
   }
 
   if (error instanceof Error && error.message === 'transfer_conflict') {
@@ -79,7 +79,7 @@ export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: str
   if (error instanceof Error && error.message === 'external_ledger_not_configured') {
     reportError(error, { area: 'service-credits', op: 'unknown' });
     return NextResponse.json(
-      { ok: false, code: 'service_credits_external_ledger_not_configured', message: 'Formance ledger is not configured for Service Credits.' },
+      { ok: false, code: 'service_credits_external_ledger_not_configured', message: 'Formance ledger is not configured for ServiceCredits.' },
       { status: 503 },
     );
   }
