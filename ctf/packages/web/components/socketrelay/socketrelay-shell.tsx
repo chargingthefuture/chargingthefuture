@@ -337,7 +337,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "feed", label: "Feed" },
       { key: "post", label: "Post" },
-      { key: "chat", label: "Chat" },
+      { key: "chat", label: "Direct Line" },
     ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
