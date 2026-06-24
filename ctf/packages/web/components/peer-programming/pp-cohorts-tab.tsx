@@ -20,7 +20,7 @@ function FeedbackForm({ value, onChange, onSubmit, submitting, success, error }:
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="How was your peer programming experience?"
+          placeholder="How was your PeerProgramming experience?"
           rows={3}
           disabled={submitting}
           style={{ padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "#E8EAF0", fontSize: 14, resize: "vertical", outline: "none" }}

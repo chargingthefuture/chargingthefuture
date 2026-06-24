@@ -56,7 +56,7 @@ referenced, admin-curated option set.
 ### Naming (owner-confirmed, applies to copy throughout)
 
 - Canonical token name is `ServiceCredits` (one word, PascalCase) in all user-facing copy — not
-  "Service Credits", "SC", "cr", or "credits".
+  "ServiceCredits", "SC", "cr", or "credits".
 - User-facing app names that are two words are joined PascalCase (ServiceCredits, LightHouse,
   SkillsHunt, ClickLog). Internal app names keep separate words (e.g. "Weekly Performance").
 - Counts in mockups ("12 mini-apps", "17 Mini Apps", "4.9M survivors") are dummy placeholders.

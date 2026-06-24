@@ -8,7 +8,7 @@ This repository contains the v3 rewrite of the Charging the Future platform — 
 
 - **Web App** — Next.js frontend for the core user experience
 - **Mobile App** — React Native (Expo) Android client with feature parity to web
-- **Ledger** — Formance-backed financial ledger for Service Credits
+- **Ledger** — Formance-backed financial ledger for ServiceCredits
 - **Agents** — AI-powered MCP servers for autonomous build, deployment, and operational workflows
 - **Schema** — PostgreSQL schema migrations and audit trails
 

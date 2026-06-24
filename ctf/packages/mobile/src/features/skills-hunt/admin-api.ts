@@ -1,7 +1,7 @@
 import { authedFetch } from '../../auth/authedFetch';
 import type { Round, Submission } from './SkillsHuntApi';
 
-// Admin client for the Skills Hunt plugin. Mirrors the web admin routes under
+// Admin client for the SkillsHunt plugin. Mirrors the web admin routes under
 // ctf/packages/web/app/api/skills-hunt/admin/*. Admin/moderator access is
 // enforced server-side; a 401/403 surfaces as a "forbidden" notice in the screen.
 // All calls go through authedFetch so the Clerk bearer token is attached and the

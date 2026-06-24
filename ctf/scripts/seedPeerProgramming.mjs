@@ -142,7 +142,7 @@ async function seed() {
     }
 
     await queryDb('COMMIT');
-    console.log('Seeded peer programming cohorts, topics, members, messages, and feedback.');
+    console.log('Seeded PeerProgramming cohorts, topics, members, messages, and feedback.');
   } catch (err) {
     try {
       await queryDb('ROLLBACK');

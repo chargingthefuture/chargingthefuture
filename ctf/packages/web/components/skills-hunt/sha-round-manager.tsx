@@ -100,7 +100,7 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, maxWidth: 560 }}>
       <div>
         <label style={label} htmlFor="shr-name">Name</label>
-        <input id="shr-name" style={field} value={v.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. July Skills Hunt" />
+        <input id="shr-name" style={field} value={v.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. July SkillsHunt" />
       </div>
       <div>
         <label style={label} htmlFor="shr-desc">Description (optional)</label>

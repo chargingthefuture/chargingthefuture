@@ -17,7 +17,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 const WHY_JOIN = [
   { icon: '⚡', t: 'Trade with anyone', d: 'Skills map to real services you can buy or sell.' },
   { icon: '🎓', t: 'Find learning cohorts', d: 'LevelUp matches you with peers based on shared skills.' },
-  { icon: '🔍', t: 'Skills Hunt discovery', d: 'Scouts use this database to nominate and verify survivors.' },
+  { icon: '🔍', t: 'SkillsHunt discovery', d: 'Scouts use this database to nominate and verify survivors.' },
   { icon: '🗺️', t: 'GDP contribution', d: 'Each skill added grows the survivor-economy estimate.' },
 ];
 

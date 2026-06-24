@@ -18,7 +18,7 @@ const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
   { href: '/admin/comic', name: 'AI Assistant', description: 'Review answers from the @comic assistant before they post.' },
   { href: '/admin/whatworks', name: 'WhatWorks', description: 'Curate problems and the products that solve them.' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt', description: 'Manage missions, scouts, and the leaderboard.' },
-  { href: '/admin/peer-programming', name: 'Peer Programming', description: 'Set topics and manage pairing assignments.' },
+  { href: '/admin/peer-programming', name: 'PeerProgramming', description: 'Set topics and manage pairing assignments.' },
   { href: '/admin/levelup', name: 'LevelUp', description: 'Run skills-training cohorts and stipend milestones.' },
   { href: '/admin/weekly-performance', name: 'Weekly Performance', description: 'Manage weekly performance reporting.' },
   { href: '/admin/workforce', name: 'Workforce', description: 'Manage workforce records and assignments.' },

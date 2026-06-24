@@ -1,17 +1,17 @@
-# Service Credits Profile and Deletion Contract (Draft)
+# ServiceCredits Profile and Deletion Contract (Draft)
 
 This draft uses `PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
 
 ## 1) Plugin Metadata
 
-- Plugin Name: Service Credits
+- Plugin Name: ServiceCredits
 - Service Key (lowercase, stable): `service-credits`
 - Owner Team: Platform Economy (proposed), Trust & Safety Engineering (proposed)
 - Rollout Stage: Planning (core wallet and deletion orchestration)
 
 ## 2) Canonical Profile Usage
 
-Service Credits uses canonical profile identity for wallet binding, authorization, and deletion orchestration.
+ServiceCredits uses canonical profile identity for wallet binding, authorization, and deletion orchestration.
 
 - Read fields:
   - `user_id`
@@ -93,7 +93,7 @@ Service Credits uses canonical profile identity for wallet binding, authorizatio
 
 ## 5) Service-Scoped Deletion Contract
 
-When user deletes Service Credits plugin usage only (`DELETE /api/account/service-credits-profile`):
+When user deletes ServiceCredits plugin usage only (`DELETE /api/account/service-credits-profile`):
 
 - Delete immediately:
   - `service_credits_user_extension` plugin-scoped preferences/flags not required for ledger integrity
@@ -104,10 +104,10 @@ When user deletes Service Credits plugin usage only (`DELETE /api/account/servic
   - `service_credits_deletion_events` and reclaim records
 - Never touch (must remain):
   - canonical account identity
-  - non-Service Credits plugin data
+  - non-ServiceCredits plugin data
   - immutable ledger/tombstone evidence
 - User-facing confirmation text:
-  - “Delete Service Credits plugin profile data only? Your account remains active and wallet ledger records required for compliance are retained.”
+  - “Delete ServiceCredits plugin profile data only? Your account remains active and wallet ledger records required for compliance are retained.”
 
 ## 6) Full-Account Deletion Contract
 
@@ -124,7 +124,7 @@ When user requests full account deletion (`DELETE /api/account/full-account`):
 - Financial boundary:
   - no external withdrawal path is allowed at any step of full-account deletion
 - Cross-service dependencies:
-  - full-account deletion orchestrator controls global sequencing; Service Credits participates as a required dependency stage
+  - full-account deletion orchestrator controls global sequencing; ServiceCredits participates as a required dependency stage
 - Final expected state:
   - no active user wallet; only policy-required immutable ledger/audit/tombstone artifacts remain
 
@@ -137,7 +137,7 @@ If user returns after plugin-scoped deletion:
 - Data that is not restored:
   - deleted plugin-scoped preference state and prior reclaim attempt transient markers
 - Re-consent required? (yes/no):
-  - yes, for Service Credits scope and wallet-operation consent surfaces
+  - yes, for ServiceCredits scope and wallet-operation consent surfaces
 
 ## 8) Audit and Events
 
@@ -160,7 +160,7 @@ If user returns after plugin-scoped deletion:
 - Internal reclaim execute route:
   - `POST /api/internal/service-credits/accounts/{accountId}/deletion-reclaims/{deletionRequestId}/execute` (orchestrator/internal actor only)
 - Full account delete endpoint (or orchestrator):
-  - `DELETE /api/account/full-account` (platform orchestrator; Service Credits is a required dependency)
+  - `DELETE /api/account/full-account` (platform orchestrator; ServiceCredits is a required dependency)
 - Status model (`requested`, `pending_deletion`, `processing`, `completed`, `failed`, `reclaim_blocked`):
   - required for plugin and full-account flows with explicit pending/reclaim states
 - User-facing copy reviewed by:
@@ -171,7 +171,7 @@ If user returns after plugin-scoped deletion:
 - Migration file(s):
   - All schema changes are made directly in `ctf/schema.sql` (canonical source of truth).
 - Rollback approach:
-  - reverse-order rollback for Service Credits deletion/reclaim/tombstone extension tables only, with hard stop if ledger integrity checks fail
+  - reverse-order rollback for ServiceCredits deletion/reclaim/tombstone extension tables only, with hard stop if ledger integrity checks fail
 - Backfill required? (yes/no):
   - yes (initialize extension rows and pending-deletion defaults for existing wallets)
 
@@ -198,4 +198,4 @@ If user returns after plugin-scoped deletion:
 ## Change Log
 
 - 2026-06-15: Added the mutual-credit default rule (§12): a negative balance at full-account deletion is a treasury-absorbed `mutual_credit_default`, bounded by small per-account credit limits.
-- 2026-02-25: Created initial Service Credits profile/deletion contract with plugin-scoped deletion, full-account pending-deletion + reclaim window rules, escrow-blocked retry semantics, treasury-return finalization, and tombstone/audit requirements.
+- 2026-02-25: Created initial ServiceCredits profile/deletion contract with plugin-scoped deletion, full-account pending-deletion + reclaim window rules, escrow-blocked retry semantics, treasury-return finalization, and tombstone/audit requirements.

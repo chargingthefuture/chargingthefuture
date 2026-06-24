@@ -254,7 +254,7 @@ async function seedSkillsHunt(c) {
      (id, name, description, status, starts_at, ends_at, scoring_config, created_by_user_id, updated_by_user_id)
      VALUES
      ($1::uuid, 'Demo Wave 1 — Skills Discovery',
-      'Identify and nominate skilled community members. Top submissions earn 250 service credits.',
+      'Identify and nominate skilled community members. Top submissions earn 250 ServiceCredits.',
       'active',
       NOW() - INTERVAL '7 days', NOW() + INTERVAL '21 days',
       '{"pointsPerAccepted":50,"firstMatchBonus":25}'::jsonb,
@@ -418,8 +418,8 @@ async function seedWorkforce(c) {
 
 async function seedFeedAnnouncements(c) {
   const feedItems = [
-    [ID.feedItem1, 'announcement', 'Platform update: service credits now live',
-     'Earn and spend service credits across all plugins starting today.'],
+    [ID.feedItem1, 'announcement', 'Platform update: ServiceCredits now live',
+     'Earn and spend ServiceCredits across all plugins starting today.'],
     [ID.feedItem2, 'community', 'Welcome to the demo community space',
      'This is a curated demo feed. Real posts from your network will appear here.'],
   ];
@@ -471,7 +471,7 @@ async function seedTrust(c) {
 async function seedMood(c) {
   const submissions = [
     [sha256id(OWNER, 'mood', '4', '2026-05-19'), OWNER, 4, 'Good momentum this week.', '2026-05-19'],
-    [sha256id(OWNER, 'mood', '5', '2026-05-26'), OWNER, 5, 'Skills hunt accepted — great week!', '2026-05-26'],
+    [sha256id(OWNER, 'mood', '5', '2026-05-26'), OWNER, 5, 'SkillsHunt accepted — great week!', '2026-05-26'],
   ];
 
   for (const [id, uid, val, note, date] of submissions) {

@@ -90,7 +90,7 @@ function ShellHeader({ active, t, isAdmin }: { active: boolean; t: PeerProgrammi
     <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
       <Users size={18} style={{ color: t.ACCENT }} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>Peer Programming</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>PeerProgramming</div>
         <div style={{ fontSize: 12, color: t.MUTED }}>Weekly global masterminds · 12 per cohort · Always-open</div>
       </div>
       {active && (
@@ -146,7 +146,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         setAccess(data.access);
       } catch (e: unknown) {
         if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-        setError(e instanceof Error ? e.message : "Failed to load peer programming data.");
+        setError(e instanceof Error ? e.message : "Failed to load PeerProgramming data.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -296,7 +296,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
               <ChevronLeft size={20} />
             </Link>
             <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Peer Programming</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>PeerProgramming</span>
             <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>

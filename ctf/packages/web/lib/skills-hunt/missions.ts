@@ -1,4 +1,4 @@
-// Skills Hunt — Missions module.
+// SkillsHunt — Missions module.
 //
 // Backs the Missions feature locked into Wave 2 scope by the post-design
 // reconciliation (see ctf-skills-hunt-session-continuity.md sect 2.9).

@@ -16,7 +16,7 @@ export async function DELETE(request: Request) {
   }
 
   // Same-origin CSRF guard before the destructive delete, matching the shared account
-  // deletion routes and the Skills Hunt profile-delete path.
+  // deletion routes and the SkillsHunt profile-delete path.
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;

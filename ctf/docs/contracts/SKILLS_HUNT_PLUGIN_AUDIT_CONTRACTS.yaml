@@ -363,7 +363,7 @@ auditEvents:
 
 changelog:
   - date: 2026-02-24
-    change: Initial Skills Hunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
+    change: Initial SkillsHunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
   - date: 2026-05-12
     change: Added audit event templates for skills-hunt.submission.report and skills-hunt.profile.delete.
   - date: 2026-06-20

@@ -132,7 +132,7 @@ function DesktopGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
             <Globe size={32} color={`${COLOR}60`} style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Add your skills to the economy</div>
             <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.6, maxWidth: 480, margin: '0 auto 20px' }}>
-              Every verified skill you add increases the collective value of the TI Skills Economy. Create a free account to contribute, earn Service Credits, and appear on the global map.
+              Every verified skill you add increases the collective value of the TI Skills Economy. Create a free account to contribute, earn ServiceCredits, and appear on the global map.
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               {verifyUrl ? (

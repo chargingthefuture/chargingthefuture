@@ -138,14 +138,14 @@ export const AdminSkillsHunt = () => {
   if (!auth?.isAuthenticated || forbidden) {
     return (
       <View style={styles.center}>
-        <Text style={styles.noticeText}>The Skills Hunt admin tools are available to admins only.</Text>
+        <Text style={styles.noticeText}>The SkillsHunt admin tools are available to admins only.</Text>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Skills Hunt Admin</Text>
+      <Text style={styles.title}>SkillsHunt Admin</Text>
       <Text style={styles.subtitle}>
         Pick a round, filter by status, and accept, reject, or flag each nomination.
       </Text>

@@ -1,7 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 
-// Live video session credentials for a Peer Programming cohort. The cohort room is
+// Live video session credentials for a PeerProgramming cohort. The cohort room is
 // async-first text; the Session tab adds an optional live video call for the same
 // cohort, using the shared GetStream (Stream) account like Chyme and Lighthouse.
 //

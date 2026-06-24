@@ -13,7 +13,7 @@ function EmptyProgress({ onBrowse }: { onBrowse: () => void }) {
       </div>
       <div>
         <div style={{ fontSize: 15, fontWeight: 600, color: TEXT, marginBottom: 6 }}>Not enrolled yet</div>
-        <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, maxWidth: 360 }}>Browse cohorts and enroll to start tracking your milestones. Service Credits are held in escrow until each milestone is verified by your trainer.</div>
+        <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, maxWidth: 360 }}>Browse cohorts and enroll to start tracking your milestones. ServiceCredits are held in escrow until each milestone is verified by your trainer.</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 340 }}>
         {STEPS.map((step, i) => (

@@ -1,4 +1,4 @@
-// Types for Peer Programming plugin
+// Types for PeerProgramming plugin
 export interface Cohort {
   id: string;
   name: string;

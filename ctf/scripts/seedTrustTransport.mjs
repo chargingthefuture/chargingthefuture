@@ -119,13 +119,13 @@ async function main() {
       [seedTripId],
     );
 
-    // Seed a service credits transaction for TrustTransport
+    // Seed a ServiceCredits transaction for TrustTransport
     await client.query(
       `
         INSERT INTO trusttransport_service_credits_transactions
           (from_user_id, to_user_id, amount, reason, trip_id, created_at)
         VALUES
-          ('seed-trusttransport-requester-01', 'seed-trusttransport-provider-01', 9, 'Seed TrustTransport service credits', $1::uuid, NOW())
+          ('seed-trusttransport-requester-01', 'seed-trusttransport-provider-01', 9, 'Seed TrustTransport ServiceCredits', $1::uuid, NOW())
         ON CONFLICT DO NOTHING
       `,
       [seedTripId],

@@ -57,7 +57,7 @@ function DesktopLevelUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
           Earn skills, earn credits —<br /><span style={{ color: COLOR }}>learn alongside other survivors</span>
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: SUBTLE, maxWidth: 520 }}>
-          Cohort-based courses across tech, finance, trades, and life skills. Complete milestones to earn Service Credits. Trainers are survivor-advocates themselves.
+          Cohort-based courses across tech, finance, trades, and life skills. Complete milestones to earn ServiceCredits. Trainers are survivor-advocates themselves.
         </p>
         <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
           {HIGHLIGHTS.map((f) => (
@@ -96,7 +96,7 @@ function MobileLevelUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; veri
           <BookOpen size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>LevelUp</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>Cohort-based courses across tech, finance, trades, and life skills. Complete milestones to earn Service Credits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, lineHeight: 1.5 }}>Cohort-based courses across tech, finance, trades, and life skills. Complete milestones to earn ServiceCredits.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {HIGHLIGHTS.map((f) => (
             <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

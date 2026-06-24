@@ -1,8 +1,8 @@
-# Stream Quota Impact Note — Mobile Peer Programming live video Session
+# Stream Quota Impact Note — Mobile PeerProgramming live video Session
 
 ## Summary
 
-- Feature/Change: Android (React Native) parity for the Peer Programming Session tab's live video
+- Feature/Change: Android (React Native) parity for the PeerProgramming Session tab's live video
   call. The mobile Session tab now has a "Join Session" button that calls the existing
   `POST /api/peer-programming/session/join` (through the shared authenticated fetch helper) and joins
   the same per-cohort GetStream video call the web Session tab already joins, using
@@ -47,7 +47,7 @@
 
 - What degrades first: if Stream is not configured (no API key/secret), `session/join` returns 503 and
   the mobile Session tab shows "Live video is unavailable right now. The cohort text room still works."
-  The async text room and all other Peer Programming features keep working — video is additive.
+  The async text room and all other PeerProgramming features keep working — video is additive.
 - User-visible messaging behavior: a member with no cohort sees "You're not in a cohort yet. Join a
   cohort to access live sessions." (404 from the route); a connect failure shows the Stream error in
   place with a retry; a read-only listener (viewing another cohort) is told to open their own cohort's
@@ -75,4 +75,4 @@
   test harness for live Stream calls (consistent with the existing Chyme/Lighthouse video surfaces) —
   the live join is verified manually on a device.
 - Rollback strategy: revert the branch, or unset the production Stream credentials to disable the join
-  path while leaving the rest of Peer Programming intact.
+  path while leaving the rest of PeerProgramming intact.

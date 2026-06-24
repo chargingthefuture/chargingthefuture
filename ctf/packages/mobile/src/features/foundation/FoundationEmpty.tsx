@@ -21,7 +21,7 @@ export function FoundationEmpty() {
       </View>
       <Text style={styles.title}>No listings yet</Text>
       <Text style={styles.desc}>
-        Post a service you offer or a job you need done. Paid in Service Credits or cash — your choice.
+        Post a service you offer or a job you need done. Paid in ServiceCredits or cash — your choice.
       </Text>
       <View style={[styles.btn, { backgroundColor: COLOR }]}>
         <Text style={styles.btnText}>Post a Service</Text>

@@ -13,7 +13,7 @@ export type DirectoryProfile = {
   jobTitleId: string | null;
   jobTitleName: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
-  // Free-text skills that were nominated for this profile through Skills Hunt but
+  // Free-text skills that were nominated for this profile through SkillsHunt but
   // are not yet in the canonical taxonomy. They live in
   // skills_hunt_proposed_skill_promotions (status not yet 'promoted'), joined to the
   // profile via the originating submission (skills_hunt_directory_profiles). Surfaced
@@ -21,7 +21,7 @@ export type DirectoryProfile = {
   // just because its nominated skill has not been promoted yet.
   pendingSkills: string[];
   isActive: boolean;
-  // Skills Hunt + Clerk username co-change (continuity §2.4 / §4 in
+  // SkillsHunt + Clerk username co-change (continuity §2.4 / §4 in
   // ctf-skills-hunt-session-continuity.md). source drives the visible
   // "Community generated" badge in the design; unclaimedHandle drives the
   // @handle vanity URL for unclaimed profiles; invitedByUsername surfaces

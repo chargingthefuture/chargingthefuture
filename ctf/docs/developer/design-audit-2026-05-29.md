@@ -32,7 +32,7 @@ The first-pass "currency" findings below were over-broad. Owner rulings reclassi
   Reword these to ServiceCredits utility framing (no fiat equivalent). This is the legal line.
 
 Still must-fix as written: all "Phase" words; brand-voice / trauma items; naming — the
-token is `ServiceCredits` (one word, PascalCase), not "Service Credits"/"SC"/"cr"/"credits";
+token is `ServiceCredits` (one word, PascalCase), not "ServiceCredits"/"SC"/"cr"/"credits";
 user-facing two-word app names join PascalCase, internal names stay spaced (e.g. "Weekly
 Performance"); the `// design-sync` marker gaps; and the 4-state gaps.
 
@@ -65,7 +65,7 @@ Findings by category:
 - brandvoice (trauma-informed tone): 12
 - marker (missing design-sync line-1 marker): 4
 
-Headline: The dominant problems are systemic, not one-off. Nearly every economy/GDP surface — web and mobile — denominates the Service Credits economy in US dollars (`$247B`, `$300B`, `$/hr` rates, `$/mo` rents, member contributions in `$`, and explicit "real monetary value" / "purchasing power" / "≈ $242 USD" pegs). This directly violates the non-fiat, Psyop-Free credit-economy rule and is the single largest fix cluster. The second cluster is banned "Phase 0/1/2/3" labels appearing in badges, tags, nav filters, announcements, and a trending hashtag across ~20 files. A third, softer cluster is trauma-informed tone: "stop needing/depending on traffickers", "reduces infiltration", "gamified talent scouting", growth-hype, and the activist loading slogan. Structurally, all four `landing/` files are missing the `// design-sync` marker, several components lack one or more of the four required states, and loading copy is nearly uniform but split between two punctuation variants. ClickLog itself is clean on content (loading-slogan only).
+Headline: The dominant problems are systemic, not one-off. Nearly every economy/GDP surface — web and mobile — denominates the ServiceCredits economy in US dollars (`$247B`, `$300B`, `$/hr` rates, `$/mo` rents, member contributions in `$`, and explicit "real monetary value" / "purchasing power" / "≈ $242 USD" pegs). This directly violates the non-fiat, Psyop-Free credit-economy rule and is the single largest fix cluster. The second cluster is banned "Phase 0/1/2/3" labels appearing in badges, tags, nav filters, announcements, and a trending hashtag across ~20 files. A third, softer cluster is trauma-informed tone: "stop needing/depending on traffickers", "reduces infiltration", "gamified talent scouting", growth-hype, and the activist loading slogan. Structurally, all four `landing/` files are missing the `// design-sync` marker, several components lack one or more of the four required states, and loading copy is nearly uniform but split between two punctuation variants. ClickLog itself is clean on content (loading-slogan only).
 
 ## List for Replit (design repo)
 
@@ -73,7 +73,7 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 
 ### Desktop / Hub (web)
 - `Desktop.tsx:16` (must-fix, phase) — `MINI_APPS` `tag: "Phase 0/1/2"` (lines 16–30) — replace phase tags with a non-phase availability concept (`Live`, `Coming soon`) or drop the tag.
-- `Desktop.tsx:34` (must-fix, currency) — "TI Skills Economy is at $247B of its $300B opportunity" — reframe in Service Credits / member-activity terms; no USD.
+- `Desktop.tsx:34` (must-fix, currency) — "TI Skills Economy is at $247B of its $300B opportunity" — reframe in ServiceCredits / member-activity terms; no USD.
 - `Desktop.tsx:38` (must-fix, currency) — stat `$247B` / `of $300B opportunity` — replace with a non-fiat metric.
 - `Desktop.tsx:180` (must-fix, currency) — hero "$300B opportunity" — express without a dollar figure.
 - `Desktop.tsx:183` (must-fix, currency) — `$247B` GDP tile — non-fiat figure.
@@ -85,14 +85,14 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `MobileHome.tsx:5` / `MobileGentlePulse.tsx:3` (question, copy) — unused `Badge` import — remove.
 
 ### Hub public/empty
-- `HubPublic.tsx:22` (must-fix, currency) — "GDP dashboard just hit $247B" — express scale in Service Credits.
+- `HubPublic.tsx:22` (must-fix, currency) — "GDP dashboard just hit $247B" — express scale in ServiceCredits.
 - `HubPublic.tsx:28` (must-fix, currency) — `GDP Economy` `$247B` with `DollarSign` icon — re-express in SC and swap to `Coins` icon.
 - `HubPublic.tsx:57` (must-fix, currency) — banner "$247B economy" — SC or omit.
 - `HubEmpty.tsx:19` (must-fix, currency) — "$300B opportunity" onboarding card — participation terms.
 - `HubEmpty.tsx:90` (must-fix, currency) — hero "$300B opportunity" — reframe.
 - `HubEmpty.tsx:143` (must-fix, currency) — `$0` contribution — use `0 SC`.
-- `HubEmpty.tsx:150` (must-fix, currency) — `Global: $247B` — Service Credits.
-- `HubEmpty.tsx:159` (should-fix, currency) — "Service Credits economy" bullet is correct; remove the conflicting `$` figures on the same screen (19, 90, 143, 150).
+- `HubEmpty.tsx:150` (must-fix, currency) — `Global: $247B` — ServiceCredits.
+- `HubEmpty.tsx:159` (should-fix, currency) — "ServiceCredits economy" bullet is correct; remove the conflicting `$` figures on the same screen (19, 90, 143, 150).
 - `HubEmpty.tsx:134` (question, copy) — "Member since 2024" (today is 2026) — confirm sample vs deprecated placeholder.
 - `MobileHubPublic.tsx:24` (must-fix, currency) — `GDP` `$247B` — non-fiat.
 - `MobileHubPublic.tsx:117` (should-fix, currency) — bottom-nav label `GDP` — rename to `Economy`/`Credits`.
@@ -115,7 +115,7 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `GDPPublic.tsx:26` (must-fix, currency) — `TOP_COUNTRIES` `$89.4B`…`$18.9B` — SC.
 - `GDPPublic.tsx:70` (must-fix, currency) — hero `$247B` / `of $300B opportunity` — SC.
 - `GDPPublic.tsx:129` (must-fix, currency) — sector `${value}B` — strip `$` and `B`; render SC.
-- `GDPPublic.tsx:160` (must-fix, currency) — CTA earns "Service Credits" but dashboard shows `$B`; decouple — remove all dollar figures.
+- `GDPPublic.tsx:160` (must-fix, currency) — CTA earns "ServiceCredits" but dashboard shows `$B`; decouple — remove all dollar figures.
 - `GDPPublic.tsx:3` (should-fix, currency) — unused `DollarSign` import — remove.
 - `GDPPublic.tsx:143` (question, copy) — "Top Countries by Economic Output" — confirm unit reads as credit output not USD.
 - `GDPPublicAlt.tsx:3` (should-fix, currency) — unused `DollarSign` import — remove.
@@ -136,37 +136,37 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `MobileGDP.tsx:140` (must-fix, currency) — "Building a $300B survivor economy" tagline — SC.
 - `MobileGDP.tsx:45` (should-fix, copy) — "GDP Tracker" (populated) vs "GDP Dashboard" (empty) — pick one canonical name; reconsider GDP/dollar framing.
 - `MobileGDPEmpty.tsx:26` (must-fix, currency) — `$247B` total — SC.
-- `MobileGDPEmpty.tsx:32` (must-fix, currency) — "Your contribution: $0" — `0 Service Credits`.
+- `MobileGDPEmpty.tsx:32` (must-fix, currency) — "Your contribution: $0" — `0 ServiceCredits`.
 - `MobileGDPPublic.tsx:28` (must-fix, currency) — `$2.4B` headline — `2.4B SC`, drop `$`.
-- `MobileGDPPublic.tsx:29` (should-fix, currency) — "annual service credits exchanged" label sits under `$2.4B`; once `$` dropped, ensure unit reads Service Credits.
+- `MobileGDPPublic.tsx:29` (should-fix, currency) — "annual ServiceCredits exchanged" label sits under `$2.4B`; once `$` dropped, ensure unit reads ServiceCredits.
 
 ### Foundation / tradespeople (web + mobile)
 - `Foundation.tsx:739` (must-fix, phase) — "Phase 1" subtitle — drop.
-- `Foundation.tsx:44` (must-fix, currency) — `$85/hr` etc. provider rates — Service Credits/hr.
+- `Foundation.tsx:44` (must-fix, currency) — `$85/hr` etc. provider rates — ServiceCredits/hr.
 - `Foundation.tsx:122` (must-fix, currency) — QUOTES `$340` / `$190` — SC.
-- `Foundation.tsx:956` (must-fix, currency) — "Accept a quote and pay with Service Credits" paired with `$` quotes — keep SC language, remove surrounding fiat prices.
+- `Foundation.tsx:956` (must-fix, currency) — "Accept a quote and pay with ServiceCredits" paired with `$` quotes — keep SC language, remove surrounding fiat prices.
 - `Foundation.tsx:23` (question, copy) — unused `DollarSign`, `Zap` imports — remove.
 - `FoundationPublic.tsx:8` (must-fix, currency) — `$/hr` preview prices next to "Credits OK" — SC or remove price chip.
-- `FoundationPublic.tsx:38` (must-fix, currency) — "Pay with Service Credits or cash" — remove "or cash"; SC only.
+- `FoundationPublic.tsx:38` (must-fix, currency) — "Pay with ServiceCredits or cash" — remove "or cash"; SC only.
 - `FoundationPublic.tsx:3` (question, copy) — unused `DollarSign` import — remove.
 - `MobileFoundation.tsx:11–13` (must-fix, currency) — `$85/95/110/hr` for credits-accepting providers — SC rates.
 - `MobileFoundation.tsx:57` (must-fix, currency) — Rate stat tile shows `$/hr` — SC.
 - `MobileFoundation.tsx:116` (must-fix, currency) — list-card `$/hr` — SC.
 - `MobileFoundation.tsx:86` (question, copy) — "8,400 vetted tradespeople" + "Background-checked" claims — verify counts/claims.
-- `MobileFoundationPublic.tsx:26–29` (must-fix, currency) — `$85/95/90/75/hr` while page says "Pay with Service Credits" — SC rates.
+- `MobileFoundationPublic.tsx:26–29` (must-fix, currency) — `$85/95/90/75/hr` while page says "Pay with ServiceCredits" — SC rates.
 - `MobileFoundationPublic.tsx:40` (must-fix, currency) — rendered `$/hr` element — SC.
-- `MobileFoundationEmpty.tsx:33` (must-fix, currency) — "Paid in Service Credits or cash — your choice" — remove cash option.
+- `MobileFoundationEmpty.tsx:33` (must-fix, currency) — "Paid in ServiceCredits or cash — your choice" — remove cash option.
 
 ### LightHouse / housing (web + mobile)
 - `LightHouse.tsx:143` (must-fix, phase) — "Phase 2" subtitle — drop.
 - `LightHouseEmpty.tsx:42` (must-fix, phase) — `Phase 2` sidebar badge — remove.
-- `LightHousePublic.tsx:8–11` (must-fix, currency) — `price: 850/1100/1400/650` with `credits: true` — denominate listings in Service Credits, not USD.
+- `LightHousePublic.tsx:8–11` (must-fix, currency) — `price: 850/1100/1400/650` with `credits: true` — denominate listings in ServiceCredits, not USD.
 - `LightHousePublic.tsx:62` (must-fix, currency) — renders `${l.price}/mo` — `N credits / mo`, no `$`.
 - `LightHousePublic.tsx:76` (should-fix, copy) — "Filter by price…" implies fiat — reword to "Filter by Service Credit cost…".
-- `MobileLightHousePublic.tsx:27–29` (must-fix, currency) — `$850/$1,100/$650/mo` with `credits: true` — Service Credits.
+- `MobileLightHousePublic.tsx:27–29` (must-fix, currency) — `$850/$1,100/$650/mo` with `credits: true` — ServiceCredits.
 - `MobileLightHousePublic.tsx:36` (must-fix, currency) — renders the dollar price strings; "Credits OK" (line 37) must not sit beside a USD price — convert.
-- `LightHouse.tsx:26, 83, 226` (question, currency) — external-rent USD figures shown beside "Accepts Service Credits" / "Pricing Guide" ranges — owner decision on whether real-world fiat rent may be shown (see Open Questions).
-- `MobileLightHouse.tsx:58, 113` (question, currency) — `${l.price}/mo` listing detail/card + separate "Accepts Service Credits" badge — same owner decision.
+- `LightHouse.tsx:26, 83, 226` (question, currency) — external-rent USD figures shown beside "Accepts ServiceCredits" / "Pricing Guide" ranges — owner decision on whether real-world fiat rent may be shown (see Open Questions).
+- `MobileLightHouse.tsx:58, 113` (question, currency) — `${l.price}/mo` listing detail/card + separate "Accepts ServiceCredits" badge — same owner decision.
 
 ### Workforce / SkillsHunt / PeerProgramming
 - `Workforce.tsx:100` (must-fix, phase) — "Phase 1" subheader — drop.
@@ -189,7 +189,7 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `MobileSkillsHuntPublic.tsx:24` (should-fix, brandvoice) — "Gamified talent scouting" for finding survivors — reframe toward dignity.
 - `MobileDirectoryPublic.tsx:109` (should-fix, copy) — "label someone… may be a survivor — no certainty needed" — confirm consent/privacy alignment.
 
-### Service Credits surfaces
+### ServiceCredits surfaces
 - `ServiceCredits.tsx:122` (must-fix, phase) — "Across all 12 mini-apps · Phase 3" — drop "· Phase 3".
 - `ServiceCredits.tsx:168` (must-fix, currency) — "≈ $242 USD purchasing power" — delete USD peg; non-fiat framing.
 - `ServiceCredits.tsx:134` (must-fix, currency) — "No purchasing power yet" — "No credits to spend yet".
@@ -219,7 +219,7 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `MobileFeed.tsx:11` (must-fix, phase) — "🚀 Phase 2 Live: …" — "Now Live: …".
 - `MobileFeed.tsx:14` (must-fix, currency) — "$247B economy" — non-fiat framing.
 - `MobileFeed.tsx:14` (should-fix, brandvoice) — "🎉 5 Million Members Worldwide! … This is YOUR economy" growth-hype — soften to calmer community tone.
-- `MobileFeed.tsx:13` (question, currency) — "12 accept Service Credits" — confirm canonical term (no peg present).
+- `MobileFeed.tsx:13` (question, currency) — "12 accept ServiceCredits" — confirm canonical term (no peg present).
 - `MobileFeedPublic.tsx:29` (should-fix, copy) — "Housing Navigators" — confirm canonical role name.
 
 ### Chyme / Directory
@@ -245,13 +245,13 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `SocketRelay.tsx:92` (must-fix, phase) — "Privacy-minimized · Phase 2" — drop / "Mutual Aid · Live".
 - `SocketRelayEmpty.tsx:28` (must-fix, phase) — `Phase 0` badge — remove.
 - `SocketRelayPublic.tsx:26` (must-fix, currency) — `$0` "Cost to post" — use "Free", drop `$`.
-- `SocketRelay.tsx:126` (should-fix, copy) — lowercase "credits" vs "SC" vs "Service Credits" across SocketRelay surfaces — standardize on "Service Credits".
+- `SocketRelay.tsx:126` (should-fix, copy) — lowercase "credits" vs "SC" vs "ServiceCredits" across SocketRelay surfaces — standardize on "ServiceCredits".
 - `SocketRelayPublic.tsx:118` (question, copy) — "SC" abbreviation — confirm canonical.
 - `MobileSocketRelay.tsx:70` (question, currency) — "{credits} credits" bare count is fine; confirm no later USD equivalent.
 - `MobileSocketRelay.tsx:11` (should-fix, copy) — "Need groceries — single mom, 3 kids" stereotyped sample — use a dignity-preserving example.
 - `TrustTransport.tsx:109` (must-fix, phase) — "Safety-first · Phase 2" — drop "· Phase 2".
 - `TrustTransportEmpty.tsx:27` (must-fix, phase) — `Phase 1` badge — remove.
-- `MobileTrustTransport.tsx:51, 74, 109` (should-fix, copy) — "Credits OK" / "Credits" badge / "12 credits" — standardize to "Service Credits".
+- `MobileTrustTransport.tsx:51, 74, 109` (should-fix, copy) — "Credits OK" / "Credits" badge / "12 credits" — standardize to "ServiceCredits".
 - `MobileTrust.tsx:5` (question, copy) — BRAND `#0284C7` vs `MobileTrustEmpty.tsx:5` `#0EA5E9` for same plugin — confirm canonical brand color.
 - `MobileTrustEmpty.tsx:101` (should-fix, copy) — empty `<span>` placeholder node; icon concatenated into label on 103 — render icon in span or remove the empty element.
 
@@ -323,16 +323,16 @@ Fix (Replit, design repo): insert `// design-sync` as line 1 of each file, pushi
 
 ## Open questions for the owner
 
-1. How should the credit economy's scale be expressed without fiat? Every economy/GDP surface currently uses `$247B` / `$300B`. We need the canonical non-fiat replacement: a Service Credits volume (e.g. "247B SC circulated"), a unitless activity index, or member/milestone counts. Pick one so Replit can apply it uniformly.
+1. How should the credit economy's scale be expressed without fiat? Every economy/GDP surface currently uses `$247B` / `$300B`. We need the canonical non-fiat replacement: a ServiceCredits volume (e.g. "247B SC circulated"), a unitless activity index, or member/milestone counts. Pick one so Replit can apply it uniformly.
 2. Should ServiceCredits show any per-member value at all? Current copy uses "≈ $242 USD purchasing power" and "real monetary value." Decide whether to show only a raw credit balance (e.g. "2,420 credits"), a utility statement ("usable across all 12 mini-apps"), or nothing — and whether "purchasing power"/"utility token" framing is allowed.
-3. External real-world rent in LightHouse: Housing listings show actual fiat rent (`$850/mo`, `$1,000`, pricing-guide ranges) beside "Accepts Service Credits." Is showing real-world landlord rent in USD an allowed exception, or must all LightHouse pricing be denominated in Service Credits? This affects LightHousePublic, MobileLightHouse(Public), and LightHouse.tsx.
+3. External real-world rent in LightHouse: Housing listings show actual fiat rent (`$850/mo`, `$1,000`, pricing-guide ranges) beside "Accepts ServiceCredits." Is showing real-world landlord rent in USD an allowed exception, or must all LightHouse pricing be denominated in ServiceCredits? This affects LightHousePublic, MobileLightHouse(Public), and LightHouse.tsx.
 4. External provider rates in Foundation: Same question for tradesperson `$/hr` rates next to "Credits OK" — convert to credits, or allow fiat rates for external providers?
 5. Loading message — activist slogan vs calm copy: Is "EXIT THEIR ECONOMY / EXIT THE PSYOP" the intended trauma-informed loading message for a survivor audience mid-load, or should it be replaced with the calmer landing-style copy ("Preparing your community experience…")? If the slogan stays, confirm the slash variant is canonical so the 23 no-slash files can be normalized.
 6. Canonical mini-app / member counts: LandingHero says "17 Mini Apps"; ServiceCredits says "12 mini-apps"; member counts vary between "4.9M survivors" and "5M+ Members." Provide the authoritative numbers (or confirm they're illustrative placeholders) so Replit can reconcile.
 7. Consent model for nominating survivors: SkillsHunt/Directory invite users to nominate third parties as possible survivors "no certainty needed." Confirm this is intended and that consent/privacy/notification handling is acceptable, or specify required guardrail copy.
 8. "GDP" as a product term: "GDP", "GDP Tracker/Dashboard", "GDP Delta", "By Phase" filters, and the "GDP" nav label all use a fiat-macroeconomics word. Decide whether "GDP" is retained as product vocabulary or replaced with a non-fiat term (e.g. "Economy" / "Service Credit circulation").
 9. Trauma-tone reframes: Confirm the direction for "stop needing/depending on traffickers", "reduces infiltration", and "gamified talent scouting" — approve the suggested self-sufficiency/safety reframes or provide preferred wording.
-10. Canonical credit unit label: Surfaces variously use "Service Credits", "SC", "credits", and "cr". Confirm the one canonical spelling and abbreviation for Replit to standardize.
+10. Canonical credit unit label: Surfaces variously use "ServiceCredits", "SC", "credits", and "cr". Confirm the one canonical spelling and abbreviation for Replit to standardize.
 11. Chyme duplication and Trust brand color: Confirm Chyme.tsx should re-export from ChymeApp.tsx (currently byte-identical copies), and which Trust brand color is canonical (`#0284C7` vs `#0EA5E9`).
 
 ## What the app side can do now
@@ -356,7 +356,7 @@ App-repo follow-ups (only after Replit fixes land and the submodule is re-pinned
 These were re-audited directly after the main run.
 
 Must-fix:
-- `MobileWeeklyPerformance.tsx:17` (currency) — `GDP Delta` value `+$1.2M` pegs the economy metric to fiat. Replace with Service Credits (`+1.2M SC`) or a non-fiat index; drop `$`.
+- `MobileWeeklyPerformance.tsx:17` (currency) — `GDP Delta` value `+$1.2M` pegs the economy metric to fiat. Replace with ServiceCredits (`+1.2M SC`) or a non-fiat index; drop `$`.
 
 Should-fix / questions:
 - `MobileUnlock.tsx:130` vs `MobileUnlockEmpty.tsx:121` (copy) — unlocked-benefit lists diverge ("Plugin marketplace" vs "All plugins"; `MobileUnlock` adds "GDP contribution"). Align across all three Unlock states.

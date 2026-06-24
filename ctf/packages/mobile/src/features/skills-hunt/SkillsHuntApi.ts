@@ -1,4 +1,4 @@
-// Skills Hunt mobile API client.
+// SkillsHunt mobile API client.
 //
 // Targets the same /api/skills-hunt/* endpoints as the web shell. All calls go
 // through authedFetch so the Clerk bearer token is attached and the base URL
@@ -7,7 +7,7 @@
 import { authedFetchJson } from '../../auth/authedFetch';
 
 // The canonical skills taxonomy lives under a different API base than the rest of
-// Skills Hunt, so its read is called with an absolute path rather than getJson.
+// SkillsHunt, so its read is called with an absolute path rather than getJson.
 const TAXONOMY_FLATTENED_PATH = '/api/skills-taxonomy/flattened';
 
 const API_BASE = '/api/skills-hunt';

@@ -76,7 +76,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   },
   {
     slug: 'skills-hunt',
-    name: 'Skills Hunt',
+    name: 'SkillsHunt',
     summary: 'Discover skills across the network.',
     availabilityState: 'implemented_shell',
     navRank: 60,
@@ -124,7 +124,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   },
   {
     slug: 'peer-programming',
-    name: 'Peer Programming',
+    name: 'PeerProgramming',
     summary: 'Weekly global mastermind sessions.',
     availabilityState: 'implemented_shell',
     navRank: 110,
@@ -164,7 +164,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   },
   {
     slug: 'service-credits',
-    name: 'Service Credits',
+    name: 'ServiceCredits',
     summary: 'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',
     availabilityState: 'implemented_shell',
     navRank: 160,

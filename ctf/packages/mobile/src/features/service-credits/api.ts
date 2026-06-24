@@ -53,7 +53,7 @@ type CirculationApiResponse = {
 };
 
 /**
- * Fetch the authenticated user's Service Credits wallet.
+ * Fetch the authenticated user's ServiceCredits wallet.
  * Returns availableBalance and escrowBalance from the real backend.
  */
 export async function fetchWallet(): Promise<Wallet> {
