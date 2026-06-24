@@ -8,7 +8,7 @@ import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
 import { IconRail, FilterSidebar, RightRail } from "./foundation-rails";
-import { BrowsePanel, QuotesPanel, ChatPanel } from "./foundation-panels";
+import { BrowsePanel, QuotesPanel } from "./foundation-panels";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
@@ -64,7 +64,6 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [skillId, setSkillId] = useState<string | null>(null);
   const [skillName, setSkillName] = useState<string | null>(null);
   const [selected, setSelected] = useState<ProviderView | null>(null);
-  const [chatInput, setChatInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
@@ -174,14 +173,6 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
       {tab === "offer" && <OfferSkillsPanel />}
       {tab === "quotes" && <QuotesPanel quotes={quotes} onBrowse={() => setTab("browse")} />}
-      {tab === "chat" && (
-        <ChatPanel
-          input={chatInput}
-          onInput={setChatInput}
-          onSend={() => setChatInput("")}
-          onBrowse={() => setTab("browse")}
-        />
-      )}
     </>
   );
 
@@ -190,7 +181,6 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       { key: "browse", label: "Browse" },
       { key: "offer", label: "Offer" },
       { key: "quotes", label: "Quotes" },
-      { key: "chat", label: "Chat" },
     ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT }}>
