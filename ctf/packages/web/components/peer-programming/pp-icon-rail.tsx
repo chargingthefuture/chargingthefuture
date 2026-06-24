@@ -7,7 +7,7 @@ import { COLOR, type Tab } from "./pp-shared";
 const TABS: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Users, key: "cohorts", label: "Cohorts" },
   { icon: Video, key: "session", label: "Session" },
-  { icon: MessageSquare, key: "chat", label: "Chat" },
+  { icon: MessageSquare, key: "chat", label: "Direct Line" },
 ];
 
 export function PeerProgrammingIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
