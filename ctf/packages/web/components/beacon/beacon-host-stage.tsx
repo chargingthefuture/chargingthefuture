@@ -3,7 +3,7 @@
 // Desktop in-browser screen-share publisher for the Beacon host. The admin captures a screen/window
 // with the browser and publishes it into the same livestream call as the host. This is the
 // computer-demo input path; the phone-demo path uses the RTMP url/key shown in the admin shell.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -26,7 +26,7 @@ export type BeaconHostCredentials = {
 
 const SUBTLE = '#9CA3AF';
 
-export function BeaconHostStage({ credentials }: { credentials: BeaconHostCredentials }) {
+export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconHostCredentials; eventId: string }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
@@ -78,16 +78,38 @@ export function BeaconHostStage({ credentials }: { credentials: BeaconHostCreden
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <ScreenShareControls />
+        <ScreenShareControls eventId={eventId} />
       </StreamCall>
     </StreamVideo>
   );
 }
 
-function ScreenShareControls() {
+function ScreenShareControls({ eventId }: { eventId: string }) {
   const { useScreenShareState, useHasOngoingScreenShare } = useCallStateHooks();
   const { screenShare, isMute } = useScreenShareState();
   const isSharing = useHasOngoingScreenShare();
+  // Start the public HLS broadcast + recording the first time a screen-share goes live in this
+  // session. go-live alone only flips the call out of backstage; egress must start once media exists,
+  // which is right here. The ref guards against firing more than once per share session and resets
+  // when sharing stops so a later re-share starts egress again.
+  const egressStartedRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (!isSharing) {
+      egressStartedRef.current = false;
+      return;
+    }
+    if (egressStartedRef.current) {
+      return;
+    }
+    egressStartedRef.current = true;
+    void fetch(`/api/beacon/${eventId}/start-broadcast`, {
+      method: 'POST',
+      headers: { 'x-ctf-csrf': '1' },
+    }).catch((error) => {
+      // Egress is additive — the screen-share itself still works. Report and move on; do not block UI.
+      reportError(error, { area: 'beacon', op: 'start_broadcast_client', extra: { eventId } });
+    });
+  }, [isSharing, eventId]);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
