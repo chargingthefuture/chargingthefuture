@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ExternalLink, Sparkles } from "lucide-react";
+import { ChevronLeft, ExternalLink, Pencil, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
 import { useExternalLink } from "@/components/hooks/useExternalLink";
 import { getDirectoryTokens, initials, type Member } from "./shared";
+import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import type { TrustUserExtension } from "@/lib/trust/types";
 
@@ -35,12 +36,16 @@ export function DirectoryProfileDetail({
   isAdmin = false,
   currentUserId,
   onAttach,
+  onProfileSaved,
 }: {
   member: Member;
   onBack: () => void;
   isAdmin?: boolean;
   currentUserId?: string;
   onAttach?: (profileId: string, targetUserId: string) => Promise<{ ok: boolean; error?: string }>;
+  // Called after the owner saves edits to their own profile, so the shell can re-fetch the list
+  // and the detail view reflects the new values.
+  onProfileSaved?: () => void;
 }) {
   const p = member;
   const { theme } = useTheme();
@@ -56,7 +61,11 @@ export function DirectoryProfileDetail({
   const claimedUserId = p.claimedByUserId;
   const [presence, setPresence] = useState<PresenceEntry[]>([]);
   const [trustState, setTrustState] = useState<TrustState>({ kind: "loading" });
+  const [editing, setEditing] = useState(false);
   const showAttach = isAdmin && p.claimedByUserId == null && typeof onAttach === "function";
+  // The viewer owns this profile when their Clerk user id matches the profile's claimed owner.
+  // Only the owner sees the Edit button; it binds the existing PUT /api/directory/profile upsert.
+  const isOwnProfile = Boolean(currentUserId) && claimedUserId === currentUserId;
 
   // Presence and the trust panel only apply to a claimed profile. Both are client fetches that
   // degrade quietly: a presence failure leaves the list empty (the section hides), and a trust
@@ -167,6 +176,19 @@ export function DirectoryProfileDetail({
               </div>
             </div>
           </div>
+
+          {/* Edit — only the profile owner sees this; it opens the edit form, which loads the full
+              profile, lets the owner change any field, and saves through PUT /api/directory/profile. */}
+          {isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 16px", borderRadius: 10, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 24 }}
+            >
+              <Pencil size={15} />
+              Edit my profile
+            </button>
+          )}
 
           {/* Quora profile — every directory profile is sourced from Quora, so this is the social
               proof and the way to learn more before bartering, trading, or exchanging credits. */}
@@ -324,6 +346,16 @@ export function DirectoryProfileDetail({
           )}
         </div>
       </div>
+
+      {editing && (
+        <DirectoryProfileEdit
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onProfileSaved?.();
+          }}
+        />
+      )}
     </div>
   );
 }

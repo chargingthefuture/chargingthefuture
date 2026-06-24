@@ -286,7 +286,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "cohorts", label: "Cohorts" },
       { key: "session", label: "Session" },
-      { key: "chat", label: "Chat" },
+      { key: "chat", label: "Direct Line" },
     ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>

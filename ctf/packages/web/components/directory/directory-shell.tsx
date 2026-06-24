@@ -53,6 +53,9 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selected, setSelected] = useState<Member | null>(null);
   const [rewardCard, setRewardCard] = useState<SkillsHuntRewardCard | null>(null);
+  // Bumped after the owner saves their own profile, so the member list re-fetches and the
+  // browse + detail views reflect the saved values.
+  const [refreshKey, setRefreshKey] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -139,6 +142,9 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             invitedByUsername: item.invitedByUsername ?? null,
           }));
           setMembers(mapped);
+          // Keep the open detail view in sync with the refreshed list (e.g. after the owner
+          // saves edits), so the profile reflects the saved values without re-selecting.
+          setSelected((prev) => (prev ? mapped.find((m) => m.id === prev.id) ?? prev : prev));
         }
       } catch {
         // AbortError is expected on unmount/re-fetch
@@ -148,7 +154,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
     }
     void fetchMembers();
     return () => controller.abort();
-  }, [activeFilter, debouncedQuery, sectors]);
+  }, [activeFilter, debouncedQuery, sectors, refreshKey]);
 
   const sectorFilters = ["All", ...sectors.map((s) => s.name)];
   const isFiltered = activeFilter !== "All" || query.trim().length > 0;
@@ -197,6 +203,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
         isAdmin={isAdmin}
         currentUserId={userId}
         onAttach={attachProfile}
+        onProfileSaved={() => setRefreshKey((k) => k + 1)}
       />
     );
   }

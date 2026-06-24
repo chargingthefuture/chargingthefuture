@@ -72,6 +72,6 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true, event: { ...liveEvent, commonsLivePostId: livePostId } }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'beacon', op: 'go_live', extra: { eventId: id } });
-    return beaconErrorResponse('Could not start the broadcast.');
+    return beaconErrorResponse(`Could not start the broadcast: ${error instanceof Error ? error.message : 'unknown error'}`);
   }
 }

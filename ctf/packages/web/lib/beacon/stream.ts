@@ -200,6 +200,10 @@ export async function ensureBeaconCallAndIngest(input: {
 }
 
 // Flip the call out of backstage so viewers can watch. Returns false when Stream is not configured.
+// This intentionally does NOT start HLS or recording: at the moment the admin clicks "Go live" there
+// is no publisher yet (the in-browser screen-share host mounts after go-live succeeds), and Stream
+// rejects starting HLS/recording with no active publisher. HLS and recording are started separately
+// by startBeaconBroadcastEgress once a publisher is actually live.
 export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
   const ctx = await resolveStreamRest();
   if (!ctx) {
@@ -207,10 +211,31 @@ export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
   }
   const callId = beaconCallIdForEvent(eventId);
   // Source: Stream Video broadcasting/HLS docs (getstream.io/video/docs/api/streaming/hls/),
-  // confirmed 2026-06-21. POST /api/v2/video/call/{type}/{id}/go_live flips the call out of backstage;
-  // start_hls begins the public HLS broadcast and start_recording begins the recording that feeds the
-  // recording-ready webhook. The response carries the updated call with `egress.hls.playlist_url`
-  // populated, which the public viewer reads via getBeaconHlsPlaybackUrl below.
+  // confirmed 2026-06-21. POST /api/v2/video/call/{type}/{id}/go_live flips the call out of backstage
+  // so viewers can join. Sending an empty body here starts neither HLS nor recording — those begin
+  // later via startBeaconBroadcastEgress when media is present.
+  await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/go_live`, {
+    method: 'POST',
+    body: {},
+  });
+  return true;
+}
+
+// Start the public HLS broadcast and the recording once a publisher is actually live. Returns false
+// when Stream is not configured.
+//
+// Source: Stream Video HLS docs (getstream.io/video/docs/api/streaming/hls/), confirmed 2026-06-21.
+// go_live is idempotent on an already-live call: calling POST /api/v2/video/call/{type}/{id}/go_live
+// again with start_hls + start_recording starts the HLS broadcast and recording now that media is
+// present, which avoids guessing standalone start-HLS/start-recording endpoint names. start_hls
+// begins the public HLS broadcast (the response carries `egress.hls.playlist_url`, read by
+// getBeaconHlsPlaybackUrl) and start_recording feeds the recording-ready webhook.
+export async function startBeaconBroadcastEgress(eventId: string): Promise<boolean> {
+  const ctx = await resolveStreamRest();
+  if (!ctx) {
+    return false;
+  }
+  const callId = beaconCallIdForEvent(eventId);
   await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/go_live`, {
     method: 'POST',
     body: { start_hls: true, start_recording: true },

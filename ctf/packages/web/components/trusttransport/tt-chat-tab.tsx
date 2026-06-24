@@ -27,7 +27,7 @@ function ChatPane({ selected, creds, loading, error }: { selected: TripRequest |
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, color: "#9CA3AF", fontSize: 14, padding: 24, textAlign: "center" }}>
         <MessageSquare size={28} style={{ color: "rgba(249,115,22,0.3)" }} />
-        <div>Chat opens once a driver accepts your trip.</div>
+        <div>Direct Line opens once a driver accepts your trip.</div>
         <div style={{ fontSize: 13, color: "#6B7280" }}>We&apos;ll bring you here when you&apos;re matched.</div>
       </div>
     );
