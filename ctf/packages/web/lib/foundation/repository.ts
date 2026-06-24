@@ -275,6 +275,91 @@ export async function setOwnOfferedSkills(userId: string, skillIds: string[]): P
   return accepted;
 }
 
+type FoundationInstantCallSettings = { enabled: boolean; rateCredits: number | null; intervalMinutes: number };
+
+type FoundationInstantCallRow = {
+  instant_call_enabled: boolean;
+  instant_call_rate_credits: number | null;
+  instant_call_interval_minutes: number;
+};
+
+const FOUNDATION_INSTANT_CALL_DEFAULT_INTERVAL = 10;
+const FOUNDATION_INSTANT_CALL_MIN_INTERVAL = 5;
+const FOUNDATION_INSTANT_CALL_MAX_INTERVAL = 60;
+
+function mapInstantCallRow(row: FoundationInstantCallRow | undefined): FoundationInstantCallSettings {
+  if (!row) {
+    return { enabled: false, rateCredits: null, intervalMinutes: FOUNDATION_INSTANT_CALL_DEFAULT_INTERVAL };
+  }
+
+  const rate = row.instant_call_rate_credits;
+  return {
+    enabled: Boolean(row.instant_call_enabled),
+    rateCredits: rate === null || rate === undefined ? null : Number(rate),
+    intervalMinutes: Number(row.instant_call_interval_minutes ?? FOUNDATION_INSTANT_CALL_DEFAULT_INTERVAL),
+  };
+}
+
+// The provider's own instant 1:1 call settings (Foundation "Connect now", issue #808). enabled is the
+// opt-in switch; rateCredits is whole ServiceCredits per block (only meaningful when enabled);
+// intervalMinutes is the block length. A member with no row yet reads the off default.
+export async function getOwnInstantCallSettings(userId: string): Promise<FoundationInstantCallSettings> {
+  const result = await queryDb<FoundationInstantCallRow>(
+    `
+      SELECT instant_call_enabled, instant_call_rate_credits, instant_call_interval_minutes
+      FROM foundation_user_extension
+      WHERE user_id = $1
+    `,
+    [userId],
+  );
+
+  return mapInstantCallRow(result.rows[0]);
+}
+
+// Save the provider's instant-call settings. Validates before writing: when enabled, rateCredits must
+// be a whole number >= 1 ('invalid_rate'); intervalMinutes must be a whole number in [5, 60]
+// ('invalid_interval'). When disabled the rate is stored as given (or null). Upserts only the three
+// settings columns + updated_at into foundation_user_extension, matching upsertNotificationPreferences.
+export async function setOwnInstantCallSettings(
+  userId: string,
+  input: FoundationInstantCallSettings,
+): Promise<FoundationInstantCallSettings> {
+  const enabled = Boolean(input.enabled);
+  const interval = input.intervalMinutes;
+  if (
+    !Number.isInteger(interval)
+    || interval < FOUNDATION_INSTANT_CALL_MIN_INTERVAL
+    || interval > FOUNDATION_INSTANT_CALL_MAX_INTERVAL
+  ) {
+    throw new Error('invalid_interval');
+  }
+
+  const rate = input.rateCredits;
+  if (enabled && (!Number.isInteger(rate) || (rate as number) < 1)) {
+    throw new Error('invalid_rate');
+  }
+  const rateToStore = rate === null || rate === undefined ? null : Number(rate);
+
+  const updated = await queryDb<FoundationInstantCallRow>(
+    `
+      INSERT INTO foundation_user_extension
+        (user_id, instant_call_enabled, instant_call_rate_credits, instant_call_interval_minutes)
+      VALUES
+        ($1, $2, $3, $4)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        instant_call_enabled = EXCLUDED.instant_call_enabled,
+        instant_call_rate_credits = EXCLUDED.instant_call_rate_credits,
+        instant_call_interval_minutes = EXCLUDED.instant_call_interval_minutes,
+        updated_at = NOW()
+      RETURNING instant_call_enabled, instant_call_rate_credits, instant_call_interval_minutes
+    `,
+    [userId, enabled, rateToStore, interval],
+  );
+
+  return mapInstantCallRow(updated.rows[0]);
+}
+
 type FoundationThreadRow = {
   id: string;
   survivor_user_id: string;

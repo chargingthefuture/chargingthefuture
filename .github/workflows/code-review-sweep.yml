@@ -42,6 +42,22 @@ jobs:
         with:
           node-version: '22'
 
+      # The rotation ledger lives on its own branch (`code-review-ledger`), never on main.
+      # main is gated by a ruleset that requires status checks, which a direct push can't
+      # satisfy, so the daily bot must not push there. Restore the latest ledger from its
+      # branch into the working tree before reviewing. First run (no branch yet): fall back
+      # to the in-repo stub checked out from main.
+      - name: Restore rotation ledger from its branch
+        run: |
+          set -euo pipefail
+          if git fetch --depth=1 origin code-review-ledger 2>/dev/null \
+            && git cat-file -e FETCH_HEAD:ctf/config/code-review-ledger.json 2>/dev/null; then
+            git show FETCH_HEAD:ctf/config/code-review-ledger.json > ctf/config/code-review-ledger.json
+            echo "Restored ledger from the code-review-ledger branch."
+          else
+            echo "No code-review-ledger branch yet; using the in-repo stub from main."
+          fi
+
       # ANTHROPIC_API_KEY is a runtime secret; Infisical is the single source of truth
       # (this matches the other AI workflows in this folder).
       - name: Inject secrets from Infisical
@@ -65,10 +81,13 @@ jobs:
           CODE_REVIEW_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: node ctf/scripts/reviewCodebaseSlice.mjs
 
-      # Persist the rotation pointer so the next run reviews a different slice. Uses GH_PAT
-      # so the push to main is allowed under branch protection (same approach as the
-      # product-update workflow). Skipped on a dry run and when nothing changed.
-      - name: Commit ledger
+      # Persist the rotation pointer so the next run reviews a different slice. Pushes to the
+      # dedicated `code-review-ledger` branch — never to main (main is PR-gated by a ruleset
+      # that a direct push can't satisfy). Force-push because this machine branch only carries
+      # the latest ledger on top of whatever main was checked out; its history is not
+      # meaningful. The script re-stamps the reviewed slice every run, so there is always a
+      # real change to commit. Skipped on a dry run.
+      - name: Commit ledger to its branch
         if: ${{ inputs.dry_run != true }}
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -83,4 +102,4 @@ jobs:
           git config user.email "ci@chargingthefuture.org"
           git add ctf/config/code-review-ledger.json
           git commit -m "chore: advance code-review sweep ledger"
-          git push "https://x-access-token:${GH_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+          git push --force "https://x-access-token:${GH_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:code-review-ledger
