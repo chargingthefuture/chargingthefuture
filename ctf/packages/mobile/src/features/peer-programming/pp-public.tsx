@@ -5,7 +5,7 @@ const COLOR = '#6EE7B7';
 
 export const PeerProgrammingPublic = () => (
   <View style={styles.root}>
-    <Text style={styles.title}>Peer Programming</Text>
+    <Text style={styles.title}>PeerProgramming</Text>
     <View style={styles.badge}>
       <Text style={styles.badgeText}>Deterministic global cohorts</Text>
     </View>

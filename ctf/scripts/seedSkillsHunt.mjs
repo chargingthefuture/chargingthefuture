@@ -144,7 +144,7 @@ async function main() {
     await client.query(
       `
         INSERT INTO skills_hunt_achievements (user_id, code, title, description, metadata)
-        VALUES ('seed-user-01', 'accepted-first', 'First Accepted Submission', 'First accepted Skills Hunt submission.', '{}'::jsonb)
+        VALUES ('seed-user-01', 'accepted-first', 'First Accepted Submission', 'First accepted SkillsHunt submission.', '{}'::jsonb)
         ON CONFLICT (user_id, code)
         DO NOTHING
       `,
@@ -159,7 +159,7 @@ async function main() {
       `,
     );
 
-    // Seed a service credits transaction tied to the accepted submission
+    // Seed a ServiceCredits transaction tied to the accepted submission
     await client.query(
       `
         INSERT INTO skills_hunt_service_credits_transactions
@@ -186,7 +186,7 @@ async function main() {
         VALUES
           ($1::uuid, NULL, 'Seed', 'Nominee',
            'Community-generated profile seeded for @handle validation.',
-           'Seeded by the Skills Hunt Phase-1 fixture.',
+           'Seeded by the SkillsHunt Phase-1 fixture.',
            TRUE, 'community-generated', 'seed-user-01', 'community-seed01',
            NOW(), NOW())
         ON CONFLICT (id) DO UPDATE SET
@@ -216,7 +216,7 @@ async function main() {
     );
 
     await client.query('COMMIT');
-    console.log('Skills Hunt phase-1 seed fixtures applied.');
+    console.log('SkillsHunt phase-1 seed fixtures applied.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

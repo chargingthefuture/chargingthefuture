@@ -384,6 +384,6 @@ policies:
 
 changelog:
   - date: 2026-02-24
-    change: Initial Skills Hunt access policy contracts added with role, validation, anti-abuse, and Directory-boundary controls for all v1 commands.
+    change: Initial SkillsHunt access policy contracts added with role, validation, anti-abuse, and Directory-boundary controls for all v1 commands.
   - date: 2026-05-12
     change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) access-policy contracts.

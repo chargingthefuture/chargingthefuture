@@ -522,7 +522,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
   UNIQUE (mission_id, user_id)
 );
 -- Proposed-skill promotion tracker: one row per distinct free-text "proposed" skill
--- harvested from accepted Skills Hunt nominations that is NOT yet in the canonical
+-- harvested from accepted SkillsHunt nominations that is NOT yet in the canonical
 -- taxonomy. A scheduled pipeline (ctf/scripts/proposeSkillPromotions.mjs) files one
 -- GitHub issue per row proposing the skill be added to the taxonomy, with an
 -- AI-suggested sector + occupation. The pipeline only files issues; it never writes
@@ -1378,7 +1378,7 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- === service credits tables ===
+-- === ServiceCredits tables ===
 CREATE TABLE IF NOT EXISTS service_credits_wallets (
   user_id TEXT PRIMARY KEY,
   available_balance NUMERIC NOT NULL DEFAULT 0,
@@ -1841,18 +1841,18 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('skills-taxonomy',    'Skills Taxonomy',      'Hierarchy and CRUD for sectors, job titles, and skills with impact preview.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
   ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
-  ('skills-hunt',        'Skills Hunt',          'Discover skills across the network.',                     'implemented_shell', 60,  TRUE),
+  ('skills-hunt',        'SkillsHunt',          'Discover skills across the network.',                     'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),
   ('socketrelay',        'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
   ('trusttransport',     'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
-  ('peer-programming',   'Peer Programming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
+  ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
   ('gentlepulse',        'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
-  ('service-credits',    'Service Credits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
+  ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
@@ -2048,7 +2048,7 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS last_name TEXT
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 -- The legacy directory_profiles.description column (exists only on cloned data) is NOT NULL
--- with no default. v3 inserts (e.g. Skills Hunt auto-generated profiles on accept) do not set
+-- with no default. v3 inserts (e.g. SkillsHunt auto-generated profiles on accept) do not set
 -- it, so the insert fails on cloned databases and rolls back the whole operation. Drop the
 -- NOT NULL where the legacy column exists so those inserts succeed; v3 reads the blurb from
 -- bio (the description -> bio backfill lives in post/0006). Guarded + idempotent.
@@ -2077,7 +2077,7 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_addres
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS service_credits_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Skills Hunt + Clerk username co-change (2026-05-11). See
+-- SkillsHunt + Clerk username co-change (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §4.
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'admin';
 DO $directory_profiles_source_check$
@@ -3217,7 +3217,7 @@ WHERE ctid IN (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_login_events_user_utc_day
   ON login_events (user_id, ((created_at AT TIME ZONE 'UTC')::date));
 
--- === PEER PROGRAMMING MODULE ===
+-- === PeerProgramming MODULE ===
 CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start_date DATE NOT NULL,
@@ -3658,7 +3658,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url DRO
 ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN quora_profile_url_normalized DROP DEFAULT;
 ALTER TABLE IF EXISTS skills_hunt_submissions ALTER COLUMN signature_hash DROP DEFAULT;
 
--- Skills Hunt v2 (2026-05-11). See
+-- SkillsHunt v2 (2026-05-11). See
 -- docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-session-continuity.md §6.
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS participation_points INTEGER NOT NULL DEFAULT 0;
@@ -3711,7 +3711,7 @@ BEGIN
 END
 $skills_hunt_achievements_round_fk$;
 
--- Skills Hunt v2 Missions (post-design lock 2026-05-11). Defensive ALTERs
+-- SkillsHunt v2 Missions (post-design lock 2026-05-11). Defensive ALTERs
 -- so legacy DBs that already created the tables get any later additions.
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS color_hex TEXT;
@@ -4569,4 +4569,74 @@ ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS updated_at
 CREATE UNIQUE INDEX IF NOT EXISTS member_plugin_presence_unique_ref_idx
   ON member_plugin_presence (user_id, plugin_slug, ref_type, ref_id);
 CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_presence (user_id);
+
+-- member_blocks: product-wide, cross-cutting member blocking (issue #809, owner-signed model
+-- 2026-06-24). One member (blocker_user_id) blocks another (blocked_user_id). A block is created
+-- one-way and is invisible to the blocked person, but enforcement is SYMMETRIC: once A blocks B,
+-- neither A nor B can see or contact the other on any member-to-member surface. The shared helper
+-- `isBlockedBetween(a, b)` (ctf/packages/web/lib/blocks/repository.ts) is the single check every
+-- surface consults, mirroring how unlock gating is one shared check.
+--
+-- No `reason` column: ordinary blocks are private and the admin never reads them. A member may block
+-- anyone for any reason. The optional "report as suspected predator/trafficker" escalation is a
+-- SEPARATE mechanism (a member safety report kept apart from this table) built in a later task; it is
+-- deliberately not stored here so ordinary blocks stay out of the admin's view.
+--
+-- user_id columns are TEXT to line up with the user-id type used elsewhere (e.g.
+-- foundation_provider_skills.user_id, directory_profiles.claimed_by_user_id) so joins/casts match.
+CREATE TABLE IF NOT EXISTS member_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  blocker_user_id TEXT NOT NULL,
+  blocked_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT member_blocks_blocker_blocked_unique UNIQUE (blocker_user_id, blocked_user_id),
+  CONSTRAINT member_blocks_no_self_block CHECK (blocker_user_id <> blocked_user_id)
+);
+
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS blocker_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS blocked_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_blocks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Converge a legacy table that predates the unique constraint / self-block check. Guarded so a fresh
+-- table (which already has them from CREATE TABLE) does not double-add, and a legacy one gains them.
+DO $member_blocks_unique_constraint$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'member_blocks_blocker_blocked_unique'
+      AND table_name = 'member_blocks'
+  ) THEN
+    BEGIN
+      ALTER TABLE member_blocks
+        ADD CONSTRAINT member_blocks_blocker_blocked_unique UNIQUE (blocker_user_id, blocked_user_id);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$member_blocks_unique_constraint$;
+
+DO $member_blocks_no_self_block$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'member_blocks_no_self_block'
+  ) THEN
+    BEGIN
+      ALTER TABLE member_blocks
+        ADD CONSTRAINT member_blocks_no_self_block CHECK (blocker_user_id <> blocked_user_id);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END
+$member_blocks_no_self_block$;
+
+-- The symmetric lookup (`WHERE (blocker=$1 AND blocked=$2) OR (blocker=$2 AND blocked=$1)`) runs on
+-- many hot paths, so index it both ways. The unique constraint already covers the
+-- (blocker_user_id, blocked_user_id) direction; this composite index covers the reverse direction so
+-- the OR-query is index-served regardless of which user is the blocker.
+CREATE INDEX IF NOT EXISTS member_blocks_blocked_blocker_idx
+  ON member_blocks (blocked_user_id, blocker_user_id);
 COMMIT;

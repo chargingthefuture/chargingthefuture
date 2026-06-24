@@ -52,7 +52,7 @@ const pool = new Pool({
  * that throws is skipped with a note rather than failing the whole draft, so a
  * missing table on a legacy database can't block the post.
  *
- * SocketRelay and Directory are the two flagship signals; Service Credits adds
+ * SocketRelay and Directory are the two flagship signals; ServiceCredits adds
  * the community-currency signal. Other marketplace plugins (LightHouse,
  * Foundation, TrustTransport, Workforce) are easy follow-ups — add them the
  * same way once their headline count is chosen.
@@ -119,9 +119,9 @@ const STAT_PROVIDERS = [
   },
   {
     slug: 'service-credits',
-    displayName: 'Service Credits',
+    displayName: 'ServiceCredits',
     async collect(client) {
-      // Service Credits is the community's internal currency. Every query here is a
+      // ServiceCredits is the community's internal currency. Every query here is a
       // whole-community aggregate — a count of wallets, the total members are holding, and how
       // many balances moved this week. No individual wallet, balance, or transfer is exposed.
       const holders = await client.query(
@@ -137,9 +137,9 @@ const STAT_PROVIDERS = [
          WHERE updated_at >= NOW() - INTERVAL '7 days'`,
       );
       return [
-        { label: 'members holding Service Credits', value: holders.rows[0].n },
-        { label: 'Service Credits members are holding right now', value: held.rows[0].n },
-        { label: 'members whose Service Credits balance changed in the last 7 days', value: activeThisWeek.rows[0].n },
+        { label: 'members holding ServiceCredits', value: holders.rows[0].n },
+        { label: 'ServiceCredits members are holding right now', value: held.rows[0].n },
+        { label: 'members whose ServiceCredits balance changed in the last 7 days', value: activeThisWeek.rows[0].n },
       ];
     },
   },

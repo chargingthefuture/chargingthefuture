@@ -131,7 +131,7 @@ export async function getEffectiveUnlockAccessTier(userId: string): Promise<Unlo
 // Of the given user ids, which have full (approved) Unlock access. One query against the stored
 // submission tier (set to `approved_full` on approval). Used to keep not-yet-unlocked people — e.g. a
 // v2 user who signed into v3 but never completed Unlock — out of flows that should be unlocked-only,
-// such as Peer Programming cohort assignment. Returns a Set for O(1) membership checks.
+// such as PeerProgramming cohort assignment. Returns a Set for O(1) membership checks.
 export async function listUnlockedUserIds(userIds: string[]): Promise<Set<string>> {
   const unlocked = new Set<string>();
   const unique = Array.from(

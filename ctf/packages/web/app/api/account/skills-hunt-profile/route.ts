@@ -9,7 +9,7 @@ import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 
-// GDPR soft-delete entry point for Skills Hunt.
+// GDPR soft-delete entry point for SkillsHunt.
 //
 // Marks every submission authored by the caller as deleted. Audit log rows
 // are intentionally preserved for regulatory retention. Directory profiles

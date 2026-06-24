@@ -47,7 +47,7 @@ function DesktopTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: stri
             <span style={{ color: COLOR }}>from the community</span>
           </h1>
           <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 480 }}>
-            Drivers are fellow community members offering mutual aid. Your pickup location is never stored permanently. Pay with Service Credits.
+            Drivers are fellow community members offering mutual aid. Your pickup location is never stored permanently. Pay with ServiceCredits.
           </p>
           <a href={verifyUrl ?? signInUrl} style={{ marginTop: 8, padding: '14px 32px', borderRadius: 10, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', textDecoration: 'none' }}>
             {verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}
@@ -108,7 +108,7 @@ function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: strin
           <Car size={20} color={COLOR} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>TrustTransport</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Rides, package delivery, and food from fellow community members. Pay with Service Credits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Rides, package delivery, and food from fellow community members. Pay with ServiceCredits.</p>
 
         {/* Service type cards */}
         <div style={{ display: 'flex', gap: 10 }}>

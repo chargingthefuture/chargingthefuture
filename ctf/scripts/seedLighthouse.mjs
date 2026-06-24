@@ -97,13 +97,13 @@ async function main() {
       `,
     );
 
-    // Seed a service credits transaction for LightHouse
+    // Seed a ServiceCredits transaction for LightHouse
     await client.query(
       `
         INSERT INTO lighthouse_service_credits_transactions
           (from_user_id, to_user_id, amount, reason, match_id, created_at)
         VALUES
-          ('seed-lighthouse-host-01', 'seed-lighthouse-seeker-01', 8, 'Seed LightHouse service credits', $1::uuid, NOW())
+          ('seed-lighthouse-host-01', 'seed-lighthouse-seeker-01', 8, 'Seed LightHouse ServiceCredits', $1::uuid, NOW())
         ON CONFLICT DO NOTHING
       `,
       [seedMatchId],

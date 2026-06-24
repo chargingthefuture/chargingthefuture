@@ -106,5 +106,12 @@ This document is the canonical source of truth for brand language across:
 - GentlePulse
 - Chyme
 - LostMail
+- PeerProgramming
+- ServiceCredits
+- SkillsHunt
 
 When these names are updated, change this lexicon first, then update all copy surfaces.
+
+## Plugin Name Joining Convention
+
+User-facing plugin names that are two words are written as one joined PascalCase word (e.g. PeerProgramming, ServiceCredits, SkillsHunt, SocketRelay). Internal plugins keep the space (e.g. Weekly Performance).

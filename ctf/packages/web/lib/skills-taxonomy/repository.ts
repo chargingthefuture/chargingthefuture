@@ -710,7 +710,7 @@ export async function getFlattened(includeInactive = false, includeAliases = fal
   // Read the live base tables (skills -> job titles -> sectors) rather than the
   // skills_taxonomy_flattened_projection table. That projection is never populated by any
   // code path, so reading it returned an empty list even when the taxonomy is fully seeded —
-  // which left the Skills Hunt nomination picker with no categories (free-text only). Joining
+  // which left the SkillsHunt nomination picker with no categories (free-text only). Joining
   // the base tables gives the same flat shape and always reflects the current taxonomy.
   const result = await queryDb<FlattenedRow>(
     `

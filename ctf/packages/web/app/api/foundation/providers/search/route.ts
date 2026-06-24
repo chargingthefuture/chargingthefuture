@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
       metadata: { page: providers.pagination.page, pageSize: providers.pagination.pageSize, total: providers.total },
     });
 
-    return NextResponse.json({ ok: true, ...providers }, { status: 200 });
+    // Return the viewer's own id so the client can suppress the "Connect now" button on the
+    // viewer's own provider card (you can't ring yourself). The provider items already carry the
+    // read-only instant-call availability mirror (Foundation "Connect now", issue #808).
+    return NextResponse.json({ ok: true, viewerUserId: gate.auth.userId, ...providers }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'foundation', op: 'providers_search' });
     console.error('[Foundation] Provider search failed:', error);

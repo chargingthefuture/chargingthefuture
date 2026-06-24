@@ -32,13 +32,13 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
     <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <header style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", margin: 0 }}>Skills Hunt — Admin</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", margin: 0 }}>SkillsHunt — Admin</h1>
           <div style={{ fontSize: 13, color: "#6B7280" }}>Run rounds, pay scouts in ServiceCredits, review nominations, publish missions, handle reports.</div>
         </div>
         <a href="/apps/skills-hunt" style={{ fontSize: 13, color: COLOR, textDecoration: "none" }}>← Open player shell</a>
       </header>
 
-      <div role="tablist" aria-label="Skills Hunt admin sections" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+      <div role="tablist" aria-label="SkillsHunt admin sections" style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
         {TABS.map((t) => {
           const active = tab === t.key;
           return (

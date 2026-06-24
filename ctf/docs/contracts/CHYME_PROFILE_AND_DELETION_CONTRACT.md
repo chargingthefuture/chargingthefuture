@@ -84,7 +84,7 @@ When user requests full account deletion (`DELETE /api/account/full-account`):
   - currently none immediately; request is recorded and downstream reclaim dependency is queued
 - Cross-service dependencies:
   - requires global account deletion orchestrator across all plugin domains
-  - Service Credits reclaim/finalization is required before account deletion can be marked `completed`
+  - ServiceCredits reclaim/finalization is required before account deletion can be marked `completed`
 - Final expected state:
   - account-scope request remains `requested` until global orchestrator transitions to `processing` then terminal state (`completed`/`failed`)
 
@@ -116,7 +116,7 @@ If user returns to Chyme after service-scoped deletion:
 - Service delete endpoint:
   - `DELETE /api/account/chyme-profile`
 - Full account delete endpoint (or orchestrator):
-  - `DELETE /api/account/full-account` (records request and queues Service Credits reclaim dependency)
+  - `DELETE /api/account/full-account` (records request and queues ServiceCredits reclaim dependency)
 - Status model (`requested`, `processing`, `completed`, `failed`):
   - currently synchronous `ok` response for service delete
   - full-account currently returns `requested` while async orchestrator states remain external to Chyme

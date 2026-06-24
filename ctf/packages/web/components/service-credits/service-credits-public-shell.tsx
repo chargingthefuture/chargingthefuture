@@ -20,7 +20,7 @@ const EARN_WAYS = [
   { action: 'Attend a LevelUp cohort session', credits: '+15' },
   { action: 'Refer a verified survivor', credits: '+50' },
   { action: 'Give peer support in Chyme', credits: '+3' },
-  { action: 'Complete Skills Hunt round', credits: '+100' },
+  { action: 'Complete SkillsHunt round', credits: '+100' },
 ];
 
 const SPEND_WAYS = [

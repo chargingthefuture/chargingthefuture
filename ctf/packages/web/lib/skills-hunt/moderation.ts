@@ -1,4 +1,4 @@
-// Skills Hunt — moderation + GDPR delete.
+// SkillsHunt — moderation + GDPR delete.
 //
 // Two flows live here:
 //
@@ -11,7 +11,7 @@
 //    authored. Audit log rows are explicitly preserved (regulatory
 //    retention). Directory profiles auto-generated from those submissions
 //    are NOT modified here — the Directory plugin owns its own deletion
-//    path; Skills Hunt nulls the link by ON DELETE SET NULL where it can.
+//    path; SkillsHunt nulls the link by ON DELETE SET NULL where it can.
 
 import type { PoolClient } from 'pg';
 import type {

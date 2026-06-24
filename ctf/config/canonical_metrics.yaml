@@ -703,8 +703,8 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_total_supply
-    name: Service Credits Total Supply
-    description: Net Service Credits in circulation calculated as minted minus burned credits.
+    name: ServiceCredits Total Supply
+    description: Net ServiceCredits in circulation calculated as minted minus burned credits.
     owner: service-credits-governance@chargingthefuture.org
     data_type: integer
     unit: SC
@@ -733,7 +733,7 @@ canonical_metrics:
         - "alert_if_24h_growth_percent >= 10"
 
   - id: service_credits_minted_total
-    name: Service Credits Minted Total
+    name: ServiceCredits Minted Total
     description: Cumulative credits minted through governance-approved issuance events.
     owner: service-credits-governance@chargingthefuture.org
     data_type: integer
@@ -759,7 +759,7 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_burned_total
-    name: Service Credits Burned Total
+    name: ServiceCredits Burned Total
     description: Cumulative credits burned through governance-approved burn events.
     owner: service-credits-governance@chargingthefuture.org
     data_type: integer
@@ -785,8 +785,8 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_marketplace_gdp_total
-    name: Service Credits Marketplace GDP Total
-    description: Total settled marketplace value measured in Service Credits for the selected reporting window.
+    name: ServiceCredits Marketplace GDP Total
+    description: Total settled marketplace value measured in ServiceCredits for the selected reporting window.
     owner: economics-team@chargingthefuture.org
     data_type: integer
     unit: SC
@@ -813,8 +813,8 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_avg_provider_monthly_earnings
-    name: Service Credits Average Provider Monthly Earnings
-    description: Average monthly settled earnings in Service Credits per active provider.
+    name: ServiceCredits Average Provider Monthly Earnings
+    description: Average monthly settled earnings in ServiceCredits per active provider.
     owner: marketplace-ops@chargingthefuture.org
     data_type: float
     unit: SC_per_provider_month
@@ -850,8 +850,8 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_active_providers_count
-    name: Service Credits Active Providers Count
-    description: Count of distinct providers with at least one settled Service Credits earning in the reporting window.
+    name: ServiceCredits Active Providers Count
+    description: Count of distinct providers with at least one settled ServiceCredits earning in the reporting window.
     owner: marketplace-ops@chargingthefuture.org
     data_type: integer
     unit: providers
@@ -878,7 +878,7 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_platform_fee_revenue
-    name: Service Credits Platform Fee Revenue
+    name: ServiceCredits Platform Fee Revenue
     description: Total platform fee credits collected into treasury within the reporting window.
     owner: treasury-ops@chargingthefuture.org
     data_type: integer
@@ -905,7 +905,7 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_account_deletion_returned_to_treasury_total
-    name: Service Credits Account Deletion Returned to Treasury Total
+    name: ServiceCredits Account Deletion Returned to Treasury Total
     description: Total credits returned to treasury from account deletion reclaim events in the reporting window; this is a reserve reallocation and is excluded from GDP recognition.
     owner: treasury-ops@chargingthefuture.org
     data_type: integer
@@ -933,7 +933,7 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_account_deletion_returned_to_treasury_count
-    name: Service Credits Account Deletion Returned to Treasury Count
+    name: ServiceCredits Account Deletion Returned to Treasury Count
     description: Count of account deletion reclaim treasury events in the reporting window; these are reserve reallocations and are excluded from GDP recognition.
     owner: treasury-ops@chargingthefuture.org
     data_type: integer
@@ -959,7 +959,7 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_account_deletion_reclaim_pending_count
-    name: Service Credits Account Deletion Reclaim Pending Count
+    name: ServiceCredits Account Deletion Reclaim Pending Count
     description: Count of account deletion reclaim records still pending completion; these pending reserve reallocations are excluded from GDP recognition.
     owner: treasury-ops@chargingthefuture.org
     data_type: integer
@@ -984,7 +984,7 @@ canonical_metrics:
       min: 0
 
   - id: service_credits_treasury_balance
-    name: Service Credits Treasury Balance
+    name: ServiceCredits Treasury Balance
     description: Current treasury wallet balance available for grants, subsidies, and stabilization policy actions.
     owner: treasury-ops@chargingthefuture.org
     data_type: integer
@@ -1016,7 +1016,7 @@ canonical_metrics:
         - "alert_if_value < 1000000"
 
   - id: service_credits_starter_grant_uptake_rate
-    name: Service Credits Starter Grant Uptake Rate
+    name: ServiceCredits Starter Grant Uptake Rate
     description: Percentage of newly eligible users who receive their starter grant within the onboarding window.
     owner: onboarding-ops@chargingthefuture.org
     data_type: percent
@@ -1063,8 +1063,8 @@ canonical_metrics:
       max: 100
 
   - id: service_credits_loan_default_rate
-    name: Service Credits Loan Default Rate
-    description: Percentage of originated Service Credits loans considered in default status within the reporting window.
+    name: ServiceCredits Loan Default Rate
+    description: Percentage of originated ServiceCredits loans considered in default status within the reporting window.
     owner: treasury-ops@chargingthefuture.org
     data_type: percent
     unit: percent
@@ -1105,7 +1105,7 @@ canonical_metrics:
         - "alert_if_value >= 8"
 
   - id: service_credits_dispute_rate
-    name: Service Credits Dispute Rate
+    name: ServiceCredits Dispute Rate
     description: Ratio of disputed settled transactions to total settled transactions in the reporting window.
     owner: trust-safety@chargingthefuture.org
     data_type: percent
@@ -1151,8 +1151,8 @@ canonical_metrics:
         - "alert_if_value >= 5"
 
   - id: service_credits_dispute_resolution_time_hours
-    name: Service Credits Dispute Resolution Time Hours
-    description: Average elapsed time in hours from dispute creation to closure for Service Credits disputes.
+    name: ServiceCredits Dispute Resolution Time Hours
+    description: Average elapsed time in hours from dispute creation to closure for ServiceCredits disputes.
     owner: trust-safety@chargingthefuture.org
     data_type: float
     unit: hours

@@ -1,4 +1,4 @@
-// Service Credits Transaction Types
+// ServiceCredits Transaction Types
 export type SkillsHuntServiceCreditsTransaction = {
   id: string;
   fromUserId: string;

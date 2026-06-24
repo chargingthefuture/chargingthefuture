@@ -12,7 +12,7 @@ function utcDayKey(now = new Date()): string {
 
 // Record that a member was active today. This is the writer for the `login_events`
 // table — the single dedicated table that the active-user / daily-active-member
-// signals read from (used by Peer Programming cohort assignment and the Weekly
+// signals read from (used by PeerProgramming cohort assignment and the Weekly
 // Performance review). It is deliberately deduplicated to at most one row per
 // member per UTC day: that keeps the table to a daily activity signal rather than
 // a full request log, and is all the 7-day "active members" window needs.

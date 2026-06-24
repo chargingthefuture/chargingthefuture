@@ -330,7 +330,7 @@ export function LighthouseHost({
             {field("zipCode", "Postal code")}
             {field("bedrooms", "Bedrooms", { type: "number" })}
             {field("bathrooms", "Bathrooms", { type: "number" })}
-            {field("monthlyRent", "Monthly rent", { type: "number", placeholder: "0 for Service Credits / free" })}
+            {field("monthlyRent", "Monthly rent", { type: "number", placeholder: "0 for ServiceCredits / free" })}
             <div style={{ flex: "1 1 160px", minWidth: 140 }}>
               <label style={labelStyle}>Rent currency</label>
               <CurrencySelect
@@ -399,7 +399,7 @@ export function LighthouseHost({
                   {[p.city, p.state].filter(Boolean).join(", ") || "Location not set"}
                   {(() => {
                     const rent = formatRent(p, currencyMap);
-                    if (rent === null) return " · Service Credits / free";
+                    if (rent === null) return " · ServiceCredits / free";
                     return rent === "Free" ? " · Free" : ` · ${rent}/mo`;
                   })()}
                 </div>

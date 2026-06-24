@@ -12,7 +12,7 @@ interface PeerProgrammingAuthResult {
 }
 
 /**
- * Authenticate a Peer Programming API request.
+ * Authenticate a PeerProgramming API request.
  *
  * For the Clerk provider, the bearer token is verified cryptographically with
  * Clerk's server SDK (see lib/auth/verify-bearer). A token that fails

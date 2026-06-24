@@ -28,7 +28,7 @@ Chyme consumes Stream for room join credentials and mirrored chat fan-out throug
 ## Observability
 
 - Route-level Chyme audit events cover room fetch, message list/send, join, and deletion flows
-- Full-account delete records reclaim dependency queueing via existing Service Credits tables
+- Full-account delete records reclaim dependency queueing via existing ServiceCredits tables
 
 ## Validation
 

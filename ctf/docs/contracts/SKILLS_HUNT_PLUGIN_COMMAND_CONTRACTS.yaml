@@ -2,7 +2,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.round.create
     version: 1.1.0
-    description: Create a Skills Hunt round with scoring config, ServiceCredits reward config, schedule window, and governance metadata.
+    description: Create a SkillsHunt round with scoring config, ServiceCredits reward config, schedule window, and governance metadata.
     inputSchema:
       name:
         type: string
@@ -44,7 +44,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.round.update
     version: 1.1.0
-    description: Update round schedule, status, scoring controls, and ServiceCredits reward config for an existing Skills Hunt campaign.
+    description: Update round schedule, status, scoring controls, and ServiceCredits reward config for an existing SkillsHunt campaign.
     inputSchema:
       roundId:
         type: string
@@ -92,7 +92,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.round.list
     version: 1.0.0
-    description: List Skills Hunt rounds for contributor and admin discovery surfaces.
+    description: List SkillsHunt rounds for contributor and admin discovery surfaces.
     inputSchema:
       status:
         type: string
@@ -282,7 +282,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.notification.list
     version: 1.0.0
-    description: List Skills Hunt notifications for the authenticated user.
+    description: List SkillsHunt notifications for the authenticated user.
     inputSchema:
       userId:
         type: string
@@ -302,7 +302,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.notification.ack
     version: 1.0.0
-    description: Mark a Skills Hunt notification as read.
+    description: Mark a SkillsHunt notification as read.
     inputSchema:
       notificationId:
         type: string
@@ -323,7 +323,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.feature-reward-card.get
     version: 1.0.0
-    description: Read the active feature reward card for Skills Hunt UI surfaces.
+    description: Read the active feature reward card for SkillsHunt UI surfaces.
     inputSchema: {}
     outputSchema:
       title:
@@ -449,7 +449,7 @@ contracts:
 
 changelog:
   - date: 2026-02-24
-    change: Initial Skills Hunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
+    change: Initial SkillsHunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
   - date: 2026-05-12
     change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) commands.
   - date: 2026-06-20

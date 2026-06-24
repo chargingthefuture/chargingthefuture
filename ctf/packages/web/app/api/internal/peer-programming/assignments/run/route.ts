@@ -4,7 +4,7 @@ import { getActiveUserIdsLastDays } from 'lib/engagement/login-activity';
 import { listUnlockedUserIds } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
-// Cron-only: forms this week's Peer Programming cohorts from the last-7-days active set, without an
+// Cron-only: forms this week's PeerProgramming cohorts from the last-7-days active set, without an
 // admin clicking "Run weekly assignment". Guarded by CRON_SECRET (Bearer), matching the Unlock
 // reward-reconciliation convention. Safe to run more than once a week — runWeeklyAssignment upserts
 // cohorts per (week, label) and the assignment notifications are idempotent per (user, week), so a

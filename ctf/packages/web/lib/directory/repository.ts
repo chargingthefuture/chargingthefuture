@@ -32,7 +32,7 @@ type DirectoryProfileRow = {
   job_title_id: string | null;
   job_title_name: string | null;
   is_active: boolean;
-  // Skills Hunt + Clerk username co-change. Optional on the row type so
+  // SkillsHunt + Clerk username co-change. Optional on the row type so
   // existing SELECTs that don't yet pull these columns still typecheck;
   // mapProfileRow defaults to safe values.
   source?: 'admin' | 'self' | 'community-generated' | null;
@@ -132,8 +132,8 @@ async function loadProfileSkills(client: PoolClient, profileId: string): Promise
   }));
 }
 
-// Free-text skills nominated for this profile through Skills Hunt that are not yet in
-// the canonical taxonomy. Join chain: the profile links to its originating Skills Hunt
+// Free-text skills nominated for this profile through SkillsHunt that are not yet in
+// the canonical taxonomy. Join chain: the profile links to its originating SkillsHunt
 // submission via skills_hunt_directory_profiles.directory_profile_id, and the submission's
 // proposed (not-yet-promoted) skills live in skills_hunt_proposed_skill_promotions keyed by
 // source_submission_id. Surfaced as muted "pending review" chips so a community-generated

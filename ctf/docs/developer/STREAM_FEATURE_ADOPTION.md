@@ -36,11 +36,11 @@ Two consequences for this plan:
 - **Enforce exclusions at the channel type where it's cheap.** We excluded uploads (#13/#14), so
   turning **Uploads off** on `messaging` enforces "no uploads" at the source rather than relying on us
   not building the UI.
-- **Voice is Peer Programming only (#12).** The clean way to scope voice to PP without enabling it
+- **Voice is PeerProgramming only (#12).** The clean way to scope voice to PP without enabling it
   app-wide is a **dedicated `peer-programming` channel type** with audio/uploads enabled, used only by
   PP channels, while the shared `messaging` type stays without it. The PP voice task uses this.
 
-### Why Peer Programming uses `messaging`-style text and a `default` video call, not `livestream`
+### Why PeerProgramming uses `messaging`-style text and a `default` video call, not `livestream`
 
 "Livestream" exists in two Stream products and PP wants neither:
 
@@ -78,8 +78,8 @@ not as separate topic rooms:
 | Surface | How it uses Stream today | Approach |
 |---|---|---|
 | Commons (home/community chat) | Custom UI over `/api/hub/messages`; mirrors to Stream server-side | (1) add features into custom design |
-| Peer Programming text room | Custom UI over `/api/peer-programming/messages` | (1) add features into custom design; **plus** voice (see #12) |
-| Peer Programming session | Stream **Video** (live calls) | already live; audit for gaps |
+| PeerProgramming text room | Custom UI over `/api/peer-programming/messages` | (1) add features into custom design; **plus** voice (see #12) |
+| PeerProgramming session | Stream **Video** (live calls) | already live; audit for gaps |
 | TrustTransport chat | `StreamChatPanel` (list + input only) | (2) richer Stream UI |
 | SocketRelay chat | `StreamChatPanel` | (2) richer Stream UI |
 | LightHouse chat | `StreamChatPanel` | (2) richer Stream UI |
@@ -104,7 +104,7 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 | 9 | Message search (in-channel) | Done (plugin chats) / Build (Commons) | Plugin chats shipped in the shared StreamChatPanel: a compact search strip at the top of the conversation calls `channel.search`, which scopes to the open channel, and lets a member jump to a result. Commons (custom UI) is a separate follow-up. |
 | 10 | Slash commands | Deferred | The only configured command is `giphy`, which is excluded (#16). No active command to surface; revisit if we add non-giphy commands. |
 | 11 | Emoji picker in the composer | Build | All surfaces. |
-| 12 | Voice / audio messages | **PP-only** | Excluded everywhere except Peer Programming. PP is a scoped async+sync environment that is easier to moderate, so voice is allowed there only. |
+| 12 | Voice / audio messages | **PP-only** | Excluded everywhere except PeerProgramming. PP is a scoped async+sync environment that is easier to moderate, so voice is allowed there only. |
 | 13 | Image upload + inline preview | **Excluded** | — |
 | 14 | File upload (docs/PDFs) | **Excluded** | — |
 | 15 | Link preview cards (URL enrichment) | Done (plugin chats) / Build (Commons) | Plugin chats shipped in the shared StreamChatPanel: URL enrichment is on in the composer (`enrichURLForPreview`) and the og-scrape attachment renders through Stream's default Attachment card in the message list. Commons (custom UI) is a separate follow-up. |
@@ -128,7 +128,7 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 | 33 | Mobile (Android) push notifications | **Excluded** | — |
 | 34 | Unread reminder pings (email/push) | **Excluded** | — |
 | 35 | Stream **Feeds** (activity feed, follows, reactions on posts) | Audit | Owner: already applied where applicable. Audit for gaps and report; do not rebuild. |
-| 36 | Stream **Video** beyond Peer Programming (recording, screenshare) | Audit | Owner: already applied where applicable. Audit for gaps and report; do not rebuild. |
+| 36 | Stream **Video** beyond PeerProgramming (recording, screenshare) | Audit | Owner: already applied where applicable. Audit for gaps and report; do not rebuild. |
 | 37 | Location sharing | **Excluded** | Excluded on safety grounds for a survivor product. |
 
 ## Build tasks (flat, ordered; dependencies named)
@@ -167,8 +167,8 @@ across the relevant surfaces. A task with no dependency can run anytime / in par
 13. **Moderation cluster (#27, #28, #29, #30, #31).** Flag, mute, admin block/ban, automod + review
     queue, slow mode. Touches admin surfaces; sequence the review queue after flagging exists within
     this task.
-14. **Voice messages — Peer Programming only (#12).** Audio recording in the PP room. Scoped to PP by
-    giving Peer Programming its own `peer-programming` channel type (audio/uploads enabled) so voice
+14. **Voice messages — PeerProgramming only (#12).** Audio recording in the PP room. Scoped to PP by
+    giving PeerProgramming its own `peer-programming` channel type (audio/uploads enabled) so voice
     never reaches the shared `messaging` type. No dependency.
 15. **Commons topic filter.** Extend the existing `feed_community_posts.category` field with a small
     fixed topic set, let authors pick a topic when posting, and add topic chips/tabs that filter the

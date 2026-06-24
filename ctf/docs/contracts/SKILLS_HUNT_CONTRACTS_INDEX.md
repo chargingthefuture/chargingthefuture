@@ -1,8 +1,8 @@
-# Skills Hunt Contracts Index
+# SkillsHunt Contracts Index
 
-This index groups the Skills Hunt plugin planning contracts for review, approval, and PR evidence.
+This index groups the SkillsHunt plugin planning contracts for review, approval, and PR evidence.
 
-## Core Skills Hunt Contracts
+## Core SkillsHunt Contracts
 
 1. Profile and deletion contract:
    - `ctf/docs/contracts/SKILLS_HUNT_PROFILE_AND_DELETION_CONTRACT.md`
@@ -35,7 +35,7 @@ This index groups the Skills Hunt plugin planning contracts for review, approval
 
 ## Review Sign-Off Checklist
 
-- [ ] Product approved Skills Hunt scope and moderation language.
+- [ ] Product approved SkillsHunt scope and moderation language.
 - [ ] Engineering approved command, policy, and audit contracts.
 - [ ] Compliance/privacy approved deletion and retention behavior.
 - [ ] Directory integration boundary approved by owning team.

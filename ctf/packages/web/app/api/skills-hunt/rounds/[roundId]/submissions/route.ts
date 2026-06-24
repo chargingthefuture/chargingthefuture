@@ -63,7 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
 
   if (isReservedUsername(gate.auth.username)) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.reservedUsername, message: 'Your username starts with a reserved Skills Hunt prefix. Pick another to continue.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.reservedUsername, message: 'Your username starts with a reserved SkillsHunt prefix. Pick another to continue.' },
       { status: 403 },
     );
   }

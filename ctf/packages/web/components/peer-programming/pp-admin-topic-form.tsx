@@ -1,12 +1,12 @@
 'use client';
 
-// Weekly topic guidance editor for the Peer Programming admin surface.
+// Weekly topic guidance editor for the PeerProgramming admin surface.
 // Binds PUT /api/peer-programming/admin/topics (upsert). The endpoint requires
 // weekStartDate, title, and guidance; `publish` toggles draft vs published.
 import { useState } from 'react';
 import type { PeerProgrammingTopic } from './pp-admin-shared';
 
-// Admin design tokens (shared admin look from the design system). Peer Programming accent is mint.
+// Admin design tokens (shared admin look from the design system). PeerProgramming accent is mint.
 const COLOR = '#6EE7B7';
 const BG = '#0F1117';
 const BORDER = '#1E2A3A';

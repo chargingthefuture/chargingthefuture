@@ -1,13 +1,13 @@
 'use client';
 
-// Weekly cohort assignment runner for the Peer Programming admin surface.
+// Weekly cohort assignment runner for the PeerProgramming admin surface.
 // Binds POST /api/peer-programming/admin/assignments/run. With no override the
 // server selects active users (login in the last 7 days); the optional manual
 // override lets an admin pass an explicit user-id list for a dry run.
 import { useState } from 'react';
 import type { AssignmentRunResult } from './pp-admin-shared';
 
-// Admin design tokens (shared admin look from the design system). Peer Programming accent is mint.
+// Admin design tokens (shared admin look from the design system). PeerProgramming accent is mint.
 const COLOR = '#6EE7B7';
 const BG = '#0F1117';
 const BORDER = '#1E2A3A';

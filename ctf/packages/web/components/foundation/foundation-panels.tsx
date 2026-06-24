@@ -8,17 +8,19 @@ import {
   COLOR, initials, quoteStatus, formatQuoteDate,
   type ProviderView, type QuoteView,
 } from "./foundation-ui";
+import { ConnectNowButton, canOfferConnectNow } from "./foundation-connect-now";
 
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
   "Get quotes from community providers",
-  "Accept a quote and pay with Service Credits",
+  "Accept a quote and pay with ServiceCredits",
 ];
 
 export function BrowsePanel({
-  providers, onSelect, activeSkillId = null, activeSkillName = null, onSkillFilter,
+  providers, viewerUserId = null, onSelect, activeSkillId = null, activeSkillName = null, onSkillFilter,
 }: {
   providers: ProviderView[];
+  viewerUserId?: string | null;
   onSelect: (p: ProviderView) => void;
   activeSkillId?: string | null;
   activeSkillName?: string | null;
@@ -80,6 +82,11 @@ export function BrowsePanel({
                           </span>
                         );
                       })}
+                    </div>
+                  ) : null}
+                  {canOfferConnectNow(p, viewerUserId) ? (
+                    <div style={{ marginTop: 10 }}>
+                      <ConnectNowButton provider={p} compact />
                     </div>
                   ) : null}
                 </div>

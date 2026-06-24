@@ -311,7 +311,7 @@ function PublicState({ onSignIn }: { onSignIn: () => void }) {
       </View>
       <Text style={styles.publicDesc}>
         Rides, package delivery, and food from fellow community members.
-        Pay with Service Credits.
+        Pay with ServiceCredits.
       </Text>
       <View style={styles.serviceRow}>
         {[

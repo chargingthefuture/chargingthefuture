@@ -58,6 +58,9 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<ProviderView[]>([]);
+  // The signed-in member's own id, returned by the search route, so the "Connect now" button is never
+  // shown on the viewer's own provider card (you can't ring yourself).
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<QuoteView[]>([]);
   const [tab, setTab] = useState<FoundationTab>("browse");
   const [trade, setTrade] = useState("All Trades");
@@ -103,8 +106,9 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         ]);
         if (!active) return;
         if (searchRes.ok) {
-          const data = (await searchRes.json()) as { items?: ProviderView[] };
+          const data = (await searchRes.json()) as { items?: ProviderView[]; viewerUserId?: string };
           setProviders(data.items ?? []);
+          setViewerUserId(data.viewerUserId ?? null);
         }
       } catch (e: unknown) {
         if (active) setError(e instanceof Error ? e.message : "Failed to load Foundation.");
@@ -210,6 +214,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return (
       <ProviderProfile
         provider={selected}
+        viewerUserId={viewerUserId}
         submitting={submitting}
         quoteError={quoteError}
         quoteSuccess={quoteSuccess}
@@ -221,7 +226,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 
   const content = (
     <>
-      {tab === "browse" && <BrowsePanel providers={providers} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
+      {tab === "browse" && <BrowsePanel providers={providers} viewerUserId={viewerUserId} onSelect={setSelected} activeSkillId={skillId} activeSkillName={skillName} onSkillFilter={(id, name) => { setSkillId(id); setSkillName(name ?? null); }} />}
       {tab === "offer" && <OfferSkillsPanel />}
       {tab === "quotes" && (
         <QuotesPanel

@@ -69,6 +69,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'room' });
-    return peerProgrammingErrorResponse(error, 'Peer programming room unavailable.');
+    return peerProgrammingErrorResponse(error, 'PeerProgramming room unavailable.');
   }
 }

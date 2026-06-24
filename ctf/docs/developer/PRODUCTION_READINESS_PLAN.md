@@ -585,3 +585,13 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   the feed/workforce reconciliations already done. **One known-open item:** sign-in via Clerk (auth),
   which the owner is fixing on a separate track — it does not block retirement of this build plan. The
   demo-tenant DB-scoping layer and the auth/public screens are carried into that auth/demo track.
+- 2026-06-24: **Member blocking — cross-cutting core landed (issue #809, task 1 of 5).** Added the
+  central `member_blocks` table to `ctf/schema.sql` (and regenerated `schema.demo.sql`): one row per
+  one-way block (`blocker_user_id`, `blocked_user_id`, `created_at`), a unique constraint on the pair,
+  a self-block CHECK, and indexes both directions so the symmetric lookup is index-served. No `reason`
+  column — ordinary blocks are private and the admin never reads them. Added the single shared
+  enforcement helper `isBlockedBetween(a, b)` in `ctf/packages/web/lib/blocks/repository.ts` (one
+  parameterized EXISTS query, symmetric, no caching — mirrors the unlock gate, which also issues one
+  indexed query per call). This is the foundational layer only: no API routes, UI, or surface wiring
+  yet (tasks 2–5 — block/unblock API + manage-list, the optional safety-report escalation, wiring the
+  check into each member-to-member surface, and admin global-ban tooling). Owner-review lane.

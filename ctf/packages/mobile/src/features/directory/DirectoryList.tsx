@@ -100,7 +100,7 @@ function ProfileDetail({
   const isCommunity = profile.source === 'community-generated';
   // handle: unclaimed_handle for community profiles; omit otherwise
   const handle = isCommunity && profile.unclaimedHandle ? `@${profile.unclaimedHandle}` : null;
-  // Skills nominated through Skills Hunt but not yet in the taxonomy — shown as muted "pending
+  // Skills nominated through SkillsHunt but not yet in the taxonomy — shown as muted "pending
   // review" chips so a community-generated profile's Skills section is never empty.
   const pendingSkills = profile.pendingSkills ?? [];
 

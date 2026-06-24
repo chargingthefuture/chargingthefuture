@@ -30,7 +30,7 @@ export function SkillsHuntSidebar({
   return (
     <aside style={{ width: 240, background: "#0D0F14", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "20px 16px 12px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 4 }}>Skills Hunt</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 4 }}>SkillsHunt</div>
         <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5, marginBottom: 12 }}>Nominate survivors — populate the Directory, build the economy.</div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 16px" }}>

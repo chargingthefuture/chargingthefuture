@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 // Admin shortcut shown in a plugin's header — visible only to admins. Links to that
-// plugin's /admin page. Matches the Skills Hunt admin pill: a small accent-tinted
+// plugin's /admin page. Matches the SkillsHunt admin pill: a small accent-tinted
 // rounded button. `accent` lets each plugin tint it to match its own header. Renders
 // nothing for non-admins, so callers can place it unconditionally.
 export function PluginAdminButton({

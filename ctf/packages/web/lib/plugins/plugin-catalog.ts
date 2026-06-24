@@ -58,7 +58,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
   },
   {
     id: 'skills-hunt',
-    name: 'Skills Hunt',
+    name: 'SkillsHunt',
     kind: 'plugin',
     summary: 'Discover skills across the network.',
   },
@@ -94,7 +94,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
   },
   {
     id: 'peer-programming',
-    name: 'Peer Programming',
+    name: 'PeerProgramming',
     kind: 'plugin',
     summary: 'Weekly global mastermind sessions.',
   },
@@ -124,7 +124,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
   },
   {
     id: 'service-credits',
-    name: 'Service Credits',
+    name: 'ServiceCredits',
     kind: 'plugin',
     summary: 'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',
   },

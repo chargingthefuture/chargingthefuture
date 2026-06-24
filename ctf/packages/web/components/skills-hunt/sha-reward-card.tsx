@@ -86,7 +86,7 @@ export function SkillsHuntAdminRewardCard() {
   return (
     <div style={{ maxWidth: 520 }}>
       <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 14 }}>
-        This is the Skills Hunt reward card pinned on the Directory page. Edits here change what every member sees there.
+        This is the SkillsHunt reward card pinned on the Directory page. Edits here change what every member sees there.
       </div>
       <div style={{ display: "grid", gap: 12 }}>
         <div>
