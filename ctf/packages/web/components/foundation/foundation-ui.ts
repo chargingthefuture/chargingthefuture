@@ -30,6 +30,12 @@ export interface ProviderView {
   bio: string | null;
   score: number;
   offeredSkills: OfferedSkillView[];
+  // Read-only mirror of the provider's instant 1:1 call availability (Foundation "Connect now",
+  // issue #808). Only meaningful when instantCallEnabled is true; the actual call and any charge are
+  // later tasks of #808.
+  instantCallEnabled: boolean;
+  instantCallRateCredits: number | null;
+  instantCallIntervalMinutes: number;
 }
 
 /** Quote view model — only fields the real quote-history API returns. */
