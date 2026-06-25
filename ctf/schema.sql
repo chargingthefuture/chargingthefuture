@@ -2802,6 +2802,30 @@ ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS requeste
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'created';
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3). The base table above models a
+-- generic call session; these columns add the ring -> answer | declined | timed_out -> in_call -> ended
+-- state machine for the opt-in metered "Connect now" call. caller_user_id is who rang, callee_user_id is
+-- the provider being rung. ring_status is the lifecycle state. ring_expires_at is when an unanswered ring
+-- auto-times-out (~60s). answered_at / ended_at / ended_by_user_id record the transitions.
+-- first_block_charged is the clean seam for issue #808 task 4 (per-block billing): task 4 flips it true
+-- when the first block is charged on answer. NO billing happens here -- this column is a placeholder the
+-- billing task hooks into.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS caller_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS callee_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ring_status TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ring_expires_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS first_block_charged BOOLEAN NOT NULL DEFAULT FALSE;
+-- One live ring per callee at a time: a partial unique index over the callee while the ring is still
+-- ringing prevents two simultaneous incoming calls stacking on the same provider.
+CREATE UNIQUE INDEX IF NOT EXISTS foundation_call_sessions_active_ring_per_callee
+  ON foundation_call_sessions (callee_user_id)
+  WHERE ring_status = 'ringing';
+-- The callee's incoming-ring inbox poll and the timeout sweep both filter on ring_status; index it.
+CREATE INDEX IF NOT EXISTS foundation_call_sessions_ring_status_idx
+  ON foundation_call_sessions (ring_status, ring_expires_at);
 
 CREATE TABLE IF NOT EXISTS foundation_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

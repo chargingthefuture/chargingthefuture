@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PhoneCall, X } from "lucide-react";
 import { COLOR, type ProviderView } from "./foundation-ui";
+import { useInstantCall } from "./foundation-instant-call";
 
 // Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min". ServiceCredits is
 // one joined word per the brand lexicon. The amount is only rendered when the provider has a valid
@@ -31,10 +32,10 @@ export function canOfferConnectNow(provider: ProviderView, viewerUserId: string 
 }
 
 // The "Connect now" entry point: a button that shows the rate and block length, and on click opens a
-// consent dialog previewing the cost and a plain-language disclaimer. Because the live call lifecycle
-// (a later task of issue #808) does not exist yet, the final confirm is rendered disabled with an
-// honest note that live calling arrives in the next update — it never places a call or hits an
-// endpoint. The button only renders when canOfferConnectNow is true (checked by the caller).
+// consent dialog previewing the cost and a plain-language disclaimer. On confirm it places a live audio
+// ring through the instant-call controller (issue #808 task 3). Billing is task 4 — the consent copy is
+// honest that no charge happens yet in this version. The button only renders when canOfferConnectNow is
+// true (checked by the caller).
 export function ConnectNowButton({
   provider, compact = false,
 }: {
@@ -72,7 +73,7 @@ export function ConnectNowButton({
 
       {open ? (
         <ConnectNowDialog
-          providerName={provider.displayName}
+          provider={provider}
           rateLabel={rateLabel}
           intervalMinutes={interval}
           onClose={() => setOpen(false)}
@@ -83,14 +84,32 @@ export function ConnectNowButton({
 }
 
 function ConnectNowDialog({
-  providerName, rateLabel, intervalMinutes, onClose,
+  provider, rateLabel, intervalMinutes, onClose,
 }: {
-  providerName: string;
+  provider: ProviderView;
   rateLabel: string;
   intervalMinutes: number;
   onClose: () => void;
 }) {
+  const providerName = provider.displayName;
   const [consented, setConsented] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const instantCall = useInstantCall();
+
+  // Place the ring through the controller, then close the consent dialog so the controller's call overlay
+  // (ringing -> in-call) takes over. The controller owns the lifecycle from here.
+  const onStart = async () => {
+    if (!consented || starting || !instantCall) {
+      return;
+    }
+    setStarting(true);
+    try {
+      await instantCall.startCall(provider);
+      onClose();
+    } finally {
+      setStarting(false);
+    }
+  };
 
   return (
     <div
@@ -161,24 +180,25 @@ function ConnectNowDialog({
 
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          title="Live calling arrives in the next update."
+          disabled={!consented || starting || !instantCall}
+          aria-disabled={!consented || starting || !instantCall}
+          onClick={() => void onStart()}
           style={{
             width: "100%",
             padding: "12px 18px",
             borderRadius: 10,
-            background: "rgba(255,255,255,0.06)",
-            color: "#6B7280",
+            background: consented && !starting && instantCall ? COLOR : "rgba(255,255,255,0.06)",
+            color: consented && !starting && instantCall ? "#1a1205" : "#6B7280",
             fontSize: 14, fontWeight: 700,
-            border: "1px solid rgba(255,255,255,0.10)",
-            cursor: "not-allowed",
+            border: consented && !starting && instantCall ? "none" : "1px solid rgba(255,255,255,0.10)",
+            cursor: consented && !starting && instantCall ? "pointer" : "not-allowed",
           }}
         >
-          Start call
+          {starting ? "Starting…" : "Start call"}
         </button>
         <div style={{ marginTop: 10, fontSize: 12, color: "#9CA3AF", lineHeight: 1.6, textAlign: "center" }}>
-          Live calling arrives in the next update. {consented ? "Your consent is noted — the call can't start yet." : "Nothing is charged and no call is placed yet."}
+          This places a live audio call. No charge happens in this version — per-block billing arrives in a
+          later update.
         </div>
       </div>
     </div>

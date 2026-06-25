@@ -351,3 +351,5 @@ auditEvents:
 changelog:
   - date: 2026-02-24
     change: Initial Foundation audit contract set added with standardized allow/deny policy evidence for all v1 commands.
+  - date: 2026-06-25
+    change: Instant 1:1 call ring/answer lifecycle (issue #808 task 3) writes audit rows via the shared foundation_admin_audit_trail for foundation.connection.instant-call.ring / .answer / .decline / .end (actor, target call/thread, and counterpart user id in metadata). The existing standardized allow/deny evidence envelope covers these; no new bespoke audit shape was needed.
