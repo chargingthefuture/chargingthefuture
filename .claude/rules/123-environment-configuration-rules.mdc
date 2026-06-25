@@ -146,6 +146,26 @@ credential set for the two integrations that need it:
 `demo-mode` selects between the two sets at request time; see the
 per-environment-credentials note above.
 
+### Web Push (VAPID) keys — Foundation instant-call ring
+
+Web Push (the browser notification that wakes a provider's device when a member rings them on
+Foundation — issue #808 task 5) needs three values:
+
+- `VAPID_PUBLIC_KEY` — the public application-server key. NOT secret; it is served to the browser so
+  it can create a push subscription.
+- `VAPID_PRIVATE_KEY` — the matching private key. Server-only; never sent to a client, never logged.
+- `VAPID_SUBJECT` — a contact identifier for the push services, either a `mailto:` address or an
+  `https://` URL (e.g. `mailto:ops@chargingthefuture.example`).
+
+The owner generates the pair once, locally, with `npx web-push generate-vapid-keys`, then stores all
+three in Infisical `production` (and any preview environment that should deliver push). Do **not**
+generate or commit these anywhere in the repo — this is an open-source repository.
+
+When any of the three is unset, Web Push degrades gracefully: `resolveWebPushKeys` in
+`ctf/packages/web/lib/notifications/push.ts` returns null, every send is a logged no-op (it never
+throws), and the in-app incoming-call poll remains the fallback. So builds, tests, and the call flow
+work with these unset; setting them only switches the out-of-app push on.
+
 ### Contributions plugin: owner Signal contact
 
 | Variable | Layer | Used by | Purpose |

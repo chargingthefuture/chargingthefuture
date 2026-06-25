@@ -2874,6 +2874,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS foundation_call_sessions_active_ring_per_calle
 CREATE INDEX IF NOT EXISTS foundation_call_sessions_ring_status_idx
   ON foundation_call_sessions (ring_status, ring_expires_at);
 
+-- Web push subscriptions (issue #808 task 5). Deliberately user-global and NOT Foundation-specific in
+-- shape so the same table backs any future push need. The Foundation instant-call ring is the first
+-- caller: when a provider enables call alerts on a device, that device's Web Push subscription is stored
+-- here, and ringInstantCall sends a push to every subscription the callee owns.
+--   kind     -- 'web' today; leaves room for 'expo' (native Android push) when #808's Android parity
+--               ticket lands, without a schema change.
+--   endpoint -- the push service URL the browser gave us (treated as the subscription identity).
+--   p256dh / auth -- the subscription's public encryption keys from PushSubscription.getKey(); these are
+--               per-subscription client keys, NOT the server VAPID private key (which is never stored in
+--               the database and only lives in env).
+--   user_agent   -- a short, non-identifying label so a member can tell their devices apart.
+--   last_used_at -- stamped when we last sent to this subscription, for housekeeping.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'web',
+  endpoint TEXT NOT NULL,
+  p256dh TEXT,
+  auth TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'web';
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS endpoint TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS p256dh TEXT;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS auth TEXT;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS user_agent TEXT;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ;
+-- One row per (user, endpoint): a device re-subscribing upserts rather than duplicating.
+CREATE UNIQUE INDEX IF NOT EXISTS push_subscriptions_user_endpoint_key
+  ON push_subscriptions (user_id, endpoint);
+-- Sending a push loads all of a user's subscriptions; index the lookup.
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_id_idx
+  ON push_subscriptions (user_id);
+
 CREATE TABLE IF NOT EXISTS foundation_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,

@@ -678,6 +678,61 @@ contracts:
     retentionClass: profile_long_lived
     idempotency: true
 
+  - pluginId: foundation
+    command: foundation.push.subscribe
+    version: 1.0.0
+    description: Save the signed-in member's Web Push subscription for one device (issue #808 task 5). A provider who enabled instant calls turns on "call alerts on this device"; the browser's push subscription is stored so the instant-call ring can wake that device with the app closed. The member acts only on their own subscription; the endpoint and per-subscription keys are stored but never logged.
+    inputSchema:
+      endpoint:
+        type: string
+        required: true
+      keys:
+        type: object
+        required: true
+      userAgent:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - push_subscriptions
+    purpose: instant_call_ring_delivery
+    retentionClass: profile_long_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.push.unsubscribe
+    version: 1.0.0
+    description: Remove the signed-in member's Web Push subscription for one device (issue #808 task 5) — they turned call alerts off on that device, or the browser revoked it. Identified by its endpoint; the member acts only on their own subscription.
+    inputSchema:
+      endpoint:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - push_subscriptions
+    purpose: instant_call_ring_delivery
+    retentionClass: profile_long_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.push.vapid-public-key.read
+    version: 1.0.0
+    description: Return the public VAPID key the browser needs to create a Web Push subscription (issue #808 task 5). The public key is not secret and is safe to expose; when push is not configured (the owner has not set the VAPID env vars) this returns enabled false with an empty key so the client shows a clear "alerts unavailable" state. Read-only.
+    inputSchema: {}
+    outputSchema:
+      enabled:
+        type: boolean
+      publicKey:
+        type: string
+    dataAccess: []
+    purpose: instant_call_ring_delivery
+    retentionClass: not_applicable
+    idempotency: true
+
 changelog:
   - date: 2026-02-24
     change: Initial Foundation v1 command contracts added for provider search, 1:1 text/voice/video, quote lifecycle, history, notifications, rate limiting, and capacity governance.
@@ -689,3 +744,5 @@ changelog:
     change: Added the instant 1:1 call ring/answer lifecycle commands (issue #808 task 3, audio-only v1) — foundation.connection.instant-call.ring / .answer / .decline / .end, plus foundation.connection.instant-call.state.read and foundation.connection.incoming-call.read. Reuses the Direct Line thread and the participant-only Stream token path. Ring is in-app only (push is task 5); no credits move (billing is task 4, hooked at the answer seam). Ring is rate limited per member.
   - date: 2026-06-25
     change: Added per-block billing (issue #808 task 4) to the instant 1:1 call. ring is now v1.1.0 — it takes an optional authorizedBlocks (buyer-set per-session block cap, default 6, never exceeded in v1), pre-checks the caller can afford the first block, and reads foundation_user_extension + service_credits_wallets (still moves no credits). answer is now v1.1.0 — it snapshots the provider's rate + interval onto the call and charges the first block via the canonical peer-to-peer ServiceCredits transfer (direct, no escrow), so its dataAccess now includes the service_credits_* tables and it is idempotent on the deterministic per-block key. Added foundation.connection.instant-call.extend (caller-only) to charge each subsequent block at the LOCKED rate under the authorized cap. Disputes/refunds and mid-session cap re-authorization are deferred follow-ups.
+  - date: 2026-06-25
+    change: Added Web Push delivery for the instant-call ring (issue #808 task 5) — foundation.push.subscribe / .unsubscribe / .vapid-public-key.read. A provider enables "call alerts on this device"; the device's Web Push subscription is stored in the user-global push_subscriptions table, and the ring sends a push so the device wakes with the app closed. The in-app incoming-call poll remains the fallback; push only augments it. The ring also writes a foundation_notification_events row of kind instant_call.ring for the in-app inbox. Server keys (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT) are read from env and the send is a graceful no-op when unset. Android/Expo native push is deferred to the #808 Android parity ticket.
