@@ -126,6 +126,36 @@ async function postTransactionToFormance(input: {
   };
 }
 
+// Direct peer-to-peer transfer: the sender's wallet pays the recipient's wallet in one posting (no
+// escrow). Mirrors the immediate-delivery model of collectTreasuryFee / applyDisputeAdjustment, which
+// also move wallet -> wallet directly. Best-effort, like all Formance posts: the local ledger is
+// authoritative and a failure here is queued for the reconciliation worker.
+export async function postTransferToFormance(input: {
+  senderUserId: string;
+  recipientUserId: string;
+  amount: number;
+  idempotencyKey: string;
+}) {
+  const config = await getFormanceConfig();
+  return postTransactionToFormance({
+    reference: `service-credits:transfer:${input.senderUserId}:${input.idempotencyKey}`,
+    postings: [
+      {
+        source: `wallet:${input.senderUserId}`,
+        destination: `wallet:${input.recipientUserId}`,
+        amount: input.amount,
+        asset: config.asset,
+      },
+    ],
+    metadata: {
+      plugin: 'service-credits',
+      senderUserId: input.senderUserId,
+      recipientUserId: input.recipientUserId,
+      flow: 'transfer',
+    },
+  });
+}
+
 export async function postEscrowHoldToFormance(input: {
   transferId: string;
   senderUserId: string;
