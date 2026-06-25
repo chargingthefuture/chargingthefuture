@@ -39,12 +39,22 @@ export function acceptsInstantCalls(provider: Provider): boolean {
   return true;
 }
 
+// True when the signed-in viewer is the same member who owns this provider profile. Both ids come
+// from the same source (the search returns viewerUserId = the signed-in user id, and
+// provider.providerUserId is the directory profile's claimed_by_user_id) — the exact comparison the
+// server uses to reject a self-connection. You cannot request a quote from, or ring, yourself, so
+// callers disable those actions on your own profile rather than let the request fail server-side.
+// Mirrors isOwnProfile on web.
+export function isOwnProfile(provider: Provider, viewerUserId: string | null): boolean {
+  return Boolean(viewerUserId) && provider.providerUserId === viewerUserId;
+}
+
 // True only when this provider is reachable for an instant call AND it should be
 // offered to this viewer: they accept calls and the viewer is not the provider
 // themselves (you cannot ring yourself). Mirrors canOfferConnectNow on web.
 export function canOfferConnectNow(provider: Provider, viewerUserId: string | null): boolean {
   if (!acceptsInstantCalls(provider)) return false;
-  if (viewerUserId && provider.providerUserId === viewerUserId) return false;
+  if (isOwnProfile(provider, viewerUserId)) return false;
   return true;
 }
 

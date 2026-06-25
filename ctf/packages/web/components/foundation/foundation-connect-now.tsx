@@ -28,6 +28,16 @@ export function acceptsInstantCalls(provider: ProviderView): boolean {
   return true;
 }
 
+// True when the signed-in viewer is the same member who owns this provider profile. Both ids come from
+// the same source: the providers/search route returns viewerUserId = the signed-in user id, and
+// provider.providerUserId is the directory profile's claimed_by_user_id. That is the exact comparison the
+// server uses to reject a self-connection (see createConnectionThread). You can't request a quote from, or
+// ring, yourself — so callers use this to disable those actions on your own profile instead of letting the
+// request fail server-side with a generic error.
+export function isOwnProfile(provider: ProviderView, viewerUserId: string | null): boolean {
+  return Boolean(viewerUserId) && provider.providerUserId === viewerUserId;
+}
+
 // True only when this provider is reachable for an instant call AND it should be offered to this
 // viewer: they accept calls (acceptsInstantCalls) and the viewer is not the provider themselves
 // (you can't ring yourself). The unlock gate is handled upstream — only an unlocked member ever
@@ -36,7 +46,7 @@ export function canOfferConnectNow(provider: ProviderView, viewerUserId: string 
   if (!acceptsInstantCalls(provider)) {
     return false;
   }
-  if (viewerUserId && provider.providerUserId === viewerUserId) {
+  if (isOwnProfile(provider, viewerUserId)) {
     return false;
   }
   return true;
