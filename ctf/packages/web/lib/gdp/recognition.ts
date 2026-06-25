@@ -134,16 +134,55 @@ export const levelUpTrainerPayoutSource: RecognitionSource = {
 };
 
 /**
- * Registered recognition sources, one per plugin, owner-approved one at a time. Append other plugins'
- * eligible-value sources here (and document them in the GDP inventory) as the owner approves each one.
- * Barter and free exchanges register as `BARTER`/`FREE`-coded sources (counted by completed-exchange
- * count) once a plugin settles them on-platform via the shared payment selector (issue #420).
+ * Foundation: ServiceCredits a caller pays a provider for a metered 1:1 "Connect now" service call.
+ * Each minute-block charges the provider's locked rate, and `foundation_call_sessions` snapshots that
+ * rate (`rate_credits_locked`) and the number of paid blocks (`blocks_charged`), so the total settled
+ * value of a call is `blocks_charged * rate_credits_locked` ServiceCredits (code `SC`). This is real
+ * service-delivery value — a survivor paying another survivor for a consultation — so it is recognized,
+ * exactly like TrustTransport's completed-task earnings. We read Foundation's OWN call-session record
+ * (not the SC transfer ledger): the ledger tags these caller→provider moves `accounting_scope =
+ * service_credits_non_gdp` because, as raw transfers, they must not be counted blindly; the curated
+ * per-call record here is the eligible-settled-value view. Only calls that actually charged at least one
+ * block count; rings that never answered (no rate, zero blocks) contribute nothing.
  */
-export const RECOGNITION_SOURCES: RecognitionSource[] = [trustTransportSource, levelUpTrainerPayoutSource];
+export const foundationCallSource: RecognitionSource = {
+  pluginSlug: 'foundation',
+  label: 'Foundation paid service calls',
+  async loadVolumes() {
+    const result = await queryDb<{ total: string | null }>(
+      `SELECT SUM(blocks_charged * rate_credits_locked)::text AS total
+         FROM foundation_call_sessions
+         WHERE blocks_charged > 0 AND rate_credits_locked IS NOT NULL`,
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return [];
+    }
+    return [{ amount: total, currencyCode: 'SC' }];
+  },
+};
 
-/** The composite index plus the per-source contribution breakdown. */
+/**
+ * Registered recognition sources, one per plugin. The policy: recognize ONLY non-incentive settled
+ * value — value actually delivered/exchanged on-platform — and never an incentive (a reward, bonus,
+ * stipend, completion grant, or "thank-you" mint), a plain member-to-member transfer, or a
+ * deletion/reclaim reallocation. Concretely excluded today by that policy: Skills Hunt accept rewards,
+ * Unlock verification incentives, and Contributions thank-you grants (all incentive mints), plus every
+ * ServiceCredits ledger row (tagged `service_credits_non_gdp`). LightHouse rent, SocketRelay favors,
+ * and other plugins join here once they record a settled on-platform exchange (a completed-exchange
+ * row with a chosen value type, or a countable BARTER/FREE exchange) via the shared payment selector
+ * (issue #420) — listings and asking-prices alone are not settled value. Append a source here (and
+ * document it in the GDP inventory) when a plugin starts recording such settlement.
+ */
+export const RECOGNITION_SOURCES: RecognitionSource[] = [
+  trustTransportSource,
+  levelUpTrainerPayoutSource,
+  foundationCallSource,
+];
+
+/** The composite index plus the per-source contribution breakdown (label included for display). */
 export interface RecognitionBreakdown extends CommunityValueResult {
-  perSource: Array<{ pluginSlug: string; valueIndex: number }>;
+  perSource: Array<{ pluginSlug: string; label: string; valueIndex: number }>;
 }
 
 /**
@@ -158,7 +197,7 @@ export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdo
   let valueIndex = 0;
   const unweighted = new Set<string>();
   const perCurrency = new Map<string, number>();
-  const perSource: Array<{ pluginSlug: string; valueIndex: number }> = [];
+  const perSource: Array<{ pluginSlug: string; label: string; valueIndex: number }> = [];
   for (const source of RECOGNITION_SOURCES) {
     const volumes = await source.loadVolumes();
     const result = foldVolumesIntoIndex(volumes, weights);
@@ -167,7 +206,7 @@ export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdo
     for (const volume of volumes) {
       perCurrency.set(volume.currencyCode, (perCurrency.get(volume.currencyCode) ?? 0) + volume.amount);
     }
-    perSource.push({ pluginSlug: source.pluginSlug, valueIndex: result.valueIndex });
+    perSource.push({ pluginSlug: source.pluginSlug, label: source.label, valueIndex: result.valueIndex });
   }
   return {
     valueIndex,
