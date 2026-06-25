@@ -186,8 +186,8 @@ export function GdpWorldMap({
 
       <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>
         {hasData
-          ? `Regions show where the survivor economy is active (per-country breakdowns are not published yet, so regions are shown in a single neutral state). ${COMMUNITY_VALUE_INDEX_DISCLAIMER}`
-          : "No published report yet. The map activates once a figure is published."}
+          ? `Regions show where the survivor economy is active (per-country breakdowns are not available yet, so regions are shown in a single neutral state). ${COMMUNITY_VALUE_INDEX_DISCLAIMER}`
+          : "No recognized activity yet. The map activates once the community has recognized value."}
       </div>
     </div>
   );

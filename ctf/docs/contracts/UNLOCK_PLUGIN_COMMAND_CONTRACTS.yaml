@@ -140,6 +140,8 @@ contracts:
         type: integer
       alreadyGranted:
         type: integer
+      withheld:
+        type: integer
       failed:
         type: integer
       errors:
@@ -154,5 +156,62 @@ contracts:
       - service_credits_adapter_outbox
       - service_credits_admin_audit_trail
     purpose: incentive_award_self_heal
+    retentionClass: financial_audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
+    command: unlock.admin.submission.revoke
+    version: 1.0.0
+    description: Duplicate-identity determination "loser" path. Claws a granted verification reward back (best-effort burn) and drops the account to rejected + locked_support_only with reward_revoked_at, so the reconcile never re-grants it. Used when a Quora identity was approved on more than one account, or for a perp impersonating a victim.
+    inputSchema:
+      submissionId:
+        type: integer
+        required: true
+      reviewNote:
+        type: string
+        required: false
+    outputSchema:
+      submissionId:
+        type: integer
+      creditsReclaimed:
+        type: boolean
+      reclaimAmount:
+        type: number
+    dataAccess:
+      - unlock_verification_submissions
+      - unlock_audit_log
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+      - service_credits_wallets
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+      - service_credits_admin_audit_trail
+    purpose: incentive_revoke_duplicate_identity
+    retentionClass: financial_audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
+    command: unlock.admin.reward.grant
+    version: 1.0.0
+    description: Duplicate-identity determination "winner" path. Clears a held reward and grants it to the chosen account through the shared duplicate-identity guard. Refuses (409, with the current holderUserId) if another account still holds the identity's reward — that one must be revoked first.
+    inputSchema:
+      submissionId:
+        type: integer
+        required: true
+    outputSchema:
+      submissionId:
+        type: integer
+      incentiveGrantedAt:
+        type: string
+    dataAccess:
+      - unlock_verification_submissions
+      - unlock_audit_log
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+      - service_credits_wallets
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+      - service_credits_admin_audit_trail
+    purpose: incentive_award_determination
     retentionClass: financial_audit_long_lived
     idempotency: true

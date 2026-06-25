@@ -59,8 +59,12 @@ contracts:
 
   - pluginId: gross-domestic-product
     command: dashboard.snapshot.get
-    version: 1.0.0
-    description: Get aggregate GDP dashboard snapshot for authenticated survivor-facing view.
+    version: 1.1.0
+    description: >-
+      Get the aggregate GDP dashboard for the authenticated survivor-facing view. Computed LIVE on each
+      request (no weekly publish/snapshot step): the Community Value Index is recognized from every
+      registered non-incentive settled-value source right now, alongside live member counts. Reads only
+      community-wide aggregates — never per-user figures.
     inputSchema:
       year:
         type: integer
@@ -84,6 +88,15 @@ contracts:
       rolloutProgress:
         type: object
     dataAccess:
+      # Live recognition sources (non-incentive settled value) + activity counts read on each request:
+      - foundation_call_sessions
+      - trusttransport_earnings_ledger
+      - service_credits_governance_events
+      - currency_usd_rates
+      - login_events
+      - users
+      - gdp_publications
+      # Published-snapshot history (retained, not what the live dashboard shows):
       - gdp_metric_snapshots
       - gdp_category_breakdowns
       - gdp_provider_tier_snapshots

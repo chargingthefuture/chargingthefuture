@@ -3,8 +3,8 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   COLOR,
+  COMMUNITY_VALUE_INDEX_DISCLAIMER,
   GDP_ESTIMATE_CHIP_LABEL,
-  GDP_ESTIMATE_FOOTNOTE,
   type GdpCountry,
   type GdpMetrics,
   type GdpSector,
@@ -56,7 +56,7 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
             </div>
           ) : null}
           {isEstimate ? (
-            <div style={{ fontSize: 11, color: "#4B5563", marginTop: 12, lineHeight: 1.55, fontStyle: "italic" }}>{GDP_ESTIMATE_FOOTNOTE}</div>
+            <div style={{ fontSize: 11, color: "#4B5563", marginTop: 12, lineHeight: 1.55, fontStyle: "italic" }}>{COMMUNITY_VALUE_INDEX_DISCLAIMER}</div>
           ) : null}
         </div>
         {stats.length > 0 ? (
@@ -77,7 +77,7 @@ function GdpHero({ metrics }: { metrics: GdpMetrics }) {
 function GdpSectors({ sectors }: { sectors: GdpSector[] }) {
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB", marginBottom: 16 }}>GDP by Sector</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB", marginBottom: 16 }}>Value by Source</div>
       {sectors.map((s) => (
         <div key={s.name} style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
@@ -85,9 +85,11 @@ function GdpSectors({ sectors }: { sectors: GdpSector[] }) {
             <span style={{ color: s.color ?? COLOR, fontWeight: 700 }}>{s.value}</span>
           </div>
           <div style={{ height: 8, background: "rgba(255,255,255,0.04)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ height: "100%", background: s.color ?? COLOR, borderRadius: 4, width: "60%", opacity: 0.85 }} />
+            <div style={{ height: "100%", background: s.color ?? COLOR, borderRadius: 4, width: `${Math.round((s.share ?? 0.6) * 100)}%`, opacity: 0.85 }} />
           </div>
-          <div style={{ fontSize: 11, color: "#4B5563", marginTop: 2 }}>{s.members.toLocaleString()} members</div>
+          {s.members !== undefined ? (
+            <div style={{ fontSize: 11, color: "#4B5563", marginTop: 2 }}>{s.members.toLocaleString()} members</div>
+          ) : null}
         </div>
       ))}
     </div>

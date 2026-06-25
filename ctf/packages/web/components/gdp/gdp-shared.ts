@@ -20,7 +20,12 @@ export interface GdpSector {
   name: string;
   color?: string;
   value: string;
-  members: number;
+  // Optional member count. The live per-source breakdown has no per-source member count, so it is left
+  // unset and the "{n} members" sub-label is hidden; the (currently unused) published-report path may set it.
+  members?: number;
+  // Optional bar fill 0..1 (the source's share of the largest contribution). Falls back to a neutral
+  // width when unset so the published-report path renders unchanged.
+  share?: number;
 }
 
 export interface GdpCountry {
@@ -80,6 +85,10 @@ export type GdpTab = "dashboard" | "map";
 // world map. These are community-wide aggregates only — never per-user figures.
 export const GDP_ACTIVE_MEMBERS_METRIC_KEY = "weekly_active_users";
 
+// Total signed-up members, carried as a live metric row alongside the value index. Community-wide
+// count only — never a per-user figure.
+export const GDP_TOTAL_MEMBERS_METRIC_KEY = "total_members";
+
 // The Community Value Index — one composite measure of all recognized economic
 // activity, folding every value type (fiat, crypto, ServiceCredits, barter) into a
 // single relative figure. It is NOT money: shown as a plain number with no currency
@@ -136,3 +145,52 @@ export function pickGdpMetricValue(
 // Matches the design's sidebar filter list (no "By Phase" — that term is banned
 // project-wide and is not present in the design mockup).
 export const SIDEBAR_FILTERS = ["Global Overview", "By Sector", "By Country", "Projections"];
+
+// One registered recognition source's contribution to the live Community Value Index, as returned by
+// GET /api/gdp/report/current. The dashboard renders these as the per-source value breakdown.
+export interface GdpLiveSource {
+  pluginSlug: string;
+  label: string;
+  valueIndex: number;
+}
+
+// The live report payload from GET /api/gdp/report/current: live metric rows plus the per-source
+// breakdown and an optional narrative. Computed on each request — there is no published-snapshot read.
+export interface GdpReportPayload {
+  publication?: { id: string; weekStartDate: string; title: string; summary: string; status: string } | null;
+  metrics: GdpMetricRow[];
+  sources?: GdpLiveSource[];
+}
+
+// Shape the live metric rows into the GdpMetrics the hero/sidebar render. The headline is the Community
+// Value Index (no currency symbol); member stats come from the live total/active rows. Any absent row is
+// simply omitted so the surface shows an honest figure, never a fabricated one.
+export function shapeLiveGdpMetrics(rows: GdpMetricRow[], isEstimate: boolean): GdpMetrics {
+  const valueIndex = pickGdpMetricValue(rows, COMMUNITY_VALUE_INDEX_METRIC_KEY);
+  const activeMembers = pickGdpMetricValue(rows, GDP_ACTIVE_MEMBERS_METRIC_KEY);
+  const totalMembers = pickGdpMetricValue(rows, GDP_TOTAL_MEMBERS_METRIC_KEY);
+  const memberStats: { v: string; l: string; c?: string }[] = [];
+  if (totalMembers !== null) memberStats.push({ v: formatGdpCount(totalMembers), l: "Members" });
+  if (activeMembers !== null) memberStats.push({ v: formatGdpCount(activeMembers), l: "Active · 7d", c: "#22C55E" });
+  return {
+    currentValue: valueIndex !== null ? formatCommunityValueIndex(valueIndex) : undefined,
+    members: totalMembers !== null ? formatGdpCount(totalMembers) : undefined,
+    memberStats,
+    isEstimate,
+  };
+}
+
+// Shape the per-source breakdown into sector rows (largest first). Bars are scaled to the biggest
+// contributor; sources with no recognized value are dropped so the panel never shows an empty bar.
+export function shapeSourceSectors(sources: GdpLiveSource[] | undefined): GdpSector[] {
+  if (!Array.isArray(sources)) return [];
+  const contributing = sources.filter((s) => Number.isFinite(s.valueIndex) && s.valueIndex > 0);
+  const max = contributing.reduce((m, s) => Math.max(m, s.valueIndex), 0);
+  return [...contributing]
+    .sort((a, b) => b.valueIndex - a.valueIndex)
+    .map((s) => ({
+      name: s.label,
+      value: formatCommunityValueIndex(s.valueIndex),
+      share: max > 0 ? s.valueIndex / max : 0,
+    }));
+}

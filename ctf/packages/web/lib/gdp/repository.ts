@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
-import { countTotalMembers } from 'lib/engagement/login-activity';
+import { countActiveUsersLastDays, countTotalMembers } from 'lib/engagement/login-activity';
+import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
 
 type PublicationRow = {
   id: string;
@@ -120,6 +121,112 @@ export async function getGdpShellStats(): Promise<{ memberCount: number | null; 
     memberCount,
     gdpValueUsd: gdpMetric ? gdpMetric.metricValue : null,
   };
+}
+
+// === Live report (issue: GDP dashboard activity) ===
+// The dashboard reads a LIVE report computed on each request — no weekly publish/snapshot step. The
+// headline is the Community Value Index recomputed from every registered recognition source right now;
+// member counts come straight from the activity tables. A published narrative (title/summary), if the
+// owner writes one, is overlaid; otherwise a standing "live" narrative is synthesized so the surface
+// always has a heading. This read NEVER writes a snapshot — gdp_metric_snapshots / the weekly
+// recognize job remain only for optional history, not for what the dashboard shows.
+
+/** A live metric row, shaped exactly like the published-snapshot rows the web shell and Android read. */
+export type GdpLiveMetricRow = {
+  metricKey: string;
+  metricValue: number;
+  dpSuppressed: boolean;
+  lawfulBasis: string;
+  sourcePlugin: string;
+  isEstimate: boolean;
+};
+
+/** One registered recognition source's contribution to the live Community Value Index. */
+export type GdpLiveSource = { pluginSlug: string; label: string; valueIndex: number };
+
+export type GdpLiveReport = {
+  publication: { id: string; weekStartDate: string; title: string; summary: string; status: 'draft' | 'published' };
+  metrics: GdpLiveMetricRow[];
+  sources: GdpLiveSource[];
+};
+
+const LIVE_PUBLICATION_TITLE = 'TI Skills Economy — Live';
+const LIVE_PUBLICATION_SUMMARY =
+  'Live measure of every recognized non-incentive exchange across the community, recomputed on each visit — no weekly publish step. Incentives (rewards, bonuses, thank-you grants) and plain transfers are not counted.';
+
+// Monday (UTC) of the current week, matching the week-start convention used by scripts/recognizeGdp.mjs,
+// so the synthesized live narrative is dated to the same week the recognition pipeline would record.
+function currentWeekStartIso(now = new Date()): string {
+  const day = now.getUTCDay(); // 0 = Sunday … 6 = Saturday
+  const backToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + backToMonday));
+  return monday.toISOString().slice(0, 10);
+}
+
+// Newest published narrative (title/summary only) — used to overlay the owner's optional report on top
+// of the live numbers. One query; the snapshot metrics are intentionally not read (the numbers are live).
+async function getLatestPublicationNarrative() {
+  const result = await queryDb<PublicationRow>(
+    `SELECT id::text, week_start_date::text, title, summary, status
+     FROM gdp_publications
+     WHERE status = 'published'
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+  );
+  return result.rows[0] ? mapPublication(result.rows[0]) : null;
+}
+
+export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
+  const [breakdown, totalMembers, activeMembers, narrative] = await Promise.all([
+    recognizeCommunityValueIndex(),
+    countTotalMembers().catch(() => null),
+    countActiveUsersLastDays(7).catch(() => null),
+    getLatestPublicationNarrative().catch(() => null),
+  ]);
+
+  // Community Value Index is the headline: a normalized, weighted estimate (no currency symbol), so it
+  // carries is_estimate = true exactly like the weekly pipeline writes it.
+  const metrics: GdpLiveMetricRow[] = [
+    {
+      metricKey: 'gdp_value_index',
+      metricValue: Math.round(breakdown.valueIndex),
+      dpSuppressed: false,
+      lawfulBasis: 'service-delivery',
+      sourcePlugin: 'gdp',
+      isEstimate: true,
+    },
+  ];
+  if (activeMembers !== null) {
+    metrics.push({
+      metricKey: 'weekly_active_users',
+      metricValue: activeMembers,
+      dpSuppressed: false,
+      lawfulBasis: 'engagement',
+      sourcePlugin: 'gdp',
+      isEstimate: false,
+    });
+  }
+  if (totalMembers !== null) {
+    metrics.push({
+      metricKey: 'total_members',
+      metricValue: totalMembers,
+      dpSuppressed: false,
+      lawfulBasis: 'engagement',
+      sourcePlugin: 'gdp',
+      isEstimate: false,
+    });
+  }
+
+  const publication =
+    narrative ?? {
+      id: 'live',
+      weekStartDate: currentWeekStartIso(),
+      title: LIVE_PUBLICATION_TITLE,
+      summary: LIVE_PUBLICATION_SUMMARY,
+      status: 'published' as const,
+    };
+
+  return { publication, metrics, sources: breakdown.perSource };
 }
 
 // === Currency USD rate admin (issue #312 P2) ===

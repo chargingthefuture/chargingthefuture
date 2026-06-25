@@ -144,3 +144,53 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - insufficient_role
+
+  - pluginId: unlock
+    command: unlock.admin.submission.revoke
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - system
+    attributePolicies:
+      adminOnlyOperation: required
+      oneTimeGrantPerUser: enforced
+    consentRequirements:
+      scopes:
+        - unlock_incentive_grant
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - missing_csrf_confirmation
+
+  - pluginId: unlock
+    command: unlock.admin.reward.grant
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - system
+    attributePolicies:
+      adminOnlyOperation: required
+      oneTimeGrantPerUser: enforced
+    consentRequirements:
+      scopes:
+        - unlock_incentive_grant
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - missing_csrf_confirmation
+      - submission_not_approved
+      - reward_still_held_by_other_account

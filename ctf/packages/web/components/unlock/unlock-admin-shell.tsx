@@ -83,6 +83,9 @@ export function UnlockAdminShell({
   const [editUrl, setEditUrl] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [savingUrl, setSavingUrl] = useState(false);
+  // Which submission is awaiting an explicit revoke confirmation (revoke burns the reward, so it is a
+  // money action — never one-click).
+  const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
 
   const visible = tab === 'pending' ? submissions.filter((s) => s.reviewStatus === 'pending') : submissions;
   // Approved submissions whose 100-credit reward never landed (incentive_granted_at still null). These
@@ -99,7 +102,7 @@ export function UnlockAdminShell({
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
       });
       const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; granted?: number; alreadyGranted?: number; failed?: number; errors?: { submissionId: number; message: string }[]; reason?: string; code?: string; message?: string }
+        | { ok?: boolean; granted?: number; alreadyGranted?: number; withheld?: number; failed?: number; errors?: { submissionId: number; message: string }[]; reason?: string; code?: string; message?: string }
         | null;
       if (!res.ok || !data?.ok) {
         setError(data?.reason ?? data?.message ?? data?.code ?? `Retry failed (${res.status}).`);
@@ -107,16 +110,17 @@ export function UnlockAdminShell({
       }
       const granted = data.granted ?? 0;
       const failed = data.failed ?? 0;
+      const withheld = data.withheld ?? 0;
       const reasons = (data.errors ?? []).map((e) => `#${e.submissionId}: ${e.message}`).join('; ');
+      // Note any rewards the duplicate-identity guard held so the operator knows to make a determination.
+      const heldNote = withheld > 0 ? ` ${withheld} held for duplicate-identity review.` : '';
       if (failed > 0) {
         // Surface the mint failure reason so the operator can act on it (e.g. a mint budget cap or a
         // misconfigured incentive amount) rather than seeing a silent "still pending".
-        setError(`Granted ${granted}. ${failed} could not be granted${reasons ? ` — ${reasons}` : ''}.`);
+        setError(`Granted ${granted}. ${failed} could not be granted${reasons ? ` — ${reasons}` : ''}.${heldNote}`);
       } else {
         setNotice(
-          granted > 0
-            ? `Granted ${granted} pending reward${granted === 1 ? '' : 's'}.`
-            : 'No pending rewards to grant.',
+          (granted > 0 ? `Granted ${granted} pending reward${granted === 1 ? '' : 's'}.` : 'No pending rewards to grant.') + heldNote,
         );
       }
       // Refresh so the snapshot counts and reward pills reflect the freshly granted rewards.
@@ -131,19 +135,90 @@ export function UnlockAdminShell({
   async function review(id: number, reviewStatus: ReviewStatus) {
     setBusyId(id);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/unlock/admin/submissions/${id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify({ reviewStatus }),
       });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; rewardWithheld?: boolean; reason?: string; code?: string } | null;
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { reason?: string; code?: string } | null;
         setError(data?.reason ?? data?.code ?? `Review failed (${res.status}).`);
         return;
       }
       // Optimistically reflect the decision, then refresh so the snapshot counts update too.
       setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, reviewStatus } : s)));
+      if (data?.rewardWithheld) {
+        setNotice('Approved, but the reward is held: this Quora profile is already on another account. Decide which account keeps it — Grant reward here, or Revoke it from the other.');
+      }
+      router.refresh();
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Duplicate-identity determination: grant a held reward to this account (the admin decided this account
+  // keeps the Quora identity). Fails with a clear message if another account still holds it.
+  async function grantReward(id: number) {
+    setBusyId(id);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/unlock/admin/submissions/${id}/grant-reward`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; submission?: UnlockSubmission; holderUserId?: string; message?: string; reason?: string; code?: string }
+        | null;
+      if (!res.ok || !data?.ok) {
+        setError(data?.message ?? data?.reason ?? data?.code ?? `Grant failed (${res.status}).`);
+        return;
+      }
+      if (data.submission) {
+        setSubmissions((prev) => prev.map((x) => (x.id === id ? (data.submission as UnlockSubmission) : x)));
+      }
+      setNotice('Reward granted to this account.');
+      router.refresh();
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Duplicate-identity determination: revoke a reward (claws the credits back via a burn and drops the
+  // account to support-only + rejected). Used for the "loser" of a determination, or a perp impersonating
+  // a victim. Confirmed inline first.
+  async function revoke(id: number) {
+    setBusyId(id);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/unlock/admin/submissions/${id}/revoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ reviewNote: 'Reward revoked — duplicate Quora identity' }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; submission?: UnlockSubmission; creditsReclaimed?: boolean; reclaimAmount?: number; message?: string; reason?: string; code?: string }
+        | null;
+      if (!res.ok || !data?.ok) {
+        setError(data?.message ?? data?.reason ?? data?.code ?? `Revoke failed (${res.status}).`);
+        return;
+      }
+      if (data.submission) {
+        setSubmissions((prev) => prev.map((x) => (x.id === id ? (data.submission as UnlockSubmission) : x)));
+      }
+      setNotice(
+        data.creditsReclaimed
+          ? `Revoked and reclaimed ${data.reclaimAmount ?? 0} credits.`
+          : 'Revoked. No credits to reclaim (none were granted, or the account already spent them).',
+      );
+      setConfirmRevokeId(null);
       router.refresh();
     } catch {
       setError('Network error. Try again.');
@@ -275,6 +350,8 @@ export function UnlockAdminShell({
         ) : (
           visible.map((s) => {
             const busy = busyId === s.id;
+            const rewardHeld = Boolean(s.rewardWithheldAt) && !s.incentiveGrantedAt && !s.rewardRevokedAt;
+            const canRevoke = s.reviewStatus === 'approved' && !s.rewardRevokedAt;
             return (
               <div key={s.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -310,7 +387,22 @@ export function UnlockAdminShell({
                         <Pencil size={12} /> Edit
                       </button>
                       <StatusPill status={s.reviewStatus} />
-                      {s.reviewStatus === 'approved' ? <RewardPill grantedAt={s.incentiveGrantedAt} /> : null}
+                      {s.reviewStatus === 'approved' && !s.rewardRevokedAt ? <RewardPill grantedAt={s.incentiveGrantedAt} /> : null}
+                      {s.sharedUrlAccountCount && s.sharedUrlAccountCount > 1 ? (
+                        <span title="This Quora URL is claimed by more than one account" style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
+                          Shared by {s.sharedUrlAccountCount}
+                        </span>
+                      ) : null}
+                      {s.rewardWithheldAt && !s.incentiveGrantedAt && !s.rewardRevokedAt ? (
+                        <span title="Another account already holds this Quora identity's reward — held for your determination" style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
+                          Reward withheld
+                        </span>
+                      ) : null}
+                      {s.rewardRevokedAt ? (
+                        <span title="Reward clawed back and access revoked" style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+                          Reward revoked
+                        </span>
+                      ) : null}
                     </>
                   )}
                 </div>
@@ -341,6 +433,31 @@ export function UnlockAdminShell({
                       <Ban size={13} /> Spam
                     </button>
                   </div>
+                ) : rewardHeld || canRevoke ? (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {rewardHeld ? (
+                      <button type="button" disabled={busy} onClick={() => grantReward(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                        <CheckCircle size={13} /> Grant reward to this account
+                      </button>
+                    ) : null}
+                    {canRevoke ? (
+                      confirmRevokeId === s.id ? (
+                        <>
+                          <span style={{ fontSize: 12, color: '#FCD34D' }}>Reclaim the reward and lock this account?</span>
+                          <button type="button" disabled={busy} onClick={() => revoke(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                            {busy ? 'Revoking…' : 'Confirm revoke'}
+                          </button>
+                          <button type="button" disabled={busy} onClick={() => setConfirmRevokeId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" disabled={busy} onClick={() => setConfirmRevokeId(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          <Ban size={13} /> Revoke reward
+                        </button>
+                      )
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             );
@@ -348,7 +465,7 @@ export function UnlockAdminShell({
         )}
 
         <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginTop: 16 }}>
-          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now.
+          Approving grants full access and mints the ServiceCredits verification reward. Rejecting or marking spam keeps the member on support-only access. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now. A Quora profile earns the reward on one account: if the same profile is approved on another account, its reward is <strong>held</strong> for your determination — use <strong>Grant reward</strong> to award the account you choose, and <strong>Revoke reward</strong> to claw it back from the others (a perp impersonating a victim is exactly this case).
         </p>
       </div>
     </div>
