@@ -1,6 +1,9 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { resolveUsernames } from 'lib/identity/resolve-usernames';
+import { sendWebPushToUser } from 'lib/notifications/push';
+import { reportError } from 'lib/observability/report';
 import {
   FOUNDATION_INSTANT_CALL_RING_LIMIT,
   FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS,
@@ -8,6 +11,10 @@ import {
 } from './constants';
 import { createFoundationCallToken } from './stream';
 import type { FoundationInstantCall, FoundationCallRingStatus } from './types';
+
+// Where a notification click and the in-app fallback both land: the Foundation app, where the existing
+// incoming-call overlay (the poll) renders answer/decline. Push only wakes the provider to that surface.
+const FOUNDATION_INCOMING_CALL_PATH = '/apps/foundation';
 
 // Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3). Audio-only for v1.
 //
@@ -156,18 +163,69 @@ async function expireStaleRings(client: PoolClient, userId: string): Promise<voi
   );
 }
 
+// Deliver an incoming ring to the callee out-of-band, AFTER the ring row has committed (issue #808 task 5).
+// Two deliveries, both best-effort — neither may fail the ring:
+//   1. A foundation_notification_events row of kind 'instant_call.ring' so the in-app inbox/poll fallback
+//      still shows the ring even with no push configured.
+//   2. A Web Push to every device the callee subscribed (sendWebPushToUser no-ops when push is unconfigured
+//      or the callee has no devices). The click deep-links to the Foundation incoming-call surface.
+// The caller's display name is resolved best-effort; it falls back to "Someone" when unresolved.
+async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> {
+  let callerName = 'Someone';
+  try {
+    const names = await resolveUsernames([call.callerUserId]);
+    callerName = names.get(call.callerUserId) ?? 'Someone';
+  } catch (error) {
+    reportError(error, { area: 'foundation', op: 'instant_call_ring_resolve_caller' });
+  }
+
+  try {
+    await queryDb(
+      `
+        INSERT INTO foundation_notification_events (user_id, thread_id, kind, title, body, metadata)
+        VALUES ($1, $2::uuid, 'instant_call.ring', 'Incoming call', $3, $4::jsonb)
+      `,
+      [
+        call.calleeUserId,
+        call.threadId,
+        `${callerName} is calling you on Foundation.`,
+        JSON.stringify({ type: 'foundation.instant_call.ring', callId: call.id }),
+      ],
+    );
+  } catch (error) {
+    reportError(error, { area: 'foundation', op: 'instant_call_ring_notification_event' });
+  }
+
+  try {
+    await sendWebPushToUser(call.calleeUserId, {
+      title: 'Incoming call',
+      body: `${callerName} is calling you on Foundation`,
+      data: {
+        type: 'foundation.instant_call.ring',
+        callId: call.id,
+        url: FOUNDATION_INCOMING_CALL_PATH,
+      },
+    });
+  } catch (error) {
+    // sendWebPushToUser already swallows its own errors; this guard is belt-and-braces so a ring is never
+    // affected by push delivery.
+    reportError(error, { area: 'foundation', op: 'instant_call_ring_push' });
+  }
+}
+
 // Place a ring: the caller (a member who tapped "Connect now") rings the provider on an existing Direct
-// Line thread. Audio-only -> modality 'voice'. The ring is in-app only for now; the callee learns about it
-// by polling getIncomingRing. Returns the created call row in 'ringing' state.
+// Line thread. Audio-only -> modality 'voice'. The callee learns about it two ways: by polling
+// getIncomingRing (the in-app fallback) and, when they have enabled call alerts, by a Web Push that wakes
+// their device. Returns the created call row in 'ringing' state.
 //
-// TASK 5 (push notifications) SEAM: this is where a push to the callee's device would be dispatched. v1
-// delivers the ring in-app only (the callee's poll). Task 5 should fire a push here after the row is
-// committed, reusing the callee_user_id and stream_call_id below — do not change the row shape for it.
+// TASK 5 (push notifications): the out-of-band delivery (push + notification-event row) runs in
+// dispatchRingDelivery AFTER the transaction commits, so a push failure can never roll back or fail the
+// ring. The row shape is unchanged from task 3.
 export async function ringInstantCall(input: {
   threadId: string;
   callerUserId: string;
 }): Promise<FoundationInstantCall> {
-  return withDbTransaction(async (client) => {
+  const call = await withDbTransaction(async (client) => {
     await expireStaleRings(client, input.callerUserId);
     await assertRingRateLimit(client, input.callerUserId);
 
@@ -206,6 +264,12 @@ export async function ringInstantCall(input: {
       throw error;
     }
   });
+
+  // Out-of-band delivery runs after the row has committed so a push or notification-event failure can never
+  // fail the ring the caller already placed.
+  await dispatchRingDelivery(call);
+
+  return call;
 }
 
 // Load a single call the user participates in (caller or callee), expiring it first if its ring lapsed.

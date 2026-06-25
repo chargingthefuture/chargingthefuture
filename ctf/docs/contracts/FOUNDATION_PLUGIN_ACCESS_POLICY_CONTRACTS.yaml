@@ -511,6 +511,76 @@ policies:
       - invalid_rate
       - invalid_interval
 
+  - pluginId: foundation
+    command: foundation.push.subscribe
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      actorCanMutateOwnSubscriptionOnly: true
+    consentRequirements:
+      scopes:
+        - connection_matchmaking
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_subscription_owner
+      - invalid_subscription
+      - missing_csrf_confirmation
+
+  - pluginId: foundation
+    command: foundation.push.unsubscribe
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      actorCanMutateOwnSubscriptionOnly: true
+    consentRequirements:
+      scopes:
+        - connection_matchmaking
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_subscription_owner
+      - missing_endpoint
+      - missing_csrf_confirmation
+
+  - pluginId: foundation
+    command: foundation.push.vapid-public-key.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      readOnly: true
+    consentRequirements:
+      scopes:
+        - connection_matchmaking
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+
 changelog:
   - date: 2026-02-24
     change: Initial Foundation access policy contracts added with explicit consent, region, high-risk, and deny-condition controls for all v1 commands.
@@ -518,3 +588,5 @@ changelog:
     change: Added access policies for provider instant 1:1 call settings (foundation.provider.instant-call.get / .set, issue #808) — member self, unlock-gated (approved_full), with rate and interval bounds validation on write.
   - date: 2026-06-25
     change: Added access policies for the instant 1:1 call ring/answer lifecycle (issue #808 task 3, audio-only) — foundation.connection.instant-call.ring / .answer / .decline / .end / .state.read and foundation.connection.incoming-call.read. Ring requires thread membership and is rate limited; answer/decline require the actor to be the callee and the call to still be ringing; end is open to either participant; the reads are scoped to the actor's own calls. No billing or push controls here (issue #808 tasks 4 and 5).
+  - date: 2026-06-25
+    change: Added access policies for Web Push delivery of the instant-call ring (issue #808 task 5) — foundation.push.subscribe / .unsubscribe (CSRF-guarded, the member acts only on their own device subscription) and foundation.push.vapid-public-key.read (read-only, returns the non-secret public key). Android/Expo native push is deferred to the #808 Android parity ticket.

@@ -353,3 +353,5 @@ changelog:
     change: Initial Foundation audit contract set added with standardized allow/deny policy evidence for all v1 commands.
   - date: 2026-06-25
     change: Instant 1:1 call ring/answer lifecycle (issue #808 task 3) writes audit rows via the shared foundation_admin_audit_trail for foundation.connection.instant-call.ring / .answer / .decline / .end (actor, target call/thread, and counterpart user id in metadata). The existing standardized allow/deny evidence envelope covers these; no new bespoke audit shape was needed.
+  - date: 2026-06-25
+    change: Web Push delivery of the instant-call ring (issue #808 task 5) writes audit rows via the shared foundation_admin_audit_trail for foundation.push.subscribe and foundation.push.unsubscribe (actor, target_type push_subscription, target_id the actor's own user id, kind 'web' in metadata). No endpoint or key material is ever recorded in the audit trail. The read of the public VAPID key is not audited (it returns only the non-secret public key). The existing standardized allow/deny evidence envelope covers these; no new bespoke audit shape was needed.
