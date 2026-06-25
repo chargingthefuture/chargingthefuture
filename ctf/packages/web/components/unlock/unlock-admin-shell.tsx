@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw, Pencil } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
 import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
@@ -69,6 +70,7 @@ export function UnlockAdminShell({
   submissions: UnlockSubmission[];
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>('pending');
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -192,7 +194,18 @@ export function UnlockAdminShell({
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div
+      style={{
+        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each shell must own
+        // its vertical scroll — otherwise a long queue is clipped and unreachable. On mobile the
+        // document scrolls, so only set a min-height there. Matches the skills-hunt / weekly-performance
+        // admin shells.
+        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        background: BG,
+        color: TEXT,
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}
+    >
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>

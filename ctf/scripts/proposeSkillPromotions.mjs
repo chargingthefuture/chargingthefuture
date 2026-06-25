@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-// Turn free-text "proposed" skills from accepted SkillsHunt nominations into GitHub
-// issues that propose adding them to the canonical skills taxonomy, each with an
-// AI-suggested sector + occupation.
+// Turn free-text "proposed" skills into GitHub issues that propose adding them to the
+// canonical skills taxonomy, each with an AI-suggested sector + occupation. This is the
+// single cross-app intake: it scans every source that lets a member name a skill not yet
+// in the taxonomy — accepted SkillsHunt nominations AND the Directory "skill not listed"
+// box — so all addition requests land in ONE review queue (these issues), reviewed and
+// approved in one place. The filed issue records which app the skill came from.
 //
 // SAFETY: This script NEVER writes the taxonomy. It only files issues and records a
 // dedupe row in skills_hunt_proposed_skill_promotions. Promotion (actually adding a
@@ -10,8 +13,10 @@
 //
 // What it does, in order:
 //   1. Find distinct normalized (trim+lowercase) proposed-skill labels from accepted
-//      submissions that are NOT already in the taxonomy (name or alias) and NOT already
-//      tracked in skills_hunt_proposed_skill_promotions. Cap at PROPOSAL_LIMIT.
+//      SkillsHunt submissions AND pending Directory "skill not listed" entries that are
+//      NOT already in the taxonomy (name or alias) and NOT already tracked in
+//      skills_hunt_proposed_skill_promotions. One row per distinct skill (the earliest
+//      source wins as the representative). Cap at PROPOSAL_LIMIT.
 //   2. Load the allowed sectors and allowed occupations (job titles with their sector)
 //      from the taxonomy — the model must choose from these.
 //   3. For each candidate, ask the Anthropic API to classify it into one allowed
@@ -168,11 +173,18 @@ async function classifySkill(skillLabel, sectorNames, occupations) {
   return { sector, occupation, rationale };
 }
 
-function buildIssueBody({ skillLabel, sector, occupation, rationale, sourceSubmissionId }) {
+function buildIssueBody({ skillLabel, sector, occupation, rationale, source, sourceSubmissionId }) {
   const mapping =
     sector && occupation
       ? `- Suggested sector: **${sector}**\n- Suggested occupation: **${occupation}**`
       : '- **Needs manual mapping** — the AI could not confidently place this skill in an existing sector/occupation.';
+
+  const sourceLabel =
+    source === 'directory'
+      ? 'Directory — a member added it through the "skill not listed" box on their own profile'
+      : source === 'skills-hunt'
+        ? 'SkillsHunt — proposed on an accepted nomination'
+        : (source ?? 'unknown');
 
   const lines = [
     'A scout proposed a skill that is not yet in the canonical skills taxonomy.',
@@ -191,7 +203,8 @@ function buildIssueBody({ skillLabel, sector, occupation, rationale, sourceSubmi
     '',
     '## Source',
     '',
-    `- Source submission id: \`${sourceSubmissionId ?? '(unknown)'}\``,
+    `- Source app: ${sourceLabel}`,
+    `- Source submission id: \`${sourceSubmissionId ?? '(not applicable)'}\``,
     '',
     '## What to do',
     '',
@@ -272,29 +285,44 @@ async function main() {
   let failed = 0;
 
   try {
-    // 1. Candidate distinct normalized skills from accepted submissions, excluding any
-    //    that already exist in the taxonomy (by name or alias) or are already tracked.
-    //    Keep one representative original label + one source submission id per skill.
+    // 1. Candidate distinct normalized skills from BOTH sources (accepted SkillsHunt
+    //    nominations + pending Directory "skill not listed" entries), excluding any that
+    //    already exist in the taxonomy (by name or alias) or are already tracked. Keep one
+    //    representative label per normalized skill (earliest wins), with its source.
     const candidatesResult = await client.query(
       `WITH proposed AS (
+         -- SkillsHunt: free-text skills on accepted nominations.
          SELECT
            lower(btrim(elem.value)) AS normalized_skill,
            btrim(elem.value)        AS skill_label,
            s.id                     AS source_submission_id,
-           s.created_at             AS submission_created_at
+           'skills-hunt'            AS source,
+           s.created_at             AS candidate_created_at
          FROM skills_hunt_submissions s
          CROSS JOIN LATERAL jsonb_array_elements_text(s.proposed_skills) AS elem(value)
          WHERE s.status = 'accepted'
            AND btrim(elem.value) <> ''
+         UNION ALL
+         -- Directory: "skill not listed" labels a member added to their own profile.
+         SELECT
+           lower(btrim(d.skill_label)) AS normalized_skill,
+           btrim(d.skill_label)        AS skill_label,
+           NULL::uuid                  AS source_submission_id,
+           'directory'                 AS source,
+           d.created_at                AS candidate_created_at
+         FROM directory_profile_proposed_skills d
+         WHERE d.status = 'pending'
+           AND btrim(d.skill_label) <> ''
        ),
        ranked AS (
          SELECT
            normalized_skill,
            skill_label,
            source_submission_id,
+           source,
            ROW_NUMBER() OVER (
              PARTITION BY normalized_skill
-             ORDER BY submission_created_at ASC, source_submission_id ASC
+             ORDER BY candidate_created_at ASC, source_submission_id ASC NULLS LAST
            ) AS rn
          FROM proposed
        ),
@@ -305,7 +333,7 @@ async function main() {
          FROM skills_taxonomy_skills t
          CROSS JOIN LATERAL jsonb_array_elements_text(t.aliases) AS alias(value)
        )
-       SELECT r.normalized_skill, r.skill_label, r.source_submission_id
+       SELECT r.normalized_skill, r.skill_label, r.source_submission_id, r.source
        FROM ranked r
        WHERE r.rn = 1
          AND r.normalized_skill NOT IN (SELECT normalized_skill FROM taxonomy_names)
@@ -357,11 +385,11 @@ async function main() {
         //     this returns no row and we skip — no duplicate issue is ever filed.
         const insertResult = await client.query(
           `INSERT INTO skills_hunt_proposed_skill_promotions
-             (normalized_skill, skill_label, source_submission_id, status)
-           VALUES ($1, $2, $3, 'proposed')
+             (normalized_skill, skill_label, source_submission_id, source, status)
+           VALUES ($1, $2, $3, $4, 'proposed')
            ON CONFLICT (normalized_skill) DO NOTHING
            RETURNING id`,
-          [candidate.normalized_skill, candidate.skill_label, candidate.source_submission_id],
+          [candidate.normalized_skill, candidate.skill_label, candidate.source_submission_id, candidate.source],
         );
 
         if (insertResult.rowCount === 0) {
@@ -385,6 +413,7 @@ async function main() {
           sector,
           occupation,
           rationale,
+          source: candidate.source,
           sourceSubmissionId: candidate.source_submission_id,
         });
         const { number, url } = await createIssue({ skillLabel: candidate.skill_label, body });

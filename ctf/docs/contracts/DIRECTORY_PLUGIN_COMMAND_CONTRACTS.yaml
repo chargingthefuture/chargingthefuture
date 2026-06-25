@@ -19,6 +19,8 @@ contracts:
         type: string
     dataAccess:
       - directory_profiles
+      - directory_profile_skills
+      - directory_profile_proposed_skills
       - directory_profile_change_events
     purpose: profile_management
     retentionClass: transactional_long_lived

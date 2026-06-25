@@ -5,7 +5,7 @@ import { Text, Modal, TouchableOpacity, Pressable, StyleSheet, Linking, Share } 
 // `ShareLink` (the v2 "useLink" pattern). A trigger opens a popup that (1) shows the full link, (2)
 // opens it, and (3) copies/shares it through the OS share sheet (which includes Copy on iOS and
 // Android — no extra dependency). Every share/copy-link affordance must use this. See
-// .github/instructions/130-link-sharing-and-copy-url-rules.mdc.
+// .claude/rules/130-link-sharing-and-copy-url-rules.mdc.
 //
 // Callers pass an ABSOLUTE url (the mobile app has no page origin to resolve a relative path against).
 

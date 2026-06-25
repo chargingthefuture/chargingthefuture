@@ -1,6 +1,64 @@
 export type FoundationQuoteState = 'requested' | 'provider_responded' | 'closed';
 export type FoundationCallModality = 'voice' | 'video';
 
+// Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3). 'none' is the default for the
+// older generic (scheduled) call sessions that never ring. The instant-call state machine moves through:
+// ringing -> answered | declined | timed_out -> ended. 'answered' is the in-call state (the callee picked
+// up); 'ended' is the terminal state once either party hangs up.
+export type FoundationCallRingStatus =
+  | 'none'
+  | 'ringing'
+  | 'answered'
+  | 'declined'
+  | 'timed_out'
+  | 'ended';
+
+// One member's view of an instant call. The caller is the member who tapped "Connect now"; the callee is
+// the provider being rung. streamCallId is the Stream Video call id the audio room joins. The Stream
+// audio-join credentials are NOT carried on this view — they reuse the Direct Line participant-only token
+// route, fetched separately, so there is no parallel token path.
+export type FoundationInstantCall = {
+  id: string;
+  threadId: string;
+  callerUserId: string;
+  calleeUserId: string;
+  ringStatus: FoundationCallRingStatus;
+  streamCallId: string;
+  ringExpiresAtIso: string | null;
+  answeredAtIso: string | null;
+  endedAtIso: string | null;
+  endedByUserId: string | null;
+  // Issue #808 task 4 (per-block billing). firstBlockCharged is true once the first block has been paid on
+  // answer. rateCreditsLocked / intervalMinutesLocked are the provider's rate + block length SNAPSHOTTED at
+  // answer (null until answered), so a provider changing their rate mid-call never affects an in-progress
+  // call. authorizedBlocks is the buyer-set cap chosen at ring; the call can never extend past it in v1.
+  // blocksCharged is how many blocks have been paid. paidThroughAtIso = answered_at + blocksCharged *
+  // interval and drives the display countdown plus the lazy paid-window expiry. lastTransferId is the most
+  // recent ServiceCredits transfer id (trace only).
+  firstBlockCharged: boolean;
+  rateCreditsLocked: number | null;
+  intervalMinutesLocked: number | null;
+  authorizedBlocks: number | null;
+  blocksCharged: number;
+  paidThroughAtIso: string | null;
+  lastTransferId: string | null;
+  // Why the call ended when it was not a plain hang-up: 'caller_insufficient_funds', 'paid_window_elapsed',
+  // or 'block_cap_reached'. Null for a normal end/decline/timeout. Lets the UI show "out of credits" etc.
+  endedReason: string | null;
+  createdAtIso: string;
+};
+
+// What the client needs to join the audio room for an answered instant call. Mirrors the Direct Line
+// participant-only token shape. Null Stream fields mean the integration is not configured (demo/local).
+export type FoundationInstantCallJoin = {
+  call: FoundationInstantCall;
+  role: 'caller' | 'callee';
+  streamApiKey: string | null;
+  streamUserId: string | null;
+  streamToken: string | null;
+  streamChannelId: string;
+};
+
 export type FoundationOfferedSkill = {
   id: string;
   name: string;

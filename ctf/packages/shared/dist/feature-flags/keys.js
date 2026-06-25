@@ -2,7 +2,7 @@
 // The backing flag service is Unleash (self-hosted on Railway); these constants are
 // the single source of truth for flag keys so every consumer references the same string.
 //
-// Naming convention (keep in sync with .github/instructions/123-environment-configuration-rules.mdc):
+// Naming convention (keep in sync with .claude/rules/123-environment-configuration-rules.mdc):
 //   feature-{pluginSlug}-{featureName}  — user-facing feature gating (e.g. feature-unlock-quora-onboarding)
 //   release-{agent}-{fixName}           — release/rollout gating for a specific change
 //   system flags                        — cross-cutting platform switches (e.g. demo-mode)

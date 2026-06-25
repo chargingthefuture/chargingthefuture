@@ -55,7 +55,7 @@
   as the single source of truth — see the Consolidation Decision above. The Hub does not own a
   separate message store, channel table, bot table, or dedicated GetStream scope.
 - Cross-plugin runtime dependency is limited to read-only consumption of the platform GDP snapshot
-  (hero stats) and the plugin registry (Apps grid). See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
+  (hero stats) and the plugin registry (Apps grid). See [112-platform-architecture-rules.mdc](../../../../.claude/rules/112-platform-architecture-rules.mdc).
 
 ## Intent and Outcome
 
@@ -254,8 +254,8 @@ There is no `seedHub.mjs`; the Hub channel's data layer is seeded by the Feed se
 - Rewrite target: `ctf/packages/web`, `ctf/packages/mobile`, `ctf/schema.sql`, `ctf/docs/contracts`.
 - Surface: Survivor Hub home experience (`community-shell` + supporting APIs and schema).
 - Canonical spec: `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-survivor-hub-chat-feature-inventory.md`.
-- Hub has no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.github/instructions/112-platform-architecture-rules.mdc).
-- 100% web↔Android parity is the baseline. See [105-web-android-feature-parity-rules.mdc](../../../../.github/instructions/105-web-android-feature-parity-rules.mdc). No phased rollouts.
+- Hub has no cross-plugin runtime dependency. See [112-platform-architecture-rules.mdc](../../../../.claude/rules/112-platform-architecture-rules.mdc).
+- 100% web↔Android parity is the baseline. See [105-web-android-feature-parity-rules.mdc](../../../../.claude/rules/105-web-android-feature-parity-rules.mdc). No phased rollouts.
 
 This checklist tracks the work needed to bring code into alignment with the inventory. The inventory is the spec; this section lists the remaining work.
 
