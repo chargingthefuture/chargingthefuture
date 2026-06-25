@@ -321,6 +321,13 @@ This applies to all development: deploy scripts, CI/CD workflows, seed scripts, 
 
 All code changes to plugin routes, database schema, contracts, or seed scripts MUST be accompanied by corresponding updates to the plugin's feature inventory markdown file. This prevents drift between code state and documentation, ensuring feature inventories remain authoritative sources of truth for plugin capabilities, data models, and delivery status.
 
+**Why this matters — the inventory serves two readers, and an out-of-date inventory fails both:**
+
+1. **The next agent.** On a later task an agent reads the inventory to understand what already exists, to catch feature drift, and to spot incomplete or half-shipped work. If the inventory does not match the code, the agent acts on a wrong map — re-doing finished work, missing a gap, or "fixing" something that is actually correct.
+2. **The owner's product description.** The inventory is the owner's always-current list of what the product actually does, used to describe the product accurately to users. A wrong inventory means the product gets described wrong.
+
+So the inventory update is **part of the change, not optional follow-up**: a change is not complete until the inventory matches it. This applies to every change that alters a feature, a route, the data model, a contract, or delivery status — not literally every whitespace/refactor edit, but anything that changes what the product does or how its data/contracts are shaped (see the Drift Vectors table below for the exact triggers).
+
 ### Drift Vectors and Required Updates
 
 When making code changes, consult this table to identify which inventory section(s) must be updated:
