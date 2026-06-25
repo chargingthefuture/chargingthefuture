@@ -172,6 +172,8 @@ Admin routes:
 - `PUT /api/feed/admin/announcements/:announcementId`
 - `POST /api/feed/admin/announcements/:announcementId/publish`
 - `POST /api/feed/admin/announcements/:announcementId/archive`
+- `PATCH /api/feed/admin/questions/:questionId` — admin re-labels a feed question's category (`relabelQuestionCategory`). Body `{ category }` validated against the allowed feed question categories (else 400); the question id must be a UUID (else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`; 404 when the question id is unknown. Writes a `feed.question.category.relabel` audit row.
+- `POST /api/feed/membership/events` — records a member join/leave membership event for the feed personalization layer (`emitMembershipEvent`, writing `feed_membership_events` and fanning out to Stream when configured). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`. Returns `{ ok, streamEmitted }`.
 
 ---
 
@@ -219,11 +221,16 @@ Domain tables:
 19. `feed_hub_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
 20. `feed_community_post_reactions` — emoji reactions on Commons community posts, stored in our own database (not Stream). Columns `id UUID PK DEFAULT gen_random_uuid()`, `post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE`, `user_id TEXT NOT NULL`, `emoji TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` makes a reaction a toggle (one of each emoji per member per post); `idx_feed_community_post_reactions_post (post_id)` serves the batched aggregate read. The emoji is constrained to the fixed quick set (`FEED_REACTION_EMOJIS`) at the application layer.
 
+**Reserved (schema-only, no runtime reader/writer yet):**
+
+21. `feed_timeline_projection` — a denormalized timeline read-model table defined in `schema.sql` (`id` UUID PK, `item_type` TEXT, `source_announcement_id` UUID nullable, `title` TEXT, `body` TEXT, `priority` INTEGER default 0, `mandatory` BOOLEAN default false, `published_at` TIMESTAMPTZ, `expires_at` TIMESTAMPTZ nullable, `created_at`/`updated_at` TIMESTAMPTZ). Named in the feed audit contract's `dataClassesAccessed` (`ctf/docs/contracts/FEED_PLUGIN_AUDIT_CONTRACTS.yaml`). No runtime code reads or writes it — the live timeline read path queries `feed_items` directly (see §4.3). It is a reserved projection for a future denormalized fan-out, not an active table; documented here so the gate and the next agent account for it without mistaking it for live storage.
+
 ### 4.3 Source-of-Truth and Fan-Out
 
 1. PostgreSQL stores canonical feed, announcement, question, and community metadata.
 2. Stream receives projected fan-out payloads after DB commit success.
 3. Retries/idempotency ensure at-least-once fan-out without duplicate canonical writes.
+4. The denormalized `feed_timeline_projection` table (§4.2) is the schema slot reserved for a future materialized timeline read model; the current read path does not use it (it reads `feed_items` live).
 
 ---
 
@@ -282,6 +289,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-06-25: **Documented two admin routes and the timeline projection table** (inventory-debt burn-down — documentation catch-up, no code change). Added `PATCH /api/feed/admin/questions/:questionId` (admin category relabel) and `POST /api/feed/membership/events` (join/leave membership event) to §3.2, and `feed_timeline_projection` to §4.2 (item 21) — recorded as a schema-only reserved read model with no runtime reader/writer, with a matching note in §4.3. Each verified against the route handlers, `schema.sql`, and `FEED_PLUGIN_AUDIT_CONTRACTS.yaml`. Removed these three items from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-21: Commons (Survivor Hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel. `POST /api/hub/join` was changed from returning hardcoded stub Stream credentials to minting real ones via `getFeedStreamCredentials(userId, displayName, 'community')` (the shared community channel + `feed-<userId>` Stream identity), or `{ ok: true, configured: false }` when Stream is not configured. This adds a per-Commons-member live chat connection (a real WATCH/connection cost) — captured in `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`. Falls back to polling when Stream is unconfigured. No feed schema or contract change; the post data layer (`feed_community_posts`) is unchanged. Full detail is in `ctf-survivor-hub-chat-feature-inventory.md` (task 1 of `STREAM_FEATURE_ADOPTION.md`).
 - 2026-06-17: Removed the feed kill switch (owner decision — unapproved agentic addition). Dropped `feed_render_config.kill_switch_enabled` (`schema.sql` + `schema.demo.sql` add a guarded `DROP COLUMN IF EXISTS`), the `killSwitchEnabled` field on `FeedConfig`/`FeedConfigInput`, its validation, the `listFeedTimeline` early-return that blanked the timeline when enabled, the `feed.admin.config.update` contract input, and the read-only display row in the feed admin shell. Part of a product-wide kill-switch removal (also Foundation and Workforce). No replacement control.
 - 2026-06-13: Web admin design pass. Replaced the bare diagnostic `/admin/feed-announcements` page with `components/feed-announcements/feed-announcements-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, read-only feed-config panel, announcement lifecycle). Bound to the real backend — `getFeedConfig` + `listAnnouncements(true)`. Real actions on existing endpoints (with `x-ctf-csrf: '1'`): create a draft (`POST /api/feed/admin/announcements`), publish a draft (`POST /api/feed/admin/announcements/:id/publish`), and archive a published one (`POST /api/feed/admin/announcements/:id/archive`). There is no desktop or mobile mockup for this admin surface, so it follows the established admin design system over real data (rule 131). No new endpoint, schema, or contract.
