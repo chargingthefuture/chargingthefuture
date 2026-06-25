@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import type { Provider } from './api';
 import { createConnectionThread, requestQuote } from './api';
-import { ConnectNowButton, canOfferConnectNow, instantCallRateLabel } from './FoundationConnectNow';
+import { ConnectNowButton, canOfferConnectNow, instantCallRateLabel, isOwnProfile } from './FoundationConnectNow';
 
 const BG = '#0F1117';
 const SURFACE_DARK = '#090B0F';
@@ -39,6 +39,10 @@ interface FoundationProviderDetailProps {
 export function FoundationProviderDetail({ provider, viewerUserId = null, onBack }: FoundationProviderDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  // You can't request a quote from your own profile — the server rejects a self-connection, so disable
+  // the button here rather than let it fail with a generic error.
+  const ownProfile = isOwnProfile(provider, viewerUserId);
 
   // Only offer "Connect now" when the provider opted in with a valid rate and the
   // viewer is not the provider themselves. Audio-only call.
@@ -132,9 +136,9 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
         {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.primaryBtn]}
+            style={[styles.actionBtn, styles.primaryBtn, (submitting || ownProfile) && styles.primaryBtnDisabled]}
             onPress={() => { void handleRequestQuote(); }}
-            disabled={submitting}
+            disabled={submitting || ownProfile}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" size="small" />
@@ -142,6 +146,11 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
               <Text style={styles.primaryBtnText}>Request Quote</Text>
             )}
           </TouchableOpacity>
+          {ownProfile ? (
+            <Text style={styles.ownProfileHint}>
+              This is your own profile — you can&apos;t request a quote from yourself.
+            </Text>
+          ) : null}
           {/* price/rate stat grid has no backing field — omitted */}
         </View>
 
@@ -309,10 +318,20 @@ const styles = StyleSheet.create({
   primaryBtn: {
     backgroundColor: COLOR,
   },
+  primaryBtnDisabled: {
+    opacity: 0.5,
+  },
   primaryBtnText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  ownProfileHint: {
+    fontSize: 12,
+    color: SUBTLE,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 17,
   },
   statusMsg: {
     fontSize: 13,
