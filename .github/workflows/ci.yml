@@ -14,7 +14,7 @@ on:
     branches: [main]
     paths:
       - "ctf/**"
-      - ".github/instructions/**"
+      - ".claude/rules/**"
       - ".github/workflows/**"
       - "docs/**"
       - "package.json"
@@ -57,31 +57,31 @@ jobs:
         run: |
           set -euo pipefail
           required=(
-            ".github/instructions/copilot-instructions.md"
-            ".github/instructions/100-product-context-and-experience-rules.mdc"
-            ".github/instructions/014-compliance-rules-index.mdc"
-            ".github/instructions/101-monorepo-layout-rules.mdc"
-            ".github/instructions/102-shared-boundary-rules.mdc"
-            ".github/instructions/103-web-nextjs-structure-rules.mdc"
-            ".github/instructions/104-mobile-react-native-android-rules.mdc"
-            ".github/instructions/105-web-android-feature-parity-rules.mdc"
-            ".github/instructions/106-expo-eas-mobile-workflow-rules.mdc"
-            ".github/instructions/112-platform-architecture-rules.mdc"
-            ".github/instructions/113-platform-coding-rules.mdc"
-            ".github/instructions/115-neon-migration-delivery-rules.mdc"
-            ".github/instructions/116-file-size-and-modularity-rules.mdc"
-            ".github/instructions/117-agent-readability-and-cost-rules.mdc"
-            ".github/instructions/118-platform-testing-and-release-rules.mdc"
-            ".github/instructions/119-github-actions-ci-rules.mdc"
-            ".github/instructions/122-schema-drift-predeployment-rules.mdc"
-            ".github/instructions/107-integration-stack-rules.mdc"
-            ".github/instructions/108-observability-provider-abstraction-rules.mdc"
-            ".github/instructions/109-sentry-implementation-rules.mdc"
-            ".github/instructions/110-stream-maker-tier-rules.mdc"
-            ".github/instructions/200-plugin-command-contract-templates.mdc"
-            ".github/instructions/201-plugin-command-schema-template.mdc"
-            ".github/instructions/202-plugin-access-policy-schema-template.mdc"
-            ".github/instructions/203-plugin-audit-schema-template.mdc"
+            "CLAUDE.md"
+            ".claude/rules/100-product-context-and-experience-rules.mdc"
+            ".claude/rules/014-compliance-rules-index.mdc"
+            ".claude/rules/101-monorepo-layout-rules.mdc"
+            ".claude/rules/102-shared-boundary-rules.mdc"
+            ".claude/rules/103-web-nextjs-structure-rules.mdc"
+            ".claude/rules/104-mobile-react-native-android-rules.mdc"
+            ".claude/rules/105-web-android-feature-parity-rules.mdc"
+            ".claude/rules/106-expo-eas-mobile-workflow-rules.mdc"
+            ".claude/rules/112-platform-architecture-rules.mdc"
+            ".claude/rules/113-platform-coding-rules.mdc"
+            ".claude/rules/115-neon-migration-delivery-rules.mdc"
+            ".claude/rules/116-file-size-and-modularity-rules.mdc"
+            ".claude/rules/117-agent-readability-and-cost-rules.mdc"
+            ".claude/rules/118-platform-testing-and-release-rules.mdc"
+            ".claude/rules/119-github-actions-ci-rules.mdc"
+            ".claude/rules/122-schema-drift-predeployment-rules.mdc"
+            ".claude/rules/107-integration-stack-rules.mdc"
+            ".claude/rules/108-observability-provider-abstraction-rules.mdc"
+            ".claude/rules/109-sentry-implementation-rules.mdc"
+            ".claude/rules/110-stream-maker-tier-rules.mdc"
+            ".claude/rules/200-plugin-command-contract-templates.mdc"
+            ".claude/rules/201-plugin-command-schema-template.mdc"
+            ".claude/rules/202-plugin-access-policy-schema-template.mdc"
+            ".claude/rules/203-plugin-audit-schema-template.mdc"
           )
 
           for file in "${required[@]}"; do
@@ -103,12 +103,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          grep -q "pluginId" .github/instructions/201-plugin-command-schema-template.mdc
-          grep -q "inputSchema" .github/instructions/201-plugin-command-schema-template.mdc
-          grep -q "requiredRoles" .github/instructions/202-plugin-access-policy-schema-template.mdc
-          grep -q "consentRequirements" .github/instructions/202-plugin-access-policy-schema-template.mdc
-          grep -q "eventId" .github/instructions/203-plugin-audit-schema-template.mdc
-          grep -q "policyDecision" .github/instructions/203-plugin-audit-schema-template.mdc
+          grep -q "pluginId" .claude/rules/201-plugin-command-schema-template.mdc
+          grep -q "inputSchema" .claude/rules/201-plugin-command-schema-template.mdc
+          grep -q "requiredRoles" .claude/rules/202-plugin-access-policy-schema-template.mdc
+          grep -q "consentRequirements" .claude/rules/202-plugin-access-policy-schema-template.mdc
+          grep -q "eventId" .claude/rules/203-plugin-audit-schema-template.mdc
+          grep -q "policyDecision" .claude/rules/203-plugin-audit-schema-template.mdc
 
   rules-link-coverage:
     name: Rules Link Coverage
@@ -127,8 +127,8 @@ jobs:
           import re
           import sys
 
-          root = Path('.github/instructions')
-          index = root / 'copilot-instructions.md'
+          root = Path('.claude/rules')
+          index = Path('CLAUDE.md')
           compliance = root / '014-compliance-rules-index.mdc'
 
           if not index.exists() or not compliance.exists():
@@ -239,7 +239,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          file=".github/instructions/110-stream-maker-tier-rules.mdc"
+          file=".claude/rules/110-stream-maker-tier-rules.mdc"
 
           test -f "$file"
           grep -q "Chat: 2,000 MAU per month" "$file"

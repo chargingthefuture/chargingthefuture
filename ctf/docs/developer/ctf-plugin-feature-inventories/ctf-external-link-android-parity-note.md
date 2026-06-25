@@ -190,4 +190,4 @@ Both implementations use the same logic:
 
 - Web feature documentation: `ctf/packages/web/EXTERNAL_LINK_FEATURE.md`
 - Non-plugin inventory: `ctf-non-plugin-feature-inventory.md` (Section 1.4)
-- Rules reference: `.github/instructions/105-web-android-feature-parity-rules.mdc`
+- Rules reference: `.claude/rules/105-web-android-feature-parity-rules.mdc`

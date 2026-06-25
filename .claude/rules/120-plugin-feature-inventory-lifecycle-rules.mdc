@@ -62,7 +62,7 @@ Each inventory must contain, in this order:
 9. **Seed Coverage Status** — deterministic plugin seed script reference and what it covers.
 10. **Gaps and Known Technical Debt** — used only for genuine ambiguities (unanswered design questions, intentional deferrals with sign-off, invariants worth flagging). Do not use this section to list unimplemented features.
 11. **Change Log** — date-stamped entries summarizing inventory edits and the PRs that drove them.
-12. **Build Checklist** — the ordered, dependency-based task list/tracker for building the plugin to spec (no phases; see [copilot-instructions.md](copilot-instructions.md) "Task Planning — No Phases"). Items may be checked off as work lands.
+12. **Build Checklist** — the ordered, dependency-based task list/tracker for building the plugin to spec (no phases; see [CLAUDE.md](../../CLAUDE.md) "Task Planning — No Phases"). Items may be checked off as work lands.
 
 ## Lifecycle Requirements
 - On plugin completion (MVP or release-candidate milestone), create the feature inventory before marking work complete.

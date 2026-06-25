@@ -157,14 +157,14 @@ for file in "${files[@]}"; do
     contract_changed=true
     validate_contract_file "$file"
   fi
-  if [[ "$file" =~ ^\.github/instructions/20[0-9].*\.mdc$ ]]; then
+  if [[ "$file" =~ ^\.claude/rules/20[0-9].*\.mdc$ ]]; then
     contract_changed=true
   fi
 
   if [[ "$file" =~ ^ctf/docs/developer/ ]]; then
     versioning_note_changed=true
   fi
-  if [[ "$file" == ".github/instructions/122-schema-drift-predeployment-rules.mdc" ]]; then
+  if [[ "$file" == ".claude/rules/122-schema-drift-predeployment-rules.mdc" ]]; then
     versioning_note_changed=true
   fi
 done
@@ -177,12 +177,12 @@ if [[ "$db_impacting_changed" == true && "$schema_sql_changed" != true ]]; then
 fi
 
 if [[ "$seed_changed" == true && "$schema_sql_changed" != true && "$versioning_note_changed" != true ]]; then
-  echo "Schema drift gate failed: seed-related changes require an accompanying change to ctf/schema.sql, or versioning evidence (ctf/docs/developer/**, .github/instructions/122-schema-drift-predeployment-rules.mdc) when the seed change carries no schema impact (seed/schema blocker policy)." >&2
+  echo "Schema drift gate failed: seed-related changes require an accompanying change to ctf/schema.sql, or versioning evidence (ctf/docs/developer/**, .claude/rules/122-schema-drift-predeployment-rules.mdc) when the seed change carries no schema impact (seed/schema blocker policy)." >&2
   failed=1
 fi
 
 if [[ "$contract_changed" == true && "$schema_sql_changed" != true && "$versioning_note_changed" != true ]]; then
-  echo "Schema drift gate failed: contract/schema command or policy changes require versioning evidence (ctf/docs/developer/**, .github/instructions/122-schema-drift-predeployment-rules.mdc, or a ctf/schema.sql change)." >&2
+  echo "Schema drift gate failed: contract/schema command or policy changes require versioning evidence (ctf/docs/developer/**, .claude/rules/122-schema-drift-predeployment-rules.mdc, or a ctf/schema.sql change)." >&2
   failed=1
 fi
 

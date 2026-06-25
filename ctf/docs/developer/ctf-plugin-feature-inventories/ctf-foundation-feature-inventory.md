@@ -179,7 +179,7 @@ Seeded content (deterministic):
     - Every command has audit shape covering allow/deny decisions and policy evidence checks.
 - [ ] Confirm Stream Maker-tier governance alignment.
   - Acceptance criteria:
-    - Contracts and inventory align with `.github/instructions/110-stream-maker-tier-rules.mdc` threshold model and fallback rules.
+    - Contracts and inventory align with `.claude/rules/110-stream-maker-tier-rules.mdc` threshold model and fallback rules.
 
 ### �� Schema, Migrations, and Retention
 
