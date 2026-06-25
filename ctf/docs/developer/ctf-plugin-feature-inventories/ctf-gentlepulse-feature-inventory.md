@@ -69,17 +69,14 @@ Authoritative app-level ownership reference:
 
 ### 3.2 HTTP Projection Routes
 
-User routes (authenticated):
+User routes (authenticated) — verified against the route handlers (2026-06-25). The implemented routes use the `library/[itemId]` shape; the earlier `/api/gentlepulse/meditations*`, `/ratings`, and `/favorites*` names previously listed here did not match any handler in the code and have been replaced:
 
-- `GET /api/gentlepulse/meditations`
-- `GET /api/gentlepulse/meditations/:id`
-- `POST /api/gentlepulse/meditations/:id/play`
-- `POST /api/gentlepulse/ratings`
-- `GET /api/gentlepulse/meditations/:id/ratings`
-- `POST /api/gentlepulse/favorites`
-- `DELETE /api/gentlepulse/favorites/:meditationId`
-- `GET /api/gentlepulse/favorites`
-- `GET /api/gentlepulse/favorites/check`
+- `GET /api/gentlepulse/library` — list the active library items.
+- `GET /api/gentlepulse/library/[itemId]` — fetch one library item by id (`getLibraryItemById`); 404 when not found. Read-gated (`requireGentlePulseReadAccess`).
+- `POST` / `DELETE /api/gentlepulse/library/[itemId]/favorite` — add / remove the caller's favorite for an item (`setFavorite`, `favorited` true/false). Write-gated (`requireGentlePulseWriteAccess`), CSRF-guarded.
+- `POST /api/gentlepulse/library/[itemId]/play` — record a play event (`trackPlayEvent`); body `{ anonymousClientId?, completed? }`; returns 201. Write-gated, CSRF-guarded — an anonymous client id is accepted so unattributed plays are still counted.
+- `PUT /api/gentlepulse/library/[itemId]/rating` — upsert the caller's rating (`upsertRating`); body `{ rating: number }` (400 when missing or non-numeric). Write-gated, CSRF-guarded.
+- `GET /api/gentlepulse/support` — returns a static support pointer (`{ supportRoute: '/support', note }`); GentlePulse delegates support to app-level support ownership. Read-gated.
 
 Excluded route groups:
 
@@ -104,6 +101,15 @@ Excluded route groups:
 
 1. Favorites keyed per user + meditation.
 2. Favorite add/remove/list/status endpoints support deterministic interface-state hydration.
+
+### 4.4 Implemented storage tables
+
+The shipped schema is leaner than the intended model in §4.1–§4.3: the thumbnail / duration / tags / position fields and the denormalized `playCount` / `averageRating` / `ratingCount` aggregates described there are not columns on these tables (they would be computed). The actual tables in `ctf/schema.sql`:
+
+- `gentlepulse_library_items` — the meditation catalog. Columns: `id`, `slug` (unique), `title`, `description`, `media_url`, `support_route`, `is_active`, `created_at`, `updated_at`.
+- `gentlepulse_ratings` — per-user rating, PK `(user_id, item_id)`. Columns: `user_id`, `item_id`, `rating` (integer), `created_at`, `updated_at`. Upserted by `PUT …/rating`.
+- `gentlepulse_favorites` — per-user favorite. Columns: `id`, `user_id`, `item_id`, `created_at`, with `UNIQUE (user_id, item_id)`. Toggled by `POST` / `DELETE …/favorite`.
+- `gentlepulse_play_events` — append-only play log. Columns: `id`, `user_id` (nullable), `anonymous_client_id` (nullable), `item_id`, `completed`, `created_at`. Written by `POST …/play`; the nullable user / anonymous-id pair lets both signed-in and anonymous plays be recorded.
 
 ## 5) Security, Privacy, and Compliance Controls
 
@@ -131,6 +137,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-06-25: **Documented the implemented routes and storage tables, correcting drift** (inventory-debt burn-down). §3.2's user-route list was replaced with the routes that actually ship (`GET /api/gentlepulse/library`, `GET /api/gentlepulse/library/[itemId]`, `POST`/`DELETE …/favorite`, `POST …/play`, `PUT …/rating`, `GET /api/gentlepulse/support`) — the previously-listed `/meditations*`, `/ratings`, and `/favorites*` names matched no handler. Added §4.4 with the four real tables (`gentlepulse_library_items`, `gentlepulse_ratings`, `gentlepulse_favorites`, `gentlepulse_play_events`) and their columns, noting the shipped schema is leaner than the aggregate model in §4.1–§4.3. Each verified against the handlers and `schema.sql`. Removed these four tables and five routes from the inventory-drift allowlist. Documentation only; no code change.
 - 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. No backend, schema, or contract change.
 - 2026-05-31: Android pixel pass. Rebuilt `GentlePulse.tsx` real screen from `MobileGentlePulse.tsx` design + Empty/Loading/Public variants. Retired `MockGentlepulse.tsx`. Updated `api.ts` with typed interface and active mutation helpers (`recordPlay`, `addFavorite`, `removeFavorite`) with CSRF headers. Bound to real fields: `id`, `title`, `description`. Omitted non-backed fields: `emoji`, `duration`, `category`, play-count, streak.
 - 2026-05-29: Web UI circle-back (design `c5d83c0`). Aligned the gentlepulse shell to the `GentlePulse.tsx` mockup + Loading/Empty states; restored the 💚 header glyphs; decomposed the oversized shell into modular sub-components within rule-116 limits; removed the dead duplicate `components/gentle-pulse/` directory. Real `/api/gentlepulse/library*` wiring unchanged.
