@@ -116,6 +116,40 @@
 2. `GET /api/account/blocks` lists the member's blocks newest-first (`listBlocksForUser`). `POST /api/account/blocks` creates a block (body `{ blockedUserId }`; CSRF-guarded; idempotent; a self-block or a blank target returns 400). `DELETE /api/account/blocks/[blockedUserId]` removes a block (CSRF-guarded; idempotent — unblocking a member who is not blocked still returns ok).
 3. Optional safety escalation (opt-in): a `POST` with `safetyConcern: true` and an optional short `safetyDetail` writes the block AND a `member_safety_reports` row in one transaction (they succeed or fail together) — the only path by which a member block reaches an admin. Without the flag, nothing is written to the reports table.
 
+### 1.7 Admin Account Restrictions (platform-wide member restriction)
+
+The admin-imposed counterpart to member-initiated blocking (§1.6): an admin restricts a member across the whole platform, scoped to the kind of action being blocked. One canonical row in `account_restrictions` carries the live state (superseding the retired per-plugin flags — TrustTransport `account_restricted`, ServiceCredits wallet `is_frozen`); every restrict/unrestrict is also appended to an immutable `account_restrictions_audit` trail.
+
+1. A restriction carries a **scope**: `all` (full account block, enforced in the auth gate), `trading` (value movement — ServiceCredits transfers, TrustTransport requests), or `contact` (initiating matches/connections). A restriction of scope S blocks an attempted action of scope A when `S === 'all'` or `S === A` (`lib/auth/account-restrictions.ts`).
+2. `POST /api/admin/account-restrictions/restrict` — admin-only (`evaluatePluginAccess({ requiredRoles: ['admin'] })`), CSRF-guarded (`x-ctf-csrf: 1` + same-origin). Body `{ targetUserId, reason?, scope? }`; `scope` defaults to `all` and must be one of `all`/`trading`/`contact` (else 400). Idempotent upsert into `account_restrictions`, writes a `restrict` audit row (`restrictAccount`).
+3. `POST /api/admin/account-restrictions/unrestrict` — admin-only, CSRF-guarded. Body `{ targetUserId }`. Clears the live row and writes an `unrestrict` audit row (`unrestrictAccount`).
+4. `GET /api/admin/account-restrictions/audit` — admin-only, read-only. Returns the most recent 100 restrict/unrestrict audit entries newest-first (`listAccountRestrictionAudit(100)`).
+5. **Data model — `account_restrictions_audit`** (immutable audit trail): `id` (uuid pk), `actor_id` (text — the admin), `action` (text, CHECK `restrict`/`unrestrict`), `target_user_id` (text), `scope` (text, null on unrestrict), `reason` (text, nullable), `metadata` (jsonb, default `{}`), `created_at` (timestamptz, default now). Index `idx_account_restrictions_audit_created` on `created_at DESC`. The live-state table `account_restrictions` is tracked separately; this section adds only the audit table.
+
+### 1.8 Safety Report Admin Review Queue
+
+The admin side of the member-blocking safety escalation (§1.6). When a member blocks with `safetyConcern: true`, a `member_safety_reports` row is written; these admin-gated routes are the review queue for those rows. Ordinary blocks never appear here.
+
+1. `GET /api/safety/admin/reports` — admin-gated (`requireSafetyAdminAccess`). Lists member safety reports for the `/admin/safety` queue: open reports first, then newest first; each row carries resolved reporter/reported display names and a count of other OPEN reports about the same reported member so a repeat report stands out (`listSafetyReportsForAdmin`).
+2. `POST /api/safety/admin/reports/[reportId]/review` — admin-gated, CSRF-guarded. Body `{ action }` where `action` is `reviewed` (admin looked at / acted on it) or `dismissed` (not a real concern). Only moves a report that is currently **open**, so a repeat action is a harmless no-op; returns 409 when the report is no longer open and 400 on a non-UUID id or an unknown action (`setSafetyReportStatus`). Triage only — a global ban is a separate, later control.
+
+### 1.9 Internal / Operator Service Endpoints (secret-gated, called by GitHub Actions)
+
+Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and called by a GitHub Actions workflow rather than a signed-in member.
+
+1. `POST /api/internal/account/delete` — operator-only; `Authorization: Bearer ${ACCOUNT_DELETE_SECRET}` (a dedicated secret, **not** the cron secret, because deletion is irreversible). Deletes ANY user's account by id (the admin counterpart to self-service `DELETE /api/account/full-account`): records the request + queues the ServiceCredits reclaim, then deletes every plugin's data via the deletion registry/orchestrator (`deleteAllAccountData`); optionally also deletes the Clerk identity (`deleteClerk` defaults true). Money is retained (wallets/ledgers are `retain` in the registry, settled by the reclaim flow). Returns 503 when the secret is unset, 403 on a wrong/absent secret, 400 when `userId` is missing; writes a chyme audit row. Called only by the manual `Delete Account (manual)` Actions workflow.
+2. `POST /api/internal/product-update` — `Authorization: Bearer ${INTERNAL_SERVICE_SECRET}`. Creates and immediately publishes a feed announcement from `{ title, body }` under the synthetic actor `ci-product-update`, writing a feed audit row. Returns 501 when the secret is unset, 401 on a wrong secret, 400 on missing fields. Lets a release pipeline post a product-update announcement to the feed.
+
+### 1.10 Operational Probes
+
+1. `GET /api/health` — no auth, `force-dynamic`. Returns `{ status: 'ok', featureFlags: 'configured' | 'defaults' }` (the flag reports whether the feature-flag backend is configured). Liveness/readiness probe.
+2. `GET /api/plugin/policy-probe` — returns the caller's plugin-access decision via `evaluatePluginAccess`. With `?adminOnly=true` it evaluates the admin gate (`requiredRoles: ['admin']`), otherwise any signed-in identity; returns `{ allowed, userId, requiredRoles }` on allow, or the deny decision with its status. A diagnostics endpoint for verifying the access gate.
+
+### 1.11 Legacy Profile URL Redirects
+
+1. Old `/platform` profile URLs are mapped to current rewrite URLs by the catch-all page route `/apps/[pluginSlug]/[scope]/[id]` (`ctf/packages/web/app/apps/[pluginSlug]/[scope]/[id]/page.tsx`) — e.g. `/apps/directory/public/{legacyId}` → `/apps/directory/{newId}`, `/apps/lighthouse/property/{legacyId}` → `/apps/lighthouse/property/{newId}`. On a miss (deleted or not-yet-migrated entity) it falls back to the plugin shell `/apps/{pluginSlug}`. This is a server-rendered page, not an API route.
+2. **Data model — `legacy_profile_redirects`**: composite primary key `(plugin_slug TEXT, scope TEXT, legacy_entity_id UUID)` mapping to `current_entity_id` (uuid) with `created_at` (timestamptz, default now). Read-only during migration; no API route writes it (populated out-of-band).
+
 ---
 
 ## 2) Explicit Exclusions from This Parity Inventory
@@ -166,6 +200,7 @@
 
 ## 5) Change Log
 
+- 2026-06-25: **Documented non-plugin/infra tables and routes** (inventory-debt burn-down — documentation catch-up, no code change). Added §1.7 admin account restrictions (`account_restrictions_audit` table + `POST /api/admin/account-restrictions/restrict`, `/unrestrict`, `GET /api/admin/account-restrictions/audit`), §1.8 safety report admin review (`GET /api/safety/admin/reports`, `POST /api/safety/admin/reports/[reportId]/review`), §1.9 internal/operator endpoints (`POST /api/internal/account/delete`, `POST /api/internal/product-update`), §1.10 operational probes (`GET /api/health`, `GET /api/plugin/policy-probe`), and §1.11 legacy profile URL redirects (`legacy_profile_redirects` table). Each verified against the route handlers and `schema.sql`. Removed these 2 tables and 9 routes from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-25: **Documented account-level surfaces** (inventory-debt burn-down — documentation catch-up, no code change). Added the per-user theme table `user_ui_preferences` and `GET`/`PUT /api/account/ui-preferences` to §1.5, and a new §1.6 covering member blocking: `GET`/`POST /api/account/blocks` and `DELETE /api/account/blocks/[blockedUserId]` (with the optional safety-escalation path). Each verified against the route handlers and `schema.sql`. Removed these four items from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-12: Android Account & Data API client (`packages/mobile/src/features/account-data/api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. The request-timeout guard is kept. No backend, schema, or contract change.
 - 2026-06-08: Recorded the removal of two off-brand "coming soon" placeholders from the community shell, which the readiness audit (#344) flagged as out of scope and the owner confirmed are not part of the product. The general person-to-person **Direct Messages** list (left sidebar; no backend, dead click handler, fake unread counts) and the permanently disabled **Notifications** bell button (icon rail) are gone, along with their now-unused props, state, fetch call, `/api/hub/dms` route, types, and CSS. The homepage hub's open community channel list and the feed stay exactly as they were. (The code for these removals already landed in #346 for Direct Messages and #350 for Notifications; this entry documents the decision and confirms the channel/feed were preserved.)
