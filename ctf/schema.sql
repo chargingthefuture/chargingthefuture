@@ -2845,6 +2845,26 @@ ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS answered
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS first_block_charged BOOLEAN NOT NULL DEFAULT FALSE;
+-- Issue #808 task 4 (per-block billing for the metered "Connect now" call). Each interval-minute block is
+-- charged as a direct ServiceCredits transfer from caller_user_id to callee_user_id (no escrow). The
+-- provider's rate + interval are SNAPSHOTTED onto the row at answer time (rate_credits_locked /
+-- interval_minutes_locked) so a provider changing their rate mid-call cannot affect an in-progress call.
+-- authorized_blocks is the buyer-set cap chosen at ring time (the call can never extend past it in v1).
+-- blocks_charged counts paid blocks; paid_through_at = answered_at + blocks_charged * interval and drives
+-- the display countdown plus the lazy paid-window expiry (no background job). last_transfer_id is the most
+-- recent ServiceCredits transfer id, kept only for trace. The money itself lives in the service_credits_*
+-- tables (financial-record retention) -- these columns only describe the call's billing state.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS rate_credits_locked INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS interval_minutes_locked INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS authorized_blocks INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS blocks_charged INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS paid_through_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS last_transfer_id TEXT;
+-- Why an answered/ringing call ended, when it was not a plain hang-up: 'caller_insufficient_funds' (a
+-- block charge failed for lack of balance), 'paid_window_elapsed' (the prepaid time ran out and the caller
+-- did not extend), or 'block_cap_reached' (an extend was attempted past the buyer-set cap). NULL for a
+-- normal end/decline/timeout.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_reason TEXT;
 -- One live ring per callee at a time: a partial unique index over the callee while the ring is still
 -- ringing prevents two simultaneous incoming calls stacking on the same provider.
 CREATE UNIQUE INDEX IF NOT EXISTS foundation_call_sessions_active_ring_per_callee

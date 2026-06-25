@@ -23,6 +23,47 @@ export function getServiceCreditsTokens(theme: ThemeName): ServiceCreditsTokens 
 export type WalletData = { availableBalance: number; escrowBalance: number };
 export type Tab = "wallet" | "earn" | "economy";
 
+// One row of the member's own wallet history, as returned by GET /api/service-credits/transactions
+// (a projection of service_credits_ledger_entries). Bare credit quantities only — never a fiat figure.
+export type LedgerEntry = {
+  id: string;
+  entryType: string;
+  amount: number;
+  referenceType: string;
+  referenceId: string;
+  createdAt: string;
+};
+
+// Plain-language label + direction for a ledger row. Direction drives the +/- sign and colour:
+// "in" credits the member, "out" debits, "neutral" for escrow moves that net within the member's own
+// wallet (held/released) where a signed amount would mislead. Keeps wording newcomer-friendly.
+export function describeLedgerEntry(
+  entryType: string,
+  referenceType: string,
+): { label: string; direction: "in" | "out" | "neutral" } {
+  switch (entryType) {
+    case "credit":
+      if (referenceType === "transfer") return { label: "Received credits", direction: "in" };
+      if (referenceType === "treasury_fee") return { label: "Fee received", direction: "in" };
+      if (referenceType === "dispute_adjustment") return { label: "Dispute resolution credit", direction: "in" };
+      return { label: "Credit grant", direction: "in" };
+    case "debit":
+      if (referenceType === "treasury_fee") return { label: "Treasury fee", direction: "out" };
+      if (referenceType === "dispute_adjustment") return { label: "Dispute resolution debit", direction: "out" };
+      return { label: "Credits removed", direction: "out" };
+    case "escrow_hold":
+      return { label: "Held in escrow", direction: "out" };
+    case "escrow_release":
+      return { label: "Escrow released", direction: "neutral" };
+    case "initial_allocation":
+      return { label: "Welcome allocation", direction: "in" };
+    case "skills_hunt_award":
+      return { label: "SkillsHunt award", direction: "in" };
+    default:
+      return { label: entryType.replace(/_/g, " "), direction: "neutral" };
+  }
+}
+
 // Public circulation metrics returned by GET /api/service-credits/circulation. Aggregate,
 // non-identifying figures only — never a per-member number and never a fiat equivalent.
 export type CirculationMetrics = {

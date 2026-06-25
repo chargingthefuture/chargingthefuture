@@ -18,6 +18,14 @@ export const FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS = 60;
 export const FOUNDATION_INSTANT_CALL_RING_LIMIT = 5;
 export const FOUNDATION_INSTANT_CALL_RING_WINDOW_SECONDS = 60;
 
+// Per-block billing for the metered "Connect now" call (issue #808 task 4). At ring time the buyer
+// pre-authorizes a maximum number of blocks; the call can never extend past this cap in v1 (there is no
+// mid-session re-authorization). FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS is the default cap and
+// FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS is the hard upper bound the buyer may pick, so a single
+// call cannot pre-commit an unbounded spend.
+export const FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS = 6;
+export const FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS = 24;
+
 export const FOUNDATION_ERROR_CODE = {
   invalidPayload: 'FOUNDATION_INVALID_PAYLOAD',
   persistenceUnavailable: 'FOUNDATION_PERSISTENCE_UNAVAILABLE',
@@ -36,4 +44,10 @@ export const FOUNDATION_ERROR_CODE = {
   callNotRinging: 'FOUNDATION_CALL_NOT_RINGING',
   callNotCallee: 'FOUNDATION_CALL_NOT_CALLEE',
   calleeBusy: 'FOUNDATION_CALLEE_BUSY',
+  // Foundation instant 1:1 call per-block billing (issue #808 task 4).
+  callNotCaller: 'FOUNDATION_CALL_NOT_CALLER',
+  callNotActive: 'FOUNDATION_CALL_NOT_ACTIVE',
+  callInsufficientFunds: 'FOUNDATION_CALL_INSUFFICIENT_FUNDS',
+  callBlockCapReached: 'FOUNDATION_CALL_BLOCK_CAP_REACHED',
+  callBillingMisconfigured: 'FOUNDATION_CALL_BILLING_MISCONFIGURED',
 } as const;
