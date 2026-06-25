@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Bug, ExternalLink } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
 import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 
@@ -96,6 +97,7 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
 }
 
 export function BugReportsAdminShell() {
+  const isMobile = useIsMobile();
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [items, setItems] = useState<AdminBugReport[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +150,17 @@ export function BugReportsAdminShell() {
   );
 
   return (
-    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div
+      style={{
+        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
+        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
+        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
+        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        background: BG,
+        color: TEXT,
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}
+    >
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>

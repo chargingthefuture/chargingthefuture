@@ -350,7 +350,10 @@ export default function GdpRateAdmin() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: bg, fontFamily: "'Inter',system-ui", color: text }}>
+    // Fixed viewport height (not min-height) so this flex column is bounded and <Body> (flex:1,
+    // overflowY:auto) scrolls internally. Desktop locks html/body to overflow:hidden (globals.css),
+    // so the shell must own its scroll or its content is clipped and unreachable.
+    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: bg, fontFamily: "'Inter',system-ui", color: text }}>
       <Header />
       <Body />
     </div>

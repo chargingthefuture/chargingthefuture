@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BarChart3, Coins } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 // Admin design tokens (shared admin look). GDP accent is cyan.
 const COLOR = '#06B6D4';
@@ -41,6 +42,7 @@ function StatBlock({ label, value, accent }: { label: string; value: string | nu
 }
 
 export function GdpAdminShell({ report }: { report: GdpReport }) {
+  const isMobile = useIsMobile();
   const router = useRouter();
   const [form, setForm] = useState({ weekStartDate: '', title: '', summary: '', publish: false, legalApproved: false });
   const [busy, setBusy] = useState(false);
@@ -81,7 +83,17 @@ export function GdpAdminShell({ report }: { report: GdpReport }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div
+      style={{
+        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
+        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
+        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
+        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        background: BG,
+        color: TEXT,
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}
+    >
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
