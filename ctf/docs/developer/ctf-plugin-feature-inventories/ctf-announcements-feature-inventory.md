@@ -106,6 +106,7 @@ Admin routes:
 - `POST /api/announcements/admin/:announcementId/publish`
 - `POST /api/announcements/admin/:announcementId/archive`
 - `POST /api/announcements/admin/targeting/validate`
+- `POST /api/announcements/membership/events` — records a member join/leave membership event so announcement audience eligibility can be recalculated; admin-gated (`requireFeedAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400). Shares the feed membership-events handler (`emitMembershipEvent`, contracts unified under `feed.*`) and returns `{ ok, streamEmitted }` — the announcements-namespaced twin of `POST /api/feed/membership/events`.
 
 ---
 
@@ -199,6 +200,7 @@ references them, so they are removed here to match the real data model.
 
 ## 11) Change Log
 
+- 2026-06-25: **Documented the membership-events route** (inventory-debt burn-down — documentation catch-up, no code change). Added `POST /api/announcements/membership/events` (admin-gated join/leave membership event for audience recalculation; the announcements-namespaced twin of the feed membership-events handler) to §3.2 Admin routes. Verified against the route handler. Removed it from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-05-18: Replaced "Web and Android Delivery Plan (Approved)" with canonical "Web and Android Delivery Status" (`web+android complete`); removed web-first/Android-follow-up language. Renamed "Gaps, Ambiguities, and Known Technical Debt (Current)" to canonical "Gaps and Known Technical Debt" and condensed deprecation note. Updated seed coverage to reference shipping seed script.
 - 2026-04-05: Deprecated standalone announcements namespace — all contracts unified under `feed.*`.
 - 2026-02-25: Added Rule 120 gaps section.

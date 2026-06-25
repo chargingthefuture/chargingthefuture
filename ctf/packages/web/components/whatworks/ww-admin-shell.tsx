@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ThumbsUp } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { WhatWorksProductStatus } from 'lib/whatworks/types';
 import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
@@ -30,6 +31,7 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
 }
 
 export function WhatWorksAdminShell() {
+  const isMobile = useIsMobile();
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [problems, setProblems] = useState<AdminProblem[]>([]);
   const [statusFilter, setStatusFilter] = useState<WhatWorksProductStatus | 'all'>('pending');
@@ -183,7 +185,17 @@ export function WhatWorksAdminShell() {
   const approvedCount = problems.reduce((total, problem) => total + problem.approvedCount, 0);
 
   return (
-    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div
+      style={{
+        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
+        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
+        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
+        ...(isMobile ? { minHeight: '100dvh' } : { height: '100dvh', overflowY: 'auto' }),
+        background: BG,
+        color: TEXT,
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}
+    >
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
