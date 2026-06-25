@@ -97,6 +97,14 @@ Consumer routes:
 5. Contract versioning required when read models change shape.
 6. Compatibility contract requires both hierarchy and flattened feeds to remain maintained for downstream consumers.
 
+### 3.1 Owned storage tables
+
+The canonical entities live in `skills_taxonomy_sectors`, `skills_taxonomy_job_titles`, and `skills_taxonomy_skills`. Three further tables back the read model, the dependency tracker, and the audit log:
+
+- `skills_taxonomy_flattened_projection` — the denormalized read model behind the flattened feed (`GET /api/skills-taxonomy/flattened`). One row per skill carrying the full chain: `sector_id`/`sector_name`, `job_title_id`/`job_title_name`, `skill_id`/`skill_name`, `skill_aliases` (jsonb), `is_active`, `created_at`/`updated_at`. Rebuilt from the canonical tables so consumers read one flat shape instead of joining three levels.
+- `skills_taxonomy_consumer_bindings` — the downstream-reference tracker behind the dependency-impact safeguards (§4). Columns: `id`, `target_type` + `target_id` (the taxonomy node referenced), `consumer_plugin` (e.g. `directory`, `workforce`), `reference_count`, `created_at`/`updated_at`. A non-zero `reference_count` is what blocks a hard-delete of a still-referenced node.
+- `skills_taxonomy_change_events` — the append-only audit log of taxonomy mutations. Columns: `id`, `actor_id`, `target_type` + `target_id`, `action`, `reason`, `metadata` (jsonb), `created_at`. One row per change decision on a sector/job-title/skill, providing the auditable evidence required by §4.5.
+
 ## 4) Destructive-Action and Dependency-Impact Requirements
 
 1. Hard-delete is denied when active downstream references exist beyond approved thresholds.
@@ -144,6 +152,7 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 ## 10) Change Log
 
+- 2026-06-25: **Documented the three owned support tables** (inventory-debt burn-down — documentation catch-up, no code change). Added `skills_taxonomy_flattened_projection` (flattened read model), `skills_taxonomy_consumer_bindings` (downstream-reference tracker for dependency-impact), and `skills_taxonomy_change_events` (mutation audit log) to §3.1, each from its `schema.sql` definition. Removed these three tables from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-25: Added the owner-approved promotion for game design / development. New occupation "Game Designers / Developers" under the existing "Creative & Media" sector, with 14 skills: Game Design, Level Design, Narrative Design, Game Systems Design, Game Development, Gameplay Programming, Game Physics, Game AI Programming, Multiplayer Networking, Unity, Unreal Engine, Godot, Game Prototyping, and Playtesting & QA. Appended to `APPROVED_SKILL_PROMOTIONS` in `ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs`; it upserts the occupation and skills on the next reseed (idempotent), looking the sector up by name (never creating it). No SkillsHunt proposal backs it, so `proposalNormalizedSkills` is empty. Data/script only — no schema change.
 - 2026-06-21: Added a durable, idempotent promotion path for owner-approved free-text skills. New `ctf/scripts/seedSkillsTaxonomyPromotions.mjs` plus shared list in `ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs`, wired to run right after the legacy backfill in `seedSkillsTaxonomy.mjs`. First promotion: occupation "Marketing Specialist" under the existing "Professional & Business Services" sector, with skills Marketing, Social Media Marketing, Content Marketing, Search Engine Optimization (SEO), Email Marketing, Market Research, Brand Management, and Copywriting (fulfils the "Marketing" proposal, issue #681). The promotion step also marks the matching `skills_hunt_proposed_skill_promotions` row `status = 'promoted'`. Also added a "Context for the agent picking this up" section to the generated skill-proposal issue body in `ctf/scripts/proposeSkillPromotions.mjs` documenting the taxonomy model, tables, file locations, and the promote recipe. Data/script only — no schema change.
 - 2026-06-12: The Android Skills Taxonomy API client (`SkillsTaxonomyApi.ts`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing the env-based origin lookup and plain fetch against a hardcoded development URL. No schema, route, or contract change.
