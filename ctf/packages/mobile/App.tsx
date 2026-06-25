@@ -19,7 +19,7 @@ import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
 import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
 import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
-import { Foundation } from './src/features/foundation';
+import { Foundation, FoundationInstantCallController } from './src/features/foundation';
 import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
 import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
 import { TrustTransport, AdminTrustTransport } from './src/features/trusttransport';
@@ -116,7 +116,14 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <AppShell />
+        {/* The instant-call controller is mounted once at the app root, inside
+            AuthProvider (it reads the signed-in member) so it can both place a ring
+            from any provider's "Connect now" and poll the incoming-call inbox so a
+            member being rung sees an in-app answer/decline anywhere in the app
+            (Foundation instant 1:1 call, issue #808). */}
+        <FoundationInstantCallController>
+          <AppShell />
+        </FoundationInstantCallController>
       </ThemeProvider>
     </AuthProvider>
   );

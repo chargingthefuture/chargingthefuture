@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import type { Provider } from './api';
 import { createConnectionThread, requestQuote } from './api';
+import { ConnectNowButton, canOfferConnectNow, instantCallRateLabel } from './FoundationConnectNow';
 
 const BG = '#0F1117';
 const SURFACE_DARK = '#090B0F';
@@ -21,6 +22,9 @@ function initials(name: string): string {
 
 interface FoundationProviderDetailProps {
   provider: Provider;
+  // The signed-in viewer's own user id (from the provider search), so "Connect now"
+  // is hidden on the viewer's own card. Null when unknown.
+  viewerUserId?: string | null;
   onBack: () => void;
 }
 
@@ -28,11 +32,20 @@ interface FoundationProviderDetailProps {
  * Provider detail screen — mirrors the selected-provider view in MobileFoundation.tsx mockup.
  * Renders only real backend fields: displayName, headline, bio.
  * Fields with no backend backing (rate, response time, job count, rating, availability, credits)
- * are omitted per real-data-only policy.
+ * are omitted per real-data-only policy. The exception is the instant 1:1 call
+ * ("Connect now") rate, which is a real backend field (issue #808) and is shown when
+ * the provider has the call enabled.
  */
-export function FoundationProviderDetail({ provider, onBack }: FoundationProviderDetailProps) {
+export function FoundationProviderDetail({ provider, viewerUserId = null, onBack }: FoundationProviderDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  // Only offer "Connect now" when the provider opted in with a valid rate and the
+  // viewer is not the provider themselves. Audio-only call.
+  const showConnectNow = canOfferConnectNow(provider, viewerUserId);
+  const connectRateLabel = showConnectNow
+    ? instantCallRateLabel(provider.instantCallRateCredits ?? 0, provider.instantCallIntervalMinutes ?? 0)
+    : null;
 
   async function handleRequestQuote() {
     setSubmitting(true);
@@ -100,6 +113,19 @@ export function FoundationProviderDetail({ provider, onBack }: FoundationProvide
                 </View>
               ))}
             </View>
+          </View>
+        ) : null}
+
+        {/* Connect now — live, paid 1:1 audio call (issue #808). Only shown when the
+            provider has it enabled with a valid rate and the viewer is not them. */}
+        {showConnectNow ? (
+          <View style={styles.connectSection}>
+            <ConnectNowButton provider={provider} />
+            {connectRateLabel ? (
+              <Text style={styles.connectHint}>
+                Live audio call · {connectRateLabel}. The first block is charged when they answer.
+              </Text>
+            ) : null}
           </View>
         ) : null}
 
@@ -260,6 +286,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: COLOR,
+  },
+  connectSection: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  connectHint: {
+    fontSize: 12,
+    color: SUBTLE,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   actions: {
     gap: 10,
