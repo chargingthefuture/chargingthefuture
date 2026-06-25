@@ -1,7 +1,6 @@
 {
   "_README": "Existing-inventory-drift baseline for check-inventory-drift.mjs. Tables/routes here are documented in NO feature inventory as of this gate. This is a BURN-DOWN list: it must only shrink — document the item in the right inventory and delete it from here. Never add a NEW table/route to silence the gate; document it instead. Some routes are non-plugin/infra (health, internal, admin) that belong in ctf-non-plugin-feature-inventory.md.",
   "tables": [
-    "feed_timeline_projection",
     "gdp_publications",
     "peer_programming_admin_audit_trail",
     "service_credits_ledger_entries"
@@ -11,8 +10,6 @@
     "/api/bug-reports/admin",
     "/api/bug-reports/admin/[id]/resolve",
     "/api/chyme/service-credits",
-    "/api/feed/admin/questions/[questionId]",
-    "/api/feed/membership/events",
     "/api/foundation/notifications",
     "/api/foundation/service-credits",
     "/api/service-credits/disputes",
