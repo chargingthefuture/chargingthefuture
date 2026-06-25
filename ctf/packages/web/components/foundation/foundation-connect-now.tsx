@@ -83,6 +83,12 @@ export function ConnectNowButton({
   );
 }
 
+// The buyer pre-authorizes a maximum number of blocks at confirm time (issue #808 task 4). The call can
+// never run past this cap in v1. These are the selectable caps; the default is 6 (matches the server
+// default FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS) and the max matches the server hard cap.
+const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 24];
+const DEFAULT_BLOCK_CAP = 6;
+
 function ConnectNowDialog({
   provider, rateLabel, intervalMinutes, onClose,
 }: {
@@ -92,20 +98,35 @@ function ConnectNowDialog({
   onClose: () => void;
 }) {
   const providerName = provider.displayName;
+  const rate = provider.instantCallRateCredits ?? 0;
   const [consented, setConsented] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [authorizedBlocks, setAuthorizedBlocks] = useState(DEFAULT_BLOCK_CAP);
   const instantCall = useInstantCall();
 
+  // The most the caller can be charged on this call: rate per block times the authorized cap. Shown so the
+  // buyer sees the worst-case total before they agree.
+  const maxSpend = rate * authorizedBlocks;
+  const maxSpendLabel = maxSpend === 1 ? '1 ServiceCredit' : `${maxSpend} ServiceCredits`;
+  const maxMinutes = intervalMinutes * authorizedBlocks;
+
   // Place the ring through the controller, then close the consent dialog so the controller's call overlay
-  // (ringing -> in-call) takes over. The controller owns the lifecycle from here.
+  // (ringing -> in-call) takes over. The controller owns the lifecycle from here. A failed ring (e.g. not
+  // enough ServiceCredits) keeps the dialog open and shows the reason.
   const onStart = async () => {
     if (!consented || starting || !instantCall) {
       return;
     }
     setStarting(true);
+    setError(null);
     try {
-      await instantCall.startCall(provider);
-      onClose();
+      const result = await instantCall.startCall(provider, authorizedBlocks);
+      if (result.ok) {
+        onClose();
+      } else {
+        setError(result.error);
+      }
     } finally {
       setStarting(false);
     }
@@ -157,14 +178,45 @@ function ConnectNowDialog({
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 6 }}>Rate</div>
           <div style={{ fontSize: 17, fontWeight: 800, color: COLOR }}>{rateLabel}</div>
           <div style={{ fontSize: 12.5, color: "#9CA3AF", marginTop: 4 }}>
-            You&apos;re charged this rate for each {intervalMinutes}-minute block. You can end the call anytime.
+            You&apos;re charged this rate for each {intervalMinutes}-minute block. The first block is charged
+            when {providerName} answers. You can end the call anytime.
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label htmlFor="connect-now-block-cap" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6B7280", textTransform: "uppercase", marginBottom: 6 }}>
+            Spend limit
+          </label>
+          <select
+            id="connect-now-block-cap"
+            value={authorizedBlocks}
+            onChange={(e) => setAuthorizedBlocks(Number(e.target.value))}
+            style={{
+              width: "100%", padding: "10px 12px", borderRadius: 10,
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)",
+              color: "#F9FAFB", fontSize: 14, fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            {BLOCK_CAP_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n === 1 ? "1 block" : `${n} blocks`} · up to {n * intervalMinutes} min
+              </option>
+            ))}
+          </select>
+          <div style={{ fontSize: 12.5, color: "#9CA3AF", marginTop: 6, lineHeight: 1.5 }}>
+            The call will not run past this limit. You&apos;ll be charged for at most{" "}
+            <strong style={{ color: "#F9FAFB" }}>{maxSpendLabel}</strong> ({authorizedBlocks === 1 ? "1 block" : `${authorizedBlocks} blocks`}, up to {maxMinutes} min).
           </div>
         </div>
 
         <div style={{ fontSize: 12.5, color: "#9CA3AF", lineHeight: 1.7, marginBottom: 14 }}>
           This starts a live 1:1 call. You&apos;ll be charged the provider&apos;s rate per block until you
-          end it. Only start a call you mean to pay for.
+          end it or reach your spend limit. Only start a call you mean to pay for.
         </div>
+
+        {error ? (
+          <div style={{ fontSize: 13, color: "#F87171", lineHeight: 1.5, marginBottom: 12 }}>{error}</div>
+        ) : null}
 
         <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 16, cursor: "pointer" }}>
           <input
@@ -174,7 +226,7 @@ function ConnectNowDialog({
             style={{ marginTop: 2, width: 16, height: 16, accentColor: COLOR, flexShrink: 0 }}
           />
           <span style={{ fontSize: 13, color: "#D1D5DB", lineHeight: 1.5 }}>
-            I understand this is a paid call and I agree to be charged {rateLabel}.
+            I understand this is a paid call and I agree to be charged {rateLabel}, up to {maxSpendLabel}.
           </span>
         </label>
 
@@ -197,8 +249,8 @@ function ConnectNowDialog({
           {starting ? "Starting…" : "Start call"}
         </button>
         <div style={{ marginTop: 10, fontSize: 12, color: "#9CA3AF", lineHeight: 1.6, textAlign: "center" }}>
-          This places a live audio call. No charge happens in this version — per-block billing arrives in a
-          later update.
+          The first block is charged when the provider answers. Ringing is free, and you only pay for blocks
+          you use up to your limit.
         </div>
       </div>
     </div>

@@ -28,9 +28,23 @@ export type FoundationInstantCall = {
   answeredAtIso: string | null;
   endedAtIso: string | null;
   endedByUserId: string | null;
-  // Issue #808 task 4 seam: true once the first per-block charge has been taken on answer. Always false
-  // until the billing task wires it; this field only exposes the seam, it never moves money here.
+  // Issue #808 task 4 (per-block billing). firstBlockCharged is true once the first block has been paid on
+  // answer. rateCreditsLocked / intervalMinutesLocked are the provider's rate + block length SNAPSHOTTED at
+  // answer (null until answered), so a provider changing their rate mid-call never affects an in-progress
+  // call. authorizedBlocks is the buyer-set cap chosen at ring; the call can never extend past it in v1.
+  // blocksCharged is how many blocks have been paid. paidThroughAtIso = answered_at + blocksCharged *
+  // interval and drives the display countdown plus the lazy paid-window expiry. lastTransferId is the most
+  // recent ServiceCredits transfer id (trace only).
   firstBlockCharged: boolean;
+  rateCreditsLocked: number | null;
+  intervalMinutesLocked: number | null;
+  authorizedBlocks: number | null;
+  blocksCharged: number;
+  paidThroughAtIso: string | null;
+  lastTransferId: string | null;
+  // Why the call ended when it was not a plain hang-up: 'caller_insufficient_funds', 'paid_window_elapsed',
+  // or 'block_cap_reached'. Null for a normal end/decline/timeout. Lets the UI show "out of credits" etc.
+  endedReason: string | null;
   createdAtIso: string;
 };
 
