@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireChymeAccess } from '../_lib';
+import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
 import { sendServiceCredits } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
 
@@ -7,6 +7,11 @@ export async function POST(request: Request) {
   const gate = await requireChymeAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   let body: { toUserId: string; amount: number; message?: string };

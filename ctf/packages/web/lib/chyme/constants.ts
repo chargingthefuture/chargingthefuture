@@ -14,6 +14,7 @@ export const CHYME_ERROR_CODE = {
   streamUnavailable: 'CHYME_STREAM_UNAVAILABLE',
   persistenceUnavailable: 'CHYME_PERSISTENCE_UNAVAILABLE',
   internalError: 'CHYME_INTERNAL_ERROR',
+  csrfDenied: 'CHYME_CSRF_DENIED',
 } as const;
 
 export type ChymeErrorCode = (typeof CHYME_ERROR_CODE)[keyof typeof CHYME_ERROR_CODE];
