@@ -69,9 +69,9 @@ Foundation uses canonical profile for identity continuity, safety defaults, and 
   - Retention period: medium-lived based on communication retention policy
   - Legal/compliance note: high-sensitivity communication metadata; raw payload logging prohibited
 - Table/entity: `foundation_call_sessions`
-  - Contains personal data? yes (participant linkage, call modality, duration)
+  - Contains personal data? yes (participant linkage, call modality, duration; plus instant-call ring lifecycle columns — `caller_user_id`, `callee_user_id`, `ring_status`, `answered_at`, `ended_at`, `ended_by_user_id` — added for issue #808 task 3)
   - Retention period: short-lived operational + medium-lived summary window for continuity/history
-  - Legal/compliance note: trauma-informed handling and region-pinning required for real-time media
+  - Legal/compliance note: trauma-informed handling and region-pinning required for real-time media. The instant-call ring lifecycle holds no call media and no payment data; `first_block_charged` is a flag-only seam for the later billing task (#808 task 4) and stores no monetary value. Caller/callee linkage is deleted/pseudonymized on the same scopes as the existing call-session linkage.
 - Table/entity: `foundation_quote_requests`
   - Contains personal data? yes (service details and lifecycle state)
   - Retention period: long-lived transactional history

@@ -5,6 +5,19 @@ export const FOUNDATION_MAX_PAGE_SIZE = 100;
 export const FOUNDATION_QUOTE_STATES = ['requested', 'provider_responded', 'closed'] as const;
 export const FOUNDATION_CALL_MODALITIES = ['voice', 'video'] as const;
 
+// Foundation instant 1:1 call (issue #808 task 3). Audio-only for v1 (owner decision): the ring is placed
+// as a 'voice' call session and the audio room never publishes video.
+//
+// FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS: how long an unanswered ring stays live before it
+// auto-times-out (~60s per the issue). The server stamps ring_expires_at = now + this on ring; both the
+// caller/callee poll and a lazy server-side sweep treat a ringing call past its expiry as timed_out.
+export const FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS = 60;
+
+// Ring rate limit (v1 safety control): how many rings one member may place in the window, to stop a member
+// spamming a provider with repeated incoming calls. Enforced via the shared foundation_rate_limit_counters.
+export const FOUNDATION_INSTANT_CALL_RING_LIMIT = 5;
+export const FOUNDATION_INSTANT_CALL_RING_WINDOW_SECONDS = 60;
+
 export const FOUNDATION_ERROR_CODE = {
   invalidPayload: 'FOUNDATION_INVALID_PAYLOAD',
   persistenceUnavailable: 'FOUNDATION_PERSISTENCE_UNAVAILABLE',
@@ -18,4 +31,9 @@ export const FOUNDATION_ERROR_CODE = {
   rateLimitExceeded: 'FOUNDATION_RATE_LIMIT_EXCEEDED',
   streamUnavailable: 'FOUNDATION_STREAM_UNAVAILABLE',
   policyDenied: 'FOUNDATION_POLICY_DENIED',
+  // Foundation instant 1:1 call lifecycle (issue #808 task 3).
+  callNotFound: 'FOUNDATION_CALL_NOT_FOUND',
+  callNotRinging: 'FOUNDATION_CALL_NOT_RINGING',
+  callNotCallee: 'FOUNDATION_CALL_NOT_CALLEE',
+  calleeBusy: 'FOUNDATION_CALLEE_BUSY',
 } as const;

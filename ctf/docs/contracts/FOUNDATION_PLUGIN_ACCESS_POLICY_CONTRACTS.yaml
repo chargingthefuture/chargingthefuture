@@ -148,6 +148,99 @@ policies:
       - rate_limit_exceeded
 
   - pluginId: foundation
+    command: foundation.connection.instant-call.ring
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      threadMembership: required
+      callParticipantLimit: one_to_one_only
+      audioOnly: true
+    consentRequirements:
+      scopes:
+        - survivor_provider_contact
+        - realtime_voice
+      fallbackLawfulBasis: explicit_consent_required
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_thread_participant
+      - participant_limit_exceeded
+      - callee_already_ringing
+      - rate_limit_exceeded
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.answer
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustBe: callee
+      callState: ringing_only
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_callee
+      - call_not_ringing
+      - call_not_found
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.decline
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustBe: callee
+      callState: ringing_only
+    denyConditions:
+      - actor_not_callee
+      - call_not_ringing
+      - call_not_found
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.end
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustBe: caller_or_callee
+    denyConditions:
+      - call_not_found
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.state.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustBe: caller_or_callee
+    denyConditions:
+      - call_not_found
+
+  - pluginId: foundation
+    command: foundation.connection.incoming-call.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustBe: callee_self
+    denyConditions: []
+
+  - pluginId: foundation
     command: foundation.quote.request.create
     version: 1.0.0
     requiredRoles:
@@ -423,3 +516,5 @@ changelog:
     change: Initial Foundation access policy contracts added with explicit consent, region, high-risk, and deny-condition controls for all v1 commands.
   - date: 2026-06-24
     change: Added access policies for provider instant 1:1 call settings (foundation.provider.instant-call.get / .set, issue #808) — member self, unlock-gated (approved_full), with rate and interval bounds validation on write.
+  - date: 2026-06-25
+    change: Added access policies for the instant 1:1 call ring/answer lifecycle (issue #808 task 3, audio-only) — foundation.connection.instant-call.ring / .answer / .decline / .end / .state.read and foundation.connection.incoming-call.read. Ring requires thread membership and is rate limited; answer/decline require the actor to be the callee and the call to still be ringing; end is open to either participant; the reads are scoped to the actor's own calls. No billing or push controls here (issue #808 tasks 4 and 5).
