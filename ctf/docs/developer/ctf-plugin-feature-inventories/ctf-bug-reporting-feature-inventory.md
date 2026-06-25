@@ -8,7 +8,7 @@ separate process redacts it and creates an issue in a **private** triage repo
 (`chargingthefuture/bug-reports`). A triage agent investigates and proposes a fix; the
 owner approves before any branch or pull request is created. The full decision and the
 reasons behind every fail-closed default are recorded in
-`.github/instructions/129-bug-reporting-and-triage-rules.mdc`.
+`.claude/rules/129-bug-reporting-and-triage-rules.mdc`.
 
 This feature owns: the report submission path and storage, the redaction/risk gate, and
 the job that publishes redacted reports into the private triage repo. It does **not** own

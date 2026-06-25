@@ -85,7 +85,7 @@ jobs:
           github_token: ${{ secrets.GH_PAT }}
           prompt: |
             You are implementing one owner-approved bug fix for the "Charging the Future"
-            app. Follow the repository rules in CLAUDE.md and .github/instructions exactly.
+            app. Follow the repository rules in CLAUDE.md and .claude/rules exactly.
 
             The approved work item is issue #${{ steps.pick.outputs.number }} in the private
             triage repo `chargingthefuture/bug-reports`. Do this in order:

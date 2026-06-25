@@ -20,10 +20,10 @@ Dispatch note:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/107-integration-stack-rules.mdc
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/103-web-nextjs-structure-rules.mdc
+- #file:.claude/rules/107-integration-stack-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/103-web-nextjs-structure-rules.mdc
 - #file:ctf/README.md
 
 You are `agent-bf-01-auth-foundation` working only under `ctf/`.
@@ -59,9 +59,9 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/119-github-actions-ci-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/119-github-actions-ci-rules.mdc
 - #file:ctf/railway.toml
 
 You are `agent-bf-02-railway-baseline` working only under `ctf/`.
@@ -97,9 +97,9 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/119-github-actions-ci-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/119-github-actions-ci-rules.mdc
 - #file:ctf/packages/web/vercel.json
 
 You are `agent-bf-03-vercel-integration` working only under `ctf/`.
@@ -135,11 +135,11 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/104-mobile-react-native-android-rules.mdc
-- #file:.github/instructions/106-expo-eas-mobile-workflow-rules.mdc
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/119-github-actions-ci-rules.mdc
+- #file:.claude/rules/104-mobile-react-native-android-rules.mdc
+- #file:.claude/rules/106-expo-eas-mobile-workflow-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/119-github-actions-ci-rules.mdc
 - #file:ctf/docs/mobile/EXPO_CLOUD_WORKFLOW.md
 
 You are `agent-bf-04-expo-baseline` working only under `ctf/`.
@@ -798,10 +798,10 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/107-integration-stack-rules.mdc
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/103-web-nextjs-structure-rules.mdc
+- #file:.claude/rules/107-integration-stack-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/103-web-nextjs-structure-rules.mdc
 - #file:ctf/README.md
 - #file:ctf/docs/developer/BASELINE_HANDOFF_BF01_BF04.md
 
@@ -838,9 +838,9 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/119-github-actions-ci-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/119-github-actions-ci-rules.mdc
 - #file:ctf/railway.toml
 - #file:ctf/docs/developer/BASELINE_HANDOFF_BF01_BF04.md
 
@@ -877,9 +877,9 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/119-github-actions-ci-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/119-github-actions-ci-rules.mdc
 - #file:ctf/packages/web/vercel.json
 - #file:ctf/docs/developer/BASELINE_HANDOFF_BF01_BF04.md
 
@@ -916,11 +916,11 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:.github/instructions/104-mobile-react-native-android-rules.mdc
-- #file:.github/instructions/106-expo-eas-mobile-workflow-rules.mdc
-- #file:.github/instructions/111-deployment-topology-rules.mdc
-- #file:.github/instructions/123-environment-configuration-rules.mdc
-- #file:.github/instructions/119-github-actions-ci-rules.mdc
+- #file:.claude/rules/104-mobile-react-native-android-rules.mdc
+- #file:.claude/rules/106-expo-eas-mobile-workflow-rules.mdc
+- #file:.claude/rules/111-deployment-topology-rules.mdc
+- #file:.claude/rules/123-environment-configuration-rules.mdc
+- #file:.claude/rules/119-github-actions-ci-rules.mdc
 - #file:ctf/docs/mobile/EXPO_CLOUD_WORKFLOW.md
 - #file:ctf/docs/developer/BASELINE_HANDOFF_BF01_BF04.md
 

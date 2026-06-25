@@ -21,10 +21,10 @@ Workforce is a deterministic workforce planning and reporting plugin with canoni
 
 Planning constraints applied:
 
-1. Inventory/checklist lifecycle follows `.github/instructions/120-plugin-feature-inventory-lifecycle-rules.mdc`.
-2. Metric definitions and rewrite planning align to `.github/instructions/121-canonical-metric-registry-rules.mdc`.
-3. Schema and contract planning align to `.github/instructions/122-schema-drift-predeployment-rules.mdc`.
-4. Plugin command/access/audit planning aligns to `.github/instructions/200-plugin-command-contract-templates.mdc` and templates `201`/`202`/`203`.
+1. Inventory/checklist lifecycle follows `.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc`.
+2. Metric definitions and rewrite planning align to `.claude/rules/121-canonical-metric-registry-rules.mdc`.
+3. Schema and contract planning align to `.claude/rules/122-schema-drift-predeployment-rules.mdc`.
+4. Plugin command/access/audit planning aligns to `.claude/rules/200-plugin-command-contract-templates.mdc` and templates `201`/`202`/`203`.
 
 ---
 
@@ -86,9 +86,9 @@ Planning constraints applied:
 
 All command contracts must conform to:
 
-- `.github/instructions/201-plugin-command-schema-template.mdc`
-- `.github/instructions/202-plugin-access-policy-schema-template.mdc`
-- `.github/instructions/203-plugin-audit-schema-template.mdc`
+- `.claude/rules/201-plugin-command-schema-template.mdc`
+- `.claude/rules/202-plugin-access-policy-schema-template.mdc`
+- `.claude/rules/203-plugin-audit-schema-template.mdc`
 
 Command groups:
 
@@ -291,16 +291,16 @@ Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added 
     - A reviewed/corrected planning note is committed and linked from implementation kickoff PR.
 - [ ] Lock plugin command contract shape.
   - Acceptance criteria:
-    - Workforce commands conform to `.github/instructions/201-plugin-command-schema-template.mdc`.
+    - Workforce commands conform to `.claude/rules/201-plugin-command-schema-template.mdc`.
 - [ ] Lock access policy contract shape.
   - Acceptance criteria:
-    - Workforce access policies conform to `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
+    - Workforce access policies conform to `.claude/rules/202-plugin-access-policy-schema-template.mdc`.
 - [ ] Lock audit contract shape.
   - Acceptance criteria:
-    - Workforce audit events conform to `.github/instructions/203-plugin-audit-schema-template.mdc`.
+    - Workforce audit events conform to `.claude/rules/203-plugin-audit-schema-template.mdc`.
 - [ ] Confirm template bundle compliance.
   - Acceptance criteria:
-    - Planning evidence references `.github/instructions/200-plugin-command-contract-templates.mdc` and all required template files.
+    - Planning evidence references `.claude/rules/200-plugin-command-contract-templates.mdc` and all required template files.
 - [ ] Lock route shape and naming decisions.
   - Acceptance criteria:
     - Drilldowns are explicit routes: `reports/skill-level/:skillLevel` and `reports/sector/:sector`.
@@ -314,7 +314,7 @@ Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added 
 
 - [ ] Define and lock `recruited` canonical metric in `ctf/config/canonical_metrics.yaml`.
   - Acceptance criteria:
-    - Metric entry includes required fields from `.github/instructions/121-canonical-metric-registry-rules.mdc` (`id`, `name`, `description`, `owner`, `data_type`, `unit`, `calculation`, `inputs`, `example_values`, `last_updated`).
+    - Metric entry includes required fields from `.claude/rules/121-canonical-metric-registry-rules.mdc` (`id`, `name`, `description`, `owner`, `data_type`, `unit`, `calculation`, `inputs`, `example_values`, `last_updated`).
 - [ ] Lock recruited derivation semantics.
   - Acceptance criteria:
     - Definition states automatic derivation from Directory profile create/update writes only.
@@ -345,7 +345,7 @@ Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added 
     - Duplicate replays produce idempotent no-op behavior.
 - [ ] Run schema drift checks and capture evidence.
   - Acceptance criteria:
-    - Drift validation aligns to `.github/instructions/122-schema-drift-predeployment-rules.mdc` and is attached in PR evidence.
+    - Drift validation aligns to `.claude/rules/122-schema-drift-predeployment-rules.mdc` and is attached in PR evidence.
 - [ ] Enforce schema/contract version compatibility decision.
   - Acceptance criteria:
     - PR declares `Schema Drift: none`, `compatible`, or `versioned-breaking` with required details.

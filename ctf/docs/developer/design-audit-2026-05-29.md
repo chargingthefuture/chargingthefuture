@@ -2,7 +2,7 @@
 
 Scope: full sweep of all 174 mockups in the `design/` submodule (`survivor-hub` + `landing`), pinned at design commit `98058a5`.
 Method: multi-agent audit (one reader per batch of 8 files) + synthesis, plus a follow-up pass for one batch that failed structured output. Checks: currency/fiat pegging, banned "phase" words, brand-voice / trauma-informed tone, copy quality, `// design-sync` marker contract, loading-message consistency, and 4-state completeness.
-Model: the app produces this list; all fixes are applied by the Replit design agent in the design repo (one-way design->app contract, see `.github/instructions/128-design-sync-workflow-rules.mdc`). The app never edits files under `design/`.
+Model: the app produces this list; all fixes are applied by the Replit design agent in the design repo (one-way design->app contract, see `.claude/rules/128-design-sync-workflow-rules.mdc`). The app never edits files under `design/`.
 
 Totals (synthesis pass, 166/174 files): 191 raw findings · 11 components with state gaps · 4 files missing the marker. Plus the 8-file addendum below.
 

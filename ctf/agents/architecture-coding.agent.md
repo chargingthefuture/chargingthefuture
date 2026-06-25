@@ -4,7 +4,7 @@
 Reviews and enforces architecture and coding standards. Ensures code quality, readability, and maintainability.
 
 ## Responsibilities
-- Enforce architecture and coding standards from copilot-instructions.md
+- Enforce architecture and coding standards from CLAUDE.md
 - Review code for quality, readability, and maintainability
 - Approve or request changes for code submissions
 

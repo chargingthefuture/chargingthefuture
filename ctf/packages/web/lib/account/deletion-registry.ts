@@ -100,7 +100,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       soft('directory_profiles', 'claimed_by_user_id', 'deleted_at', 'The directory profile you claimed.'),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
-      // directory_profile_tags is keyed by profile_id (cascades with the profile);
+      // directory_profile_skills, directory_profile_tags, and directory_profile_proposed_skills are
+      // keyed by profile_id (cascade with the profile, cleared in deleteOwnDirectoryProfile);
       // directory_announcements are admin-authored.
     ],
   },
