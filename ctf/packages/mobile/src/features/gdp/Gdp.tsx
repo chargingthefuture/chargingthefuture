@@ -9,7 +9,7 @@ import {
   type DimensionValue,
 } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
-import { fetchGdpCurrentReport, pickMetric, pickMetricIsEstimate, GdpReport } from './api';
+import { fetchGdpCurrentReport, pickMetric, pickMetricIsEstimate, GdpReport, GdpSourceContribution } from './api';
 
 // Shared estimate copy — mirrors the web GDP shell (gdp-shared.ts) so the wording
 // stays identical.
@@ -200,7 +200,7 @@ function GdpMainView({ report }: { report: GdpReport }) {
           />
         )}
         {activeNav === 'sectors' && (
-          <GdpSectorsTab />
+          <GdpSectorsTab sources={report.sources ?? []} fmtIndex={fmtIndex} />
         )}
         {activeNav === 'trend' && (
           <GdpTrendTab valueIndex={valueIndex} fmtIndex={fmtIndex} />
@@ -302,19 +302,53 @@ function GdpOverviewTab({
 }
 
 // ─── Sectors tab ─────────────────────────────────────────────────────────────
-function GdpSectorsTab() {
-  /*
-   * Sector breakdown (Professional Services, Technology & Coding, etc.) is not
-   * returned by /api/gdp/report/current — no metric keys map to sector splits.
-   * Omitted per real-data-only rule; honest empty state shown instead.
-   */
+// Per-source value breakdown: each registered recognition source's contribution to the live Community
+// Value Index, largest first. Sources with no recognized value are dropped; an honest empty state shows
+// when nothing has settled value yet. Mirrors the web "Value by Source" panel.
+function GdpSectorsTab({
+  sources,
+  fmtIndex,
+}: {
+  sources: GdpSourceContribution[];
+  fmtIndex: (_n: number | null) => string;
+}) {
+  const contributing = sources
+    .filter((s) => Number.isFinite(s.valueIndex) && s.valueIndex > 0)
+    .sort((a, b) => b.valueIndex - a.valueIndex);
+
+  if (contributing.length === 0) {
+    return (
+      <View style={styles.sectorEmpty}>
+        <Text style={styles.sectorEmptyIcon}>📊</Text>
+        <Text style={styles.sectorEmptyTitle}>Value by Source</Text>
+        <Text style={styles.sectorEmptyDesc}>
+          No recognized non-incentive value yet. Completed paid services and validated work appear here as
+          they settle.
+        </Text>
+      </View>
+    );
+  }
+
+  const max = contributing.reduce((m, s) => Math.max(m, s.valueIndex), 0);
   return (
-    <View style={styles.sectorEmpty}>
-      <Text style={styles.sectorEmptyIcon}>📊</Text>
-      <Text style={styles.sectorEmptyTitle}>GDP by Sector</Text>
-      <Text style={styles.sectorEmptyDesc}>
-        Sector breakdown data is not yet available in the published report.
-      </Text>
+    <View>
+      <Text style={styles.trendTitle}>Value by Source</Text>
+      {contributing.map((s) => (
+        <View key={s.pluginSlug} style={styles.sourceCard}>
+          <View style={styles.sourceRow}>
+            <Text style={styles.sourceName}>{s.label}</Text>
+            <Text style={styles.sourceValue}>{fmtIndex(s.valueIndex)}</Text>
+          </View>
+          <View style={styles.sourceBarTrack}>
+            <View
+              style={[
+                styles.sourceBarFill,
+                { width: `${max > 0 ? Math.round((s.valueIndex / max) * 100) : 0}%` as DimensionValue },
+              ]}
+            />
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
@@ -336,7 +370,7 @@ function GdpTrendTab({
     <>
       <Text style={styles.trendTitle}>Weekly Growth</Text>
       <View style={styles.trendCard}>
-        <Text style={styles.trendLabel}>Current total (latest published report)</Text>
+        <Text style={styles.trendLabel}>Current total (live)</Text>
         <Text style={styles.trendValue}>{fmtIndex(valueIndex)}</Text>
         <Text style={styles.trendNote}>
           Weekly trend series is not yet available in the current report.
@@ -401,8 +435,8 @@ function GdpHomeTab({
       </View>
       <Text style={styles.mapCaption}>
         {hasData
-          ? 'Regions show where the survivor economy is active. The figure above is the community-wide USD estimate — per-country breakdowns are not published yet.'
-          : 'No published GDP report yet. The map activates once an aggregate figure is published.'}
+          ? 'Regions show where the survivor economy is active. The figure above is the community-wide Community Value Index — per-country breakdowns are not available yet.'
+          : 'No recognized activity yet. The map activates once the community has recognized value.'}
       </Text>
     </View>
   );
@@ -669,6 +703,43 @@ const styles = StyleSheet.create({
   summaryDate: {
     fontSize: 12,
     color: TEXT_DIM,
+  },
+  // Value by source
+  sourceCard: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginBottom: 10,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sourceName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: TEXT_BODY,
+  },
+  sourceValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLOR,
+  },
+  sourceBarTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    overflow: 'hidden',
+  },
+  sourceBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: COLOR,
   },
   // Sectors empty
   sectorEmpty: {

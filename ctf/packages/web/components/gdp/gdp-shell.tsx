@@ -6,7 +6,19 @@ import { ChevronLeft, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
-import { getGdpTokens, GDP_HEADLINE_METRIC_KEY, type GdpMetricRow, type GdpMetrics, type GdpReport, type GdpTab, type GdpTokens } from "./gdp-shared";
+import {
+  getGdpTokens,
+  shapeLiveGdpMetrics,
+  shapeSourceSectors,
+  COMMUNITY_VALUE_INDEX_METRIC_KEY,
+  type GdpCountry,
+  type GdpMetricRow,
+  type GdpMetrics,
+  type GdpReportPayload,
+  type GdpSector,
+  type GdpTab,
+  type GdpTokens,
+} from "./gdp-shared";
 import { GdpLoading } from "./gdp-loading";
 import { GdpIconRail } from "./gdp-icon-rail";
 import { GdpSidebar } from "./gdp-sidebar";
@@ -52,10 +64,10 @@ function GdpContent({
 }: {
   t: GdpTokens;
   error: string | null;
-  report: GdpReport | null;
+  report: GdpReportPayload | null;
   tab: GdpTab;
-  sectors: GdpReport["sectors"];
-  countries: GdpReport["countries"];
+  sectors: GdpSector[];
+  countries: GdpCountry[];
   metrics: GdpMetrics;
   metricRows: GdpMetricRow[];
 }) {
@@ -67,14 +79,14 @@ function GdpContent({
   return <GdpMap metricRows={metricRows} />;
 }
 
-// Read the published headline GDP metric off the raw report payload and report
-// whether it is flagged a normalized USD estimate. Returns false unless the report
-// actually carries that flag, so the estimate treatment only renders where the data
-// says it is an estimate. Never inspects per-user figures — only the aggregate metric.
+// Read the live headline figure (the Community Value Index) off the report payload and report whether it
+// is flagged a normalized estimate. Returns false unless the row actually carries that flag, so the
+// estimate treatment only renders where the data says it is an estimate. Never inspects per-user figures
+// — only the aggregate metric.
 function deriveIsEstimate(rawMetrics: unknown): boolean {
   if (!Array.isArray(rawMetrics)) return false;
   return (rawMetrics as GdpMetricRow[]).some(
-    (m) => m && m.metricKey === GDP_HEADLINE_METRIC_KEY && m.isEstimate === true,
+    (m) => m && m.metricKey === COMMUNITY_VALUE_INDEX_METRIC_KEY && m.isEstimate === true,
   );
 }
 
@@ -82,11 +94,11 @@ export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [tab, setTab] = useState<GdpTab>("dashboard");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<GdpReport | null>(null);
+  const [report, setReport] = useState<GdpReportPayload | null>(null);
   const [isEstimate, setIsEstimate] = useState(false);
   // Raw per-metric rows from the report payload. Kept separately from the shaped
   // GdpMetrics so the world map can read the real community-wide aggregates
-  // (gdp_total_revenue, weekly_active_users) by key. No per-country data exists.
+  // (gdp_value_index, weekly_active_users) by key. No per-country data exists.
   const [metricRows, setMetricRows] = useState<GdpMetricRow[]>([]);
   const isMobile = useIsMobile();
   const { theme } = useTheme();
@@ -100,11 +112,11 @@ export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       try {
         const res = await fetch("/api/gdp/report/current", { signal: controller.signal });
         if (!res.ok) throw new Error("Failed to load GDP report");
-        const data = (await res.json()) as { report?: (GdpReport & { metrics?: unknown }) | null };
+        const data = (await res.json()) as { report?: GdpReportPayload | null };
         if (!controller.signal.aborted) {
           setReport(data.report ?? null);
           setIsEstimate(deriveIsEstimate(data.report?.metrics));
-          setMetricRows(Array.isArray(data.report?.metrics) ? (data.report?.metrics as GdpMetricRow[]) : []);
+          setMetricRows(Array.isArray(data.report?.metrics) ? data.report.metrics : []);
         }
       } catch (e: unknown) {
         if (controller.signal.aborted) return;
@@ -119,9 +131,9 @@ export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 
   if (loading) return <GdpLoading />;
 
-  const sectors = report?.sectors ?? [];
-  const countries = report?.countries ?? [];
-  const metrics: GdpMetrics = { ...(report?.metrics ?? {}), isEstimate };
+  const sectors = shapeSourceSectors(report?.sources);
+  const countries: GdpCountry[] = [];
+  const metrics: GdpMetrics = shapeLiveGdpMetrics(metricRows, isEstimate);
 
   if (isMobile) {
     const tabs: { key: GdpTab; label: string }[] = [

@@ -26,9 +26,19 @@ export type GdpPublication = {
   status: 'draft' | 'published';
 };
 
+// One registered recognition source's contribution to the live Community Value Index. Mirrors the web
+// payload from GET /api/gdp/report/current; rendered as the per-source value breakdown.
+export type GdpSourceContribution = {
+  pluginSlug: string;
+  label: string;
+  valueIndex: number;
+};
+
 export type GdpReport = {
   publication: GdpPublication;
   metrics: GdpMetric[];
+  // Optional so older payloads without the field still parse; the live report always includes it.
+  sources?: GdpSourceContribution[];
 };
 
 type GdpCurrentResponse =

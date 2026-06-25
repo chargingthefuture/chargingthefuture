@@ -42,7 +42,19 @@ const SOURCES = [
             FROM service_credits_governance_events
             WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split'`,
   },
-  // Add more as approved. Keep eligible settled spend only.
+  {
+    // Foundation metered "Connect now" service calls: a caller pays a provider their locked rate per
+    // minute-block for a 1:1 consultation. foundation_call_sessions snapshots the locked rate and the
+    // paid-block count, so blocks_charged * rate_credits_locked is the total ServiceCredits ('SC') of
+    // delivered call value. Read Foundation's own call record (not the SC ledger, which tags these
+    // caller->provider moves accounting_scope 'service_credits_non_gdp'); only calls that charged a
+    // block count. This is service delivered, not an incentive.
+    pluginSlug: 'foundation',
+    sql: `SELECT 'SC' AS currency_code, SUM(blocks_charged * rate_credits_locked)::numeric AS total
+            FROM foundation_call_sessions
+            WHERE blocks_charged > 0 AND rate_credits_locked IS NOT NULL`,
+  },
+  // Add more as approved. Keep eligible settled spend only — never incentives or plain transfers.
 ];
 
 function currentWeekStartIso() {
