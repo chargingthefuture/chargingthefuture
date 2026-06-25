@@ -67,6 +67,26 @@ contracts:
     idempotency: true
 
   - pluginId: service-credits
+    command: wallet.transactions.list
+    version: 1.0.0
+    description: List the calling member's own recent wallet ledger entries (mints, transfers in/out, escrow holds/releases, treasury fees, allocations), newest first. Read-only and scoped to the caller's wallet.
+    inputSchema:
+      walletId:
+        type: string
+        required: true
+      limit:
+        type: number
+        required: false
+    outputSchema:
+      entries:
+        type: array
+    dataAccess:
+      - service_credits_ledger_entries
+    purpose: balance_visibility
+    retentionClass: derived_medium_lived
+    idempotency: true
+
+  - pluginId: service-credits
     command: transfer.create
     version: 1.1.0
     description: Create a credit transfer between source and destination wallets under plugin-path constraints. The optional rail selects whether the sender pays from balance or on mutual credit (going negative down to their credit limit).

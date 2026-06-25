@@ -216,6 +216,50 @@ export async function getOrCreateWallet(userId: string) {
   return mapWallet(upsert.rows[0]);
 }
 
+export type WalletLedgerEntry = {
+  id: string;
+  entryType: string;
+  amount: number;
+  referenceType: string;
+  referenceId: string;
+  createdAt: string;
+};
+
+// A member's own wallet history, read straight from the authoritative double-entry record
+// (service_credits_ledger_entries). Every mint/transfer/escrow/fee/dispute path writes a row here in
+// the same transaction as the balance change, so these entries reconcile to the wallet's available +
+// escrow balance. Read-only; scoped to the caller's user_id. This is the FULL ledger — mints,
+// transfers in/out, escrow holds/releases, treasury fees, seed allocations — not just governance
+// mints (service_credits_governance_events holds only the mint/burn subset, which is why a balance can
+// exceed the sum of mint events when transfers or allocations are involved).
+export async function listWalletLedgerEntries(userId: string, limit = 50): Promise<WalletLedgerEntry[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 200);
+  const result = await queryDb<{
+    id: string;
+    entry_type: string;
+    amount: string;
+    reference_type: string;
+    reference_id: string;
+    created_at: Date;
+  }>(
+    `SELECT id::text, entry_type, amount::text, reference_type, reference_id, created_at
+       FROM service_credits_ledger_entries
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2`,
+    [userId, safeLimit],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    entryType: row.entry_type,
+    amount: Number(row.amount),
+    referenceType: row.reference_type,
+    referenceId: row.reference_id,
+    createdAt: row.created_at.toISOString(),
+  }));
+}
+
 export async function createTransfer(input: {
   senderUserId: string;
   recipientUserId: string;
