@@ -1011,6 +1011,12 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   reviewed_by_user_id TEXT,
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
+  -- Duplicate-identity guard: a normalized Quora URL earns the verification reward on ONE account.
+  -- When a second account is approved with a URL another account already holds, its reward is held
+  -- (reward_withheld_at) for an admin determination instead of auto-granted. reward_revoked_at marks a
+  -- reward an admin clawed back (the "loser" of a determination, or a perp).
+  reward_withheld_at TIMESTAMPTZ,
+  reward_revoked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1028,6 +1034,8 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reward_withheld_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reward_revoked_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- The app upserts a submission with `ON CONFLICT (user_id)` (createOrUpdateUnlockSubmission). That
@@ -1051,6 +1059,10 @@ WHERE ctid IN (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
   ON unlock_verification_submissions (user_id);
+-- Supports the duplicate-identity guard: find every account that has claimed a given normalized Quora
+-- URL (and which one currently holds the reward) without scanning the table.
+CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
+  ON unlock_verification_submissions (quora_profile_url_normalized);
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
