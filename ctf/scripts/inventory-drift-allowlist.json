@@ -6,9 +6,7 @@
     "gdp_publications",
     "legacy_profile_redirects",
     "peer_programming_admin_audit_trail",
-    "service_credits_ledger_entries",
-    "weekly_performance_audit_trail",
-    "weekly_performance_metrics"
+    "service_credits_ledger_entries"
   ],
   "routes": [
     "/api/admin/account-restrictions/audit",
