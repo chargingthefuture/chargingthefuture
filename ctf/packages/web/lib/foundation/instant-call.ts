@@ -21,7 +21,7 @@ import type { FoundationInstantCall, FoundationCallRingStatus } from './types';
 //   ringing --timeout(~60s)--> timed_out (terminal)
 //   answered --end (either party)--> ended (terminal)
 //
-// Money model (task 4): DIRECT per-block transfer, no escrow. The caller (buyer) is always the sender and
+// Billing model (task 4): DIRECT per-block transfer, no escrow. The caller (buyer) is always the sender and
 // the provider (callee) is always the recipient. The first block is charged on answer; each subsequent
 // block is charged by the caller calling extendInstantCall. Every charge uses the canonical createTransfer
 // peer-to-peer primitive, which runs in its OWN db transaction and is idempotent on (sender,
@@ -29,8 +29,8 @@ import type { FoundationInstantCall, FoundationCallRingStatus } from './types';
 // transfer replays, no double charge). createTransfer manages its own transaction, so we never nest it
 // inside withDbTransaction.
 //
-// Money-safety invariants enforced here:
-//   - Only answer + extend ever move money; ringing charges nothing.
+// Credit-safety invariants enforced here:
+//   - Only answer + extend ever move credits; ringing charges nothing.
 //   - The provider's rate + interval are snapshotted onto the row at answer (rate_credits_locked /
 //     interval_minutes_locked) and every later charge uses the LOCKED rate, never the live rate.
 //   - A block is never charged twice (deterministic ...-block-N key + the blocks_charged guard).
@@ -271,7 +271,7 @@ export async function ringInstantCall(input: {
       throw new Error('thread_not_found');
     }
 
-    // Ring pre-check: ringing itself moves no money, but reject early if the call can't even fund the
+    // Ring pre-check: ringing itself moves no credits, but reject early if the call can't even fund the
     // first block. The provider must have opted in with a valid whole-credit rate, and the caller's
     // available balance must cover at least one block at the provider's CURRENT rate. (The rate is only
     // LOCKED at answer; this pre-check uses the live rate purely to avoid placing a ring that could never
@@ -418,7 +418,7 @@ async function chargeBlock(input: {
 }
 
 // Mark an answered/ringing call ended with a billing reason, in its own short transaction. Used when a
-// charge fails for lack of funds (so the call ends cleanly and no money moved) or an extend hits the cap.
+// charge fails for lack of funds (so the call ends cleanly and no credits moved) or an extend hits the cap.
 async function endCallWithReason(callId: string, reason: FoundationCallEndedReason): Promise<FoundationCallRow> {
   return withDbTransaction(async (client) => {
     const updated = await client.query<FoundationCallRow>(
@@ -442,7 +442,7 @@ async function endCallWithReason(callId: string, reason: FoundationCallEndedReas
 // charge runs through createTransfer (its OWN transaction + idempotency, so it is NOT nested); then a
 // second transaction records the answer. The deterministic ...-block-1 key makes an answer retry safe.
 //   - On 'insufficient_balance': the call is moved to a terminal ended state (reason
-//     'caller_insufficient_funds'), no money moves, and 'caller_insufficient_funds' is thrown so the route
+//     'caller_insufficient_funds'), no credits move, and 'caller_insufficient_funds' is thrown so the route
 //     can surface a clear error. The call is NEVER opened.
 //   - On success: the call becomes answered/active with first_block_charged = TRUE, blocks_charged = 1, the
 //     rate/interval locked, paid_through_at = answered_at + interval, and last_transfer_id set.
@@ -526,7 +526,7 @@ export async function answerInstantCall(input: {
 // Charge the next block (issue #808 task 4). Caller-only. Validates the call is active and that the
 // buyer-set cap has room (blocks_charged < authorized_blocks); otherwise rejects with 'block_cap_reached'.
 // Charges block (blocks_charged + 1) at the LOCKED rate via createTransfer. On 'insufficient_balance' the
-// call ends cleanly (reason 'caller_insufficient_funds') and no money moves. On success blocks_charged is
+// call ends cleanly (reason 'caller_insufficient_funds') and no credits move. On success blocks_charged is
 // incremented, paid_through_at is advanced by one interval, and last_transfer_id is set.
 export async function extendInstantCall(input: {
   callId: string;
