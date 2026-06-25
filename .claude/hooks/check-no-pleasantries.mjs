@@ -29,7 +29,7 @@ const BANNED = [
 ];
 
 // Owner-maintained excluded vocabulary — the single canonical list of jargon / misused words
-// agents must not use in this repo. .github/instructions/098-agent-communication-rules.mdc points
+// agents must not use in this repo. .claude/rules/098-agent-communication-rules.mdc points
 // here instead of keeping a second copy that drifts. Each entry pairs the banned term with its
 // plain replacement so the block message can name what to use instead.
 const VOCABULARY = [

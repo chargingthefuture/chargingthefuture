@@ -35,6 +35,7 @@
     "migrate:all": "pnpm run migrate:schema",
     "schema:report-live-drift": "bash ./scripts/audit_schema_drift.sh",
     "schema:audit-queries": "node ./scripts/audit-schema-queries.mjs",
+    "check:inventory-drift": "node ./scripts/check-inventory-drift.mjs",
     "formance:fetch:standalone": "node ./scripts/fetchFormanceStandalone.mjs",
     "formance:up:standalone": "pnpm run formance:fetch:standalone && docker compose -f ./ops/formance/upstream-standalone/docker-compose.yml up -d",
     "formance:down:standalone": "bash ./scripts/formanceStandaloneDown.sh",

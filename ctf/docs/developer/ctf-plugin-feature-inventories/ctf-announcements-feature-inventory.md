@@ -76,9 +76,9 @@ Approved suggestions incorporated:
 
 All command contracts must conform to templates from:
 
-- `.github/instructions/201-plugin-command-schema-template.mdc`
-- `.github/instructions/202-plugin-access-policy-schema-template.mdc`
-- `.github/instructions/203-plugin-audit-schema-template.mdc`
+- `.claude/rules/201-plugin-command-schema-template.mdc`
+- `.claude/rules/202-plugin-access-policy-schema-template.mdc`
+- `.claude/rules/203-plugin-audit-schema-template.mdc`
 
 Command groups:
 
@@ -226,13 +226,13 @@ references them, so they are removed here to match the real data model.
 
 - [x] Define Announcements command contracts.
   - Acceptance criteria:
-    - Commands comply with `.github/instructions/201-plugin-command-schema-template.mdc`.
+    - Commands comply with `.claude/rules/201-plugin-command-schema-template.mdc`.
 - [x] Define Announcements access policy contracts.
   - Acceptance criteria:
-    - Policies comply with `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
+    - Policies comply with `.claude/rules/202-plugin-access-policy-schema-template.mdc`.
 - [x] Define Announcements audit contracts.
   - Acceptance criteria:
-    - Audit events comply with `.github/instructions/203-plugin-audit-schema-template.mdc` for allow/deny parity.
+    - Audit events comply with `.claude/rules/203-plugin-audit-schema-template.mdc` for allow/deny parity.
 - [x] Lock naming normalization and legacy alias handling.
   - Acceptance criteria:
     - New docs/contracts use **Announcements** spelling; legacy typo alias note is documented for compatibility.

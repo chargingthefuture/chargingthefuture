@@ -1,6 +1,6 @@
 # Design Audit: Replit Mockup vs Shell Code
 
-    _Generated: 2026-05-19 by design agent per `.github/instructions/126-design-mockup-implementation-rules.mdc`_
+    _Generated: 2026-05-19 by design agent per `.claude/rules/126-design-mockup-implementation-rules.mdc`_
     _Last updated: 2026-05-19 — LevelUp shell implemented_
 
     ---

@@ -16,7 +16,7 @@ on desktop**.
 
 Making the app adapt to small screens is a layout change to user-facing screens,
 which normally requires a design pass first (see
-`.github/instructions/127-design-pass-gating-rules.mdc`). The design submodule only
+`.claude/rules/127-design-pass-gating-rules.mdc`). The design submodule only
 holds desktop web designs; the narrow-screen `Mobile*` mockups there are scoped to
 the Android app, not the web (per `ctf/agents/design.agent.md`), so there is no
 authoritative responsive-web design to build against.
@@ -27,7 +27,7 @@ adapt to small screens. This note records the bypass as the rule requires.
 
 Proper responsive-web designs from the Replit design agent remain a follow-up. When
 they land, the per-screen polish listed below should be implemented against them
-(see `.github/instructions/126-design-mockup-implementation-rules.mdc`).
+(see `.claude/rules/126-design-mockup-implementation-rules.mdc`).
 
 ## What changed
 

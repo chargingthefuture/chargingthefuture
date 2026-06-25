@@ -125,9 +125,9 @@ Architecture decisions in effect:
 
 All command contracts must conform to templates from:
 
-- `.github/instructions/201-plugin-command-schema-template.mdc`
-- `.github/instructions/202-plugin-access-policy-schema-template.mdc`
-- `.github/instructions/203-plugin-audit-schema-template.mdc`
+- `.claude/rules/201-plugin-command-schema-template.mdc`
+- `.claude/rules/202-plugin-access-policy-schema-template.mdc`
+- `.claude/rules/203-plugin-audit-schema-template.mdc`
 
 **Timeline (unified):**
 
@@ -314,13 +314,13 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 - [x] Lock Feed command contracts.
   - Acceptance criteria:
-    - Commands conform to `.github/instructions/201-plugin-command-schema-template.mdc`.
+    - Commands conform to `.claude/rules/201-plugin-command-schema-template.mdc`.
 - [x] Lock Feed access policy contracts.
   - Acceptance criteria:
-    - Access policy conforms to `.github/instructions/202-plugin-access-policy-schema-template.mdc` with role/consent/region constraints.
+    - Access policy conforms to `.claude/rules/202-plugin-access-policy-schema-template.mdc` with role/consent/region constraints.
 - [x] Lock Feed audit contracts.
   - Acceptance criteria:
-    - Audit events conform to `.github/instructions/203-plugin-audit-schema-template.mdc` with allow/deny parity.
+    - Audit events conform to `.claude/rules/203-plugin-audit-schema-template.mdc` with allow/deny parity.
 - [x] Normalize Announcements spelling across new docs and APIs where feasible.
   - Acceptance criteria:
     - New implementation removes legacy typo

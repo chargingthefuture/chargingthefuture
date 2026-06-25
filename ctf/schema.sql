@@ -533,6 +533,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
   normalized_skill TEXT NOT NULL,
   skill_label TEXT NOT NULL,
   source_submission_id UUID,
+  -- Which app surfaced this proposal, for provenance in the filed GitHub issue. This is the
+  -- single cross-app intake for "skill not in the taxonomy yet": SkillsHunt nominations and the
+  -- Directory "skill not listed" box both write here. 'skills-hunt' is the default so existing
+  -- rows (all from SkillsHunt) are labelled correctly without a backfill.
+  source TEXT NOT NULL DEFAULT 'skills-hunt',
   suggested_sector TEXT,
   suggested_occupation TEXT,
   issue_number INTEGER,
@@ -541,6 +546,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'skills-hunt';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_proposed_skill_promotions_normalized ON skills_hunt_proposed_skill_promotions (normalized_skill);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_rounds (status, starts_at DESC, ends_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
@@ -2189,6 +2195,27 @@ CREATE TABLE IF NOT EXISTS directory_profile_tags (
 ALTER TABLE IF EXISTS directory_profile_tags ADD COLUMN IF NOT EXISTS profile_id UUID;
 ALTER TABLE IF EXISTS directory_profile_tags ADD COLUMN IF NOT EXISTS tag_id UUID;
 
+-- Free-text "skill not listed" entries a member adds to their own profile through the self-edit
+-- form. They are NOT canonical taxonomy skills: each renders as a muted "pending review" chip
+-- (alongside SkillsHunt-nominated pending skills) until an admin promotes it into the taxonomy.
+-- Keyed by profile_id so it cascades with the profile on deletion (like directory_profile_skills).
+CREATE TABLE IF NOT EXISTS directory_profile_proposed_skills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL,
+  skill_label TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS profile_id UUID;
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS skill_label TEXT;
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS directory_profile_proposed_skills_profile_idx ON directory_profile_proposed_skills (profile_id);
+CREATE UNIQUE INDEX IF NOT EXISTS directory_profile_proposed_skills_unique_label ON directory_profile_proposed_skills (profile_id, lower(skill_label));
+
 CREATE TABLE IF NOT EXISTS directory_user_extension (
   user_id TEXT PRIMARY KEY,
   profile_visibility TEXT NOT NULL DEFAULT 'workspace',
@@ -2802,6 +2829,50 @@ ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS requeste
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'created';
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3). The base table above models a
+-- generic call session; these columns add the ring -> answer | declined | timed_out -> in_call -> ended
+-- state machine for the opt-in metered "Connect now" call. caller_user_id is who rang, callee_user_id is
+-- the provider being rung. ring_status is the lifecycle state. ring_expires_at is when an unanswered ring
+-- auto-times-out (~60s). answered_at / ended_at / ended_by_user_id record the transitions.
+-- first_block_charged is the clean seam for issue #808 task 4 (per-block billing): task 4 flips it true
+-- when the first block is charged on answer. NO billing happens here -- this column is a placeholder the
+-- billing task hooks into.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS caller_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS callee_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ring_status TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ring_expires_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS first_block_charged BOOLEAN NOT NULL DEFAULT FALSE;
+-- Issue #808 task 4 (per-block billing for the metered "Connect now" call). Each interval-minute block is
+-- charged as a direct ServiceCredits transfer from caller_user_id to callee_user_id (no escrow). The
+-- provider's rate + interval are SNAPSHOTTED onto the row at answer time (rate_credits_locked /
+-- interval_minutes_locked) so a provider changing their rate mid-call cannot affect an in-progress call.
+-- authorized_blocks is the buyer-set cap chosen at ring time (the call can never extend past it in v1).
+-- blocks_charged counts paid blocks; paid_through_at = answered_at + blocks_charged * interval and drives
+-- the display countdown plus the lazy paid-window expiry (no background job). last_transfer_id is the most
+-- recent ServiceCredits transfer id, kept only for trace. The money itself lives in the service_credits_*
+-- tables (financial-record retention) -- these columns only describe the call's billing state.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS rate_credits_locked INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS interval_minutes_locked INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS authorized_blocks INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS blocks_charged INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS paid_through_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS last_transfer_id TEXT;
+-- Why an answered/ringing call ended, when it was not a plain hang-up: 'caller_insufficient_funds' (a
+-- block charge failed for lack of balance), 'paid_window_elapsed' (the prepaid time ran out and the caller
+-- did not extend), or 'block_cap_reached' (an extend was attempted past the buyer-set cap). NULL for a
+-- normal end/decline/timeout.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_reason TEXT;
+-- One live ring per callee at a time: a partial unique index over the callee while the ring is still
+-- ringing prevents two simultaneous incoming calls stacking on the same provider.
+CREATE UNIQUE INDEX IF NOT EXISTS foundation_call_sessions_active_ring_per_callee
+  ON foundation_call_sessions (callee_user_id)
+  WHERE ring_status = 'ringing';
+-- The callee's incoming-ring inbox poll and the timeout sweep both filter on ring_status; index it.
+CREATE INDEX IF NOT EXISTS foundation_call_sessions_ring_status_idx
+  ON foundation_call_sessions (ring_status, ring_expires_at);
 
 CREATE TABLE IF NOT EXISTS foundation_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
