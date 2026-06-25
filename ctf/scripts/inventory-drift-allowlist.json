@@ -13,9 +13,6 @@
     "lighthouse_user_extension",
     "peer_programming_admin_audit_trail",
     "service_credits_ledger_entries",
-    "skills_taxonomy_change_events",
-    "skills_taxonomy_consumer_bindings",
-    "skills_taxonomy_flattened_projection",
     "weekly_performance_audit_trail",
     "weekly_performance_metrics"
   ],
