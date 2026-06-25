@@ -17,7 +17,9 @@
 // It also marks the matching proposal rows as 'promoted' (by normalized skill label) when
 // present, so the trackers reflect reality: both the cross-app skills_hunt_proposed_skill_promotions
 // intake and any directory_profile_proposed_skills row a member added through the Directory
-// "skill not listed" box. Flipping the directory row clears its "pending review" chip.
+// "skill not listed" box. For the Directory rows it additionally auto-attaches the now-official
+// taxonomy skill to each proposing member's profile (directory_profile_skills), so the member's
+// "pending review" chip becomes the real taxonomy chip instead of disappearing.
 //
 // The promotions list below is the single source of truth for owner-approved promotions.
 // Add a new approved promotion by appending an entry; keep it small and curated.
@@ -104,23 +106,55 @@ async function markProposalsPromoted(client, normalizedSkills) {
 }
 
 // Resolve member-added Directory "skill not listed" entries once the same label is promoted
-// into the taxonomy. Flipping the row to 'promoted' drops it out of the profile's pending set
-// (loadProfileProposedSkills reads status = 'pending'), so the muted "pending review" chip
-// clears — the member can then pick the now-official skill from the taxonomy list.
-async function markDirectoryProposalsPromoted(client, normalizedSkills) {
+// into the taxonomy under jobTitleId. Two steps, in order:
+//   1. Auto-attach: every profile that proposed this label is given the now-official taxonomy
+//      skill (insert into directory_profile_skills), so the member keeps it as a real chip
+//      instead of losing it and having to re-pick it. Idempotent (ON CONFLICT DO NOTHING) and
+//      one-shot (only pending rows attach), so a member who later removes the skill is respected.
+//   2. Mark promoted: flip the matching directory_profile_proposed_skills rows to 'promoted' so
+//      they drop out of the profile's pending set (loadProfileProposedSkills reads status =
+//      'pending') and the muted "pending review" chip is replaced by the real one.
+// The attach is scoped to jobTitleId (the occupation this promotion added the skill under) so a
+// proposal label resolves to the specific skill just promoted, not a same-named skill elsewhere.
+async function promoteDirectoryProposals(client, jobTitleId, normalizedSkills) {
   if (!normalizedSkills || normalizedSkills.length === 0) {
-    return 0;
+    return { attached: 0, marked: 0 };
   }
-  const result = await client.query(
+  const labels = normalizedSkills.map((value) => value.trim().toLowerCase());
+
+  const attachResult = await client.query(
+    `
+      INSERT INTO directory_profile_skills (profile_id, skill_id, display_order)
+      SELECT
+        d.profile_id,
+        sk.id,
+        COALESCE(
+          (SELECT MAX(x.display_order) FROM directory_profile_skills x WHERE x.profile_id = d.profile_id),
+          0
+        ) + 1
+      FROM directory_profile_proposed_skills d
+      JOIN skills_taxonomy_skills sk
+        ON sk.job_title_id = $1
+       AND lower(btrim(sk.name)) = lower(btrim(d.skill_label))
+       AND sk.is_active = true
+      WHERE d.status = 'pending'
+        AND lower(btrim(d.skill_label)) = ANY($2::text[])
+      ON CONFLICT (profile_id, skill_id) DO NOTHING
+    `,
+    [jobTitleId, labels],
+  );
+
+  const markResult = await client.query(
     `
       UPDATE directory_profile_proposed_skills
       SET status = 'promoted', updated_at = NOW()
-      WHERE lower(btrim(skill_label)) = ANY($1::text[])
-        AND status <> 'promoted'
+      WHERE status <> 'promoted'
+        AND lower(btrim(skill_label)) = ANY($1::text[])
     `,
-    [normalizedSkills.map((value) => value.trim().toLowerCase())],
+    [labels],
   );
-  return result.rowCount ?? 0;
+
+  return { attached: attachResult.rowCount ?? 0, marked: markResult.rowCount ?? 0 };
 }
 
 // Apply every curated promotion in one transaction. Idempotent: re-running no-ops.
@@ -135,6 +169,7 @@ export async function seedSkillsTaxonomyPromotions({ pool, promotions = APPROVED
     skills: 0,
     proposalsMarkedPromoted: 0,
     directoryProposalsMarkedPromoted: 0,
+    directorySkillsAutoAttached: 0,
     missingSectors: [],
   };
 
@@ -174,10 +209,13 @@ export async function seedSkillsTaxonomyPromotions({ pool, promotions = APPROVED
         client,
         promotion.proposalNormalizedSkills,
       );
-      summary.directoryProposalsMarkedPromoted += await markDirectoryProposalsPromoted(
+      const directoryPromotion = await promoteDirectoryProposals(
         client,
+        jobTitleId,
         promotion.proposalNormalizedSkills,
       );
+      summary.directoryProposalsMarkedPromoted += directoryPromotion.marked;
+      summary.directorySkillsAutoAttached += directoryPromotion.attached;
     }
 
     await client.query('COMMIT');
