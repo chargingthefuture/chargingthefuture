@@ -191,7 +191,7 @@ Extension entity:
 Domain tables:
 
 1. `service_credits_wallets`
-2. `service_credits_transfers`
+2. `service_credits_transfers` — one row per member-to-member transfer. Columns: `id` UUID PK, `sender_user_id` TEXT, `recipient_user_id` TEXT, `amount` NUMERIC, `status` TEXT (`pending` | `completed` | `cancelled` | `disputed`), `idempotency_key` TEXT (unique per `sender_user_id`), `completed_at` TIMESTAMPTZ, `origin_plugin` TEXT, `reason_code` TEXT, `created_at` TIMESTAMPTZ default now. **A direct send now delivers immediately**: `createTransfer` debits the sender and credits the recipient in one step and writes the row as `completed` (it no longer parks the funds in the sender's escrow as `pending`, which previously meant the recipient never received the credits). `origin_plugin` records the initiating surface — `service-credits` for a direct send from the "Send Credits" form, or the plugin slug for a plugin-mediated move (e.g. `chyme` tip, `foundation` call charge) — and `reason_code` the finer intent; together they let GDP recognition count genuine direct peer-to-peer activity and attribute plugin transfers to each plugin rather than blindly summing the ledger. The separate `createEscrowHold` / `releaseEscrow` / `refundEscrow` functions remain the hold-then-resolve path for real escrow use cases.
 3. `service_credits_escrow_holds`
 4. `service_credits_governance_events` — `governance_ticket_id` is **TEXT** (a free-text ticket reference such as `unlock:submission:5`, `levelup:<cohort>:completion:<id>`, `contribution-<id>`, or an operator-typed ticket), not a UUID. A legacy UUID-typed column is converted to TEXT by a guarded block in `schema.sql`.
 5. `service_credits_treasury_events`

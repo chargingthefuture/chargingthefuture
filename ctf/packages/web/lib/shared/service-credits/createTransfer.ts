@@ -51,11 +51,20 @@ export async function createTransfer(input: CreateTransferInput) {
       amount: string;
       status: 'pending' | 'completed' | 'cancelled' | 'disputed';
     }>(
-      `INSERT INTO service_credits_transfers (id, sender_user_id, recipient_user_id, amount, status, idempotency_key)
-       VALUES ($1, $2, $3, $4, 'pending', $5)
+      `INSERT INTO service_credits_transfers
+        (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, origin_plugin, reason_code, completed_at)
+       VALUES ($1, $2, $3, $4, 'completed', $5, $6, $7, NOW())
        ON CONFLICT (sender_user_id, idempotency_key) DO NOTHING
        RETURNING id::text, sender_user_id, recipient_user_id, amount::text, status`,
-      [transferId, input.senderUserId, input.recipientUserId, input.amount, input.idempotencyKey],
+      [
+        transferId,
+        input.senderUserId,
+        input.recipientUserId,
+        input.amount,
+        input.idempotencyKey,
+        input.originPlugin ?? 'service-credits',
+        input.reasonCode ?? 'transfer',
+      ],
     );
 
     if (!insertedTransfer.rows[0]) {
@@ -77,6 +86,29 @@ export async function createTransfer(input: CreateTransferInput) {
       }
       return existingTransfer.rows[0];
     }
+
+    // Deliver immediately: debit the sender and credit the recipient (total supply conserved), and
+    // record the ledger debit/credit pair. Previously this only wrote a pending row and moved no funds,
+    // so the recipient never received the credits.
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance - $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [input.senderUserId, input.amount],
+    );
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance + $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [input.recipientUserId, input.amount],
+    );
+    await client.query(
+      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope)
+       VALUES
+        ($1, $2, 'debit', $4, 'transfer', $3, 'service_credits_non_gdp'),
+        ($5, $6, 'credit', $4, 'transfer', $3, 'service_credits_non_gdp')`,
+      [randomUUID(), input.senderUserId, transferId, input.amount, randomUUID(), input.recipientUserId],
+    );
 
     return insertedTransfer.rows[0];
   });

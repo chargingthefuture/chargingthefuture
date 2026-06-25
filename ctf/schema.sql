@@ -1417,8 +1417,17 @@ CREATE TABLE IF NOT EXISTS service_credits_transfers (
   status TEXT NOT NULL,
   idempotency_key TEXT NOT NULL,
   completed_at TIMESTAMPTZ,
+  origin_plugin TEXT,
+  reason_code TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- origin_plugin records which surface initiated the transfer: 'service-credits' for a direct member
+-- send from the ServiceCredits "Send Credits" form, or the plugin slug when a plugin feature moved the
+-- credits (e.g. 'chyme' for a tip, 'foundation' for a call charge). reason_code is the finer intent.
+-- These let GDP recognition count only genuine direct peer-to-peer economic activity and attribute
+-- plugin-mediated transfers to each plugin, instead of blindly summing the ledger (issue: GDP scope).
+ALTER TABLE IF EXISTS service_credits_transfers ADD COLUMN IF NOT EXISTS origin_plugin TEXT;
+ALTER TABLE IF EXISTS service_credits_transfers ADD COLUMN IF NOT EXISTS reason_code TEXT;
 CREATE TABLE IF NOT EXISTS service_credits_command_idempotency (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   command TEXT NOT NULL,

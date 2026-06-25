@@ -10,6 +10,7 @@ import {
   postEscrowRefundToFormance,
   postEscrowReleaseToFormance,
   postMintToFormance,
+  postTransferToFormance,
   postTreasuryFeeToFormance,
 } from 'lib/service-credits/formance-ledger';
 
@@ -340,11 +341,20 @@ export async function createTransfer(input: {
       amount: string;
       status: 'pending' | 'completed' | 'cancelled' | 'disputed';
     }>(
-      `INSERT INTO service_credits_transfers (id, sender_user_id, recipient_user_id, amount, status, idempotency_key)
-       VALUES ($1, $2, $3, $4, 'pending', $5)
+      `INSERT INTO service_credits_transfers
+        (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, origin_plugin, reason_code, completed_at)
+       VALUES ($1, $2, $3, $4, 'completed', $5, $6, $7, NOW())
        ON CONFLICT (sender_user_id, idempotency_key) DO NOTHING
        RETURNING id::text, sender_user_id, recipient_user_id, amount::text, status`,
-      [transferId, input.senderUserId, input.recipientUserId, input.amount, input.idempotencyKey],
+      [
+        transferId,
+        input.senderUserId,
+        input.recipientUserId,
+        input.amount,
+        input.idempotencyKey,
+        input.originPlugin ?? 'service-credits',
+        input.reasonCode ?? 'transfer',
+      ],
     );
 
     if (!insertedTransfer.rows[0]) {
@@ -395,11 +405,9 @@ export async function createTransfer(input: {
       };
     }
 
-    const escrowHoldId = randomUUID();
     let externalLedgerTransactionId: string | null = null;
     try {
-      const externalLedger = await postEscrowHoldToFormance({
-        transferId,
+      const externalLedger = await postTransferToFormance({
         senderUserId: input.senderUserId,
         recipientUserId: input.recipientUserId,
         amount: input.amount,
@@ -433,34 +441,34 @@ export async function createTransfer(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      // Formance unavailable — keep the authoritative local ledger write (committed below) and
-      // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
-      // the member's credits are correct locally and the external mirror catches up later.
+      // Formance unavailable — the authoritative local ledger write below still completes the transfer,
+      // and a durable 'queued' outbox row lets the reconciliation worker mirror it later. Do not roll back.
     }
 
+    // Deliver immediately: debit the sender and credit the recipient in one step (no escrow) so the
+    // recipient actually receives the credits. Mirrors collectTreasuryFee's wallet -> wallet move; total
+    // supply is conserved (sender -amount, recipient +amount). On the mutual-credit rail the sender may go
+    // negative down to their limit, which the balance/floor check above already allowed.
     await client.query(
       `UPDATE service_credits_wallets
-       SET available_balance = available_balance - $2, escrow_balance = escrow_balance + $2, updated_at = NOW()
+       SET available_balance = available_balance - $2, updated_at = NOW()
        WHERE user_id = $1`,
       [input.senderUserId, input.amount],
     );
 
     await client.query(
-      `INSERT INTO service_credits_escrow_holds (id, wallet_user_id, transfer_id, amount, status)
-       VALUES ($1, $2, $3, $4, 'held')`,
-      [escrowHoldId, input.senderUserId, transferId, input.amount],
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance + $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [input.recipientUserId, input.amount],
     );
 
     await client.query(
-      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
-       VALUES ($1, $2, 'escrow_hold', $4, 'escrow', $3, 'service_credits_non_gdp', $5::jsonb)`,
-      [
-        randomUUID(),
-        input.senderUserId,
-        escrowHoldId,
-        input.amount,
-        JSON.stringify({ externalLedger: 'formance', externalLedgerTransactionId, rail }),
-      ],
+      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope)
+       VALUES
+        ($1, $2, 'debit', $4, 'transfer', $3, 'service_credits_non_gdp'),
+        ($5, $6, 'credit', $4, 'transfer', $3, 'service_credits_non_gdp')`,
+      [randomUUID(), input.senderUserId, transferId, input.amount, randomUUID(), input.recipientUserId],
     );
 
     const response = {
@@ -468,8 +476,8 @@ export async function createTransfer(input: {
       senderUserId: input.senderUserId,
       recipientUserId: input.recipientUserId,
       amount: input.amount,
-      status: 'pending' as const,
-      escrowHoldId,
+      status: 'completed' as const,
+      escrowHoldId: null,
       externalLedgerTransactionId,
       rail,
     };
