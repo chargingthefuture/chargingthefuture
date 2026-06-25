@@ -225,7 +225,10 @@ export function ContributionsAdminShell() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, overflow: 'hidden' }}>
+    // Desktop locks html/body to 100vh + overflow:hidden (globals.css). Use a fixed viewport height
+    // (not min-height) so this row is bounded and the main column's content (flex:1, overflowY:auto)
+    // scrolls internally instead of being clipped and unreachable.
+    <div style={{ display: 'flex', height: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, overflow: 'hidden' }}>
       <div style={{ width: 200, background: t.SURFACE, borderRight: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '18px 14px 14px', borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -253,7 +256,7 @@ export function ContributionsAdminShell() {
           })}
         </nav>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
         {loadError && <div style={{ padding: '10px 24px', fontSize: 12, color: '#EF4444' }}>{loadError}</div>}
         {content}
       </div>
