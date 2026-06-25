@@ -65,8 +65,17 @@ the existing trust card rendered next to it so trust reads as peer social proof 
     post's current status. Keyed on `owner_user_id`.
 - A read API (`GET /api/presence/user/[userId]`) returns the active presence list for a member,
   gated to any signed-in member.
+- A self re-derivation (`lib/presence/derive.ts` → `refreshOwnPresence`) rebuilds one member's index
+  straight from the same source tables the live hooks and the original backfill used, then returns the
+  active list. It is best-effort and self-contained: a source whose table is missing or unavailable is
+  skipped (its existing index rows are left untouched, never deactivated), so the recompute can only
+  add back missing rows and retire rows whose source listing is genuinely gone — it can never wipe the
+  index because of a transient read failure. Exposed at `GET /api/presence/user/self`.
 - The Directory profile detail (a client component) fetches presence and trust for the profile's
-  `claimed_by_user_id` and renders the "Also active in" section and the trust card beside it.
+  `claimed_by_user_id` and renders the "Also active in" section and the trust card beside it. For the
+  viewer's own profile it reads the refreshing `self` routes so both panels reflect the member's real
+  current activity instead of a frozen index/snapshot; for another member's profile it reads the
+  read-only by-id routes.
 
 ## Trust-beside-presence Decision
 
@@ -114,11 +123,19 @@ Notes on sources:
 
 - `GET /api/presence/user/[userId]` — returns `{ presence: Array<{ pluginSlug, refType, refId, label,
   deepLink }> }` for the member, active rows only, ordered by plugin then label. Gated to any
-  authenticated member (`requireTrustMemberAccess`). Read-only; no mutation route in this first cut.
+  authenticated member (`requireTrustMemberAccess`). Read-only; reads the shared index as written by
+  the live hooks. Used when a member views **another** member's profile.
+- `GET /api/presence/user/self` — re-derives the **caller's** presence from the live source tables
+  (`lib/presence/derive.refreshOwnPresence`), self-healing any index row a best-effort write dropped
+  or that predates the live hooks, then returns the active list in the same shape. Gated to any
+  authenticated member. This is the presence counterpart of `GET /api/trust/user/self`, which
+  recomputes the caller's trust signal on read. Used when a member views **their own** profile.
 
 The Directory profile read is unchanged at the API level: the detail component already receives the
 profile's `claimedByUserId` from the list payload, so presence and trust are fetched client-side from
-that id rather than embedded in a directory route.
+that id rather than embedded in a directory route. When the viewer owns the profile, the detail reads
+the refreshing `self` routes for both presence and trust; for another member's profile it reads the
+read-only by-id routes.
 
 ## Data Model and Storage Contracts
 
@@ -177,9 +194,13 @@ it current, so presence coverage follows the real data of the source plugins.
   create/remove path is added later, wire `recordMemberPresence` / `clearMemberPresence` on
   `provider_user_id` with the same `offer` ref type and "Offering rides" label the backfill uses.
 - Presence writes are best-effort and not part of the listing's database transaction: a presence write
-  that fails after the listing commits is logged and dropped, leaving the index momentarily stale until
-  the next write or backfill. This is intentional — the listing operation must never fail because of a
-  presence write.
+  that fails after the listing commits is logged and dropped, leaving the index momentarily out of date
+  until the next write. This is intentional — the listing operation must never fail because of a
+  presence write. The backfill that used to recover such gaps was removed, so recovery now comes from
+  `refreshOwnPresence`: a member viewing their own profile re-derives their presence from the source
+  tables, restoring any dropped or pre-hook row. A member who never views their own profile can still
+  have a gap until their next live write; a future pass could re-derive on a broader trigger (e.g. on
+  login) if needed.
 - Foundation presence is one row per offered skill, labeled generically; if a member offers many
   skills this could read as several identical "Provider offering" entries. A future pass could collapse
   Foundation to a single per-member entry.
@@ -212,6 +233,10 @@ Deferred follow-ups (not yet done):
    LightHouse host, the TrustTransport driver, and the Foundation provider — so presence and trust are
    visible where members actually meet, not only on the Directory profile.
 
+10. Self re-derivation on own-profile view. Added `lib/presence/derive.ts` (`refreshOwnPresence`) and
+    `GET /api/presence/user/self`; the Directory detail reads the `self` route for the viewer's own
+    profile so a dropped or pre-hook index row is restored from the source tables on read. Done.
+
 ## Change Log
 
 - 2026-06-21: First cut. Added `member_plugin_presence`, the presence repository, the backfill script,
@@ -232,3 +257,12 @@ Deferred follow-ups (not yet done):
   hooks keep the index current from here. The four source repositories' comments that pointed at the
   deleted script were reworded to describe the active-state rules inline. No code behavior or schema
   change.
+- 2026-06-25: Own-profile activity now reflects real participation on read. Two surfaces showed empty
+  even for an active member: the "Also active in" list (the index had no row — a best-effort write was
+  dropped or the listing predated the live hooks, with the backfill gone) and the Trust card (the
+  Directory detail read the non-refreshing by-id trust route, so it showed a frozen/empty snapshot).
+  Fix: added `lib/presence/derive.refreshOwnPresence` and `GET /api/presence/user/self` (re-derive the
+  caller's presence from the source tables, self-healing the index without ever wiping it on a
+  transient read failure), and switched the Directory detail to read the refreshing `self` routes for
+  both presence and trust when the viewer owns the profile. Another member's profile still reads the
+  read-only by-id routes. No schema change.

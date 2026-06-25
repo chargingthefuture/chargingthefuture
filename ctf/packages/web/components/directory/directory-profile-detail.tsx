@@ -71,6 +71,12 @@ export function DirectoryProfileDetail({
   // Presence and the trust panel only apply to a claimed profile. Both are client fetches that
   // degrade quietly: a presence failure leaves the list empty (the section hides), and a trust
   // failure hides the trust panel — neither can crash the profile.
+  //
+  // When the viewer owns this profile, both panels read the refreshing "self" routes
+  // (/api/presence/user/self and /api/trust/user/self), which recompute from the member's real
+  // cross-plugin activity on read — so your own profile reflects what you have actually done instead
+  // of a frozen index/snapshot that nothing refreshed. Viewing someone else's profile keeps the
+  // read-only by-id routes (you never trigger a recompute of another member's data).
   useEffect(() => {
     if (!claimedUserId) {
       setPresence([]);
@@ -82,7 +88,10 @@ export function DirectoryProfileDetail({
 
     async function loadPresence(userId: string) {
       try {
-        const res = await fetch(`/api/presence/user/${encodeURIComponent(userId)}`, { signal: controller.signal });
+        const url = isOwnProfile
+          ? `/api/presence/user/self`
+          : `/api/presence/user/${encodeURIComponent(userId)}`;
+        const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) return;
         const data = (await res.json()) as { presence?: PresenceEntry[] };
         if (!controller.signal.aborted) setPresence(data.presence ?? []);
@@ -94,7 +103,10 @@ export function DirectoryProfileDetail({
     async function loadTrust(userId: string) {
       setTrustState({ kind: "loading" });
       try {
-        const res = await fetch(`/api/trust/user/${encodeURIComponent(userId)}`, { signal: controller.signal });
+        const url = isOwnProfile
+          ? `/api/trust/user/self`
+          : `/api/trust/user/${encodeURIComponent(userId)}`;
+        const res = await fetch(url, { signal: controller.signal });
         if (controller.signal.aborted) return;
         if (res.status === 403) {
           // The member limits who can view their trust details — a calm state, not an error.
@@ -116,7 +128,7 @@ export function DirectoryProfileDetail({
     void loadTrust(claimedUserId);
 
     return () => controller.abort();
-  }, [claimedUserId]);
+  }, [claimedUserId, isOwnProfile]);
   const profileUrl = p.profileUrl?.trim() ? p.profileUrl.trim() : null;
   const headline = p.headline?.trim() ? p.headline.trim() : null;
   const bio = p.bio?.trim() ? p.bio.trim() : null;
