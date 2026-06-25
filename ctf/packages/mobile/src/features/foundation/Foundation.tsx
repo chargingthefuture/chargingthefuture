@@ -51,6 +51,9 @@ export function Foundation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
+  // The signed-in viewer's own user id, returned by the provider search. Used to
+  // suppress "Connect now" on the viewer's own provider card (issue #808).
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<QuoteHistoryItem[]>([]);
   const [query, setQuery] = useState('');
   const [page] = useState(1);
@@ -78,6 +81,7 @@ export function Foundation() {
         ]);
         if (!cancelled) {
           setProviders(searchResult.items);
+          setViewerUserId(searchResult.viewerUserId ?? null);
           setQuotes(historyResult.items);
         }
       } catch (e: unknown) {
@@ -148,6 +152,7 @@ export function Foundation() {
     return (
       <FoundationProviderDetail
         provider={selected}
+        viewerUserId={viewerUserId}
         onBack={() => setSelected(null)}
       />
     );
