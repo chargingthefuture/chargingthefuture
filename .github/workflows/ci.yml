@@ -339,6 +339,17 @@ jobs:
       - name: Validate account deletion engine SQL generation
         run: node ctf/scripts/check-deletion-engine.mjs
 
+  inventory-drift-gate:
+    name: Inventory Drift Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enforce feature-inventory coverage of tables and routes
+        run: node ctf/scripts/check-inventory-drift.mjs
+
   pr-parity-status:
     name: PR Parity Status
     runs-on: ubuntu-latest
