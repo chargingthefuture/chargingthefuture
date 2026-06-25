@@ -47,6 +47,27 @@ export const APPROVED_SKILL_PROMOTIONS = [
     ],
     proposalNormalizedSkills: ['marketing'],
   },
+  {
+    sectorName: 'Creative & Media',
+    occupationName: 'Game Designers / Developers',
+    skills: [
+      'Game Design',
+      'Level Design',
+      'Narrative Design',
+      'Game Systems Design',
+      'Game Development',
+      'Gameplay Programming',
+      'Game Physics',
+      'Game AI Programming',
+      'Multiplayer Networking',
+      'Unity',
+      'Unreal Engine',
+      'Godot',
+      'Game Prototyping',
+      'Playtesting & QA',
+    ],
+    proposalNormalizedSkills: [],
+  },
 ];
 
 async function findSectorIdByName(client, sectorName) {
