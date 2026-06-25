@@ -128,16 +128,16 @@
 
 ## 3) Rule Alignment
 
-1. `.github/instructions/index.mdc`
+1. `.claude/rules/index.mdc`
    - Keeps rewrite scope in `ctf/`, preserves plugin-first ownership boundaries, and treats legacy as reference-only.
-2. `.github/instructions/120-plugin-feature-inventory-lifecycle-rules.mdc`
+2. `.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc`
    - Requires plugin-owned capabilities (weekly-performance, skills-taxonomy) to move into dedicated plugin inventory/checklist docs.
    - This non-plugin inventory is explicitly exempt from Rule 120 plugin-required content sections and uses alternate non-plugin capability criteria.
-3. `.github/instructions/004-authz-authn-and-admin-controls.mdc`
+3. `.claude/rules/004-authz-authn-and-admin-controls.mdc`
    - Requires server-side authz/authn hardening for retained non-plugin auth/account and privileged contract surfaces.
-4. `.github/instructions/007-audit-logging-and-monitoring.mdc`
+4. `.claude/rules/007-audit-logging-and-monitoring.mdc`
    - Allows admin feed removal while still requiring complete audit logging coverage and protected evidence paths.
-5. `.github/instructions/014-compliance-rules-index.mdc`
+5. `.claude/rules/014-compliance-rules-index.mdc`
    - Keeps compliance modules mandatory for retained non-plugin contracts and plugin-owned rewrites.
 
 ---

@@ -27,9 +27,9 @@ This plugin must:
 
 Planning constraints applied:
 
-1. Inventory/checklist lifecycle follows `.github/instructions/120-plugin-feature-inventory-lifecycle-rules.mdc`.
-2. Command/access/audit design follows `.github/instructions/200-plugin-command-contract-templates.mdc` and templates `201`/`202`/`203`.
-3. Canonical profile and plugin-extension boundaries follow `.github/instructions/114-single-profile-and-plugin-extension-rules.mdc`.
+1. Inventory/checklist lifecycle follows `.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc`.
+2. Command/access/audit design follows `.claude/rules/200-plugin-command-contract-templates.mdc` and templates `201`/`202`/`203`.
+3. Canonical profile and plugin-extension boundaries follow `.claude/rules/114-single-profile-and-plugin-extension-rules.mdc`.
 
 ---
 
@@ -98,9 +98,9 @@ Planning constraints applied:
 
 All command contracts conform to:
 
-- `.github/instructions/201-plugin-command-schema-template.mdc`
-- `.github/instructions/202-plugin-access-policy-schema-template.mdc`
-- `.github/instructions/203-plugin-audit-schema-template.mdc`
+- `.claude/rules/201-plugin-command-schema-template.mdc`
+- `.claude/rules/202-plugin-access-policy-schema-template.mdc`
+- `.claude/rules/203-plugin-audit-schema-template.mdc`
 
 Command groups:
 

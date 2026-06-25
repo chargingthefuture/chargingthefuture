@@ -32,7 +32,7 @@ Ensure every user-facing feature implemented in web is also implemented in Andro
 ## No Phased Rollouts
 - Features are either delivered or not delivered. "Phase 0", "Phase 1", and "we will add Android later" framings are prohibited in PRs, inventories, checklists, design artifacts, and code comments.
 - If a feature cannot be delivered on both platforms in the same change, the feature is not ready to land.
-- This is the parity-specific case of the general no-phases rule in `copilot-instructions.md` → "Task Planning — No Phases": break work into an ordered, dependency-based task list, never phase buckets.
+- This is the parity-specific case of the general no-phases rule in `CLAUDE.md` → "Task Planning — No Phases": break work into an ordered, dependency-based task list, never phase buckets.
 
 ## Testing Rules
 - Add parity acceptance criteria for critical paths in test plans.

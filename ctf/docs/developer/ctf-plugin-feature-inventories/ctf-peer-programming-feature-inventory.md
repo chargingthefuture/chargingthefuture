@@ -203,13 +203,13 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 - [ ] Define plugin command contracts for v1.
   - Acceptance criteria:
-    - Every command conforms to `.github/instructions/201-plugin-command-schema-template.mdc`.
+    - Every command conforms to `.claude/rules/201-plugin-command-schema-template.mdc`.
 - [ ] Define plugin access policy contracts for v1.
   - Acceptance criteria:
-    - Every command has aligned role, attribute, consent/lawful basis, region, and deny conditions under `.github/instructions/202-plugin-access-policy-schema-template.mdc`.
+    - Every command has aligned role, attribute, consent/lawful basis, region, and deny conditions under `.claude/rules/202-plugin-access-policy-schema-template.mdc`.
 - [ ] Define plugin audit contracts for v1.
   - Acceptance criteria:
-    - Every command has allow/deny + result audit coverage under `.github/instructions/203-plugin-audit-schema-template.mdc`.
+    - Every command has allow/deny + result audit coverage under `.claude/rules/203-plugin-audit-schema-template.mdc`.
 - [ ] Verify command parity across all three contract files.
   - Acceptance criteria:
     - Command set matches exactly across command, policy, and audit YAML.
