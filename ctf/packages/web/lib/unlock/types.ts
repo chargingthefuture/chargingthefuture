@@ -15,8 +15,22 @@ export type UnlockSubmission = {
   reviewedAt: string | null;
   reviewNote: string | null;
   incentiveGrantedAt: string | null;
+  // Duplicate-identity guard. rewardWithheldAt: the reward was held because another account already
+  // holds this Quora identity's reward — awaiting an admin determination. rewardRevokedAt: an admin
+  // clawed the reward back (the "loser" of a determination, or a perp).
+  rewardWithheldAt: string | null;
+  rewardRevokedAt: string | null;
+  // How many accounts (including this one) have claimed the same normalized Quora URL. Only populated
+  // by the admin queue list; 1 means no duplicate. Undefined where not computed.
+  sharedUrlAccountCount?: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type RevokeUnlockRewardInput = {
+  actorUserId: string;
+  submissionId: number;
+  reviewNote?: string;
 };
 
 export type CreateUnlockSubmissionInput = {

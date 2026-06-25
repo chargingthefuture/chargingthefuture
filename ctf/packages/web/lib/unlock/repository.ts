@@ -2,6 +2,7 @@ import { queryDb } from 'lib/db/postgres';
 import type {
   CreateUnlockSubmissionInput,
   ReviewUnlockSubmissionInput,
+  RevokeUnlockRewardInput,
   UnlockAccessTier,
   UnlockDashboardSnapshot,
   UnlockQueueFilters,
@@ -36,6 +37,10 @@ type UnlockSubmissionRow = {
   reviewed_at: Date | null;
   review_note: string | null;
   incentive_granted_at: Date | null;
+  reward_withheld_at: Date | null;
+  reward_revoked_at: Date | null;
+  // Only present on the admin queue list (a per-URL COUNT). Undefined elsewhere.
+  shared_url_account_count?: string;
   created_at: Date;
   updated_at: Date;
 };
@@ -62,6 +67,11 @@ function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
     reviewedAt: row.reviewed_at ? row.reviewed_at.toISOString() : null,
     reviewNote: row.review_note,
     incentiveGrantedAt: row.incentive_granted_at ? row.incentive_granted_at.toISOString() : null,
+    rewardWithheldAt: row.reward_withheld_at ? row.reward_withheld_at.toISOString() : null,
+    rewardRevokedAt: row.reward_revoked_at ? row.reward_revoked_at.toISOString() : null,
+    ...(row.shared_url_account_count !== undefined
+      ? { sharedUrlAccountCount: Number(row.shared_url_account_count) }
+      : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -223,6 +233,8 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        reviewed_at,
        review_note,
        incentive_granted_at,
+       reward_withheld_at,
+       reward_revoked_at,
        created_at,
        updated_at`,
     [input.userId, input.quoraProfileUrl, input.quoraProfileUrlNormalized, String(submissionWindowHours)],
@@ -262,9 +274,14 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
        reviewed_at,
        review_note,
        incentive_granted_at,
+       reward_withheld_at,
+       reward_revoked_at,
        created_at,
-       updated_at
-     FROM unlock_verification_submissions
+       updated_at,
+       (SELECT COUNT(*)
+          FROM unlock_verification_submissions dup
+         WHERE dup.quora_profile_url_normalized = s.quora_profile_url_normalized) AS shared_url_account_count
+     FROM unlock_verification_submissions s
      ${whereClause}
      ORDER BY created_at DESC
      LIMIT $${values.length}`,
@@ -292,10 +309,13 @@ export async function listApprovedUnincentivizedSubmissions(limit = 100): Promis
        reviewed_at,
        review_note,
        incentive_granted_at,
+       reward_withheld_at,
+       reward_revoked_at,
        created_at,
        updated_at
      FROM unlock_verification_submissions
      WHERE review_status = 'approved' AND incentive_granted_at IS NULL
+       AND reward_withheld_at IS NULL AND reward_revoked_at IS NULL
      ORDER BY reviewed_at ASC NULLS FIRST
      LIMIT $1`,
     [safeLimit],
@@ -330,6 +350,8 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
        reviewed_at,
        review_note,
        incentive_granted_at,
+       reward_withheld_at,
+       reward_revoked_at,
        created_at,
        updated_at`,
     [input.reviewStatus, accessTier, input.actorUserId, input.reviewNote ?? null, input.submissionId],
@@ -370,6 +392,8 @@ export async function updateUnlockSubmissionQuoraUrl(
        reviewed_at,
        review_note,
        incentive_granted_at,
+       reward_withheld_at,
+       reward_revoked_at,
        created_at,
        updated_at`,
     [submissionId, quoraProfileUrl, quoraProfileUrlNormalized],
@@ -392,6 +416,95 @@ export async function markUnlockIncentiveGranted(submissionId: number): Promise<
   );
 
   return (result.rowCount ?? 0) > 0;
+}
+
+// Load a single submission by its serial id. The admin revoke / determination routes operate by id.
+export async function getUnlockSubmissionById(submissionId: number): Promise<UnlockSubmission | null> {
+  const result = await queryDb<UnlockSubmissionRow>(
+    `SELECT
+       id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
+       unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
+       incentive_granted_at, reward_withheld_at, reward_revoked_at, created_at, updated_at
+     FROM unlock_verification_submissions
+     WHERE id = $1
+     LIMIT 1`,
+    [submissionId],
+  );
+
+  return result.rows[0] ? mapUnlockSubmission(result.rows[0]) : null;
+}
+
+// Duplicate-identity guard. The account (other than excludeUserId) that currently HOLDS the verification
+// reward for a normalized Quora URL — approved, reward granted, not revoked. Returns its user id, or null
+// when the identity's reward is unclaimed (free to grant). Earliest grant wins if more than one slipped
+// through (e.g. a rare concurrent-grant race), so the holder is stable.
+export async function getUnlockRewardHolderForUrl(
+  normalizedUrl: string,
+  excludeUserId: string,
+): Promise<string | null> {
+  const result = await queryDb<{ user_id: string }>(
+    `SELECT user_id
+       FROM unlock_verification_submissions
+      WHERE quora_profile_url_normalized = $1
+        AND user_id <> $2
+        AND review_status = 'approved'
+        AND incentive_granted_at IS NOT NULL
+        AND reward_revoked_at IS NULL
+      ORDER BY incentive_granted_at ASC
+      LIMIT 1`,
+    [normalizedUrl, excludeUserId],
+  );
+
+  return result.rows[0]?.user_id ?? null;
+}
+
+// Hold this submission's reward for an admin determination (another account already holds the identity).
+// Only flips a not-yet-granted submission, so it can never hide an already-paid reward.
+export async function markUnlockRewardWithheld(submissionId: number): Promise<void> {
+  await queryDb(
+    `UPDATE unlock_verification_submissions
+     SET reward_withheld_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND incentive_granted_at IS NULL`,
+    [submissionId],
+  );
+}
+
+// Clear a withhold so the reward can be granted (an admin determined this account keeps the identity).
+export async function clearUnlockRewardWithheld(submissionId: number): Promise<void> {
+  await queryDb(
+    `UPDATE unlock_verification_submissions
+     SET reward_withheld_at = NULL, updated_at = NOW()
+     WHERE id = $1`,
+    [submissionId],
+  );
+}
+
+// Admin determination "loser" path: claw a reward back. Marks the submission rejected + support-only and
+// stamps reward_revoked_at, so the reconcile job never re-grants it. The ServiceCredits clawback (burn) is
+// done by the route via burnCredits; this only moves the submission's verification state. Returns the
+// updated submission, or null if no row matched.
+export async function revokeUnlockSubmissionReward(
+  input: RevokeUnlockRewardInput,
+): Promise<UnlockSubmission | null> {
+  const result = await queryDb<UnlockSubmissionRow>(
+    `UPDATE unlock_verification_submissions
+     SET review_status = 'rejected',
+         access_tier = 'locked_support_only',
+         reward_revoked_at = NOW(),
+         reward_withheld_at = NULL,
+         reviewed_by_user_id = $2,
+         reviewed_at = NOW(),
+         review_note = $3,
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING
+       id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
+       unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
+       incentive_granted_at, reward_withheld_at, reward_revoked_at, created_at, updated_at`,
+    [input.submissionId, input.actorUserId, input.reviewNote ?? null],
+  );
+
+  return result.rows[0] ? mapUnlockSubmission(result.rows[0]) : null;
 }
 
 export async function getUnlockDashboardSnapshot(): Promise<UnlockDashboardSnapshot> {
