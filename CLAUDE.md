@@ -546,13 +546,12 @@ When creating a new plugin from scratch, ALL of the following must be completed 
 - Related rules: [120-plugin-feature-inventory-lifecycle-rules.mdc](.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc) (naming/folder structure), [122-schema-drift-predeployment-rules.mdc](.claude/rules/122-schema-drift-predeployment-rules.mdc) (schema drift detection)
 - Inventory template examples: [ctf/docs/developer/ctf-plugin-feature-inventories/](ctf/docs/developer/ctf-plugin-feature-inventories/)
 
-### Future Automation Opportunity
+### Automated Enforcement (and remaining gaps)
 
-In the future, a nightly cron job (`0 0 * * * check-inventory-drift.sh`) could:
-- Compare API routes in code against inventory "API Surface and Route Map" section
-- Validate all schema.sql tables are documented in inventory "Data Model and Storage Contracts"
-- Verify contract YAML definitions match inventory "Security, Privacy, and Compliance Controls"
-- Create GitHub issues for detected drift (with PR suggestions for manual review)
+A CI gate runs `node ctf/scripts/check-inventory-drift.mjs` on every PR (job `inventory-drift-gate` in `.github/workflows/ci.yml`; run locally with `pnpm --dir ctf run check:inventory-drift`). It fails the build when a schema table or an API route exists in the code but is documented in **no** feature inventory — so a new table/route can no longer ship undocumented, and enforcement no longer depends on an agent remembering. Known pre-existing gaps are recorded in `ctf/scripts/inventory-drift-allowlist.json`, a burn-down list that should only ever shrink (never add a new table/route there to silence the gate — document it instead).
 
-For now, enforcement is manual via PR review gate. Automation can be added later if manual enforcement is insufficient.
+Still manual / not yet automated (follow-ups):
+- Verifying a table/route is in the **right** plugin's inventory, not merely documented somewhere — the slug ↔ api-dir ↔ table-prefix mapping is irregular (e.g. api `gdp` ↔ `gross-domestic-product`), so it needs an explicit manifest.
+- Matching contract YAML definitions against the inventory "Security, Privacy, and Compliance Controls" section.
+- Opening GitHub issues for detected drift (the gate currently fails the PR instead, which catches it earlier).
 </content>
