@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
 
 // Product-wide member blocking — the cross-cutting data layer (issue #809, owner-signed model
@@ -72,6 +73,27 @@ export async function blockUser(blockerUserId: string, blockedUserId: string): P
   }
 
   await queryDb(
+    `INSERT INTO member_blocks (blocker_user_id, blocked_user_id)
+     VALUES ($1, $2)
+     ON CONFLICT (blocker_user_id, blocked_user_id) DO NOTHING`,
+    [blockerUserId, blockedUserId],
+  );
+}
+
+// Same create-block insert, but issued on the caller's transaction client. Used by the create-block
+// route when the member also raised a safety report (issue #809, task 3): the block and the report
+// are written in one transaction so they succeed or fail together. Idempotent for the same reason as
+// blockUser. Rejects a self-block defensively before touching the database.
+export async function blockUserTx(
+  client: PoolClient,
+  blockerUserId: string,
+  blockedUserId: string,
+): Promise<void> {
+  if (blockerUserId === blockedUserId) {
+    throw new SelfBlockError();
+  }
+
+  await client.query(
     `INSERT INTO member_blocks (blocker_user_id, blocked_user_id)
      VALUES ($1, $2)
      ON CONFLICT (blocker_user_id, blocked_user_id) DO NOTHING`,

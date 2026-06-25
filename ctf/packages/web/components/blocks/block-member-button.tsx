@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, type CSSProperties } from 'react';
-import { Ban, Loader2, ShieldX, X } from 'lucide-react';
+import { AlertTriangle, Ban, Loader2, ShieldX, X } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
 import { postBlock } from './blocks-shared';
+import { SAFETY_REPORT_DETAIL_MAX_LENGTH } from 'lib/safety/constants';
 
 type Status = 'idle' | 'confirming' | 'submitting' | 'done' | 'error';
 
@@ -31,14 +32,28 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
   const { BORDER, TEXT, SUBTLE } = tokens;
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // The optional safety escalation, default off. An ordinary block leaves these untouched and
+  // reaches no one; only when the checkbox is on does a report go to the admins.
+  const [safetyConcern, setSafetyConcern] = useState(false);
+  const [safetyDetail, setSafetyDetail] = useState('');
+  // Set true once the just-created block also raised a safety report, so the done state can confirm
+  // the report reached the admins.
+  const [reported, setReported] = useState(false);
 
   const label = displayName?.trim() ? displayName.trim() : 'this member';
+
+  function resetForm() {
+    setSafetyConcern(false);
+    setSafetyDetail('');
+    setErrorMessage(null);
+  }
 
   async function handleConfirm() {
     setStatus('submitting');
     setErrorMessage(null);
     try {
-      await postBlock(targetUserId);
+      await postBlock(targetUserId, safetyConcern ? { concern: true, detail: safetyDetail } : undefined);
+      setReported(safetyConcern);
       setStatus('done');
       onBlocked?.();
     } catch (error) {
@@ -48,7 +63,8 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
   }
 
   // Once blocked, the trigger becomes a calm, non-actionable confirmation rather than disappearing,
-  // so the member gets clear feedback that the block took effect.
+  // so the member gets clear feedback that the block took effect. When a safety report also went out,
+  // the label says so, so the member knows the admins were notified.
   if (status === 'done') {
     return (
       <span
@@ -58,7 +74,7 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
           ...style,
         }}
       >
-        <ShieldX size={15} /> Blocked
+        <ShieldX size={15} /> {reported ? 'Blocked and reported' : 'Blocked'}
       </span>
     );
   }
@@ -67,7 +83,7 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
     <>
       <button
         type="button"
-        onClick={() => { setStatus('confirming'); setErrorMessage(null); }}
+        onClick={() => { setStatus('confirming'); resetForm(); }}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 10,
           background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444',
@@ -105,10 +121,52 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
             </div>
 
             <div style={{ padding: '20px 24px' }}>
-              <p style={{ fontSize: 14, color: '#9CA3AF', lineHeight: 1.6, margin: '0 0 18px' }}>
-                They won&apos;t be able to see or contact you, and they won&apos;t be told. You can unblock
-                them later from your blocked members list.
+              <p style={{ fontSize: 14, color: '#9CA3AF', lineHeight: 1.6, margin: '0 0 16px' }}>
+                They won&apos;t be able to see or contact you, and they won&apos;t be told. This is private
+                — no one is notified. You can unblock them later from your blocked members list.
               </p>
+
+              {/* Optional, clearly-secondary safety escalation. An ordinary block reaches no one; only
+                  checking this box sends a report to the admins so they can act. */}
+              <div style={{ borderRadius: 12, background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.22)', padding: '12px 14px', marginBottom: 18 }}>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: status === 'submitting' ? 'not-allowed' : 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={safetyConcern}
+                    disabled={status === 'submitting'}
+                    onChange={(e) => setSafetyConcern(e.target.checked)}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: '#F59E0B', flexShrink: 0, cursor: status === 'submitting' ? 'not-allowed' : 'pointer' }}
+                  />
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#F59E0B' }}>
+                      <AlertTriangle size={14} /> Report this person to the admins as a safety concern
+                    </span>
+                    <span style={{ fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.55 }}>
+                      Only check this if you believe they are a suspected predator or human trafficker.
+                      An ordinary block does not notify anyone — this sends a private report to the admins
+                      so they can review and act.
+                    </span>
+                  </span>
+                </label>
+
+                {safetyConcern ? (
+                  <div style={{ marginTop: 12 }}>
+                    <label htmlFor="safety-detail" style={{ display: 'block', fontSize: 12.5, color: SUBTLE, marginBottom: 6 }}>
+                      Anything the admins should know (optional)
+                    </label>
+                    <textarea
+                      id="safety-detail"
+                      value={safetyDetail}
+                      disabled={status === 'submitting'}
+                      onChange={(e) => setSafetyDetail(e.target.value)}
+                      maxLength={SAFETY_REPORT_DETAIL_MAX_LENGTH}
+                      rows={3}
+                      placeholder="A short note that would help the admins (optional)"
+                      style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 64, padding: '9px 11px', borderRadius: 9, background: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontFamily: 'inherit', lineHeight: 1.5 }}
+                    />
+                  </div>
+                ) : null}
+              </div>
 
               {status === 'error' && errorMessage ? (
                 <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
@@ -123,7 +181,9 @@ export function BlockMemberButton({ targetUserId, displayName, onBlocked, style 
                   disabled={status === 'submitting'}
                   style={{ flex: 1, padding: '12px', borderRadius: 11, background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.45)', color: '#EF4444', fontSize: 14, fontWeight: 700, cursor: status === 'submitting' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
                 >
-                  {status === 'submitting' ? <><Loader2 size={15} className="blocks-spin" /> Blocking…</> : <><Ban size={15} /> Block member</>}
+                  {status === 'submitting'
+                    ? <><Loader2 size={15} className="blocks-spin" /> {safetyConcern ? 'Blocking and reporting…' : 'Blocking…'}</>
+                    : <><Ban size={15} /> {safetyConcern ? 'Block and report' : 'Block member'}</>}
                 </button>
                 <button
                   type="button"

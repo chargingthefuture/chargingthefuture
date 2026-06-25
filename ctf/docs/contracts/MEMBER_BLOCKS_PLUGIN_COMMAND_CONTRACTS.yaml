@@ -47,3 +47,71 @@ contracts:
     purpose: member_safety_boundary
     retentionClass: derived_short_lived
     idempotency: true
+
+  # --- Optional safety escalation on the block flow (issue #809, task 3) ---
+  # An ordinary block (member.block.create above) is private and never reaches the admin. When the
+  # blocking member flags the block as a safety concern, member.block.create ALSO records a safety
+  # report (this command) in the same transaction. This is the only path by which a member block
+  # reaches the admin.
+  - pluginId: member-blocks
+    command: member.safety-report.create
+    version: 1.0.0
+    description: Record an admin-visible safety report that a member raised while blocking someone they believe to be a suspected predator or human trafficker. Created atomically with the block; an ordinary block writes nothing here.
+    inputSchema:
+      blockedUserId:
+        type: string
+        required: true
+      safetyConcern:
+        type: boolean
+        required: true
+      safetyDetail:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+      safetyReported:
+        type: boolean
+    dataAccess:
+      - member_blocks
+      - member_safety_reports
+    purpose: member_safety_escalation
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: member-blocks
+    command: admin.safety-report.list
+    version: 1.0.0
+    description: Admin-only queue of member safety reports, open reports first then newest, each with resolved reporter and reported display labels and a count of open reports about the same reported member.
+    inputSchema: {}
+    outputSchema:
+      reports:
+        type: array
+    dataAccess:
+      - member_safety_reports
+      - directory_profiles
+    purpose: member_safety_escalation
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: member-blocks
+    command: admin.safety-report.review
+    version: 1.0.0
+    description: Admin-only triage of a member safety report. Marks an open report reviewed or dismissed, stamping who acted and when. Triage only; the global ban is a separate admin action (task 5).
+    inputSchema:
+      reportId:
+        type: string
+        required: true
+      action:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      status:
+        type: string
+    dataAccess:
+      - member_safety_reports
+    purpose: member_safety_escalation
+    retentionClass: transactional_long_lived
+    idempotency: true

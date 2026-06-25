@@ -18,13 +18,34 @@ export type BlocksListResponse = {
   blocks: BlockedMember[];
 };
 
-// Create a block. Resolves on success; rejects with a member-facing message on failure (a self-block
-// or missing target is a 400 with a clear message, anything else a generic failure).
-export async function postBlock(blockedUserId: string): Promise<void> {
+// An optional safety escalation that can ride along with a block (issue #809, task 3). When
+// `concern` is true the server ALSO records an admin safety report; otherwise the block stays the
+// member's own private boundary and nothing reaches the admin. `detail` is the optional free-text
+// context ("anything the admins should know").
+export type SafetyEscalation = {
+  concern: boolean;
+  detail?: string;
+};
+
+// Create a block, optionally with a safety report. Resolves on success; rejects with a member-facing
+// message on failure (a self-block or missing target is a 400 with a clear message, anything else a
+// generic failure). When a safety report is requested and recording it fails, the server rolls the
+// block back and returns an error, so this rejects and the member can retry rather than silently
+// losing their report.
+export async function postBlock(blockedUserId: string, safety?: SafetyEscalation): Promise<void> {
+  const body: { blockedUserId: string; safetyConcern?: boolean; safetyDetail?: string } = { blockedUserId };
+  if (safety?.concern) {
+    body.safetyConcern = true;
+    const detail = safety.detail?.trim();
+    if (detail) {
+      body.safetyDetail = detail;
+    }
+  }
+
   const res = await fetch('/api/account/blocks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-    body: JSON.stringify({ blockedUserId }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     throw new Error(await readError(res, 'Unable to block this member. Please try again.'));
