@@ -78,7 +78,10 @@ export async function postChymeMessage(text: string): Promise<ChymeSendResponse>
 }
 
 export async function postChymeJoin(): Promise<ChymeJoinResponse> {
-  return authedFetchJson('/api/chyme/join', { method: 'POST' });
+  return authedFetchJson('/api/chyme/join', {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
 }
 
 export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {

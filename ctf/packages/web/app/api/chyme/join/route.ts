@@ -4,12 +4,17 @@ import { createStreamJoinCredentials } from 'lib/chyme/stream';
 import { chymeHandle, getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess } from '../_lib';
+import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
 
-export async function POST() {
+export async function POST(request: Request) {
   const gate = await requireChymeAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   try {
