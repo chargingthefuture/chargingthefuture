@@ -14,8 +14,10 @@
 //   - upsert each skill under that occupation
 // Every write is ON CONFLICT no-op on re-run, so running it repeatedly is safe.
 //
-// It also marks the matching skills_hunt_proposed_skill_promotions row as 'promoted'
-// (by normalized skill label) when present, so the proposal tracker reflects reality.
+// It also marks the matching proposal rows as 'promoted' (by normalized skill label) when
+// present, so the trackers reflect reality: both the cross-app skills_hunt_proposed_skill_promotions
+// intake and any directory_profile_proposed_skills row a member added through the Directory
+// "skill not listed" box. Flipping the directory row clears its "pending review" chip.
 //
 // The promotions list below is the single source of truth for owner-approved promotions.
 // Add a new approved promotion by appending an entry; keep it small and curated.
@@ -101,6 +103,26 @@ async function markProposalsPromoted(client, normalizedSkills) {
   return result.rowCount ?? 0;
 }
 
+// Resolve member-added Directory "skill not listed" entries once the same label is promoted
+// into the taxonomy. Flipping the row to 'promoted' drops it out of the profile's pending set
+// (loadProfileProposedSkills reads status = 'pending'), so the muted "pending review" chip
+// clears — the member can then pick the now-official skill from the taxonomy list.
+async function markDirectoryProposalsPromoted(client, normalizedSkills) {
+  if (!normalizedSkills || normalizedSkills.length === 0) {
+    return 0;
+  }
+  const result = await client.query(
+    `
+      UPDATE directory_profile_proposed_skills
+      SET status = 'promoted', updated_at = NOW()
+      WHERE lower(btrim(skill_label)) = ANY($1::text[])
+        AND status <> 'promoted'
+    `,
+    [normalizedSkills.map((value) => value.trim().toLowerCase())],
+  );
+  return result.rowCount ?? 0;
+}
+
 // Apply every curated promotion in one transaction. Idempotent: re-running no-ops.
 // Returns a summary of what was touched.
 export async function seedSkillsTaxonomyPromotions({ pool, promotions = APPROVED_SKILL_PROMOTIONS } = {}) {
@@ -112,6 +134,7 @@ export async function seedSkillsTaxonomyPromotions({ pool, promotions = APPROVED
     occupations: 0,
     skills: 0,
     proposalsMarkedPromoted: 0,
+    directoryProposalsMarkedPromoted: 0,
     missingSectors: [],
   };
 
@@ -148,6 +171,10 @@ export async function seedSkillsTaxonomyPromotions({ pool, promotions = APPROVED
       }
 
       summary.proposalsMarkedPromoted += await markProposalsPromoted(
+        client,
+        promotion.proposalNormalizedSkills,
+      );
+      summary.directoryProposalsMarkedPromoted += await markDirectoryProposalsPromoted(
         client,
         promotion.proposalNormalizedSkills,
       );

@@ -533,6 +533,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
   normalized_skill TEXT NOT NULL,
   skill_label TEXT NOT NULL,
   source_submission_id UUID,
+  -- Which app surfaced this proposal, for provenance in the filed GitHub issue. This is the
+  -- single cross-app intake for "skill not in the taxonomy yet": SkillsHunt nominations and the
+  -- Directory "skill not listed" box both write here. 'skills-hunt' is the default so existing
+  -- rows (all from SkillsHunt) are labelled correctly without a backfill.
+  source TEXT NOT NULL DEFAULT 'skills-hunt',
   suggested_sector TEXT,
   suggested_occupation TEXT,
   issue_number INTEGER,
@@ -541,6 +546,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'skills-hunt';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_proposed_skill_promotions_normalized ON skills_hunt_proposed_skill_promotions (normalized_skill);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_rounds (status, starts_at DESC, ends_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
