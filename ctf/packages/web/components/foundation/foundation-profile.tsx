@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Shield } from "lucide-react";
 import { COLOR, FONT, initials, type ProviderView } from "./foundation-ui";
-import { ConnectNowButton, canOfferConnectNow } from "./foundation-connect-now";
+import { ConnectNowButton, canOfferConnectNow, isOwnProfile } from "./foundation-connect-now";
 
 export function ProviderProfile({
   provider, viewerUserId = null, submitting, quoteError, quoteSuccess, onBack, onRequestQuote,
@@ -16,6 +16,7 @@ export function ProviderProfile({
   onBack: () => void;
   onRequestQuote: () => void;
 }) {
+  const ownProfile = isOwnProfile(provider, viewerUserId);
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "100vh", background: "#0F1117", fontFamily: FONT, color: "#E8EAF0", display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${COLOR}25`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: "#0D0F14", flexShrink: 0 }}>
@@ -35,13 +36,22 @@ export function ProviderProfile({
               {provider.headline && <div style={{ fontSize: 15, color: "#9CA3AF" }}>{provider.headline}</div>}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {/* You can't request a quote from your own profile — the server rejects a self-connection,
+                  so disable the button here rather than let the request fail with a generic error. */}
               <button
+                type="button"
                 onClick={onRequestQuote}
-                disabled={submitting}
-                style={{ padding: "10px 20px", borderRadius: 10, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.7 : 1 }}
+                disabled={submitting || ownProfile}
+                title={ownProfile ? "This is your own profile — you can't request a quote from yourself." : undefined}
+                style={{ padding: "10px 20px", borderRadius: 10, background: COLOR, border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: ownProfile ? "not-allowed" : submitting ? "default" : "pointer", opacity: submitting || ownProfile ? 0.5 : 1 }}
               >
                 {submitting ? "Requesting…" : "Request Quote"}
               </button>
+              {ownProfile && (
+                <div style={{ fontSize: 12, color: "#6B7280", maxWidth: 180, lineHeight: 1.5 }}>
+                  This is your own profile — you can&apos;t request a quote from yourself.
+                </div>
+              )}
               {canOfferConnectNow(provider, viewerUserId) ? (
                 <ConnectNowButton provider={provider} />
               ) : null}
