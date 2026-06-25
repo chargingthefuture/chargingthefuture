@@ -6,8 +6,6 @@
   ],
   "routes": [
     "/api/announcements/membership/events",
-    "/api/bug-reports/admin",
-    "/api/bug-reports/admin/[id]/resolve",
     "/api/chyme/service-credits",
     "/api/foundation/notifications",
     "/api/foundation/service-credits",

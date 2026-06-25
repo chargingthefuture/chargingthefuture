@@ -36,17 +36,23 @@ and does no external calls.
 
 ## Target Admin Features
 
-- A private in-app view of reports that were **held for review** (flagged by the redaction
-  gate) so the owner can read the raw text in a private place and decide. (Planned; not in
-  this pass.)
+- A private in-app admin view of reports that were **held for review** (flagged by the redaction
+  gate), so an admin can decide on each. **Built (web):** the admin-gated `/admin/bug-reports`
+  page (`app/admin/bug-reports/page.tsx` → `components/bug-reports/bug-reports-admin-shell.tsx`)
+  lists reports (held first) and releases or rejects each via the admin routes below. Only
+  **redacted** text is ever shown — the raw user text never leaves the database (rule 129), so the
+  original plan to read raw text in-app was deliberately not built; raw triage stays in the private
+  triage repo.
 
 ## API Surface and Route Map
 
 | Method | Route | Access | Description |
 |---|---|---|---|
 | POST | `/api/bug-reports` | any authenticated user | Submit a problem report. Validates and length-caps input, enforces a per-user rate limit, runs the redaction/risk gate, and stores the row. Returns `{ ok, reportId, status }`. |
+| GET | `/api/bug-reports/admin` | admin only (`requireBugReportAdminAccess`) | List bug reports for the `/admin/bug-reports` review page, held reports first (`listReportsForAdmin`). Returns `{ ok, items }` with **redacted** message/context only (raw text never leaves the DB, rule 129), plus status, risk flags/level, page URL, plugin slug, app version, and any triage-repo issue link. |
+| POST | `/api/bug-reports/admin/:id/resolve` | admin only, CSRF (`x-ctf-csrf: 1`) | Resolve a held (or new) report. Body `{ action: 'release' \| 'reject' }`: `release` sends it back to `new` so the create-issues job publishes the redacted copy to the triage repo (`releaseHeldReport`); `reject` drops it so it never publishes (`rejectReport`). 409 when the report is not in a resolvable state, 400 on a non-UUID id or an unknown action. Returns `{ ok, id, status }`. |
 
-Admin/triage read routes are planned and not part of this pass.
+The admin routes above back the in-app `/admin/bug-reports` review page. No route ever exposes raw (un-redacted) report text — deeper raw triage happens only in the private triage repo (rule 129).
 
 ## Data Model and Storage Contracts
 
@@ -125,6 +131,7 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-06-25: **Documented the admin review routes** (inventory-debt burn-down — documentation catch-up, no code change). The admin review surface was already built but the inventory still described it as planned. Added `GET /api/bug-reports/admin` (list reports, held first, redacted-only) and `POST /api/bug-reports/admin/:id/resolve` (release/reject, CSRF + admin) to the API Surface table, and updated Target Admin Features to record the built `/admin/bug-reports` page. Both verified against the route handlers and the admin page/shell. Removed these two routes from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. The request-timeout guard is kept. No backend, schema, or contract change.
 - 2026-06-10: Initial backend foundation — `bug_reports` table, submit route, redaction/risk
   gate, repository, create-issues script and (dispatch-only) workflow, plugin registration
