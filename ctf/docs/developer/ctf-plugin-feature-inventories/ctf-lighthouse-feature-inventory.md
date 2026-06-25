@@ -161,15 +161,20 @@ longer a precondition for browsing, hosting, or matching.
 - `GET /api/lighthouse/admin/matches`
 - `PUT /api/lighthouse/admin/properties/:id`
 - `PUT /api/lighthouse/admin/matches/:id`
+- `GET /api/lighthouse/admin/audit-events` — admin-gated (`requireLighthouseAdminAccess`) list of audit-trail rows (`listLighthouseAuditEvents`, `?limit=` default 100), reading `lighthouse_admin_audit_trail`.
 
-### 3.5 Blocks APIs (required v1)
+### 3.5 Blocks APIs (implemented)
 
-- Route contract to be finalized during implementation planning.
-- Required operations:
-  - create block,
-  - check block state,
-  - list blocked users,
-  - remove block.
+Implemented and verified against the route handlers (resolves the earlier "contract to be finalized" note):
+
+- `GET /api/lighthouse/blocks` — list the caller's blocks (`listBlocks`). Read-gated.
+- `POST /api/lighthouse/blocks` — create a block (`createBlock`; body `{ blockedUserId, reason? }`; CSRF-guarded; a self-block returns 403; the action is recorded in `lighthouse_admin_audit_trail` via `insertLighthouseAudit`). Returns 201.
+- `DELETE /api/lighthouse/blocks/[blockedUserId]` — remove a block (`removeBlock`; 404 when not found; CSRF-guarded; audited).
+- `GET /api/lighthouse/blocks/check?blockedUserId=` — return `{ blocked }` for whether the pair is blocked in either direction (`isBlockedPair`). Read-gated.
+
+### 3.6 ServiceCredits
+
+- `POST /api/lighthouse/service-credits` — send ServiceCredits from the caller to `toUserId` (body `{ toUserId, amount, message?, idempotencyKey? }`; `amount` must be > 0; CSRF-guarded). Delegates to the shared `createTransfer` with `originPlugin: 'lighthouse'` and `reasonCode: 'lighthouse.transfer'`; an idempotency key is auto-generated when none is supplied.
 
 ## 4) Data Model and Storage Contracts
 
@@ -184,6 +189,12 @@ Required entities for parity scope:
 5. `lighthouse_property_accepted_currencies` — join (`property_id`, `currency_code` FK →
    `currencies`) listing every currency a property accepts. "Accepts ServiceCredits" is true iff a
    row with `currency_code='SC'` exists here — it is never derived from `rent_currency`.
+6. `lighthouse_user_extension` — the plugin extension keyed by `user_id` (PK); holds the
+   service-scoped deletion marker `service_deleted_at` (nullable) and `updated_at`.
+7. `lighthouse_admin_audit_trail` — the audit log. Columns: `id`, `actor_id`, `command`,
+   `policy_status` (`allow`/`deny`), `reason`, `target_type`, `target_id`, `metadata` (jsonb),
+   `created_at`. Written by `insertLighthouseAudit` (e.g. on block create/delete) and read by
+   `GET /api/lighthouse/admin/audit-events`.
 
 Multi-currency / no-fiat-parity (issue #120):
 
@@ -231,6 +242,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-06-25: **Documented the implemented blocks/audit/ServiceCredits routes and two tables** (inventory-debt burn-down). §3.5 replaced its "contract to be finalized" placeholder with the shipped blocks routes (`GET`/`POST /api/lighthouse/blocks`, `DELETE …/blocks/[blockedUserId]`, `GET …/blocks/check`); added `GET /api/lighthouse/admin/audit-events` to §3.4 and a new §3.6 for `POST /api/lighthouse/service-credits`. Added `lighthouse_user_extension` and `lighthouse_admin_audit_trail` to §4. Each verified against the route handlers and `schema.sql`. Removed these two tables and five routes from the inventory-drift allowlist. Documentation only; no code change.
 - 2026-06-20: Multi-currency for property listings (issue #120). The host create/edit form
   (`lighthouse-host.tsx`) no longer assumes USD: it adds a **Rent currency** picker (shared
   `CurrencySelect`, defaults to `USD`) next to Monthly rent, and an **Accepted currencies** checklist
