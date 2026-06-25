@@ -78,6 +78,13 @@ Admin-only routes:
 5. Canonical metric definitions/versioning for all comparison fields.
 6. Week payload contract includes explicit current-week and previous-week boundary metadata.
 
+### 3.1 Owned storage tables
+
+The aggregates above are persisted in two tables in `ctf/schema.sql`:
+
+- `weekly_performance_metrics` — the per-week aggregate store. One row per metric: `id`, `week_start_date` (DATE), `metric_key`, `metric_value` (NUMERIC), `metric_unit`, `source_plugin`, `created_at`.
+- `weekly_performance_audit_trail` — the admin allow/deny audit log. Columns: `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `metadata` (jsonb), `created_at` — the audit coverage required by §4.4.
+
 ## 4) Security and Compliance Controls
 
 1. Admin-only authorization for plugin admin read/report commands.
@@ -109,6 +116,7 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
 
 ## 8) Change Log
 
+- 2026-06-25: **Documented the two owned storage tables** (inventory-debt burn-down — documentation catch-up, no code change). Added `weekly_performance_metrics` (per-week aggregate store) and `weekly_performance_audit_trail` (admin allow/deny audit log) to §3.1, each from its `schema.sql` definition. Removed these two tables from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-16: The active-member signal now has a writer. The current-week active-member count (`GET /current-week`) reads `login_events` via `countActiveUsersLastDays`, but nothing wrote that table, so the count was always 0. Added `recordLoginEvent` (`lib/engagement/login-activity.ts`), called from the shared access gate for every signed-in member (deduplicated to one row per member per UTC day), which now populates the table this review reads. No schema, route, or contract change here (the writer lives in shared engagement/auth code); the same fix unblocked PeerProgramming weekly cohort assignment, which reads the same table.
 - 2026-06-16: The current week is now always shown, even before any metrics exist for it. Previously, when the `weekly_performance_weeks` table had no rows (the normal state in production until upstream metrics are recorded), `listWeeks()` returned an empty list and `getCurrentWeek()` returned `null`, so the admin surface rendered only a bare "No weeks are tracked yet" message. `lib/weekly-performance/repository.ts` now synthesizes the current week (open, derived from `DATE_TRUNC('week', NOW())`) at read time in both `listWeeks()` (via a `UNION` that adds the current week when absent) and `getCurrentWeek()` (via a `LEFT JOIN`), so the dashboard and admin shells render their normal structure with zero/empty values instead of a blank page. The synthesized week is persisted only when an admin sets it active: `selectWeek()` now inserts the row on first activation when no row exists yet (the table has no unique constraint on `week_start_date`, so an `UPDATE`-then-`INSERT` is used rather than an upsert). Web and Android both consume the same read routes, so this fixes parity for free. No schema or contract change.
 - 2026-06-12: The Android Weekly Performance API client (`packages/mobile/src/features/weekly-performance/api.ts`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs. No schema, route, or contract change.
