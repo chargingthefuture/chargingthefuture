@@ -1,7 +1,5 @@
 {
-  "_README": "Existing-inventory-drift baseline for check-inventory-drift.mjs. Tables/routes here are documented in NO feature inventory as of this gate. This is a BURN-DOWN list: it must only shrink — document the item in the right inventory and delete it from here. Never add a NEW table/route to silence the gate; document it instead. Some routes are non-plugin/infra (health, internal, admin) that belong in ctf-non-plugin-feature-inventory.md.",
+  "_README": "Existing-inventory-drift baseline for check-inventory-drift.mjs. Tables/routes here are documented in NO feature inventory as of this gate. This is a BURN-DOWN list: it must only shrink — document the item in the right inventory and delete it from here. Never add a NEW table/route to silence the gate; document it instead. FULLY DRAINED 2026-06-25 (PRs #852, #866, #868–#877): the original baseline is documented, so this list is now empty and the gate enforces full table/route coverage. Keep it empty — if a new table or route lands undocumented, the fix is to document it in the right inventory, not to re-populate this allowlist.",
   "tables": [],
-  "routes": [
-    "/api/socketrelay/service-credits"
-  ]
+  "routes": []
 }
