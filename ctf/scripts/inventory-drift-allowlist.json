@@ -16,14 +16,10 @@
     "skills_taxonomy_change_events",
     "skills_taxonomy_consumer_bindings",
     "skills_taxonomy_flattened_projection",
-    "user_ui_preferences",
     "weekly_performance_audit_trail",
     "weekly_performance_metrics"
   ],
   "routes": [
-    "/api/account/blocks",
-    "/api/account/blocks/[blockedUserId]",
-    "/api/account/ui-preferences",
     "/api/admin/account-restrictions/audit",
     "/api/admin/account-restrictions/restrict",
     "/api/admin/account-restrictions/unrestrict",
