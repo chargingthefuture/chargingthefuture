@@ -3,7 +3,7 @@ import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { setRoomMemberHandRaised } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess } from '../_lib';
+import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
 
 // Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing
 // the raised hand until they lower it (or leave). Stream reactions are transient and auto-clear, so
@@ -16,6 +16,11 @@ export async function POST(request: Request) {
   const gate = await requireChymeAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   let body: HandRequestBody;

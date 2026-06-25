@@ -72,7 +72,7 @@ export async function getChymeMessages(): Promise<ChymeMessagesResponse> {
 export async function postChymeMessage(text: string): Promise<ChymeSendResponse> {
   return authedFetchJson('/api/chyme/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({ text }),
   });
 }

@@ -117,7 +117,10 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, isM
     if (status !== 'joined') return;
     const ping = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      void fetch('/api/chyme/heartbeat', { method: 'POST' }).catch(() => {
+      void fetch('/api/chyme/heartbeat', {
+        method: 'POST',
+        headers: { 'x-ctf-csrf': '1' },
+      }).catch(() => {
         /* best-effort keepalive */
       });
     };
@@ -238,7 +241,7 @@ function ChymeAudioRoomLive({
     );
     void fetch('/api/chyme/hand', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
       body: JSON.stringify({ raised: next }),
     }).catch(() => {
       /* best-effort: the next room poll reconciles; local state already reflects the toggle */

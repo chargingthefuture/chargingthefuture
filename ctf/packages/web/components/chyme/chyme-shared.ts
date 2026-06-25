@@ -64,7 +64,14 @@ type RequestError = {
 };
 
 export async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { cache: 'no-store', ...init });
+  // Attach the same-origin CSRF confirmation header on state-changing requests, matching the
+  // server-side `ensureMutationCsrf` guard on the chyme mutation routes. Reads (GET/HEAD) skip it.
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const headers = new Headers(init?.headers);
+  if (method !== 'GET' && method !== 'HEAD') {
+    headers.set('x-ctf-csrf', '1');
+  }
+  const response = await fetch(url, { cache: 'no-store', ...init, headers });
   const payload = (await response.json().catch(() => null)) as T | RequestError | null;
   if (!response.ok) {
     const message =
