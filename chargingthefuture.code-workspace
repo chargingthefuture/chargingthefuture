@@ -10,18 +10,6 @@
     "workbench.editor.limit.enabled": true,
     "workbench.editor.limit.perEditorGroup": true,
     "workbench.editor.limit.value": 1,
-    "workbench.editor.limit.excludeDirty": true,
-    "github.copilot.chat.codeGeneration.instructions": [
-      { "file": ".github/instructions/copilot-instructions.md" }
-    ],
-    "github.copilot.chat.reviewSelection.instructions": [
-      { "file": ".github/instructions/copilot-instructions.md" }
-    ],
-    "github.copilot.chat.testGeneration.instructions": [
-      { "file": ".github/instructions/copilot-instructions.md" }
-    ],
-    "github.copilot.chat.commitMessageGeneration.instructions": [
-      { "file": ".github/instructions/copilot-instructions.md" }
-    ]
+    "workbench.editor.limit.excludeDirty": true
   }
 }
