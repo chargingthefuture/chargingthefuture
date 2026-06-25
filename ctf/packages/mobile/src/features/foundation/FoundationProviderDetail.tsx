@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import type { Provider } from './api';
 import { createConnectionThread, requestQuote } from './api';
-import { ConnectNowButton, canOfferConnectNow, instantCallRateLabel } from './FoundationConnectNow';
+import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, instantCallRateLabel } from './FoundationConnectNow';
 
 const BG = '#0F1117';
 const SURFACE_DARK = '#090B0F';
@@ -41,8 +41,11 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
   const [status, setStatus] = useState<string | null>(null);
 
   // Only offer "Connect now" when the provider opted in with a valid rate and the
-  // viewer is not the provider themselves. Audio-only call.
+  // viewer is not the provider themselves. Audio-only call. When the provider accepts
+  // calls but this viewer can't be offered one (e.g. they're viewing their own profile),
+  // show a passive availability badge instead so they can see the setting is live.
   const showConnectNow = canOfferConnectNow(provider, viewerUserId);
+  const showAvailabilityBadge = !showConnectNow && acceptsInstantCalls(provider);
   const connectRateLabel = showConnectNow
     ? instantCallRateLabel(provider.instantCallRateCredits ?? 0, provider.instantCallIntervalMinutes ?? 0)
     : null;
@@ -126,6 +129,10 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
                 Live audio call · {connectRateLabel}. The first block is charged when they answer.
               </Text>
             ) : null}
+          </View>
+        ) : showAvailabilityBadge ? (
+          <View style={styles.connectSection}>
+            <InstantCallAvailabilityBadge provider={provider} />
           </View>
         ) : null}
 

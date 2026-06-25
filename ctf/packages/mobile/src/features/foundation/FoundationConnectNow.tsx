@@ -28,17 +28,42 @@ export function instantCallRateLabel(rateCredits: number, intervalMinutes: numbe
   return `${credits} / ${intervalMinutes} min`;
 }
 
-// True only when this provider is reachable for an instant call AND it should be
-// offered to this viewer: the provider opted in, set a valid whole-credit rate (>= 1),
-// and the viewer is not the provider themselves (you cannot ring yourself). Mirrors
-// canOfferConnectNow on web.
-export function canOfferConnectNow(provider: Provider, viewerUserId: string | null): boolean {
+// True when this provider is reachable for an instant call at all: they opted in and set
+// a valid whole-credit rate (>= 1). Viewer-independent — used to surface a passive
+// "accepts 1:1 calls" badge to everyone, including the provider themselves. Mirrors
+// acceptsInstantCalls on web.
+export function acceptsInstantCalls(provider: Provider): boolean {
   if (!provider.instantCallEnabled) return false;
   const rate = provider.instantCallRateCredits;
   if (rate === null || rate === undefined || !Number.isFinite(rate) || rate < 1) return false;
+  return true;
+}
+
+// True only when this provider is reachable for an instant call AND it should be
+// offered to this viewer: they accept calls and the viewer is not the provider
+// themselves (you cannot ring yourself). Mirrors canOfferConnectNow on web.
+export function canOfferConnectNow(provider: Provider, viewerUserId: string | null): boolean {
+  if (!acceptsInstantCalls(provider)) return false;
   if (viewerUserId && provider.providerUserId === viewerUserId) return false;
   return true;
 }
+
+// A passive, non-interactive pill stating the provider accepts live 1:1 calls and at what
+// rate. Shown wherever "Connect now" can't be offered to this viewer but the provider still
+// accepts calls — most importantly on their own profile. Caller gates on acceptsInstantCalls.
+// Mirrors InstantCallAvailabilityBadge on web.
+export const InstantCallAvailabilityBadge: React.FC<{ provider: Provider }> = ({ provider }) => {
+  const rate = provider.instantCallRateCredits ?? 0;
+  const interval = provider.instantCallIntervalMinutes ?? 0;
+  const rateLabel = instantCallRateLabel(rate, interval);
+  return (
+    <View style={styles.availabilityBadge} accessibilityRole="text">
+      <Text style={styles.availabilityIcon}>📞</Text>
+      <Text style={styles.availabilityText}>Accepts live 1:1 calls</Text>
+      <Text style={styles.availabilityRate}>· {rateLabel}</Text>
+    </View>
+  );
+};
 
 // The buyer pre-authorizes a maximum number of blocks at confirm time. The call can
 // never run past this cap in v1. These selectable caps match the web entry; the
@@ -232,6 +257,21 @@ const styles = StyleSheet.create({
   connectIcon: { fontSize: 15 },
   connectText: { color: '#1a1205', fontSize: 14, fontWeight: '700' },
   connectRate: { color: '#1a1205', fontSize: 13, fontWeight: '600', opacity: 0.85 },
+  availabilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: `${COLOR}12`,
+    borderWidth: 1,
+    borderColor: `${COLOR}30`,
+  },
+  availabilityIcon: { fontSize: 14 },
+  availabilityText: { color: COLOR, fontSize: 13.5, fontWeight: '600' },
+  availabilityRate: { color: COLOR, fontSize: 13, fontWeight: '600', opacity: 0.85 },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(8,9,13,0.72)',

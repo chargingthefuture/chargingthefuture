@@ -13,11 +13,11 @@ export function instantCallRateLabel(rateCredits: number, intervalMinutes: numbe
   return `${credits} / ${intervalMinutes} min`;
 }
 
-// True only when this provider is reachable for an instant call AND it should be offered to this
-// viewer: the provider opted in, set a valid whole-credit rate (>= 1), and the viewer is not the
-// provider themselves (you can't ring yourself). The unlock gate is handled upstream — only an
-// unlocked member ever sees the Foundation provider list.
-export function canOfferConnectNow(provider: ProviderView, viewerUserId: string | null): boolean {
+// True when this provider is reachable for an instant call at all: they opted in and set a valid
+// whole-credit rate (>= 1). This is viewer-independent — it's used to surface a passive "accepts
+// 1:1 calls" badge to everyone, including the provider themselves (so they can confirm their own
+// setting is live). The actionable "Connect now" button uses canOfferConnectNow instead.
+export function acceptsInstantCalls(provider: ProviderView): boolean {
   if (!provider.instantCallEnabled) {
     return false;
   }
@@ -25,10 +25,51 @@ export function canOfferConnectNow(provider: ProviderView, viewerUserId: string 
   if (rate === null || !Number.isFinite(rate) || rate < 1) {
     return false;
   }
+  return true;
+}
+
+// True only when this provider is reachable for an instant call AND it should be offered to this
+// viewer: they accept calls (acceptsInstantCalls) and the viewer is not the provider themselves
+// (you can't ring yourself). The unlock gate is handled upstream — only an unlocked member ever
+// sees the Foundation provider list.
+export function canOfferConnectNow(provider: ProviderView, viewerUserId: string | null): boolean {
+  if (!acceptsInstantCalls(provider)) {
+    return false;
+  }
   if (viewerUserId && provider.providerUserId === viewerUserId) {
     return false;
   }
   return true;
+}
+
+// A passive, non-interactive pill that states the provider accepts live 1:1 calls and at what rate.
+// Shown wherever "Connect now" can't be offered to this viewer but the provider still accepts calls —
+// most importantly on the provider's own profile, so they can see their setting is live. Caller gates
+// on acceptsInstantCalls before rendering this.
+export function InstantCallAvailabilityBadge({
+  provider, compact = false,
+}: {
+  provider: ProviderView;
+  compact?: boolean;
+}) {
+  const rate = provider.instantCallRateCredits ?? 0;
+  const rateLabel = instantCallRateLabel(rate, provider.instantCallIntervalMinutes);
+  return (
+    <span
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: compact ? "6px 12px" : "9px 16px",
+        borderRadius: compact ? 8 : 10,
+        background: `${COLOR}12`, color: COLOR,
+        fontSize: compact ? 12 : 13.5, fontWeight: 600,
+        border: `1px solid ${COLOR}30`, flexShrink: 0,
+      }}
+    >
+      <PhoneCall size={compact ? 14 : 16} />
+      <span>Accepts live 1:1 calls</span>
+      <span style={{ fontWeight: 600, opacity: 0.85 }}>· {rateLabel}</span>
+    </span>
+  );
 }
 
 // The "Connect now" entry point: a button that shows the rate and block length, and on click opens a
