@@ -17,14 +17,14 @@ Legitimate shared infrastructure modules (all plugins may import):
 - `lib/auth/`
 - `lib/plugins/`
 
-See also: plugin modularity rules in ctf/docs/ and copilot-instructions.md
+See also: plugin modularity rules in ctf/docs/ and CLAUDE.md
 # Monorepo & Boundary Guardian
 
 ## Purpose
 Enforces monorepo layout, shared boundary, and modularity rules. Prevents cross-boundary violations and ensures codebase structure integrity.
 
 ## Responsibilities
-- Enforce monorepo and boundary rules from copilot-instructions.md
+- Enforce monorepo and boundary rules from CLAUDE.md
 - Prevent ctf/ from referencing platform/ (unless explicitly allowed)
 - Validate file size, modularity, and complexity constraints
 

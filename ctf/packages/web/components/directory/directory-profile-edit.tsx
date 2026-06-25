@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { getDirectoryTokens } from "./shared";
 import { useTheme } from "@/hooks/useTheme";
+import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
 
 // The full editable shape of a directory profile. GET /api/directory/profile returns the
 // caller's own profile with the taxonomy IDs (sectorId, jobTitleId, skills[].id) needed to
@@ -20,6 +21,9 @@ type OwnProfile = {
   sectorId: string | null;
   jobTitleId: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
+  // Free-text "skill not listed" labels the member added themselves; round-tripped so they can be
+  // edited or removed. Absent on profiles created before this field existed (defaults to []).
+  proposedSkills?: string[];
   venmoAddress?: string | null;
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;
@@ -41,6 +45,7 @@ type FormState = {
   sectorId: string;
   jobTitleId: string;
   skillIds: string[];
+  proposedSkills: string[];
   venmoAddress: string;
   moneroAddress: string;
   bitcoinAddress: string;
@@ -62,6 +67,7 @@ function emptyForm(): FormState {
     sectorId: "",
     jobTitleId: "",
     skillIds: [],
+    proposedSkills: [],
     venmoAddress: "",
     moneroAddress: "",
     bitcoinAddress: "",
@@ -92,6 +98,11 @@ export function DirectoryProfileEdit({
   const [skills, setSkills] = useState<SkillOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Free-text filter for the specializations list. Empty = show the full scrollable list, so a
+  // member who prefers to scroll the whole table for maximum exposure still can; typing narrows it.
+  const [skillQuery, setSkillQuery] = useState("");
+  // Draft text for the "skill not listed" box, before it is committed to form.proposedSkills.
+  const [proposedInput, setProposedInput] = useState("");
 
   // Load the current profile plus the taxonomy option lists. Skills load unfiltered so the
   // profile's existing skill IDs always resolve to names regardless of their job title.
@@ -152,6 +163,7 @@ export function DirectoryProfileEdit({
           sectorId,
           jobTitleId: p?.jobTitleId ?? "",
           skillIds: (p?.skills ?? []).map((s) => s.id),
+          proposedSkills: p?.proposedSkills ?? [],
           venmoAddress: p?.venmoAddress ?? "",
           moneroAddress: p?.moneroAddress ?? "",
           bitcoinAddress: p?.bitcoinAddress ?? "",
@@ -194,6 +206,27 @@ export function DirectoryProfileEdit({
     }));
   }
 
+  // Commit the "skill not listed" draft as a free-text proposed skill. Skips blanks, anything past
+  // the count cap, and labels that duplicate an existing entry or an already-selected taxonomy skill.
+  function addProposedSkill() {
+    const label = proposedInput.trim().replace(/\s+/g, " ").slice(0, DIRECTORY_MAX_PROPOSED_SKILL_LENGTH);
+    if (label.length === 0) return;
+    const lower = label.toLowerCase();
+    setForm((prev) => {
+      if (prev.proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS) return prev;
+      if (prev.proposedSkills.some((s) => s.toLowerCase() === lower)) return prev;
+      if (skills.some((s) => prev.skillIds.includes(s.id) && s.name.toLowerCase() === lower)) return prev;
+      return { ...prev, proposedSkills: [...prev.proposedSkills, label] };
+    });
+    setProposedInput("");
+  }
+
+  function removeProposedSkill(label: string) {
+    setForm((prev) => ({ ...prev, proposedSkills: prev.proposedSkills.filter((s) => s !== label) }));
+  }
+
+  const proposedFull = form.proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
+
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
@@ -209,6 +242,7 @@ export function DirectoryProfileEdit({
       sectorId: form.sectorId.trim().length > 0 ? form.sectorId : null,
       jobTitleId: form.jobTitleId.trim().length > 0 ? form.jobTitleId : null,
       skillIds: form.skillIds,
+      proposedSkills: form.proposedSkills,
       venmoAddress: nullableTrim(form.venmoAddress),
       moneroAddress: nullableTrim(form.moneroAddress),
       bitcoinAddress: nullableTrim(form.bitcoinAddress),
@@ -238,6 +272,14 @@ export function DirectoryProfileEdit({
   const inputStyle = { width: "100%", padding: "9px 12px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", boxSizing: "border-box" as const };
   const fieldGap = { marginBottom: 18 };
   const canSave = form.firstName.trim().length > 0 && !saving;
+
+  // Filter the taxonomy skills by the typed query (case-insensitive substring). Selection state
+  // lives in form.skillIds, so a chip filtered out of view stays selected and reappears, still
+  // highlighted, the moment the query is cleared — searching never drops a pick.
+  const normalizedSkillQuery = skillQuery.trim().toLowerCase();
+  const filteredSkills = normalizedSkillQuery
+    ? skills.filter((s) => s.name.toLowerCase().includes(normalizedSkillQuery))
+    : skills;
 
   return (
     <div
@@ -323,30 +365,110 @@ export function DirectoryProfileEdit({
               </div>
 
               <div style={fieldGap}>
-                <label style={labelStyle}>Specializations</label>
+                <label style={labelStyle}>
+                  Specializations
+                  {form.skillIds.length > 0 && (
+                    <span style={{ marginLeft: 8, color: t.ACCENT, fontWeight: 700 }}>{form.skillIds.length} selected</span>
+                  )}
+                </label>
                 {skills.length === 0 ? (
                   <div style={{ fontSize: 12, color: t.FAINT }}>No skills available to select.</div>
                 ) : (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", maxHeight: 180, overflowY: "auto", padding: 2 }}>
-                    {skills.map((s) => {
-                      const active = form.skillIds.includes(s.id);
-                      return (
+                  <>
+                    {/* Type to filter; clear the box to get the full scrollable list back. */}
+                    <div style={{ position: "relative", marginBottom: 8 }}>
+                      <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: t.MUTED, pointerEvents: "none" }} />
+                      <input
+                        type="search"
+                        value={skillQuery}
+                        onChange={(e) => setSkillQuery(e.target.value)}
+                        aria-label="Search specializations"
+                        placeholder="Search specializations…"
+                        style={{ ...inputStyle, padding: "8px 12px 8px 32px" }}
+                      />
+                    </div>
+                    {filteredSkills.length === 0 ? (
+                      <div style={{ fontSize: 12, color: t.FAINT, padding: "6px 2px", lineHeight: 1.5 }}>
+                        No specialization matches “{skillQuery.trim()}”.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", maxHeight: 180, overflowY: "auto", padding: 2 }}>
+                        {filteredSkills.map((s) => {
+                          const active = form.skillIds.includes(s.id);
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => toggleSkill(s.id)}
+                              aria-pressed={active}
+                              style={{
+                                padding: "5px 12px", borderRadius: 14, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                                background: active ? `${t.ACCENT}20` : "transparent",
+                                border: `1px solid ${active ? `${t.ACCENT}50` : t.BORDER_HI}`,
+                                color: active ? t.ACCENT : t.SUBTLE,
+                              }}
+                            >
+                              {s.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div style={fieldGap}>
+                <label style={labelStyle} htmlFor="dpe-proposed">Your skill not listed? Add it</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    id="dpe-proposed"
+                    value={proposedInput}
+                    onChange={(e) => setProposedInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addProposedSkill(); } }}
+                    maxLength={DIRECTORY_MAX_PROPOSED_SKILL_LENGTH}
+                    disabled={proposedFull}
+                    aria-label="Add a skill that is not in the list"
+                    placeholder="e.g. Game design, Game development…"
+                    style={{ ...inputStyle, opacity: proposedFull ? 0.6 : 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addProposedSkill}
+                    disabled={proposedFull || proposedInput.trim().length === 0}
+                    style={{
+                      padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+                      background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}50`, color: t.ACCENT,
+                      cursor: proposedFull || proposedInput.trim().length === 0 ? "not-allowed" : "pointer",
+                      opacity: proposedFull || proposedInput.trim().length === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: t.FAINT, marginTop: 6, lineHeight: 1.5 }}>
+                  {proposedFull
+                    ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
+                    : "Not in the list above? Type it here. It shows on your profile as “pending review” until an admin adds it to the official list."}
+                </div>
+                {form.proposedSkills.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    {form.proposedSkills.map((s) => (
+                      <span
+                        key={s}
+                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, fontSize: 13, fontWeight: 600, background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.32)", color: "#FBBF24" }}
+                      >
+                        {s}
                         <button
-                          key={s.id}
                           type="button"
-                          onClick={() => toggleSkill(s.id)}
-                          aria-pressed={active}
-                          style={{
-                            padding: "5px 12px", borderRadius: 14, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                            background: active ? `${t.ACCENT}20` : "transparent",
-                            border: `1px solid ${active ? `${t.ACCENT}50` : t.BORDER_HI}`,
-                            color: active ? t.ACCENT : t.SUBTLE,
-                          }}
+                          aria-label={`Remove ${s}`}
+                          onClick={() => removeProposedSkill(s)}
+                          style={{ background: "none", border: "none", color: "#FBBF24", cursor: "pointer", padding: 0, lineHeight: 1, display: "flex" }}
                         >
-                          {s.name}
+                          <X size={12} />
                         </button>
-                      );
-                    })}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>

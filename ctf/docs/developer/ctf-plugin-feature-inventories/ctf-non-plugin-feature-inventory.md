@@ -108,6 +108,13 @@
 2. Persistent settings contract includes high contrast mode, font size (`normal`, `large`, `extra-large`), and dyslexia-friendly font.
 3. Runtime accessibility token/class application remains app-shell-owned.
 4. Plugins consume settings/accessibility state as read-only dependency and do not fork keys.
+5. The per-user UI theme is persisted in `user_ui_preferences` (`user_id` PK, `theme` default `'default'`, `updated_at`) and served by `GET` / `PUT /api/account/ui-preferences` (`getUserTheme` / `setUserTheme`; the value is normalized via `normalizeTheme`, CSRF-guarded on write, and gated by `requireAccountAccess` so any signed-in identity reads and sets only its own row).
+
+### 1.6 Member Blocking (cross-cutting safety control)
+
+1. Any signed-in member can block, unblock, and list who they have blocked — a baseline safety boundary gated by `requireAccountAccess` (the same `any_authenticated` gate as account deletion, never the unlock gate). A block is the member's own private boundary: never visible to the person blocked, and it carries no reason.
+2. `GET /api/account/blocks` lists the member's blocks newest-first (`listBlocksForUser`). `POST /api/account/blocks` creates a block (body `{ blockedUserId }`; CSRF-guarded; idempotent; a self-block or a blank target returns 400). `DELETE /api/account/blocks/[blockedUserId]` removes a block (CSRF-guarded; idempotent — unblocking a member who is not blocked still returns ok).
+3. Optional safety escalation (opt-in): a `POST` with `safetyConcern: true` and an optional short `safetyDetail` writes the block AND a `member_safety_reports` row in one transaction (they succeed or fail together) — the only path by which a member block reaches an admin. Without the flag, nothing is written to the reports table.
 
 ---
 
@@ -128,16 +135,16 @@
 
 ## 3) Rule Alignment
 
-1. `.github/instructions/index.mdc`
+1. `.claude/rules/index.mdc`
    - Keeps rewrite scope in `ctf/`, preserves plugin-first ownership boundaries, and treats legacy as reference-only.
-2. `.github/instructions/120-plugin-feature-inventory-lifecycle-rules.mdc`
+2. `.claude/rules/120-plugin-feature-inventory-lifecycle-rules.mdc`
    - Requires plugin-owned capabilities (weekly-performance, skills-taxonomy) to move into dedicated plugin inventory/checklist docs.
    - This non-plugin inventory is explicitly exempt from Rule 120 plugin-required content sections and uses alternate non-plugin capability criteria.
-3. `.github/instructions/004-authz-authn-and-admin-controls.mdc`
+3. `.claude/rules/004-authz-authn-and-admin-controls.mdc`
    - Requires server-side authz/authn hardening for retained non-plugin auth/account and privileged contract surfaces.
-4. `.github/instructions/007-audit-logging-and-monitoring.mdc`
+4. `.claude/rules/007-audit-logging-and-monitoring.mdc`
    - Allows admin feed removal while still requiring complete audit logging coverage and protected evidence paths.
-5. `.github/instructions/014-compliance-rules-index.mdc`
+5. `.claude/rules/014-compliance-rules-index.mdc`
    - Keeps compliance modules mandatory for retained non-plugin contracts and plugin-owned rewrites.
 
 ---
@@ -159,6 +166,7 @@
 
 ## 5) Change Log
 
+- 2026-06-25: **Documented account-level surfaces** (inventory-debt burn-down — documentation catch-up, no code change). Added the per-user theme table `user_ui_preferences` and `GET`/`PUT /api/account/ui-preferences` to §1.5, and a new §1.6 covering member blocking: `GET`/`POST /api/account/blocks` and `DELETE /api/account/blocks/[blockedUserId]` (with the optional safety-escalation path). Each verified against the route handlers and `schema.sql`. Removed these four items from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-12: Android Account & Data API client (`packages/mobile/src/features/account-data/api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. The request-timeout guard is kept. No backend, schema, or contract change.
 - 2026-06-08: Recorded the removal of two off-brand "coming soon" placeholders from the community shell, which the readiness audit (#344) flagged as out of scope and the owner confirmed are not part of the product. The general person-to-person **Direct Messages** list (left sidebar; no backend, dead click handler, fake unread counts) and the permanently disabled **Notifications** bell button (icon rail) are gone, along with their now-unused props, state, fetch call, `/api/hub/dms` route, types, and CSS. The homepage hub's open community channel list and the feed stay exactly as they were. (The code for these removals already landed in #346 for Direct Messages and #350 for Notifications; this entry documents the decision and confirms the channel/feed were preserved.)
 - 2026-06-01: Added the cross-plugin account/per-service data deletion backend (registry-driven engine + orchestrator, `account_deletion_events` table, `DELETE /api/account/services/:slug` and `DELETE /api/account/full-account`, which now orchestrates the mixed delete/soft-delete/retain plan across every plugin instead of only recording a request). Documented in section 1.2 and `ACCOUNT_DELETION_REGISTRY.md`. No UI (design-gated).

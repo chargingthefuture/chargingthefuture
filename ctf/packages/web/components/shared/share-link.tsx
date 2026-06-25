@@ -6,7 +6,7 @@ import { Share2, Copy, Check, ExternalLink } from "lucide-react";
 // THE shared way to share any URL across the web app (the v2 "useLink" pattern). A trigger button opens
 // a small popup that (1) shows the full, absolute link, (2) lets you open it in a new tab, and (3)
 // copies it with clear feedback. Every "share"/"copy link" affordance in the app must use this — never a
-// bare copy button or a raw window.open. See .github/instructions/130-link-sharing-and-copy-url-rules.mdc.
+// bare copy button or a raw window.open. See .claude/rules/130-link-sharing-and-copy-url-rules.mdc.
 //
 // Accessibility: the trigger has aria-haspopup/aria-expanded; the popup is a labelled dialog; opening it
 // moves focus to the (selectable) URL field; Escape and an outside click close it and return focus to the

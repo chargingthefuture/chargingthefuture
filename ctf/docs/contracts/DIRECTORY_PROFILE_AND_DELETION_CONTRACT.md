@@ -60,6 +60,10 @@ Rule 114 baseline: Directory extends the canonical profile by `user_id` and avoi
   - Contains personal data? yes (profile linkage)
   - Retention period: long-lived
   - Legal/compliance note: search/filter metadata
+- Table/entity: `directory_profile_proposed_skills`
+  - Contains personal data? yes (member-authored free-text skill labels on their own profile)
+  - Retention period: long-lived while the profile is active
+  - Legal/compliance note: "skill not listed" entries awaiting admin promotion into the taxonomy; keyed by `profile_id`, cascades with the profile on deletion
 - Table/entity: `directory_profile_change_events`
   - Contains personal data? minimal actor linkage
   - Retention period: compliance retention window
@@ -75,6 +79,7 @@ When user deletes Directory usage only:
 
 - Delete immediately:
   - `directory_user_extension` and optional discoverability preferences
+  - `directory_profile_skills` and `directory_profile_proposed_skills` for the user's profile (profile_id-keyed child rows)
 - Anonymize/pseudonymize:
   - directory profile projection where historical records must remain
 - Retain for compliance/fraud/finance:
@@ -151,3 +156,4 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-06-25: Added `directory_profile_proposed_skills` (member-authored "skill not listed" free-text labels on their own profile, pending admin promotion). Profile_id-keyed; cleared with the profile in service-scoped deletion.

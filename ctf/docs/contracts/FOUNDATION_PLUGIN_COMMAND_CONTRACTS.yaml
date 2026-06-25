@@ -175,6 +175,193 @@ contracts:
     idempotency: true
 
   - pluginId: foundation
+    command: foundation.connection.instant-call.ring
+    version: 1.1.0
+    description: Place an instant 1:1 audio call ring on an existing Direct Line thread (Foundation "Connect now", issue #808 tasks 3 and 4). The caller rings the other thread participant (the provider). Audio only for v1. Rate limited so one member cannot spam a provider with repeated rings. Ringing moves NO credits. The buyer pre-authorizes a maximum number of blocks here (authorizedBlocks, the per-session cap the call can never extend past in v1; default 6); the ring is rejected up front if the caller cannot afford even the first block at the provider's current rate, or if the provider has no valid paid-call rate set. No push happens here (issue #808 task 5 — the ring is in-app only for now).
+    inputSchema:
+      threadId:
+        type: string
+        required: true
+      authorizedBlocks:
+        type: integer
+        required: false
+    outputSchema:
+      callId:
+        type: string
+      ringStatus:
+        type: string
+      ringExpiresAt:
+        type: string
+      authorizedBlocks:
+        type: integer
+    dataAccess:
+      - foundation_connection_threads
+      - foundation_thread_participants
+      - foundation_call_sessions
+      - foundation_rate_limit_counters
+      - foundation_user_extension
+      - service_credits_wallets
+    purpose: survivor_provider_communication
+    retentionClass: communication_short_lived
+    idempotency: false
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.answer
+    version: 1.1.0
+    description: Answer a ringing instant 1:1 call AND take the first per-block charge (issue #808 tasks 3 and 4). Only the callee may answer, and only while it is still ringing. Answering snapshots the provider's rate + block length onto the call (so a later rate change cannot affect this call) and charges the first block from the caller to the provider via the canonical peer-to-peer ServiceCredits transfer (direct, no escrow; idempotency key foundation-instant-call-<callId>-block-1, so an answer retry never double-charges). If the caller cannot afford the first block the call ends cleanly with no credits moved and the answer fails — the call is never opened.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      callId:
+        type: string
+      ringStatus:
+        type: string
+      answeredAt:
+        type: string
+      blocksCharged:
+        type: integer
+      rateCreditsLocked:
+        type: integer
+      paidThroughAt:
+        type: string
+      lastTransferId:
+        type: string
+    dataAccess:
+      - foundation_call_sessions
+      - foundation_user_extension
+      - service_credits_wallets
+      - service_credits_transfers
+      - service_credits_ledger_entries
+      - service_credits_escrow_holds
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+    purpose: survivor_provider_communication
+    retentionClass: financial_record_long_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.extend
+    version: 1.0.0
+    description: Charge one more paid block on an in-progress instant 1:1 call (issue #808 task 4). Caller-only (only the buyer who started the call). The call must be active and still under the buyer-set block cap (blocks_charged < authorized_blocks; otherwise rejected as block_cap_reached). The next block is charged at the rate LOCKED on the call at answer (never the provider's live rate), via the canonical peer-to-peer ServiceCredits transfer (direct, no escrow; idempotency key foundation-instant-call-<callId>-block-<n>, so a retry never double-charges). On insufficient funds the call ends cleanly with no credits moved. Advances paid_through_at by one interval on success.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      callId:
+        type: string
+      ringStatus:
+        type: string
+      blocksCharged:
+        type: integer
+      authorizedBlocks:
+        type: integer
+      paidThroughAt:
+        type: string
+      lastTransferId:
+        type: string
+    dataAccess:
+      - foundation_call_sessions
+      - service_credits_wallets
+      - service_credits_transfers
+      - service_credits_ledger_entries
+      - service_credits_escrow_holds
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+    purpose: survivor_provider_communication
+    retentionClass: financial_record_long_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.decline
+    version: 1.0.0
+    description: Decline a ringing instant 1:1 call (issue #808 task 3). Only the callee may decline, and only while it is still ringing. Terminal — no call and no charge.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      callId:
+        type: string
+      ringStatus:
+        type: string
+    dataAccess:
+      - foundation_call_sessions
+    purpose: survivor_provider_communication
+    retentionClass: communication_short_lived
+    idempotency: false
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.end
+    version: 1.0.0
+    description: End an instant 1:1 call (issue #808 task 3). Either participant may end it from any non-terminal state — the caller can cancel a still-ringing call, and either party can hang up an in-progress call. Idempotent on an already-ended call.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      callId:
+        type: string
+      ringStatus:
+        type: string
+      endedAt:
+        type: string
+    dataAccess:
+      - foundation_call_sessions
+    purpose: survivor_provider_communication
+    retentionClass: communication_short_lived
+    idempotency: true
+
+  - pluginId: foundation
+    command: foundation.connection.instant-call.state.read
+    version: 1.0.0
+    description: Read the current state of an instant 1:1 call the caller participates in (issue #808 task 3). Drives the caller and callee poll. When the call is answered, also returns the participant-only Stream audio-join credentials (the same token path the Direct Line uses — no parallel token path). Realises the ~60s ring timeout lazily on read.
+    inputSchema:
+      callId:
+        type: string
+        required: true
+    outputSchema:
+      ringStatus:
+        type: string
+      role:
+        type: string
+      streamApiKey:
+        type: string
+      streamUserId:
+        type: string
+      streamToken:
+        type: string
+      streamChannelId:
+        type: string
+    dataAccess:
+      - foundation_call_sessions
+      - foundation_connection_threads
+      - stream_video_call_metadata
+    purpose: survivor_provider_communication
+    retentionClass: communication_short_lived
+    idempotency: false
+
+  - pluginId: foundation
+    command: foundation.connection.incoming-call.read
+    version: 1.0.0
+    description: Read the signed-in member's one live incoming instant 1:1 call ring, if any (issue #808 task 3). The in-app incoming-call surface polls this so a member being rung can answer or decline. v1 delivers the ring in-app only; out-of-app push is issue #808 task 5. Realises the ~60s ring timeout lazily on read.
+    inputSchema: {}
+    outputSchema:
+      callId:
+        type: string
+      ringStatus:
+        type: string
+      ringExpiresAt:
+        type: string
+    dataAccess:
+      - foundation_call_sessions
+    purpose: survivor_provider_communication
+    retentionClass: communication_short_lived
+    idempotency: false
+
+  - pluginId: foundation
     command: foundation.quote.request.create
     version: 1.0.0
     description: Create a quote request in requested state for survivor-selected providers.
@@ -498,3 +685,7 @@ changelog:
     change: Added provider instant 1:1 call settings commands (foundation.provider.instant-call.get / .set, issue #808) — the provider opt-in toggle, rate in ServiceCredits, and per-block interval. Settings only; no call or billing logic.
   - date: 2026-06-24
     change: foundation.search.providers now also returns each provider's read-only instant-call availability (instantCallEnabled, instantCallRateCredits, instantCallIntervalMinutes) read from foundation_user_extension, plus viewerUserId so the client can hide "Connect now" on the viewer's own card (Foundation "Connect now" button, issue #808). Read-only; the call lifecycle and billing are later tasks of #808.
+  - date: 2026-06-25
+    change: Added the instant 1:1 call ring/answer lifecycle commands (issue #808 task 3, audio-only v1) — foundation.connection.instant-call.ring / .answer / .decline / .end, plus foundation.connection.instant-call.state.read and foundation.connection.incoming-call.read. Reuses the Direct Line thread and the participant-only Stream token path. Ring is in-app only (push is task 5); no credits move (billing is task 4, hooked at the answer seam). Ring is rate limited per member.
+  - date: 2026-06-25
+    change: Added per-block billing (issue #808 task 4) to the instant 1:1 call. ring is now v1.1.0 — it takes an optional authorizedBlocks (buyer-set per-session block cap, default 6, never exceeded in v1), pre-checks the caller can afford the first block, and reads foundation_user_extension + service_credits_wallets (still moves no credits). answer is now v1.1.0 — it snapshots the provider's rate + interval onto the call and charges the first block via the canonical peer-to-peer ServiceCredits transfer (direct, no escrow), so its dataAccess now includes the service_credits_* tables and it is idempotent on the deterministic per-block key. Added foundation.connection.instant-call.extend (caller-only) to charge each subsequent block at the LOCKED rate under the authorized cap. Disputes/refunds and mid-session cap re-authorization are deferred follow-ups.
