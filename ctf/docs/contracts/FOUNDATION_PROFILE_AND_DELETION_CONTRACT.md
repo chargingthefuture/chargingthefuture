@@ -84,6 +84,10 @@ Foundation uses canonical profile for identity continuity, safety defaults, and 
   - Contains personal data? yes (delivery target linkage and event category)
   - Retention period: short-lived for delivery operations and acknowledgments
   - Legal/compliance note: no sensitive content body in event table; metadata only
+- Table/entity: `push_subscriptions`
+  - Contains personal data? yes (the device's push endpoint and per-subscription encryption keys, linked to `user_id`)
+  - Retention period: kept while a device has call alerts on; removed when the member turns alerts off, when the push service reports the subscription is gone, or on deletion
+  - Legal/compliance note: user-global table, but Foundation's instant-call ring (issue #808 task 5) is its only consumer today, so Foundation owns its deletion. It stores only the subscription endpoint and the subscription's own public encryption keys (never the server VAPID private key, which lives only in env). No message or call content is stored here.
 - Table/entity: `foundation_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, timestamps, result metadata)
   - Retention period: compliance retention window
@@ -106,6 +110,7 @@ When user deletes Foundation plugin usage only:
   - `foundation_provider_skills` rows for the requester (the skills they opted in to offer)
   - participant links and plugin-owned thread linkage rows for the requester
   - plugin-scoped notification preference and pending delivery records owned by requester
+  - `push_subscriptions` rows for the requester (the devices they turned call alerts on for) — wired in `lib/account/deletion-registry.ts` under the `foundation` entry as a hard delete on `user_id`, so account/profile deletion removes them
 - Anonymize/pseudonymize:
   - `foundation_message_metadata` and `foundation_call_sessions` user linkage for retained continuity records where hard delete is not required by policy
   - quote history actor identifiers where retention obligation allows pseudonymization
@@ -191,3 +196,4 @@ If user returns to Foundation after service-scoped deletion:
 - 2026-02-24: Created initial Foundation profile/deletion contract with explicit Directory read-only boundary, plugin-vs-account deletion behavior, and re-consent requirements.
 - 2026-05-31: Added transaction-scoped messaging retention (per rule 100): 1:1 text/voice/video channel closes on connection/quote terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.
 - 2026-06-25: Documented the instant-call per-block billing columns on `foundation_call_sessions` (`rate_credits_locked`, `interval_minutes_locked`, `authorized_blocks`, `blocks_charged`, `paid_through_at`, `last_transfer_id`, `ended_reason`; issue #808 task 4). Clarified that the credits are held in the canonical `service_credits_*` tables (financial-record retention, governed by the ServiceCredits reclaim policy), NOT on the Foundation call row, and that disputes/refunds for a block are a deferred follow-up handled through the existing ServiceCredits dispute path.
+- 2026-06-25: Added `push_subscriptions` (issue #808 task 5 Web Push for the instant-call ring) as Foundation-owned domain data. Documented it in section 4 and as a "delete immediately" entry in section 5; the deletion is wired in `lib/account/deletion-registry.ts` under the `foundation` entry (hard delete on `user_id`), so service-scoped and full-account deletion both remove a member's device subscriptions. Only the subscription endpoint and the subscription's own public encryption keys are stored; the server VAPID private key lives only in env and is never persisted.

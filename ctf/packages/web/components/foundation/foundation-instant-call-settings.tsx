@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PhoneCall } from "lucide-react";
 import { COLOR } from "./foundation-ui";
+import { CallAlerts } from "./foundation-call-alerts";
 
 type InstantCall = { enabled: boolean; rateCredits: number | null; intervalMinutes: number };
 
@@ -142,6 +143,7 @@ export function InstantCallSettings() {
                   style={INPUT_STYLE}
                 />
               </label>
+              <CallAlerts />
             </div>
           ) : null}
 

@@ -131,6 +131,11 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your provider connection threads, messages, calls, quote requests, and notifications.',
     serviceScopeSupported: true,
     tables: [
+      // push_subscriptions is a user-global table, but Foundation's instant-call ring (issue #808 task 5)
+      // is its only consumer today, so its deletion is wired here. If another plugin ever stores rows in
+      // it, move this to a shared/account-level deletion entry so a single-service deletion does not remove
+      // a device subscription another service still needs.
+      del('push_subscriptions', 'user_id', 'The devices you turned call alerts on for.'),
       del('foundation_notification_events', 'user_id', 'Your Foundation notifications.'),
       del('foundation_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
       del('foundation_quote_status_events', 'actor_user_id', 'Quote state changes you made.'),
