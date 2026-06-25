@@ -3,7 +3,7 @@ import { CHYME_DEFAULT_MESSAGES_LIMIT, CHYME_ERROR_CODE } from 'lib/chyme/consta
 import { logChymeAudit } from 'lib/chyme/audit';
 import { listRoomMessages, sendRoomMessage, validateMessageInput } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeAccess } from '../_lib';
+import { requireChymeAccess, ensureMutationCsrf } from '../_lib';
 
 function parseLimit(url: string): number {
   const queryLimit = new URL(url).searchParams.get('limit');
@@ -80,6 +80,11 @@ export async function POST(request: Request) {
   const gate = await requireChymeAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   let body: MessageRequestBody;
