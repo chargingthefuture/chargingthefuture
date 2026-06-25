@@ -226,11 +226,11 @@ export function DirectoryProfileDetail({
             </section>
           )}
 
-          {/* Specializations. Real taxonomy skills render as accent chips. A profile
-              nominated through SkillsHunt may also have free-text skills that are not yet
-              in the taxonomy (still a proposal in skills_hunt_proposed_skill_promotions);
-              those render as muted "pending review" chips so the section is never empty
-              just because a nominated skill has not been promoted yet. */}
+          {/* Specializations. Real taxonomy skills render as accent chips. A profile may also have
+              free-text skills not yet in the taxonomy — either nominated through SkillsHunt or added
+              by the member through the "skill not listed" box on their own profile. Both render as
+              muted "pending review" chips so the section is never empty just because a skill has not
+              been promoted into the taxonomy yet. */}
           <section style={{ marginBottom: 24 }}>
             <div style={sectionLabel}>Specializations</div>
             {p.skills.length > 0 || pendingSkills.length > 0 ? (
@@ -241,7 +241,7 @@ export function DirectoryProfileDetail({
                 {pendingSkills.map((s) => (
                   <Badge
                     key={`pending-${s}`}
-                    title="Nominated through SkillsHunt; not yet in the skills taxonomy."
+                    title="Not in the official skills list yet — pending admin review."
                     style={{ background: "rgba(255,255,255,0.04)", color: t.MUTED, border: `1px dashed ${t.BORDER}`, fontSize: 13, padding: "5px 12px", fontWeight: 500 }}
                   >
                     {s} <span style={{ color: t.FAINT, fontWeight: 400 }}>· pending review</span>

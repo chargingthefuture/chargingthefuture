@@ -20,6 +20,11 @@ export type DirectoryProfile = {
   // as muted "pending review" chips so a community-generated profile is never empty
   // just because its nominated skill has not been promoted yet.
   pendingSkills: string[];
+  // Free-text skills the member added to their OWN profile through the self-edit form (the
+  // "skill not listed" box). These are the editable subset of pendingSkills — they round-trip
+  // into the edit form so the owner can change or remove them, whereas SkillsHunt-nominated
+  // pending skills are not self-editable. Stored in directory_profile_proposed_skills.
+  proposedSkills: string[];
   isActive: boolean;
   // SkillsHunt + Clerk username co-change (continuity §2.4 / §4 in
   // ctf-skills-hunt-session-continuity.md). source drives the visible
@@ -65,6 +70,8 @@ export type DirectoryProfileInput = {
   sectorId?: string | null;
   jobTitleId?: string | null;
   skillIds?: string[];
+  // Free-text "skill not listed" labels for the member's own profile (see DirectoryProfile.proposedSkills).
+  proposedSkills?: string[];
   venmoAddress?: string | null;
   moneroAddress?: string | null;
   bitcoinAddress?: string | null;

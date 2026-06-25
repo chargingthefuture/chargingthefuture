@@ -2189,6 +2189,27 @@ CREATE TABLE IF NOT EXISTS directory_profile_tags (
 ALTER TABLE IF EXISTS directory_profile_tags ADD COLUMN IF NOT EXISTS profile_id UUID;
 ALTER TABLE IF EXISTS directory_profile_tags ADD COLUMN IF NOT EXISTS tag_id UUID;
 
+-- Free-text "skill not listed" entries a member adds to their own profile through the self-edit
+-- form. They are NOT canonical taxonomy skills: each renders as a muted "pending review" chip
+-- (alongside SkillsHunt-nominated pending skills) until an admin promotes it into the taxonomy.
+-- Keyed by profile_id so it cascades with the profile on deletion (like directory_profile_skills).
+CREATE TABLE IF NOT EXISTS directory_profile_proposed_skills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL,
+  skill_label TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS profile_id UUID;
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS skill_label TEXT;
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_profile_proposed_skills ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS directory_profile_proposed_skills_profile_idx ON directory_profile_proposed_skills (profile_id);
+CREATE UNIQUE INDEX IF NOT EXISTS directory_profile_proposed_skills_unique_label ON directory_profile_proposed_skills (profile_id, lower(skill_label));
+
 CREATE TABLE IF NOT EXISTS directory_user_extension (
   user_id TEXT PRIMARY KEY,
   profile_visibility TEXT NOT NULL DEFAULT 'workspace',
