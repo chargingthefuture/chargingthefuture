@@ -7,8 +7,6 @@
   "routes": [
     "/api/announcements/membership/events",
     "/api/chyme/service-credits",
-    "/api/skills-hunt/admin/audit-events",
-    "/api/skills-hunt/service-credits",
     "/api/socketrelay/service-credits"
   ]
 }
