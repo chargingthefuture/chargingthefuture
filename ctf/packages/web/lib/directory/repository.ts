@@ -9,6 +9,8 @@ import {
   DIRECTORY_MAX_NAME_LENGTH,
   DIRECTORY_MAX_HEADLINE_LENGTH,
   DIRECTORY_MAX_PAGE_SIZE,
+  DIRECTORY_MAX_PROPOSED_SKILL_LENGTH,
+  DIRECTORY_MAX_PROPOSED_SKILLS,
   DIRECTORY_MAX_URL_LENGTH,
 } from './constants';
 import type {
@@ -156,7 +158,47 @@ async function loadProfilePendingSkills(client: PoolClient, profileId: string): 
   return result.rows.map((row) => row.skill_label);
 }
 
+// Free-text "skill not listed" labels the member added to their OWN profile through the self-edit
+// form. Distinct from loadProfilePendingSkills (which reads SkillsHunt nominations): these live in
+// directory_profile_proposed_skills keyed by profile_id, and are the editable subset round-tripped
+// into the edit form.
+async function loadProfileProposedSkills(client: PoolClient, profileId: string): Promise<string[]> {
+  const result = await client.query<{ skill_label: string }>(
+    `
+      SELECT skill_label
+      FROM directory_profile_proposed_skills
+      -- profile_id compared as text for the same v2 varchar / uuid reason as loadProfileSkills.
+      WHERE profile_id::text = $1
+        AND status = 'pending'
+        AND btrim(skill_label) <> ''
+      ORDER BY skill_label ASC
+    `,
+    [profileId],
+  );
+
+  return result.rows.map((row) => row.skill_label);
+}
+
 async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Promise<DirectoryProfile> {
+  const skills = await loadProfileSkills(client, row.id);
+  const nominatedPending = await loadProfilePendingSkills(client, row.id);
+  const selfProposed = await loadProfileProposedSkills(client, row.id);
+
+  // pendingSkills is the de-duplicated display set: SkillsHunt nominations + the member's own
+  // free-text additions, minus any that already match a selected taxonomy skill name (so a chip
+  // never appears twice). proposedSkills keeps only the self-added labels for the edit form.
+  const taxonomyNames = new Set(skills.map((s) => s.name.trim().toLowerCase()));
+  const seen = new Set<string>();
+  const pendingSkills: string[] = [];
+  for (const label of [...nominatedPending, ...selfProposed]) {
+    const key = label.trim().toLowerCase();
+    if (key.length === 0 || taxonomyNames.has(key) || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    pendingSkills.push(label);
+  }
+
   return {
     id: row.id,
     claimedByUserId: row.claimed_by_user_id,
@@ -169,8 +211,9 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     sectorName: row.sector_name,
     jobTitleId: row.job_title_id,
     jobTitleName: row.job_title_name,
-    skills: await loadProfileSkills(client, row.id),
-    pendingSkills: await loadProfilePendingSkills(client, row.id),
+    skills,
+    pendingSkills,
+    proposedSkills: selfProposed,
     isActive: row.is_active,
     source: row.source ?? 'admin',
     invitedByUsername: row.invited_by_username ?? null,
@@ -210,6 +253,14 @@ export function validateProfileInput(input: DirectoryProfileInput): boolean {
     !bio || bio.length <= DIRECTORY_MAX_BIO_LENGTH,
     !profileUrl || profileUrl.length <= DIRECTORY_MAX_URL_LENGTH,
     !input.skillIds || Array.isArray(input.skillIds),
+    // proposedSkills, when present, must be an array within the count cap and each label within
+    // the per-label length cap (measured after whitespace normalization).
+    !input.proposedSkills ||
+      (Array.isArray(input.proposedSkills) &&
+        input.proposedSkills.length <= DIRECTORY_MAX_PROPOSED_SKILLS &&
+        input.proposedSkills.every(
+          (label) => typeof label === 'string' && normalizeText(label).length <= DIRECTORY_MAX_PROPOSED_SKILL_LENGTH,
+        )),
   ];
 
   return checks.every(Boolean);
@@ -296,6 +347,52 @@ function normalizeSkillIds(value: string[] | undefined): string[] {
   return Array.from(new Set(normalized));
 }
 
+// Normalize free-text proposed-skill labels: trim/collapse whitespace, drop empties and any over
+// the per-label length cap, de-duplicate case-insensitively (keeping first spelling), and cap the
+// count. The UI enforces the same limits; this is the defensive server-side copy.
+function normalizeProposedSkills(value: string[] | undefined): string[] {
+  if (!value || value.length === 0) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') {
+      continue;
+    }
+    const label = normalizeText(item);
+    if (label.length === 0 || label.length > DIRECTORY_MAX_PROPOSED_SKILL_LENGTH) {
+      continue;
+    }
+    const key = label.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(label);
+    if (result.length >= DIRECTORY_MAX_PROPOSED_SKILLS) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+async function replaceProfileProposedSkills(client: PoolClient, profileId: string, labels: string[]): Promise<void> {
+  await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
+
+  for (const label of labels) {
+    await client.query(
+      `
+        INSERT INTO directory_profile_proposed_skills (profile_id, skill_label, status)
+        VALUES ($1::uuid, $2, 'pending')
+      `,
+      [profileId, label],
+    );
+  }
+}
+
 async function loadProfileByUser(client: PoolClient, userId: string): Promise<DirectoryProfile | null> {
   const result = await client.query<DirectoryProfileRow>(
     `
@@ -347,6 +444,7 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
+    const proposedSkills = normalizeProposedSkills(input.proposedSkills);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
@@ -391,6 +489,7 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     }
 
     await replaceProfileSkills(client, profileId, skillIds);
+    await replaceProfileProposedSkills(client, profileId, proposedSkills);
 
     // Directory is no longer public-facing; every authenticated member sees
     // every profile (subject to soft-delete + claimed_by_user_id). The
@@ -677,6 +776,7 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
 
       await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
       await client.query('DELETE FROM directory_profile_tags WHERE profile_id = $1', [profileId]);
+      await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
     }
 
     await client.query(

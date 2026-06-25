@@ -36,6 +36,11 @@ export function ServiceCreditsGovernancePanel() {
   const [busy, setBusy] = useState<'mint' | 'burn' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Which action produced the current error/notice, so the result renders next to THAT button.
+  // The single top-of-panel banner was off-screen on mobile (the burn form sits far below it), so a
+  // failed burn — e.g. "Insufficient balance." when the action hit the demo schema — read as "nothing
+  // happened." Showing it inline under the action makes the outcome impossible to miss.
+  const [lastAction, setLastAction] = useState<'mint' | 'burn' | null>(null);
 
   const mintAmount = Number(mint.amount);
   const burnAmount = Number(burn.amount);
@@ -44,6 +49,7 @@ export function ServiceCreditsGovernancePanel() {
 
   async function submitMint() {
     setBusy('mint');
+    setLastAction('mint');
     setError(null);
     setNotice(null);
     const result = await scAdminMutate<MintGrantResponse>('/api/service-credits/admin/governance/mint-grants', 'POST', {
@@ -64,6 +70,7 @@ export function ServiceCreditsGovernancePanel() {
 
   async function submitBurn() {
     setBusy('burn');
+    setLastAction('burn');
     setError(null);
     setNotice(null);
     const result = await scAdminMutate<BurnResponse>('/api/service-credits/admin/governance/burns', 'POST', {
@@ -103,8 +110,6 @@ export function ServiceCreditsGovernancePanel() {
         </p>
       </header>
 
-      <Feedback error={error} notice={notice} />
-
       <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: TEXT, margin: 0 }}>Mint grant</h3>
@@ -125,6 +130,7 @@ export function ServiceCreditsGovernancePanel() {
               </>
             }
           />
+          {lastAction === 'mint' ? <Feedback error={error} notice={notice} /> : null}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -147,6 +153,7 @@ export function ServiceCreditsGovernancePanel() {
               </>
             }
           />
+          {lastAction === 'burn' ? <Feedback error={error} notice={notice} /> : null}
         </div>
       </div>
     </section>

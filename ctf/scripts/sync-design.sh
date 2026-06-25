@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # sync-design.sh — Advance the pinned `design/` submodule to the design-repo remote HEAD.
 #
-# Submodule-pin model (see .github/instructions/128-design-sync-workflow-rules.mdc):
+# Submodule-pin model (see .claude/rules/128-design-sync-workflow-rules.mdc):
 #   A "design sync" in the app repo only bumps the pinned design SHA. It copies no mockup
 #   files into the app tree and deletes nothing. It is strictly read-only against the design
 #   repo — it never writes to or pushes to the design remote (the design→app flow is one-way).

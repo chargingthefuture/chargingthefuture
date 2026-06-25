@@ -12,6 +12,7 @@ import { BrowsePanel, QuotesPanel } from "./foundation-panels";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
 import { DirectLineFromQuote, DirectLineFromThread, type DirectLineCredentials } from "./foundation-direct-line";
+import { FoundationInstantCallController } from "./foundation-instant-call";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
@@ -188,30 +189,41 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return <Centered color="#EF4444">{error}</Centered>;
   }
 
+  // The instant-call controller (issue #808 task 3) wraps every interactive Foundation surface so that:
+  // the "Connect now" button can place a ring from anywhere it appears, AND a member being rung sees the
+  // in-app incoming-call surface regardless of which tab/screen they are on. displayName is cosmetic on
+  // the client (the server mints the Stream token from the real signed-in identity); fall back to a stable
+  // label when the viewer id is not yet known.
+  const withInstantCall = (node: React.ReactNode) => (
+    <FoundationInstantCallController displayName={viewerUserId ?? "Member"}>
+      {node}
+    </FoundationInstantCallController>
+  );
+
   // Direct Line opened straight after Request Quote (uses the credentials the POST returned).
   if (activeDirectLine) {
-    return (
+    return withInstantCall(
       <DirectLineFromQuote
         credentials={activeDirectLine.credentials}
         subtitle={activeDirectLine.subtitle}
         onBack={() => { setActiveDirectLine(null); setTab("quotes"); }}
-      />
+      />,
     );
   }
 
   // Direct Line re-opened from a Quotes row (fetches fresh credentials by thread id).
   if (quoteDirectLine) {
-    return (
+    return withInstantCall(
       <DirectLineFromThread
         threadId={quoteDirectLine.threadId}
         subtitle={quoteDirectLine.subtitle}
         onBack={() => setQuoteDirectLine(null)}
-      />
+      />,
     );
   }
 
   if (selected) {
-    return (
+    return withInstantCall(
       <ProviderProfile
         provider={selected}
         viewerUserId={viewerUserId}
@@ -220,7 +232,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         quoteSuccess={quoteSuccess}
         onBack={() => { setSelected(null); setQuoteError(null); setQuoteSuccess(false); }}
         onRequestQuote={() => { void requestQuote(selected); }}
-      />
+      />,
     );
   }
 
@@ -244,7 +256,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       { key: "offer", label: "Offer" },
       { key: "quotes", label: "Quotes" },
     ];
-    return (
+    return withInstantCall(
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: FONT, color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
@@ -270,11 +282,11 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           )}
         </div>
         {content}
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return withInstantCall(
     <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: FONT, color: t.TEXT, display: "flex" }}>
       <IconRail tab={tab} onTab={setTab} />
       <FilterSidebar query={query} onQuery={setQuery} trade={trade} onTrade={setTrade} />
@@ -290,6 +302,6 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         {content}
       </div>
       <RightRail providers={providers} quoteCount={quotes.length} onBrowse={() => setTab("browse")} onSelect={setSelected} />
-    </div>
+    </div>,
   );
 }

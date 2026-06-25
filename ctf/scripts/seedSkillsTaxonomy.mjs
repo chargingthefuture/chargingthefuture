@@ -40,6 +40,8 @@ async function main() {
       `occupations=${promotions.occupations}`,
       `skills=${promotions.skills}`,
       `proposalsMarkedPromoted=${promotions.proposalsMarkedPromoted}`,
+      `directoryProposalsMarkedPromoted=${promotions.directoryProposalsMarkedPromoted}`,
+      `directorySkillsAutoAttached=${promotions.directorySkillsAutoAttached}`,
       promotions.missingSectors.length > 0
         ? `missingSectors=${promotions.missingSectors.join('; ')}`
         : 'missingSectors=none',
