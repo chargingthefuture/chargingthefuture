@@ -32,10 +32,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
     );
   }
 
+  // Reject an unknown/typo status outright rather than silently resetting the match to 'pending'.
+  const allowedStatuses = ['pending', 'accepted', 'rejected', 'cancelled', 'completed'] as const;
+  if (!allowedStatuses.includes(body.status as (typeof allowedStatuses)[number])) {
+    return NextResponse.json(
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid match status.' },
+      { status: 400 },
+    );
+  }
+
   const input: LighthouseMatchUpdateInput = {
-    status: body.status === 'pending' || body.status === 'accepted' || body.status === 'rejected' || body.status === 'cancelled' || body.status === 'completed'
-      ? body.status
-      : 'pending',
+    status: body.status as (typeof allowedStatuses)[number],
     hostResponse: typeof body.hostResponse === 'string' ? body.hostResponse : null,
   };
 
