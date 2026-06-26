@@ -13,7 +13,10 @@ name: Code Review — Keep the Auto PR Moving
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/20 * * * *"   # about every 20 minutes (GitHub may delay scheduled runs)
+    # Every 20 minutes, at :07/:27/:47 — offset off the top of the hour and off every other
+    # cron in this repo (which sit at :00, :15, :17, :20, :23, :30) to avoid a stampede. GitHub
+    # may still delay scheduled runs under load.
+    - cron: "7,27,47 * * * *"
 
 # One tender at a time — never let two runs update or resolve the same PR at once.
 concurrency:
