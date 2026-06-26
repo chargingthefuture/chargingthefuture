@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireWorkforceAdminAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { insertWorkforceAdminAudit, getWorkforceConfig, updateWorkforceConfig, validateConfigInput } from 'lib/workforce/repository';
-import { logWorkforceAudit } from 'lib/workforce/audit';
+import { logWorkforceAudit, WORKFORCE_AUDIT_WORKSPACE } from 'lib/workforce/audit';
 import type { WorkforceConfigInput } from 'lib/workforce/types';
 import { reportError } from 'lib/observability/report';
 
@@ -64,8 +64,13 @@ export async function PUT(request: Request) {
     );
   }
 
+  const requestId = request.headers.get('x-request-id');
+  const traceId = request.headers.get('x-trace-id');
+
   try {
     const config = await updateWorkforceConfig(gate.auth.userId, input);
+    // The config row has no separate version column; its updatedAtIso is the monotonic version stamp.
+    const configVersion = config.updatedAtIso;
 
     await insertWorkforceAdminAudit({
       actorId: gate.auth.userId,
@@ -75,6 +80,8 @@ export async function PUT(request: Request) {
       targetType: 'config',
       targetId: 'workforce',
       metadata: {
+        workspaceId: WORKFORCE_AUDIT_WORKSPACE,
+        configVersion,
         population: config.population,
         participationRate: config.participationRate,
         minRecruitable: config.minRecruitable,
@@ -91,6 +98,12 @@ export async function PUT(request: Request) {
       targetId: 'workforce',
       result: 'success',
       errorCategory: null,
+      requestId,
+      traceId,
+      targetContext: {
+        workspaceId: WORKFORCE_AUDIT_WORKSPACE,
+        configVersion,
+      },
     });
 
     return NextResponse.json({ ok: true, config }, { status: 200 });
