@@ -11,6 +11,7 @@ export {
   getChymeMessages,
   postChymeMessage,
   postChymeJoin,
+  postChymeTip,
   deleteChymeProfile,
   deleteFullAccount,
   chymeHandle,
