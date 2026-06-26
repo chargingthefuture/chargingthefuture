@@ -25,7 +25,7 @@
     "seed:socketrelay": "node ./scripts/seedSocketRelay.mjs",
     "seed:trusttransport": "node ./scripts/seedTrustTransport.mjs",
     "seed:levelup": "node ./scripts/seedLevelup.mjs",
-    "seed:whatworks": "node ./scripts/seedWhatworks.mjs",
+    "seed:what-works": "node ./scripts/seedWhatWorks.mjs",
     "sync:skills-taxonomy:legacy": "node ./scripts/syncSkillsTaxonomyFromPlatform.mjs --mode=sync",
     "migrate:file": "node ./scripts/runMigrationFile.mjs",
     "migrate:schema": "node ./scripts/runMigrationFile.mjs --file=./schema.sql",

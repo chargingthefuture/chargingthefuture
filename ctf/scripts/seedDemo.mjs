@@ -748,7 +748,7 @@ async function seedClicklog(c) {
   console.log('  ✓ clicklog');
 }
 
-async function seedWhatworks(c) {
+async function seedWhatWorks(c) {
   const endorsers = [OWNER, PEER_1, PEER_2, 'demo-ww-001', 'demo-ww-002', 'demo-ww-003'];
   const problems = [
     {
@@ -780,9 +780,9 @@ async function seedWhatworks(c) {
 
   let sortOrder = 0;
   for (const problem of problems) {
-    const problemId = sha256id('whatworks-problem', problem.slug);
+    const problemId = sha256id('what-works-problem', problem.slug);
     await c.query(
-      `INSERT INTO whatworks_problems (id, slug, emoji, title, context, sort_order, is_active, created_by)
+      `INSERT INTO what_works_problems (id, slug, emoji, title, context, sort_order, is_active, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
        ON CONFLICT (id) DO NOTHING`,
       [problemId, problem.slug, problem.emoji, problem.title, problem.context, sortOrder, OWNER],
@@ -790,9 +790,9 @@ async function seedWhatworks(c) {
     sortOrder += 1;
 
     for (const product of problem.products) {
-      const productId = sha256id('whatworks-product', problem.slug, product.name);
+      const productId = sha256id('what-works-product', problem.slug, product.name);
       await c.query(
-        `INSERT INTO whatworks_products
+        `INSERT INTO what_works_products
            (id, problem_id, emoji, name, kind, note, purchase_url, status, suggested_by, reviewed_by, reviewed_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, $9, NOW())
          ON CONFLICT (id) DO NOTHING`,
@@ -800,16 +800,16 @@ async function seedWhatworks(c) {
       );
       for (let index = 0; index < product.verified; index += 1) {
         await c.query(
-          `INSERT INTO whatworks_endorsements (id, product_id, user_id)
+          `INSERT INTO what_works_endorsements (id, product_id, user_id)
            VALUES ($1, $2, $3)
            ON CONFLICT (id) DO NOTHING`,
-          [sha256id('whatworks-endorsement', productId, endorsers[index % endorsers.length]), productId, endorsers[index % endorsers.length]],
+          [sha256id('what-works-endorsement', productId, endorsers[index % endorsers.length]), productId, endorsers[index % endorsers.length]],
         );
       }
     }
   }
 
-  console.log('  ✓ whatworks');
+  console.log('  ✓ what-works');
 }
 
 async function main() {
@@ -849,7 +849,7 @@ async function main() {
     await seedSkillsTaxonomy(client);
     await seedSocketRelay(client);
     await seedClicklog(client);
-    await seedWhatworks(client);
+    await seedWhatWorks(client);
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);

@@ -16,7 +16,7 @@ const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
   { href: '/admin/lighthouse', name: 'LightHouse', description: 'Manage LightHouse listings and review reports.' },
   { href: '/admin/trusttransport', name: 'TrustTransport', description: 'Oversee transport coordination and disputes.' },
   { href: '/admin/comic', name: 'AI Assistant', description: 'Review answers from the @comic assistant before they post.' },
-  { href: '/admin/whatworks', name: 'WhatWorks', description: 'Curate problems and the products that solve them.' },
+  { href: '/admin/what-works', name: 'WhatWorks', description: 'Curate problems and the products that solve them.' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt', description: 'Manage missions, scouts, and the leaderboard.' },
   { href: '/admin/peer-programming', name: 'PeerProgramming', description: 'Set topics and manage pairing assignments.' },
   { href: '/admin/levelup', name: 'LevelUp', description: 'Run skills-training cohorts and stipend milestones.' },

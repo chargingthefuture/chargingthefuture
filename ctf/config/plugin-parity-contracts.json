@@ -116,8 +116,8 @@
       "requiresExplicitWebShell": false
     },
     {
-      "slug": "whatworks",
-      "mobileFeatureDirs": ["whatworks"],
+      "slug": "what-works",
+      "mobileFeatureDirs": ["what-works"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
