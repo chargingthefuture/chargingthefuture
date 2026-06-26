@@ -65,15 +65,21 @@ function NumberField({
   );
 }
 
-async function adminMutate(url: string, method: 'PUT', body?: unknown): Promise<{ ok: boolean; message?: string }> {
+async function adminMutate(
+  url: string,
+  method: 'PUT',
+  body?: unknown,
+): Promise<{ ok: boolean; message?: string; config?: WorkforceConfig }> {
   try {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (res.ok) return { ok: true };
-    const data = (await res.json().catch(() => null)) as { message?: string; reason?: string; code?: string } | null;
+    const data = (await res.json().catch(() => null)) as
+      | { message?: string; reason?: string; code?: string; config?: WorkforceConfig }
+      | null;
+    if (res.ok) return { ok: true, config: data?.config };
     return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
   } catch {
     return { ok: false, message: 'Network error. Try again.' };
@@ -106,6 +112,16 @@ export function WorkforceAdminShell({
     setMessage(null);
     const res = await adminMutate('/api/workforce/admin/config', 'PUT', config);
     if (res.ok) {
+      // Adopt the server-returned config so the form shows the values the server actually stored
+      // (it may clamp or normalize what was typed), not the unverified local input.
+      if (res.config) {
+        setConfig({
+          population: res.config.population,
+          participationRate: res.config.participationRate,
+          minRecruitable: res.config.minRecruitable,
+          maxRecruitable: res.config.maxRecruitable,
+        });
+      }
       setMessage('Config saved.');
       router.refresh();
     } else {

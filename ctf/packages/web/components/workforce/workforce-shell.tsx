@@ -269,6 +269,14 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
 
         if (controller.signal.aborted) return;
 
+        // A 401/403 on ANY endpoint means the session is no longer valid (e.g. it expired after the
+        // page loaded). Surface a re-auth prompt via the error state rather than a soft "couldn't load"
+        // warning, so a user who lost their session is told to sign in again instead of being left on a
+        // half-rendered dashboard.
+        if ([dashRes, sectorRes, skillRes, occRes, profileRes].some((r) => r.status === 401 || r.status === 403)) {
+          throw new Error('Your session has expired. Please sign in again.');
+        }
+
         // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
         // surface the error state rather than silently falling through to the empty state.
         if (!dashRes.ok) {
