@@ -64,8 +64,9 @@ export type MoodEligibility = {
 
 const CLIENT_ID_KEY = "ctf.mood.clientId";
 
-// Mood check-ins are anonymous and rate-limited per device, keyed by a random
-// client id persisted in localStorage (never tied to the account server-side).
+// Each check-in still carries a random client id persisted in localStorage and
+// sent with the request, but the 7-day cooldown is enforced server-side on the
+// authenticated account, not on this client id.
 export function getMoodClientId(): string {
   if (typeof window === "undefined") return "";
   try {

@@ -58,6 +58,9 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
        LEFT JOIN skills_taxonomy_sectors dp_sec ON dp_sec.id = dp.sector_id
        WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
     ),
+    // Rows are keyed by profile and only read for the active profiles loaded above, so there is no
+    // need to re-join directory_profiles here (that join can fail on databases where the id column
+    // types differ). The job-title join keeps only skills under an active job title.
     queryDb<ProfileSkillRow>(
       `SELECT
          dps.profile_id::text AS profile_id,
@@ -65,9 +68,7 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
          sts.job_title_id::text AS job_title_id
        FROM directory_profile_skills dps
        JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE
-       JOIN skills_taxonomy_job_titles jt ON jt.id = sts.job_title_id AND jt.is_active = TRUE
-       JOIN directory_profiles dp ON dp.id = dps.profile_id
-       WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
+       JOIN skills_taxonomy_job_titles jt ON jt.id = sts.job_title_id AND jt.is_active = TRUE`,
     ),
     queryDb<JobTitleRow>(
       `SELECT jt.id::text AS id, jt.name AS name, jt.sector_id::text AS sector_id, sec.name AS sector_name

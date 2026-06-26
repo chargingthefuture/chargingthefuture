@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 import {
   WORKFORCE_SKILL_LEVELS,
   deriveAnnualTrainingTarget,
@@ -208,7 +209,7 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   const config = await getWorkforceConfig();
   const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
 
-  const [sectorsRes, jobTitlesRes, membersRes, profileSkillsRes] = await Promise.all([
+  const [sectorsRes, jobTitlesRes, membersRes] = await Promise.all([
     queryDb<SectorModelRow>(
       `SELECT id::text AS id, name, workforce_share::text AS workforce_share
        FROM skills_taxonomy_sectors
@@ -232,19 +233,28 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
        WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
     ),
-    queryDb<ProfileSkillJobTitleRow>(
-      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
-       FROM directory_profile_skills dps
-       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE
-       JOIN directory_profiles dp ON dp.id = dps.profile_id
-       WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
-    ),
   ]);
 
   const sectors = sectorsRes.rows;
   const jobTitles = jobTitlesRes.rows;
   const members = membersRes.rows;
-  const profileSkillRows = profileSkillsRes.rows;
+
+  // Skill arm of the recruited match, loaded separately and defensively. A profile counts toward an
+  // occupation if it carries a skill registered under that job title. These rows are keyed by profile
+  // and only read for the active members loaded above, so there is no need to re-join (and filter)
+  // directory_profiles here. If this optional query fails on a given database, recruited degrades to
+  // the sector and job-title arms rather than failing the whole read-only dashboard with a 503.
+  let profileSkillRows: ProfileSkillJobTitleRow[] = [];
+  try {
+    const profileSkillsRes = await queryDb<ProfileSkillJobTitleRow>(
+      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
+       FROM directory_profile_skills dps
+       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE`,
+    );
+    profileSkillRows = profileSkillsRes.rows;
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'computeWorkforceModel_skillArm' });
+  }
 
   // Demand: distribute the workforce total across sectors by each sector's workforce share (shared with
   // the lightweight dashboard summary so the two can never disagree on the headcount target).
