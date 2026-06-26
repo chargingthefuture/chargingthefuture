@@ -90,8 +90,8 @@ export async function DELETE(request: Request) {
   const requestedAtIso = requestedAt.toISOString();
 
   try {
-    const deleted = await softDeleteOwnProfile(gate.auth.userId);
-    if (!deleted) {
+    const outcome = await softDeleteOwnProfile(gate.auth.userId);
+    if (outcome === 'not_found') {
       logWorkforceAudit({
         actorId: gate.auth.userId,
         command: 'workforce.profile.delete',
@@ -110,6 +110,26 @@ export async function DELETE(request: Request) {
         { ok: false, code: WORKFORCE_ERROR_CODE.notFound, message: 'No workforce profile to delete.' },
         { status: 404 },
       );
+    }
+
+    if (outcome === 'already_deleted') {
+      // Idempotent: the profile was already service-deleted. Do NOT write a second deletion event;
+      // just audit the no-op and return success so a retry is safe.
+      logWorkforceAudit({
+        actorId: gate.auth.userId,
+        command: 'workforce.profile.delete',
+        status: 'allow',
+        reason: 'profile_already_deleted',
+        targetType: 'profile',
+        targetId: gate.auth.userId,
+        result: 'success',
+        errorCategory: null,
+        requestId,
+        traceId,
+        targetContext: { workspaceId: WORKFORCE_AUDIT_WORKSPACE, userId: gate.auth.userId },
+        metadata: { roleCheck: 'pass', profileOwnershipCheck: 'pass', csrfCheck: 'pass', idempotentNoop: true },
+      });
+      return NextResponse.json({ ok: true, status: 'already_deleted', requestedAtIso }, { status: 200 });
     }
 
     // Service-scoped deletion event (deletion contract section 8). workforce_recruited_events and
