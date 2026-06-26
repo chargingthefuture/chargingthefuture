@@ -28,57 +28,52 @@ Planning constraints applied:
 
 ---
 
+Workforce is a **read-only live tracker** of how the skills/talent of a population is distributed across sectors, and where the gaps are. Every number is derived at request time from two upstream sources plus the workforce config; Workforce never writes Directory or Skills Taxonomy.
+
 ## 1) User Features
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
-1. Workforce dashboard with current-state counts and distribution views.
-2. Drilldowns by sector, skill level, and geography where authorized.
-3. Deterministic loading/empty/error states for core report screens.
+1. Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+2. Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory (members = active profiles, recruited = claimed). Gap = demand − recruited.
+3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
+4. Deterministic loading/empty/error states for the core screens.
 
 ### 1.2 Workforce Directory-Coupled Profile Experience
 
-1. User-visible workforce profile view based on canonical Directory-linked data.
-2. Controlled profile update flows where rewrite policy permits user edits.
-3. Read-only indicators where fields are system-derived.
+1. Read-only workforce profile view derived live from the member's own claimed Directory profile (occupation = Skills Taxonomy job title; skill level derived from it; recruited = claimed).
+2. Workforce-owned extension fields (availability/work preferences) and a service-scoped deletion marker live in `workforce_user_extension`.
+3. There is no profile editor — the profile is read-only; the only write is the compliance soft delete.
 
-### 1.3 Workforce Reporting and Export
+### 1.3 Workforce Reporting
 
-1. Current-state report views for active workforce metrics.
-2. Historical trend views using canonical weekly buckets.
-3. Async export job workflow for approved report datasets and metadata.
+1. Current-state report views (summary, sector, skill-level, per-occupation gaps), all derived live.
+2. No exporting and no report-running: exporting was removed and there are no stored snapshots or weekly historical buckets — everything is computed live on read.
 
-### 1.4 Workforce Occupations Experience (Parity)
+### 1.4 Workforce Occupations Experience
 
-1. Occupations browse route with filter + pagination controls.
+1. Occupations browse route (read-only list of Skills Taxonomy job titles with their demand/supply overlay, largest gap first), paginated.
 2. Occupation detail route with deterministic error/empty handling.
-3. Role-aware behaviors where admin-only mutation controls are hidden from non-admin users.
+3. Occupations are read from Skills Taxonomy and are never created or edited by Workforce — there are no member- or admin-facing occupation mutations.
 
 ## 2) Admin Features
 
 ### 2.1 Workforce Admin Operations
 
-1. Admin route(s) for workforce config, assumptions, report controls, and parity management surfaces.
-2. Role-gated create/update/deactivate operations for workforce admin objects.
-3. Operator-visible audit and change-history views.
+1. Admin route for the workforce config (the population model) plus the read-only dashboard snapshot.
+2. Operator-visible audit trail (`GET /api/workforce/admin/audit-events`).
+3. No occupation/announcement/export/sync/recompute admin surface — those were removed in the read-only model.
 
-### 2.2 Workforce Admin Occupations (Parity)
+### 2.2 Workforce Configuration Governance
 
-1. Admin occupations create/update/delete operations.
-2. Server-enforced role + policy checks for every mutation.
-3. Mutation outcomes emitted to standardized workforce admin audit events.
+1. The only admin-editable, workforce-owned state is the config singleton: `population`, `participation_rate`, `min_recruitable`, `max_recruitable`.
+2. Validation and safe defaults on the config update (population > 0; participation 0–1; max ≥ min).
+3. Config is never written to Directory or Skills Taxonomy.
 
-### 2.3 Workforce Configuration Governance
+### 2.3 Data Stewardship Controls
 
-1. Controlled mutation of planning assumptions and policy flags.
-2. Validation and safe defaults on all state-changing admin operations.
-3. Feature flags for risky behavior changes.
-
-### 2.4 Data Stewardship Controls
-
-1. Admin tools for reconciliation diagnostics against canonical Directory state.
-2. No admin backfill/recompute tool: Workforce is read-only and recruited state derives live from Directory (claimed profiles), so there is nothing to recompute. The previous recompute control and its `workforce.admin.recompute.enqueue` command were removed (read-only model, owner decision 2026-06-16).
-3. Explicit exclusion checks for accidental legacy event artifact reintroduction.
+1. No admin backfill/recompute/sync tool: Workforce is read-only and recruited state derives live from Directory (claimed profiles), so there is nothing to recompute or sync.
+2. Demand depends on `skills_taxonomy_sectors.workforce_share`; if no sector carries a positive share the demand falls back to an even split so the breakdown is never blank.
 
 ## 3) API Surface and Route Map
 
@@ -157,29 +152,20 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 
 ### 4.3 Storage and Derivation Rules
 
-1. Recruited inference is derived from Directory profile create/update writes.
-2. Inference history is append-only for traceability of mapping changes.
-3. Inference writes use deterministic dedupe key (`inference_dedupe_key`, `NOT NULL`), enforced by the unique index `uq_workforce_recruited_events_dedupe_key`; repository upserts and the seed rely on `ON CONFLICT (inference_dedupe_key)`. The column is `NOT NULL` because Postgres treats NULLs as distinct in a unique index, so a null key would silently bypass dedup.
-4. Replay/backfill duplicates are idempotent no-op outcomes.
-5. Current-state dashboards read latest resolved state.
-6. Historical dashboards read weekly trend buckets from inferred event history.
-7. Weekly buckets use `America/New_York`, week start = Saturday, T+14 rolling correction then freeze.
-8. No carry-over of legacy accidental event scaffolding or unrelated event models.
+1. Every view is derived live in `computeWorkforceModel()` from one read of the upstream sources; there is no stored snapshot, no inferred-event history, and no weekly bucketing.
+2. **Demand** per sector = (sector `workforce_share` ÷ sum of shares) × `workforce_total`, where `workforce_total = population × participation_rate`. If no sector carries a positive share, demand is an even split across active sectors. Per-occupation demand = its sector's demand split evenly across the sector's active job titles.
+3. **Supply** is read from Directory: a profile maps to a sector via its Skills Taxonomy job title (`job_title_id → sector_id`), falling back to its own `sector_id`; members = all active profiles, recruited = `claimed_by_user_id IS NOT NULL`.
+4. **Skill level** is derived live from each job title's name using V2's keyword rule (`lib/workforce/skill-level.ts`) — Foundational / Intermediate / Advanced. No stored skill-level column.
+5. **Gap** = `max(0, demand − recruited)` at the sector, occupation, and skill-level grain.
+6. The only workforce-owned writes are the config singleton, the profile extension (`workforce_user_extension`), the admin audit trail, and deletion events.
 
-## 5) Canonical Metrics — Recruited Semantics
+## 5) Recruited Semantics
 
-Metric definitions are locked in `ctf/config/canonical_metrics.yaml`.
+`recruited` is computed live, not stored or inferred:
 
-Canonical definition notes for `recruited`:
-
-1. **Primary metric:** current-state recruited count from latest resolved inferred state per user.
-2. **Automatic derivation only:** event is inferred from Directory profile create/update writes.
-3. **No manual trigger path:** no user/admin action directly emits recruited events.
-4. **Append-only metric history:** inferred mapping changes are recorded as immutable historical events.
-5. **Dual consumption model:**
-   - Live dashboard uses current resolved state.
-   - Historical dashboard uses weekly trend buckets computed from event history.
-6. **Operational policy:** update cadence hourly; retention 60 months.
+1. **Definition:** a recruited member is an active Directory profile that has been claimed (`claimed_by_user_id IS NOT NULL`). "Members" is the broader set of all active Directory profiles.
+2. **Live only:** recruited is counted at request time from Directory. There is no inferred recruited-event table in the read path, no dedupe key, no append-only history, no hourly cadence, and no weekly trend buckets.
+3. **No manual trigger and no sync:** no user/admin action emits recruited events; there is no sync or recompute job. The number always reflects current Directory state.
 
 ## 6) Security, Privacy, and Compliance Controls
 
@@ -204,34 +190,33 @@ Canonical definition notes for `recruited`:
 | Web | ✅ Delivered | Pixel pass complete 2026-05-31. Shell rewritten to match `design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/Workforce.tsx` canonical design. Bound to real dashboard, sector-report, skill-level-report, and profile API endpoints. Fabricated stats (Employed/In Training/Seeking Work breakdown, pathways, skill counts) omitted per real-data-only policy. Loading state, empty state, 4-card hero stats, skill-level distribution bars, sector gaps table, and profile right-rail all delivered. Chat tab from mockup omitted (no backing API route). |
 | Android | ✅ Delivered | User dashboard pixel-pass 2026-05-31. Admin operations screen added 2026-06-06 (`AdminWorkforce.tsx`), mirroring the web admin page (`/admin/workforce`). |
 
-Android admin present (2026-06-06): `AdminWorkforce.tsx` + `admin-api.ts` added under `packages/mobile/src/features/workforce`, registered as the `workforce-admin` screen in `App.tsx`. It mirrors the shipped web admin page (`/admin/workforce`): the four dashboard counts (workforce total, recruited total, occupations, active announcements), the current config (exports-enabled toggle, report timezone, week-start day-of-week), and the two operational actions (run incremental sync, recompute recruited totals). It binds only existing endpoints — `GET /api/workforce/dashboard`, `GET /api/workforce/admin/config`, `PUT /api/workforce/admin/config`, `POST /api/workforce/admin/sync`, `POST /api/workforce/admin/recompute`. Admin access is enforced server-side; a 401/403 shows an "admins only" notice. All mutations send `x-ctf-csrf: '1'`; the sync and recompute are each behind an explicit confirm gesture. The web admin page is already mobile-responsive (Tailwind `max-w-4xl` container with stacked text sections), so no web layout change was needed. Endpoint/contract gap: the design mockup shows a "flags" moderation queue (profile/skills-gap flags), but no workforce flags endpoint exists; that tab is omitted per rule 126 and the overview/config/operations surfaces (which do have endpoints) are shown instead. Occupations and announcements admin CRUD endpoints exist but were not surfaced on Android in this pass.
+Android admin (current): `AdminWorkforce.tsx` + `admin-api.ts` under `packages/mobile/src/features/workforce`, registered as the `workforce-admin` screen in `App.tsx`. It mirrors the web admin page (`/admin/workforce`): the snapshot counts (workforce total, headcount target, recruited, directory members) and the editable config — the population model (population, participation rate, min/max recruitable) with a Save action. It binds only `GET /api/workforce/dashboard`, `GET /api/workforce/admin/config`, and `PUT /api/workforce/admin/config`. There are no sync/recompute/export/occupation actions (removed in the read-only model). Admin access is enforced server-side; a 401/403 shows an "admins only" notice; the config save sends `x-ctf-csrf: '1'`.
 
 Profile read + compliance-delete surface (2026-06-26): the profile is read-only (owner decision 2026-06-16, reaffirmed) — there is no `PUT`. `GET /api/workforce/profile` now emits a `workforce.profile.fetch` audit and reads the real extension preferences/marker; `DELETE /api/workforce/profile` is the only mutation — a service-scoped soft delete per the deletion contract. These are backend API routes; the web profile panel and the mobile `WorkforceProfileCard` remain display-only, so there is no new rendered surface and no web/mobile parity gap. A member-facing delete control can be added later against the DELETE route.
 
 ## 8) Gaps and Known Technical Debt
 
-1. Retention and legal-basis wording for workforce recruited inference and exports has not been explicitly signed off; the plugin runs under platform defaults.
-2. Export schema versioning has no documented backward-compatibility contract; exporters consume the current shape.
-3. Migration and backfill strategy for first production cutover relies on the generic platform migration runbook; no plugin-specific runbook exists.
-4. Export job execution/result is intentionally deferred (per phase-1 product decision): `POST /api/workforce/export/jobs` records the request and `GET /api/workforce/export/jobs/[jobId]/result` return `501 exportDeferred`. The job row + audit trail are written; actual artifact generation is post-MVP.
+1. Demand quality depends on `skills_taxonomy_sectors.workforce_share` being populated. If shares are null/zero, demand falls back to an even split across sectors — the dashboard still renders, but the distribution is only as accurate as the shares Skills Taxonomy carries.
+2. Per-occupation demand is split evenly across a sector's job titles (no per-occupation weight exists in Skills Taxonomy). If finer weighting is wanted, it would need a new upstream signal.
+3. Single-bucket report fetches (`/reports/sector/:sector`, `/reports/skill-level/:skillLevel` with a value other than `all`) match the bucket case-insensitively for sectors; the dashboard only uses the `all` variant, so the single-bucket paths are lightly exercised.
+4. The retained-but-unused `workforce_occupations` / `workforce_export_jobs` tables and the vestigial `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables are dead weight in the schema; `workforce_occupations` cannot be dropped until the SkillsHunt rare-skill snapshot and the demo seed stop referencing it.
 
 ## 9) Web and Android Delivery Status
 
 | Surface | Status | Notes |
 |---|---|---|
-| Web pixel-perfect | ⬜ Not started | Web shell exists; awaiting pixel-pass PR |
-| Android pixel-pass | ✅ Delivered 2026-05-31 | `WorkforceDashboard`, `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard` — all bound to real API routes only. Standalone `WorkforceProfile` screen wired to real auth + real `GET /api/workforce/profile` on 2026-06-26 (was a stub). |
-| Android admin | ✅ Delivered 2026-06-06 | `AdminWorkforce.tsx` + `admin-api.ts`; mirrors `/admin/workforce` (counts, config toggles, sync, recompute) against existing endpoints only |
+| Web dashboard | ✅ Delivered | `workforce-shell.tsx` + `workforce-hero-stats` (incl. Recruitment Progress), `workforce-sector-gaps`, `workforce-skill-distribution`, `workforce-training-gaps`, sidebar, profile panel. Bound to `/dashboard`, `/reports/sector/all`, `/reports/skill-level/all`, `/reports/occupations`, `/profile`. |
+| Web admin | ✅ Delivered | `workforce-admin-shell.tsx` — snapshot counts + the population-model config (population, participation rate, min/max recruitable). |
+| Android dashboard | ✅ Delivered | `WorkforceDashboard` with StatGrid (Population / Workforce Total / Headcount Target / Recruited / Directory Members), Sector Gaps, Top Training Gaps; `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard`. |
+| Android admin | ✅ Delivered | `AdminWorkforce.tsx` + `admin-api.ts`; mirrors `/admin/workforce` (snapshot + population-model config) against `GET /dashboard`, `GET/PUT /admin/config` only. |
 
-### Android Mobile Parity Summary (2026-05-31)
+### Mobile Parity Summary (current)
 
-- **Real bindings:** `GET /api/workforce/dashboard` → `fetchWorkforceDashboard()`, `GET /api/workforce/profile` → `fetchWorkforceProfile()`.
-- **Delivered states:** loading, empty (zero workforce total), error, and main authenticated dashboard.
-- **Public/unauthenticated state:** `WorkforcePublic` component renders the pre-auth landing with a locked content region.
-- **Omitted (no API backing):** Status Distribution percentage bars, Critical Skill Gaps data, Recommended Pathways match scores, "Add Skills" / "View Demand Map" CTAs. All have inline code comments explaining the omission.
-- **Stats shown from real data:** Total Members (`workforceTotal`), Recruited (`recruitedTotal`), Occupations (`occupationsTotal`).
-- **Profile section:** occupation name, skill level, region, recruited state — all from real `GET /api/workforce/profile` response.
-- **Rule 116 compliance:** dashboard logic is split across `WorkforceDashboard` (orchestration/state), `WorkforceStatCard` (stat card sub-component), `WorkforceProfileCard` (profile sub-component), `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic` — no function exceeds 200 lines.
+- **Real bindings:** `GET /api/workforce/dashboard` → `fetchWorkforceDashboard()`, `GET /api/workforce/reports/sector/all` → `fetchWorkforceSectorReport()`, `GET /api/workforce/reports/occupations?limit=10` → `fetchWorkforceOccupationGaps()`, `GET /api/workforce/profile` → `fetchWorkforceProfile()`.
+- **Delivered states:** loading, empty (no sectors/occupations and no Directory members), error, and the main authenticated dashboard.
+- **Stats shown from real data:** Population, Workforce Total, Total Headcount Target, Recruited, Directory Members. Plus Sector Gaps (recruited / target / gap) and Top Training Gaps (per occupation).
+- **Profile section:** occupation name, skill level, region, recruited state — all from `GET /api/workforce/profile`.
+- **Rule 116 compliance:** dashboard logic is split across `WorkforceDashboard` (orchestration/state) plus small presentational sub-components and `WorkforceStatCard` / `WorkforceProfileCard` / `WorkforceLoading` / `WorkforceEmpty` / `WorkforcePublic`.
 
 ## 10) Change Log
 
@@ -261,6 +246,7 @@ Profile read + compliance-delete surface (2026-06-26): the profile is read-only 
 
 ## Build Checklist
 
+> **Historical planning artifact — superseded.** This checklist captures the original rewrite plan, which included announcements, exporting, recruited inference/recompute, and weekly historical buckets. Those were since removed: Workforce is now a read-only live tracker (see sections 1–5 and the Change Log). Items below that reference announcements, export, sync/recompute, or inferred recruited events no longer apply; the current shipped scope is the authoritative one above.
 
 ### Scope and Boundary
 
