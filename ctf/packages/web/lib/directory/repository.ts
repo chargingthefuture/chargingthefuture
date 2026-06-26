@@ -779,6 +779,9 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
       await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
     }
 
+    // Tombstone the extension row: keep the user_id-keyed marker (service_deleted_at)
+    // so rejoin can recreate clean defaults, but wipe every contact/payment field the
+    // deletion contract (section 5) requires cleared on service-scoped deletion.
     await client.query(
       `
         INSERT INTO directory_user_extension (user_id, profile_visibility, service_deleted_at, updated_at)
@@ -787,6 +790,10 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
         DO UPDATE SET
           profile_visibility = 'private',
           service_deleted_at = NOW(),
+          venmo_address = NULL,
+          monero_address = NULL,
+          bitcoin_address = NULL,
+          service_credits_address = NULL,
           updated_at = NOW()
       `,
       [userId],

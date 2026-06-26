@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deactivateAnnouncement, updateAnnouncement, validateAnnouncementInput } from 'lib/directory/repository';
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
+import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -44,6 +45,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   const input = parseBody(body);
   if (!validateAnnouncementInput(input)) {
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'deny',
+      reason: 'invalid_payload',
+      targetType: 'announcement',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'validation',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid announcement payload.' },
       { status: 400 },
@@ -53,15 +65,48 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const announcement = await updateAnnouncement(gate.auth.userId, id, input);
     if (!announcement) {
+      logDirectoryAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.admin.announcement.upsert',
+        status: 'deny',
+        reason: 'not_found',
+        targetType: 'announcement',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'not_found',
+      });
+
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Announcement not found.' },
         { status: 404 },
       );
     }
 
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'announcement',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements_id' });
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'announcement',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to update announcement.' },
       { status: 503 },
@@ -85,15 +130,48 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const ok = await deactivateAnnouncement(gate.auth.userId, id);
     if (!ok) {
+      logDirectoryAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.admin.announcement.upsert',
+        status: 'deny',
+        reason: 'not_found',
+        targetType: 'announcement',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'not_found',
+      });
+
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Announcement not found.' },
         { status: 404 },
       );
     }
 
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'allow',
+      reason: 'admin_announcement_deactivate',
+      targetType: 'announcement',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements_id' });
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'allow',
+      reason: 'admin_announcement_deactivate',
+      targetType: 'announcement',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to deactivate announcement.' },
       { status: 503 },

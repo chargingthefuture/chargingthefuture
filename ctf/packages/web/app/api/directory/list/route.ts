@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireDirectoryReadAccess } from '../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { listDirectoryForMember, parsePaginationParams } from 'lib/directory/repository';
+import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 
 function getFilters(url: string) {
@@ -25,9 +26,32 @@ export async function GET(request: Request) {
 
   try {
     const payload = await listDirectoryForMember(pagination, getFilters(request.url));
+
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.list.fetch',
+      status: 'allow',
+      reason: 'directory_discovery',
+      targetType: 'directory_list',
+      targetId: gate.auth.userId,
+      result: 'success',
+      errorCategory: null,
+    });
+
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'list_members', extra: { userId: gate.auth.userId } });
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.list.fetch',
+      status: 'allow',
+      reason: 'directory_discovery',
+      targetType: 'directory_list',
+      targetId: gate.auth.userId,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch directory list.' },
       { status: 503 },
