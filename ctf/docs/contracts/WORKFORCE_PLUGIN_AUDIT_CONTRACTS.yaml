@@ -80,58 +80,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: workforce
-    command: workforce.export.job.create
-    commandVersion: 1.0.0
-    purpose: workforce_reporting_exports
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        exportScopeCheck: pass_or_fail
-        piiGuardCheck: pass_or_fail
-    dataClassesAccessed:
-      - workforce_report_export_metadata
-      - export_job_status_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      exportJobId: export_job_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: workforce
-    command: workforce.export.job.create
-    commandVersion: 1.0.0
-    purpose: workforce_reporting_exports
-    policyDecision:
-      status: allow_or_deny
-      reason: export_execution_deferred_or_policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        exportScopeCheck: pass_or_fail
-        defermentCheck: pass_or_fail
-    dataClassesAccessed:
-      - workforce_export_jobs
-      - admin_mutation_audit_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      exportJobId: export_job_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: deferred_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: workforce
     command: workforce.admin.config.update
     commandVersion: 1.0.0
     purpose: workforce_governance
@@ -148,6 +96,52 @@ auditEvents:
     targetContext:
       workspaceId: workspace_identifier
       configVersion: config_version_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: workforce
+    command: workforce.admin.auditEvents.fetch
+    commandVersion: 1.0.0
+    purpose: workforce_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        auditProjectionOnlyCheck: pass_or_fail
+    dataClassesAccessed:
+      - admin_audit_trail_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: workforce
+    command: workforce.admin.config.fetch
+    commandVersion: 2.0.0
+    purpose: workforce_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        configProjectionOnlyCheck: pass_or_fail
+    dataClassesAccessed:
+      - workforce_config_metadata
+    targetContext:
+      workspaceId: workspace_identifier
     requestId: request_identifier
     traceId: trace_identifier
     result:

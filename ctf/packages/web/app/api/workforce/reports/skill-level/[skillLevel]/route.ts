@@ -23,7 +23,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ski
     if (normalizedSkillLevel === 'all') {
       return NextResponse.json({ items }, { status: 200 });
     }
-    const bucket = items.find((item) => item.bucket === normalizedSkillLevel) ?? null;
+    // Buckets are capitalized ('Foundational' / 'Intermediate' / 'Advanced'); compare
+    // case-insensitively so e.g. /reports/skill-level/advanced matches (the sector route does the same).
+    const bucket = items.find((item) => item.bucket.toLowerCase() === normalizedSkillLevel) ?? null;
     return NextResponse.json({ items: bucket ? [bucket] : [] }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'reports_skill_level_skilllevel' });

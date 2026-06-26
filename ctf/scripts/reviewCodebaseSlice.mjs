@@ -61,6 +61,12 @@ const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES |
 // room (Sonnet allows far more), overridable for cost tuning.
 const MAX_OUTPUT_TOKENS = Number(process.env.CODE_REVIEW_MAX_OUTPUT_TOKENS || '16000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
+// How long a won't-fix (closed as "not planned") finding stays suppressed before a recurrence is
+// re-surfaced for a fresh decision. Dedup keys off the finding TITLE, not the code, so a dismissal is
+// "not now", not "never": after this window the code may have changed and the call may differ. A
+// finding that was closed via a fix (completed) has no window — if it recurs it is a regression and is
+// re-surfaced immediately. 0 disables the window (won't-fix suppressed forever).
+const WONTFIX_REVISIT_DAYS = Number(process.env.CODE_REVIEW_WONTFIX_DAYS || '90');
 
 // A plugin's declared contracts are sent as read-only reference so the reviewer can check
 // the code against them. Looked up by exact filename (prefix = SLICE_NAME upper-snake);
@@ -291,7 +297,25 @@ function gatherContracts(sliceName) {
   return { text, files };
 }
 
-async function askClaude(slice, source, chunkNote, contractsText) {
+function buildAlreadyTrackedBlock(existingFindings) {
+  if (!existingFindings || existingFindings.length === 0) {
+    return [];
+  }
+  // Newest first (gh order); cap so the list never crowds out the source budget.
+  const lines = existingFindings.slice(0, 60).map((e) => {
+    const state = e.state === 'closed'
+      ? (e.stateReason === 'completed' ? 'closed: fixed' : 'closed: dismissed')
+      : 'open';
+    return `- [${state}] ${e.title}: ${e.summary}`;
+  });
+  return [
+    '',
+    'ALREADY-TRACKED findings for this slice (each is tracked on its own GitHub issue — do NOT refile these):',
+    ...lines,
+  ];
+}
+
+async function askClaude(slice, source, chunkNote, contractsText, existingFindings = []) {
   const layers = slice.paths.join('\n  ');
   const system = [
     'You are a senior engineer doing a code review of one plugin/module of "Charging the',
@@ -315,6 +339,15 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     'handling, clear dead code, obvious simplifications, and TypeScript type-safety violations',
     '(no `any` without an eslint-disable + reason).',
     '',
+    'You may be given an ALREADY-TRACKED list of findings previously raised for this slice. These are',
+    'already tracked elsewhere — do NOT report them again, with two narrow exceptions:',
+    '  - a tracked finding marked "closed: fixed" that the CURRENT code shown to you clearly STILL',
+    '    exhibits — report it and begin the summary with "Regression:" and point to the exact code;',
+    '  - a NEW, distinct problem (even in the same file) that is not the same concern as any tracked one.',
+    'Do NOT re-report a tracked finding just because it is similar; if the code already addresses it, or',
+    'it was "closed: dismissed", leave it out. When unsure whether something is already tracked, prefer',
+    'NOT reporting it.',
+    '',
     'Do NOT report pure style or formatting nits, and do not invent problems. If the slice looks',
     'fine, return []. Write every field in plain language. Be specific and brief.',
   ].join('\n');
@@ -330,6 +363,7 @@ async function askClaude(slice, source, chunkNote, contractsText) {
           contractsText,
         ]
       : []),
+    ...buildAlreadyTrackedBlock(existingFindings),
     '',
     'The source files follow, each after a "===== FILE: <path> =====" header. Some long files',
     'may be truncated; do not flag truncation itself as a problem.',
@@ -349,6 +383,12 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     'Return [] if there is nothing worth filing.',
   ].join('\n');
 
+  return anthropicMessage(system, user, MAX_OUTPUT_TOKENS);
+}
+
+// One Anthropic message call. Returns the model's text. Logs (does not throw) on a max_tokens stop,
+// since callers salvage truncated output.
+async function anthropicMessage(system, user, maxTokens) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -358,7 +398,7 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
+      max_tokens: maxTokens,
       system,
       messages: [{ role: 'user', content: user }],
     }),
@@ -368,10 +408,8 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
   }
   const result = await response.json();
-  // A `max_tokens` stop means the JSON may be cut off mid-array; parseFindings salvages the
-  // complete findings rather than failing the run, but log it so the truncation is visible.
   if (result.stop_reason === 'max_tokens') {
-    console.warn('reviewCodebaseSlice: model response hit max_tokens; findings JSON may be truncated and will be salvaged.');
+    console.warn('reviewCodebaseSlice: model response hit max_tokens; output may be truncated.');
   }
   return result.content[0].text.trim();
 }
@@ -462,23 +500,117 @@ function ensureLabel(name, color, description) {
   }
 }
 
-// Fingerprints already on open `code-review` issues, so reruns don't refile the same thing.
-function existingFingerprints() {
+// Every `code-review` issue this sweep has ever filed for THIS slice, open OR closed. Reading closed
+// issues too is what makes "close it" a durable decision (a dismissed/fixed finding is matched, not
+// re-filed). We match on substance via the model (judgeDuplicates), not on the issue title — an LLM
+// rewrites the title every run, so a text fingerprint would miss a reworded re-flag. The embedded
+// fingerprint is kept only as a cheap exact-match fast path.
+function existingSliceIssues(sliceName) {
+  const titlePrefix = `Code review (${sliceName}):`;
   try {
     const raw = gh([
-      'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'open',
-      '--json', 'body', '--limit', '300',
+      'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'all',
+      '--json', 'number,title,state,stateReason,closedAt,body', '--limit', '500',
     ]);
-    const set = new Set();
+    const issues = [];
     for (const issue of JSON.parse(raw)) {
-      const match = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
-      if (match) {
-        set.add(match[1]);
-      }
+      if (!(issue.title || '').startsWith(titlePrefix)) continue;
+      const fpMatch = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
+      issues.push({
+        number: issue.number,
+        title: (issue.title || '').slice(titlePrefix.length).trim(),
+        summary: extractWhat(issue.body || ''),
+        state: String(issue.state || '').toLowerCase(),
+        stateReason: String(issue.stateReason || '').toLowerCase(),
+        closedAt: issue.closedAt || null,
+        fingerprint: fpMatch ? fpMatch[1] : null,
+      });
     }
-    return set;
+    return issues;
   } catch {
-    return new Set();
+    return [];
+  }
+}
+
+// Pull the "## What" paragraph out of an issue body for a compact dedupe signal.
+function extractWhat(body) {
+  const m = body.match(/##\s*What\s*\n+([\s\S]*?)(?:\n##\s|\n---|\n<!--|$)/);
+  return (m ? m[1] : body).replace(/\s+/g, ' ').trim().slice(0, 400);
+}
+
+// Ask the model which NEW findings are the SAME underlying problem as an EXISTING tracked issue for
+// this slice. Matches on substance, not wording (the issue text is regenerated each run). Returns an
+// array aligned to `newFindings`: the matched existing issue number, or null for a genuinely new one.
+async function judgeDuplicates(slice, newFindings, existingIssues) {
+  if (newFindings.length === 0 || existingIssues.length === 0) {
+    return newFindings.map(() => null);
+  }
+  const validNumbers = new Set(existingIssues.map((e) => e.number));
+  const system = [
+    'You decide whether each NEW code-review finding describes the SAME underlying problem as one of',
+    'the EXISTING tracked issues for this module. Match on the SUBSTANCE of the problem (same code,',
+    'same defect or concern) — the wording is rewritten every run, so identical wording is not',
+    'required, and different wording does not make it a different problem. Be conservative: only match',
+    'when you are confident it is the same concern. Two different problems in the same file are NOT a',
+    'match. Return only the JSON described; no prose.',
+  ].join('\n');
+  const existingBlock = existingIssues
+    .map((e) => `#${e.number} [${e.state}${e.stateReason ? '/' + e.stateReason : ''}]: ${e.title}\n    ${e.summary}`)
+    .join('\n');
+  const newBlock = newFindings
+    .map((f, i) => `N${i}: ${f.title}\n    ${(f.summary || '').replace(/\s+/g, ' ').slice(0, 400)}\n    files: ${(f.files || []).join(', ')}`)
+    .join('\n');
+  const user = [
+    `Module: ${slice.name}`,
+    '',
+    'EXISTING tracked issues (open and closed):',
+    existingBlock,
+    '',
+    `NEW findings from this run (N0..N${newFindings.length - 1}):`,
+    newBlock,
+    '',
+    `Return ONLY a JSON array of exactly ${newFindings.length} objects, one per NEW finding in order:`,
+    '  { "match": <existing issue number> | null }',
+    'Use the issue number of the existing issue it duplicates, or null if it is genuinely new.',
+  ].join('\n');
+
+  try {
+    const text = await anthropicMessage(system, user, 2000);
+    const fenced = text.match(/^```(?:json)?\s*\n([\s\S]*?)\n?```$/i);
+    const arr = JSON.parse((fenced ? fenced[1] : text).trim());
+    if (!Array.isArray(arr)) throw new Error('not an array');
+    return newFindings.map((_, i) => {
+      const m = arr[i] && typeof arr[i].match === 'number' ? arr[i].match : null;
+      // Ignore a number the model invented that isn't a real existing issue — safer to file a new
+      // issue than to silently suppress a finding against a non-existent match.
+      return m !== null && validNumbers.has(m) ? m : null;
+    });
+  } catch (error) {
+    console.log(`reviewCodebaseSlice: dedupe judge unavailable (${error?.message || error}); using exact fingerprint only.`);
+    return newFindings.map(() => null);
+  }
+}
+
+function daysSince(iso) {
+  if (!iso) return Infinity;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return Infinity;
+  return (Date.now() - then) / 86_400_000;
+}
+
+// Re-surface a finding that recurs after its issue was closed: reopen it, add the given marker label,
+// and leave one comment explaining why. Used for both regressions (closed via a fix) and revisits
+// (a won't-fix whose suppression window has lapsed). No new issue is created, so the issue list does
+// not grow on recurrence — the history stays on the one original issue.
+function resurfaceIssue(number, label, comment) {
+  try {
+    gh(['issue', 'reopen', String(number), '--repo', REPO]);
+    gh(['issue', 'edit', String(number), '--repo', REPO, '--add-label', label]);
+    gh(['issue', 'comment', String(number), '--repo', REPO, '--body', comment]);
+    return true;
+  } catch (error) {
+    console.log(`reviewCodebaseSlice: could not resurface #${number}: ${error?.message || error}`);
+    return false;
   }
 }
 
@@ -507,6 +639,12 @@ function buildIssueBody(slice, finding, fp) {
     'When labelled `code-review:actionable`, the implement workflow',
     '(`.github/workflows/code-review-implement.yml`) can open a pull request for it. Remove',
     'that label to keep this as a tracking note only.',
+    '',
+    'Closing this issue is durable — the sweep dedupes against closed issues too, so it will not be',
+    're-filed as a new issue. Close as **not planned** to dismiss it (the sweep may re-surface it for',
+    `a fresh look after ${WONTFIX_REVISIT_DAYS} days, tagged \`code-review:revisit\`, since the code may have`,
+    'changed by then). If it is closed as **completed**/fixed and the same finding recurs later, the',
+    'sweep reopens this issue tagged `code-review:regression` rather than opening a duplicate.',
   ].join('\n');
 }
 
@@ -559,8 +697,12 @@ async function main() {
 
   const contracts = gatherContracts(slice.name);
   const contractNote = contracts.files.length ? ` + ${contracts.files.length} contract file(s)` : '';
-  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote} with ${MODEL}.`);
-  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote, contracts.text));
+  // The findings already raised for this slice (open + closed). Passed to the reviewer so it doesn't
+  // re-report a concern already tracked or already fixed (the main source of re-run churn), and reused
+  // below for substance-based dedup. One fetch serves both.
+  const sliceIssues = existingSliceIssues(slice.name);
+  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote} with ${MODEL} (${sliceIssues.length} already-tracked).`);
+  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote, contracts.text, sliceIssues));
 
   if (findings.length === 0) {
     console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);
@@ -575,10 +717,22 @@ async function main() {
 
   ensureLabel('code-review', '5319e7', 'Filed by the scheduled code-review sweep');
   ensureLabel('code-review:actionable', '0e8a16', 'Code-review finding with a small, safe fix; eligible for an auto PR');
+  ensureLabel('code-review:regression', 'b60205', 'A previously-fixed code-review finding the sweep saw recur');
+  ensureLabel('code-review:revisit', 'fbca04', 'A dismissed (won\'t-fix) code-review finding the sweep re-surfaced for a fresh decision');
 
-  const seen = existingFingerprints();
+  // Match new findings to existing slice issues by SUBSTANCE (the model), not by title text — reusing
+  // the sliceIssues fetched above. The embedded fingerprint is a free exact-match fast path for the
+  // rare run where the title is identical.
+  const issuesByNumber = new Map(sliceIssues.map((i) => [i.number, i]));
+  const fingerprintToIssue = new Map();
+  for (const i of sliceIssues) {
+    if (i.fingerprint && !fingerprintToIssue.has(i.fingerprint)) fingerprintToIssue.set(i.fingerprint, i);
+  }
+  const judged = await judgeDuplicates(slice, findings, sliceIssues);
+
   let filed = 0;
-  for (const finding of findings) {
+  for (let idx = 0; idx < findings.length; idx += 1) {
+    const finding = findings[idx];
     if (filed >= MAX_ISSUES) {
       console.log(`reviewCodebaseSlice: hit MAX_ISSUES (${MAX_ISSUES}); remaining findings deferred.`);
       break;
@@ -587,12 +741,48 @@ async function main() {
       continue;
     }
     const fp = fingerprint(slice.name, finding.title);
-    if (seen.has(fp)) {
-      console.log(`reviewCodebaseSlice: skip duplicate "${finding.title}".`);
+    // Prefer the semantic match; fall back to an exact fingerprint match.
+    const matchNumber = judged[idx] ?? fingerprintToIssue.get(fp)?.number ?? null;
+    const prior = matchNumber !== null ? issuesByNumber.get(matchNumber) : undefined;
+
+    if (prior && prior.state === 'open') {
+      // Already tracked on an open issue — nothing to do.
+      console.log(`reviewCodebaseSlice: skip duplicate of open #${prior.number} "${finding.title}".`);
+      continue;
+    }
+
+    if (prior && prior.state === 'closed') {
+      if (prior.stateReason === 'completed') {
+        // Closed via a fix but the finding is back — a regression. Reopen the original, don't duplicate.
+        if (resurfaceIssue(prior.number, 'code-review:regression',
+          `The code-review sweep flagged this again after it was closed as fixed — possible regression.\n\n**${finding.title}**\n\n${finding.summary || ''}`)) {
+          filed += 1;
+          console.log(`reviewCodebaseSlice: regression — reopened #${prior.number} "${finding.title}".`);
+        }
+        continue;
+      }
+      // Closed as "not planned" (or closed with no reason): a dismissal. Suppress within the window;
+      // after it lapses, re-surface once for a fresh decision against possibly-changed code.
+      const age = daysSince(prior.closedAt);
+      if (WONTFIX_REVISIT_DAYS <= 0 || age <= WONTFIX_REVISIT_DAYS) {
+        console.log(`reviewCodebaseSlice: skip dismissed #${prior.number} "${finding.title}" (closed ${Math.round(age)}d ago).`);
+        continue;
+      }
+      if (resurfaceIssue(prior.number, 'code-review:revisit',
+        `This was dismissed (closed as not planned) ${Math.round(age)} days ago. The code-review sweep raised it again; since the code may have changed, please re-decide whether it still applies.\n\n**${finding.title}**\n\n${finding.summary || ''}`)) {
+        filed += 1;
+        console.log(`reviewCodebaseSlice: revisit — reopened #${prior.number} "${finding.title}".`);
+      }
+      continue;
+    }
+
+    // Genuinely new finding — unless an identical-titled one was already filed earlier this run.
+    if (fingerprintToIssue.has(fp)) {
+      console.log(`reviewCodebaseSlice: skip same-run duplicate "${finding.title}".`);
       continue;
     }
     const url = fileIssue(slice, finding, fp);
-    seen.add(fp);
+    fingerprintToIssue.set(fp, { number: 0, state: 'open' });
     filed += 1;
     console.log(`reviewCodebaseSlice: filed ${url}`);
   }

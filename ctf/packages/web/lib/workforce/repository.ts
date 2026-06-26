@@ -5,21 +5,21 @@ import {
   type WorkforceSkillLevel,
 } from './skill-level';
 import {
+  WORKFORCE_DEFAULT_MAX_RECRUITABLE,
+  WORKFORCE_DEFAULT_MIN_RECRUITABLE,
   WORKFORCE_DEFAULT_PAGE,
   WORKFORCE_DEFAULT_PAGE_SIZE,
-  WORKFORCE_DEFAULT_TIMEZONE,
-  WORKFORCE_DEFAULT_WEEK_START_DOW,
-  WORKFORCE_MAX_OCCUPATION_NAME_LENGTH,
+  WORKFORCE_DEFAULT_PARTICIPATION_RATE,
+  WORKFORCE_DEFAULT_POPULATION,
   WORKFORCE_MAX_PAGE_SIZE,
 } from './constants';
 import type {
   WorkforceConfig,
   WorkforceConfigInput,
   WorkforceDashboard,
-  WorkforceExportJob,
   WorkforceGroupedReportItem,
   WorkforceOccupation,
-  WorkforceOccupationInput,
+  WorkforceOccupationGapItem,
   WorkforcePagination,
   WorkforceProfile,
   WorkforceSummaryReport,
@@ -27,34 +27,13 @@ import type {
 
 type CountRow = { total: string };
 
-type WorkforceOccupationRow = {
-  id: string;
-  name: string;
-  sector: string | null;
-  is_active: boolean;
-  created_by_user_id: string;
-  updated_by_user_id: string;
-  created_at: Date;
-  updated_at: Date;
-};
-
 type WorkforceConfigRow = {
-  exports_enabled: boolean;
-  report_week_timezone: string;
-  report_week_start_dow: number;
+  population: string;
+  participation_rate: string;
+  min_recruitable: string;
+  max_recruitable: string;
   updated_by_user_id: string;
   updated_at: Date;
-};
-
-type WorkforceReportRow = {
-  workforce_total: number;
-  recruited_total: number;
-};
-
-type WorkforceGroupedRow = {
-  bucket: string;
-  workforce_total: string;
-  recruited_total: string;
 };
 
 type WorkforceAuditRow = {
@@ -73,19 +52,6 @@ function toIso(value: Date): string {
   return value.toISOString();
 }
 
-function normalizeText(value: string): string {
-  return value.trim().replace(/\s+/g, ' ');
-}
-
-function normalizeNullableText(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const normalized = normalizeText(value);
-  return normalized.length > 0 ? normalized : null;
-}
-
 function normalizeJsonObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -94,24 +60,20 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function mapOccupation(row: WorkforceOccupationRow): WorkforceOccupation {
-  return {
-    id: row.id,
-    name: row.name,
-    sector: row.sector,
-    isActive: row.is_active,
-    createdByUserId: row.created_by_user_id,
-    updatedByUserId: row.updated_by_user_id,
-    createdAtIso: toIso(row.created_at),
-    updatedAtIso: toIso(row.updated_at),
-  };
+function toFiniteNumber(value: string | null | undefined, fallback: number): number {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function mapConfig(row: WorkforceConfigRow): WorkforceConfig {
   return {
-    exportsEnabled: row.exports_enabled,
-    reportWeekTimezone: row.report_week_timezone,
-    reportWeekStartDow: row.report_week_start_dow,
+    population: Math.round(toFiniteNumber(row.population, WORKFORCE_DEFAULT_POPULATION)),
+    participationRate: toFiniteNumber(row.participation_rate, WORKFORCE_DEFAULT_PARTICIPATION_RATE),
+    minRecruitable: Math.round(toFiniteNumber(row.min_recruitable, WORKFORCE_DEFAULT_MIN_RECRUITABLE)),
+    maxRecruitable: Math.round(toFiniteNumber(row.max_recruitable, WORKFORCE_DEFAULT_MAX_RECRUITABLE)),
     updatedByUserId: row.updated_by_user_id,
     updatedAtIso: toIso(row.updated_at),
   };
@@ -129,45 +91,383 @@ export function parsePaginationParams(url: string): { page: number; pageSize: nu
   return { page, pageSize };
 }
 
-export function validateOccupationInput(input: WorkforceOccupationInput): boolean {
-  const name = normalizeText(input.name ?? '');
-  const sector = normalizeNullableText(input.sector);
-
-  return name.length > 0
-    && name.length <= WORKFORCE_MAX_OCCUPATION_NAME_LENGTH
-    && (!sector || sector.length <= 80)
-    && (input.isActive === undefined || typeof input.isActive === 'boolean');
-}
-
 export function validateConfigInput(input: WorkforceConfigInput): boolean {
-  const timezone = normalizeText(input.reportWeekTimezone ?? '');
-
-  return typeof input.exportsEnabled === 'boolean'
-    && timezone.length > 0
-    && timezone.length <= 64
-    && Number.isInteger(input.reportWeekStartDow)
-    && input.reportWeekStartDow >= 0
-    && input.reportWeekStartDow <= 6;
+  return Number.isFinite(input.population)
+    && input.population > 0
+    && Number.isFinite(input.participationRate)
+    && input.participationRate >= 0
+    && input.participationRate <= 1
+    && Number.isFinite(input.minRecruitable)
+    && input.minRecruitable >= 0
+    && Number.isFinite(input.maxRecruitable)
+    && input.maxRecruitable >= 0
+    && input.maxRecruitable >= input.minRecruitable;
 }
 
-export async function getDashboard(): Promise<WorkforceDashboard> {
-  // Directory (+ Skills Taxonomy) is the single source of truth: the workforce population IS the
-  // active directory profiles, and "recruited" means a profile that has been claimed by a user.
-  // We read directory_profiles live rather than keeping a synced workforce_profiles copy, so the
-  // numbers can never drift and there is no sync job to fail.
-  const [workforceCount, recruitedCount, occupationCount] = await Promise.all([
-    queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL"),
-    queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL AND claimed_by_user_id IS NOT NULL"),
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM workforce_occupations WHERE is_active = true'),
+// ---------------------------------------------------------------------------
+// Live workforce model
+//
+// The whole tracker is a read-only overlay of two upstream sources plus the workforce config:
+//   - Skills Taxonomy (sectors + their workforce_share, and job titles) gives the DEMAND.
+//   - Directory (active profiles, claimed = recruited) gives the SUPPLY.
+//   - The workforce config gives the population scale.
+// Nothing in Directory or Skills Taxonomy is ever written. We compute every view from one read so
+// the dashboard, sector breakdown, skill-level breakdown, and occupation gaps are always consistent.
+// ---------------------------------------------------------------------------
+
+type SectorModelRow = { id: string; name: string; workforce_share: string | null };
+type JobTitleModelRow = { id: string; sector_id: string; name: string };
+type MemberModelRow = {
+  sector_id: string | null;
+  job_title_id: string | null;
+  job_title_name: string | null;
+  claimed: boolean;
+};
+
+const UNASSIGNED_BUCKET = 'Unassigned';
+
+export type WorkforceModel = {
+  config: WorkforceConfig;
+  workforceTotal: number;
+  totalHeadcountTarget: number;
+  totalMembers: number;
+  recruitedTotal: number;
+  sectorsTotal: number;
+  occupationsTotal: number;
+  sectors: WorkforceGroupedReportItem[];
+  skillLevels: WorkforceGroupedReportItem[];
+  occupations: WorkforceOccupationGapItem[];
+  generatedAtIso: string;
+};
+
+function emptyBucket(): { members: number; recruited: number } {
+  return { members: 0, recruited: 0 };
+}
+
+// The web shell loads the dashboard, sector, skill-level, and occupation reports in one page load —
+// four routes that each call computeWorkforceModel(), i.e. four identical full recomputations (~16 DB
+// queries) for the same global, user-independent data. Coalesce them: an in-flight computation is
+// shared by concurrent callers, and the result is reused for a brief TTL so a burst of requests in one
+// load runs the model once.
+//
+// The model has NO per-user/per-workspace input — it is the same global workforce aggregate for every
+// caller (the product is single-tenant; see lib/auth/server-authz AllowDecision, which carries no
+// workspaceId). So a process-global cache is correct here. If the product ever becomes multi-tenant,
+// this cache must be keyed per workspace. To avoid serving stale numbers right after an admin edits
+// the config, updateWorkforceConfig() calls invalidateWorkforceModelCache().
+const WORKFORCE_MODEL_CACHE_MS = 1000;
+let workforceModelInFlight: Promise<WorkforceModel> | null = null;
+let workforceModelCache: { at: number; value: WorkforceModel } | null = null;
+
+export function invalidateWorkforceModelCache(): void {
+  workforceModelCache = null;
+}
+
+export async function computeWorkforceModel(): Promise<WorkforceModel> {
+  if (workforceModelCache && Date.now() - workforceModelCache.at < WORKFORCE_MODEL_CACHE_MS) {
+    return workforceModelCache.value;
+  }
+  if (workforceModelInFlight) {
+    return workforceModelInFlight;
+  }
+  workforceModelInFlight = computeWorkforceModelUncached()
+    .then((value) => {
+      workforceModelCache = { at: Date.now(), value };
+      return value;
+    })
+    .finally(() => {
+      workforceModelInFlight = null;
+    });
+  return workforceModelInFlight;
+}
+
+async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
+  const config = await getWorkforceConfig();
+  const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
+
+  const [sectorsRes, jobTitlesRes, membersRes] = await Promise.all([
+    queryDb<SectorModelRow>(
+      `SELECT id::text AS id, name, workforce_share::text AS workforce_share
+       FROM skills_taxonomy_sectors
+       WHERE is_active = TRUE
+       ORDER BY display_order ASC, name ASC`,
+    ),
+    queryDb<JobTitleModelRow>(
+      `SELECT id::text AS id, sector_id::text AS sector_id, name
+       FROM skills_taxonomy_job_titles
+       WHERE is_active = TRUE
+       ORDER BY display_order ASC, name ASC`,
+    ),
+    queryDb<MemberModelRow>(
+      `SELECT
+         COALESCE(jt.sector_id, dp.sector_id)::text AS sector_id,
+         dp.job_title_id::text AS job_title_id,
+         jt.name AS job_title_name,
+         (dp.claimed_by_user_id IS NOT NULL) AS claimed
+       FROM directory_profiles dp
+       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
+       WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
+    ),
   ]);
 
+  const sectors = sectorsRes.rows;
+  const jobTitles = jobTitlesRes.rows;
+  const members = membersRes.rows;
+
+  // Demand: distribute the workforce total across sectors by each sector's workforce share. Shares
+  // are normalized so they always sum to the workforce total even if the raw shares don't sum to 1.
+  // If no sector carries a positive share, fall back to an even split so the breakdown is never blank.
+  const shareById = new Map<string, number>();
+  let shareSum = 0;
+  for (const s of sectors) {
+    const share = Math.max(0, toFiniteNumber(s.workforce_share, 0));
+    shareById.set(s.id, share);
+    shareSum += share;
+  }
+  const evenWeight = sectors.length > 0 ? 1 / sectors.length : 0;
+  const sectorDemand = new Map<string, number>();
+  for (const s of sectors) {
+    const weight = shareSum > 0 ? (shareById.get(s.id) ?? 0) / shareSum : evenWeight;
+    sectorDemand.set(s.id, Math.round(weight * workforceTotal));
+  }
+
+  // Per-occupation demand: split a sector's demand evenly across its active job titles.
+  const jobTitlesBySector = new Map<string, JobTitleModelRow[]>();
+  for (const jt of jobTitles) {
+    const list = jobTitlesBySector.get(jt.sector_id) ?? [];
+    list.push(jt);
+    jobTitlesBySector.set(jt.sector_id, list);
+  }
+  const jobTitleDemand = new Map<string, number>();
+  for (const [sectorId, list] of jobTitlesBySector) {
+    const demand = sectorDemand.get(sectorId) ?? 0;
+    const per = list.length > 0 ? Math.round(demand / list.length) : 0;
+    for (const jt of list) {
+      jobTitleDemand.set(jt.id, per);
+    }
+  }
+
+  // Supply: count Directory members and the claimed (recruited) subset per sector, per occupation,
+  // and per skill level.
+  const membersBySector = new Map<string, { members: number; recruited: number }>();
+  const membersByJobTitle = new Map<string, { members: number; recruited: number }>();
+  const membersBySkillLevel = new Map<WorkforceSkillLevel, { members: number; recruited: number }>();
+  for (const level of WORKFORCE_SKILL_LEVELS) {
+    membersBySkillLevel.set(level, emptyBucket());
+  }
+  let totalMembers = 0;
+  let recruitedTotal = 0;
+
+  for (const m of members) {
+    totalMembers += 1;
+    if (m.claimed) {
+      recruitedTotal += 1;
+    }
+
+    const sectorKey = m.sector_id ?? UNASSIGNED_BUCKET;
+    const sectorBucket = membersBySector.get(sectorKey) ?? emptyBucket();
+    sectorBucket.members += 1;
+    if (m.claimed) sectorBucket.recruited += 1;
+    membersBySector.set(sectorKey, sectorBucket);
+
+    if (m.job_title_id) {
+      const jtBucket = membersByJobTitle.get(m.job_title_id) ?? emptyBucket();
+      jtBucket.members += 1;
+      if (m.claimed) jtBucket.recruited += 1;
+      membersByJobTitle.set(m.job_title_id, jtBucket);
+    }
+
+    const level = deriveWorkforceSkillLevel(m.job_title_name);
+    const levelBucket = membersBySkillLevel.get(level)!;
+    levelBucket.members += 1;
+    if (m.claimed) levelBucket.recruited += 1;
+  }
+
+  // Sector breakdown: every active sector (so the view is never blank), plus an Unassigned row when
+  // Directory members have no resolvable sector.
+  const sectorItems: WorkforceGroupedReportItem[] = sectors.map((s) => {
+    const supply = membersBySector.get(s.id) ?? emptyBucket();
+    const target = sectorDemand.get(s.id) ?? 0;
+    return {
+      bucket: s.name,
+      target,
+      members: supply.members,
+      recruited: supply.recruited,
+      gap: Math.max(0, target - supply.recruited),
+    };
+  });
+  const unassigned = membersBySector.get(UNASSIGNED_BUCKET);
+  if (unassigned && (unassigned.members > 0 || unassigned.recruited > 0)) {
+    sectorItems.push({
+      bucket: UNASSIGNED_BUCKET,
+      target: 0,
+      members: unassigned.members,
+      recruited: unassigned.recruited,
+      gap: 0,
+    });
+  }
+
+  // Skill-level breakdown: roll each occupation's demand up by the level derived from its job-title
+  // name (the V2 keyword rule), and pair it with the live supply at that level.
+  const demandBySkillLevel = new Map<WorkforceSkillLevel, number>();
+  for (const level of WORKFORCE_SKILL_LEVELS) {
+    demandBySkillLevel.set(level, 0);
+  }
+  for (const jt of jobTitles) {
+    const level = deriveWorkforceSkillLevel(jt.name);
+    demandBySkillLevel.set(level, (demandBySkillLevel.get(level) ?? 0) + (jobTitleDemand.get(jt.id) ?? 0));
+  }
+  const skillLevelItems: WorkforceGroupedReportItem[] = WORKFORCE_SKILL_LEVELS.map((level) => {
+    const supply = membersBySkillLevel.get(level)!;
+    const target = demandBySkillLevel.get(level) ?? 0;
+    return {
+      bucket: level,
+      target,
+      members: supply.members,
+      recruited: supply.recruited,
+      gap: Math.max(0, target - supply.recruited),
+    };
+  }).filter((item) => item.target > 0 || item.members > 0);
+
+  // Per-occupation training gaps (sorted largest gap first) — the LevelUp recruiting/training signal.
+  const sectorNameById = new Map(sectors.map((s) => [s.id, s.name]));
+  const occupationItems: WorkforceOccupationGapItem[] = jobTitles.map((jt) => {
+    const supply = membersByJobTitle.get(jt.id) ?? emptyBucket();
+    const target = jobTitleDemand.get(jt.id) ?? 0;
+    return {
+      jobTitleId: jt.id,
+      occupation: jt.name,
+      sector: sectorNameById.get(jt.sector_id) ?? UNASSIGNED_BUCKET,
+      skillLevel: deriveWorkforceSkillLevel(jt.name),
+      target,
+      members: supply.members,
+      recruited: supply.recruited,
+      gap: Math.max(0, target - supply.recruited),
+    };
+  });
+  occupationItems.sort((a, b) => b.gap - a.gap || a.occupation.localeCompare(b.occupation));
+
+  const totalHeadcountTarget = Array.from(sectorDemand.values()).reduce((sum, n) => sum + n, 0);
+
   return {
-    workforceTotal: Number.parseInt(workforceCount.rows[0]?.total ?? '0', 10),
-    recruitedTotal: Number.parseInt(recruitedCount.rows[0]?.total ?? '0', 10),
-    occupationsTotal: Number.parseInt(occupationCount.rows[0]?.total ?? '0', 10),
+    config,
+    workforceTotal,
+    totalHeadcountTarget,
+    totalMembers,
+    recruitedTotal,
+    sectorsTotal: sectors.length,
+    occupationsTotal: jobTitles.length,
+    sectors: sectorItems,
+    skillLevels: skillLevelItems,
+    occupations: occupationItems,
     generatedAtIso: new Date().toISOString(),
   };
 }
+
+function percentRecruited(recruited: number, target: number): number {
+  if (target <= 0) {
+    return 0;
+  }
+  return Math.round(((recruited / target) * 100 + Number.EPSILON) * 100) / 100;
+}
+
+export async function getDashboard(): Promise<WorkforceDashboard> {
+  const model = await computeWorkforceModel();
+  return {
+    population: model.config.population,
+    participationRate: model.config.participationRate,
+    workforceTotal: model.workforceTotal,
+    totalHeadcountTarget: model.totalHeadcountTarget,
+    totalMembers: model.totalMembers,
+    recruitedTotal: model.recruitedTotal,
+    percentRecruited: percentRecruited(model.recruitedTotal, model.totalHeadcountTarget),
+    remainingCapacity: Math.max(0, model.config.maxRecruitable - model.recruitedTotal),
+    minRecruitable: model.config.minRecruitable,
+    maxRecruitable: model.config.maxRecruitable,
+    sectorsTotal: model.sectorsTotal,
+    occupationsTotal: model.occupationsTotal,
+    generatedAtIso: model.generatedAtIso,
+  };
+}
+
+export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
+  const model = await computeWorkforceModel();
+  return {
+    population: model.config.population,
+    workforceTotal: model.workforceTotal,
+    totalHeadcountTarget: model.totalHeadcountTarget,
+    totalMembers: model.totalMembers,
+    recruitedTotal: model.recruitedTotal,
+    percentRecruited: percentRecruited(model.recruitedTotal, model.totalHeadcountTarget),
+    generatedAtIso: model.generatedAtIso,
+  };
+}
+
+export async function fetchSectorReport(): Promise<WorkforceGroupedReportItem[]> {
+  const model = await computeWorkforceModel();
+  return model.sectors;
+}
+
+export async function fetchSkillLevelReport(): Promise<WorkforceGroupedReportItem[]> {
+  const model = await computeWorkforceModel();
+  return model.skillLevels;
+}
+
+export async function fetchOccupationGapReport(): Promise<WorkforceOccupationGapItem[]> {
+  const model = await computeWorkforceModel();
+  return model.occupations;
+}
+
+// Occupations browse is a read-only, paginated view of Skills Taxonomy job titles with their
+// demand/supply overlay. Sorted by largest gap first so the biggest needs surface to the top.
+export async function listOccupations(
+  pagination: { page: number; pageSize: number },
+): Promise<{ items: WorkforceOccupation[]; pagination: WorkforcePagination }> {
+  const model = await computeWorkforceModel();
+  const all = model.occupations;
+  const offset = (pagination.page - 1) * pagination.pageSize;
+  const items = all.slice(offset, offset + pagination.pageSize).map((occ) => ({
+    id: occ.jobTitleId,
+    name: occ.occupation,
+    sector: occ.sector,
+    skillLevel: occ.skillLevel,
+    target: occ.target,
+    members: occ.members,
+    recruited: occ.recruited,
+    gap: occ.gap,
+  }));
+
+  return {
+    items,
+    pagination: {
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      total: all.length,
+    },
+  };
+}
+
+export async function getOccupationById(id: string): Promise<WorkforceOccupation | null> {
+  const model = await computeWorkforceModel();
+  const occ = model.occupations.find((o) => o.jobTitleId === id);
+  if (!occ) {
+    return null;
+  }
+  return {
+    id: occ.jobTitleId,
+    name: occ.occupation,
+    sector: occ.sector,
+    skillLevel: occ.skillLevel,
+    target: occ.target,
+    members: occ.members,
+    recruited: occ.recruited,
+    gap: occ.gap,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Own profile (read-only Directory-derived view + workforce-owned extension)
+// ---------------------------------------------------------------------------
 
 type WorkforceExtensionRow = {
   availability_preferences: Record<string, unknown> | null;
@@ -195,7 +495,7 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
   // (occupation = their Skills Taxonomy job title; skill level is derived from it; recruited = true,
   // since a claimed profile is by definition a recruited member). The editable extension fields
   // (availability/work preferences) and the plugin-scoped deletion marker live in
-  // workforce_user_extension — the member can write those via PUT and reset them via DELETE.
+  // workforce_user_extension — the only table the profile flow writes, and it is workforce-owned.
   const result = await queryDb<{ job_title_id: string | null; job_title_name: string | null; updated_at: Date }>(
     `
       SELECT dp.job_title_id::text AS job_title_id, jt.name AS job_title_name, dp.updated_at
@@ -230,15 +530,22 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
   };
 }
 
+export type WorkforceSoftDeleteOutcome = 'deleted' | 'already_deleted' | 'not_found';
+
 // Service-scoped soft delete (deletion contract section 5): set service_deleted_at = NOW() and reset
-// both preference payloads to empty objects on workforce_user_extension. workforce_recruited_events
-// and admin audit are retained (handled by the caller / not touched here). Upserts so a delete on a
-// never-written extension still records the soft-delete marker. Returns false when the caller has no
-// claimed Directory profile (nothing to delete).
-export async function softDeleteOwnProfile(userId: string): Promise<boolean> {
+// both preference payloads to empty objects on workforce_user_extension (a workforce-owned table —
+// Directory and Skills Taxonomy are never touched).
+//   - 'not_found'       : the caller has no claimed Directory profile (nothing to delete).
+//   - 'already_deleted' : the profile was already service-deleted; this is an idempotent no-op, so the
+//                         caller should NOT write a second deletion event.
+//   - 'deleted'         : the soft delete was applied now.
+export async function softDeleteOwnProfile(userId: string): Promise<WorkforceSoftDeleteOutcome> {
   const profile = await getOwnProfile(userId);
   if (!profile) {
-    return false;
+    return 'not_found';
+  }
+  if (profile.serviceDeletedAtIso) {
+    return 'already_deleted';
   }
 
   await queryDb(
@@ -256,27 +563,30 @@ export async function softDeleteOwnProfile(userId: string): Promise<boolean> {
     [userId],
   );
 
-  return true;
+  return 'deleted';
 }
 
+// requested_at is the time the caller captured before any awaits (when the request was received);
+// processed_at is when this row is written (NOW() in SQL), so the two timestamps are genuinely
+// distinct as the deletion contract (section 8) requires.
 export async function insertWorkforceDeletionEvent(input: {
   userId: string;
   scope: string;
   result: string;
+  requestedAt: Date;
   requestId: string | null;
   traceId: string | null;
-  processedAt?: Date | null;
 }): Promise<void> {
   await queryDb(
     `
       INSERT INTO workforce_deletion_events
         (user_id, scope, plugin_id, requested_at, processed_at, result, request_id, trace_id)
-      VALUES ($1, $2, 'workforce', NOW(), $3, $4, $5, $6)
+      VALUES ($1, $2, 'workforce', $3, NOW(), $4, $5, $6)
     `,
     [
       input.userId,
       input.scope,
-      input.processedAt ?? new Date(),
+      input.requestedAt,
       input.result,
       input.requestId,
       input.traceId,
@@ -284,114 +594,14 @@ export async function insertWorkforceDeletionEvent(input: {
   );
 }
 
-export async function listOccupations(
-  pagination: { page: number; pageSize: number },
-  includeInactive = false,
-): Promise<{ items: WorkforceOccupation[]; pagination: WorkforcePagination }> {
-  const offset = (pagination.page - 1) * pagination.pageSize;
-
-  const [countResult, rows] = await Promise.all([
-    queryDb<CountRow>(
-      `
-        SELECT COUNT(*)::text AS total
-        FROM workforce_occupations
-        WHERE ($1::boolean OR is_active = true)
-      `,
-      [includeInactive],
-    ),
-    queryDb<WorkforceOccupationRow>(
-      `
-        SELECT id, name, sector, is_active, created_by_user_id, updated_by_user_id, created_at, updated_at
-        FROM workforce_occupations
-        WHERE ($1::boolean OR is_active = true)
-        ORDER BY updated_at DESC
-        OFFSET $2 LIMIT $3
-      `,
-      [includeInactive, offset, pagination.pageSize],
-    ),
-  ]);
-
-  return {
-    items: rows.rows.map(mapOccupation),
-    pagination: {
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
-    },
-  };
-}
-
-export async function getOccupationById(id: string): Promise<WorkforceOccupation | null> {
-  const result = await queryDb<WorkforceOccupationRow>(
-    `
-      SELECT id, name, sector, is_active, created_by_user_id, updated_by_user_id, created_at, updated_at
-      FROM workforce_occupations
-      WHERE id = $1::uuid
-      LIMIT 1
-    `,
-    [id],
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return mapOccupation(result.rows[0]);
-}
-
-export async function createOccupation(actorId: string, input: WorkforceOccupationInput): Promise<WorkforceOccupation> {
-  const result = await queryDb<WorkforceOccupationRow>(
-    `
-      INSERT INTO workforce_occupations (name, sector, is_active, created_by_user_id, updated_by_user_id)
-      VALUES ($1, $2, COALESCE($3, true), $4, $4)
-      RETURNING id, name, sector, is_active, created_by_user_id, updated_by_user_id, created_at, updated_at
-    `,
-    [normalizeText(input.name), normalizeNullableText(input.sector), input.isActive, actorId],
-  );
-
-  return mapOccupation(result.rows[0]);
-}
-
-export async function updateOccupation(
-  actorId: string,
-  id: string,
-  input: WorkforceOccupationInput,
-): Promise<WorkforceOccupation | null> {
-  const result = await queryDb<WorkforceOccupationRow>(
-    `
-      UPDATE workforce_occupations
-      SET
-        name = $2,
-        sector = $3,
-        is_active = COALESCE($4, is_active),
-        updated_by_user_id = $5,
-        updated_at = NOW()
-      WHERE id = $1::uuid
-      RETURNING id, name, sector, is_active, created_by_user_id, updated_by_user_id, created_at, updated_at
-    `,
-    [id, normalizeText(input.name), normalizeNullableText(input.sector), input.isActive, actorId],
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return mapOccupation(result.rows[0]);
-}
-
-export async function deleteOccupation(id: string): Promise<'deleted' | 'not_found'> {
-  const result = await queryDb<{ id: string }>(
-    'DELETE FROM workforce_occupations WHERE id = $1::uuid RETURNING id',
-    [id],
-  );
-
-  return result.rows.length > 0 ? 'deleted' : 'not_found';
-}
+// ---------------------------------------------------------------------------
+// Workforce config (workforce-owned, admin-editable)
+// ---------------------------------------------------------------------------
 
 export async function getWorkforceConfig(): Promise<WorkforceConfig> {
   const result = await queryDb<WorkforceConfigRow>(
     `
-      SELECT exports_enabled, report_week_timezone, report_week_start_dow,
+      SELECT population::text, participation_rate::text, min_recruitable::text, max_recruitable::text,
              updated_by_user_id, updated_at
       FROM workforce_config
       WHERE singleton_key = true
@@ -402,9 +612,10 @@ export async function getWorkforceConfig(): Promise<WorkforceConfig> {
   const row = result.rows[0];
   if (!row) {
     return {
-      exportsEnabled: false,
-      reportWeekTimezone: WORKFORCE_DEFAULT_TIMEZONE,
-      reportWeekStartDow: WORKFORCE_DEFAULT_WEEK_START_DOW,
+      population: WORKFORCE_DEFAULT_POPULATION,
+      participationRate: WORKFORCE_DEFAULT_PARTICIPATION_RATE,
+      minRecruitable: WORKFORCE_DEFAULT_MIN_RECRUITABLE,
+      maxRecruitable: WORKFORCE_DEFAULT_MAX_RECRUITABLE,
       updatedByUserId: 'system',
       updatedAtIso: new Date(0).toISOString(),
     };
@@ -417,101 +628,39 @@ export async function updateWorkforceConfig(actorId: string, input: WorkforceCon
   const result = await queryDb<WorkforceConfigRow>(
     `
       INSERT INTO workforce_config
-        (singleton_key, exports_enabled, report_week_timezone, report_week_start_dow, updated_by_user_id)
+        (singleton_key, population, participation_rate, min_recruitable, max_recruitable, updated_by_user_id)
       VALUES
-        (true, $1, $2, $3, $4)
+        (true, $1, $2, $3, $4, $5)
       ON CONFLICT (singleton_key)
       DO UPDATE SET
-        exports_enabled = EXCLUDED.exports_enabled,
-        report_week_timezone = EXCLUDED.report_week_timezone,
-        report_week_start_dow = EXCLUDED.report_week_start_dow,
+        population = EXCLUDED.population,
+        participation_rate = EXCLUDED.participation_rate,
+        min_recruitable = EXCLUDED.min_recruitable,
+        max_recruitable = EXCLUDED.max_recruitable,
         updated_by_user_id = EXCLUDED.updated_by_user_id,
         updated_at = NOW()
-      RETURNING exports_enabled, report_week_timezone, report_week_start_dow,
+      RETURNING population::text, participation_rate::text, min_recruitable::text, max_recruitable::text,
                 updated_by_user_id, updated_at
     `,
-    [input.exportsEnabled, normalizeText(input.reportWeekTimezone), input.reportWeekStartDow, actorId],
+    [
+      Math.round(input.population),
+      input.participationRate,
+      Math.round(input.minRecruitable),
+      Math.round(input.maxRecruitable),
+      actorId,
+    ],
   );
+
+  // Config drives the whole model's demand numbers; drop the cached model so the next read recomputes
+  // with the new config instead of serving the pre-update snapshot for up to the cache TTL.
+  invalidateWorkforceModelCache();
 
   return mapConfig(result.rows[0]);
 }
 
-export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
-  // Live from Directory (see getDashboard): total = active profiles, recruited = claimed.
-  const result = await queryDb<WorkforceReportRow>(
-    `
-      SELECT
-        COUNT(*)::int AS workforce_total,
-        COUNT(*) FILTER (WHERE claimed_by_user_id IS NOT NULL)::int AS recruited_total
-      FROM directory_profiles
-      WHERE is_active = TRUE AND deleted_at IS NULL
-    `,
-  );
-
-  return {
-    workforceTotal: result.rows[0]?.workforce_total ?? 0,
-    recruitedTotal: result.rows[0]?.recruited_total ?? 0,
-    generatedAtIso: new Date().toISOString(),
-  };
-}
-
-export async function fetchSkillLevelReport(): Promise<WorkforceGroupedReportItem[]> {
-  // Skill level is derived live from each active directory profile's Skills Taxonomy job-title
-  // name, using V2's keyword rule (see lib/workforce/skill-level.ts) — Foundational / Intermediate
-  // / Advanced. No stored column, no seed; the breakdown lives on the source of truth. Recruited =
-  // claimed. Aggregated in code over the (small) active-profile set so the keyword lists stay in
-  // one place, shared with the drill-down.
-  const result = await queryDb<{ job_title_name: string | null; claimed: boolean }>(
-    `
-      SELECT jt.name AS job_title_name, (dp.claimed_by_user_id IS NOT NULL) AS claimed
-      FROM directory_profiles dp
-      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
-      WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL
-    `,
-  );
-
-  const buckets = new Map<WorkforceSkillLevel, { workforceTotal: number; recruitedTotal: number }>();
-  for (const level of WORKFORCE_SKILL_LEVELS) {
-    buckets.set(level, { workforceTotal: 0, recruitedTotal: 0 });
-  }
-  for (const row of result.rows) {
-    const bucket = buckets.get(deriveWorkforceSkillLevel(row.job_title_name))!;
-    bucket.workforceTotal += 1;
-    if (row.claimed) {
-      bucket.recruitedTotal += 1;
-    }
-  }
-
-  // Foundational → Intermediate → Advanced; include only levels that have people so the shell's
-  // panel shows the buckets that actually exist.
-  return WORKFORCE_SKILL_LEVELS
-    .map((level) => ({ bucket: level, ...buckets.get(level)! }))
-    .filter((item) => item.workforceTotal > 0);
-}
-
-export async function fetchSectorReport(): Promise<WorkforceGroupedReportItem[]> {
-  // Group the active directory profiles by their Skills Taxonomy sector; recruited = claimed.
-  const result = await queryDb<WorkforceGroupedRow>(
-    `
-      SELECT
-        COALESCE(s.name, 'Unassigned') AS bucket,
-        COUNT(*)::text AS workforce_total,
-        COUNT(*) FILTER (WHERE dp.claimed_by_user_id IS NOT NULL)::text AS recruited_total
-      FROM directory_profiles dp
-      LEFT JOIN skills_taxonomy_sectors s ON s.id = dp.sector_id
-      WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL
-      GROUP BY COALESCE(s.name, 'Unassigned')
-      ORDER BY bucket ASC
-    `,
-  );
-
-  return result.rows.map((row) => ({
-    bucket: row.bucket,
-    workforceTotal: Number.parseInt(row.workforce_total, 10),
-    recruitedTotal: Number.parseInt(row.recruited_total, 10),
-  }));
-}
-
+// ---------------------------------------------------------------------------
+// Admin audit trail (workforce-owned)
+// ---------------------------------------------------------------------------
 
 export async function insertWorkforceAdminAudit(input: {
   actorId: string;
@@ -589,66 +738,5 @@ export async function listAdminAuditEvents(
       pageSize: pagination.pageSize,
       total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
     },
-  };
-}
-
-export async function createDeferredExportJob(actorId: string, exportType: string): Promise<WorkforceExportJob> {
-  const result = await queryDb<{
-    id: string;
-    status: 'queued' | 'running' | 'completed' | 'failed' | 'deferred';
-    export_type: string;
-    created_by_user_id: string;
-    created_at: Date;
-    completed_at: Date | null;
-  }>(
-    `
-      INSERT INTO workforce_export_jobs (status, export_type, created_by_user_id, completed_at)
-      VALUES ('deferred', $1, $2, NOW())
-      RETURNING id, status, export_type, created_by_user_id, created_at, completed_at
-    `,
-    [exportType, actorId],
-  );
-
-  const row = result.rows[0];
-  return {
-    id: row.id,
-    status: row.status,
-    exportType: row.export_type,
-    createdByUserId: row.created_by_user_id,
-    createdAtIso: toIso(row.created_at),
-    completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
-  };
-}
-
-export async function getExportJobById(jobId: string): Promise<WorkforceExportJob | null> {
-  const result = await queryDb<{
-    id: string;
-    status: 'queued' | 'running' | 'completed' | 'failed' | 'deferred';
-    export_type: string;
-    created_by_user_id: string;
-    created_at: Date;
-    completed_at: Date | null;
-  }>(
-    `
-      SELECT id, status, export_type, created_by_user_id, created_at, completed_at
-      FROM workforce_export_jobs
-      WHERE id = $1::uuid
-      LIMIT 1
-    `,
-    [jobId],
-  );
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  const row = result.rows[0];
-  return {
-    id: row.id,
-    status: row.status,
-    exportType: row.export_type,
-    createdByUserId: row.created_by_user_id,
-    createdAtIso: toIso(row.created_at),
-    completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
   };
 }

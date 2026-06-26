@@ -4,3 +4,4 @@ export { FoundationEmpty } from './FoundationEmpty';
 export { FoundationPublic } from './FoundationPublic';
 export { FoundationInstantCallController, useInstantCall } from './FoundationInstantCallController';
 export { ConnectNowButton, canOfferConnectNow } from './FoundationConnectNow';
+export { FoundationCallAlerts } from './FoundationCallAlerts';

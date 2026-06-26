@@ -1009,6 +1009,12 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   reviewed_by_user_id TEXT,
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
+  -- Duplicate-identity guard: a normalized Quora URL earns the verification reward on ONE account.
+  -- When a second account is approved with a URL another account already holds, its reward is held
+  -- (reward_withheld_at) for an admin determination instead of auto-granted. reward_revoked_at marks a
+  -- reward an admin clawed back (the "loser" of a determination, or a perp).
+  reward_withheld_at TIMESTAMPTZ,
+  reward_revoked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1026,6 +1032,8 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reward_withheld_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS reward_revoked_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- The app upserts a submission with `ON CONFLICT (user_id)` (createOrUpdateUnlockSubmission). That
@@ -1049,6 +1057,10 @@ WHERE ctid IN (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
   ON unlock_verification_submissions (user_id);
+-- Supports the duplicate-identity guard: find every account that has claimed a given normalized Quora
+-- URL (and which one currently holds the reward) without scanning the table.
+CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
+  ON unlock_verification_submissions (quora_profile_url_normalized);
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
@@ -1345,6 +1357,10 @@ CREATE TABLE IF NOT EXISTS workforce_profiles (
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- workforce_occupations is no longer read or written by the Workforce plugin: occupations are read
+-- live from Skills Taxonomy (job titles), and Workforce never creates them. The table is retained
+-- (unused by Workforce) because the SkillsHunt rare-skill snapshot still references it; do not drop it
+-- without updating that consumer.
 CREATE TABLE IF NOT EXISTS workforce_occupations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -1367,16 +1383,30 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_events (
   user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Workforce config is the plugin's own (admin-editable) population model. Demand is derived as
+-- population * participation_rate, distributed across sectors by each sector's Skills Taxonomy
+-- workforce share. This config is never written to Directory or Skills Taxonomy.
 CREATE TABLE IF NOT EXISTS workforce_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
-  exports_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  report_week_timezone TEXT NOT NULL,
-  report_week_start_dow INTEGER NOT NULL DEFAULT 0,
-  updated_by_user_id TEXT NOT NULL,
+  population NUMERIC NOT NULL DEFAULT 5000000,
+  participation_rate NUMERIC NOT NULL DEFAULT 0.5,
+  min_recruitable NUMERIC NOT NULL DEFAULT 2000000,
+  max_recruitable NUMERIC NOT NULL DEFAULT 5000000,
+  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+-- New population-model columns (idempotent add) and removal of retired columns. The export toggle and
+-- report-week settings were removed when workforce became a read-only live tracker; the legacy
+-- kill-switch column is also dropped if a prior DB created it.
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS population NUMERIC NOT NULL DEFAULT 5000000;
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS participation_rate NUMERIC NOT NULL DEFAULT 0.5;
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS min_recruitable NUMERIC NOT NULL DEFAULT 2000000;
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS max_recruitable NUMERIC NOT NULL DEFAULT 5000000;
+ALTER TABLE IF EXISTS workforce_config ALTER COLUMN updated_by_user_id SET DEFAULT 'system';
 ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS kill_switch_enabled;
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS exports_enabled;
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS report_week_timezone;
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS report_week_start_dow;
 CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1426,8 +1456,17 @@ CREATE TABLE IF NOT EXISTS service_credits_transfers (
   status TEXT NOT NULL,
   idempotency_key TEXT NOT NULL,
   completed_at TIMESTAMPTZ,
+  origin_plugin TEXT,
+  reason_code TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- origin_plugin records which surface initiated the transfer: 'service-credits' for a direct member
+-- send from the ServiceCredits "Send Credits" form, or the plugin slug when a plugin feature moved the
+-- credits (e.g. 'chyme' for a tip, 'foundation' for a call charge). reason_code is the finer intent.
+-- These let GDP recognition count only genuine direct peer-to-peer economic activity and attribute
+-- plugin-mediated transfers to each plugin, instead of blindly summing the ledger (issue: GDP scope).
+ALTER TABLE IF EXISTS service_credits_transfers ADD COLUMN IF NOT EXISTS origin_plugin TEXT;
+ALTER TABLE IF EXISTS service_credits_transfers ADD COLUMN IF NOT EXISTS reason_code TEXT;
 CREATE TABLE IF NOT EXISTS service_credits_command_idempotency (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   command TEXT NOT NULL,
@@ -2850,6 +2889,89 @@ ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS requeste
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'created';
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3). The base table above models a
+-- generic call session; these columns add the ring -> answer | declined | timed_out -> in_call -> ended
+-- state machine for the opt-in metered "Connect now" call. caller_user_id is who rang, callee_user_id is
+-- the provider being rung. ring_status is the lifecycle state. ring_expires_at is when an unanswered ring
+-- auto-times-out (~60s). answered_at / ended_at / ended_by_user_id record the transitions.
+-- first_block_charged is the clean seam for issue #808 task 4 (per-block billing): task 4 flips it true
+-- when the first block is charged on answer. NO billing happens here -- this column is a placeholder the
+-- billing task hooks into.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS caller_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS callee_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ring_status TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ring_expires_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS first_block_charged BOOLEAN NOT NULL DEFAULT FALSE;
+-- Issue #808 task 4 (per-block billing for the metered "Connect now" call). Each interval-minute block is
+-- charged as a direct ServiceCredits transfer from caller_user_id to callee_user_id (no escrow). The
+-- provider's rate + interval are SNAPSHOTTED onto the row at answer time (rate_credits_locked /
+-- interval_minutes_locked) so a provider changing their rate mid-call cannot affect an in-progress call.
+-- authorized_blocks is the buyer-set cap chosen at ring time (the call can never extend past it in v1).
+-- blocks_charged counts paid blocks; paid_through_at = answered_at + blocks_charged * interval and drives
+-- the display countdown plus the lazy paid-window expiry (no background job). last_transfer_id is the most
+-- recent ServiceCredits transfer id, kept only for trace. The money itself lives in the service_credits_*
+-- tables (financial-record retention) -- these columns only describe the call's billing state.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS rate_credits_locked INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS interval_minutes_locked INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS authorized_blocks INTEGER;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS blocks_charged INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS paid_through_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS last_transfer_id TEXT;
+-- Why an answered/ringing call ended, when it was not a plain hang-up: 'caller_insufficient_funds' (a
+-- block charge failed for lack of balance), 'paid_window_elapsed' (the prepaid time ran out and the caller
+-- did not extend), or 'block_cap_reached' (an extend was attempted past the buyer-set cap). NULL for a
+-- normal end/decline/timeout.
+ALTER TABLE IF EXISTS foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_reason TEXT;
+-- One live ring per callee at a time: a partial unique index over the callee while the ring is still
+-- ringing prevents two simultaneous incoming calls stacking on the same provider.
+CREATE UNIQUE INDEX IF NOT EXISTS foundation_call_sessions_active_ring_per_callee
+  ON foundation_call_sessions (callee_user_id)
+  WHERE ring_status = 'ringing';
+-- The callee's incoming-ring inbox poll and the timeout sweep both filter on ring_status; index it.
+CREATE INDEX IF NOT EXISTS foundation_call_sessions_ring_status_idx
+  ON foundation_call_sessions (ring_status, ring_expires_at);
+
+-- Web push subscriptions (issue #808 task 5). Deliberately user-global and NOT Foundation-specific in
+-- shape so the same table backs any future push need. The Foundation instant-call ring is the first
+-- caller: when a provider enables call alerts on a device, that device's Web Push subscription is stored
+-- here, and ringInstantCall sends a push to every subscription the callee owns.
+--   kind     -- 'web' today; leaves room for 'expo' (native Android push) when #808's Android parity
+--               ticket lands, without a schema change.
+--   endpoint -- the push service URL the browser gave us (treated as the subscription identity).
+--   p256dh / auth -- the subscription's public encryption keys from PushSubscription.getKey(); these are
+--               per-subscription client keys, NOT the server VAPID private key (which is never stored in
+--               the database and only lives in env).
+--   user_agent   -- a short, non-identifying label so a member can tell their devices apart.
+--   last_used_at -- stamped when we last sent to this subscription, for housekeeping.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'web',
+  endpoint TEXT NOT NULL,
+  p256dh TEXT,
+  auth TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'web';
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS endpoint TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS p256dh TEXT;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS auth TEXT;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS user_agent TEXT;
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS push_subscriptions ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ;
+-- One row per (user, endpoint): a device re-subscribing upserts rather than duplicating.
+CREATE UNIQUE INDEX IF NOT EXISTS push_subscriptions_user_endpoint_key
+  ON push_subscriptions (user_id, endpoint);
+-- Sending a push loads all of a user's subscriptions; index the lookup.
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_id_idx
+  ON push_subscriptions (user_id);
 
 CREATE TABLE IF NOT EXISTS foundation_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3466,7 +3588,9 @@ ALTER TABLE IF EXISTS weekly_performance_audit_trail ADD COLUMN IF NOT EXISTS ta
 ALTER TABLE IF EXISTS weekly_performance_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS weekly_performance_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === WORKFORCE MODULE (missing tables) ===
+-- workforce_export_jobs is retained but unused: report exporting was removed (no routes write it);
+-- the table is left in place rather than dropped to avoid a destructive migration. Workforce is a
+-- read-only live tracker.
 CREATE TABLE IF NOT EXISTS workforce_export_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_by_user_id TEXT NOT NULL,
@@ -3477,15 +3601,6 @@ CREATE TABLE IF NOT EXISTS workforce_export_jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS export_type TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS export_data JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
 CREATE TABLE IF NOT EXISTS workforce_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -3812,10 +3927,6 @@ ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS target_user_id T
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_by_user_id TEXT;
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_at TIMESTAMPTZ;
-
--- workforce_occupations (2 — defensive)
-ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
 
 -- workforce_recruited_events (6 missing)
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS directory_profile_id TEXT;

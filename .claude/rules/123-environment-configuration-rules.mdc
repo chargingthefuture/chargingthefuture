@@ -166,6 +166,30 @@ When any of the three is unset, Web Push degrades gracefully: `resolveWebPushKey
 throws), and the in-app incoming-call poll remains the fallback. So builds, tests, and the call flow
 work with these unset; setting them only switches the out-of-app push on.
 
+### Expo push access token — Foundation instant-call ring (Android native push)
+
+Android native push (the Expo notification that wakes a provider's phone when a member rings them on
+Foundation — issue #884) is the Android counterpart of the Web Push above. The send goes to Expo's
+push API (`https://exp.host/--/api/v2/push/send`) and may need ONE optional secret:
+
+- `EXPO_ACCESS_TOKEN` — an Expo account access token. **Server-only**; never sent to a client, never
+  logged. It is **optional**: it is required only when the Expo project has "Enhanced Security for
+  Push Notifications" turned on. A project without that setting accepts unauthenticated sends, so an
+  unset token is a valid configuration, not an error.
+
+The owner generates it (in the Expo dashboard, under the account's access tokens) only if enhanced
+push security is on, then stores it in Infisical `production`. Do **not** generate or commit it
+anywhere in the repo — this is an open-source repository. There is no public key counterpart: unlike
+VAPID, the device registers with an Expo push token fetched at runtime in the app, not from a
+server-provided key.
+
+When `EXPO_ACCESS_TOKEN` is unset, the send degrades gracefully: `sendExpoPushToUser` in
+`ctf/packages/web/lib/notifications/expo-push.ts` still posts to Expo without an auth header (which
+works for projects that do not require it), never throws, and the in-app incoming-call poll remains
+the fallback. So builds, tests, and the call flow work with it unset. Note the Android device side
+also needs an EAS native build (the `expo-notifications` config plugin) — native push does not work
+in Expo Go regardless of this env var.
+
 ### Contributions plugin: owner Signal contact
 
 | Variable | Layer | Used by | Purpose |

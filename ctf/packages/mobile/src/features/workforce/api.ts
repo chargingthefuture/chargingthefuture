@@ -6,12 +6,44 @@ import { authedFetch } from '../../auth/authedFetch';
 const WORKFORCE_BASE = '/api/workforce';
 
 export interface WorkforceDashboardData {
+  population: number;
+  participationRate: number;
   workforceTotal: number;
+  totalHeadcountTarget: number;
+  totalMembers: number;
   recruitedTotal: number;
+  percentRecruited: number;
+  remainingCapacity: number;
+  minRecruitable: number;
+  maxRecruitable: number;
+  sectorsTotal: number;
   occupationsTotal: number;
   generatedAtIso: string;
 }
 
+export interface WorkforceGroupedReportItem {
+  bucket: string;
+  target: number;
+  members: number;
+  recruited: number;
+  gap: number;
+}
+
+export interface WorkforceOccupationGapItem {
+  jobTitleId: string;
+  occupation: string;
+  sector: string;
+  skillLevel: string;
+  target: number;
+  members: number;
+  recruited: number;
+  gap: number;
+}
+
+// GET /api/workforce/profile returns the same full profile object to web and mobile, so this type
+// mirrors the web WorkforceProfile shape (including the extension fields) even though the mobile
+// profile card does not render the extension fields today — keeping the types aligned avoids silent
+// drift between the two clients.
 export interface WorkforceProfileData {
   userId: string;
   occupationId: string | null;
@@ -20,6 +52,9 @@ export interface WorkforceProfileData {
   region: string | null;
   recruitedState: boolean;
   recruitedResolvedAtIso: string | null;
+  availabilityPreferences: Record<string, unknown>;
+  workPreferences: Record<string, unknown>;
+  serviceDeletedAtIso: string | null;
   updatedAtIso: string;
 }
 
@@ -28,6 +63,20 @@ export async function fetchWorkforceDashboard(): Promise<WorkforceDashboardData>
   if (!res.ok) throw new Error('Failed to fetch workforce dashboard');
   const json = await res.json() as { dashboard: WorkforceDashboardData };
   return json.dashboard;
+}
+
+export async function fetchWorkforceSectorReport(): Promise<WorkforceGroupedReportItem[]> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/reports/sector/all`);
+  if (!res.ok) throw new Error('Failed to fetch workforce sector report');
+  const json = await res.json() as { items?: WorkforceGroupedReportItem[] };
+  return json.items ?? [];
+}
+
+export async function fetchWorkforceOccupationGaps(limit = 10): Promise<WorkforceOccupationGapItem[]> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/reports/occupations?limit=${limit}`);
+  if (!res.ok) throw new Error('Failed to fetch workforce occupation gaps');
+  const json = await res.json() as { items?: WorkforceOccupationGapItem[] };
+  return json.items ?? [];
 }
 
 export async function fetchWorkforceProfile(): Promise<WorkforceProfileData | null> {

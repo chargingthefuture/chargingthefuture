@@ -7,7 +7,7 @@ import {
   insertWorkforceDeletionEvent,
   softDeleteOwnProfile,
 } from 'lib/workforce/repository';
-import { logWorkforceAudit } from 'lib/workforce/audit';
+import { logWorkforceAudit, WORKFORCE_AUDIT_WORKSPACE } from 'lib/workforce/audit';
 import { reportError } from 'lib/observability/report';
 
 // Read-only profile (owner decision 2026-06-16, reaffirmed): the occupation/skill section is a live
@@ -27,11 +27,13 @@ function readRequestTraceIds(request: Request): { requestId: string | null; trac
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const gate = await requireWorkforceReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const { requestId, traceId } = readRequestTraceIds(request);
 
   try {
     const profile = await getOwnProfile(gate.auth.userId);
@@ -47,6 +49,12 @@ export async function GET() {
       targetId: gate.auth.userId,
       result: 'success',
       errorCategory: null,
+      requestId,
+      traceId,
+      targetContext: {
+        workspaceId: WORKFORCE_AUDIT_WORKSPACE,
+        userId: gate.auth.userId,
+      },
       metadata: {
         roleCheck: 'pass',
         profileOwnershipCheck: 'pass',
@@ -76,10 +84,14 @@ export async function DELETE(request: Request) {
   }
 
   const { requestId, traceId } = readRequestTraceIds(request);
+  // Capture the request time up front so the deletion event can record a real requested_at distinct
+  // from the processed_at the database stamps when the row is written.
+  const requestedAt = new Date();
+  const requestedAtIso = requestedAt.toISOString();
 
   try {
-    const deleted = await softDeleteOwnProfile(gate.auth.userId);
-    if (!deleted) {
+    const outcome = await softDeleteOwnProfile(gate.auth.userId);
+    if (outcome === 'not_found') {
       logWorkforceAudit({
         actorId: gate.auth.userId,
         command: 'workforce.profile.delete',
@@ -89,6 +101,9 @@ export async function DELETE(request: Request) {
         targetId: gate.auth.userId,
         result: 'failure',
         errorCategory: 'not_found',
+        requestId,
+        traceId,
+        targetContext: { workspaceId: WORKFORCE_AUDIT_WORKSPACE, userId: gate.auth.userId },
         metadata: { roleCheck: 'pass', profileOwnershipCheck: 'fail', csrfCheck: 'pass' },
       });
       return NextResponse.json(
@@ -97,7 +112,25 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const requestedAtIso = new Date().toISOString();
+    if (outcome === 'already_deleted') {
+      // Idempotent: the profile was already service-deleted. Do NOT write a second deletion event;
+      // just audit the no-op and return success so a retry is safe.
+      logWorkforceAudit({
+        actorId: gate.auth.userId,
+        command: 'workforce.profile.delete',
+        status: 'allow',
+        reason: 'profile_already_deleted',
+        targetType: 'profile',
+        targetId: gate.auth.userId,
+        result: 'success',
+        errorCategory: null,
+        requestId,
+        traceId,
+        targetContext: { workspaceId: WORKFORCE_AUDIT_WORKSPACE, userId: gate.auth.userId },
+        metadata: { roleCheck: 'pass', profileOwnershipCheck: 'pass', csrfCheck: 'pass', idempotentNoop: true },
+      });
+      return NextResponse.json({ ok: true, status: 'already_deleted', requestedAtIso }, { status: 200 });
+    }
 
     // Service-scoped deletion event (deletion contract section 8). workforce_recruited_events and
     // workforce_admin_audit_trail are retained per section 5 — the soft delete only resets the
@@ -106,6 +139,7 @@ export async function DELETE(request: Request) {
       userId: gate.auth.userId,
       scope: 'service',
       result: 'completed',
+      requestedAt,
       requestId,
       traceId,
     });
@@ -129,6 +163,9 @@ export async function DELETE(request: Request) {
       targetId: gate.auth.userId,
       result: 'success',
       errorCategory: null,
+      requestId,
+      traceId,
+      targetContext: { workspaceId: WORKFORCE_AUDIT_WORKSPACE, userId: gate.auth.userId },
       metadata: { roleCheck: 'pass', profileOwnershipCheck: 'pass', csrfCheck: 'pass' },
     });
 
@@ -142,6 +179,7 @@ export async function DELETE(request: Request) {
         userId: gate.auth.userId,
         scope: 'service',
         result: 'failed',
+        requestedAt,
         requestId,
         traceId,
       });

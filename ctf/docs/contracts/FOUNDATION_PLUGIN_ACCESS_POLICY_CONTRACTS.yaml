@@ -545,7 +545,7 @@ policies:
 
   - pluginId: foundation
     command: foundation.push.subscribe
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
     attributePolicies:
@@ -565,6 +565,7 @@ policies:
     denyConditions:
       - actor_not_subscription_owner
       - invalid_subscription
+      - invalid_token
       - missing_csrf_confirmation
 
   - pluginId: foundation
@@ -624,3 +625,5 @@ changelog:
     change: Per-block billing controls (issue #808 task 4). ring is now v1.1.0 with a bounded authorizedBlocks (per-session cap) and new deny conditions provider_billing_misconfigured / caller_insufficient_funds / invalid_authorized_blocks (still moves no credits). answer is now v1.1.0 with movesCredits true, rate locked at answer, and a caller_insufficient_funds deny (the call is not opened if the first block cannot be paid). Added foundation.connection.instant-call.extend — caller-only, active_only, charged at the locked rate, block-cap enforced, with deny conditions actor_not_caller / call_not_active / block_cap_reached / caller_insufficient_funds.
   - date: 2026-06-25
     change: Added access policies for Web Push delivery of the instant-call ring (issue #808 task 5) — foundation.push.subscribe / .unsubscribe (CSRF-guarded, the member acts only on their own device subscription) and foundation.push.vapid-public-key.read (read-only, returns the non-secret public key). Android/Expo native push is deferred to the #808 Android parity ticket.
+  - date: 2026-06-26
+    change: foundation.push.subscribe is now v1.1.0 to also accept an Expo (Android native) push subscription (kind 'expo', issue #884) — same member-self / CSRF-guarded controls, with a new invalid_token deny for a missing/blank Expo token. foundation.push.unsubscribe is unchanged and kind-agnostic (matches by endpoint, so it removes a web or expo row). The send-side Expo access token (EXPO_ACCESS_TOKEN) is a server-only secret read from env and never returned to a client.
