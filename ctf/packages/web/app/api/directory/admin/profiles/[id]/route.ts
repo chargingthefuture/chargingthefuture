@@ -98,6 +98,17 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const result = await deleteAdminProfile(gate.auth.userId, id);
     if (result === 'not_found') {
+      logDirectoryAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.admin.profile.delete',
+        status: 'deny',
+        reason: 'not_found',
+        targetType: 'profile',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'not_found',
+      });
+
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Profile not found.' },
         { status: 404 },
@@ -140,6 +151,17 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles_id' });
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.profile.delete',
+      status: 'allow',
+      reason: 'unclaimed_only_delete',
+      targetType: 'profile',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete profile.' },
       { status: 503 },
