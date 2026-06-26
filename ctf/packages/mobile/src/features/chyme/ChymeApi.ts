@@ -84,6 +84,27 @@ export async function postChymeJoin(): Promise<ChymeJoinResponse> {
   });
 }
 
+// Presence heartbeat. The audio room pings this on a 35s interval while joined so the member's
+// last_seen_at stays fresh inside the 45s presence window and they keep counting as present.
+// Matches the web room's heartbeat ping.
+export async function postChymeHeartbeat(): Promise<{ ok: true }> {
+  return authedFetchJson('/api/chyme/heartbeat', {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
+}
+
+// Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing
+// it until it's lowered (or they leave). Stream reactions are transient and auto-clear, so they
+// cannot carry this state. Mirrors the web room's POST /api/chyme/hand call.
+export async function postChymeHand(raised: boolean): Promise<{ ok: true }> {
+  return authedFetchJson('/api/chyme/hand', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ raised }),
+  });
+}
+
 type ChymeTipResponse = {
   ok: true;
   transaction: { id: string; fromUserId: string; toUserId: string; amount: number; status: string };

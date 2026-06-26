@@ -28,6 +28,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-native-sdk';
 import type { ChymeJoinResponse } from './ChymeApi';
+import { postChymeHeartbeat, postChymeHand } from './ChymeApi';
 import { ChymeTipButton } from './ChymeTipModal';
 
 const PRIMARY = '#22C55E';
@@ -136,6 +137,25 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     displayName,
   ]);
 
+  // While joined, ping the presence heartbeat so this member keeps counting as in the call. 35s
+  // keeps the member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS),
+  // matching the web room. Without this the mobile participant's presence row goes stale and they
+  // drop off the participant list after 45s even though they are still connected to Stream audio.
+  // The OS suspends these timers when the app is backgrounded, so presence lapses on its own then —
+  // no explicit visibility guard is needed (the web equivalent guards on document.visibilityState,
+  // which has no React Native counterpart).
+  useEffect(() => {
+    if (status !== 'joined') return;
+    const ping = () => {
+      void postChymeHeartbeat().catch(() => {
+        /* best-effort keepalive: the next ping reconciles */
+      });
+    };
+    ping();
+    const intervalId = setInterval(ping, 35000);
+    return () => clearInterval(intervalId);
+  }, [status]);
+
   if (status !== 'joined' || !client || !call) {
     return (
       <View style={styles.center}>
@@ -168,6 +188,26 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
 const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void }> = ({ onOpenChat, onLeave }) => {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
+  const call = useCall();
+  // Hand-raise is tracked locally so the toggle is reliable and instant for the person pressing it,
+  // AND persisted server-side (POST /api/chyme/hand) so it rides on the member's presence row and
+  // everyone else keeps seeing it until it's lowered or they leave — matching the web room. We still
+  // emit the Stream reaction so others get the live in-call cue. The old transient 2.5s auto-reset is
+  // gone: a raised hand now stays up until the member lowers it.
+  const [handRaised, setHandRaised] = useState(false);
+
+  const onToggleHand = () => {
+    const next = !handRaised;
+    setHandRaised(next);
+    void call?.sendReaction(
+      next
+        ? { type: 'raised_hand', emoji_code: ':raised_hand:' }
+        : { type: 'lower_hand', emoji_code: ':hand:' },
+    );
+    void postChymeHand(next).catch(() => {
+      /* best-effort: local state already reflects the toggle; the next room poll reconciles */
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -193,22 +233,28 @@ const ChymeAudioRoomLive: React.FC<{ onOpenChat: () => void; onLeave: () => void
         ) : (
           <View style={styles.stageGrid}>
             {participants.map((participant) => (
-              <ChymeSpeakerTile key={participant.sessionId} participant={participant} />
+              <ChymeSpeakerTile key={participant.sessionId} participant={participant} localHandRaised={handRaised} />
             ))}
           </View>
         )}
       </View>
 
-      <ChymeAudioControls onOpenChat={onOpenChat} onLeave={onLeave} />
+      <ChymeAudioControls onOpenChat={onOpenChat} onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} />
     </View>
   );
 }
 
-const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant }> = ({ participant }) => {
+const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant; localHandRaised: boolean }> = ({
+  participant,
+  localHandRaised,
+}) => {
   const isSelf = participant.isLocalParticipant;
   const speaking = participant.isSpeaking;
   const publishingAudio = isPublishingAudio(participant);
-  const handRaised = participant.reaction?.type === 'raised_hand';
+  // The local member's raised hand is driven by their own toggle so it is reliable and instant.
+  // Everyone else's still comes from the transient Stream reaction (mobile does not yet poll the
+  // server-persisted set); the persistence above is what makes the raised hand visible on web.
+  const handRaised = isSelf ? localHandRaised : participant.reaction?.type === 'raised_hand';
   const name = participant.name || participant.userId;
   // Signed-out guests join as `chyme-guest-…` and have no wallet, so never show Tip on a guest. The
   // clerk user id (the tip recipient) is the Stream id with the `chyme-` prefix stripped.
@@ -254,11 +300,14 @@ const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant }> = ({ p
   );
 }
 
-const ChymeAudioControls: React.FC<{ onOpenChat: () => void; onLeave: () => void }> = ({ onOpenChat, onLeave }) => {
+const ChymeAudioControls: React.FC<{
+  onOpenChat: () => void;
+  onLeave: () => void;
+  handRaised: boolean;
+  onToggleHand: () => void;
+}> = ({ onOpenChat, onLeave, handRaised, onToggleHand }) => {
   const { useMicrophoneState } = useCallStateHooks();
   const { microphone, isMute } = useMicrophoneState();
-  const call = useCall();
-  const [handRaised, setHandRaised] = useState(false);
 
   return (
     <View style={styles.controls}>
@@ -277,16 +326,7 @@ const ChymeAudioControls: React.FC<{ onOpenChat: () => void; onLeave: () => void
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.controlBtn}
-          onPress={() => {
-            // Broadcast a raised-hand reaction to everyone in the room, then
-            // clear the local pressed state shortly after (it is transient).
-            void call?.sendReaction({ type: 'raised_hand', emoji_code: ':raised_hand:' });
-            setHandRaised(true);
-            setTimeout(() => setHandRaised(false), 2500);
-          }}
-        >
+        <TouchableOpacity style={styles.controlBtn} onPress={onToggleHand}>
           <View
             style={[
               styles.controlCircle,
@@ -295,7 +335,9 @@ const ChymeAudioControls: React.FC<{ onOpenChat: () => void; onLeave: () => void
           >
             <Text style={styles.controlIcon}>✋</Text>
           </View>
-          <Text style={[styles.controlLabel, handRaised && styles.controlLabelHand]}>Hand</Text>
+          <Text style={[styles.controlLabel, handRaised && styles.controlLabelHand]}>
+            {handRaised ? 'Lower' : 'Hand'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.controlBtn} onPress={onOpenChat}>
