@@ -84,6 +84,21 @@ export async function postChymeJoin(): Promise<ChymeJoinResponse> {
   });
 }
 
+type ChymeTipResponse = {
+  ok: true;
+  transaction: { id: string; fromUserId: string; toUserId: string; amount: number; status: string };
+};
+
+// Send ServiceCredits peer-to-peer to another room participant (origin_plugin 'chyme'). The transfer
+// delivers immediately; on failure the backend's message (e.g. insufficient balance) is surfaced.
+export async function postChymeTip(toUserId: string, amount: number, message?: string): Promise<ChymeTipResponse> {
+  return authedFetchJson('/api/chyme/service-credits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ toUserId, amount, ...(message && message.trim().length > 0 ? { message: message.trim() } : {}) }),
+  });
+}
+
 export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {
   return authedFetchJson('/api/account/chyme-profile', { method: 'DELETE' });
 }

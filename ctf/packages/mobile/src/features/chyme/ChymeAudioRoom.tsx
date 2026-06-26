@@ -28,6 +28,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-native-sdk';
 import type { ChymeJoinResponse } from './ChymeApi';
+import { ChymeTipButton } from './ChymeTipModal';
 
 const PRIMARY = '#22C55E';
 
@@ -209,6 +210,12 @@ const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant }> = ({ p
   const publishingAudio = isPublishingAudio(participant);
   const handRaised = participant.reaction?.type === 'raised_hand';
   const name = participant.name || participant.userId;
+  // Signed-out guests join as `chyme-guest-…` and have no wallet, so never show Tip on a guest. The
+  // clerk user id (the tip recipient) is the Stream id with the `chyme-` prefix stripped.
+  const isGuest = participant.userId.startsWith('chyme-guest-');
+  const clerkUserId = participant.userId.startsWith('chyme-')
+    ? participant.userId.slice('chyme-'.length)
+    : participant.userId;
 
   return (
     <View style={tileStyles.wrapper}>
@@ -242,6 +249,7 @@ const ChymeSpeakerTile: React.FC<{ participant: StreamVideoParticipant }> = ({ p
           {publishingAudio ? 'speaking' : 'muted'}
         </Text>
       </View>
+      {!isSelf && !isGuest ? <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} /> : null}
     </View>
   );
 }

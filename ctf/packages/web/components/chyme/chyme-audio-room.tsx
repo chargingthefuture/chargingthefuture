@@ -15,6 +15,7 @@ import {
 import { Mic, Headphones } from 'lucide-react';
 import { BORDER, PRIMARY, chymeHandle, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
+import { ChymeTipButton } from './chyme-tip-dialog';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
@@ -380,6 +381,7 @@ function ChymeSpeakerTile({
       >
         {isGuest ? 'listening' : publishingAudio ? 'speaking' : 'muted'}
       </span>
+      {!isSelf && !isGuest ? <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} /> : null}
     </div>
   );
 }
