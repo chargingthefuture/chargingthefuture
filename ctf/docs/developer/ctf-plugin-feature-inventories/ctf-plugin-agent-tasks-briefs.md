@@ -639,19 +639,19 @@ Handoff output:
 - Open product decision points
 ```
 
-## Prompt 12 — `agent-12-gentlepulse`
+## Prompt 12 — `agent-12-gentle-pulse`
 
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentlepulse-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentlepulse-feature-inventory.md
-- #file:ctf/docs/contracts/GENTLEPULSE_PLUGIN_COMMAND_CONTRACTS.yaml
-- #file:ctf/docs/contracts/GENTLEPULSE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
-- #file:ctf/docs/contracts/GENTLEPULSE_PLUGIN_AUDIT_CONTRACTS.yaml
-- #file:ctf/docs/contracts/GENTLEPULSE_PROFILE_AND_DELETION_CONTRACT.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentle-pulse-feature-inventory.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gentle-pulse-feature-inventory.md
+- #file:ctf/docs/contracts/GENTLE_PULSE_PLUGIN_COMMAND_CONTRACTS.yaml
+- #file:ctf/docs/contracts/GENTLE_PULSE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
+- #file:ctf/docs/contracts/GENTLE_PULSE_PLUGIN_AUDIT_CONTRACTS.yaml
+- #file:ctf/docs/contracts/GENTLE_PULSE_PROFILE_AND_DELETION_CONTRACT.md
 
-You are `agent-12-gentlepulse` working only under `ctf/`.
+You are `agent-12-gentle-pulse` working only under `ctf/`.
 Start gate:
 - Phase 2 — parallel start after Phase 0 completion.
 

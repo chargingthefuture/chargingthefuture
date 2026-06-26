@@ -1,6 +1,6 @@
 contracts:
-  - pluginId: gentlepulse
-    command: gentlepulse.library.list
+  - pluginId: gentle-pulse
+    command: gentle-pulse.library.list
     version: 1.0.0
     description: List meditations with sort/filter and favorites-only options.
     inputSchema:
@@ -25,15 +25,15 @@ contracts:
       total:
         type: integer
     dataAccess:
-      - gentlepulse_meditations
-      - gentlepulse_favorites
-      - gentlepulse_ratings
+      - gentle_pulse_meditations
+      - gentle_pulse_favorites
+      - gentle_pulse_ratings
     purpose: wellbeing_content_discovery
     retentionClass: derived_short_lived
     idempotency: true
 
-  - pluginId: gentlepulse
-    command: gentlepulse.meditation.play.record
+  - pluginId: gentle-pulse
+    command: gentle-pulse.meditation.play.record
     version: 1.0.0
     description: Record a meditation play event and return launch metadata.
     inputSchema:
@@ -48,14 +48,14 @@ contracts:
       mediaUrl:
         type: string
     dataAccess:
-      - gentlepulse_meditation_play_events
-      - gentlepulse_meditations
+      - gentle_pulse_meditation_play_events
+      - gentle_pulse_meditations
     purpose: wellbeing_engagement_tracking
     retentionClass: transactional_long_lived
     idempotency: true
 
-  - pluginId: gentlepulse
-    command: gentlepulse.rating.upsert
+  - pluginId: gentle-pulse
+    command: gentle-pulse.rating.upsert
     version: 1.0.0
     description: Create or update authenticated user rating for a meditation.
     inputSchema:
@@ -73,8 +73,8 @@ contracts:
       ratingCount:
         type: integer
     dataAccess:
-      - gentlepulse_ratings
-      - gentlepulse_rating_aggregates
+      - gentle_pulse_ratings
+      - gentle_pulse_rating_aggregates
     purpose: wellbeing_feedback
     retentionClass: transactional_long_lived
     idempotency: true

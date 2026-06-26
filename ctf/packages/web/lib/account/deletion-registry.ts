@@ -168,15 +168,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'gentlepulse',
+    slug: 'gentle-pulse',
     name: 'GentlePulse',
     dataSummary: 'Your favorited sessions, play history, and ratings.',
     serviceScopeSupported: true,
     tables: [
-      del('gentlepulse_ratings', 'user_id', 'Your ratings.'),
-      del('gentlepulse_play_events', 'user_id', 'Your play history.'),
-      del('gentlepulse_favorites', 'user_id', 'Your favorited sessions.'),
-      // gentlepulse_library_items is the shared session library.
+      del('gentle_pulse_ratings', 'user_id', 'Your ratings.'),
+      del('gentle_pulse_play_events', 'user_id', 'Your play history.'),
+      del('gentle_pulse_favorites', 'user_id', 'Your favorited sessions.'),
+      // gentle_pulse_library_items is the shared session library.
     ],
   },
   {

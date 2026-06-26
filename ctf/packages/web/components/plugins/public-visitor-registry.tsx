@@ -6,7 +6,7 @@ import { ContributionsPublicShell } from '@/components/contributions/contributio
 import { DirectoryPublicShell } from '@/components/directory/directory-public-shell';
 import { FoundationPublicShell } from '@/components/foundation/foundation-public-shell';
 import { GdpPublicShell } from '@/components/gdp/gdp-public-shell';
-import { GentlePulsePublicShell } from '@/components/gentlepulse/gentlepulse-public-shell';
+import { GentlePulsePublicShell } from '@/components/gentle-pulse/gentle-pulse-public-shell';
 import { LevelUpPublicShell } from '@/components/level-up/level-up-public-shell';
 import { LighthousePublicShell } from '@/components/lighthouse/lighthouse-public-shell';
 import { MoodPublicShell } from '@/components/mood/mood-public-shell';
@@ -64,7 +64,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   directory: DirectoryPublicShell,
   foundation: FoundationPublicShell,
   gdp: GdpPublicShell,
-  gentlepulse: GentlePulsePublicShell,
+  'gentle-pulse': GentlePulsePublicShell,
   'level-up': LevelUpPublicShell,
   lighthouse: LighthousePublicShell,
   mood: MoodPublicShell,

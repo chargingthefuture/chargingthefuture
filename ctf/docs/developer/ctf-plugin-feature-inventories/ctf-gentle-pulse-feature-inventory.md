@@ -4,7 +4,7 @@
 
 - Rewrite target only: `ctf/`
 - Legacy `platform/` is reference-only and must not be modified.
-- Unified plugin scope slug: `gentlepulse`
+- Unified plugin scope slug: `gentle-pulse`
 - This document is the living snapshot of GentlePulse per Rule 120.
 - Plugin name to retain: `GentlePulse`.
 
@@ -26,7 +26,7 @@ Authoritative app-level ownership reference:
 
 ### 1.1 Library Dashboard
 
-1. Plugin route for meditation library (`/apps/gentlepulse`).
+1. Plugin route for meditation library (`/apps/gentle-pulse`).
 2. Meditation listing with pagination (`limit`, `offset`).
 3. Sort modes: `newest`, `most-rated`, `highest-rating`.
 4. Tag-based filtering.
@@ -41,7 +41,7 @@ Authoritative app-level ownership reference:
 
 ### 1.3 Support Page
 
-1. Support/About route (`/apps/gentlepulse/support`).
+1. Support/About route (`/apps/gentle-pulse/support`).
 2. Trauma-informed plugin description.
 3. Privacy statement aligned to current CTF policy language.
 
@@ -57,32 +57,32 @@ Authoritative app-level ownership reference:
 
 ### 3.1 Plugin Command Surface
 
-1. `gentlepulse.library.list`
-2. `gentlepulse.meditation.detail.fetch`
-3. `gentlepulse.meditation.play.record`
-4. `gentlepulse.rating.upsert`
-5. `gentlepulse.rating.summary.fetch`
-6. `gentlepulse.favorite.add`
-7. `gentlepulse.favorite.remove`
-8. `gentlepulse.favorite.list`
-9. `gentlepulse.favorite.status.fetch`
+1. `gentle-pulse.library.list`
+2. `gentle-pulse.meditation.detail.fetch`
+3. `gentle-pulse.meditation.play.record`
+4. `gentle-pulse.rating.upsert`
+5. `gentle-pulse.rating.summary.fetch`
+6. `gentle-pulse.favorite.add`
+7. `gentle-pulse.favorite.remove`
+8. `gentle-pulse.favorite.list`
+9. `gentle-pulse.favorite.status.fetch`
 
 ### 3.2 HTTP Projection Routes
 
-User routes (authenticated) — verified against the route handlers (2026-06-25). The implemented routes use the `library/[itemId]` shape; the earlier `/api/gentlepulse/meditations*`, `/ratings`, and `/favorites*` names previously listed here did not match any handler in the code and have been replaced:
+User routes (authenticated) — verified against the route handlers (2026-06-25). The implemented routes use the `library/[itemId]` shape; the earlier `/api/gentle-pulse/meditations*`, `/ratings`, and `/favorites*` names previously listed here did not match any handler in the code and have been replaced:
 
-- `GET /api/gentlepulse/library` — list the active library items.
-- `GET /api/gentlepulse/library/[itemId]` — fetch one library item by id (`getLibraryItemById`); 404 when not found. Read-gated (`requireGentlePulseReadAccess`).
-- `POST` / `DELETE /api/gentlepulse/library/[itemId]/favorite` — add / remove the caller's favorite for an item (`setFavorite`, `favorited` true/false). Write-gated (`requireGentlePulseWriteAccess`), CSRF-guarded.
-- `POST /api/gentlepulse/library/[itemId]/play` — record a play event (`trackPlayEvent`); body `{ anonymousClientId?, completed? }`; returns 201. Write-gated, CSRF-guarded — an anonymous client id is accepted so unattributed plays are still counted.
-- `PUT /api/gentlepulse/library/[itemId]/rating` — upsert the caller's rating (`upsertRating`); body `{ rating: number }` (400 when missing or non-numeric). Write-gated, CSRF-guarded.
-- `GET /api/gentlepulse/support` — returns a static support pointer (`{ supportRoute: '/support', note }`); GentlePulse delegates support to app-level support ownership. Read-gated.
+- `GET /api/gentle-pulse/library` — list the active library items.
+- `GET /api/gentle-pulse/library/[itemId]` — fetch one library item by id (`getLibraryItemById`); 404 when not found. Read-gated (`requireGentlePulseReadAccess`).
+- `POST` / `DELETE /api/gentle-pulse/library/[itemId]/favorite` — add / remove the caller's favorite for an item (`setFavorite`, `favorited` true/false). Write-gated (`requireGentlePulseWriteAccess`), CSRF-guarded.
+- `POST /api/gentle-pulse/library/[itemId]/play` — record a play event (`trackPlayEvent`); body `{ anonymousClientId?, completed? }`; returns 201. Write-gated, CSRF-guarded — an anonymous client id is accepted so unattributed plays are still counted.
+- `PUT /api/gentle-pulse/library/[itemId]/rating` — upsert the caller's rating (`upsertRating`); body `{ rating: number }` (400 when missing or non-numeric). Write-gated, CSRF-guarded.
+- `GET /api/gentle-pulse/support` — returns a static support pointer (`{ supportRoute: '/support', note }`); GentlePulse delegates support to app-level support ownership. Read-gated.
 
 Excluded route groups:
 
-1. No `/api/gentlepulse/admin/*` routes in CTF rewrite scope.
+1. No `/api/gentle-pulse/admin/*` routes in CTF rewrite scope.
 2. No plugin-scoped announcements routes in CTF rewrite scope.
-3. No `/api/gentlepulse/progress*` routes in CTF rewrite scope.
+3. No `/api/gentle-pulse/progress*` routes in CTF rewrite scope.
 
 ## 4) Data Model and Storage Contracts
 
@@ -106,10 +106,10 @@ Excluded route groups:
 
 The shipped schema is leaner than the intended model in §4.1–§4.3: the thumbnail / duration / tags / position fields and the denormalized `playCount` / `averageRating` / `ratingCount` aggregates described there are not columns on these tables (they would be computed). The actual tables in `ctf/schema.sql`:
 
-- `gentlepulse_library_items` — the meditation catalog. Columns: `id`, `slug` (unique), `title`, `description`, `media_url`, `support_route`, `is_active`, `created_at`, `updated_at`.
-- `gentlepulse_ratings` — per-user rating, PK `(user_id, item_id)`. Columns: `user_id`, `item_id`, `rating` (integer), `created_at`, `updated_at`. Upserted by `PUT …/rating`.
-- `gentlepulse_favorites` — per-user favorite. Columns: `id`, `user_id`, `item_id`, `created_at`, with `UNIQUE (user_id, item_id)`. Toggled by `POST` / `DELETE …/favorite`.
-- `gentlepulse_play_events` — append-only play log. Columns: `id`, `user_id` (nullable), `anonymous_client_id` (nullable), `item_id`, `completed`, `created_at`. Written by `POST …/play`; the nullable user / anonymous-id pair lets both signed-in and anonymous plays be recorded.
+- `gentle_pulse_library_items` — the meditation catalog. Columns: `id`, `slug` (unique), `title`, `description`, `media_url`, `support_route`, `is_active`, `created_at`, `updated_at`.
+- `gentle_pulse_ratings` — per-user rating, PK `(user_id, item_id)`. Columns: `user_id`, `item_id`, `rating` (integer), `created_at`, `updated_at`. Upserted by `PUT …/rating`.
+- `gentle_pulse_favorites` — per-user favorite. Columns: `id`, `user_id`, `item_id`, `created_at`, with `UNIQUE (user_id, item_id)`. Toggled by `POST` / `DELETE …/favorite`.
+- `gentle_pulse_play_events` — append-only play log. Columns: `id`, `user_id` (nullable), `anonymous_client_id` (nullable), `item_id`, `completed`, `created_at`. Written by `POST …/play`; the nullable user / anonymous-id pair lets both signed-in and anonymous plays be recorded.
 
 ## 5) Security, Privacy, and Compliance Controls
 
@@ -120,11 +120,11 @@ The shipped schema is leaner than the intended model in §4.1–§4.3: the thumb
 
 ## 6) Web and Android Delivery Status
 
-`web+android complete`. Core library/filter/sort/favorite/rating/play behaviors are consistent across web (`/apps/gentlepulse`) and Android (`packages/mobile/src/features/gentlepulse`). App-level settings parity is tracked in the non-plugin inventory.
+`web+android complete`. Core library/filter/sort/favorite/rating/play behaviors are consistent across web (`/apps/gentle-pulse`) and Android (`packages/mobile/src/features/gentle-pulse`). App-level settings parity is tracked in the non-plugin inventory.
 
-Web pixel pass (design `c5d83c0`): the `/apps/gentlepulse` shell matches `design/.../survivor-hub/GentlePulse.tsx` (sessions grid, player, supportive chat, sidebar categories, right panel) with the mockup's 💚 header glyphs; Loading/Empty states added. Library browse, play tracking, and favorite toggles bind to the real `/api/gentlepulse/library*` routes; sessions, categories, and counts derive from that data (no dummy session list). The previously oversized shell was decomposed into modular sub-components (`gp-shared`, `gp-loading`, `gp-icon-rail`, `gp-sidebar`, `gp-sessions`, `gp-player`, `gp-chat`, `gp-right-panel`) within the rule-116 limits, and a dead duplicate `components/gentle-pulse/` directory was removed.
+Web pixel pass (design `c5d83c0`): the `/apps/gentle-pulse` shell matches `design/.../survivor-hub/GentlePulse.tsx` (sessions grid, player, supportive chat, sidebar categories, right panel) with the mockup's 💚 header glyphs; Loading/Empty states added. Library browse, play tracking, and favorite toggles bind to the real `/api/gentle-pulse/library*` routes; sessions, categories, and counts derive from that data (no dummy session list). The previously oversized shell was decomposed into modular sub-components (`gp-shared`, `gp-loading`, `gp-icon-rail`, `gp-sidebar`, `gp-sessions`, `gp-player`, `gp-chat`, `gp-right-panel`) within the rule-116 limits, and a dead duplicate `components/gentle-pulse/` directory was removed.
 
-Android pixel pass (2026-05-31): `ctf/packages/mobile/src/features/gentlepulse/` rebuilt against `design/.../survivor-hub/MobileGentlePulse.tsx` (+ Empty/Loading/Public variants). Real screen `GentlePulse.tsx` replaces retired `MockGentlepulse.tsx`. `index.ts` now exports `{ GentlePulse }` from the real screen. `api.ts` updated to export typed `GentlePulseSession` interface and active `recordPlay`, `addFavorite`, `removeFavorite` functions with `x-ctf-csrf: 1` headers. Bound fields: `id`, `title`, `description` from `GET /api/gentlepulse/library`. Omitted (no backing DB column): `emoji`, `duration`, `category`, play-count, streak. Loading/Empty/Public/Main states all implemented with design-faithful colors, spacing, and RN primitives.
+Android pixel pass (2026-05-31): `ctf/packages/mobile/src/features/gentle-pulse/` rebuilt against `design/.../survivor-hub/MobileGentlePulse.tsx` (+ Empty/Loading/Public variants). Real screen `GentlePulse.tsx` replaces retired `MockGentlePulse.tsx`. `index.ts` now exports `{ GentlePulse }` from the real screen. `api.ts` updated to export typed `GentlePulseSession` interface and active `recordPlay`, `addFavorite`, `removeFavorite` functions with `x-ctf-csrf: 1` headers. Bound fields: `id`, `title`, `description` from `GET /api/gentle-pulse/library`. Omitted (no backing DB column): `emoji`, `duration`, `category`, play-count, streak. Loading/Empty/Public/Main states all implemented with design-faithful colors, spacing, and RN primitives.
 
 ## 7) Seed Coverage Status
 
@@ -137,10 +137,11 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
-- 2026-06-25: **Documented the implemented routes and storage tables, correcting drift** (inventory-debt burn-down). §3.2's user-route list was replaced with the routes that actually ship (`GET /api/gentlepulse/library`, `GET /api/gentlepulse/library/[itemId]`, `POST`/`DELETE …/favorite`, `POST …/play`, `PUT …/rating`, `GET /api/gentlepulse/support`) — the previously-listed `/meditations*`, `/ratings`, and `/favorites*` names matched no handler. Added §4.4 with the four real tables (`gentlepulse_library_items`, `gentlepulse_ratings`, `gentlepulse_favorites`, `gentlepulse_play_events`) and their columns, noting the shipped schema is leaner than the aggregate model in §4.1–§4.3. Each verified against the handlers and `schema.sql`. Removed these four tables and five routes from the inventory-drift allowlist. Documentation only; no code change.
+- 2026-06-26: **Renamed the plugin `gentlepulse` → `gentle-pulse` (hard cutover, no backward-compatible aliases).** The slug, route folders, command names, contract-file prefixes, and inventory filename are now the hyphenated/kebab form: slug `gentle-pulse`, routes `/api/gentle-pulse/*` and `/apps/gentle-pulse`, commands `gentle-pulse.*`, contracts `GENTLE_PULSE_*`. The four database tables were renamed to snake_case — `gentlepulse_library_items` → `gentle_pulse_library_items`, `gentlepulse_play_events` → `gentle_pulse_play_events`, `gentlepulse_ratings` → `gentle_pulse_ratings`, `gentlepulse_favorites` → `gentle_pulse_favorites` — with `ALTER TABLE … RENAME TO` run before each `CREATE TABLE IF NOT EXISTS` in `schema.sql` and `schema.demo.sql` so an existing database keeps its data and a fresh one is unaffected. The plugin-registry seed row's slug is now `gentle-pulse` (display name `GentlePulse` unchanged) and a `DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('gentlepulse')` was added before the seed so existing databases drop the orphaned old-slug row and the Apps list no longer shows the plugin twice. PascalCase `GentlePulse` proper-noun identifiers and the display name are unchanged; the client-facing error-code string values moved to `gentle_pulse_*` (e.g. `gentle_pulse_csrf_denied`). No Stream surfaces touched, so no quota note. No `gentlepulse → gentle-pulse` alias was added.
+- 2026-06-25: **Documented the implemented routes and storage tables, correcting drift** (inventory-debt burn-down). §3.2's user-route list was replaced with the routes that actually ship (`GET /api/gentle-pulse/library`, `GET /api/gentle-pulse/library/[itemId]`, `POST`/`DELETE …/favorite`, `POST …/play`, `PUT …/rating`, `GET /api/gentle-pulse/support`) — the previously-listed `/meditations*`, `/ratings`, and `/favorites*` names matched no handler. Added §4.4 with the four real tables (`gentle_pulse_library_items`, `gentle_pulse_ratings`, `gentle_pulse_favorites`, `gentle_pulse_play_events`) and their columns, noting the shipped schema is leaner than the aggregate model in §4.1–§4.3. Each verified against the handlers and `schema.sql`. Removed these four tables and five routes from the inventory-drift allowlist. Documentation only; no code change.
 - 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. No backend, schema, or contract change.
-- 2026-05-31: Android pixel pass. Rebuilt `GentlePulse.tsx` real screen from `MobileGentlePulse.tsx` design + Empty/Loading/Public variants. Retired `MockGentlepulse.tsx`. Updated `api.ts` with typed interface and active mutation helpers (`recordPlay`, `addFavorite`, `removeFavorite`) with CSRF headers. Bound to real fields: `id`, `title`, `description`. Omitted non-backed fields: `emoji`, `duration`, `category`, play-count, streak.
-- 2026-05-29: Web UI circle-back (design `c5d83c0`). Aligned the gentlepulse shell to the `GentlePulse.tsx` mockup + Loading/Empty states; restored the 💚 header glyphs; decomposed the oversized shell into modular sub-components within rule-116 limits; removed the dead duplicate `components/gentle-pulse/` directory. Real `/api/gentlepulse/library*` wiring unchanged.
+- 2026-05-31: Android pixel pass. Rebuilt `GentlePulse.tsx` real screen from `MobileGentlePulse.tsx` design + Empty/Loading/Public variants. Retired `MockGentlePulse.tsx`. Updated `api.ts` with typed interface and active mutation helpers (`recordPlay`, `addFavorite`, `removeFavorite`) with CSRF headers. Bound to real fields: `id`, `title`, `description`. Omitted non-backed fields: `emoji`, `duration`, `category`, play-count, streak.
+- 2026-05-29: Web UI circle-back (design `c5d83c0`). Aligned the gentle-pulse shell to the `GentlePulse.tsx` mockup + Loading/Empty states; restored the 💚 header glyphs; decomposed the oversized shell into modular sub-components within rule-116 limits; removed the dead duplicate `components/gentle-pulse/` directory. Real `/api/gentle-pulse/library*` wiring unchanged.
 - 2026-05-18: Renamed "Web and Android Parity Plan" to canonical "Web and Android Delivery Status" and confirmed `web+android complete`. Renamed "Gaps, Ambiguities, and Known Debt (Planning)" to canonical "Gaps and Known Technical Debt" per Rule 120.
 - 2026-02-25: Created initial GentlePulse CTF rewrite inventory.
 - 2026-02-25: Removed Mood integration from GentlePulse parity scope; GentlePulse and Mood are documented as separate plugins.
@@ -156,7 +157,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
     - No implementation work is required in `platform/`.
 - [ ] Confirm plugin identity and naming.
   - Acceptance criteria:
-    - Rewrite artifacts use plugin slug `gentlepulse` in CTF folder naming.
+    - Rewrite artifacts use plugin slug `gentle-pulse` in CTF folder naming.
 - [ ] Confirm app-level ownership transfer for settings/accessibility.
   - Acceptance criteria:
     - GentlePulse plugin does not own `Settings and Accessibility Personalization` in CTF.
@@ -167,10 +168,10 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
     - App-wide Announcements/Feed ownership is referenced.
 - [ ] Confirm no in-app GentlePulse admin UI.
   - Acceptance criteria:
-    - No `/apps/gentlepulse/admin*` implementation tasks are required in this checklist.
+    - No `/apps/gentle-pulse/admin*` implementation tasks are required in this checklist.
 - [ ] Confirm progress endpoint exclusion.
   - Acceptance criteria:
-    - No `/api/gentlepulse/progress*` contract or implementation tasks are in scope.
+    - No `/api/gentle-pulse/progress*` contract or implementation tasks are in scope.
 
 ### �� Contracts and Scope Lock
 
