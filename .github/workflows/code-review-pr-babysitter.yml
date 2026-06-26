@@ -1,0 +1,126 @@
+name: Code Review — Keep the Auto PR Moving
+
+# Keeps the single open code-review auto PR (label `code-review:auto-pr`) from sitting stuck.
+# GitHub never sends a "this PR has fallen behind main" event, so an auto-merge PR can stall
+# behind a require-branches-up-to-date rule until someone clicks "Update branch". This runs on
+# a short schedule and:
+#   - updates the PR's branch when it is BEHIND main (so CI re-runs and auto-merge can finish), and
+#   - when the PR has a REAL merge conflict, dispatches the Claude agent to merge main and resolve
+#     it locally, then push — so auto-merge can finish on its own.
+#
+# The implement workflow allows at most one such PR at a time, so this only ever tends a single
+# PR. Also runnable by hand. It is a no-op when there is no open auto PR.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/20 * * * *"   # about every 20 minutes (GitHub may delay scheduled runs)
+
+# One tender at a time — never let two runs update or resolve the same PR at once.
+concurrency:
+  group: code-review-pr-babysitter
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  tend-auto-pr:
+    name: Update or unblock the open auto PR
+    runs-on: ubuntu-latest
+    steps:
+      # Find the single open auto PR and classify what it needs. gh is preinstalled.
+      - name: Find the open auto PR and its merge state
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # At most one open PR carries this label.
+          #   mergeable:        MERGEABLE | CONFLICTING | UNKNOWN
+          #   mergeStateStatus: BEHIND | DIRTY | CLEAN | BLOCKED | UNSTABLE | UNKNOWN | ...
+          PR=$(gh pr list --repo "$REPO" --label code-review:auto-pr --state open \
+            --json number,mergeable,mergeStateStatus,headRefName \
+            --jq 'sort_by(.number) | .[0] // empty')
+          if [ -z "$PR" ]; then
+            echo "number=" >> "$GITHUB_OUTPUT"
+            echo "action=none" >> "$GITHUB_OUTPUT"
+            echo "No open auto PR; nothing to tend."
+            exit 0
+          fi
+          NUM=$(echo "$PR" | jq -r '.number')
+          MERGEABLE=$(echo "$PR" | jq -r '.mergeable')
+          STATE=$(echo "$PR" | jq -r '.mergeStateStatus')
+          BRANCH=$(echo "$PR" | jq -r '.headRefName')
+          echo "number=$NUM" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "PR #$NUM (branch $BRANCH): mergeable=$MERGEABLE mergeStateStatus=$STATE"
+          if [ "$MERGEABLE" = "CONFLICTING" ] || [ "$STATE" = "DIRTY" ]; then
+            echo "action=conflict" >> "$GITHUB_OUTPUT"
+          elif [ "$STATE" = "BEHIND" ]; then
+            echo "action=update" >> "$GITHUB_OUTPUT"
+          else
+            # CLEAN/UNSTABLE/BLOCKED/UNKNOWN — auto-merge will handle it (or checks are pending). Leave it.
+            echo "action=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Behind main, no conflict: merge main into the PR branch via the API. Uses the PAT so the
+      # resulting push re-runs CI and lets auto-merge complete.
+      - name: Update the branch (behind main, no conflict)
+        if: steps.scan.outputs.action == 'update'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Updating PR #${{ steps.scan.outputs.number }} branch with main."
+          gh pr update-branch "${{ steps.scan.outputs.number }}" --repo "$REPO"
+
+      - name: Check out for conflict resolution
+        if: steps.scan.outputs.action == 'conflict'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inject secrets from Infisical
+        if: steps.scan.outputs.action == 'conflict'
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # Real conflict: let the agent merge main and resolve it. Auto-merge stays enabled and
+      # completes once the branch is clean and CI is green.
+      - name: Resolve the conflict with the agent
+        if: steps.scan.outputs.action == 'conflict'
+        # Pin this to a version you trust before relying on it in production.
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        with:
+          anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_PAT }}
+          prompt: |
+            A code-review auto PR has a merge conflict with main and cannot auto-merge. Resolve
+            it, fully unattended. Follow CLAUDE.md, including the no-pleasantries / banned-term
+            dictionary in everything you write to GitHub.
+
+            PR #${{ steps.scan.outputs.number }} on `${{ github.repository }}`, head branch
+            `${{ steps.scan.outputs.branch }}`. Do this in order:
+
+            1. Check out the PR branch:
+               `git fetch origin ${{ steps.scan.outputs.branch }} && git checkout ${{ steps.scan.outputs.branch }}`.
+            2. Merge the latest main: `git fetch origin main && git merge origin/main`.
+            3. Resolve every conflict so the PR's ORIGINAL change is preserved AND main's changes
+               are kept. Do not expand the PR's scope or drop its fix.
+            4. Run `pnpm --filter @ctf/web typecheck` and fix any errors.
+            5. Commit the merge and push the branch. Do NOT touch auto-merge — it is already
+               enabled and will complete once the branch is clean and CI is green.
+            6. If the conflict cannot be resolved cleanly without a larger change, do NOT force
+               it: comment the specific blocker on PR #${{ steps.scan.outputs.number }} and stop.
