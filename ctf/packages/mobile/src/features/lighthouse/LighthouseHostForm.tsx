@@ -7,6 +7,10 @@ const SURFACE = 'rgba(255,255,255,0.02)';
 const BORDER = `${COLOR}20`;
 const MUTED = '#9CA3AF';
 
+// Currency code for ServiceCredits — mirrors SERVICE_CREDITS_CODE in
+// ctf/packages/web/lib/currency/types.ts.
+const SERVICE_CREDITS_CODE = 'SC';
+
 type HostForm = {
   title: string;
   description: string;
@@ -19,6 +23,8 @@ type HostForm = {
   bedrooms: string;
   bathrooms: string;
   monthlyRent: string;
+  rentCurrency: string;
+  acceptedCurrencies: string[];
   availableFromIso: string;
   amenities: string;
   houseRules: string;
@@ -37,6 +43,8 @@ const EMPTY_FORM: HostForm = {
   bedrooms: '',
   bathrooms: '',
   monthlyRent: '',
+  rentCurrency: 'USD',
+  acceptedCurrencies: [],
   availableFromIso: '',
   amenities: '',
   houseRules: '',
@@ -69,6 +77,8 @@ function toInputPayload(form: HostForm): PropertyCreateInput {
     bedrooms: toNumberOrNull(form.bedrooms),
     bathrooms: toNumberOrNull(form.bathrooms),
     monthlyRent: toNumberOrNull(form.monthlyRent),
+    rentCurrency: form.rentCurrency.trim() || 'USD',
+    acceptedCurrencies: form.acceptedCurrencies.length > 0 ? form.acceptedCurrencies : null,
     availableFromIso: form.availableFromIso.trim() || null,
     amenities: toListOrNull(form.amenities),
     houseRules: toListOrNull(form.houseRules),
@@ -110,9 +120,20 @@ interface Props {
 export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmit }) => {
   const [form, setForm] = useState<HostForm>(EMPTY_FORM);
 
-  const setField = <K extends keyof HostForm>(key: K, value: string) => {
+  const setField = (key: Exclude<keyof HostForm, 'acceptedCurrencies'>, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  const toggleServiceCredits = () => {
+    setForm((prev) => ({
+      ...prev,
+      acceptedCurrencies: prev.acceptedCurrencies.includes(SERVICE_CREDITS_CODE)
+        ? prev.acceptedCurrencies.filter((code) => code !== SERVICE_CREDITS_CODE)
+        : [...prev.acceptedCurrencies, SERVICE_CREDITS_CODE],
+    }));
+  };
+
+  const acceptsServiceCredits = form.acceptedCurrencies.includes(SERVICE_CREDITS_CODE);
 
   const handleSubmit = () => {
     onSubmit(toInputPayload(form));
@@ -143,6 +164,24 @@ export const LighthouseHostForm: React.FC<Props> = ({ submitting, error, onSubmi
         placeholder="0 for ServiceCredits / free"
         keyboardType="numeric"
       />
+      <Field
+        label="Rent currency"
+        value={form.rentCurrency}
+        onChange={(v) => setField('rentCurrency', v)}
+        placeholder="USD"
+      />
+      <View style={styles.field}>
+        <Text style={styles.label}>Accepted currencies</Text>
+        <TouchableOpacity
+          style={[styles.toggle, acceptsServiceCredits && styles.toggleOn]}
+          onPress={toggleServiceCredits}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.toggleText, acceptsServiceCredits && styles.toggleTextOn]}>
+            {acceptsServiceCredits ? '✓ ' : ''}Accept ServiceCredits
+          </Text>
+        </TouchableOpacity>
+      </View>
       <Field
         label="Available from"
         value={form.availableFromIso}
@@ -198,6 +237,27 @@ const styles = StyleSheet.create({
   textarea: {
     minHeight: 72,
     textAlignVertical: 'top',
+  },
+  toggle: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+  },
+  toggleOn: {
+    backgroundColor: `${COLOR}14`,
+    borderColor: `${COLOR}40`,
+  },
+  toggleText: {
+    fontSize: 13,
+    color: '#F9FAFB',
+    fontWeight: '600',
+  },
+  toggleTextOn: {
+    color: COLOR,
   },
   errorText: {
     color: '#EF4444',

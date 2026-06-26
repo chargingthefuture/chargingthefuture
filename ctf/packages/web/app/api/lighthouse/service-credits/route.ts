@@ -12,14 +12,16 @@ type LighthouseServiceCreditsSendInput = {
 };
 
 export async function POST(request: Request) {
-  const gate = await requireLighthouseReadAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
+  // CSRF gate runs first, matching every other mutation handler in this plugin, so a cross-origin
+  // request is rejected before any authenticated DB lookup.
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  const gate = await requireLighthouseReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
 
   let input: LighthouseServiceCreditsSendInput;

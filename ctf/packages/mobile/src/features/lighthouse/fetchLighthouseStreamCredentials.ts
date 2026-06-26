@@ -29,10 +29,21 @@ export async function fetchLighthouseStreamCredentials(): Promise<LighthouseStre
   if (!res.ok || !data.ok) {
     throw new Error(data?.message || 'Unable to load Lighthouse chat credentials');
   }
-  return {
+  // Validate every credential field before returning. A missing field (e.g. a null streamChannelId
+  // from a shape mismatch in the chat route) must fail loudly here rather than silently flow into
+  // StreamChatPanel and surface as an opaque Stream SDK error.
+  const credentials: LighthouseStreamCredentials = {
     streamApiKey: data.streamApiKey,
     streamToken: data.streamToken,
     streamUserId: data.streamUserId,
     streamChannelId: data.streamChannelId,
   };
+  const missing = (Object.keys(credentials) as Array<keyof LighthouseStreamCredentials>).filter(
+    (key) => typeof credentials[key] !== 'string' || credentials[key].length === 0,
+  );
+  if (missing.length > 0) {
+    throw new Error(`Lighthouse chat credentials incomplete: missing ${missing.join(', ')}`);
+  }
+
+  return credentials;
 }

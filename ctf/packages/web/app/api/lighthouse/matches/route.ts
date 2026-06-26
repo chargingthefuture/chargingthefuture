@@ -165,6 +165,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ...created }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'matches' });
+    // The seeker-role check, blocked-pair check, and duplicate check all live in the repository and
+    // raise these codes. The audit contract marks lighthouse.match.request.create as allow_or_deny,
+    // so a policy denial must emit a deny audit event, not only the success path.
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'policy_denied' || code === 'blocked_pair' || code === 'duplicate_match' || code === 'not_owner') {
+      await insertLighthouseAudit({
+        actorId: gate.auth.userId,
+        command: 'lighthouse.match.request.create',
+        policyStatus: 'deny',
+        reason: code,
+        targetType: 'match',
+        targetId: input.propertyId,
+        metadata: { propertyId: input.propertyId },
+      });
+    }
     return lighthouseErrorResponse(error, 'Match create unavailable.');
   }
 }
