@@ -5,6 +5,23 @@ import { randomUUID } from 'crypto';
 // the shared template, so we record this constant for it rather than a real per-workspace value.
 export const WORKFORCE_AUDIT_WORKSPACE = 'global';
 
+// Contract version per command, so audit entries record the version that actually governs the command
+// (the command contracts put several at 2.0.0). Falls back to 1.0.0 for anything not listed.
+const WORKFORCE_COMMAND_VERSIONS: Record<string, string> = {
+  'workforce.dashboard.fetch': '2.0.0',
+  'workforce.profile.fetch': '2.0.0',
+  'workforce.profile.delete': '2.0.0',
+  'workforce.occupations.list': '2.0.0',
+  'workforce.occupations.detail.fetch': '2.0.0',
+  'workforce.report.summary.fetch': '2.0.0',
+  'workforce.report.skillLevel.fetch': '2.0.0',
+  'workforce.report.sector.fetch': '2.0.0',
+  'workforce.report.occupations.fetch': '1.0.0',
+  'workforce.admin.config.fetch': '2.0.0',
+  'workforce.admin.config.update': '2.0.0',
+  'workforce.admin.auditEvents.fetch': '1.0.0',
+};
+
 type WorkforceAuditEvent = {
   actorId: string;
   command: string;
@@ -31,7 +48,7 @@ export function logWorkforceAudit(event: WorkforceAuditEvent): void {
     actorId: event.actorId,
     pluginId: 'workforce',
     command: event.command,
-    commandVersion: '1.0.0',
+    commandVersion: WORKFORCE_COMMAND_VERSIONS[event.command] ?? '1.0.0',
     policyDecision: {
       status: event.status,
       reason: event.reason,
