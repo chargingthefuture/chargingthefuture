@@ -71,6 +71,10 @@ export type PropertyCreateInput = {
   bedrooms: number | null;
   bathrooms: number | null;
   monthlyRent: number | null;
+  // Currency the rent is priced in (mirrors the web host form, default 'USD').
+  rentCurrency: string | null;
+  // Currency codes this listing accepts, e.g. 'SC' for ServiceCredits. Independent of rentCurrency.
+  acceptedCurrencies: string[] | null;
   availableFromIso: string | null;
   amenities: string[] | null;
   houseRules: string[] | null;

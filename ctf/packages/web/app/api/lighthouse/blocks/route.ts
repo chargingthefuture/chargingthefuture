@@ -132,6 +132,24 @@ export async function POST(request: Request) {
     );
   }
 
+  // Self-block check runs before the DB round-trip and emits the contract-required deny audit
+  // event (the audit contract marks lighthouse.block.create as allow_or_deny with a selfBlockCheck).
+  if (blockedUserId === gate.auth.userId) {
+    await insertLighthouseAudit({
+      actorId: gate.auth.userId,
+      command: 'lighthouse.block.create',
+      policyStatus: 'deny',
+      reason: 'self_block',
+      targetType: 'block',
+      targetId: blockedUserId,
+      metadata: { blockedUserId },
+    });
+    return NextResponse.json(
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.selfBlock, message: 'Cannot block your own user account.' },
+      { status: 403 },
+    );
+  }
+
   try {
     const block = await createBlock(gate.auth.userId, blockedUserId, body.reason);
     await insertLighthouseAudit({
@@ -147,6 +165,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, block }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'blocks' });
+    // A policy denial raised by the repository (self_block, policy_denied) must also be audited.
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'self_block' || code === 'policy_denied') {
+      await insertLighthouseAudit({
+        actorId: gate.auth.userId,
+        command: 'lighthouse.block.create',
+        policyStatus: 'deny',
+        reason: code,
+        targetType: 'block',
+        targetId: blockedUserId,
+        metadata: { blockedUserId },
+      });
+    }
     return lighthouseErrorResponse(error, 'Block create unavailable.');
   }
 }

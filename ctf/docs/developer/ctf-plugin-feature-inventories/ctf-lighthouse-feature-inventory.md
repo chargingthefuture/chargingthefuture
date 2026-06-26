@@ -242,6 +242,13 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-06-26: **Code-review sweep fixes (issues #1012–#1019).** Security/correctness hardening across the plugin, no schema or contract change:
+  - `POST /api/lighthouse/matches/:matchId/chat` now returns 403 unless the match status is `accepted`, so a pending/rejected/cancelled/completed match can no longer provision a live Stream channel or token (#1012).
+  - `POST /api/lighthouse/service-credits` runs the CSRF gate before the auth/DB lookup, matching every other mutation handler in the plugin (#1014).
+  - `PUT /api/lighthouse/admin/matches/:matchId` rejects an unknown `status` with 400 instead of silently coercing it to `pending` (#1016).
+  - `lighthouse.block.create`, `lighthouse.match.request.create`, and `lighthouse.profile.upsert` now emit a `deny` audit event on policy denials (self-block, blocked-pair, duplicate, ownership, policy), not only on the success path — aligning with the audit contract's `allow_or_deny` status. Self-block is now pre-checked before the DB round-trip (#1013, #1017, #1018).
+  - Mobile `fetchLighthouseStreamCredentials` validates all four Stream credential fields before returning, failing loudly on a missing field instead of passing a null into the chat panel (#1015).
+  - Mobile `LighthouseHostForm` gained `rentCurrency` (default `USD`) and `acceptedCurrencies` (with a ServiceCredits toggle) to match the web host form's `lighthouse.property.create` payload (#1019).
 - 2026-06-25: **Documented the implemented blocks/audit/ServiceCredits routes and two tables** (inventory-debt burn-down). §3.5 replaced its "contract to be finalized" placeholder with the shipped blocks routes (`GET`/`POST /api/lighthouse/blocks`, `DELETE …/blocks/[blockedUserId]`, `GET …/blocks/check`); added `GET /api/lighthouse/admin/audit-events` to §3.4 and a new §3.6 for `POST /api/lighthouse/service-credits`. Added `lighthouse_user_extension` and `lighthouse_admin_audit_trail` to §4. Each verified against the route handlers and `schema.sql`. Removed these two tables and five routes from the inventory-drift allowlist. Documentation only; no code change.
 - 2026-06-20: Multi-currency for property listings (issue #120). The host create/edit form
   (`lighthouse-host.tsx`) no longer assumes USD: it adds a **Rent currency** picker (shared
