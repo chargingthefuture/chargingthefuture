@@ -10,14 +10,14 @@ import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
 import { GentlePulseShell } from '@/components/gentlepulse/gentlepulse-shell';
 import { LighthouseShell } from '@/components/lighthouse/lighthouse-shell';
-import { LevelupShell } from '@/components/levelup/levelup-shell';
+import { LevelUpShell } from '@/components/level-up/level-up-shell';
 import MoodShell from '@/components/mood/mood-shell';
 import { PeerProgrammingShell } from '@/components/peer-programming/peer-programming-shell';
 import { ServiceCreditsShell } from '@/components/service-credits/service-credits-shell';
-import { SocketRelayShell } from '@/components/socketrelay/socketrelay-shell';
+import { SocketRelayShell } from '@/components/socket-relay/socket-relay-shell';
 import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
-import { TrustTransportShell } from '@/components/trusttransport/trusttransport-shell';
+import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
 import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
 import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
 import { WhatWorksShell } from '@/components/what-works/what-works-shell';
@@ -244,11 +244,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <LighthouseShell userId={decision.userId} username={decision.username} isAdmin={decision.isAdmin} />;
   }
 
-  if (selectedPlugin.slug === 'socketrelay') {
+  if (selectedPlugin.slug === 'socket-relay') {
     return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
   }
 
-  if (selectedPlugin.slug === 'trusttransport') {
+  if (selectedPlugin.slug === 'trust-transport') {
     return <TrustTransportShell isAdmin={decision.isAdmin} />;
   }
 
@@ -276,8 +276,8 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <ServiceCreditsShell isAdmin={decision.isAdmin} />;
   }
 
-  if (selectedPlugin.slug === 'levelup') {
-    return <LevelupShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
+  if (selectedPlugin.slug === 'level-up') {
+    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
   }
 
   return (

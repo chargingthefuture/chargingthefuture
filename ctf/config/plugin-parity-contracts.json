@@ -50,14 +50,14 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "socketrelay",
-      "mobileFeatureDirs": ["socketrelay"],
+      "slug": "socket-relay",
+      "mobileFeatureDirs": ["socket-relay"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "trusttransport",
-      "mobileFeatureDirs": ["trusttransport"],
+      "slug": "trust-transport",
+      "mobileFeatureDirs": ["trust-transport"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
@@ -98,8 +98,8 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "levelup",
-      "mobileFeatureDirs": ["levelup"],
+      "slug": "level-up",
+      "mobileFeatureDirs": ["level-up"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },

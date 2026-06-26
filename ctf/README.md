@@ -127,49 +127,49 @@ This folder contains the rewrite monorepo scaffold for:
 ## SocketRelay Phase-2 Baseline
 
 - User APIs:
-  - `GET/POST/PUT/DELETE /api/socketrelay/profile`
-  - `GET/POST /api/socketrelay/requests`
-  - `GET/PUT /api/socketrelay/requests/:id`
-  - `POST /api/socketrelay/requests/:id/repost`
-  - `POST /api/socketrelay/requests/:id/fulfill`
-  - `GET /api/socketrelay/my-requests`
-  - `GET /api/socketrelay/fulfillments/:id`
-  - `POST /api/socketrelay/fulfillments/:id/close`
-  - `GET/POST /api/socketrelay/fulfillments/:id/messages`
-  - `GET /api/socketrelay/my-fulfillments`
-  - `GET /api/socketrelay/announcements`
+  - `GET/POST/PUT/DELETE /api/socket-relay/profile`
+  - `GET/POST /api/socket-relay/requests`
+  - `GET/PUT /api/socket-relay/requests/:id`
+  - `POST /api/socket-relay/requests/:id/repost`
+  - `POST /api/socket-relay/requests/:id/fulfill`
+  - `GET /api/socket-relay/my-requests`
+  - `GET /api/socket-relay/fulfillments/:id`
+  - `POST /api/socket-relay/fulfillments/:id/close`
+  - `GET/POST /api/socket-relay/fulfillments/:id/messages`
+  - `GET /api/socket-relay/my-fulfillments`
+  - `GET /api/socket-relay/announcements`
 - Public APIs:
-  - `GET /api/socketrelay/public`
-  - `GET /api/socketrelay/public/:id`
+  - `GET /api/socket-relay/public`
+  - `GET /api/socket-relay/public/:id`
 - Admin APIs:
-  - `GET /api/socketrelay/admin/requests`
-  - `DELETE /api/socketrelay/admin/requests/:id`
-  - `GET /api/socketrelay/admin/fulfillments`
-  - `GET/POST /api/socketrelay/admin/announcements`
-  - `PUT/DELETE /api/socketrelay/admin/announcements/:id`
+  - `GET /api/socket-relay/admin/requests`
+  - `DELETE /api/socket-relay/admin/requests/:id`
+  - `GET /api/socket-relay/admin/fulfillments`
+  - `GET/POST /api/socket-relay/admin/announcements`
+  - `PUT/DELETE /api/socket-relay/admin/announcements/:id`
 
 ## TrustTransport Phase-2 Baseline
 
 - User APIs:
-  - `GET /api/trusttransport/modes`
-  - `GET/POST /api/trusttransport/requests`
-  - `GET /api/trusttransport/requests/:requestId`
-  - `GET /api/trusttransport/requests/:requestId/offers`
-  - `POST /api/trusttransport/offers/:offerId/accept`
-  - `POST /api/trusttransport/trips/:tripId/status`
-  - `POST /api/trusttransport/trips/:tripId/proof`
-  - `POST /api/trusttransport/trips/:tripId/emergency-stop`
-  - `POST /api/trusttransport/orders/:orderId/cancel`
-  - `POST /api/trusttransport/orders/:orderId/rating`
-  - `POST /api/trusttransport/payouts/requests`
-  - `GET /api/trusttransport/payouts`
+  - `GET /api/trust-transport/modes`
+  - `GET/POST /api/trust-transport/requests`
+  - `GET /api/trust-transport/requests/:requestId`
+  - `GET /api/trust-transport/requests/:requestId/offers`
+  - `POST /api/trust-transport/offers/:offerId/accept`
+  - `POST /api/trust-transport/trips/:tripId/status`
+  - `POST /api/trust-transport/trips/:tripId/proof`
+  - `POST /api/trust-transport/trips/:tripId/emergency-stop`
+  - `POST /api/trust-transport/orders/:orderId/cancel`
+  - `POST /api/trust-transport/orders/:orderId/rating`
+  - `POST /api/trust-transport/payouts/requests`
+  - `GET /api/trust-transport/payouts`
 - Admin APIs:
-  - `GET /api/trusttransport/admin/incidents`
-  - `POST /api/trusttransport/admin/incidents/:incidentId/resolve`
-  - `POST /api/trusttransport/admin/accounts/:userId/restrict`
-  - `POST /api/trusttransport/admin/accounts/:userId/restore`
-  - `GET/PUT /api/trusttransport/admin/market-config`
-  - `GET /api/trusttransport/admin/audit-events`
+  - `GET /api/trust-transport/admin/incidents`
+  - `POST /api/trust-transport/admin/incidents/:incidentId/resolve`
+  - `POST /api/trust-transport/admin/accounts/:userId/restrict`
+  - `POST /api/trust-transport/admin/accounts/:userId/restore`
+  - `GET/PUT /api/trust-transport/admin/market-config`
+  - `GET /api/trust-transport/admin/audit-events`
 
 ## ServiceCredits Formance Ledger Requirement
 
@@ -181,18 +181,18 @@ This folder contains the rewrite monorepo scaffold for:
 
 ## LevelUp Plugin (Phase 3)
 
-- Plugin shell route: `/apps/levelup`
-- Admin route: `/admin/levelup`
-- Primary migration: `ctf/migrations/2026-03-24-levelup-core-phase3.sql`
-- Deterministic seed script: `pnpm run seed:levelup`
+- Plugin shell route: `/apps/level-up`
+- Admin route: `/admin/level-up`
+- Primary migration: `ctf/migrations/2026-03-24-level-up-core-phase3.sql`
+- Deterministic seed script: `pnpm run seed:level-up`
 
 ### LevelUp environment variables
 
-- `LEVELUP_STARTER_CREDITS` default: `500`
-- `LEVELUP_ENROLL_RATE_LIMIT_WINDOW_MS` default: `60000`
-- `LEVELUP_ENROLL_RATE_LIMIT_MAX` default: `6`
-- `LEVELUP_MILESTONE_RATE_LIMIT_WINDOW_MS` default: `60000`
-- `LEVELUP_MILESTONE_RATE_LIMIT_MAX` default: `20`
+- `LEVEL_UP_STARTER_CREDITS` default: `500`
+- `LEVEL_UP_ENROLL_RATE_LIMIT_WINDOW_MS` default: `60000`
+- `LEVEL_UP_ENROLL_RATE_LIMIT_MAX` default: `6`
+- `LEVEL_UP_MILESTONE_RATE_LIMIT_WINDOW_MS` default: `60000`
+- `LEVEL_UP_MILESTONE_RATE_LIMIT_MAX` default: `20`
 
 ### MVP testing posture
 

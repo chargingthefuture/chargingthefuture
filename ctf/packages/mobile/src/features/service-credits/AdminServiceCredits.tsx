@@ -301,7 +301,7 @@ export const AdminServiceCredits = () => {
         <LabeledInput label="Treasury wallet user ID" value={feeTreasury} onChange={setFeeTreasury} placeholder="user_…" />
         <LabeledInput label="Amount (credits)" value={feeAmount} onChange={setFeeAmount} placeholder="0" numeric />
         <LabeledInput label="Fee reason code" value={feeCode} onChange={setFeeCode} placeholder="relay_fee" />
-        <LabeledInput label="Origin plugin" value={feeOrigin} onChange={setFeeOrigin} placeholder="socketrelay" />
+        <LabeledInput label="Origin plugin" value={feeOrigin} onChange={setFeeOrigin} placeholder="socket-relay" />
         <ConfirmButton
           label="Collect fee"
           busy={busy === 'fee'}

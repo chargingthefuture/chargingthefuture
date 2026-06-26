@@ -9,7 +9,6 @@ type PluginVisuals = {
 const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   chyme: { emoji: '🎙️', color: '#22C55E', bg: '#04160A' },
   lighthouse: { emoji: '🏠', color: '#60A5FA', bg: '#0B121C' },
-  trusttransport: { emoji: '📦', color: '#38BDF8', bg: '#06151B' },
   'trust-transport': { emoji: '📦', color: '#38BDF8', bg: '#06151B' },
   directory: { emoji: '📇', color: '#93C5FD', bg: '#10161C' },
   foundation: { emoji: '🪛', color: '#F59E0B', bg: '#1B1101' },
@@ -19,7 +18,7 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   workforce: { emoji: '💼', color: '#F97316', bg: '#1B0D02' },
   gentlepulse: { emoji: '💚', color: '#34D399', bg: '#061711' },
   mood: { emoji: '😁', color: '#4ADE80', bg: '#08180E' },
-  socketrelay: { emoji: '🔂', color: '#FB923C', bg: '#1C1007' },
+  'socket-relay': { emoji: '🔂', color: '#FB923C', bg: '#1C1007' },
   'skills-hunt': { emoji: '🎓', color: '#FBBF24', bg: '#1C1504' },
   'feed-announcements': { emoji: '📢', color: '#FB923C', bg: '#1c0e03' },
   'skills-taxonomy': { emoji: '🧩', color: '#818CF8', bg: '#0E0F1B' },

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { normalizeQuoraProfileUrl, requireUnlockUserAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { normalizeQuoraProfileUrl, requireUnlockUserAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
@@ -12,6 +12,8 @@ export async function POST(request: Request) {
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   let body: SubmissionBody;
   try {
@@ -32,6 +34,7 @@ export async function POST(request: Request) {
       policyStatus: 'deny',
       reason: 'invalid_quora_url',
       targetUserId: gate.auth.userId,
+      requestId,
       metadata: {},
     });
     return unlockErrorResponse('Valid Quora profile URL is required.', 400);
@@ -50,6 +53,7 @@ export async function POST(request: Request) {
       policyStatus: 'allow',
       reason: 'ok',
       targetUserId: gate.auth.userId,
+      requestId,
       metadata: { submissionId: submission.id },
     });
 

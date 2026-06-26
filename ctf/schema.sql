@@ -273,7 +273,7 @@ CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletio
 COMMIT;
 
 -- === peer-programming placeholder ===
--- === levelup_enrollments ===
+-- === level_up_enrollments ===
 -- The canonical definition lives further below (the cohort-based table).
 -- An earlier level_id-based table used to be defined here; it was legacy
 -- cruft that left a level_id NOT NULL column with no default and blocked
@@ -1135,8 +1135,27 @@ ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS support_onl
 -- incentive_currency names the currency of incentive_amount; it defaults to ServiceCredits (code 'SC').
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS incentive_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
--- === levelup_enrollments table (guarded DDL, schema drift prevention) ===
-CREATE TABLE IF NOT EXISTS levelup_enrollments (
+-- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `level-up`; tables move to
+-- the matching snake_case prefix `level_up_`. Renames run first so an existing DB keeps its data;
+-- on a fresh DB the IF EXISTS renames are no-ops and the CREATE statements below build the new names.
+ALTER TABLE IF EXISTS levelup_enrollments RENAME TO level_up_enrollments;
+ALTER TABLE IF EXISTS levelup_cohorts RENAME TO level_up_cohorts;
+ALTER TABLE IF EXISTS levelup_curriculum_items RENAME TO level_up_curriculum_items;
+ALTER TABLE IF EXISTS levelup_milestones RENAME TO level_up_milestones;
+ALTER TABLE IF EXISTS levelup_command_idempotency RENAME TO level_up_command_idempotency;
+ALTER TABLE IF EXISTS levelup_audit_events RENAME TO level_up_audit_events;
+ALTER TABLE IF EXISTS levelup_rate_limit_counters RENAME TO level_up_rate_limit_counters;
+ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows RENAME TO level_up_enrollment_milestone_escrows;
+ALTER TABLE IF EXISTS levelup_milestone_validations RENAME TO level_up_milestone_validations;
+ALTER TABLE IF EXISTS levelup_disputes RENAME TO level_up_disputes;
+ALTER TABLE IF EXISTS levelup_dispute_comments RENAME TO level_up_dispute_comments;
+ALTER TABLE IF EXISTS levelup_disbursements RENAME TO level_up_disbursements;
+ALTER TABLE IF EXISTS levelup_trainers RENAME TO level_up_trainers;
+ALTER TABLE IF EXISTS levelup_achievements RENAME TO level_up_achievements;
+ALTER TABLE IF EXISTS levelup_user_achievements RENAME TO level_up_user_achievements;
+
+-- === level_up_enrollments table (guarded DDL, schema drift prevention) ===
+CREATE TABLE IF NOT EXISTS level_up_enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   user_id TEXT NOT NULL,
@@ -1147,29 +1166,49 @@ CREATE TABLE IF NOT EXISTS levelup_enrollments (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (cohort_id, user_id)
 );
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Add unique constraint if not exists (Postgres 15+)
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'levelup_enrollments' AND indexname = 'levelup_enrollments_cohort_id_user_id_key'
+    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_enrollments' AND indexname = 'level_up_enrollments_cohort_id_user_id_key'
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS levelup_enrollments_cohort_id_user_id_key ON levelup_enrollments(cohort_id, user_id)';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_enrollments_cohort_id_user_id_key ON level_up_enrollments(cohort_id, user_id)';
   END IF;
 END $$;
 -- Shed the legacy level_id column if an older database still carries it.
 -- It was NOT NULL with no default, so cohort-based inserts (which never set
 -- it) failed. Dropping the column also removes its dependent
--- uq_levelup_enrollments_user_level index. Safe no-op on databases that
+-- uq_level_up_enrollments_user_level index. Safe no-op on databases that
 -- never had the legacy column.
-ALTER TABLE IF EXISTS levelup_enrollments DROP COLUMN IF EXISTS level_id;
-CREATE TABLE IF NOT EXISTS trusttransport_requests (
+ALTER TABLE IF EXISTS level_up_enrollments DROP COLUMN IF EXISTS level_id;
+-- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `trust-transport`; tables move to
+-- the matching snake_case prefix `trust_transport_`. Renames run first so an existing DB keeps its data;
+-- on a fresh DB the IF EXISTS renames are no-ops and the CREATE statements below build the new names.
+ALTER TABLE IF EXISTS trusttransport_requests RENAME TO trust_transport_requests;
+ALTER TABLE IF EXISTS trusttransport_status_events RENAME TO trust_transport_status_events;
+ALTER TABLE IF EXISTS trusttransport_offers RENAME TO trust_transport_offers;
+ALTER TABLE IF EXISTS trusttransport_trips RENAME TO trust_transport_trips;
+ALTER TABLE IF EXISTS trusttransport_risk_signals RENAME TO trust_transport_risk_signals;
+ALTER TABLE IF EXISTS trusttransport_disputes RENAME TO trust_transport_disputes;
+ALTER TABLE IF EXISTS trusttransport_ratings RENAME TO trust_transport_ratings;
+ALTER TABLE IF EXISTS trusttransport_market_config RENAME TO trust_transport_market_config;
+ALTER TABLE IF EXISTS trusttransport_user_extension RENAME TO trust_transport_user_extension;
+ALTER TABLE IF EXISTS trusttransport_proof_artifacts RENAME TO trust_transport_proof_artifacts;
+ALTER TABLE IF EXISTS trusttransport_payout_requests RENAME TO trust_transport_payout_requests;
+ALTER TABLE IF EXISTS trusttransport_earnings_ledger RENAME TO trust_transport_earnings_ledger;
+ALTER TABLE IF EXISTS trusttransport_admin_audit_trail RENAME TO trust_transport_admin_audit_trail;
+-- Drop the legacy-named price-consistency CHECK constraint if an older DB still carries it; the
+-- DO-block further down recreates it under the new `trust_transport_requests_price_consistency_check`
+-- name. Safe no-op on a fresh DB that never had the old constraint.
+ALTER TABLE IF EXISTS trust_transport_requests DROP CONSTRAINT IF EXISTS trusttransport_requests_price_consistency_check;
+CREATE TABLE IF NOT EXISTS trust_transport_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_user_id TEXT NOT NULL,
   mode TEXT NOT NULL,
@@ -1186,24 +1225,24 @@ CREATE TABLE IF NOT EXISTS trusttransport_requests (
 -- How the requester will settle the ride (issue #420): the chosen value type + an optional amount.
 -- "Free" (asking for a free ride — valid mutual aid) and "Barter" carry no amount; priced types
 -- (ServiceCredits, fiat, crypto) carry a positive amount. Both NULL means none was chosen.
-ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
-ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
-ALTER TABLE IF EXISTS trusttransport_requests DROP CONSTRAINT IF EXISTS trusttransport_requests_price_consistency_check;
-DO $trusttransport_requests_price_consistency$
+ALTER TABLE IF EXISTS trust_transport_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS trust_transport_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trust_transport_requests DROP CONSTRAINT IF EXISTS trust_transport_requests_price_consistency_check;
+DO $trust_transport_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'trusttransport_requests_price_consistency_check'
+    WHERE constraint_name = 'trust_transport_requests_price_consistency_check'
   ) THEN
-    ALTER TABLE trusttransport_requests
-      ADD CONSTRAINT trusttransport_requests_price_consistency_check
+    ALTER TABLE trust_transport_requests
+      ADD CONSTRAINT trust_transport_requests_price_consistency_check
       CHECK (
         (price_amount IS NULL AND price_currency IS NULL) OR
         (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
       );
   END IF;
 END
-$trusttransport_requests_price_consistency$;
+$trust_transport_requests_price_consistency$;
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -1227,9 +1266,9 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS upda
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Removed feature: drop the legacy kill-switch column if a prior DB created it.
 ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
-CREATE TABLE IF NOT EXISTS trusttransport_status_events (
+CREATE TABLE IF NOT EXISTS trust_transport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
   trip_id UUID,
   actor_user_id TEXT NOT NULL,
   event_name TEXT NOT NULL,
@@ -1238,9 +1277,9 @@ CREATE TABLE IF NOT EXISTS trusttransport_status_events (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_offers (
+CREATE TABLE IF NOT EXISTS trust_transport_offers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
   provider_user_id TEXT NOT NULL,
   note TEXT,
   proposed_amount INTEGER,
@@ -1248,9 +1287,9 @@ CREATE TABLE IF NOT EXISTS trusttransport_offers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_trips (
+CREATE TABLE IF NOT EXISTS trust_transport_trips (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
   offer_id UUID,
   requester_user_id TEXT NOT NULL,
   provider_user_id TEXT NOT NULL,
@@ -1262,7 +1301,7 @@ CREATE TABLE IF NOT EXISTS trusttransport_trips (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_risk_signals (
+CREATE TABLE IF NOT EXISTS trust_transport_risk_signals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID,
   trip_id UUID,
@@ -1277,7 +1316,7 @@ CREATE TABLE IF NOT EXISTS trusttransport_risk_signals (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_disputes (
+CREATE TABLE IF NOT EXISTS trust_transport_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trip_id UUID,
   request_id UUID,
@@ -1287,9 +1326,9 @@ CREATE TABLE IF NOT EXISTS trusttransport_disputes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_ratings (
+CREATE TABLE IF NOT EXISTS trust_transport_ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES trusttransport_trips(id) ON DELETE CASCADE,
+  trip_id UUID NOT NULL REFERENCES trust_transport_trips(id) ON DELETE CASCADE,
   requester_user_id TEXT NOT NULL,
   provider_user_id TEXT NOT NULL,
   score INTEGER NOT NULL,
@@ -1297,28 +1336,28 @@ CREATE TABLE IF NOT EXISTS trusttransport_ratings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_market_config (
+CREATE TABLE IF NOT EXISTS trust_transport_market_config (
   id BOOLEAN PRIMARY KEY DEFAULT TRUE,
   config JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_user_extension (
+CREATE TABLE IF NOT EXISTS trust_transport_user_extension (
   user_id TEXT PRIMARY KEY,
   availability_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   work_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   service_deleted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_proof_artifacts (
+CREATE TABLE IF NOT EXISTS trust_transport_proof_artifacts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES trusttransport_trips(id) ON DELETE CASCADE,
+  trip_id UUID NOT NULL REFERENCES trust_transport_trips(id) ON DELETE CASCADE,
   artifact_type TEXT NOT NULL,
   artifact_redacted TEXT,
   captured_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_payout_requests (
+CREATE TABLE IF NOT EXISTS trust_transport_payout_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_user_id TEXT NOT NULL,
   amount INTEGER NOT NULL,
@@ -1327,7 +1366,7 @@ CREATE TABLE IF NOT EXISTS trusttransport_payout_requests (
   idempotency_key TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_earnings_ledger (
+CREATE TABLE IF NOT EXISTS trust_transport_earnings_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_user_id TEXT NOT NULL,
   entry_type TEXT NOT NULL,
@@ -1342,13 +1381,13 @@ CREATE TABLE IF NOT EXISTS trusttransport_earnings_ledger (
 -- the GDP estimation layer (issue #121) reads. Existing rows are backfilled from `currency` only where it
 -- already matches a known code; unknown legacy values are left for manual reconciliation so no money data
 -- is overwritten. This never asserts a ServiceCredits<->fiat parity.
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
-ALTER TABLE IF EXISTS trusttransport_earnings_ledger ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
-UPDATE trusttransport_payout_requests SET price_currency = currency
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trust_transport_earnings_ledger ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+UPDATE trust_transport_payout_requests SET price_currency = currency
   WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
-UPDATE trusttransport_earnings_ledger SET price_currency = currency
+UPDATE trust_transport_earnings_ledger SET price_currency = currency
   WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
-CREATE TABLE IF NOT EXISTS trusttransport_admin_audit_trail (
+CREATE TABLE IF NOT EXISTS trust_transport_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command TEXT NOT NULL,
@@ -1925,15 +1964,15 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),
-  ('socketrelay',        'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
-  ('trusttransport',     'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
+  ('socket-relay',         'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
+  ('trust-transport',    'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
   ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
   ('gentlepulse',        'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
-  ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
+  ('level-up',           'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
@@ -2373,7 +2412,7 @@ ALTER TABLE IF EXISTS directory_deletion_events ADD COLUMN IF NOT EXISTS result 
 ALTER TABLE IF EXISTS directory_deletion_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === LEVELUP MODULE ===
-CREATE TABLE IF NOT EXISTS levelup_cohorts (
+CREATE TABLE IF NOT EXISTS level_up_cohorts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -2400,38 +2439,38 @@ CREATE TABLE IF NOT EXISTS levelup_cohorts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS seats INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS start_date DATE NOT NULL DEFAULT CURRENT_DATE;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS end_date DATE NOT NULL DEFAULT CURRENT_DATE;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS required_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS materials_cost NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS device_support BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS trainer_split_percent NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS stipend_mode TEXT NOT NULL DEFAULT 'none';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS stipend_amount_per_payout NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS stipend_interval_days INTEGER;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS microgrant_mode TEXT NOT NULL DEFAULT 'none';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS microgrant_amount NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS payout_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS seats INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS start_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS end_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS required_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS materials_cost NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS device_support BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS trainer_split_percent NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_mode TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_amount_per_payout NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_interval_days INTEGER;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_mode TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_amount NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS payout_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Multi-currency (issue #120): LevelUp stipends and microgrants are internal ServiceCredits payouts.
 -- stipend_currency / microgrant_currency name the currency of stipend_amount_per_payout / microgrant_amount;
 -- both default to ServiceCredits (code 'SC').
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
-ALTER TABLE IF EXISTS levelup_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
-CREATE TABLE IF NOT EXISTS levelup_curriculum_items (
+CREATE TABLE IF NOT EXISTS level_up_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   title TEXT NOT NULL,
@@ -2441,16 +2480,16 @@ CREATE TABLE IF NOT EXISTS levelup_curriculum_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_curriculum_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_milestones (
+CREATE TABLE IF NOT EXISTS level_up_milestones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   name TEXT NOT NULL,
@@ -2460,16 +2499,16 @@ CREATE TABLE IF NOT EXISTS levelup_milestones (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS percent_release NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS required_task TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_milestones ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS percent_release NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS required_task TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_command_idempotency (
+CREATE TABLE IF NOT EXISTS level_up_command_idempotency (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command_name TEXT NOT NULL,
@@ -2478,14 +2517,14 @@ CREATE TABLE IF NOT EXISTS levelup_command_idempotency (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (actor_id, command_name, idempotency_key)
 );
-ALTER TABLE IF EXISTS levelup_command_idempotency ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_command_idempotency ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_command_idempotency ADD COLUMN IF NOT EXISTS command_name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_command_idempotency ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_command_idempotency ADD COLUMN IF NOT EXISTS response_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS levelup_command_idempotency ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS command_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS response_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_audit_events (
+CREATE TABLE IF NOT EXISTS level_up_audit_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command TEXT NOT NULL,
@@ -2496,17 +2535,17 @@ CREATE TABLE IF NOT EXISTS levelup_audit_events (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS levelup_audit_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_rate_limit_counters (
+CREATE TABLE IF NOT EXISTS level_up_rate_limit_counters (
   user_id TEXT NOT NULL,
   command_name TEXT NOT NULL,
   window_started_at TIMESTAMPTZ NOT NULL,
@@ -2515,14 +2554,14 @@ CREATE TABLE IF NOT EXISTS levelup_rate_limit_counters (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, command_name, window_started_at, window_seconds)
 );
-ALTER TABLE IF EXISTS levelup_rate_limit_counters ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS levelup_rate_limit_counters ADD COLUMN IF NOT EXISTS command_name TEXT;
-ALTER TABLE IF EXISTS levelup_rate_limit_counters ADD COLUMN IF NOT EXISTS window_started_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS levelup_rate_limit_counters ADD COLUMN IF NOT EXISTS window_seconds INTEGER;
-ALTER TABLE IF EXISTS levelup_rate_limit_counters ADD COLUMN IF NOT EXISTS request_count INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE IF EXISTS levelup_rate_limit_counters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS command_name TEXT;
+ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS window_started_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS window_seconds INTEGER;
+ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS request_count INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_enrollment_milestone_escrows (
+CREATE TABLE IF NOT EXISTS level_up_enrollment_milestone_escrows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   milestone_id UUID NOT NULL,
@@ -2532,15 +2571,15 @@ CREATE TABLE IF NOT EXISTS levelup_enrollment_milestone_escrows (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (enrollment_id, milestone_id)
 );
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS escrow_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS held_amount NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS release_status TEXT NOT NULL DEFAULT 'held';
-ALTER TABLE IF EXISTS levelup_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS escrow_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS held_amount NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS release_status TEXT NOT NULL DEFAULT 'held';
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_milestone_validations (
+CREATE TABLE IF NOT EXISTS level_up_milestone_validations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   milestone_id UUID NOT NULL,
@@ -2554,20 +2593,20 @@ CREATE TABLE IF NOT EXISTS levelup_milestone_validations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS validated_by_user_id TEXT;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS validation_note TEXT;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS release_transfer_id UUID;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS trainer_payout_governance_id UUID;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_by_user_id TEXT;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS validation_note TEXT;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS release_transfer_id UUID;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS trainer_payout_governance_id UUID;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_disputes (
+CREATE TABLE IF NOT EXISTS level_up_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   milestone_id UUID,
@@ -2581,20 +2620,20 @@ CREATE TABLE IF NOT EXISTS levelup_disputes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS milestone_id UUID;
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS opened_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS resolution_comment TEXT;
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_disputes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS milestone_id UUID;
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS opened_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS resolution_comment TEXT;
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_dispute_comments (
+CREATE TABLE IF NOT EXISTS level_up_dispute_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   dispute_id UUID NOT NULL,
   actor_user_id TEXT NOT NULL,
@@ -2602,14 +2641,14 @@ CREATE TABLE IF NOT EXISTS levelup_dispute_comments (
   attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_dispute_comments ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_dispute_comments ADD COLUMN IF NOT EXISTS dispute_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_dispute_comments ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_dispute_comments ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_dispute_comments ADD COLUMN IF NOT EXISTS attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS levelup_dispute_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS dispute_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS levelup_disbursements (
+CREATE TABLE IF NOT EXISTS level_up_disbursements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   recipient_user_id TEXT NOT NULL,
@@ -2618,18 +2657,18 @@ CREATE TABLE IF NOT EXISTS levelup_disbursements (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS recipient_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS disbursement_type TEXT NOT NULL DEFAULT 'trainer_payout';
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS amount NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS levelup_disbursements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS recipient_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS disbursement_type TEXT NOT NULL DEFAULT 'trainer_payout';
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS amount NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === levelup_trainers ===
+-- === level_up_trainers ===
 -- Survivor-advocate trainers shown in the LevelUp "Trainers" directory.
 -- Read-only browse surface; one row per trainer user.
-CREATE TABLE IF NOT EXISTS levelup_trainers (
+CREATE TABLE IF NOT EXISTS level_up_trainers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
@@ -2640,20 +2679,20 @@ CREATE TABLE IF NOT EXISTS levelup_trainers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS headline TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS tracks JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_trainers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS headline TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS tracks JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === levelup_achievements ===
+-- === level_up_achievements ===
 -- Grant-only badge/milestone definitions. Never spend or deduct credits.
 -- credit_reward documents the grant amount tied to earning the badge (display only).
-CREATE TABLE IF NOT EXISTS levelup_achievements (
+CREATE TABLE IF NOT EXISTS level_up_achievements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
@@ -2666,21 +2705,21 @@ CREATE TABLE IF NOT EXISTS levelup_achievements (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'trophy';
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS credit_reward NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_achievements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'trophy';
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS credit_reward NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === levelup_user_achievements ===
+-- === level_up_user_achievements ===
 -- Per-user earned badge rows. Grant-only: a row means the badge was earned.
-CREATE TABLE IF NOT EXISTS levelup_user_achievements (
+CREATE TABLE IF NOT EXISTS level_up_user_achievements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   achievement_id UUID NOT NULL,
@@ -2689,19 +2728,19 @@ CREATE TABLE IF NOT EXISTS levelup_user_achievements (
   source_reference TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS achievement_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS granted_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS source_reference TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS levelup_user_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS achievement_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS granted_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS source_reference TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'levelup_user_achievements' AND indexname = 'levelup_user_achievements_user_id_achievement_id_key'
+    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_user_achievements' AND indexname = 'level_up_user_achievements_user_id_achievement_id_key'
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS levelup_user_achievements_user_id_achievement_id_key ON levelup_user_achievements(user_id, achievement_id)';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_user_achievements_user_id_achievement_id_key ON level_up_user_achievements(user_id, achievement_id)';
   END IF;
 END $$;
 
@@ -3008,8 +3047,22 @@ ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS targ
 ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === SOCKETRELAY MODULE ===
-CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
+-- === SOCKET-RELAY MODULE ===
+-- Rename legacy socket_relay_* tables to socket_relay_* before the CREATE ... IF NOT EXISTS blocks,
+-- so an existing DB keeps its rows under the new names and a fresh DB builds the new names directly.
+-- Each RENAME is a no-op on a fresh DB (table does not yet exist) and on a DB already renamed.
+ALTER TABLE IF EXISTS socketrelay_user_extension RENAME TO socket_relay_user_extension;
+ALTER TABLE IF EXISTS socketrelay_requests RENAME TO socket_relay_requests;
+ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies RENAME TO socket_relay_request_accepted_currencies;
+ALTER TABLE IF EXISTS socketrelay_request_events RENAME TO socket_relay_request_events;
+ALTER TABLE IF EXISTS socketrelay_fulfillments RENAME TO socket_relay_fulfillments;
+ALTER TABLE IF EXISTS socketrelay_fulfillment_participants RENAME TO socket_relay_fulfillment_participants;
+ALTER TABLE IF EXISTS socketrelay_messages RENAME TO socket_relay_messages;
+ALTER TABLE IF EXISTS socketrelay_admin_audit_trail RENAME TO socket_relay_admin_audit_trail;
+-- Drop the legacy-named price-consistency CHECK constraint if an older DB still carries it; the
+-- DO-block further down recreates it under the new socket_relay_requests_price_consistency_check name.
+ALTER TABLE IF EXISTS socket_relay_requests DROP CONSTRAINT IF EXISTS socketrelay_requests_price_consistency_check;
+CREATE TABLE IF NOT EXISTS socket_relay_user_extension (
   user_id TEXT PRIMARY KEY,
   bio TEXT,
   relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -3017,14 +3070,14 @@ CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
   service_deleted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS bio TEXT;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS presence_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS presence_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_requests (
+CREATE TABLE IF NOT EXISTS socket_relay_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_user_id TEXT NOT NULL,
   owner_username TEXT,
@@ -3045,61 +3098,61 @@ CREATE TABLE IF NOT EXISTS socketrelay_requests (
   expires_at TIMESTAMPTZ,
   UNIQUE (owner_user_id, idempotency_key)
 );
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_username TEXT;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS city TEXT;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS claimed_fulfillment_id UUID;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS owner_username TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS claimed_fulfillment_id UUID;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Auto-expiry (28 days). Nullable so it can be backfilled from each existing post's created_at without a
 -- blocking default; new posts and re-posts always set it explicitly in code.
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
-UPDATE socketrelay_requests SET expires_at = created_at + INTERVAL '28 days' WHERE expires_at IS NULL;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+UPDATE socket_relay_requests SET expires_at = created_at + INTERVAL '28 days' WHERE expires_at IS NULL;
 -- Multi-currency (issue #120): SocketRelay is mutual aid and posts are free. These OPTIONAL columns let a
 -- request name an offered reward when one exists; "Free" must render from the ABSENCE of a price (NULL),
--- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+-- never as $0. Accepted currencies (if any) live in socket_relay_request_accepted_currencies.
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
 -- Price/value-type consistency (issue #120 / #420): a request either names no value type (both NULL) or
 -- names a value type, with a positive amount for priced types and NO amount for amount-less types
 -- (Free, Barter — currencies.requires_amount = FALSE). "Free" therefore renders from price_currency =
 -- 'FREE' with a NULL amount, never as $0. Drop the older strict constraint (which forbade amount-less
 -- named types) so legacy DBs get the relaxed rule; the guarded block re-adds it under the same name.
-ALTER TABLE IF EXISTS socketrelay_requests DROP CONSTRAINT IF EXISTS socketrelay_requests_price_consistency_check;
-DO $socketrelay_requests_price_consistency$
+ALTER TABLE IF EXISTS socket_relay_requests DROP CONSTRAINT IF EXISTS socket_relay_requests_price_consistency_check;
+DO $socket_relay_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'socketrelay_requests_price_consistency_check'
+    WHERE constraint_name = 'socket_relay_requests_price_consistency_check'
   ) THEN
-    ALTER TABLE socketrelay_requests
-      ADD CONSTRAINT socketrelay_requests_price_consistency_check
+    ALTER TABLE socket_relay_requests
+      ADD CONSTRAINT socket_relay_requests_price_consistency_check
       CHECK (
         (price_amount IS NULL AND price_currency IS NULL) OR
         (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
       );
   END IF;
 END
-$socketrelay_requests_price_consistency$;
-CREATE TABLE IF NOT EXISTS socketrelay_request_accepted_currencies (
-  request_id UUID NOT NULL REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
+$socket_relay_requests_price_consistency$;
+CREATE TABLE IF NOT EXISTS socket_relay_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES socket_relay_requests(id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
   PRIMARY KEY (request_id, currency_code)
 );
-ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
-ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
-CREATE INDEX IF NOT EXISTS idx_socketrelay_request_accepted_currencies_request ON socketrelay_request_accepted_currencies(request_id);
+ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_socket_relay_request_accepted_currencies_request ON socket_relay_request_accepted_currencies(request_id);
 
-CREATE TABLE IF NOT EXISTS socketrelay_request_events (
+CREATE TABLE IF NOT EXISTS socket_relay_request_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL,
   actor_user_id TEXT NOT NULL,
@@ -3107,14 +3160,14 @@ CREATE TABLE IF NOT EXISTS socketrelay_request_events (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS event_name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS event_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_fulfillments (
+CREATE TABLE IF NOT EXISTS socket_relay_fulfillments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL,
   requester_user_id TEXT NOT NULL,
@@ -3124,28 +3177,28 @@ CREATE TABLE IF NOT EXISTS socketrelay_fulfillments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS requester_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS requester_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_fulfillment_participants (
+CREATE TABLE IF NOT EXISTS socket_relay_fulfillment_participants (
   fulfillment_id UUID NOT NULL,
   user_id TEXT NOT NULL,
   participant_role TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (fulfillment_id, user_id)
 );
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS fulfillment_id UUID;
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS participant_role TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS fulfillment_id UUID;
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS participant_role TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_messages (
+CREATE TABLE IF NOT EXISTS socket_relay_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   fulfillment_id UUID NOT NULL,
   sender_user_id TEXT NOT NULL,
@@ -3153,14 +3206,14 @@ CREATE TABLE IF NOT EXISTS socketrelay_messages (
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS fulfillment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS sender_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS message_text TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS fulfillment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS sender_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS message_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_admin_audit_trail (
+CREATE TABLE IF NOT EXISTS socket_relay_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command TEXT NOT NULL,
@@ -3171,15 +3224,15 @@ CREATE TABLE IF NOT EXISTS socketrelay_admin_audit_trail (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === GDP MODULE ===
 CREATE TABLE IF NOT EXISTS gdp_metric_snapshots (
@@ -3685,8 +3738,8 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
 
--- levelup_enrollments (1 missing)
-ALTER TABLE IF EXISTS levelup_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;
+-- level_up_enrollments (1 missing)
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;
 
 -- service_credits_adapter_outbox (1 missing)
 ALTER TABLE IF EXISTS service_credits_adapter_outbox ADD COLUMN IF NOT EXISTS provider_transaction_id TEXT;
@@ -3923,37 +3976,37 @@ ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS display_orde
 ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS bonus_credited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
--- trusttransport_admin_audit_trail (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_admin_audit_trail (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_disputes (4 missing)
-ALTER TABLE IF EXISTS trusttransport_disputes ADD COLUMN IF NOT EXISTS resolution_notes TEXT;
-ALTER TABLE IF EXISTS trusttransport_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS trusttransport_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
+-- trust_transport_disputes (4 missing)
+ALTER TABLE IF EXISTS trust_transport_disputes ADD COLUMN IF NOT EXISTS resolution_notes TEXT;
+ALTER TABLE IF EXISTS trust_transport_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
 
--- trusttransport_offers (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_offers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_offers (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_offers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_payout_requests (4 missing)
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS decision_reason TEXT;
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_payout_requests (4 missing)
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS decision_reason TEXT;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_requests (2 missing)
-ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+-- trust_transport_requests (2 missing)
+ALTER TABLE IF EXISTS trust_transport_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 
--- trusttransport_risk_signals (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_risk_signals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_risk_signals (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_risk_signals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_trips (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_trips (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_user_extension (4 missing)
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS account_restricted BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS restricted_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS restricted_by_user_id TEXT;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS restriction_reason TEXT;
+-- trust_transport_user_extension (4 missing)
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS account_restricted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS restricted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS restricted_by_user_id TEXT;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS restriction_reason TEXT;
 
 -- unlock_audit_log (7 missing — existing table has only id, user_id, action, details, created_at, updated_at)
 ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
@@ -4056,15 +4109,15 @@ $sc_cmd_idem_command_nullable$;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS deletion_request_id UUID;
 
--- socketrelay_messages (1 missing)
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
+-- socket_relay_messages (1 missing)
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
 
--- trusttransport_user_extension (5 missing)
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS safety_settings JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS payout_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS provider_eligible BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_user_extension (5 missing)
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS safety_settings JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS payout_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS provider_eligible BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === comic AI Assistant (@comic) — conversation + supervision + training layer ===
 -- The @comic assistant captures every turn, drafts via Ollama, and routes every draft to human
@@ -4619,7 +4672,7 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
 -- One canonical record of whether a member is restricted, and at what scope. The auth gate blocks an
 -- 'all'-scope restriction on every product route; value-movement and contact points additionally
 -- honour 'trading'/'contact' scopes. Supersedes the per-plugin flags
--- (trusttransport_user_extension.account_restricted, service_credits_wallets.is_frozen), which are
+-- (trust_transport_user_extension.account_restricted, service_credits_wallets.is_frozen), which are
 -- retired in code and backfilled below. Defined at the END so the tables it backfills from already exist.
 CREATE TABLE IF NOT EXISTS account_restrictions (
   user_id TEXT PRIMARY KEY,
@@ -4653,7 +4706,7 @@ CREATE INDEX IF NOT EXISTS idx_account_restrictions_audit_created ON account_res
 -- re-restricts a member whose canonical row already exists (e.g. after an operator unrestricts).
 INSERT INTO account_restrictions (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason)
 SELECT user_id, TRUE, 'trading', COALESCE(restricted_at, NOW()), restricted_by_user_id, restriction_reason
-FROM trusttransport_user_extension
+FROM trust_transport_user_extension
 WHERE account_restricted = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 

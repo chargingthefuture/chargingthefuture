@@ -7,16 +7,16 @@ import { DirectoryPublicShell } from '@/components/directory/directory-public-sh
 import { FoundationPublicShell } from '@/components/foundation/foundation-public-shell';
 import { GdpPublicShell } from '@/components/gdp/gdp-public-shell';
 import { GentlePulsePublicShell } from '@/components/gentlepulse/gentlepulse-public-shell';
-import { LevelupPublicShell } from '@/components/levelup/levelup-public-shell';
+import { LevelUpPublicShell } from '@/components/level-up/level-up-public-shell';
 import { LighthousePublicShell } from '@/components/lighthouse/lighthouse-public-shell';
 import { MoodPublicShell } from '@/components/mood/mood-public-shell';
 import { PeerProgrammingPublicShell } from '@/components/peer-programming/peer-programming-public-shell';
 import { ServiceCreditsPublicShell } from '@/components/service-credits/service-credits-public-shell';
 import { SkillsHuntPublicShell } from '@/components/skills-hunt/skills-hunt-public-shell';
 import { SkillsTaxonomyPublicShell } from '@/components/skills-taxonomy/skills-taxonomy-public-shell';
-import { SocketRelayPublicShell } from '@/components/socketrelay/socketrelay-public-shell';
+import { SocketRelayPublicShell } from '@/components/socket-relay/socket-relay-public-shell';
 import { TrustPublicShell } from '@/components/trust/trust-public-shell';
-import { TrustTransportPublicShell } from '@/components/trusttransport/trusttransport-public-shell';
+import { TrustTransportPublicShell } from '@/components/trust-transport/trust-transport-public-shell';
 import { UnlockPublicShell } from '@/components/unlock/unlock-public-shell';
 import { WeeklyPerformancePublicShell } from '@/components/weekly-performance/weekly-performance-public-shell';
 import { WhatWorksPublicShell } from '@/components/what-works/what-works-public-shell';
@@ -65,16 +65,16 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   foundation: FoundationPublicShell,
   gdp: GdpPublicShell,
   gentlepulse: GentlePulsePublicShell,
-  levelup: LevelupPublicShell,
+  'level-up': LevelUpPublicShell,
   lighthouse: LighthousePublicShell,
   mood: MoodPublicShell,
   'peer-programming': PeerProgrammingPublicShell,
   'service-credits': ServiceCreditsPublicShell,
   'skills-hunt': SkillsHuntPublicShell,
   'skills-taxonomy': SkillsTaxonomyPublicShell,
-  socketrelay: SocketRelayPublicShell,
+  'socket-relay': SocketRelayPublicShell,
   trust: TrustPublicShell,
-  trusttransport: TrustTransportPublicShell,
+  'trust-transport': TrustTransportPublicShell,
   unlock: UnlockPublicShell,
   'weekly-performance': WeeklyPerformancePublicShell,
   'what-works': WhatWorksPublicShell,

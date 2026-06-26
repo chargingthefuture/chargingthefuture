@@ -25,9 +25,9 @@ function requireEnv(name) {
 // One per contributing plugin: a SQL query returning (currency_code, total) of eligible settled spend.
 const SOURCES = [
   {
-    pluginSlug: 'trusttransport',
+    pluginSlug: 'trust-transport',
     sql: `SELECT COALESCE(price_currency, currency) AS currency_code, SUM(amount)::numeric AS total
-            FROM trusttransport_earnings_ledger
+            FROM trust_transport_earnings_ledger
             WHERE entry_type IN ('credit', 'release')
             GROUP BY COALESCE(price_currency, currency)`,
   },
@@ -37,7 +37,7 @@ const SOURCES = [
     // Eligible service delivery only — excludes learner escrow returns, completion bonuses, stipends,
     // and microgrants. Read from governance events, not the SC ledger (whose entries are tagged
     // accounting_scope 'service_credits_non_gdp' by design).
-    pluginSlug: 'levelup',
+    pluginSlug: 'level-up',
     sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
             FROM service_credits_governance_events
             WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split'`,
@@ -76,9 +76,9 @@ const SOURCES = [
     // SocketRelay favors: mutual aid with no per-favor price, so each successfully-completed favor counts
     // as one FREE exchange (by count). The standalone SocketRelay SC transfer route is intentionally not
     // also counted here to avoid double-counting a single favor.
-    pluginSlug: 'socketrelay',
+    pluginSlug: 'socket-relay',
     sql: `SELECT 'FREE' AS currency_code, COUNT(*)::numeric AS total
-            FROM socketrelay_fulfillments
+            FROM socket_relay_fulfillments
             WHERE close_reason = 'successful'`,
   },
   // Add more as approved. Keep eligible settled spend only — never incentives. A genuine peer-to-peer

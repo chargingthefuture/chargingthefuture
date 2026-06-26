@@ -28,11 +28,11 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO trusttransport_user_extension
+        INSERT INTO trust_transport_user_extension
           (user_id, mode_preferences, safety_settings, payout_preferences, provider_eligible, account_restricted, service_deleted_at)
         VALUES
-          ('seed-trusttransport-requester-01', '{"preferredMode":"ride"}'::jsonb, '{"emergencyContact":true}'::jsonb, '{}'::jsonb, FALSE, FALSE, NULL),
-          ('seed-trusttransport-provider-01', '{"preferredMode":"ride"}'::jsonb, '{"emergencyContact":true}'::jsonb, '{"method":"ledger"}'::jsonb, TRUE, FALSE, NULL)
+          ('seed-trust-transport-requester-01', '{"preferredMode":"ride"}'::jsonb, '{"emergencyContact":true}'::jsonb, '{}'::jsonb, FALSE, FALSE, NULL),
+          ('seed-trust-transport-provider-01', '{"preferredMode":"ride"}'::jsonb, '{"emergencyContact":true}'::jsonb, '{"method":"ledger"}'::jsonb, TRUE, FALSE, NULL)
         ON CONFLICT (user_id)
         DO UPDATE SET
           mode_preferences = EXCLUDED.mode_preferences,
@@ -47,10 +47,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO trusttransport_requests
+        INSERT INTO trust_transport_requests
           (id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, idempotency_key)
         VALUES
-          ($1::uuid, 'seed-trusttransport-requester-01', 'ride', 'Seed TrustTransport Ride', 'Deterministic trusttransport request fixture.', 'Austin', 'Round Rock', 'pickup-redacted', 'dropoff-redacted', 'accepted', 'seed-trusttransport-request-01')
+          ($1::uuid, 'seed-trust-transport-requester-01', 'ride', 'Seed TrustTransport Ride', 'Deterministic trust-transport request fixture.', 'Austin', 'Round Rock', 'pickup-redacted', 'dropoff-redacted', 'accepted', 'seed-trust-transport-request-01')
         ON CONFLICT (id)
         DO UPDATE SET
           mode = EXCLUDED.mode,
@@ -68,10 +68,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO trusttransport_offers
+        INSERT INTO trust_transport_offers
           (id, request_id, provider_user_id, note, proposed_amount, status)
         VALUES
-          ($1::uuid, $2::uuid, 'seed-trusttransport-provider-01', 'Seed offer note.', 24.50, 'accepted')
+          ($1::uuid, $2::uuid, 'seed-trust-transport-provider-01', 'Seed offer note.', 24.50, 'accepted')
         ON CONFLICT (id)
         DO UPDATE SET
           note = EXCLUDED.note,
@@ -84,10 +84,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO trusttransport_trips
+        INSERT INTO trust_transport_trips
           (id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id)
         VALUES
-          ($1::uuid, $2::uuid, $3::uuid, 'seed-trusttransport-requester-01', 'seed-trusttransport-provider-01', 'ride', 'en_route', 'trusttransport-trip-seed-1')
+          ($1::uuid, $2::uuid, $3::uuid, 'seed-trust-transport-requester-01', 'seed-trust-transport-provider-01', 'ride', 'en_route', 'trust-transport-trip-seed-1')
         ON CONFLICT (id)
         DO UPDATE SET
           status = EXCLUDED.status,
@@ -99,11 +99,11 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO trusttransport_status_events (request_id, trip_id, actor_user_id, event_name, from_status, to_status, metadata)
+        INSERT INTO trust_transport_status_events (request_id, trip_id, actor_user_id, event_name, from_status, to_status, metadata)
         VALUES
-          ($1::uuid, $2::uuid, 'seed-trusttransport-requester-01', 'request_created', NULL, 'open', '{"seed":true}'::jsonb),
-          ($1::uuid, $2::uuid, 'seed-trusttransport-requester-01', 'offer_accepted', 'open', 'accepted', '{"seed":true}'::jsonb),
-          ($1::uuid, $2::uuid, 'seed-trusttransport-provider-01', 'trip_status_updated', 'assigned', 'en_route', '{"seed":true}'::jsonb)
+          ($1::uuid, $2::uuid, 'seed-trust-transport-requester-01', 'request_created', NULL, 'open', '{"seed":true}'::jsonb),
+          ($1::uuid, $2::uuid, 'seed-trust-transport-requester-01', 'offer_accepted', 'open', 'accepted', '{"seed":true}'::jsonb),
+          ($1::uuid, $2::uuid, 'seed-trust-transport-provider-01', 'trip_status_updated', 'assigned', 'en_route', '{"seed":true}'::jsonb)
         ON CONFLICT DO NOTHING
       `,
       [seedRequestId, seedTripId],
@@ -111,10 +111,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO trusttransport_earnings_ledger
+        INSERT INTO trust_transport_earnings_ledger
           (provider_user_id, trip_id, entry_type, amount, currency, status, metadata)
         VALUES
-          ('seed-trusttransport-provider-01', $1::uuid, 'credit', 24.50, 'USD', 'posted', '{"seed":true}'::jsonb)
+          ('seed-trust-transport-provider-01', $1::uuid, 'credit', 24.50, 'USD', 'posted', '{"seed":true}'::jsonb)
       `,
       [seedTripId],
     );
@@ -122,10 +122,10 @@ async function main() {
     // Seed a ServiceCredits transaction for TrustTransport
     await client.query(
       `
-        INSERT INTO trusttransport_service_credits_transactions
+        INSERT INTO trust_transport_service_credits_transactions
           (from_user_id, to_user_id, amount, reason, trip_id, created_at)
         VALUES
-          ('seed-trusttransport-requester-01', 'seed-trusttransport-provider-01', 9, 'Seed TrustTransport ServiceCredits', $1::uuid, NOW())
+          ('seed-trust-transport-requester-01', 'seed-trust-transport-provider-01', 9, 'Seed TrustTransport ServiceCredits', $1::uuid, NOW())
         ON CONFLICT DO NOTHING
       `,
       [seedTripId],

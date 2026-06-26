@@ -37,7 +37,7 @@ interface PresenceSource {
 // TrustTransport `status` is free text with no schema-level enum, so "active" is everything that is
 // not one of these terminal states — mirroring the original backfill rather than guessing the active
 // set. Kept in sync with the live TrustTransport write hooks.
-const TRUSTTRANSPORT_TERMINAL_STATUSES = [
+const TRUST_TRANSPORT_TERMINAL_STATUSES = [
   'cancelled',
   'canceled',
   'completed',
@@ -66,34 +66,34 @@ const PRESENCE_SOURCES: PresenceSource[] = [
     },
   },
   {
-    slug: 'trusttransport',
+    slug: 'trust-transport',
     read: async (userId) => {
       const [requests, offers] = await Promise.all([
         queryDb<{ id: string }>(
-          `SELECT id::text AS id FROM trusttransport_requests
+          `SELECT id::text AS id FROM trust_transport_requests
            WHERE requester_user_id = $1 AND LOWER(status) <> ALL($2::text[])`,
-          [userId, TRUSTTRANSPORT_TERMINAL_STATUSES],
+          [userId, TRUST_TRANSPORT_TERMINAL_STATUSES],
         ),
         queryDb<{ id: string }>(
-          `SELECT id::text AS id FROM trusttransport_offers
+          `SELECT id::text AS id FROM trust_transport_offers
            WHERE provider_user_id = $1 AND LOWER(status) <> ALL($2::text[])`,
-          [userId, TRUSTTRANSPORT_TERMINAL_STATUSES],
+          [userId, TRUST_TRANSPORT_TERMINAL_STATUSES],
         ),
       ]);
       return [
         ...requests.rows.map((row) => ({
-          pluginSlug: 'trusttransport',
+          pluginSlug: 'trust-transport',
           refType: 'request',
           refId: row.id,
           label: 'Ride request',
-          deepLink: '/apps/trusttransport',
+          deepLink: '/apps/trust-transport',
         })),
         ...offers.rows.map((row) => ({
-          pluginSlug: 'trusttransport',
+          pluginSlug: 'trust-transport',
           refType: 'offer',
           refId: row.id,
           label: 'Offering rides',
-          deepLink: '/apps/trusttransport',
+          deepLink: '/apps/trust-transport',
         })),
       ];
     },
@@ -115,18 +115,18 @@ const PRESENCE_SOURCES: PresenceSource[] = [
     },
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     read: async (userId) => {
       const result = await queryDb<{ id: string }>(
-        `SELECT id::text AS id FROM socketrelay_requests WHERE owner_user_id = $1 AND status = 'open'`,
+        `SELECT id::text AS id FROM socket_relay_requests WHERE owner_user_id = $1 AND status = 'open'`,
         [userId],
       );
       return result.rows.map((row) => ({
-        pluginSlug: 'socketrelay',
+        pluginSlug: 'socket-relay',
         refType: 'post',
         refId: row.id,
         label: 'Help post',
-        deepLink: '/apps/socketrelay',
+        deepLink: '/apps/socket-relay',
       }));
     },
   },

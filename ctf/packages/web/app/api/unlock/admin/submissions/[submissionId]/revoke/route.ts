@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import {
   getUnlockRuntimeConfig,
   getUnlockSubmissionById,
@@ -33,6 +33,8 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   const resolvedParams = await params;
   const submissionId = Number(resolvedParams.submissionId);
@@ -104,6 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       policyStatus: 'allow',
       reason: 'ok',
       targetUserId: submission.userId,
+      requestId,
       metadata: { submissionId, creditsReclaimed, reclaimAmount },
     });
 

@@ -21,22 +21,22 @@ import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
 import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
 import { Foundation, FoundationInstantCallController } from './src/features/foundation';
 import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
-import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
-import { TrustTransport, AdminTrustTransport } from './src/features/trusttransport';
+import { SocketRelay, AdminSocketRelay } from './src/features/socket-relay';
+import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
-import { Levelup, AdminLevelup } from './src/features/levelup';
+import { LevelUp, AdminLevelUp } from './src/features/level-up';
 import { Unlock, AdminUnlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { Beacon } from './src/features/beacon';
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
-import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
+import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 
@@ -52,9 +52,9 @@ type FeatureKey =
   | 'skills-hunt'
   | 'foundation'
   | 'lighthouse'
-  | 'socketrelay'
-  | 'trusttransport'
-  | 'trusttransport-admin'
+  | 'socket-relay'
+  | 'trust-transport'
+  | 'trust-transport-admin'
   | 'peer-programming'
   | 'mood'
   | 'gentlepulse'
@@ -64,18 +64,18 @@ type FeatureKey =
   | 'gdp-rate-admin'
   | 'service-credits'
   | 'service-credits-admin'
-  | 'levelup'
+  | 'level-up'
   | 'unlock'
   | 'unlock-admin'
   | 'account-data'
   | 'blocked-members'
   | 'comic-review'
   | 'peer-programming-admin'
-  | 'socketrelay-admin'
+  | 'socket-relay-admin'
   | 'skills-hunt-admin'
   | 'lighthouse-admin'
   | 'workforce-admin'
-  | 'levelup-admin';
+  | 'level-up-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -89,9 +89,9 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'skills-hunt', label: 'SkillsHunt' },
   { key: 'foundation', label: 'Foundation' },
   { key: 'lighthouse', label: 'Lighthouse' },
-  { key: 'socketrelay', label: 'SocketRelay' },
-  { key: 'trusttransport', label: 'TrustTransport' },
-  { key: 'trusttransport-admin', label: 'TrustTransport Admin' },
+  { key: 'socket-relay', label: 'SocketRelay' },
+  { key: 'trust-transport', label: 'TrustTransport' },
+  { key: 'trust-transport-admin', label: 'TrustTransport Admin' },
   { key: 'peer-programming', label: 'PeerProgramming' },
   { key: 'mood', label: 'Mood' },
   { key: 'gentlepulse', label: 'GentlePulse' },
@@ -101,18 +101,18 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'gdp-rate-admin', label: 'GDP Rate Admin' },
   { key: 'service-credits', label: 'ServiceCredits' },
   { key: 'service-credits-admin', label: 'ServiceCredits Admin' },
-  { key: 'levelup', label: 'LevelUp' },
+  { key: 'level-up', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
   { key: 'unlock-admin', label: 'Unlock Admin' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'blocked-members', label: 'Blocked members' },
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'PeerProgramming Admin' },
-  { key: 'socketrelay-admin', label: 'SocketRelay Admin' },
+  { key: 'socket-relay-admin', label: 'SocketRelay Admin' },
   { key: 'skills-hunt-admin', label: 'SkillsHunt Admin' },
   { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
   { key: 'workforce-admin', label: 'Workforce Admin' },
-  { key: 'levelup-admin', label: 'LevelUp Admin' },
+  { key: 'level-up-admin', label: 'LevelUp Admin' },
 ];
 
 export default function App() {
@@ -159,9 +159,9 @@ function buildFeatureViews(
     'skills-hunt': () => <SkillsHunt />,
     foundation: () => <Foundation />,
     lighthouse: () => <Lighthouse />,
-    socketrelay: () => <SocketRelay />,
-    trusttransport: () => <TrustTransport />,
-    'trusttransport-admin': () => <AdminTrustTransport />,
+    'socket-relay': () => <SocketRelay />,
+    'trust-transport': () => <TrustTransport />,
+    'trust-transport-admin': () => <AdminTrustTransport />,
     'peer-programming': () => <PeerProgramming />,
     mood: () => <Mood />,
     gentlepulse: () => <GentlePulse />,
@@ -171,18 +171,18 @@ function buildFeatureViews(
     'gdp-rate-admin': () => <GdpRateAdmin />,
     'service-credits': () => <ServiceCredits />,
     'service-credits-admin': () => <AdminServiceCredits />,
-    levelup: () => <Levelup />,
+    'level-up': () => <LevelUp />,
     unlock: () => <Unlock />,
     'unlock-admin': () => <AdminUnlock />,
     'account-data': () => <AccountData />,
     'blocked-members': () => <BlockedMembers />,
     'comic-review': () => <ComicReviewDashboard />,
     'peer-programming-admin': () => <AdminPeerProgramming />,
-    'socketrelay-admin': () => <AdminSocketRelay />,
+    'socket-relay-admin': () => <AdminSocketRelay />,
     'skills-hunt-admin': () => <AdminSkillsHunt />,
     'lighthouse-admin': () => <AdminLighthouse />,
     'workforce-admin': () => <AdminWorkforce />,
-    'levelup-admin': () => <AdminLevelup />,
+    'level-up-admin': () => <AdminLevelUp />,
   };
 }
 

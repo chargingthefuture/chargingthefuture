@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { normalizeQuoraProfileUrl, requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { ensureUnlockMutationCsrf, normalizeQuoraProfileUrl, requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { insertUnlockAudit, updateUnlockSubmissionQuoraUrl } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
@@ -17,10 +17,17 @@ type EditUrlBody = {
 // Re-runs the same validation and normalization as the member submission path so the stored
 // normalized URL stays canonical. Does not change review status or the verification window.
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const csrfDeny = ensureUnlockMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const gate = await requireUnlockAdminAccess();
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   const resolvedParams = await params;
   const submissionId = Number(resolvedParams.submissionId);
@@ -57,6 +64,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       policyStatus: 'allow',
       reason: 'ok',
       targetUserId: submission.userId,
+      requestId,
       metadata: {
         submissionId,
         quoraProfileUrlNormalized: normalizedUrl,

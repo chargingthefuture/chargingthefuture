@@ -5,7 +5,7 @@ import { Copy, Check } from "lucide-react";
 
 // Reusable "copy this link" control — the platform baseline for sharing any URL (a UX + accessibility
 // requirement: visible affordance, keyboard-operable, and clear "Copied!" feedback). Copies an ABSOLUTE
-// URL so the link works when pasted elsewhere: a relative path (e.g. "/apps/socketrelay") is resolved
+// URL so the link works when pasted elsewhere: a relative path (e.g. "/apps/socket-relay") is resolved
 // against the current origin. Falls back to a hidden textarea + execCommand when the async clipboard API
 // is unavailable (older mobile browsers / insecure contexts), so it never silently does nothing.
 

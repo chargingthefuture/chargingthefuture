@@ -5,7 +5,7 @@ Type: cross-cutting auth + schema + plugin-migration work.
 
 ## Why
 
-Restriction was fragmented: TrustTransport kept `trusttransport_user_extension.account_restricted` (checked
+Restriction was fragmented: TrustTransport kept `trust_transport_user_extension.account_restricted` (checked
 only in its `createRequest`), and ServiceCredits kept `service_credits_wallets.is_frozen` (checked only in
 its transfer path). A bad actor restricted in one plugin was free in the others. This spec makes one
 canonical signal that every value-moving and contact-initiating surface honors.
@@ -33,7 +33,7 @@ CREATE TABLE account_restrictions_audit ( id, actor_id, action ('restrict'|'unre
 ```
 
 The table is defined at the **end** of `schema.sql` so the per-plugin tables it backfills from already exist.
-The backfill (from `trusttransport_user_extension.account_restricted` and `service_credits_wallets.is_frozen`,
+The backfill (from `trust_transport_user_extension.account_restricted` and `service_credits_wallets.is_frozen`,
 both mapped to `trading` scope) uses `ON CONFLICT (user_id) DO NOTHING`, so re-running never re-restricts a
 member whose canonical row already exists (e.g. after an operator lifts a restriction).
 
@@ -62,8 +62,8 @@ The helper is `getAccountRestrictionStatus(userId, actionScope)` in `lib/auth/ac
   `getCreditLimitInfo`'s `frozen` reads the shared signal. The `/admin/wallet-status` endpoint and the web +
   Android freeze UI are unchanged — they now drive the shared signal.
 - TrustTransport `restrictAccount` / `restoreAccount` write the shared signal (scope `trading`) and keep
-  their TrustTransport-specific `trusttransport_risk_signals` evidence rows.
-- The retired columns (`trusttransport_user_extension.account_restricted` and friends,
+  their TrustTransport-specific `trust_transport_risk_signals` evidence rows.
+- The retired columns (`trust_transport_user_extension.account_restricted` and friends,
   `service_credits_wallets.is_frozen` and friends) are left in place (no destructive `DROP`) but are no
   longer read or written in code; backfilled into the canonical table.
 

@@ -104,7 +104,7 @@ contracts:
         type: string
       metrics:
         type: object
-        description: Real counts derived from upstream plugins (login*, socketRelay*, serviceCredits*, lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelupCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed).
+        description: Real counts derived from upstream plugins (login*, socketRelay*, serviceCredits*, lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelUpCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed).
       trustEvidence:
         type: array
       trustStatus:
@@ -116,14 +116,14 @@ contracts:
       - trust_user_extension
       - trust_admin_audit_trail
       - login_events
-      - socketrelay_fulfillments
-      - socketrelay_requests
+      - socket_relay_fulfillments
+      - socket_relay_requests
       - service_credits_transfers
       - service_credits_disputes
       - lighthouse_matches
-      - trusttransport_trips
+      - trust_transport_trips
       - skills_hunt_submissions
-      - levelup_enrollments
+      - level_up_enrollments
       - chyme_room_members
       - directory_profiles
       - what_works_endorsements

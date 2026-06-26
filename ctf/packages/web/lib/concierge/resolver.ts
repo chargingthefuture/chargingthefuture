@@ -94,7 +94,7 @@ export function resolveConcierge(text: string): ConciergeMatch[] {
 // connection, a repair), per the reframe (2026-06-17): lead with getting-needs-met, not with
 // "log it" or "breathe". ClickLog / Mood / GentlePulse are still resolvable when someone explicitly
 // asks for them, but they are not featured as starters.
-const FEATURED_STARTER_SLUGS = ['lighthouse', 'workforce', 'trusttransport', 'chyme', 'directory'];
+const FEATURED_STARTER_SLUGS = ['lighthouse', 'workforce', 'trust-transport', 'chyme', 'directory'];
 
 // The example questions for tappable starter prompts on an empty home chat (the one-tap "ask" path).
 export function conciergeStarterPrompts(limit = 5): string[] {

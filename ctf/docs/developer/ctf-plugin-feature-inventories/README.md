@@ -16,14 +16,14 @@ contract files (`{PLUGIN}_PLUGIN_COMMAND_CONTRACTS.yaml`, `..._ACCESS_POLICY_CON
 Examples:
 
 - `ctf-directory-feature-inventory.md`
-- `ctf-socketrelay-feature-inventory.md`
+- `ctf-socket-relay-feature-inventory.md`
 - `ctf-workforce-feature-inventory.md`
 
 ## Current inventories
 
 - [CTF plugin coding readiness matrix](./ctf-plugin-coding-readiness-matrix.md)
 - [Chyme](./ctf-chyme-feature-inventory.md)
-- [TrustTransport](./ctf-trusttransport-feature-inventory.md)
+- [TrustTransport](./ctf-trust-transport-feature-inventory.md)
 - [Feed](./ctf-feed-feature-inventory.md)
 - [Announcements](./ctf-announcements-feature-inventory.md)
 - [comic (AI assistant in the Feed/Hub chat)](./ctf-comic-feature-inventory.md)
@@ -32,12 +32,12 @@ Examples:
 - [PeerProgramming](./ctf-peer-programming-feature-inventory.md)
 - [Gross Domestic Product](./ctf-gross-domestic-product-feature-inventory.md)
 - [ServiceCredits](./ctf-service-credits-feature-inventory.md)
-- [LevelUp](./ctf-levelup-feature-inventory.md)
+- [LevelUp](./ctf-level-up-feature-inventory.md)
 - [SkillsHunt](./ctf-skills-hunt-feature-inventory.md)
 - [Workforce](./ctf-workforce-feature-inventory.md)
 - [GentlePulse](./ctf-gentlepulse-feature-inventory.md)
 - [Mood](./ctf-mood-feature-inventory.md)
-- [SocketRelay](./ctf-socketrelay-feature-inventory.md)
+- [SocketRelay](./ctf-socket-relay-feature-inventory.md)
 - [Weekly Performance](./ctf-weekly-performance-feature-inventory.md)
 - [Skills Taxonomy](./ctf-skills-taxonomy-feature-inventory.md)
 - [Unlock](./ctf-unlock-feature-inventory.md)

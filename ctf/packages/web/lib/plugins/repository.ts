@@ -107,7 +107,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     name: 'SocketRelay',
     summary: 'Real-time resource sharing across the network.',
     availabilityState: 'implemented_shell',
@@ -115,7 +115,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'trusttransport',
+    slug: 'trust-transport',
     name: 'TrustTransport',
     summary: 'Vetted transportation for safe travel. Drivers screened by the community, for the community.',
     availabilityState: 'implemented_shell',
@@ -171,7 +171,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'levelup',
+    slug: 'level-up',
     name: 'LevelUp',
     summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
     availabilityState: 'implemented_shell',
@@ -230,10 +230,8 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
 
 const pluginAliasMap: Record<string, string> = {
   'gross-domestic-product': 'gdp',
-  leveluptraining: 'levelup',
+  leveluptraining: 'level-up',
   servicecredits: 'service-credits',
-  'socket-relay': 'socketrelay',
-  'trust-transport': 'trusttransport',
 };
 
 export function canonicalizePluginSlug(input: string): string {

@@ -11,7 +11,7 @@
 ## Stream Surfaces Affected
 
 - Chat: all plugin chat surfaces that mint Stream credentials — chyme, feed, foundation, lighthouse,
-  socketrelay, trusttransport. Behavior is unchanged in production; only the credential source changes
+  socket-relay, trusttransport. Behavior is unchanged in production; only the credential source changes
   when `demo-mode` is ON.
 
 ## Estimated Monthly Impact

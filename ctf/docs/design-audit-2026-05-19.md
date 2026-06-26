@@ -62,15 +62,15 @@
 
     ### 7. LevelUp shell — full implementation replacing stub
 
-    - **File**: `ctf/packages/web/components/levelup/levelup-shell.tsx`
+    - **File**: `ctf/packages/web/components/level-up/level-up-shell.tsx`
     - **Design ref**: `LevelUp.tsx` — green=#22C55E, dark surface theme
     - **Structure**: 220px sidebar (logo, nav, trainer tools section, wallet badge) + main area + 300px right panel.
     - **Nav views**: Browse Cohorts (stats bar + track filters + search + 3-col cohort grid), My Progress (enrollment tracking with milestone progress bars), stub views for Trainers/Achievements/Wallet.
     - **Cohort grid**: track color badge, status badge (open/active/full/completed), seat count, SC cost, Enroll button with optimistic enrolled state.
-    - **Enrollment flow**: POST `/api/levelup/enroll` with `{ cohortId, idempotencyKey, depositCredits }`. Enrolled state tracked client-side; enrolled cohorts appear in right panel and Progress view.
+    - **Enrollment flow**: POST `/api/level-up/enroll` with `{ cohortId, idempotencyKey, depositCredits }`. Enrolled state tracked client-side; enrolled cohorts appear in right panel and Progress view.
     - **Wallet**: fetched from `/api/service-credits/wallet` — available balance + escrow shown in sidebar badge and stats bar.
-    - **Trainer panel**: `isAdmin=true` reveals Create Cohort button, Trainer Tools nav section, pending validations panel with Approve action (`POST /api/levelup/milestones/[id]/validate`).
-    - **Track filters**: All Tracks, Tech, Finance, Wellness, Life Skills — passed to `GET /api/levelup/cohorts?track=`.
+    - **Trainer panel**: `isAdmin=true` reveals Create Cohort button, Trainer Tools nav section, pending validations panel with Approve action (`POST /api/level-up/milestones/[id]/validate`).
+    - **Track filters**: All Tracks, Tech, Finance, Wellness, Life Skills — passed to `GET /api/level-up/cohorts?track=`.
     - **Status**: ✅ committed
 
     ---

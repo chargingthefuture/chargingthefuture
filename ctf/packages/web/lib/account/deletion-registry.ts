@@ -7,7 +7,7 @@
 // shipped tables. Examples of drift this registry deliberately corrects:
 //   - `gdp_user_extension` does NOT exist — GDP stores no per-user data, so GDP has nothing to delete.
 //   - feed tables key authorship by `author_user_id` / `asked_by_user_id`, not `user_id`.
-//   - `socketrelay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
+//   - `socket_relay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
 //     `provider_user_id`; Foundation threads use `created_by_user_id` / `sender_user_id`.
 //
 // The validator `ctf/scripts/check-deletion-registry.mjs` (wired into CI) checks every table and
@@ -210,33 +210,33 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     name: 'SocketRelay',
     dataSummary: 'Your relay requests, fulfillments, messages, and profile.',
     serviceScopeSupported: true,
     tables: [
-      del('socketrelay_messages', 'sender_user_id', 'Messages you sent.'),
-      del('socketrelay_fulfillment_participants', 'user_id', 'Your fulfillment participation.'),
-      del('socketrelay_fulfillments', 'requester_user_id', 'Fulfillments you requested.'),
-      del('socketrelay_requests', 'owner_user_id', 'Your relay requests.'),
-      soft('socketrelay_user_extension', 'user_id', 'service_deleted_at', 'Your SocketRelay plugin extension record.'),
-      retain('socketrelay_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
+      del('socket_relay_messages', 'sender_user_id', 'Messages you sent.'),
+      del('socket_relay_fulfillment_participants', 'user_id', 'Your fulfillment participation.'),
+      del('socket_relay_fulfillments', 'requester_user_id', 'Fulfillments you requested.'),
+      del('socket_relay_requests', 'owner_user_id', 'Your relay requests.'),
+      soft('socket_relay_user_extension', 'user_id', 'service_deleted_at', 'Your SocketRelay plugin extension record.'),
+      retain('socket_relay_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
-    slug: 'trusttransport',
+    slug: 'trust-transport',
     name: 'TrustTransport',
     dataSummary: 'Your ride/package requests, offers, trips, ratings, and profile.',
     serviceScopeSupported: true,
     tables: [
-      del('trusttransport_ratings', 'requester_user_id', 'Ratings you left.'),
-      del('trusttransport_trips', 'requester_user_id', 'Trips you requested.'),
-      del('trusttransport_offers', 'provider_user_id', 'Offers you made.'),
-      del('trusttransport_requests', 'requester_user_id', 'Your ride/package requests.'),
-      soft('trusttransport_user_extension', 'user_id', 'service_deleted_at', 'Your TrustTransport plugin extension record.'),
-      retain('trusttransport_earnings_ledger', 'Provider earnings ledger; retained for financial integrity.'),
-      retain('trusttransport_payout_requests', 'Payout requests; retained for financial integrity.'),
-      retain('trusttransport_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
+      del('trust_transport_ratings', 'requester_user_id', 'Ratings you left.'),
+      del('trust_transport_trips', 'requester_user_id', 'Trips you requested.'),
+      del('trust_transport_offers', 'provider_user_id', 'Offers you made.'),
+      del('trust_transport_requests', 'requester_user_id', 'Your ride/package requests.'),
+      soft('trust_transport_user_extension', 'user_id', 'service_deleted_at', 'Your TrustTransport plugin extension record.'),
+      retain('trust_transport_earnings_ledger', 'Provider earnings ledger; retained for financial integrity.'),
+      retain('trust_transport_payout_requests', 'Payout requests; retained for financial integrity.'),
+      retain('trust_transport_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -338,15 +338,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'levelup',
+    slug: 'level-up',
     name: 'LevelUp',
     dataSummary: 'Your cohort enrollments.',
     serviceScopeSupported: true,
     tables: [
-      del('levelup_enrollments', 'user_id', 'Your cohort enrollments.'),
-      del('levelup_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
-      retain('levelup_audit_events', 'Audit log; retained for compliance.'),
-      // levelup_cohorts are shared; disbursements/escrows/disputes are money records (retained).
+      del('level_up_enrollments', 'user_id', 'Your cohort enrollments.'),
+      del('level_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
+      retain('level_up_audit_events', 'Audit log; retained for compliance.'),
+      // level_up_cohorts are shared; disbursements/escrows/disputes are money records (retained).
     ],
   },
   {

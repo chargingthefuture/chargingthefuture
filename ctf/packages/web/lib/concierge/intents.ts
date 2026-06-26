@@ -56,7 +56,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'I lost my job last week. I need paid work I can start right away.',
   },
   {
-    slug: 'trusttransport',
+    slug: 'trust-transport',
     name: 'TrustTransport',
     blurb: 'Community-screened drivers for safe travel.',
     keywords: [
@@ -144,7 +144,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'I’m broke but I can fix bikes. Any way to get groceries without cash?',
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     name: 'SocketRelay',
     blurb: 'Share surplus with members who need it now.',
     keywords: [
@@ -174,7 +174,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: "I want to learn something new but I don't even know what's out there.",
   },
   {
-    slug: 'levelup',
+    slug: 'level-up',
     name: 'LevelUp',
     blurb: 'Goal-based cohorts with milestones and stipends.',
     keywords: [

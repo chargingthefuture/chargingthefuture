@@ -137,7 +137,7 @@ canonical_metrics:
       FROM eligible_settled_value
       JOIN latest_contribution_weights USING (currency_code);
     inputs:
-      - name: trusttransport_earnings_ledger.amount
+      - name: trust_transport_earnings_ledger.amount
         type: currency
       - name: service_credits_governance_events.amount
         type: integer

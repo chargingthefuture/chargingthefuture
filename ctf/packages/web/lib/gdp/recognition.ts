@@ -92,12 +92,12 @@ export interface RecognitionSource {
  * free-text `currency`; unknown codes are surfaced (not silently dropped) by the aggregator.
  */
 export const trustTransportSource: RecognitionSource = {
-  pluginSlug: 'trusttransport',
+  pluginSlug: 'trust-transport',
   label: 'TrustTransport completed-task earnings',
   async loadVolumes() {
     const result = await queryDb<{ currency_code: string | null; total: string }>(
       `SELECT COALESCE(price_currency, currency) AS currency_code, SUM(amount)::text AS total
-         FROM trusttransport_earnings_ledger
+         FROM trust_transport_earnings_ledger
          WHERE entry_type IN ('credit', 'release')
          GROUP BY COALESCE(price_currency, currency)`,
     );
@@ -117,7 +117,7 @@ export const trustTransportSource: RecognitionSource = {
  * ledger marks these entries `accounting_scope = service_credits_non_gdp` by design.
  */
 export const levelUpTrainerPayoutSource: RecognitionSource = {
-  pluginSlug: 'levelup',
+  pluginSlug: 'level-up',
   label: 'LevelUp trainer payouts for validated work',
   async loadVolumes() {
     const result = await queryDb<{ total: string | null }>(
@@ -218,19 +218,19 @@ export const chymeTipSource: RecognitionSource = {
  * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, and a fulfillment carries
  * no price/currency, so there is no money amount to sum. We recognize each successfully-completed favor
  * as one `FREE` exchange (counted by completed-exchange count, the way the index treats BARTER/FREE),
- * read from `socketrelay_fulfillments` where `close_reason = 'successful'`. Unsuccessful, reopened, or
+ * read from `socket_relay_fulfillments` where `close_reason = 'successful'`. Unsuccessful, reopened, or
  * cancelled favors do not count. We deliberately do NOT also count SocketRelay's standalone
  * ServiceCredits transfer route here: it is rare, unlinked to a fulfillment, and counting both could
  * double-count one favor; the completed-favor count is the mutual-aid value SocketRelay actually
  * settles. If `FREE` has no active contribution weight it is surfaced and excluded, never zeroed.
  */
 export const socketRelayFavorSource: RecognitionSource = {
-  pluginSlug: 'socketrelay',
+  pluginSlug: 'socket-relay',
   label: 'SocketRelay completed favors',
   async loadVolumes() {
     const result = await queryDb<{ total: string | null }>(
       `SELECT COUNT(*)::text AS total
-         FROM socketrelay_fulfillments
+         FROM socket_relay_fulfillments
          WHERE close_reason = 'successful'`,
     );
     const total = Number(result.rows[0]?.total ?? 0);

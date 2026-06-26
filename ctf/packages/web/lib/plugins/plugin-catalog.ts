@@ -81,13 +81,13 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Verified survivor housing listings.',
   },
   {
-    id: 'socketrelay',
+    id: 'socket-relay',
     name: 'SocketRelay',
     kind: 'plugin',
     summary: 'Real-time resource sharing across the network.',
   },
   {
-    id: 'trusttransport',
+    id: 'trust-transport',
     name: 'TrustTransport',
     kind: 'plugin',
     summary: 'Vetted transportation for safe travel. Drivers screened by the community, for the community.',
@@ -129,7 +129,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',
   },
   {
-    id: 'levelup',
+    id: 'level-up',
     name: 'LevelUp',
     kind: 'plugin',
     summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',

@@ -1,7 +1,7 @@
 // Real API client for the Directory plugin (mobile).
 // Mirrors web routes under ctf/packages/web/app/api/directory/.
 // All calls go through authedFetch so the Clerk bearer token is attached and the
-// base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
+// base URL comes from runtime config (APP_URL) — same pattern as socket-relay/currency.
 
 import { authedFetch } from '../../auth/authedFetch';
 import type { TrustUserExtension } from '../trust/api';

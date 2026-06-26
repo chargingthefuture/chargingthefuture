@@ -19,7 +19,7 @@ type RedirectRow = {
  * Maps old URLs from the legacy /platform to new ctf rewrite URLs:
  * - /apps/directory/public/{legacyId} → /apps/directory/{newId}
  * - /apps/lighthouse/property/{legacyId} → /apps/lighthouse/property/{newId}
- * - /apps/socketrelay/public/{legacyId} → /apps/socketrelay/public/{newId}
+ * - /apps/socket-relay/public/{legacyId} → /apps/socket-relay/public/{newId}
  *
  * Uses legacy_profile_redirects table to resolve ID mappings during migration.
  */
