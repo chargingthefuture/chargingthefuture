@@ -219,6 +219,14 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        reviewed_at = NULL,
        review_note = NULL,
        reminder_stage = 0,
+       -- A re-submission starts a fresh verification cycle: clear the prior cycle's reward stamps so a
+       -- previously approved/withheld/revoked row is treated as new. Without this, a revoked row keeps
+       -- reward_revoked_at set and is skipped forever by the approval path and reconcile job, and an
+       -- approved row keeps incentive_granted_at set so the new cycle is seen as already rewarded. The
+       -- per-submission mint idempotency key still prevents any double-credit on the same row.
+       incentive_granted_at = NULL,
+       reward_withheld_at = NULL,
+       reward_revoked_at = NULL,
        updated_at = NOW()
      RETURNING
        id,

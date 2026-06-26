@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { insertUnlockAudit, listUnlockSubmissions } from 'lib/unlock/repository';
 import type { UnlockAccessTier, UnlockReviewStatus } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
@@ -12,6 +12,8 @@ export async function GET(request: Request) {
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   const url = new URL(request.url);
   const reviewStatusCandidate = url.searchParams.get('reviewStatus');
@@ -38,6 +40,7 @@ export async function GET(request: Request) {
       command: 'unlock.admin.submission.list',
       policyStatus: 'allow',
       reason: 'ok',
+      requestId,
       metadata: {
         reviewStatus: reviewStatusCandidate,
         accessTier: accessTierCandidate,

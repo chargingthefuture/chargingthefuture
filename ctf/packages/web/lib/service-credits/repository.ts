@@ -867,7 +867,9 @@ export async function mintGrant(input: {
       externalLedgerTransactionId: string | null;
     }>(client, input.actorId, 'governance.mint.grant', input.idempotencyKey);
     if (existing) {
-      return existing;
+      // Idempotency replay: this exact mint already committed in a prior call. Flag it so callers can
+      // tell a fresh grant from a replay and avoid double-counting / duplicate follow-up audits.
+      return { ...existing, replayed: true as const };
     }
 
     // Per-period mint budget (the keystone rule). Off unless the operator turns it on; mutual-credit
@@ -961,7 +963,8 @@ export async function mintGrant(input: {
       externalLedgerTransactionId,
     };
     await writeCommandIdempotency(client, input.actorId, 'governance.mint.grant', input.idempotencyKey, response);
-    return response;
+    // replayed:false marks this as the first/fresh commit of this idempotency key (vs. the replay path above).
+    return { ...response, replayed: false as const };
   });
 }
 
