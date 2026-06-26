@@ -26,6 +26,10 @@ interface FoundationProviderDetailProps {
   // is hidden on the viewer's own card. Null when unknown.
   viewerUserId?: string | null;
   onBack: () => void;
+  // Open the Direct Line for a connection thread. Called after a successful Request Quote so the
+  // member lands straight in the 1:1 conversation (mirrors the web, which opens the Direct Line right
+  // after a quote request). `subtitle` is who the conversation is with.
+  onOpenDirectLine?: (_threadId: string, _subtitle: string | null) => void;
 }
 
 /**
@@ -36,7 +40,7 @@ interface FoundationProviderDetailProps {
  * ("Connect now") rate, which is a real backend field (issue #808) and is shown when
  * the provider has the call enabled.
  */
-export function FoundationProviderDetail({ provider, viewerUserId = null, onBack }: FoundationProviderDetailProps) {
+export function FoundationProviderDetail({ provider, viewerUserId = null, onBack, onOpenDirectLine }: FoundationProviderDetailProps) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -60,7 +64,14 @@ export function FoundationProviderDetail({ provider, viewerUserId = null, onBack
     try {
       const thread = await createConnectionThread(provider.profileId);
       await requestQuote(thread.threadId);
-      setStatus('Quote requested. Check back for a response.');
+      // Take the member straight into the Direct Line for the new thread (mirrors the web, which opens
+      // the Direct Line right after a quote request). If the parent did not supply the navigation, fall
+      // back to the confirmation message so the request is never lost.
+      if (onOpenDirectLine) {
+        onOpenDirectLine(thread.threadId, provider.displayName);
+      } else {
+        setStatus('Quote requested. Check back for a response.');
+      }
     } catch (e: unknown) {
       setStatus(e instanceof Error ? e.message : 'Failed to request quote.');
     } finally {
