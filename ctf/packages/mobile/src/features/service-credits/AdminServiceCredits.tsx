@@ -10,12 +10,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
+import { AdminDemoBanner } from '../../components/shared/AdminDemoBanner';
 import {
   applyDisputeAdjustment,
   burnCredits,
   collectFee,
   fetchAdminCirculation,
   fetchCreditLimit,
+  fetchLedgerStatus,
   fetchTreasuryConfig,
   mintGrant,
   setCreditLimit,
@@ -169,6 +171,10 @@ export const AdminServiceCredits = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<ActionKey | null>(null);
   const [policyText, setPolicyText] = useState('');
+  // Whether the signed-in operator is a demo participant. When true, every action on this screen
+  // runs against the demo schema, not production — surfaced via AdminDemoBanner. Read from the
+  // existing admin-only GET /api/service-credits/admin/ledger-status (formance.demoMode).
+  const [demoMode, setDemoMode] = useState(false);
 
   // Governance — mint
   const [mintUser, setMintUser] = useState('');
@@ -220,6 +226,10 @@ export const AdminServiceCredits = () => {
     }
     setForbidden(false);
     setPolicyText(JSON.stringify(result.data?.treasuryConfig ?? {}, null, 2));
+    // Best-effort demo-mode probe: a failure here must not block the admin screen, so we only
+    // flip the banner on when the flag is read back as true.
+    const status = await fetchLedgerStatus();
+    setDemoMode(status.ok ? Boolean(status.data?.formance?.demoMode) : false);
     setLoading(false);
   }, [auth]);
 
@@ -267,6 +277,7 @@ export const AdminServiceCredits = () => {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {demoMode ? <AdminDemoBanner style={styles.demoBanner} /> : null}
       <Text style={styles.title}>ServiceCredits Admin</Text>
       <Text style={styles.subtitle}>
         Governance, treasury, and dispute controls. Every action is written to the audit trail and asks
@@ -587,6 +598,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
   content: { padding: 16, gap: 16 },
   center: { flex: 1, backgroundColor: BG, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  // Pull the demo banner to the screen edges (the content padding is 16) so it reads as a full-width
+  // warning strip, mirroring the web fixed-position banner.
+  demoBanner: { marginTop: -16, marginHorizontal: -16, marginBottom: 4 },
   title: { fontSize: 20, fontWeight: '800', color: TEXT },
   subtitle: { fontSize: 13, color: SUBTLE, lineHeight: 19 },
   noticeText: { fontSize: 14, color: SUBTLE, textAlign: 'center' },
