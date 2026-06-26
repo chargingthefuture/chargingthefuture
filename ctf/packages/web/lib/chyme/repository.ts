@@ -8,12 +8,17 @@ export async function sendServiceCredits(
   toUserId: string,
   amount: number,
   message?: string,
+  // Optional idempotency key, normally derived from a stable client-supplied nonce by the route, so a
+  // retried tip (e.g. after a network failure) deduplicates instead of double-charging. When absent we
+  // mint a fresh per-request UUID — never `Date.now()`, which read like a dedup key but collides under
+  // load and gave no real idempotency.
+  idempotencyKey?: string,
 ): Promise<ChymeServiceCreditsTransaction> {
   const tx = await createTransfer({
     senderUserId: fromUserId,
     recipientUserId: toUserId,
     amount,
-    idempotencyKey: `chyme-${fromUserId}-${Date.now()}`,
+    idempotencyKey: idempotencyKey ?? `chyme-${fromUserId}-${randomUUID()}`,
     originPlugin: 'chyme',
     reasonCode: message && message.trim().length > 0 ? 'chyme.transfer.message' : 'chyme.transfer',
   });
