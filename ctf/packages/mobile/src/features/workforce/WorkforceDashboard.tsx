@@ -48,7 +48,6 @@ function StatGrid({ dashboard }: { dashboard: WorkforceDashboardData }) {
     { label: 'Workforce Total', value: formatCount(dashboard.workforceTotal), color: COLOR },
     { label: 'Headcount Target', value: formatCount(dashboard.totalHeadcountTarget), color: '#EF4444' },
     { label: 'Recruited', value: formatCount(dashboard.recruitedTotal), color: '#22C55E' },
-    { label: 'Directory Members', value: formatCount(dashboard.totalMembers), color: '#F59E0B' },
   ];
 
   return (
@@ -169,7 +168,7 @@ export function WorkforceDashboard() {
     return <WorkforceEmpty />;
   }
 
-  const subtitle = `${formatCount(dashboard.totalMembers)} members · ${formatCount(dashboard.recruitedTotal)} recruited`;
+  const subtitle = `${formatCount(dashboard.recruitedTotal)} recruited · ${formatCount(dashboard.totalHeadcountTarget)} target`;
 
   return (
     <View style={styles.container}>
