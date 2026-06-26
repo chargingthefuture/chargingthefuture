@@ -169,11 +169,33 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
   };
 }
 
+type WorkforceExtensionRow = {
+  availability_preferences: Record<string, unknown> | null;
+  work_preferences: Record<string, unknown> | null;
+  service_deleted_at: Date | null;
+  updated_at: Date;
+};
+
+async function getOwnExtension(userId: string): Promise<WorkforceExtensionRow | null> {
+  const result = await queryDb<WorkforceExtensionRow>(
+    `
+      SELECT availability_preferences, work_preferences, service_deleted_at, updated_at
+      FROM workforce_user_extension
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  return result.rows[0] ?? null;
+}
+
 export async function getOwnProfile(userId: string): Promise<WorkforceProfile | null> {
-  // Read-only: a member's workforce profile is a live view of their own claimed Directory profile.
-  // Occupation = their Skills Taxonomy job title; skill level is derived from it; recruited = true
-  // (a claimed profile is, by definition, a recruited member). Workforce no longer stores or edits
-  // its own profile rows — Directory + Skills Taxonomy are the single source of truth.
+  // The occupation/skill view is a live read of the member's own claimed Directory profile
+  // (occupation = their Skills Taxonomy job title; skill level is derived from it; recruited = true,
+  // since a claimed profile is by definition a recruited member). The editable extension fields
+  // (availability/work preferences) and the plugin-scoped deletion marker live in
+  // workforce_user_extension — the member can write those via PUT and reset them via DELETE.
   const result = await queryDb<{ job_title_id: string | null; job_title_name: string | null; updated_at: Date }>(
     `
       SELECT dp.job_title_id::text AS job_title_id, jt.name AS job_title_name, dp.updated_at
@@ -191,6 +213,8 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
     return null;
   }
 
+  const extension = await getOwnExtension(userId);
+
   return {
     userId,
     occupationId: row.job_title_id,
@@ -199,11 +223,65 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
     region: null,
     recruitedState: true,
     recruitedResolvedAtIso: null,
-    availabilityPreferences: {},
-    workPreferences: {},
-    serviceDeletedAtIso: null,
+    availabilityPreferences: normalizeJsonObject(extension?.availability_preferences),
+    workPreferences: normalizeJsonObject(extension?.work_preferences),
+    serviceDeletedAtIso: extension?.service_deleted_at ? toIso(extension.service_deleted_at) : null,
     updatedAtIso: toIso(row.updated_at),
   };
+}
+
+// Service-scoped soft delete (deletion contract section 5): set service_deleted_at = NOW() and reset
+// both preference payloads to empty objects on workforce_user_extension. workforce_recruited_events
+// and admin audit are retained (handled by the caller / not touched here). Upserts so a delete on a
+// never-written extension still records the soft-delete marker. Returns false when the caller has no
+// claimed Directory profile (nothing to delete).
+export async function softDeleteOwnProfile(userId: string): Promise<boolean> {
+  const profile = await getOwnProfile(userId);
+  if (!profile) {
+    return false;
+  }
+
+  await queryDb(
+    `
+      INSERT INTO workforce_user_extension
+        (user_id, availability_preferences, work_preferences, service_deleted_at, updated_at)
+      VALUES ($1, '{}'::jsonb, '{}'::jsonb, NOW(), NOW())
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        availability_preferences = '{}'::jsonb,
+        work_preferences = '{}'::jsonb,
+        service_deleted_at = NOW(),
+        updated_at = NOW()
+    `,
+    [userId],
+  );
+
+  return true;
+}
+
+export async function insertWorkforceDeletionEvent(input: {
+  userId: string;
+  scope: string;
+  result: string;
+  requestId: string | null;
+  traceId: string | null;
+  processedAt?: Date | null;
+}): Promise<void> {
+  await queryDb(
+    `
+      INSERT INTO workforce_deletion_events
+        (user_id, scope, plugin_id, requested_at, processed_at, result, request_id, trace_id)
+      VALUES ($1, $2, 'workforce', NOW(), $3, $4, $5, $6)
+    `,
+    [
+      input.userId,
+      input.scope,
+      input.processedAt ?? new Date(),
+      input.result,
+      input.requestId,
+      input.traceId,
+    ],
+  );
 }
 
 export async function listOccupations(
@@ -524,10 +602,8 @@ export async function createDeferredExportJob(actorId: string, exportType: strin
     completed_at: Date | null;
   }>(
     `
-      -- A deferred job has not completed, so completed_at is left NULL (it defaults to NULL).
-      -- Only a job that actually finishes should carry a completed_at timestamp.
-      INSERT INTO workforce_export_jobs (status, export_type, created_by_user_id)
-      VALUES ('deferred', $1, $2)
+      INSERT INTO workforce_export_jobs (status, export_type, created_by_user_id, completed_at)
+      VALUES ('deferred', $1, $2, NOW())
       RETURNING id, status, export_type, created_by_user_id, created_at, completed_at
     `,
     [exportType, actorId],

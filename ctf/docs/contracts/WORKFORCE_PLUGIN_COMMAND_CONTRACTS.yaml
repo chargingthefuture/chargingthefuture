@@ -37,26 +37,6 @@ contracts:
     idempotency: true
 
   - pluginId: workforce
-    command: workforce.profile.update
-    version: 1.0.0
-    description: Update workforce extension profile fields permitted by policy.
-    inputSchema:
-      profile:
-        type: object
-        required: true
-    outputSchema:
-      profileId:
-        type: string
-      updatedAt:
-        type: string
-    dataAccess:
-      - workforce_profiles
-      - workforce_admin_audit_trail
-    purpose: workforce_profile_management
-    retentionClass: transactional_long_lived
-    idempotency: true
-
-  - pluginId: workforce
     command: workforce.profile.delete
     version: 1.0.0
     description: Service-scoped workforce profile deletion and extension reset.
@@ -73,6 +53,8 @@ contracts:
       - workforce_profiles
       - workforce_user_extension
       - workforce_recruited_events
+      - workforce_deletion_events
+      - workforce_admin_audit_trail
     purpose: workforce_profile_management
     retentionClass: audit_long_lived
     idempotency: true
@@ -228,10 +210,6 @@ contracts:
       exportType:
         type: string
         required: true
-        enum:
-          - summary
-          - skill-level
-          - sector
       filters:
         type: object
         required: false
