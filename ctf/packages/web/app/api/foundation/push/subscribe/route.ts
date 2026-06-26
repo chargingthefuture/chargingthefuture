@@ -3,14 +3,23 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit } from 'lib/foundation/repository';
 import { saveWebPushSubscription } from 'lib/notifications/push';
+import { saveExpoPushSubscription } from 'lib/notifications/expo-push';
 import { reportError } from 'lib/observability/report';
 
-// Save the signed-in member's Web Push subscription for one device (issue #808 task 5). A provider who
-// enabled "call alerts on this device" sends the browser's PushSubscription here so the Foundation
-// instant-call ring can wake their device. The member acts only on their own subscription.
+// Save the signed-in member's push subscription for one device. A provider who enabled "call alerts on
+// this device" sends their device subscription here so the Foundation instant-call ring can wake their
+// device. The member acts only on their own subscription.
 //
-// Secrets policy: the endpoint and keys are stored but never logged; the audit metadata records only that
-// a subscription was saved, never the endpoint URL or any key material.
+// Two kinds of subscription share this one route, branched on the body's `kind`:
+//   - Web Push (default / kind:'web', issue #808 task 5): the browser's PushSubscription — endpoint + the
+//     p256dh/auth encryption keys.
+//   - Expo native push (kind:'expo', issue #884): the Android app's Expo push token. The token is the
+//     identity (stored as the endpoint); there are no encryption keys.
+// Both store into the same user-global push_subscriptions table on (user_id, endpoint), so the same
+// account/service deletion wiring removes either kind.
+//
+// Secrets policy: the endpoint/token and any keys are stored but never logged; the audit metadata records
+// only the kind, never the endpoint URL, token, or any key material.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -22,7 +31,13 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
-  let payload: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown }; userAgent?: unknown };
+  let payload: {
+    kind?: unknown;
+    token?: unknown;
+    endpoint?: unknown;
+    keys?: { p256dh?: unknown; auth?: unknown };
+    userAgent?: unknown;
+  };
   try {
     payload = await request.json();
   } catch {
@@ -32,10 +47,46 @@ export async function POST(request: Request) {
     );
   }
 
+  const userAgent = typeof payload.userAgent === 'string' ? payload.userAgent.slice(0, 256) : null;
+  const kind = payload.kind === 'expo' ? 'expo' : 'web';
+
+  // Expo native push (Android): the body carries an Expo push token, no encryption keys.
+  if (kind === 'expo') {
+    const token = typeof payload.token === 'string' ? payload.token.trim() : '';
+    if (!token) {
+      return NextResponse.json(
+        { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'A push token is required.' },
+        { status: 400 },
+      );
+    }
+
+    try {
+      await saveExpoPushSubscription({ userId: gate.auth.userId, token, userAgent });
+
+      await insertFoundationAudit({
+        actorId: gate.auth.userId,
+        command: 'foundation.push.subscribe',
+        policyStatus: 'allow',
+        reason: 'ok',
+        targetType: 'push_subscription',
+        targetId: gate.auth.userId,
+        metadata: { kind: 'expo' },
+      });
+
+      return NextResponse.json({ ok: true }, { status: 201 });
+    } catch (error) {
+      reportError(error, { area: 'foundation', op: 'push_subscribe' });
+      return NextResponse.json(
+        { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not save your call alerts.' },
+        { status: 503 },
+      );
+    }
+  }
+
+  // Web Push (default): the body carries the browser's PushSubscription (endpoint + encryption keys).
   const endpoint = typeof payload.endpoint === 'string' ? payload.endpoint.trim() : '';
   const p256dh = typeof payload.keys?.p256dh === 'string' ? payload.keys.p256dh : null;
   const auth = typeof payload.keys?.auth === 'string' ? payload.keys.auth : null;
-  const userAgent = typeof payload.userAgent === 'string' ? payload.userAgent.slice(0, 256) : null;
 
   if (!endpoint || !p256dh || !auth) {
     return NextResponse.json(

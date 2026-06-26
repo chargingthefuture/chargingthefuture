@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { sendWebPushToUser } from 'lib/notifications/push';
+import { sendExpoPushToUser } from 'lib/notifications/expo-push';
 import { reportError } from 'lib/observability/report';
 import { createTransfer, getOrCreateWallet } from 'lib/service-credits/repository';
 import {
@@ -251,12 +252,15 @@ async function expireStaleRings(client: PoolClient, userId: string): Promise<voi
   );
 }
 
-// Deliver an incoming ring to the callee out-of-band, AFTER the ring row has committed (issue #808 task 5).
-// Two deliveries, both best-effort — neither may fail the ring:
+// Deliver an incoming ring to the callee out-of-band, AFTER the ring row has committed (issue #808 task 5,
+// extended for Android native push in issue #884). Deliveries are all best-effort — none may fail the ring:
 //   1. A foundation_notification_events row of kind 'instant_call.ring' so the in-app inbox/poll fallback
 //      still shows the ring even with no push configured.
-//   2. A Web Push to every device the callee subscribed (sendWebPushToUser no-ops when push is unconfigured
-//      or the callee has no devices). The click deep-links to the Foundation incoming-call surface.
+//   2. A Web Push to every web device the callee subscribed (sendWebPushToUser no-ops when push is
+//      unconfigured or the callee has no devices). The click deep-links to the Foundation incoming-call surface.
+//   3. An Expo native push to every Android device the callee subscribed (sendExpoPushToUser no-ops when the
+//      callee has no Expo devices; it never throws). Tapping it opens the app at the incoming-call surface.
+// Each push runs in its own try/catch so a failure of one delivery never affects the others or the ring.
 // The caller's display name is resolved best-effort; it falls back to "Someone" when unresolved.
 async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> {
   let callerName = 'Someone';
@@ -284,20 +288,30 @@ async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> 
     reportError(error, { area: 'foundation', op: 'instant_call_ring_notification_event' });
   }
 
+  const ringPayload = {
+    title: 'Incoming call',
+    body: `${callerName} is calling you on Foundation`,
+    data: {
+      type: 'foundation.instant_call.ring',
+      callId: call.id,
+      url: FOUNDATION_INCOMING_CALL_PATH,
+    },
+  } as const;
+
   try {
-    await sendWebPushToUser(call.calleeUserId, {
-      title: 'Incoming call',
-      body: `${callerName} is calling you on Foundation`,
-      data: {
-        type: 'foundation.instant_call.ring',
-        callId: call.id,
-        url: FOUNDATION_INCOMING_CALL_PATH,
-      },
-    });
+    await sendWebPushToUser(call.calleeUserId, ringPayload);
   } catch (error) {
     // sendWebPushToUser already swallows its own errors; this guard is belt-and-braces so a ring is never
     // affected by push delivery.
     reportError(error, { area: 'foundation', op: 'instant_call_ring_push' });
+  }
+
+  try {
+    await sendExpoPushToUser(call.calleeUserId, ringPayload);
+  } catch (error) {
+    // sendExpoPushToUser already swallows its own errors; this guard is belt-and-braces so a ring is never
+    // affected by Expo (Android native) push delivery.
+    reportError(error, { area: 'foundation', op: 'instant_call_ring_expo_push' });
   }
 }
 
