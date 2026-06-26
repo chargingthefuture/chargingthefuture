@@ -84,7 +84,15 @@ async function main() {
       }),
     });
     if (!createRes.ok) {
-      throw new Error(`Create release failed: ${createRes.status} ${await readBody(createRes)}`);
+      // A 404 here almost always means GH_PAT cannot see BACKUP_REPO: the repo
+      // does not exist, was renamed, or the token lacks `contents: write` on it
+      // (GitHub returns 404, not 403, for a private repo a token cannot access).
+      // Spell that out so the owner fixes the secret instead of the script.
+      const hint =
+        createRes.status === 404
+          ? ' (check the BACKUP_REPO and GH_PAT Actions secrets: the repo must exist as owner/name and GH_PAT must have contents: write on it)'
+          : '';
+      throw new Error(`Create release failed: ${createRes.status} ${await readBody(createRes)}${hint}`);
     }
     const release = await createRes.json();
     const releaseId = release.id;
