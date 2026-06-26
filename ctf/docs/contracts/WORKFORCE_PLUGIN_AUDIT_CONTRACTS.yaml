@@ -79,33 +79,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: workforce
-    command: workforce.admin.recompute.enqueue
-    commandVersion: 1.0.0
-    purpose: workforce_recruited_derivation
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        sourceEventValidationCheck: pass_or_fail
-        csrfCheck: pass_or_fail
-    dataClassesAccessed:
-      - directory_profile_write_metadata
-      - workforce_recruited_event_metadata
-      - workforce_profile_recruited_state
-    targetContext:
-      workspaceId: workspace_identifier
-      recomputeJobId: request_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: workforce
     command: workforce.export.job.create
     commandVersion: 1.0.0
     purpose: workforce_reporting_exports
