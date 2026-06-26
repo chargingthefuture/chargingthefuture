@@ -1,8 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { usePluginAuth } from '../peer-programming/usePluginAuth';
-import { WorkforceLoading } from './WorkforceLoading';
-import { WorkforcePublic } from './WorkforcePublic';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import {
   fetchAllWorkforceOccupations,
   fetchWorkforceOccupation,
@@ -19,11 +16,15 @@ import type {
   WorkforceOccupation,
 } from './api';
 
-// Android parity for the web occupations browse + V2 sector/skill-level member drilldowns. One screen,
-// three tabs (Occupations / Sectors / Skill Levels), mirroring the web sidebar views. Read-only.
+// Body for the Workforce screen's Occupations / Sectors / Skill Level tabs. This is part of the one
+// Workforce feature — the screen's tab bar lives in WorkforceDashboard; this renders only the chosen
+// tab's content. Occupations browse mirrors the web browse; Sectors / Skill Level are the V2 member
+// drilldowns. Read-only.
 const COLOR = '#F97316';
 const SKILL_LEVELS = ['Foundational', 'Intermediate', 'Advanced'];
 const PAGE_SIZE = 20;
+
+export type WorkforceBrowseTab = 'occupations' | 'sector' | 'skill-level';
 
 const REASON: Record<WorkforceMatchReason, { label: string; color: string }> = {
   jobTitle: { label: 'Job title', color: '#22C55E' },
@@ -276,57 +277,13 @@ function OccupationsBrowse() {
   );
 }
 
-type Tab = 'occupations' | 'sector' | 'skill-level';
-
-export function WorkforceExplore() {
-  const { auth, loading: authLoading } = usePluginAuth('clerk');
-  const isAuthenticated = auth?.isAuthenticated ?? false;
-  const [tab, setTab] = useState<Tab>('occupations');
-
-  if (authLoading) return <WorkforceLoading />;
-  if (!isAuthenticated) return <WorkforcePublic />;
-
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'occupations', label: 'Occupations' },
-    { key: 'sector', label: 'Sectors' },
-    { key: 'skill-level', label: 'Skill Level' },
-  ];
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Workforce Explore</Text>
-      </View>
-      <View style={styles.tabBar}>
-        {tabs.map((t) => (
-          <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabActive]}>
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {tab === 'occupations' ? <OccupationsBrowse /> : null}
-        {tab === 'sector' ? <BucketDrilldown kind="sector" fetcher={fetchWorkforceSectorReport} /> : null}
-        {tab === 'skill-level' ? <BucketDrilldown kind="skill-level" fetcher={fetchWorkforceSkillLevelReport} /> : null}
-      </ScrollView>
-    </View>
-  );
+export function WorkforceBrowseViews({ tab }: { tab: WorkforceBrowseTab }) {
+  if (tab === 'occupations') return <OccupationsBrowse />;
+  if (tab === 'sector') return <BucketDrilldown kind="sector" fetcher={fetchWorkforceSectorReport} />;
+  return <BucketDrilldown kind="skill-level" fetcher={fetchWorkforceSkillLevelReport} />;
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F1117' },
-  header: {
-    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, backgroundColor: '#090B0F',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#F9FAFB' },
-  tabBar: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#0D0F14' },
-  tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  tabActive: { backgroundColor: COLOR + '20', borderColor: COLOR + '40' },
-  tabText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' },
-  tabTextActive: { color: COLOR },
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
   muted: { fontSize: 13, color: '#6B7280', paddingVertical: 8 },
   errorText: { fontSize: 14, color: '#EF4444', textAlign: 'center', paddingVertical: 12 },
   input: {

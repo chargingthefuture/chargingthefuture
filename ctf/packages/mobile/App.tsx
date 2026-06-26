@@ -17,7 +17,7 @@ import { HubHome } from './src/features/hub';
 import { DirectoryList, AdminDirectory } from './src/features/directory';
 import { Feed } from './src/features/feed';
 import { Announcements } from './src/features/announcements';
-import { WorkforceDashboard, WorkforceExplore, AdminWorkforce } from './src/features/workforce';
+import { WorkforceDashboard, AdminWorkforce } from './src/features/workforce';
 import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
 import { Foundation, FoundationInstantCallController } from './src/features/foundation';
 import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
@@ -49,7 +49,6 @@ type FeatureKey =
   | 'directory-admin'
   | 'feed-announcements'
   | 'workforce'
-  | 'workforce-explore'
   | 'skills-hunt'
   | 'foundation'
   | 'lighthouse'
@@ -87,7 +86,6 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'directory-admin', label: 'Directory Admin' },
   { key: 'feed-announcements', label: 'Feed+Announcements' },
   { key: 'workforce', label: 'Workforce' },
-  { key: 'workforce-explore', label: 'Workforce Explore' },
   { key: 'skills-hunt', label: 'SkillsHunt' },
   { key: 'foundation', label: 'Foundation' },
   { key: 'lighthouse', label: 'Lighthouse' },
@@ -158,7 +156,6 @@ function buildFeatureViews(
       </ScrollView>
     ),
     workforce: () => <WorkforceDashboard />,
-    'workforce-explore': () => <WorkforceExplore />,
     'skills-hunt': () => <SkillsHunt />,
     foundation: () => <Foundation />,
     lighthouse: () => <Lighthouse />,

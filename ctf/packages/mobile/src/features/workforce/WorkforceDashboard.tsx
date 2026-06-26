@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import { WorkforceLoading } from './WorkforceLoading';
 import { WorkforceEmpty } from './WorkforceEmpty';
 import { WorkforcePublic } from './WorkforcePublic';
 import { WorkforceStatCard } from './WorkforceStatCard';
 import { WorkforceProfileCard } from './WorkforceProfileCard';
+import { WorkforceBrowseViews, type WorkforceBrowseTab } from './WorkforceBrowseViews';
 import {
   fetchWorkforceDashboard,
   fetchWorkforceProfile,
@@ -96,10 +97,13 @@ function TrainingGaps({ items }: { items: WorkforceOccupationGapItem[] }) {
   );
 }
 
+type WorkforceTab = 'overview' | WorkforceBrowseTab;
+
 export function WorkforceDashboard() {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
+  const [tab, setTab] = useState<WorkforceTab>('overview');
   const [dashboard, setDashboard] = useState<WorkforceDashboardData | null>(null);
   const [profile, setProfile] = useState<WorkforceProfileData | null>(null);
   const [sectors, setSectors] = useState<WorkforceGroupedReportItem[]>([]);
@@ -161,37 +165,64 @@ export function WorkforceDashboard() {
   }
 
   // Empty only when there is genuinely nothing to track: no taxonomy and nobody in the Directory.
-  if (
-    !dashboard
-    || (dashboard.sectorsTotal === 0 && dashboard.occupationsTotal === 0 && dashboard.totalMembers === 0)
-  ) {
-    return <WorkforceEmpty />;
-  }
+  const isEmpty = !dashboard
+    || (dashboard.sectorsTotal === 0 && dashboard.occupationsTotal === 0 && dashboard.totalMembers === 0);
 
-  const subtitle = `${formatCount(dashboard.recruitedTotal)} recruited · ${formatCount(dashboard.totalHeadcountTarget)} target`;
+  const subtitle = dashboard
+    ? `${formatCount(dashboard.recruitedTotal)} recruited · ${formatCount(dashboard.totalHeadcountTarget)} target`
+    : 'Live workforce tracker';
+
+  const tabs: { key: WorkforceTab; label: string }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'occupations', label: 'Occupations' },
+    { key: 'sector', label: 'Sectors' },
+    { key: 'skill-level', label: 'Skill Level' },
+  ];
 
   return (
     <View style={styles.container}>
       <DashboardHeader subtitle={subtitle} />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <StatGrid dashboard={dashboard} />
-        <SectorGaps items={sectors} />
-        <TrainingGaps items={occupations} />
+      <View style={styles.tabBar}>
+        {tabs.map((tb) => (
+          <TouchableOpacity
+            key={tb.key}
+            onPress={() => setTab(tb.key)}
+            style={[styles.tab, tab === tb.key && styles.tabActive]}
+          >
+            <Text style={[styles.tabText, tab === tb.key && styles.tabTextActive]}>{tb.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {profile ? (
-          <WorkforceProfileCard profile={profile} />
-        ) : (
-          <View style={styles.noProfileCard}>
-            <Text style={styles.noProfileText}>
-              No workforce profile yet. Complete your profile to get matched to opportunities.
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+      {tab === 'overview' && isEmpty ? (
+        <WorkforceEmpty />
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {tab === 'overview' ? (
+            <>
+              <StatGrid dashboard={dashboard!} />
+              <SectorGaps items={sectors} />
+              <TrainingGaps items={occupations} />
+
+              {profile ? (
+                <WorkforceProfileCard profile={profile} />
+              ) : (
+                <View style={styles.noProfileCard}>
+                  <Text style={styles.noProfileText}>
+                    No workforce profile yet. Complete your profile to get matched to opportunities.
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <WorkforceBrowseViews tab={tab} />
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -244,6 +275,32 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 11,
+    color: COLOR,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#0D0F14',
+  },
+  tab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  tabActive: {
+    backgroundColor: COLOR + '20',
+    borderColor: COLOR + '40',
+  },
+  tabText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  tabTextActive: {
     color: COLOR,
   },
   scroll: {
