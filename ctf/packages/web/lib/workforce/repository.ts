@@ -118,11 +118,16 @@ export function validateConfigInput(input: WorkforceConfigInput): boolean {
 type SectorModelRow = { id: string; name: string; workforce_share: string | null };
 type JobTitleModelRow = { id: string; sector_id: string; name: string };
 type MemberModelRow = {
+  profile_id: string;
   sector_id: string | null;
   job_title_id: string | null;
   job_title_name: string | null;
   claimed: boolean;
 };
+// One row per (profile, job title reachable through one of the profile's skills). Used for the
+// skill arm of the V2 aspirational match: a profile counts toward an occupation if it carries a
+// skill registered under that occupation's job title.
+type ProfileSkillJobTitleRow = { profile_id: string; job_title_id: string };
 
 const UNASSIGNED_BUCKET = 'Unassigned';
 
@@ -139,10 +144,6 @@ export type WorkforceModel = {
   occupations: WorkforceOccupationGapItem[];
   generatedAtIso: string;
 };
-
-function emptyBucket(): { members: number; recruited: number } {
-  return { members: 0, recruited: 0 };
-}
 
 // The web shell loads the dashboard, sector, skill-level, and occupation reports in one page load —
 // four routes that each call computeWorkforceModel(), i.e. four identical full recomputations (~16 DB
@@ -185,7 +186,7 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   const config = await getWorkforceConfig();
   const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
 
-  const [sectorsRes, jobTitlesRes, membersRes] = await Promise.all([
+  const [sectorsRes, jobTitlesRes, membersRes, profileSkillsRes] = await Promise.all([
     queryDb<SectorModelRow>(
       `SELECT id::text AS id, name, workforce_share::text AS workforce_share
        FROM skills_taxonomy_sectors
@@ -200,6 +201,7 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
     ),
     queryDb<MemberModelRow>(
       `SELECT
+         dp.id::text AS profile_id,
          COALESCE(jt.sector_id, dp.sector_id)::text AS sector_id,
          dp.job_title_id::text AS job_title_id,
          jt.name AS job_title_name,
@@ -208,11 +210,19 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
        WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
     ),
+    queryDb<ProfileSkillJobTitleRow>(
+      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
+       FROM directory_profile_skills dps
+       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE
+       JOIN directory_profiles dp ON dp.id = dps.profile_id
+       WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
+    ),
   ]);
 
   const sectors = sectorsRes.rows;
   const jobTitles = jobTitlesRes.rows;
   const members = membersRes.rows;
+  const profileSkillRows = profileSkillsRes.rows;
 
   // Demand: distribute the workforce total across sectors by each sector's workforce share. Shares
   // are normalized so they always sum to the workforce total even if the raw shares don't sum to 1.
@@ -247,68 +257,127 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
     }
   }
 
-  // Supply: count Directory members and the claimed (recruited) subset per sector, per occupation,
-  // and per skill level.
-  const membersBySector = new Map<string, { members: number; recruited: number }>();
-  const membersByJobTitle = new Map<string, { members: number; recruited: number }>();
-  const membersBySkillLevel = new Map<WorkforceSkillLevel, { members: number; recruited: number }>();
+  // Supply (V2 aspirational match). "members" is the physical count of profiles whose resolved
+  // sector / job title falls in a bucket. "recruited" is the DISTINCT Directory profiles that MATCH a
+  // bucket by ANY of three signals — same sector, same job title, or a skill registered under the job
+  // title — counted live (not just claimed profiles). A profile's own sector expands to every
+  // occupation in that sector, so per-occupation recruited is intentionally generous; this mirrors V2.
+  const jobTitleById = new Map(jobTitles.map((jt) => [jt.id, jt] as const));
+
+  // Per profile, the set of job titles reachable through one of its skills (the skill arm).
+  const skillJobTitlesByProfile = new Map<string, Set<string>>();
+  for (const r of profileSkillRows) {
+    if (!jobTitleById.has(r.job_title_id)) continue;
+    let set = skillJobTitlesByProfile.get(r.profile_id);
+    if (!set) {
+      set = new Set<string>();
+      skillJobTitlesByProfile.set(r.profile_id, set);
+    }
+    set.add(r.job_title_id);
+  }
+
+  const memberCountBySector = new Map<string, number>();
+  const memberCountByJobTitle = new Map<string, number>();
+  const memberCountBySkillLevel = new Map<WorkforceSkillLevel, number>();
+  const recruitedBySector = new Map<string, Set<string>>();
+  const recruitedByJobTitle = new Map<string, Set<string>>();
+  const recruitedBySkillLevel = new Map<WorkforceSkillLevel, Set<string>>();
   for (const level of WORKFORCE_SKILL_LEVELS) {
-    membersBySkillLevel.set(level, emptyBucket());
+    memberCountBySkillLevel.set(level, 0);
+    recruitedBySkillLevel.set(level, new Set<string>());
   }
   let totalMembers = 0;
-  let recruitedTotal = 0;
+
+  const addProfileToBucket = (map: Map<string, Set<string>>, key: string, profileId: string) => {
+    let set = map.get(key);
+    if (!set) {
+      set = new Set<string>();
+      map.set(key, set);
+    }
+    set.add(profileId);
+  };
 
   for (const m of members) {
     totalMembers += 1;
-    if (m.claimed) {
-      recruitedTotal += 1;
-    }
 
+    // Physical placement (where the profile actually sits).
     const sectorKey = m.sector_id ?? UNASSIGNED_BUCKET;
-    const sectorBucket = membersBySector.get(sectorKey) ?? emptyBucket();
-    sectorBucket.members += 1;
-    if (m.claimed) sectorBucket.recruited += 1;
-    membersBySector.set(sectorKey, sectorBucket);
-
+    memberCountBySector.set(sectorKey, (memberCountBySector.get(sectorKey) ?? 0) + 1);
     if (m.job_title_id) {
-      const jtBucket = membersByJobTitle.get(m.job_title_id) ?? emptyBucket();
-      jtBucket.members += 1;
-      if (m.claimed) jtBucket.recruited += 1;
-      membersByJobTitle.set(m.job_title_id, jtBucket);
+      memberCountByJobTitle.set(m.job_title_id, (memberCountByJobTitle.get(m.job_title_id) ?? 0) + 1);
+    }
+    const ownLevel = deriveWorkforceSkillLevel(m.job_title_name);
+    memberCountBySkillLevel.set(ownLevel, (memberCountBySkillLevel.get(ownLevel) ?? 0) + 1);
+
+    // Matched job titles: the profile's own job title plus its skill-derived job titles.
+    const matchedJobTitles = new Set<string>();
+    if (m.job_title_id && jobTitleById.has(m.job_title_id)) {
+      matchedJobTitles.add(m.job_title_id);
+    }
+    const skillMatched = skillJobTitlesByProfile.get(m.profile_id);
+    if (skillMatched) {
+      for (const id of skillMatched) matchedJobTitles.add(id);
     }
 
-    const level = deriveWorkforceSkillLevel(m.job_title_name);
-    const levelBucket = membersBySkillLevel.get(level)!;
-    levelBucket.members += 1;
-    if (m.claimed) levelBucket.recruited += 1;
+    // Matched occupations: the matched job titles PLUS every occupation in the profile's own sector
+    // (V2's sector arm makes a profile count for all occupations in its sector).
+    const matchedOccupations = new Set<string>(matchedJobTitles);
+    if (m.sector_id) {
+      for (const jt of jobTitlesBySector.get(m.sector_id) ?? []) {
+        matchedOccupations.add(jt.id);
+      }
+    }
+
+    // Matched sectors: the profile's own sector plus the sectors of every matched job title.
+    const matchedSectors = new Set<string>();
+    if (m.sector_id) matchedSectors.add(m.sector_id);
+    for (const id of matchedJobTitles) {
+      const jt = jobTitleById.get(id);
+      if (jt) matchedSectors.add(jt.sector_id);
+    }
+
+    for (const sectorId of matchedSectors) addProfileToBucket(recruitedBySector, sectorId, m.profile_id);
+    for (const jobTitleId of matchedOccupations) addProfileToBucket(recruitedByJobTitle, jobTitleId, m.profile_id);
+    const matchedLevels = new Set<WorkforceSkillLevel>();
+    for (const jobTitleId of matchedOccupations) {
+      const jt = jobTitleById.get(jobTitleId);
+      if (jt) matchedLevels.add(deriveWorkforceSkillLevel(jt.name));
+    }
+    for (const level of matchedLevels) {
+      recruitedBySkillLevel.get(level)!.add(m.profile_id);
+    }
   }
+
+  // Top-line recruited mirrors V2 exactly: the count of ALL active Directory profiles.
+  const recruitedTotal = totalMembers;
 
   // Sector breakdown: every active sector (so the view is never blank), plus an Unassigned row when
   // Directory members have no resolvable sector.
   const sectorItems: WorkforceGroupedReportItem[] = sectors.map((s) => {
-    const supply = membersBySector.get(s.id) ?? emptyBucket();
     const target = sectorDemand.get(s.id) ?? 0;
+    const recruited = recruitedBySector.get(s.id)?.size ?? 0;
     return {
       bucket: s.name,
       target,
-      members: supply.members,
-      recruited: supply.recruited,
-      gap: Math.max(0, target - supply.recruited),
+      members: memberCountBySector.get(s.id) ?? 0,
+      recruited,
+      gap: Math.max(0, target - recruited),
     };
   });
-  const unassigned = membersBySector.get(UNASSIGNED_BUCKET);
-  if (unassigned && (unassigned.members > 0 || unassigned.recruited > 0)) {
+  const unassignedMembers = memberCountBySector.get(UNASSIGNED_BUCKET) ?? 0;
+  const unassignedRecruited = recruitedBySector.get(UNASSIGNED_BUCKET)?.size ?? 0;
+  if (unassignedMembers > 0 || unassignedRecruited > 0) {
     sectorItems.push({
       bucket: UNASSIGNED_BUCKET,
       target: 0,
-      members: unassigned.members,
-      recruited: unassigned.recruited,
+      members: unassignedMembers,
+      recruited: unassignedRecruited,
       gap: 0,
     });
   }
 
   // Skill-level breakdown: roll each occupation's demand up by the level derived from its job-title
-  // name (the V2 keyword rule), and pair it with the live supply at that level.
+  // name (the V2 keyword rule), and pair it with the live matched supply at that level.
   const demandBySkillLevel = new Map<WorkforceSkillLevel, number>();
   for (const level of WORKFORCE_SKILL_LEVELS) {
     demandBySkillLevel.set(level, 0);
@@ -318,31 +387,31 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
     demandBySkillLevel.set(level, (demandBySkillLevel.get(level) ?? 0) + (jobTitleDemand.get(jt.id) ?? 0));
   }
   const skillLevelItems: WorkforceGroupedReportItem[] = WORKFORCE_SKILL_LEVELS.map((level) => {
-    const supply = membersBySkillLevel.get(level)!;
     const target = demandBySkillLevel.get(level) ?? 0;
+    const recruited = recruitedBySkillLevel.get(level)?.size ?? 0;
     return {
       bucket: level,
       target,
-      members: supply.members,
-      recruited: supply.recruited,
-      gap: Math.max(0, target - supply.recruited),
+      members: memberCountBySkillLevel.get(level) ?? 0,
+      recruited,
+      gap: Math.max(0, target - recruited),
     };
   }).filter((item) => item.target > 0 || item.members > 0);
 
   // Per-occupation training gaps (sorted largest gap first) — the LevelUp recruiting/training signal.
   const sectorNameById = new Map(sectors.map((s) => [s.id, s.name]));
   const occupationItems: WorkforceOccupationGapItem[] = jobTitles.map((jt) => {
-    const supply = membersByJobTitle.get(jt.id) ?? emptyBucket();
     const target = jobTitleDemand.get(jt.id) ?? 0;
+    const recruited = recruitedByJobTitle.get(jt.id)?.size ?? 0;
     return {
       jobTitleId: jt.id,
       occupation: jt.name,
       sector: sectorNameById.get(jt.sector_id) ?? UNASSIGNED_BUCKET,
       skillLevel: deriveWorkforceSkillLevel(jt.name),
       target,
-      members: supply.members,
-      recruited: supply.recruited,
-      gap: Math.max(0, target - supply.recruited),
+      members: memberCountByJobTitle.get(jt.id) ?? 0,
+      recruited,
+      gap: Math.max(0, target - recruited),
     };
   });
   occupationItems.sort((a, b) => b.gap - a.gap || a.occupation.localeCompare(b.occupation));
