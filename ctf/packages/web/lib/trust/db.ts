@@ -56,7 +56,7 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 //   - levelup_enrollments      → completed LevelUp cohorts
 //   - chyme_room_members       → Chyme rooms joined
 //   - directory_profiles       → claimed Directory profile
-//   - whatworks_endorsements   → WhatWorks endorsements
+//   - what_works_endorsements   → WhatWorks endorsements
 //   - peer_programming_cohort_members → PeerProgramming cohorts joined
 //   - contributions_submissions→ confirmed contributions
 //   - foundation_connection_threads → connections where the member is the PROVIDER (provider side only)
@@ -158,7 +158,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
       [userId]
     ),
     queryDb<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM whatworks_endorsements WHERE user_id = $1`,
+      `SELECT COUNT(*) AS count FROM what_works_endorsements WHERE user_id = $1`,
       [userId]
     ),
     queryDb<{ count: string }>(
@@ -270,7 +270,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
     { count: metrics.levelupCohortsCompleted, type: 'engagement-levelup-cohorts', verb: 'Completed', singular: 'LevelUp cohort', plural: 'LevelUp cohorts' },
     { count: metrics.chymeRoomsJoined, type: 'engagement-chyme-rooms', verb: 'Joined', singular: 'Chyme room', plural: 'Chyme rooms' },
     { count: metrics.directoryProfilesClaimed, type: 'engagement-directory-profile', verb: 'Claimed', singular: 'Directory profile', plural: 'Directory profiles' },
-    { count: metrics.whatWorksEndorsements, type: 'engagement-whatworks-endorsements', verb: 'Endorsed', singular: 'WhatWorks product', plural: 'WhatWorks products' },
+    { count: metrics.whatWorksEndorsements, type: 'engagement-what-works-endorsements', verb: 'Endorsed', singular: 'WhatWorks product', plural: 'WhatWorks products' },
     { count: metrics.peerProgrammingCohortsJoined, type: 'engagement-peerprogramming-cohorts', verb: 'Joined', singular: 'PeerProgramming cohort', plural: 'PeerProgramming cohorts' },
     { count: metrics.contributionsConfirmed, type: 'engagement-contributions', verb: 'Confirmed', singular: 'contribution', plural: 'contributions' },
     { count: metrics.foundationConnectionsAsProvider, type: 'engagement-foundation-provider', verb: 'Connected with', singular: 'member as a Foundation provider', plural: 'members as a Foundation provider' },

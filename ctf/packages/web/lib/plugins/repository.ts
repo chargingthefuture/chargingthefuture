@@ -195,7 +195,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: false,
   },
   {
-    slug: 'whatworks',
+    slug: 'what-works',
     name: 'WhatWorks',
     summary: 'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.',
     availabilityState: 'implemented_shell',

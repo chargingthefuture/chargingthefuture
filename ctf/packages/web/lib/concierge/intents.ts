@@ -154,7 +154,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: "Someone gave me 200 masks. I don't need them all and don't want them wasted.",
   },
   {
-    slug: 'whatworks',
+    slug: 'what-works',
     name: 'WhatWorks',
     blurb: 'Survivor-verified tools, ranked — no ads, no affiliates.',
     keywords: [

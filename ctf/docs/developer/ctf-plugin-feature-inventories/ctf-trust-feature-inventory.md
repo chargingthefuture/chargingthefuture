@@ -74,7 +74,7 @@ human-readable evidence items on `trust_user_extension`. Real signals that feed 
   - LevelUp — `levelup_enrollments` completed → "Completed N LevelUp cohorts"
   - Chyme — `chyme_room_members` → "Joined N Chyme rooms"
   - Directory — `directory_profiles` (`claimed_by_user_id`) → "Claimed N Directory profiles"
-  - WhatWorks — `whatworks_endorsements` → "Endorsed N WhatWorks products"
+  - WhatWorks — `what_works_endorsements` → "Endorsed N WhatWorks products"
   - PeerProgramming — `peer_programming_cohort_members` → "Joined N PeerProgramming cohorts"
   - Contributions — `contributions_submissions` confirmed → "Confirmed N contributions"
   - Foundation (provider side only) — `foundation_connection_threads` where `provider_user_id` = the member → "Connected with N members as a Foundation provider". The **seeker** side (requesting services) is never counted — help-seeking is sensitive.
