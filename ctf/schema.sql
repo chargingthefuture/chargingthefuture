@@ -3504,6 +3504,12 @@ ALTER TABLE IF EXISTS peer_programming_cohort_members ADD COLUMN IF NOT EXISTS i
 ALTER TABLE IF EXISTS peer_programming_cohort_members ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS peer_programming_cohort_members ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_cohort_members ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Roster reads list a cohort's members ordered by join time (listCohortMemberUserIds). Under the
+-- single standing, always-open Cohort 1 mode every active member joins one cohort, so that one row
+-- set grows without bound; this index keeps the per-cohort, time-ordered read cheap instead of a
+-- table scan + sort.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_cohort_members_cohort_created
+  ON peer_programming_cohort_members (cohort_id, created_at);
 
 CREATE TABLE IF NOT EXISTS peer_programming_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3521,6 +3527,14 @@ ALTER TABLE IF EXISTS peer_programming_messages ADD COLUMN IF NOT EXISTS parent_
 ALTER TABLE IF EXISTS peer_programming_messages ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_messages ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The room read lists one cohort's messages in time order (listMessages: WHERE cohort_id = $1
+-- ORDER BY created_at ASC LIMIT 300). Without this index that is a sequential scan + sort over the
+-- whole table; under the single standing, always-open Cohort 1 mode every member's messages pile
+-- into one cohort that grows without bound, so the scan eventually exceeds the DB statement timeout
+-- and the room request fails (the room page then shows "Failed to load room"). This index keeps the
+-- read on an index range so it stays fast as the table grows.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_messages_cohort_created
+  ON peer_programming_messages (cohort_id, created_at);
 
 CREATE TABLE IF NOT EXISTS peer_programming_feedback (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -14,6 +14,12 @@ export const PEER_PROGRAMMING_COHORT_TARGET_SIZE = 5;
 // Label for the single standing cohort used in low-population mode.
 export const PEER_PROGRAMMING_STANDING_COHORT_LABEL = 'C1';
 
+// How many members the room's "In this cohort" roster lists (the earliest joiners). The standing
+// cohort can hold every active member, and each name is resolved via an external Clerk lookup, so an
+// uncapped roster is unbounded work on every room load. The true total still shows separately as the
+// cohort member count, so this caps the displayed chips, not the count.
+export const PEER_PROGRAMMING_ROOM_ROSTER_LIMIT = 60;
+
 // Single standing, always-open Cohort 1 mode (owner directive, temporary low-population mode).
 // When ON there is one standing cohort (is_standing = TRUE) that any active member auto-joins on
 // opening the room, the weekly auto-split is paused, and the cohort is not week-scoped. The flag
