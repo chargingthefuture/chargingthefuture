@@ -16,7 +16,11 @@ function parseLimit(url: string): number {
     return CHYME_DEFAULT_MESSAGES_LIMIT;
   }
 
-  return parsed;
+  // Enforce the chyme.messages.list contract bounds (minimum 1, maximum 100) here at the API layer so
+  // an out-of-range page size can never flow into the repository or the audit context — fail-safe at
+  // the edge rather than relying on the repository's own clamp. CHYME_DEFAULT_MESSAGES_LIMIT is the
+  // contract maximum (100).
+  return Math.min(Math.max(parsed, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
 }
 
 export async function GET(request: Request) {
