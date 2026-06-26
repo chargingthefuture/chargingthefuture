@@ -1952,11 +1952,12 @@ ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS is_visible BO
 ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Remove the orphaned pre-rename plugin-registry row. The gentlepulse->gentle-pulse hyphenation
--- rename changed this slug and the new-slug row is seeded below; but the ON CONFLICT (plugin_slug)
--- upsert cannot delete the old slug, so an existing DB would keep BOTH rows and list the plugin
--- twice in the Apps list. Purge the old row.
-DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('gentlepulse');
+-- Remove orphaned pre-rename plugin-registry rows. The hyphenation renames changed these slugs
+-- (whatworks->what-works, trusttransport->trust-transport, socketrelay->socket-relay, levelup->level-up,
+-- gentlepulse->gentle-pulse) and the new-slug rows are seeded below; but the ON CONFLICT (plugin_slug)
+-- upsert cannot delete the old slug, so an existing DB kept BOTH rows and listed the plugin twice in the
+-- Apps list. Purge the old rows. (clicklog still uses its original slug until its rename ships.)
+DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup', 'gentlepulse');
 
 -- Seed plugin registry (upsert so re-running is safe)
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
