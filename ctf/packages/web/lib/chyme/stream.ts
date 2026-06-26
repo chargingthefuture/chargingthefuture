@@ -66,9 +66,19 @@ export async function createStreamJoinCredentials(
 
 // Mint a short-lived Stream identity for an anonymous guest so they can LISTEN to the public room.
 // The guest is an ephemeral Stream user (random id), not a member — they get a token that lets them
-// join the call and receive audio. They never publish: the client joins muted with no controls, so
-// "listen-only" is enforced on the client. (Server-side publish restriction would require Stream
-// call-type role config, which is out of scope here.)
+// join the call and receive audio. They never publish.
+//
+// Listen-only is enforced in two layers:
+//  1. Client: the guest joins muted with camera/microphone disabled and no speak controls.
+//  2. Server (Stream): when CHYME_GUEST_STREAM_ROLE is set, the guest Stream user is given that role,
+//     and the owner has configured the `default` Video call type so that role lacks the publish
+//     capabilities (send-audio / send-video / screenshare) while keeping join/read/subscribe. A guest
+//     who extracts their token and calls join() directly then still cannot publish, because Stream
+//     rejects publish for a role without the grant. See
+//     `ctf/docs/plugins/chyme/guest-listener-stream-role.md` for the one-time Stream config.
+//
+// The env var gates this so the change is a no-op until the Stream role + call-type grants exist:
+// unset → guests keep the default role (client-only enforcement, unchanged); set → server-enforced.
 export async function createChymeGuestListenCredentials(): Promise<StreamJoinCredentials | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
@@ -78,7 +88,12 @@ export async function createChymeGuestListenCredentials(): Promise<StreamJoinCre
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const guestUserId = `chyme-guest-${crypto.randomUUID()}`;
-    await streamClient.upsertUser({ id: guestUserId, name: 'Guest listener' });
+    const guestRole = process.env.CHYME_GUEST_STREAM_ROLE?.trim();
+    await streamClient.upsertUser({
+      id: guestUserId,
+      name: 'Guest listener',
+      ...(guestRole ? { role: guestRole } : {}),
+    });
     // This token is handed to anonymous visitors from a public endpoint, so it must expire — an
     // indefinite token would leave a wide replay/abuse window. One hour is plenty to join and listen;
     // the page re-fetches a fresh token on reload.
