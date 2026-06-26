@@ -9,6 +9,7 @@ import {
   requireWhatWorksAdminAccess,
   whatworksError,
 } from '../../../_lib';
+import { logWhatWorksAudit } from 'lib/whatworks/audit';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -66,6 +67,16 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const problem = await updateProblem(id, patch);
+  logWhatWorksAudit({
+    actorId: gate.auth.userId,
+    command: 'whatworks.admin.problem.update',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'problem',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+  });
   return NextResponse.json({ ok: true, problem });
 }
 
@@ -84,5 +95,15 @@ export async function DELETE(request: Request, context: RouteContext) {
     return whatworksError('That problem could not be found.', 'whatworks_problem_not_found', 404);
   }
   await deleteProblem(id);
+  logWhatWorksAudit({
+    actorId: gate.auth.userId,
+    command: 'whatworks.admin.problem.delete',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'problem',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+  });
   return NextResponse.json({ ok: true });
 }

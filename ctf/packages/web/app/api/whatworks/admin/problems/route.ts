@@ -8,6 +8,7 @@ import {
   requireWhatWorksAdminAccess,
   whatworksError,
 } from '../../_lib';
+import { logWhatWorksAudit } from 'lib/whatworks/audit';
 
 export async function GET() {
   const gate = await requireWhatWorksAdminAccess();
@@ -15,6 +16,16 @@ export async function GET() {
     return gate.response;
   }
   const problems = await listAdminProblems();
+  logWhatWorksAudit({
+    actorId: gate.auth.userId,
+    command: 'whatworks.admin.problem.list',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'problem',
+    targetId: 'all',
+    result: 'success',
+    errorCategory: null,
+  });
   return NextResponse.json({ ok: true, problems });
 }
 
@@ -58,6 +69,16 @@ export async function POST(request: Request) {
     context,
     sortOrder,
     createdBy: gate.auth.userId,
+  });
+  logWhatWorksAudit({
+    actorId: gate.auth.userId,
+    command: 'whatworks.admin.problem.create',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'problem',
+    targetId: problem.id,
+    result: 'success',
+    errorCategory: null,
   });
   return NextResponse.json({ ok: true, problem }, { status: 201 });
 }
