@@ -1,6 +1,6 @@
 // All calls go through authedFetch so the Clerk bearer token is attached and the
 // base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
-import { authedFetchJson } from '../../auth/authedFetch';
+import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 
 const BASE = '/api/foundation';
 
@@ -49,6 +49,9 @@ export interface ProvidersSearchResult {
 
 export interface QuoteHistoryItem {
   id: string;
+  // The connection thread this quote belongs to. Carried so a Quotes row can re-open its Direct
+  // Line (the chat channel is keyed by thread). Mirrors the web quote-history row's threadId.
+  threadId?: string;
   providerId?: string;
   providerName?: string;
   status: string;
@@ -57,6 +60,22 @@ export interface QuoteHistoryItem {
 
 export interface QuoteHistoryResult {
   items: QuoteHistoryItem[];
+}
+
+// Stream credentials a member needs to connect to one connection thread's Direct Line channel.
+// Mirrors the web DirectLineCredentials shape returned by the token route.
+export interface DirectLineCredentials {
+  streamApiKey: string;
+  streamToken: string;
+  streamUserId: string;
+  streamChannelId: string;
+}
+
+// A failed Direct Line open, surfaced to the UI with a plain message. `code` is the server's
+// FOUNDATION_* error code (kept for branching); `message` is the sentence shown to the member.
+export interface DirectLineError {
+  code: string | null;
+  message: string;
 }
 
 export async function fetchProviders(
@@ -98,6 +117,52 @@ export async function createConnectionThread(providerId: string): Promise<{ thre
     headers: JSON_HEADERS,
     body: JSON.stringify({ providerId }),
   });
+}
+
+// Re-mint fresh Stream credentials for an existing connection thread's Direct Line. Mirrors the web
+// DirectLineFromThread call to GET /api/foundation/connections/threads/:threadId/token: the chat
+// channel is created at Request-Quote time, and this hands the member credentials to connect to that
+// already-existing channel. The server only succeeds when the caller is a participant of the thread,
+// and it governs whether the thread is writable (a closed/terminal thread is read-only server-side) —
+// the client does not invent any lifecycle gating. On failure this throws a DirectLineError-shaped
+// reason (thrown via Object so the caller can read `code` to branch the message).
+export async function fetchThreadDirectLineCredentials(threadId: string): Promise<DirectLineCredentials> {
+  const res = await authedFetch(`${BASE}/connections/threads/${encodeURIComponent(threadId)}/token`);
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    code?: string;
+    streamApiKey?: string;
+    streamToken?: string;
+    streamUserId?: string;
+    streamChannelId?: string;
+  };
+
+  if (
+    res.ok &&
+    body.ok &&
+    body.streamApiKey &&
+    body.streamToken &&
+    body.streamUserId &&
+    body.streamChannelId
+  ) {
+    return {
+      streamApiKey: body.streamApiKey,
+      streamToken: body.streamToken,
+      streamUserId: body.streamUserId,
+      streamChannelId: body.streamChannelId,
+    };
+  }
+
+  const error: DirectLineError = {
+    code: body.code ?? null,
+    message:
+      body.code === 'FOUNDATION_NOT_THREAD_PARTICIPANT'
+        ? "You don't have access to this Direct Line."
+        : body.code === 'FOUNDATION_STREAM_UNAVAILABLE'
+          ? 'The Direct Line is temporarily unavailable. Try again shortly.'
+          : 'Could not open this Direct Line.',
+  };
+  throw error;
 }
 
 export async function requestQuote(threadId: string, serviceType = 'general'): Promise<{ ok: boolean }> {

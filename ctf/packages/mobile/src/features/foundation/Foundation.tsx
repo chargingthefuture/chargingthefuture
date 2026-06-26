@@ -21,6 +21,7 @@ import { FoundationLoading } from './FoundationLoading';
 import { FoundationEmpty } from './FoundationEmpty';
 import { FoundationProviderCard } from './FoundationProviderCard';
 import { FoundationProviderDetail } from './FoundationProviderDetail';
+import { FoundationDirectLine } from './FoundationDirectLine';
 
 const BG = '#0F1117';
 const SURFACE_DARK = '#090B0F';
@@ -59,6 +60,12 @@ export function Foundation() {
   const [page] = useState(1);
   const [tab, setTab] = useState<Tab>('browse');
   const [selected, setSelected] = useState<Provider | null>(null);
+  // The Direct Line currently open (the 1:1 chat for one connection thread), or null. Opened straight
+  // after a Request Quote and re-opened from a Quotes row. `subtitle` is who the conversation is with.
+  const [directLine, setDirectLine] = useState<{ threadId: string; subtitle: string | null } | null>(null);
+  // Bumped to re-run the providers + quotes load (e.g. after a new quote request, so the new quote
+  // appears in the Quotes list when the member backs out of the Direct Line).
+  const [reloadKey, setReloadKey] = useState(0);
   // Active skill filter on the browse list (tapped from a provider's offered-skill chip).
   const [skillFilter, setSkillFilter] = useState<{ id: string; name: string } | null>(null);
   // "Offer skills" surface state.
@@ -94,7 +101,7 @@ export function Foundation() {
     }
     void load();
     return () => { cancelled = true; };
-  }, [query, page, skillFilter]);
+  }, [query, page, skillFilter, reloadKey]);
 
   // Load the member's own Directory skills (with their offered flag) when the Offer-skills tab opens.
   useEffect(() => {
@@ -148,12 +155,31 @@ export function Foundation() {
     }
   };
 
+  // The Direct Line (1:1 chat for a connection thread) takes precedence over every other surface while
+  // it is open. Opened straight after a Request Quote and re-opened from a Quotes row.
+  if (directLine) {
+    return (
+      <FoundationDirectLine
+        threadId={directLine.threadId}
+        subtitle={directLine.subtitle}
+        onBack={() => {
+          setDirectLine(null);
+          setSelected(null);
+          setTab('quotes');
+          // Refresh so a just-requested quote shows in the Quotes list.
+          setReloadKey((key) => key + 1);
+        }}
+      />
+    );
+  }
+
   if (selected) {
     return (
       <FoundationProviderDetail
         provider={selected}
         viewerUserId={viewerUserId}
         onBack={() => setSelected(null)}
+        onOpenDirectLine={(threadId, subtitle) => setDirectLine({ threadId, subtitle })}
       />
     );
   }
@@ -311,31 +337,49 @@ export function Foundation() {
               </TouchableOpacity>
             </View>
           }
-          renderItem={({ item }) => (
-            <View style={styles.quoteCard}>
-              <View style={styles.quoteInfo}>
-                <Text style={styles.quoteName}>
-                  {item.providerName ?? item.providerId ?? 'Provider'}
-                </Text>
-                {item.createdAt ? (
-                  <Text style={styles.quoteDate}>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={[
-                styles.statusBadge,
-                item.status === 'Accepted' ? styles.statusAccepted : styles.statusPending,
-              ]}>
-                <Text style={[
-                  styles.statusBadgeText,
-                  item.status === 'Accepted' ? styles.statusAcceptedText : styles.statusPendingText,
+          renderItem={({ item }) => {
+            const name = item.providerName ?? item.providerId ?? 'Provider';
+            // Only rows that carry a thread id can re-open a Direct Line (the chat is keyed by thread).
+            const canOpen = Boolean(item.threadId);
+            const body = (
+              <>
+                <View style={styles.quoteInfo}>
+                  <Text style={styles.quoteName}>{name}</Text>
+                  {item.createdAt ? (
+                    <Text style={styles.quoteDate}>
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </Text>
+                  ) : null}
+                  {canOpen ? <Text style={styles.quoteOpenHint}>Open Direct Line ›</Text> : null}
+                </View>
+                <View style={[
+                  styles.statusBadge,
+                  item.status === 'Accepted' ? styles.statusAccepted : styles.statusPending,
                 ]}>
-                  {item.status}
-                </Text>
-              </View>
-            </View>
-          )}
+                  <Text style={[
+                    styles.statusBadgeText,
+                    item.status === 'Accepted' ? styles.statusAcceptedText : styles.statusPendingText,
+                  ]}>
+                    {item.status}
+                  </Text>
+                </View>
+              </>
+            );
+            if (canOpen && item.threadId) {
+              const threadId = item.threadId;
+              return (
+                <TouchableOpacity
+                  style={styles.quoteCard}
+                  onPress={() => setDirectLine({ threadId, subtitle: item.providerName ?? null })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open Direct Line with ${name}`}
+                >
+                  {body}
+                </TouchableOpacity>
+              );
+            }
+            return <View style={styles.quoteCard}>{body}</View>;
+          }}
         />
       )}
 
@@ -644,6 +688,12 @@ const styles = StyleSheet.create({
   quoteDate: {
     fontSize: 12,
     color: TEXT_DIM,
+  },
+  quoteOpenHint: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR,
+    marginTop: 4,
   },
   statusBadge: {
     paddingHorizontal: 10,
