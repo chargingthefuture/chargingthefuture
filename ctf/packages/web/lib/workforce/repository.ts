@@ -144,7 +144,35 @@ function emptyBucket(): { members: number; recruited: number } {
   return { members: 0, recruited: 0 };
 }
 
+// The web shell loads the dashboard, sector, skill-level, and occupation reports in one page load —
+// four routes that each call computeWorkforceModel(), i.e. four identical full recomputations (~16 DB
+// queries) for the same global, user-independent data. Coalesce them: an in-flight computation is
+// shared by concurrent callers, and the result is reused for a brief TTL so a burst of requests in one
+// load runs the model once. The window is tiny so an admin who just saved config still sees fresh
+// numbers on the next load.
+const WORKFORCE_MODEL_CACHE_MS = 1000;
+let workforceModelInFlight: Promise<WorkforceModel> | null = null;
+let workforceModelCache: { at: number; value: WorkforceModel } | null = null;
+
 export async function computeWorkforceModel(): Promise<WorkforceModel> {
+  if (workforceModelCache && Date.now() - workforceModelCache.at < WORKFORCE_MODEL_CACHE_MS) {
+    return workforceModelCache.value;
+  }
+  if (workforceModelInFlight) {
+    return workforceModelInFlight;
+  }
+  workforceModelInFlight = computeWorkforceModelUncached()
+    .then((value) => {
+      workforceModelCache = { at: Date.now(), value };
+      return value;
+    })
+    .finally(() => {
+      workforceModelInFlight = null;
+    });
+  return workforceModelInFlight;
+}
+
+async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   const config = await getWorkforceConfig();
   const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
 
@@ -493,14 +521,22 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
   };
 }
 
+export type WorkforceSoftDeleteOutcome = 'deleted' | 'already_deleted' | 'not_found';
+
 // Service-scoped soft delete (deletion contract section 5): set service_deleted_at = NOW() and reset
 // both preference payloads to empty objects on workforce_user_extension (a workforce-owned table —
-// Directory and Skills Taxonomy are never touched). Returns false when the caller has no claimed
-// Directory profile (nothing to delete).
-export async function softDeleteOwnProfile(userId: string): Promise<boolean> {
+// Directory and Skills Taxonomy are never touched).
+//   - 'not_found'       : the caller has no claimed Directory profile (nothing to delete).
+//   - 'already_deleted' : the profile was already service-deleted; this is an idempotent no-op, so the
+//                         caller should NOT write a second deletion event.
+//   - 'deleted'         : the soft delete was applied now.
+export async function softDeleteOwnProfile(userId: string): Promise<WorkforceSoftDeleteOutcome> {
   const profile = await getOwnProfile(userId);
   if (!profile) {
-    return false;
+    return 'not_found';
+  }
+  if (profile.serviceDeletedAtIso) {
+    return 'already_deleted';
   }
 
   await queryDb(
@@ -518,7 +554,7 @@ export async function softDeleteOwnProfile(userId: string): Promise<boolean> {
     [userId],
   );
 
-  return true;
+  return 'deleted';
 }
 
 // requested_at is the time the caller captured before any awaits (when the request was received);

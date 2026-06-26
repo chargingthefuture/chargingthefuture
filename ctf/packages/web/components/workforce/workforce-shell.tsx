@@ -167,6 +167,25 @@ function WorkforceEmptyState({ t }: { t: WorkforceTokens }) {
   );
 }
 
+function WorkforceWarningBanner({ message }: { message: string }) {
+  return (
+    <div
+      role="status"
+      style={{
+        padding: '10px 14px',
+        borderRadius: 10,
+        background: 'rgba(245,158,11,0.1)',
+        border: '1px solid rgba(245,158,11,0.35)',
+        color: '#F59E0B',
+        fontSize: 13,
+        marginBottom: 16,
+      }}
+    >
+      {message}
+    </div>
+  );
+}
+
 function WorkforceDashboardContent({
   t,
   dashboard,
@@ -174,6 +193,7 @@ function WorkforceDashboardContent({
   skillItems,
   occupationItems,
   activeView,
+  warning,
 }: {
   t: WorkforceTokens;
   dashboard: WorkforceDashboard | null;
@@ -181,6 +201,7 @@ function WorkforceDashboardContent({
   skillItems: WorkforceGroupedReportItem[];
   occupationItems: WorkforceOccupationGapItem[];
   activeView: SidebarView;
+  warning: string | null;
 }) {
   // Empty only when there is genuinely nothing to track: no taxonomy sectors/occupations and nobody
   // in the Directory. Demand alone (population model) is enough to render the dashboard.
@@ -194,6 +215,7 @@ function WorkforceDashboardContent({
   return (
     <ScrollArea style={{ flex: 1 }}>
       <div style={{ padding: '24px' }}>
+        {warning ? <WorkforceWarningBanner message={warning} /> : null}
         <WorkforceHeroStats dashboard={dashboard} />
 
         {(activeView === 'overview' || activeView === 'skill-level') && skillItems.length > 0 ? (
@@ -217,6 +239,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
   const [view, setView] = useState<SidebarView>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [data, setData] = useState<WorkforceData>({
     dashboard: null,
     sectorItems: [],
@@ -234,6 +257,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     async function fetchAll() {
       setLoading(true);
       setError(null);
+      setWarning(null);
       try {
         const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
           fetch('/api/workforce/dashboard', { signal: controller.signal }),
@@ -245,9 +269,13 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
 
         if (controller.signal.aborted) return;
 
-        const dashJson = dashRes.ok
-          ? ((await dashRes.json()) as { dashboard?: WorkforceDashboard })
-          : null;
+        // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
+        // surface the error state rather than silently falling through to the empty state.
+        if (!dashRes.ok) {
+          throw new Error(`Dashboard request failed (${dashRes.status}).`);
+        }
+
+        const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };
         const sectorJson = sectorRes.ok
           ? ((await sectorRes.json()) as { items?: WorkforceGroupedReportItem[] })
           : null;
@@ -257,9 +285,19 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
         const occJson = occRes.ok
           ? ((await occRes.json()) as { items?: WorkforceOccupationGapItem[] })
           : null;
+        // A 404 on the profile is normal (the member has not claimed a Directory profile); any other
+        // non-OK profile status is a real failure worth noting.
         const profileJson = profileRes.ok
           ? ((await profileRes.json()) as { profile?: WorkforceProfile })
           : null;
+
+        // Surface a non-blocking notice if a secondary panel failed to load, instead of silently
+        // showing it empty (which reads as "no data").
+        const failed: string[] = [];
+        if (!sectorRes.ok) failed.push('sector gaps');
+        if (!skillRes.ok) failed.push('skill levels');
+        if (!occRes.ok) failed.push('training gaps');
+        if (!profileRes.ok && profileRes.status !== 404) failed.push('your profile');
 
         setData({
           dashboard: dashJson?.dashboard ?? null,
@@ -268,6 +306,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
           occupationItems: occJson?.items ?? [],
           profile: profileJson?.profile ?? null,
         });
+        setWarning(failed.length > 0 ? `Some sections could not be loaded: ${failed.join(', ')}.` : null);
       } catch (e: unknown) {
         if (controller.signal.aborted) return;
         setError(e instanceof Error ? e.message : 'Failed to load workforce data.');
@@ -318,6 +357,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       skillItems={skillItems}
       occupationItems={occupationItems}
       activeView={view}
+      warning={warning}
     />
   );
 

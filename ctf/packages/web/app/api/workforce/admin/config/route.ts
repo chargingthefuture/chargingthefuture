@@ -106,7 +106,9 @@ export async function PUT(request: Request) {
       },
     });
 
-    return NextResponse.json({ ok: true, config }, { status: 200 });
+    // Contract output schema is { config, updatedAt }; expose updatedAt at the top level too (it also
+    // lives on config.updatedAtIso) so a contract-driven consumer doesn't read undefined.
+    return NextResponse.json({ ok: true, config, updatedAt: config.updatedAtIso }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'admin_config' });
     return NextResponse.json(
