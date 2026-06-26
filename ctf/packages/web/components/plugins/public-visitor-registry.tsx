@@ -19,7 +19,7 @@ import { TrustPublicShell } from '@/components/trust/trust-public-shell';
 import { TrustTransportPublicShell } from '@/components/trusttransport/trusttransport-public-shell';
 import { UnlockPublicShell } from '@/components/unlock/unlock-public-shell';
 import { WeeklyPerformancePublicShell } from '@/components/weekly-performance/weekly-performance-public-shell';
-import { WhatWorksPublicShell } from '@/components/whatworks/whatworks-public-shell';
+import { WhatWorksPublicShell } from '@/components/what-works/what-works-public-shell';
 import { WorkforcePublicShell } from '@/components/workforce/workforce-public-shell';
 import { GenericPublicShell } from '@/components/plugins/generic-public-shell';
 
@@ -77,7 +77,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   trusttransport: TrustTransportPublicShell,
   unlock: UnlockPublicShell,
   'weekly-performance': WeeklyPerformancePublicShell,
-  whatworks: WhatWorksPublicShell,
+  'what-works': WhatWorksPublicShell,
   workforce: WorkforcePublicShell,
 };
 

@@ -1,0 +1,84 @@
+policies:
+  - pluginId: what-works
+    command: what-works.list.read
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.public.read
+    version: 1.0.0
+    # Public surface: no authenticated role required. Returns a redacted, identity-free teaser.
+    requiredRoles: []
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.problems.list
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.product.suggest
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.product.endorse
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.product.unendorse
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.problem.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.problem.create
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.problem.update
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.problem.delete
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.product.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.product.review
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.product.delete
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []

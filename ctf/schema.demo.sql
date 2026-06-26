@@ -41,7 +41,19 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- are the "this helped me" signal whose count renders as "N survivors verified". The
 -- suggester's identity is stored for moderation/abuse control only and is never exposed in
 -- any reader or admin projection (the anonymity promise on the suggest flow).
-CREATE TABLE IF NOT EXISTS whatworks_problems (
+-- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `what-works`; tables move to the
+-- matching snake_case prefix `what_works_`. Renames run first so an existing DB keeps its data; on a
+-- fresh DB the IF EXISTS renames are no-ops and the CREATE statements below build the new names.
+ALTER TABLE IF EXISTS whatworks_problems RENAME TO what_works_problems;
+ALTER TABLE IF EXISTS whatworks_products RENAME TO what_works_products;
+ALTER TABLE IF EXISTS whatworks_endorsements RENAME TO what_works_endorsements;
+ALTER INDEX IF EXISTS idx_whatworks_problems_slug RENAME TO idx_what_works_problems_slug;
+ALTER INDEX IF EXISTS idx_whatworks_problems_active_sort RENAME TO idx_what_works_problems_active_sort;
+ALTER INDEX IF EXISTS idx_whatworks_products_problem RENAME TO idx_what_works_products_problem;
+ALTER INDEX IF EXISTS idx_whatworks_products_status RENAME TO idx_what_works_products_status;
+ALTER INDEX IF EXISTS idx_whatworks_endorsements_product RENAME TO idx_what_works_endorsements_product;
+ALTER INDEX IF EXISTS idx_whatworks_endorsements_unique RENAME TO idx_what_works_endorsements_unique;
+CREATE TABLE IF NOT EXISTS what_works_problems (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL,
   emoji TEXT NOT NULL DEFAULT '',
@@ -53,22 +65,22 @@ CREATE TABLE IF NOT EXISTS whatworks_problems (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS slug TEXT;
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_by TEXT;
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS whatworks_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_problems_slug ON whatworks_problems(slug);
-CREATE INDEX IF NOT EXISTS idx_whatworks_problems_active_sort ON whatworks_problems(is_active, sort_order);
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS context TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_what_works_problems_slug ON what_works_problems(slug);
+CREATE INDEX IF NOT EXISTS idx_what_works_problems_active_sort ON what_works_problems(is_active, sort_order);
 
-CREATE TABLE IF NOT EXISTS whatworks_products (
+CREATE TABLE IF NOT EXISTS what_works_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  problem_id UUID NOT NULL REFERENCES whatworks_problems(id) ON DELETE CASCADE,
+  problem_id UUID NOT NULL REFERENCES what_works_problems(id) ON DELETE CASCADE,
   emoji TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT '',
@@ -82,35 +94,35 @@ CREATE TABLE IF NOT EXISTS whatworks_products (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS problem_id UUID;
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS purchase_url TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS suggested_by TEXT;
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS whatworks_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE INDEX IF NOT EXISTS idx_whatworks_products_problem ON whatworks_products(problem_id);
-CREATE INDEX IF NOT EXISTS idx_whatworks_products_status ON whatworks_products(status);
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS problem_id UUID;
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS purchase_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS suggested_by TEXT;
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS what_works_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_what_works_products_problem ON what_works_products(problem_id);
+CREATE INDEX IF NOT EXISTS idx_what_works_products_status ON what_works_products(status);
 
-CREATE TABLE IF NOT EXISTS whatworks_endorsements (
+CREATE TABLE IF NOT EXISTS what_works_endorsements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id UUID NOT NULL REFERENCES whatworks_products(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES what_works_products(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS product_id UUID;
-ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS whatworks_endorsements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE INDEX IF NOT EXISTS idx_whatworks_endorsements_product ON whatworks_endorsements(product_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_whatworks_endorsements_unique ON whatworks_endorsements(product_id, user_id);
+ALTER TABLE IF EXISTS what_works_endorsements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS what_works_endorsements ADD COLUMN IF NOT EXISTS product_id UUID;
+ALTER TABLE IF EXISTS what_works_endorsements ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS what_works_endorsements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_what_works_endorsements_product ON what_works_endorsements(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_what_works_endorsements_unique ON what_works_endorsements(product_id, user_id);
 
 -- === currencies (app-wide reference table; see issue #120) ===
 -- Curated catalog of currencies usable across value-bearing plugins. Defined early so any table
@@ -1921,7 +1933,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('levelup',            'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
-  ('whatworks',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
+  ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
@@ -3395,6 +3407,7 @@ CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
   fallback_open BOOLEAN NOT NULL DEFAULT FALSE,
   topic_id UUID,
   assigned_by_user_id TEXT NOT NULL,
+  is_standing BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (week_start_date, cohort_label)
@@ -3405,8 +3418,18 @@ ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS cohort_l
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS fallback_open BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS topic_id UUID;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS assigned_by_user_id TEXT NOT NULL DEFAULT '';
+-- The single standing, always-open Cohort 1 used in low-population mode
+-- (PEER_PROGRAMMING_SINGLE_OPEN_COHORT). At most one row may have is_standing = TRUE, enforced by
+-- the partial-unique index below; that one row persists across weeks and is found by is_standing,
+-- not by the current week.
+ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS is_standing BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Guarantee there is at most one standing cohort. The find-or-create helper uses this partial-unique
+-- index for its ON CONFLICT (is_standing) WHERE is_standing inference.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_peer_programming_cohorts_standing
+  ON peer_programming_cohorts (is_standing)
+  WHERE is_standing;
 
 CREATE TABLE IF NOT EXISTS peer_programming_cohort_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

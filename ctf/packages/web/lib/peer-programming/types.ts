@@ -16,6 +16,9 @@ export type PeerProgrammingCohort = {
   fallbackOpen: boolean;
   topicId: string | null;
   memberCount: number;
+  // True for the single standing cohort used in low-population mode (PEER_PROGRAMMING_SINGLE_OPEN_COHORT).
+  // It persists across weeks and is always open. False for ordinary week-scoped cohorts.
+  isStanding: boolean;
 };
 
 export type PeerProgrammingMessage = {

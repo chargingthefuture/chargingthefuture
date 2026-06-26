@@ -59,12 +59,14 @@ async function seed() {
       ]
     );
 
-    // Seed cohorts
+    // Seed cohorts. This is a week-scoped demo cohort, not the runtime standing cohort, so
+    // is_standing is FALSE (the single is_standing = TRUE row is created at runtime by
+    // ensureStandingCohort, and the partial-unique index allows only one such row).
     const cohortId = deterministicUuid('cohort-' + WEEK_START + '-1');
     await queryDb(
       `INSERT INTO peer_programming_cohorts
-       (id, week_start_date, cohort_label, fallback_open, topic_id, assigned_by_user_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (id, week_start_date, cohort_label, fallback_open, topic_id, assigned_by_user_id, is_standing)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (id) DO NOTHING`,
       [
         cohortId,
@@ -73,6 +75,7 @@ async function seed() {
         false,
         topicId,
         SEED_USER_IDS[0],
+        false,
       ]
     );
 

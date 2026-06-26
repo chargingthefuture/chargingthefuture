@@ -1,0 +1,419 @@
+commands:
+  - pluginId: what-works
+    command: what-works.list.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: '#/definitions/ReaderProblem'
+        stats:
+          $ref: '#/definitions/ListStats'
+        viewer:
+          type: object
+          properties:
+            isAdmin:
+              type: boolean
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_products (select)
+      - what_works_endorsements (select)
+    purpose: Read the shared survivor-verified list (approved tools grouped by active problem) with per-viewer endorsement state
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.public.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: '#/definitions/ReaderProblem'
+        stats:
+          $ref: '#/definitions/ListStats'
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_products (select)
+      - what_works_endorsements (select)
+    purpose: Public, sign-in-free teaser of the list; submitter identity is never returned
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.problems.list
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: '#/definitions/ProblemOption'
+    dataAccess:
+      - what_works_problems (select)
+    purpose: List active problems for the suggest form
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.product.suggest
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        problemId:
+          type: string
+        name:
+          type: string
+        purchaseUrl:
+          type: string
+        emoji:
+          type: string
+        kind:
+          type: string
+        note:
+          type: string
+      required: [problemId, name, purchaseUrl]
+    outputSchema:
+      type: object
+      properties:
+        productId:
+          type: string
+        status:
+          type: string
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_products (insert)
+      - what_works_endorsements (insert)
+    purpose: Suggest a tool (status pending for admin review); the suggester is auto-recorded as the first verifier
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.product.endorse
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required: [id]
+    outputSchema:
+      $ref: '#/definitions/EndorsementState'
+    dataAccess:
+      - what_works_products (select)
+      - what_works_endorsements (insert)
+    purpose: Mark an approved tool as "this helped me" (increments its verified count)
+    retentionClass: user_event
+  - pluginId: what-works
+    command: what-works.product.unendorse
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required: [id]
+    outputSchema:
+      $ref: '#/definitions/EndorsementState'
+    dataAccess:
+      - what_works_products (select)
+      - what_works_endorsements (delete)
+    purpose: Remove the viewer's own endorsement from a tool
+    retentionClass: user_event
+  - pluginId: what-works
+    command: what-works.admin.problem.list
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: '#/definitions/AdminProblem'
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_products (select)
+    purpose: List all problems with product counts for curation
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.problem.create
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        title:
+          type: string
+        emoji:
+          type: string
+        context:
+          type: string
+        sortOrder:
+          type: integer
+      required: [title]
+    outputSchema:
+      type: object
+      properties:
+        problem:
+          $ref: '#/definitions/AdminProblem'
+    dataAccess:
+      - what_works_problems (insert)
+    purpose: Create an admin-curated problem category
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.problem.update
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        emoji:
+          type: string
+        context:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+      required: [id]
+    outputSchema:
+      type: object
+      properties:
+        problem:
+          $ref: '#/definitions/AdminProblem'
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_problems (update)
+    purpose: Edit, reorder, or deactivate a problem
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.problem.delete
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required: [id]
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_problems (delete)
+      - what_works_products (delete)
+      - what_works_endorsements (delete)
+    purpose: Delete a problem and (by cascade) its tools and endorsements
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.product.list
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+    outputSchema:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/definitions/AdminProduct'
+    dataAccess:
+      - what_works_products (select)
+      - what_works_problems (select)
+      - what_works_endorsements (select)
+    purpose: Moderation queue; submitter identity is intentionally never returned
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.product.review
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+          enum: [approve, reject]
+        rejectionReason:
+          type: string
+      required: [id, action]
+    outputSchema:
+      type: object
+      properties:
+        status:
+          type:
+            - string
+            - 'null'
+    dataAccess:
+      - what_works_products (select)
+      - what_works_products (update)
+    purpose: Approve or reject a suggested tool
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.product.delete
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required: [id]
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - what_works_products (select)
+      - what_works_products (delete)
+      - what_works_endorsements (delete)
+    purpose: Delete a tool and (by cascade) its endorsements
+    retentionClass: community_content
+
+definitions:
+  ReaderProduct:
+    type: object
+    properties:
+      id:
+        type: string
+      emoji:
+        type: string
+      name:
+        type: string
+      kind:
+        type: string
+      note:
+        type: string
+      purchaseUrl:
+        type: string
+      verifiedCount:
+        type: integer
+      viewerHasEndorsed:
+        type: boolean
+    required: [id, name, purchaseUrl, verifiedCount, viewerHasEndorsed]
+  ReaderProblem:
+    type: object
+    properties:
+      id:
+        type: string
+      slug:
+        type: string
+      emoji:
+        type: string
+      title:
+        type: string
+      context:
+        type: string
+      products:
+        type: array
+        items:
+          $ref: '#/definitions/ReaderProduct'
+    required: [id, slug, title, products]
+  ProblemOption:
+    type: object
+    properties:
+      id:
+        type: string
+      slug:
+        type: string
+      emoji:
+        type: string
+      title:
+        type: string
+      context:
+        type: string
+    required: [id, title]
+  ListStats:
+    type: object
+    properties:
+      problems:
+        type: integer
+      verifiedTools:
+        type: integer
+      survivorsHelped:
+        type: integer
+    required: [problems, verifiedTools, survivorsHelped]
+  EndorsementState:
+    type: object
+    properties:
+      verifiedCount:
+        type: integer
+      viewerHasEndorsed:
+        type: boolean
+    required: [verifiedCount, viewerHasEndorsed]
+  AdminProblem:
+    type: object
+    properties:
+      id:
+        type: string
+      slug:
+        type: string
+      emoji:
+        type: string
+      title:
+        type: string
+      context:
+        type: string
+      sort_order:
+        type: integer
+      is_active:
+        type: boolean
+      productCount:
+        type: integer
+      approvedCount:
+        type: integer
+      pendingCount:
+        type: integer
+    required: [id, slug, title, is_active]
+  AdminProduct:
+    type: object
+    properties:
+      id:
+        type: string
+      problemId:
+        type: string
+      problemTitle:
+        type: string
+      emoji:
+        type: string
+      name:
+        type: string
+      kind:
+        type: string
+      note:
+        type: string
+      purchaseUrl:
+        type: string
+      status:
+        type: string
+      verifiedCount:
+        type: integer
+      createdAt:
+        type: string
+      reviewedAt:
+        type:
+          - string
+          - 'null'
+      rejectionReason:
+        type:
+          - string
+          - 'null'
+    required: [id, problemId, name, status]

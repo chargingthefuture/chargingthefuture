@@ -1,6 +1,12 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
-import { PEER_PROGRAMMING_COHORT_TARGET_SIZE, PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from './constants';
+import {
+  PEER_PROGRAMMING_COHORT_TARGET_SIZE,
+  PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH,
+  PEER_PROGRAMMING_MAX_MESSAGE_LENGTH,
+  PEER_PROGRAMMING_STANDING_COHORT_LABEL,
+  isPeerProgrammingSingleOpenCohortEnabled,
+} from './constants';
 import type { PeerProgrammingCohort, PeerProgrammingMessage, PeerProgrammingTier, PeerProgrammingTopic } from './types';
 
 type TopicRow = {
@@ -51,10 +57,19 @@ type CohortRow = {
   fallback_open: boolean;
   topic_id: string | null;
   member_count: string;
+  is_standing: boolean;
 };
+
+// Column list shared by every cohort SELECT, so the row shape (including is_standing and the
+// live member_count subquery) stays identical across getMyCohort, listActiveCohorts,
+// listManagedCohorts and getCohortById.
+const COHORT_SELECT_COLUMNS = `c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
+            c.is_standing,
+            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count`;
 
 function mapCohortRow(row: CohortRow): PeerProgrammingCohort {
   const memberCount = Number.parseInt(row.member_count, 10) || 0;
+  const isStanding = row.is_standing === true;
   return {
     id: row.id,
     weekStartDate: row.week_start_date,
@@ -64,17 +79,98 @@ function mapCohortRow(row: CohortRow): PeerProgrammingCohort {
     // if the cohort currently has fewer than 2 members it is open regardless of the
     // stored flag. This is the "fewer than 2 members present" rule from the intent,
     // measured from the actual roster rather than only the snapshot taken at assignment.
-    fallbackOpen: row.fallback_open || memberCount < 2,
+    // The standing cohort is always open by definition.
+    fallbackOpen: isStanding || row.fallback_open || memberCount < 2,
     topicId: row.topic_id,
     memberCount,
+    isStanding,
   };
 }
 
+// Find-or-create the single standing cohort (is_standing = TRUE), idempotent. Returns the existing
+// standing row if there is one, otherwise inserts it with label C1, fallback_open = TRUE,
+// is_standing = TRUE. The standing cohort is not week-scoped: its week_start_date is just its
+// creation week and it is found by is_standing, not by the current week. A unique partial index
+// (uq_peer_programming_cohorts_standing WHERE is_standing) guarantees there can only ever be one
+// standing row, so the insert below can safely race with a concurrent caller: the loser's insert
+// hits the partial-unique conflict, does nothing, and re-reads the winner's row.
+export async function ensureStandingCohort(actorId: string): Promise<PeerProgrammingCohort> {
+  const existing = await queryDb<CohortRow>(
+    `SELECT ${COHORT_SELECT_COLUMNS}
+     FROM peer_programming_cohorts c
+     WHERE c.is_standing = TRUE
+     LIMIT 1`,
+  );
+  if (existing.rows[0]) {
+    return mapCohortRow(existing.rows[0]);
+  }
+
+  const weekStartDate = getWeekStartDate();
+  // ON CONFLICT inference on the partial-unique standing index (is_standing WHERE is_standing) makes
+  // this a no-op insert if another caller already created the standing cohort between the SELECT
+  // above and this INSERT. RETURNING is empty on that conflict, so fall through to the re-read.
+  const inserted = await queryDb<{ id: string }>(
+    `INSERT INTO peer_programming_cohorts
+      (id, week_start_date, cohort_label, fallback_open, is_standing, assigned_by_user_id)
+     VALUES ($1, $2, $3, TRUE, TRUE, $4)
+     ON CONFLICT (is_standing) WHERE is_standing DO NOTHING
+     RETURNING id`,
+    [randomUUID(), weekStartDate, PEER_PROGRAMMING_STANDING_COHORT_LABEL, actorId],
+  );
+
+  if (inserted.rows[0]) {
+    const created = await queryDb<CohortRow>(
+      `SELECT ${COHORT_SELECT_COLUMNS}
+       FROM peer_programming_cohorts c
+       WHERE c.id = $1
+       LIMIT 1`,
+      [inserted.rows[0].id],
+    );
+    if (created.rows[0]) {
+      return mapCohortRow(created.rows[0]);
+    }
+  }
+
+  // Lost the race (conflict): the winner's standing row now exists; re-read it.
+  const reread = await queryDb<CohortRow>(
+    `SELECT ${COHORT_SELECT_COLUMNS}
+     FROM peer_programming_cohorts c
+     WHERE c.is_standing = TRUE
+     LIMIT 1`,
+  );
+  if (!reread.rows[0]) {
+    throw new Error('peer_programming_standing_cohort_unavailable');
+  }
+  return mapCohortRow(reread.rows[0]);
+}
+
 export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort | null> {
+  // Single standing, always-open Cohort 1 mode: resolve the one standing cohort (is_standing = TRUE),
+  // regardless of week, and idempotently add the requesting member to it so any active member who
+  // opens the room can POST, not just listen. The room read-access gate already authorized this
+  // user, so we only insert the membership row for that gated user here.
+  if (isPeerProgrammingSingleOpenCohortEnabled()) {
+    const standing = await ensureStandingCohort(userId);
+    await queryDb(
+      `INSERT INTO peer_programming_cohort_members (id, cohort_id, user_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (cohort_id, user_id) DO NOTHING`,
+      [randomUUID(), standing.id, userId],
+    );
+    // Re-read so the returned member_count reflects this just-added membership.
+    const refreshed = await queryDb<CohortRow>(
+      `SELECT ${COHORT_SELECT_COLUMNS}
+       FROM peer_programming_cohorts c
+       WHERE c.id = $1
+       LIMIT 1`,
+      [standing.id],
+    );
+    return refreshed.rows[0] ? mapCohortRow(refreshed.rows[0]) : standing;
+  }
+
   const weekStartDate = getWeekStartDate();
   const result = await queryDb<CohortRow>(
-    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
-            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+    `SELECT ${COHORT_SELECT_COLUMNS}
      FROM peer_programming_cohorts c
      INNER JOIN peer_programming_cohort_members m ON m.cohort_id = c.id
      WHERE c.week_start_date = $1
@@ -91,10 +187,21 @@ export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort
 // shown to a member who was not placed in a given cohort. Ordered by label so C1, C2, C3 read in
 // the order they were formed.
 export async function listActiveCohorts(): Promise<PeerProgrammingCohort[]> {
+  // Single standing cohort mode: the active set is just the one standing cohort (regardless of
+  // week), so the room's cohort list and listen-in resolve it.
+  if (isPeerProgrammingSingleOpenCohortEnabled()) {
+    const result = await queryDb<CohortRow>(
+      `SELECT ${COHORT_SELECT_COLUMNS}
+       FROM peer_programming_cohorts c
+       WHERE c.is_standing = TRUE
+       ORDER BY c.cohort_label ASC`,
+    );
+    return result.rows.map(mapCohortRow);
+  }
+
   const weekStartDate = getWeekStartDate();
   const result = await queryDb<CohortRow>(
-    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
-            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+    `SELECT ${COHORT_SELECT_COLUMNS}
      FROM peer_programming_cohorts c
      WHERE c.week_start_date = $1
      ORDER BY c.cohort_label ASC`,
@@ -110,12 +217,14 @@ export async function listActiveCohorts(): Promise<PeerProgrammingCohort[]> {
 // silently disappears from the admin list. Bounded to the last 12 weeks and 200 rows so it stays
 // cheap; within a week, labels read C1, C2, C3 in formation order.
 export async function listManagedCohorts(): Promise<PeerProgrammingCohort[]> {
+  // Include the standing cohort regardless of its creation week so an admin always sees it
+  // alongside any week-scoped cohorts from the last 12 weeks.
   const result = await queryDb<CohortRow>(
-    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
-            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+    `SELECT ${COHORT_SELECT_COLUMNS}
      FROM peer_programming_cohorts c
      WHERE c.week_start_date >= (CURRENT_DATE - INTERVAL '84 days')
-     ORDER BY c.week_start_date DESC, c.cohort_label ASC
+        OR c.is_standing = TRUE
+     ORDER BY c.is_standing DESC, c.week_start_date DESC, c.cohort_label ASC
      LIMIT 200`,
   );
 
@@ -126,8 +235,7 @@ export async function listManagedCohorts(): Promise<PeerProgrammingCohort[]> {
 // or admin opens via ?cohortId= even when they are not a member of it.
 export async function getCohortById(cohortId: string): Promise<PeerProgrammingCohort | null> {
   const result = await queryDb<CohortRow>(
-    `SELECT c.id, c.week_start_date::text, c.cohort_label, c.fallback_open, c.topic_id::text,
-            (SELECT COUNT(*) FROM peer_programming_cohort_members cm WHERE cm.cohort_id = c.id)::text AS member_count
+    `SELECT ${COHORT_SELECT_COLUMNS}
      FROM peer_programming_cohorts c
      WHERE c.id = $1
      LIMIT 1`,
@@ -287,6 +395,35 @@ export async function runWeeklyAssignment(input: { actorId: string; activeUserId
   const uniqueUsers = Array.from(
     new Set(input.activeUserIds.map((value) => value.trim()).filter((value) => value.length > 0)),
   );
+  // Single standing, always-open Cohort 1 mode: the weekly auto-split is paused. Instead of slicing
+  // into C1/C2/C3…, ensure the one standing cohort exists and idempotently join every provided
+  // active user into it, sending the same assignment notification (idempotent per user + week).
+  // No other cohorts are created. The standing cohort is ensured even when there are no active
+  // users, so cohortsCreated is 1 (the standing cohort exists) and notificationsCreated is 0.
+  if (isPeerProgrammingSingleOpenCohortEnabled()) {
+    const standing = await ensureStandingCohort(input.actorId);
+    let notificationsCreated = 0;
+    for (const userId of uniqueUsers) {
+      await queryDb(
+        `INSERT INTO peer_programming_cohort_members (id, cohort_id, user_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (cohort_id, user_id) DO NOTHING`,
+        [randomUUID(), standing.id, userId],
+      );
+
+      const idempotencyKey = `${weekStartDate}:${standing.cohortLabel}:${userId}`;
+      await queryDb(
+        `INSERT INTO peer_programming_assignment_notifications (id, cohort_id, user_id, idempotency_key, payload, delivered_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, NOW())
+         ON CONFLICT (user_id, idempotency_key) DO NOTHING`,
+        [randomUUID(), standing.id, userId, idempotencyKey, JSON.stringify({ weekStartDate, cohortLabel: standing.cohortLabel })],
+      );
+
+      notificationsCreated += 1;
+    }
+    return { cohortsCreated: 1, notificationsCreated };
+  }
+
   if (uniqueUsers.length === 0) {
     return { cohortsCreated: 0, notificationsCreated: 0 };
   }

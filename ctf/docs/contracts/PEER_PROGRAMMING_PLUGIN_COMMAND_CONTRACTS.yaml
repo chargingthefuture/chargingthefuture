@@ -2,7 +2,7 @@ contracts:
   - pluginId: peer-programming
     command: cohort.weekly.select
     version: 1.0.0
-    description: Select weekly active users (login within the last 7 days) and form cohorts with target size of 5 members. Triggered either by an admin from the PeerProgramming admin screen, or automatically once a week by the scheduler (the `system` role) via the secret-guarded internal route. Idempotent per week.
+    description: Select weekly active users (login within the last 7 days) and form cohorts with target size of 5 members. Triggered either by an admin from the PeerProgramming admin screen, or automatically once a week by the scheduler (the `system` role) via the secret-guarded internal route. Idempotent per week. When the server flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT` is ON (its default — temporary low-population mode), the weekly split is paused: instead of forming C1/C2/C3, this command ensures the single standing cohort exists (the `peer_programming_cohorts` row with `is_standing = TRUE`, label C1, always open) and idempotently joins all active members into it, sending the same per-member assignment notifications. Set the flag to `0`/`false` to restore the original weekly cohorting.
     inputSchema:
       workspaceId:
         type: string

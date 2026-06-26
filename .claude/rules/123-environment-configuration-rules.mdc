@@ -205,6 +205,25 @@ in Expo Go regardless of this env var.
 - **Never commit or log the value.** It holds personal contact info; do not print it in logs,
   errors, or job summaries.
 
+### PeerProgramming plugin: single standing, always-open Cohort 1 mode
+
+`PEER_PROGRAMMING_SINGLE_OPEN_COHORT` switches the PeerProgramming plugin between two cohort models.
+It is read server-side by one resolver, `isPeerProgrammingSingleOpenCohortEnabled()` in
+`ctf/packages/web/lib/peer-programming/constants.ts` — do not read this variable anywhere else.
+
+- **Defaults ON (temporary low-population mode).** Unset or empty is treated as ON. Only the explicit
+  values `0` or `false` (case-insensitive) turn it OFF. The default is ON on purpose: while there are
+  not enough active members to fill weekly cohorts of five, everyone shares one standing, always-open
+  Cohort 1 instead of being split into tiny one-person rooms.
+- **When ON:** there is a single standing cohort (the one row with `is_standing = TRUE`, label `C1`,
+  always open). Any active member who opens PeerProgramming auto-joins it, so they can post and not
+  just listen. The weekly auto-split is paused: the cron and the admin "run weekly assignment" simply
+  add the active members to the standing cohort instead of forming `C1`/`C2`/`C3`.
+- **To restore the original weekly cohorting,** set `PEER_PROGRAMMING_SINGLE_OPEN_COHORT=0` (or
+  `false`). With the flag OFF, the plugin behaves exactly as before this mode was added: members are
+  sliced into week-scoped cohorts of five and `getMyCohort` resolves the current week's cohort.
+- **Optional, no secret.** It is a plain on/off switch, holds nothing sensitive, and can be logged.
+
 ## Implementation Rules
 
 ### When Deploying

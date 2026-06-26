@@ -126,7 +126,7 @@ contracts:
       - levelup_enrollments
       - chyme_room_members
       - directory_profiles
-      - whatworks_endorsements
+      - what_works_endorsements
       - peer_programming_cohort_members
       - contributions_submissions
       - foundation_connection_threads
