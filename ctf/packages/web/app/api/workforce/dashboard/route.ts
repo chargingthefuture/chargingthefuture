@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireWorkforceReadAccess } from 'lib/workforce/_lib';
 import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { getDashboard } from 'lib/workforce/repository';
+import { logWorkforceAudit } from 'lib/workforce/audit';
 import { reportError } from 'lib/observability/report';
 
 export async function GET() {
@@ -12,6 +13,19 @@ export async function GET() {
 
   try {
     const dashboard = await getDashboard();
+    // The audit contract requires a workforce.dashboard.fetch event on every read (the dashboard returns
+    // only projected counts). Mirrors the admin config route's audit shape.
+    logWorkforceAudit({
+      actorId: gate.auth.userId,
+      command: 'workforce.dashboard.fetch',
+      status: 'allow',
+      reason: 'read_route_guard',
+      targetType: 'dashboard',
+      targetId: 'workforce',
+      result: 'success',
+      errorCategory: null,
+      metadata: { evidence: { roleCheck: 'pass', projectionOnlyCheck: 'pass' } },
+    });
     return NextResponse.json({ dashboard }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'dashboard' });

@@ -43,7 +43,13 @@ export async function fetchAdminOverview(): Promise<WorkforceOverviewResult> {
     authedFetch(`${API_ROOT}/dashboard`, { headers: jsonHeaders() }),
   ]);
 
-  if (configRes.status === 401 || configRes.status === 403) {
+  // Either endpoint returning 401/403 means the viewer is not an admin (or the token expired between the
+  // two parallel calls). Check the dashboard the same way as the config — otherwise a config that loads
+  // while the dashboard is forbidden would silently render the admin panel with a missing snapshot.
+  if (
+    configRes.status === 401 || configRes.status === 403 ||
+    dashboardRes.status === 401 || dashboardRes.status === 403
+  ) {
     return { ok: false, forbidden: true, config: null, dashboard: null, message: 'Admin access is required.' };
   }
   if (!configRes.ok) {
@@ -66,7 +72,9 @@ export async function fetchAdminOverview(): Promise<WorkforceOverviewResult> {
     forbidden: false,
     config: configData.config ?? null,
     dashboard: dashboardData.dashboard ?? null,
-    message: null,
+    // A non-auth dashboard failure (e.g. 500) still loads the config, but say so instead of showing a
+    // silently-empty snapshot.
+    message: dashboardRes.ok ? null : `Could not load the dashboard snapshot (${dashboardRes.status}).`,
   };
 }
 

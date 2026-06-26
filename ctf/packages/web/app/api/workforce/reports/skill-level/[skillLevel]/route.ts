@@ -16,8 +16,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ski
 
   try {
     const items = await fetchSkillLevelReport();
-    const bucket = items.find((item) => item.bucket === skillLevel.toLowerCase()) ?? null;
-    return NextResponse.json({ bucket, items }, { status: 200 });
+    const normalizedSkillLevel = skillLevel.toLowerCase();
+    // `all` returns the full breakdown (the dashboard uses this); a specific skill level returns only its
+    // own bucket, so a single-level request never leaks the whole cross-level dataset. Output is `{ items }`
+    // per the workforce.report.skillLevel.fetch contract in both cases.
+    if (normalizedSkillLevel === 'all') {
+      return NextResponse.json({ items }, { status: 200 });
+    }
+    const bucket = items.find((item) => item.bucket === normalizedSkillLevel) ?? null;
+    return NextResponse.json({ items: bucket ? [bucket] : [] }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'reports_skill_level_skilllevel' });
     return NextResponse.json(
