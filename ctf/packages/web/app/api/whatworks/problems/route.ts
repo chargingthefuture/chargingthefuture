@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listActiveProblems } from 'lib/whatworks/repository';
 import { requireWhatWorksAccess, whatworksError } from '../_lib';
+import { logWhatWorksAudit } from 'lib/whatworks/audit';
 import { reportError } from 'lib/observability/report';
 
 // Active problems for the suggest form. Members may only attach a tool to an existing
@@ -12,6 +13,16 @@ export async function GET() {
   }
   try {
     const problems = await listActiveProblems();
+    logWhatWorksAudit({
+      actorId: gate.auth.userId,
+      command: 'whatworks.problems.list',
+      status: 'allow',
+      reason: 'access_route_guard',
+      targetType: 'problem',
+      targetId: 'active',
+      result: 'success',
+      errorCategory: null,
+    });
     return NextResponse.json({
       ok: true,
       problems: problems.map((problem) => ({

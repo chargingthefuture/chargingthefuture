@@ -16,6 +16,7 @@ import {
   requireWhatWorksAccess,
   whatworksError,
 } from '../_lib';
+import { logWhatWorksAudit } from 'lib/whatworks/audit';
 import { reportError } from 'lib/observability/report';
 
 // A survivor suggests a tool. It lands as `pending` for admin review before it joins
@@ -84,6 +85,16 @@ export async function POST(request: Request) {
       kind,
       note,
       suggestedBy: gate.auth.userId,
+    });
+    logWhatWorksAudit({
+      actorId: gate.auth.userId,
+      command: 'whatworks.product.suggest',
+      status: 'allow',
+      reason: 'access_route_guard',
+      targetType: 'product',
+      targetId: product.id,
+      result: 'success',
+      errorCategory: null,
     });
     return NextResponse.json({ ok: true, productId: product.id, status: product.status }, { status: 201 });
   } catch (error) {
