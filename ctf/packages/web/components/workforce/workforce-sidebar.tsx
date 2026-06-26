@@ -6,7 +6,7 @@ import type { WorkforceDashboard, WorkforceGroupedReportItem } from '../../lib/w
 
 const COLOR = '#F97316';
 
-type SidebarView = 'overview' | 'sector' | 'skill-level';
+type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';
 
 interface WorkforceSidebarProps {
   activeView: SidebarView;
@@ -19,6 +19,7 @@ const SIDEBAR_ITEMS: { label: string; key: SidebarView }[] = [
   { label: 'Overview', key: 'overview' },
   { label: 'Skill Gaps', key: 'sector' },
   { label: 'By Skill Level', key: 'skill-level' },
+  { label: 'Occupations', key: 'occupations' },
 ];
 
 export function WorkforceSidebar({
@@ -152,7 +153,6 @@ export function WorkforceSidebar({
               {[
                 { l: 'Headcount Target', v: dashboard.totalHeadcountTarget.toLocaleString() },
                 { l: 'Recruited', v: dashboard.recruitedTotal.toLocaleString() },
-                { l: 'Directory Members', v: dashboard.totalMembers.toLocaleString() },
                 { l: 'Skill Gaps', v: gapCount > 0 ? `${gapCount} sectors` : 'None' },
               ].map(({ l, v }) => (
                 <div key={l} style={{ padding: '7px 10px', fontSize: 12, color: '#6B7280' }}>

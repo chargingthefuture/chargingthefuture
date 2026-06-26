@@ -49,8 +49,12 @@ export type WorkforceOccupation = {
   sector: string;
   skillLevel: WorkforceSkillLevel;
   target: number; // demand share of this occupation
+  // V2-style annual training target: a fixed share of the occupation demand by skill level
+  // (Foundational 10%, Intermediate 15%, Advanced 25% — the midpoints of V2's seed ranges). V3 stores
+  // no occupation, so this is derived live, not a stored admin value.
+  annualTrainingTarget: number;
   members: number; // active Directory profiles in this occupation
-  recruited: number; // claimed Directory profiles in this occupation
+  recruited: number; // distinct matched Directory profiles in this occupation (V2 aspirational match)
   gap: number; // max(0, target - recruited)
 };
 
@@ -101,4 +105,33 @@ export type WorkforceOccupationGapItem = {
   members: number;
   recruited: number;
   gap: number;
+};
+
+// Why a Directory profile counts toward a sector / skill-level / occupation. Priority order when a
+// profile matches more than one way: jobTitle > skill > sector (mirrors V2).
+export type WorkforceMatchReason = 'sector' | 'jobTitle' | 'skill' | 'none';
+
+// One matched member in a sector or skill-level drilldown (the V2 member list). Names are shown:
+// Workforce requires sign-in and is a filtered view of the Directory whose purpose is surfacing who
+// has or wants a skill, so there is no separate anonymization step here.
+export type WorkforceMatchedMember = {
+  profileId: string;
+  displayName: string;
+  skills: string[];
+  sectors: string[];
+  jobTitles: string[];
+  matchingOccupations: Array<{ id: string; title: string; sector: string }>;
+  matchReason: WorkforceMatchReason;
+};
+
+// A single sector or skill-level bucket plus its matched-member list — the drilldown shape returned
+// by GET /api/workforce/reports/sector/:sector and /reports/skill-level/:skillLevel for a specific
+// (non-`all`) bucket. The aggregate fields mirror WorkforceGroupedReportItem.
+export type WorkforceBucketDetail = {
+  bucket: string;
+  target: number;
+  members: number;
+  recruited: number;
+  gap: number;
+  matchedMembers: WorkforceMatchedMember[];
 };

@@ -86,3 +86,91 @@ export async function fetchWorkforceProfile(): Promise<WorkforceProfileData | nu
   const json = await res.json() as { profile: WorkforceProfileData };
   return json.profile;
 }
+
+// An occupation (Skills Taxonomy job title) with its demand/supply overlay. Mirrors the web
+// WorkforceOccupation type, including the derived annualTrainingTarget.
+export interface WorkforceOccupation {
+  id: string;
+  name: string;
+  sector: string;
+  skillLevel: string;
+  target: number;
+  annualTrainingTarget: number;
+  members: number;
+  recruited: number;
+  gap: number;
+}
+
+// Why a member counts toward a bucket; and the matched-member shape for the sector / skill-level
+// drilldowns. Mirrors the web WorkforceMatchReason / WorkforceMatchedMember / WorkforceBucketDetail.
+export type WorkforceMatchReason = 'sector' | 'jobTitle' | 'skill' | 'none';
+
+export interface WorkforceMatchedMember {
+  profileId: string;
+  displayName: string;
+  skills: string[];
+  sectors: string[];
+  jobTitles: string[];
+  matchingOccupations: Array<{ id: string; title: string; sector: string }>;
+  matchReason: WorkforceMatchReason;
+}
+
+export interface WorkforceBucketDetail {
+  bucket: string;
+  target: number;
+  members: number;
+  recruited: number;
+  gap: number;
+  matchedMembers: WorkforceMatchedMember[];
+}
+
+const OCCUPATIONS_PAGE_SIZE = 100; // API max; page through to load the full list for client filtering.
+
+// Load every occupation by paging through the list endpoint (the API caps page size at 100 and has no
+// server-side sector/skill filters, so the browse screen filters client-side — same as web).
+export async function fetchAllWorkforceOccupations(): Promise<WorkforceOccupation[]> {
+  const first = await authedFetch(`${WORKFORCE_BASE}/occupations?page=1&pageSize=${OCCUPATIONS_PAGE_SIZE}`);
+  if (!first.ok) throw new Error('Failed to fetch occupations');
+  const firstJson = await first.json() as { items?: WorkforceOccupation[]; pagination?: { total?: number } };
+  const items = firstJson.items ?? [];
+  const total = firstJson.pagination?.total ?? items.length;
+  const pages = Math.ceil(total / OCCUPATIONS_PAGE_SIZE);
+  if (pages <= 1) return items;
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) =>
+      authedFetch(`${WORKFORCE_BASE}/occupations?page=${i + 2}&pageSize=${OCCUPATIONS_PAGE_SIZE}`)
+        .then((r) => (r.ok ? r.json() : { items: [] }))
+        .then((j: { items?: WorkforceOccupation[] }) => j.items ?? []),
+    ),
+  );
+  return items.concat(...rest);
+}
+
+export async function fetchWorkforceOccupation(id: string): Promise<WorkforceOccupation | null> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/occupations/${encodeURIComponent(id)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('Failed to fetch occupation');
+  const json = await res.json() as { occupation: WorkforceOccupation };
+  return json.occupation;
+}
+
+export async function fetchWorkforceSkillLevelReport(): Promise<WorkforceGroupedReportItem[]> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/reports/skill-level/all`);
+  if (!res.ok) throw new Error('Failed to fetch workforce skill-level report');
+  const json = await res.json() as { items?: WorkforceGroupedReportItem[] };
+  return json.items ?? [];
+}
+
+export async function fetchWorkforceSectorDetail(sector: string): Promise<WorkforceBucketDetail | null> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/reports/sector/${encodeURIComponent(sector)}`);
+  if (!res.ok) throw new Error('Failed to fetch sector detail');
+  const json = await res.json() as { detail?: WorkforceBucketDetail | null };
+  return json.detail ?? null;
+}
+
+export async function fetchWorkforceSkillLevelDetail(skillLevel: string): Promise<WorkforceBucketDetail | null> {
+  const res = await authedFetch(`${WORKFORCE_BASE}/reports/skill-level/${encodeURIComponent(skillLevel)}`);
+  if (!res.ok) throw new Error('Failed to fetch skill-level detail');
+  const json = await res.json() as { detail?: WorkforceBucketDetail | null };
+  return json.detail ?? null;
+}

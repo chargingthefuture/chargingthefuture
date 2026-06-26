@@ -1184,22 +1184,36 @@ canonical_metrics:
 
   - id: workforce_recruited_current_count
     name: Workforce Recruited (Current)
-    description: Count of active Directory profiles that have been claimed by a user (recruited). Derived live from Directory on read; there is no inferred-event table, sync, or stored state.
+    description: >-
+      Aspirational/projection "recruited" count, mirroring V2 Workforce Recruiter. The top-line total
+      is the count of all active Directory profiles. Per-sector, per-skill-level, and per-occupation
+      "recruited" is the count of DISTINCT active Directory profiles that match the bucket by ANY of
+      three signals — same sector, same job title, or a skill registered under the job title (a
+      profile's own sector matches every occupation in that sector). Derived live from Directory and
+      Skills Taxonomy on read; there is no inferred-event table, sync, or stored state.
     owner: marketplace-ops@chargingthefuture.org
     data_type: integer
     unit: users
     calculation: |
+      -- Top-line total (mirrors V2: all active Directory profiles).
       SELECT COUNT(*)
       FROM directory_profiles
       WHERE is_active = TRUE
-        AND deleted_at IS NULL
-        AND claimed_by_user_id IS NOT NULL;
+        AND deleted_at IS NULL;
+      -- Per-bucket recruited is the distinct profiles matching that bucket by sector, job title, or a
+      -- skill registered under the job title (see computeWorkforceModel in lib/workforce/repository.ts).
     inputs:
       - name: directory_profiles.is_active
         type: boolean
       - name: directory_profiles.deleted_at
         type: datetime
-      - name: directory_profiles.claimed_by_user_id
+      - name: directory_profiles.sector_id
+        type: string
+      - name: directory_profiles.job_title_id
+        type: string
+      - name: directory_profile_skills.skill_id
+        type: string
+      - name: skills_taxonomy_skills.job_title_id
         type: string
     example_values:
       - 1
