@@ -1184,40 +1184,29 @@ canonical_metrics:
 
   - id: workforce_recruited_current_count
     name: Workforce Recruited (Current)
-    description: Count of users whose latest inferred workforce recruited state is true, derived only from Directory profile create/update writes.
+    description: Count of active Directory profiles that have been claimed by a user (recruited). Derived live from Directory on read; there is no inferred-event table, sync, or stored state.
     owner: marketplace-ops@chargingthefuture.org
     data_type: integer
     unit: users
     calculation: |
-      WITH latest_inferred_state AS (
-        SELECT DISTINCT ON (user_id)
-               user_id,
-               resolved_recruited,
-               resolved_at
-        FROM workforce_recruited_events
-        WHERE source_event IN ('directory_profile_upsert', 'directory_profile_assign')
-        ORDER BY user_id, resolved_at DESC, created_at DESC
-      )
       SELECT COUNT(*)
-      FROM latest_inferred_state
-      WHERE resolved_recruited = TRUE;
+      FROM directory_profiles
+      WHERE is_active = TRUE
+        AND deleted_at IS NULL
+        AND claimed_by_user_id IS NOT NULL;
     inputs:
-      - name: workforce_recruited_events.user_id
-        type: string
-      - name: workforce_recruited_events.source_event
-        type: string
-      - name: workforce_recruited_events.resolved_recruited
+      - name: directory_profiles.is_active
         type: boolean
-      - name: workforce_recruited_events.resolved_at
+      - name: directory_profiles.deleted_at
         type: datetime
-      - name: workforce_recruited_events.inference_dedupe_key
+      - name: directory_profiles.claimed_by_user_id
         type: string
     example_values:
-      - 12034
-      - 12110
-    last_updated: "2026-03-03T00:00:00Z"
-    update_cadence: hourly
-    retention: 60 months
+      - 1
+      - 67
+    last_updated: "2026-06-26T00:00:00Z"
+    update_cadence: live
+    retention: not_applicable
     allowed_thresholds:
       min: 0
       alert_rules:
