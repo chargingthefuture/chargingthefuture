@@ -14,7 +14,7 @@ const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
   { href: '/admin/directory', name: 'Directory', description: 'Manage member directory listings and visibility.' },
   { href: '/admin/socketrelay', name: 'SocketRelay', description: 'Moderate mutual-aid requests and offers.' },
   { href: '/admin/lighthouse', name: 'LightHouse', description: 'Manage LightHouse listings and review reports.' },
-  { href: '/admin/trusttransport', name: 'TrustTransport', description: 'Oversee transport coordination and disputes.' },
+  { href: '/admin/trust-transport', name: 'TrustTransport', description: 'Oversee transport coordination and disputes.' },
   { href: '/admin/comic', name: 'AI Assistant', description: 'Review answers from the @comic assistant before they post.' },
   { href: '/admin/what-works', name: 'WhatWorks', description: 'Curate problems and the products that solve them.' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt', description: 'Manage missions, scouts, and the leaderboard.' },

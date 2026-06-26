@@ -69,7 +69,7 @@ human-readable evidence items on `trust_user_extension`. Real signals that feed 
   member active in only one plugin is still seen (with less social proof than an all-plugins member, not the
   same). Each emits one categorical "verb N noun" evidence item:
   - LightHouse — `lighthouse_matches` accepted/completed → "Accepted N LightHouse matches"
-  - TrustTransport — `trusttransport_trips` completed → "Completed N TrustTransport trips"
+  - TrustTransport — `trust_transport_trips` completed → "Completed N TrustTransport trips"
   - SkillsHunt — `skills_hunt_submissions` accepted → "Accepted N SkillsHunt submissions"
   - LevelUp — `levelup_enrollments` completed → "Completed N LevelUp cohorts"
   - Chyme — `chyme_room_members` → "Joined N Chyme rooms"

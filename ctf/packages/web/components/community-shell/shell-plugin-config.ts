@@ -9,7 +9,6 @@ type PluginVisuals = {
 const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   chyme: { emoji: '🎙️', color: '#22C55E', bg: '#04160A' },
   lighthouse: { emoji: '🏠', color: '#60A5FA', bg: '#0B121C' },
-  trusttransport: { emoji: '📦', color: '#38BDF8', bg: '#06151B' },
   'trust-transport': { emoji: '📦', color: '#38BDF8', bg: '#06151B' },
   directory: { emoji: '📇', color: '#93C5FD', bg: '#10161C' },
   foundation: { emoji: '🪛', color: '#F59E0B', bg: '#1B1101' },

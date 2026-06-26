@@ -56,7 +56,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'I lost my job last week. I need paid work I can start right away.',
   },
   {
-    slug: 'trusttransport',
+    slug: 'trust-transport',
     name: 'TrustTransport',
     blurb: 'Community-screened drivers for safe travel.',
     keywords: [

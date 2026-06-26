@@ -17,7 +17,7 @@ import { ServiceCreditsShell } from '@/components/service-credits/service-credit
 import { SocketRelayShell } from '@/components/socketrelay/socketrelay-shell';
 import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
-import { TrustTransportShell } from '@/components/trusttransport/trusttransport-shell';
+import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
 import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
 import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
 import { WhatWorksShell } from '@/components/what-works/what-works-shell';
@@ -248,7 +248,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
   }
 
-  if (selectedPlugin.slug === 'trusttransport') {
+  if (selectedPlugin.slug === 'trust-transport') {
     return <TrustTransportShell isAdmin={decision.isAdmin} />;
   }
 

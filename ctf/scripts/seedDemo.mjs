@@ -599,7 +599,7 @@ async function seedChyme(c) {
 
 async function seedTrustTransport(c) {
   await c.query(
-    `INSERT INTO trusttransport_requests
+    `INSERT INTO trust_transport_requests
      (id, requester_user_id, mode, title, details, pickup_city, dropoff_city,
       pickup_geo_redacted, dropoff_geo_redacted, status)
      VALUES ($1::uuid, $2, 'rideshare',
@@ -612,7 +612,7 @@ async function seedTrustTransport(c) {
   );
 
   await c.query(
-    `INSERT INTO trusttransport_offers
+    `INSERT INTO trust_transport_offers
      (id, request_id, provider_user_id, note, proposed_amount, status)
      VALUES ($1::uuid, $2::uuid, $3,
        'Happy to help — I drive that route daily.', 0, 'accepted')
@@ -620,7 +620,7 @@ async function seedTrustTransport(c) {
     [ID.ttOffer, ID.ttRequest, PEER_2],
   );
 
-  console.log('  ✓ trusttransport');
+  console.log('  ✓ trust-transport');
 }
 
 async function seedPeerProgramming(c) {
