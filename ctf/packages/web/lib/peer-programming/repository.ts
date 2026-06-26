@@ -9,6 +9,111 @@ import {
 } from './constants';
 import type { PeerProgrammingCohort, PeerProgrammingMessage, PeerProgrammingTier, PeerProgrammingTopic } from './types';
 
+// The persisted admin setting (peer_programming_settings, a one-row singleton). single_open_cohort
+// is the stored choice for single-standing-cohort mode: true/false = the admin's explicit choice,
+// null = unset (fall back to the env flag, then to default ON). The source tells the admin surface
+// where the effective value comes from.
+export type PeerProgrammingSettings = {
+  singleOpenCohort: boolean | null;
+  updatedByUserId: string | null;
+  updatedAtIso: string | null;
+};
+
+export type SingleOpenCohortMode = {
+  enabled: boolean;
+  source: 'admin_setting' | 'env_flag' | 'default';
+  adminSetting: boolean | null;
+  envFlagEnabled: boolean;
+};
+
+type SettingsRow = {
+  single_open_cohort_enabled: boolean | null;
+  updated_by_user_id: string | null;
+  updated_at: Date | null;
+};
+
+// Read the single PeerProgramming settings row, or a fully-unset settings object when the row does
+// not exist yet. Never writes; safe on a fresh database.
+export async function getPeerProgrammingSettings(): Promise<PeerProgrammingSettings> {
+  const result = await queryDb<SettingsRow>(
+    `SELECT single_open_cohort_enabled, updated_by_user_id, updated_at
+     FROM peer_programming_settings
+     WHERE singleton_id = TRUE
+     LIMIT 1`,
+  );
+  const row = result.rows[0];
+  if (!row) {
+    return { singleOpenCohort: null, updatedByUserId: null, updatedAtIso: null };
+  }
+  return {
+    singleOpenCohort: row.single_open_cohort_enabled,
+    updatedByUserId: row.updated_by_user_id,
+    updatedAtIso: row.updated_at ? row.updated_at.toISOString() : null,
+  };
+}
+
+// Upsert the single settings row, setting single_open_cohort_enabled to the admin's explicit choice,
+// or back to NULL ("unset" — revert to the env flag / default). One row only, keyed on the singleton
+// primary key.
+export async function setPeerProgrammingSingleOpenCohort(input: {
+  actorId: string;
+  enabled: boolean | null;
+}): Promise<PeerProgrammingSettings> {
+  const result = await queryDb<SettingsRow>(
+    `INSERT INTO peer_programming_settings (singleton_id, single_open_cohort_enabled, updated_by_user_id, updated_at)
+     VALUES (TRUE, $1, $2, NOW())
+     ON CONFLICT (singleton_id)
+     DO UPDATE SET
+       single_open_cohort_enabled = EXCLUDED.single_open_cohort_enabled,
+       updated_by_user_id = EXCLUDED.updated_by_user_id,
+       updated_at = NOW()
+     RETURNING single_open_cohort_enabled, updated_by_user_id, updated_at`,
+    [input.enabled, input.actorId],
+  );
+  const row = result.rows[0];
+  return {
+    singleOpenCohort: row.single_open_cohort_enabled,
+    updatedByUserId: row.updated_by_user_id,
+    updatedAtIso: row.updated_at ? row.updated_at.toISOString() : null,
+  };
+}
+
+// Resolve the effective single-standing-cohort mode with precedence:
+//   (a) the persisted admin setting if set (non-null) → use it;
+//   (b) else the env flag PEER_PROGRAMMING_SINGLE_OPEN_COHORT;
+//   (c) else default ON.
+// This is async because it now reads the DB. The three behaviour call sites (getMyCohort,
+// listActiveCohorts, runWeeklyAssignment) await isSingleOpenCohortModeEnabled().
+export async function resolveSingleOpenCohortMode(): Promise<SingleOpenCohortMode> {
+  const envFlagEnabled = isPeerProgrammingSingleOpenCohortEnabled();
+  const settings = await getPeerProgrammingSettings();
+  if (settings.singleOpenCohort !== null) {
+    return {
+      enabled: settings.singleOpenCohort,
+      source: 'admin_setting',
+      adminSetting: settings.singleOpenCohort,
+      envFlagEnabled,
+    };
+  }
+  // The env read defaults ON when unset, so when there is no admin setting the source is the env
+  // flag if an explicit override is present, otherwise the built-in default.
+  const hasEnvOverride = process.env.PEER_PROGRAMMING_SINGLE_OPEN_COHORT !== undefined
+    && process.env.PEER_PROGRAMMING_SINGLE_OPEN_COHORT.trim().length > 0;
+  return {
+    enabled: envFlagEnabled,
+    source: hasEnvOverride ? 'env_flag' : 'default',
+    adminSetting: null,
+    envFlagEnabled,
+  };
+}
+
+// Boolean-only convenience over resolveSingleOpenCohortMode for the behaviour call sites that only
+// need the on/off decision.
+export async function isSingleOpenCohortModeEnabled(): Promise<boolean> {
+  const mode = await resolveSingleOpenCohortMode();
+  return mode.enabled;
+}
+
 type TopicRow = {
   id: string;
   week_start_date: string;
@@ -149,7 +254,7 @@ export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort
   // regardless of week, and idempotently add the requesting member to it so any active member who
   // opens the room can POST, not just listen. The room read-access gate already authorized this
   // user, so we only insert the membership row for that gated user here.
-  if (isPeerProgrammingSingleOpenCohortEnabled()) {
+  if (await isSingleOpenCohortModeEnabled()) {
     const standing = await ensureStandingCohort(userId);
     await queryDb(
       `INSERT INTO peer_programming_cohort_members (id, cohort_id, user_id)
@@ -189,7 +294,7 @@ export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort
 export async function listActiveCohorts(): Promise<PeerProgrammingCohort[]> {
   // Single standing cohort mode: the active set is just the one standing cohort (regardless of
   // week), so the room's cohort list and listen-in resolve it.
-  if (isPeerProgrammingSingleOpenCohortEnabled()) {
+  if (await isSingleOpenCohortModeEnabled()) {
     const result = await queryDb<CohortRow>(
       `SELECT ${COHORT_SELECT_COLUMNS}
        FROM peer_programming_cohorts c
@@ -400,7 +505,7 @@ export async function runWeeklyAssignment(input: { actorId: string; activeUserId
   // active user into it, sending the same assignment notification (idempotent per user + week).
   // No other cohorts are created. The standing cohort is ensured even when there are no active
   // users, so cohortsCreated is 1 (the standing cohort exists) and notificationsCreated is 0.
-  if (isPeerProgrammingSingleOpenCohortEnabled()) {
+  if (await isSingleOpenCohortModeEnabled()) {
     const standing = await ensureStandingCohort(input.actorId);
     let notificationsCreated = 0;
     for (const userId of uniqueUsers) {

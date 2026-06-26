@@ -3518,6 +3518,22 @@ ALTER TABLE IF EXISTS peer_programming_admin_audit_trail ADD COLUMN IF NOT EXIST
 ALTER TABLE IF EXISTS peer_programming_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS peer_programming_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Single-row settings singleton for admin-flippable PeerProgramming toggles. The CHECK on
+-- singleton_id forces every row to share the same primary key value (TRUE), so there can only ever
+-- be one row. single_open_cohort_enabled is nullable on purpose: NULL means "unset" — the resolver
+-- then falls back to the env flag PEER_PROGRAMMING_SINGLE_OPEN_COHORT, then to default ON. A non-null
+-- value (TRUE/FALSE) is the admin's explicit choice and supersedes the env flag.
+CREATE TABLE IF NOT EXISTS peer_programming_settings (
+  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
+  single_open_cohort_enabled BOOLEAN,
+  updated_by_user_id TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS singleton_id BOOLEAN;
+ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS single_open_cohort_enabled BOOLEAN;
+ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
+ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- === TRUST MODULE ===
 CREATE TABLE IF NOT EXISTS trust_user_extension (
   user_id TEXT PRIMARY KEY,

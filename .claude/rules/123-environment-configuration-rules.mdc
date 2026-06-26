@@ -211,6 +211,16 @@ in Expo Go regardless of this env var.
 It is read server-side by one resolver, `isPeerProgrammingSingleOpenCohortEnabled()` in
 `ctf/packages/web/lib/peer-programming/constants.ts` — do not read this variable anywhere else.
 
+**Now a fallback under an in-app admin setting.** The env flag is no longer the source of truth. The
+effective mode is resolved by the async resolver `isSingleOpenCohortModeEnabled()` (and
+`resolveSingleOpenCohortMode()`) in `ctf/packages/web/lib/peer-programming/repository.ts` with this
+precedence: (a) the persisted admin setting
+(`peer_programming_settings.single_open_cohort_enabled`) if it is set (non-null) → use it; (b) else
+this env flag; (c) else the built-in default (ON). An admin flips the setting from the PeerProgramming
+admin surface (`POST /api/peer-programming/admin/single-open-cohort`), which supersedes this env flag
+without a redeploy; clearing the admin setting (null) reverts to the env flag, then the default. With
+no admin setting and no env override, behaviour is unchanged: ON.
+
 - **Defaults ON (temporary low-population mode).** Unset or empty is treated as ON. Only the explicit
   values `0` or `false` (case-insensitive) turn it OFF. The default is ON on purpose: while there are
   not enough active members to fill weekly cohorts of five, everyone shares one standing, always-open

@@ -423,3 +423,55 @@ contracts:
     purpose: topic_governance
     retentionClass: derived_medium_lived
     idempotency: true
+
+  - pluginId: peer-programming
+    command: admin.single-open-cohort.get
+    version: 1.0.0
+    description: Read the effective single standing, always-open Cohort 1 mode and where it resolves from. Precedence is the persisted admin setting (peer_programming_settings.single_open_cohort_enabled) if set, then the env flag PEER_PROGRAMMING_SINGLE_OPEN_COHORT, then the built-in default (ON). Returns the resolved on/off decision, its source (admin_setting/env_flag/default), the stored admin value, and the env flag value so the admin surface can show why the mode is what it is.
+    inputSchema: {}
+    outputSchema:
+      enabled:
+        type: boolean
+      source:
+        type: string
+        enum:
+          - admin_setting
+          - env_flag
+          - default
+      adminSetting:
+        type: boolean
+      envFlagEnabled:
+        type: boolean
+    dataAccess:
+      - peer_programming_settings
+    purpose: cohort_mode_governance
+    retentionClass: derived_medium_lived
+    idempotency: true
+
+  - pluginId: peer-programming
+    command: admin.single-open-cohort.set
+    version: 1.0.0
+    description: Set or clear the persisted admin toggle for single standing, always-open Cohort 1 mode. `enabled` true/false records the admin's explicit choice, which supersedes the env flag PEER_PROGRAMMING_SINGLE_OPEN_COHORT; `enabled` null clears the admin setting so the mode falls back to the env flag and then the built-in default (ON). Writes the one-row peer_programming_settings singleton and records an admin audit row. CSRF-guarded, admin-only.
+    inputSchema:
+      enabled:
+        type: boolean
+        required: false
+    outputSchema:
+      enabled:
+        type: boolean
+      source:
+        type: string
+        enum:
+          - admin_setting
+          - env_flag
+          - default
+      adminSetting:
+        type: boolean
+      envFlagEnabled:
+        type: boolean
+    dataAccess:
+      - peer_programming_settings
+      - peer_programming_admin_audit_trail
+    purpose: cohort_mode_governance
+    retentionClass: audit_long_lived
+    idempotency: true
