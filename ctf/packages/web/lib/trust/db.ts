@@ -48,7 +48,7 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 //
 // Signals used in the `cross_plugin_engagement_v3` model:
 //   - login_events             → how often / how recently the member logs in (the universal "seen" signal)
-//   - socketrelay_*            → completed SocketRelay trades + requests opened
+//   - socket_relay_*            → completed SocketRelay trades + requests opened
 //   - service_credits_*        → completed transfers received + distinct payers; disputes withhold clean-record
 //   - lighthouse_matches       → accepted/completed LightHouse matches
 //   - trust_transport_trips     → completed TrustTransport trips
@@ -98,17 +98,17 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     ),
     // A "completed trade" is a closed fulfillment in which the member was either the requester or
     // the fulfiller. Closing a fulfillment is how a SocketRelay trade is finished (see
-    // socketrelay.repository.closeFulfillment), so a closed row is a genuinely completed exchange.
+    // socket-relay.repository.closeFulfillment), so a closed row is a genuinely completed exchange.
     queryDb<{ completed: string }>(
       `SELECT COUNT(*) AS completed
-       FROM socketrelay_fulfillments
+       FROM socket_relay_fulfillments
        WHERE status = 'closed'
          AND (requester_user_id = $1 OR fulfiller_user_id = $1)`,
       [userId]
     ),
     queryDb<{ opened: string }>(
       `SELECT COUNT(*) AS opened
-       FROM socketrelay_requests
+       FROM socket_relay_requests
        WHERE owner_user_id = $1`,
       [userId]
     ),
@@ -209,7 +209,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
   if (metrics.socketRelayCompletedTrades > 0) {
     const n = metrics.socketRelayCompletedTrades;
     evidence.push({
-      type: 'engagement-socketrelay-trades',
+      type: 'engagement-socket-relay-trades',
       summary: `Completed ${n} SocketRelay ${n === 1 ? 'trade' : 'trades'}`,
       createdAt: nowIso,
       createdBy: 'trust-signal',
@@ -219,7 +219,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
   if (metrics.socketRelayRequestsOpened > 0) {
     const n = metrics.socketRelayRequestsOpened;
     evidence.push({
-      type: 'engagement-socketrelay-requests',
+      type: 'engagement-socket-relay-requests',
       summary: `Opened ${n} SocketRelay ${n === 1 ? 'request' : 'requests'}`,
       createdAt: nowIso,
       createdBy: 'trust-signal',

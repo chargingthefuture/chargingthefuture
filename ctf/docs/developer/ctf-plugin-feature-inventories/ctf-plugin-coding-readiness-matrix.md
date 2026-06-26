@@ -25,7 +25,7 @@ This matrix tracks coding-readiness status across CTF feature inventories and ap
 | `ctf-service-credits-feature-inventory.md` | `ctf-service-credits-feature-inventory.md` | Present | `ctf/docs/contracts/SERVICE_CREDITS_PROFILE_AND_DELETION_CONTRACT.md` | Present (`SERVICE_CREDITS_*` YAML triplet) | Implemented in part; checklist gate | Ready | None for coding start |
 | `ctf-skills-hunt-feature-inventory.md` | `ctf-skills-hunt-feature-inventory.md` | Present | `ctf/docs/contracts/SKILLS_HUNT_PROFILE_AND_DELETION_CONTRACT.md` | Present (`SKILLS_HUNT_*` YAML triplet) | Implemented in part; checklist gate | Ready | None for coding start |
 | `ctf-skills-taxonomy-feature-inventory.md` | `ctf-skills-taxonomy-feature-inventory.md` | Present | `ctf/docs/contracts/SKILLS_TAXONOMY_PROFILE_AND_DELETION_CONTRACT.md` | Present (`SKILLS_TAXONOMY_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
-| `ctf-socketrelay-feature-inventory.md` | `ctf-socketrelay-feature-inventory.md` | Present | `ctf/docs/contracts/SOCKETRELAY_PROFILE_AND_DELETION_CONTRACT.md` | Present (`SOCKETRELAY_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
+| `ctf-socket-relay-feature-inventory.md` | `ctf-socket-relay-feature-inventory.md` | Present | `ctf/docs/contracts/SOCKET_RELAY_PROFILE_AND_DELETION_CONTRACT.md` | Present (`SOCKET_RELAY_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-trust-transport-feature-inventory.md` | `ctf-trust-transport-feature-inventory.md` | Present | `ctf/docs/contracts/TRUST_TRANSPORT_PROFILE_AND_DELETION_CONTRACT.md` | Present (`TRUST_TRANSPORT_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-weekly-performance-feature-inventory.md` | `ctf-weekly-performance-feature-inventory.md` | Present | `ctf/docs/contracts/WEEKLY_PERFORMANCE_PROFILE_AND_DELETION_CONTRACT.md` | Present (`WEEKLY_PERFORMANCE_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-workforce-feature-inventory.md` | `ctf-workforce-feature-inventory.md` | Present | `ctf/docs/contracts/WORKFORCE_PROFILE_AND_DELETION_CONTRACT.md` | Present (`WORKFORCE_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
@@ -37,7 +37,7 @@ No plugins are currently missing command/access/audit YAML triplets.
 ## Change Log
 
 - 2026-02-25: Created initial coding readiness matrix with Rule 114 baseline and release-gate backlog.
-- 2026-02-25: Added triplets for announcements, directory, feed, gentlepulse, lighthouse, mood, socketrelay, trusttransport, and workforce; cleared release-gate backlog.
+- 2026-02-25: Added triplets for announcements, directory, feed, gentlepulse, lighthouse, mood, socket-relay, trusttransport, and workforce; cleared release-gate backlog.
 - 2026-02-25: Added Chyme inventory/checklist row and reopened release-gate backlog for missing `CHYME_*` command/access/audit triplet artifacts.
 - 2026-02-25: Added `CHYME_PLUGIN_COMMAND_CONTRACTS.yaml`, `CHYME_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, and `CHYME_PLUGIN_AUDIT_CONTRACTS.yaml`; cleared Chyme release-gate contract debt.
 - 2026-03-01: Rebased Chyme readiness for fresh-start rewrite planning; removed implemented-baseline assumption and added mandatory baseline Phase -1 gate (Clerk → Railway → Vercel → Expo).

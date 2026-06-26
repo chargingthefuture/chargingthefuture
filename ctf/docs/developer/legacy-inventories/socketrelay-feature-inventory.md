@@ -30,47 +30,47 @@ It includes anti-scraping/rate-limit controls on public routes. Legacy implement
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/dashboard.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/dashboard.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
-1. Route: `/apps/socketrelay`.
-2. Request list for active requests (`GET /api/socketrelay/requests`).
-3. My requests list (`GET /api/socketrelay/my-requests`).
-4. Request create (`POST /api/socketrelay/requests`) with `description` and `isPublic`.
-5. Request update (`PUT /api/socketrelay/requests/:id`).
-6. Repost expired request (`POST /api/socketrelay/requests/:id/repost`).
+1. Route: `/apps/socket-relay`.
+2. Request list for active requests (`GET /api/socket-relay/requests`).
+3. My requests list (`GET /api/socket-relay/my-requests`).
+4. Request create (`POST /api/socket-relay/requests`) with `description` and `isPublic`.
+5. Request update (`PUT /api/socket-relay/requests/:id`).
+6. Repost expired request (`POST /api/socket-relay/requests/:id/repost`).
 
 ### 1.2 Profile Create/Edit/Delete
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/profile.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
-- `platform/shared/schema/socketrelay/index.ts`
+- `platform/client/src/pages/socket-relay/profile.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
+- `platform/shared/schema/socket-relay/index.ts`
 
 Features:
 
-1. Profile read: `GET /api/socketrelay/profile`.
-2. Profile create: `POST /api/socketrelay/profile`.
-3. Profile update: `PUT /api/socketrelay/profile`.
-4. Profile delete with reason: `DELETE /api/socketrelay/profile`.
+1. Profile read: `GET /api/socket-relay/profile`.
+2. Profile create: `POST /api/socket-relay/profile`.
+3. Profile update: `PUT /api/socket-relay/profile`.
+4. Profile delete with reason: `DELETE /api/socket-relay/profile`.
 5. Profile exposes city/state/country and verification flags.
 
 ### 1.3 Fulfillment and Close Outcomes
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/dashboard.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/dashboard.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
-1. Claim fulfillment: `POST /api/socketrelay/requests/:id/fulfill`.
-2. My fulfillments listing: `GET /api/socketrelay/my-fulfillments`.
-3. Fulfillment detail: `GET /api/socketrelay/fulfillments/:id`.
-4. Close fulfillment: `POST /api/socketrelay/fulfillments/:id/close`.
+1. Claim fulfillment: `POST /api/socket-relay/requests/:id/fulfill`.
+2. My fulfillments listing: `GET /api/socket-relay/my-fulfillments`.
+3. Fulfillment detail: `GET /api/socket-relay/fulfillments/:id`.
+4. Close fulfillment: `POST /api/socket-relay/fulfillments/:id/close`.
 5. Valid close statuses: `completed_success`, `completed_failure`, `cancelled`.
 6. Request status is updated to `closed` after fulfillment closure flow.
 
@@ -78,14 +78,14 @@ Features:
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/chat.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/chat.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
-1. Route: `/apps/socketrelay/chat/:id`.
-2. Message fetch: `GET /api/socketrelay/fulfillments/:id/messages`.
-3. Message send: `POST /api/socketrelay/fulfillments/:id/messages`.
+1. Route: `/apps/socket-relay/chat/:id`.
+2. Message fetch: `GET /api/socket-relay/fulfillments/:id/messages`.
+3. Message send: `POST /api/socket-relay/fulfillments/:id/messages`.
 4. Access controls ensure only request owner or fulfiller can view/send messages.
 
 ### 1.5 Public Sharing Surface
@@ -93,17 +93,17 @@ Features:
 Evidence:
 
 - `platform/client/src/routes/public-routes.tsx`
-- `platform/client/src/pages/socketrelay/public-list.tsx`
-- `platform/client/src/pages/socketrelay/public.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/public-list.tsx`
+- `platform/client/src/pages/socket-relay/public.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
 1. Public routes:
-   - `/apps/socketrelay/public`
-   - `/apps/socketrelay/public/:id`
-2. Public listing endpoint: `GET /api/socketrelay/public`.
-3. Public detail endpoint: `GET /api/socketrelay/public/:id`.
+   - `/apps/socket-relay/public`
+   - `/apps/socket-relay/public/:id`
+2. Public listing endpoint: `GET /api/socket-relay/public`.
+3. Public detail endpoint: `GET /api/socket-relay/public/:id`.
 4. Optional user filter query for public list.
 5. Public pages present first-name-only identity in UI.
 
@@ -111,13 +111,13 @@ Features:
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/announcements.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/announcements.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
-1. Announcements route: `/apps/socketrelay/announcements`.
-2. User endpoint: `GET /api/socketrelay/announcements`.
+1. Announcements route: `/apps/socket-relay/announcements`.
+2. User endpoint: `GET /api/socket-relay/announcements`.
 3. Renders active, non-expired announcements.
 
 ---
@@ -128,31 +128,31 @@ Features:
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/admin.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/admin.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
-1. Admin route: `/apps/socketrelay/admin`.
-2. Admin requests endpoint: `GET /api/socketrelay/admin/requests`.
-3. Admin fulfillments endpoint: `GET /api/socketrelay/admin/fulfillments`.
-4. Admin request deletion: `DELETE /api/socketrelay/admin/requests/:id`.
+1. Admin route: `/apps/socket-relay/admin`.
+2. Admin requests endpoint: `GET /api/socket-relay/admin/requests`.
+3. Admin fulfillments endpoint: `GET /api/socket-relay/admin/fulfillments`.
+4. Admin request deletion: `DELETE /api/socket-relay/admin/requests/:id`.
 
 ### 2.2 Admin Announcements Management
 
 Evidence:
 
-- `platform/client/src/pages/socketrelay/admin-announcements.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/client/src/pages/socket-relay/admin-announcements.tsx`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
-1. Admin route: `/apps/socketrelay/admin/announcements`.
+1. Admin route: `/apps/socket-relay/admin/announcements`.
 2. Admin announcement APIs:
-   - `GET /api/socketrelay/admin/announcements`
-   - `POST /api/socketrelay/admin/announcements`
-   - `PUT /api/socketrelay/admin/announcements/:id`
-   - `DELETE /api/socketrelay/admin/announcements/:id`
+   - `GET /api/socket-relay/admin/announcements`
+   - `POST /api/socket-relay/admin/announcements`
+   - `PUT /api/socket-relay/admin/announcements/:id`
+   - `DELETE /api/socket-relay/admin/announcements/:id`
 3. Admin action logging is emitted for create/update/deactivate.
 
 ---
@@ -161,44 +161,44 @@ Features:
 
 ### 3.1 Profile APIs
 
-- `GET /api/socketrelay/profile`
-- `POST /api/socketrelay/profile`
-- `PUT /api/socketrelay/profile`
-- `DELETE /api/socketrelay/profile`
+- `GET /api/socket-relay/profile`
+- `POST /api/socket-relay/profile`
+- `PUT /api/socket-relay/profile`
+- `DELETE /api/socket-relay/profile`
 
 ### 3.2 Request APIs
 
-- `GET /api/socketrelay/requests`
-- `GET /api/socketrelay/requests/:id`
-- `GET /api/socketrelay/my-requests`
-- `POST /api/socketrelay/requests`
-- `PUT /api/socketrelay/requests/:id`
-- `POST /api/socketrelay/requests/:id/repost`
+- `GET /api/socket-relay/requests`
+- `GET /api/socket-relay/requests/:id`
+- `GET /api/socket-relay/my-requests`
+- `POST /api/socket-relay/requests`
+- `PUT /api/socket-relay/requests/:id`
+- `POST /api/socket-relay/requests/:id/repost`
 
 ### 3.3 Fulfillment and Message APIs
 
-- `POST /api/socketrelay/requests/:id/fulfill`
-- `GET /api/socketrelay/fulfillments/:id`
-- `GET /api/socketrelay/my-fulfillments`
-- `POST /api/socketrelay/fulfillments/:id/close`
-- `GET /api/socketrelay/fulfillments/:id/messages`
-- `POST /api/socketrelay/fulfillments/:id/messages`
+- `POST /api/socket-relay/requests/:id/fulfill`
+- `GET /api/socket-relay/fulfillments/:id`
+- `GET /api/socket-relay/my-fulfillments`
+- `POST /api/socket-relay/fulfillments/:id/close`
+- `GET /api/socket-relay/fulfillments/:id/messages`
+- `POST /api/socket-relay/fulfillments/:id/messages`
 
 ### 3.4 Public APIs
 
-- `GET /api/socketrelay/public`
-- `GET /api/socketrelay/public/:id`
+- `GET /api/socket-relay/public`
+- `GET /api/socket-relay/public/:id`
 
 ### 3.5 Announcement/Admin APIs
 
-- `GET /api/socketrelay/announcements`
-- `GET /api/socketrelay/admin/announcements`
-- `POST /api/socketrelay/admin/announcements`
-- `PUT /api/socketrelay/admin/announcements/:id`
-- `DELETE /api/socketrelay/admin/announcements/:id`
-- `GET /api/socketrelay/admin/requests`
-- `GET /api/socketrelay/admin/fulfillments`
-- `DELETE /api/socketrelay/admin/requests/:id`
+- `GET /api/socket-relay/announcements`
+- `GET /api/socket-relay/admin/announcements`
+- `POST /api/socket-relay/admin/announcements`
+- `PUT /api/socket-relay/admin/announcements/:id`
+- `DELETE /api/socket-relay/admin/announcements/:id`
+- `GET /api/socket-relay/admin/requests`
+- `GET /api/socket-relay/admin/fulfillments`
+- `DELETE /api/socket-relay/admin/requests/:id`
 
 ---
 
@@ -206,17 +206,17 @@ Features:
 
 Evidence:
 
-- `platform/shared/schema/socketrelay/index.ts`
-- `platform/server/storage/plugins/socketrelay-storage.ts`
+- `platform/shared/schema/socket-relay/index.ts`
+- `platform/server/storage/plugins/socket-relay-storage.ts`
 - `platform/schema.sql`
 
 Core entities:
 
-1. `socketrelay_profiles`
-2. `socketrelay_requests`
-3. `socketrelay_fulfillments`
-4. `socketrelay_messages`
-5. `socketrelay_announcements`
+1. `socket_relay_profiles`
+2. `socket_relay_requests`
+3. `socket_relay_fulfillments`
+4. `socket_relay_messages`
+5. `socket_relay_announcements`
 
 Storage-level behaviors:
 
@@ -231,7 +231,7 @@ Storage-level behaviors:
 
 Evidence:
 
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/server/routes/socket-relay.routes.ts`
 - `platform/server/dataObfuscation.ts`
 - `platform/server/rateLimiter.ts`
 
@@ -254,17 +254,17 @@ Evidence:
 
 Protected routes:
 
-1. `/apps/socketrelay`
-2. `/apps/socketrelay/profile`
-3. `/apps/socketrelay/announcements`
-4. `/apps/socketrelay/chat/:id`
-5. `/apps/socketrelay/admin`
-6. `/apps/socketrelay/admin/announcements`
+1. `/apps/socket-relay`
+2. `/apps/socket-relay/profile`
+3. `/apps/socket-relay/announcements`
+4. `/apps/socket-relay/chat/:id`
+5. `/apps/socket-relay/admin`
+6. `/apps/socket-relay/admin/announcements`
 
 Public routes:
 
-1. `/apps/socketrelay/public`
-2. `/apps/socketrelay/public/:id`
+1. `/apps/socket-relay/public`
+2. `/apps/socket-relay/public/:id`
 
 ---
 
@@ -272,9 +272,9 @@ Public routes:
 
 Evidence:
 
-- `platform/test/api/socketrelay.test.ts`
-- `platform/test/e2e/socketrelay.spec.ts`
-- `platform/test/client/pages/socketrelay/profile.test.tsx`
+- `platform/test/api/socket-relay.test.ts`
+- `platform/test/e2e/socket-relay.spec.ts`
+- `platform/test/client/pages/socket-relay/profile.test.tsx`
 - `platform/scripts/seedSocketRelay.ts`
 
 Observed:
@@ -289,11 +289,11 @@ Observed:
 ## 8) Gaps, Ambiguities, and Migration Risks
 
 1. **Schema drift across sources (blocker risk):**
-   - `socketrelay_profiles` differs between Drizzle schema, SQL, and seed payload assumptions (e.g., `displayName` usage).
+   - `socket_relay_profiles` differs between Drizzle schema, SQL, and seed payload assumptions (e.g., `displayName` usage).
 2. **Public privacy projection mismatch:**
    - Public API payload contains `firstName` and `lastName`, while UI policy is first-name-only rendering.
 3. **Cross-module boundary bleed:**
-   - Directory announcement routes are implemented inside `socketrelay.routes.ts`, increasing module ownership ambiguity.
+   - Directory announcement routes are implemented inside `socket-relay.routes.ts`, increasing module ownership ambiguity.
 4. **Tests are partially scaffold-level:**
    - A meaningful subset of API/E2E tests validate mock shape instead of robust route/storage behavior.
 5. **CSRF policy consistency ambiguity:**

@@ -14,7 +14,7 @@ import { PeerProgrammingPublicShell } from '@/components/peer-programming/peer-p
 import { ServiceCreditsPublicShell } from '@/components/service-credits/service-credits-public-shell';
 import { SkillsHuntPublicShell } from '@/components/skills-hunt/skills-hunt-public-shell';
 import { SkillsTaxonomyPublicShell } from '@/components/skills-taxonomy/skills-taxonomy-public-shell';
-import { SocketRelayPublicShell } from '@/components/socketrelay/socketrelay-public-shell';
+import { SocketRelayPublicShell } from '@/components/socket-relay/socket-relay-public-shell';
 import { TrustPublicShell } from '@/components/trust/trust-public-shell';
 import { TrustTransportPublicShell } from '@/components/trust-transport/trust-transport-public-shell';
 import { UnlockPublicShell } from '@/components/unlock/unlock-public-shell';
@@ -72,7 +72,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   'service-credits': ServiceCreditsPublicShell,
   'skills-hunt': SkillsHuntPublicShell,
   'skills-taxonomy': SkillsTaxonomyPublicShell,
-  socketrelay: SocketRelayPublicShell,
+  'socket-relay': SocketRelayPublicShell,
   trust: TrustPublicShell,
   'trust-transport': TrustTransportPublicShell,
   unlock: UnlockPublicShell,

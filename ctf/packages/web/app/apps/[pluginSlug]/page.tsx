@@ -14,7 +14,7 @@ import { LevelupShell } from '@/components/levelup/levelup-shell';
 import MoodShell from '@/components/mood/mood-shell';
 import { PeerProgrammingShell } from '@/components/peer-programming/peer-programming-shell';
 import { ServiceCreditsShell } from '@/components/service-credits/service-credits-shell';
-import { SocketRelayShell } from '@/components/socketrelay/socketrelay-shell';
+import { SocketRelayShell } from '@/components/socket-relay/socket-relay-shell';
 import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
 import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
@@ -244,7 +244,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <LighthouseShell userId={decision.userId} username={decision.username} isAdmin={decision.isAdmin} />;
   }
 
-  if (selectedPlugin.slug === 'socketrelay') {
+  if (selectedPlugin.slug === 'socket-relay') {
     return <SocketRelayShell userId={decision.userId} isAdmin={decision.isAdmin} role={decision.role} />;
   }
 

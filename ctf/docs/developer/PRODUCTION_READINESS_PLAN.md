@@ -85,7 +85,7 @@ in the `design/` submodule** — build backend now, circle back for UI.
 7. **skills-hunt** backend — blocked by #3 (generates unclaimed Directory profiles).
 8. **foundation** backend — blocked by #3 (reads Directory projections, read-only boundary).
 9. **lighthouse** backend — no dependency.
-10. **socketrelay** backend — no dependency.
+10. **socket-relay** backend — no dependency.
 11. **trusttransport** backend — no dependency.
 12. **peer-programming** backend — no dependency.
 13. **mood** backend — no dependency.
@@ -120,7 +120,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | skills-hunt | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | foundation | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | lighthouse | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| socketrelay | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| socket-relay | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | trust-transport | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | peer-programming | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -171,7 +171,7 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       error falls through to the DB tier instead of throwing).
 - [x] **#102 foundation**: public visibility resolved as a per-plugin **auth-gate** (not a global flag) —
       directory's dead v2 public routes removed (they leaked full profiles incl. payment addresses),
-      socketrelay stays public via `mapPublicRequestRow()` redaction, chyme/hub auth-only; `public-surface`
+      socket-relay stays public via `mapPublicRequestRow()` redaction, chyme/hub auth-only; `public-surface`
       demoted to a reserved kill-switch. Demo mode landed for third-party isolation: `isDemoMode()` routes
       **Stream** to a separate app (`STREAM_*_STAGING`) and **Formance** to a separate ledger book
       (`FORMANCE_LEDGER_STAGING` = `ctf-demo`, same instance) so recordings never touch the prod Stream
@@ -186,7 +186,7 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       (`DEMO_OWNER_ID`). Covers: service-credits (wallet + ledger + transfer), gdp, weekly-performance,
       levelup (cohort + enrollment), skills-hunt (active round + accepted submission + leaderboard),
       skills-taxonomy (sector + job-title + 2 skills), directory (3 profiles), workforce (profile +
-      occupation), lighthouse (seeker + host + 2 properties + match), socketrelay (user-extension +
+      occupation), lighthouse (seeker + host + 2 properties + match), socket-relay (user-extension +
       request + fulfillment), feed + announcements, trust, mood, gentlepulse (library + play + rating +
       favorite), foundation (thread + capacity policy), chyme (room + members + messages), trusttransport
       (request + offer), peer-programming (topic + cohort + members), clicklog (3 incidents).
@@ -223,7 +223,7 @@ Recorded in this progress channel rather than as separate issues (per decision 1
    → `seed<Plugin>.mjs`; updated `package.json` seed scripts and current doc references (dated historical
    change-log entries left as-is). No CI workflow referenced them by name.
 3. ~~Inventory delivery-status normalization~~ — **done 2026-05-26.** Added a reconciliation note to the 5
-   flagged inventories (lighthouse, skills-taxonomy, socketrelay, gdp, peer-programming) clarifying that
+   flagged inventories (lighthouse, skills-taxonomy, socket-relay, gdp, peer-programming) clarifying that
    unchecked Build Checklist items are obsolete web-first/Android-deferral artifacts + deferred MVP
    validation (Rule 118), not missing features; this plan's table is authoritative.
 4. ~~**Backend drift decisions (owner input)** — feed-announcements names `feed_user_extension`,
@@ -280,7 +280,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   gate contract field pattern matching (now handles both 'version'/'command' and legacy 'contractVersion'/'commandId').
 - 2026-05-21: Batch backend audit — discovered most plugins already have backend implementations. Verified
   7 additional backends complete (schema, contracts, routes, seed script all present and coherent):
-  lighthouse (5 tables, 23 routes), socketrelay (7 tables, 20 routes), trusttransport (13 tables, 20 routes),
+  lighthouse (5 tables, 23 routes), socket-relay (7 tables, 20 routes), trusttransport (13 tables, 20 routes),
   gentlepulse (4 tables, 6 routes), levelup (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
   4 routes). Marked all 7 backends ✅. Detailed audit of remaining 6 plugins: peer-programming (7 tables, 6 routes,
   NO seed script), mood (1 table, 2 routes, NO seed), gdp (3 tables, 2 routes, NO seed), service-credits (15 tables,
@@ -304,7 +304,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
 - 2026-05-26: **Feature-flag foundation landed.** #103 OpenFeature + self-hosted Unleash client shipped
   (shared flag-key registry; safe-OFF when unconfigured). #101 `unlock` re-scoped to the
   `feature-unlock-quora-onboarding` flag with a DB fallback. #102 public visibility resolved as a
-  per-plugin auth-gate: removed directory's dead v2 public projection routes, kept socketrelay public via
+  per-plugin auth-gate: removed directory's dead v2 public projection routes, kept socket-relay public via
   field redaction, chyme/hub auth-only; `public-surface` demoted to a reserved kill-switch.
 - 2026-05-26: **Demo-mode third-party isolation (#102).** `isDemoMode()` now routes Stream
   (`resolveStreamCredentials()`, centralizing 6 scattered readers) to a separate Stream app
@@ -479,15 +479,15 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   (`MobileSkillsTaxonomy.tsx`) remains ⬜. All four previously design-gated plugins are now web-pixel
   complete; no design-gated plugins remain.
 - 2026-05-29: UI circle-back — non-gated web pixel passes (designs existed since `dcaaf15`): mood,
-  gentlepulse, and socketrelay. Each aligned/rebuilt its shell to the design mockup + Loading/Empty
+  gentlepulse, and socket-relay. Each aligned/rebuilt its shell to the design mockup + Loading/Empty
   states and was decomposed into modular sub-components within the rule-116 limits. Real bugs fixed
   along the way: mood (eligibility `?clientId=` + submission `{ clientId, moodValue, note }` + CSRF —
-  prior shell 400'd), gentlepulse (removed a dead duplicate `components/gentle-pulse/` dir), socketrelay
+  prior shell 400'd), gentlepulse (removed a dead duplicate `components/gentle-pulse/` dir), socket-relay
   (prior shell read the paged `requests` response as a bare array and POSTed non-existent
   `type`/`description`/`credits` fields without CSRF — rebuilt to the real request/claim/fulfillment
   model). All counts derive from real data; unbacked mockup figures were omitted, not faked. typecheck,
   lint, modularity, build:ci, EOF, parity, and schema-drift gates green for each. Marked mood,
-  gentlepulse, socketrelay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
+  gentlepulse, socket-relay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
   `MobileGentlePulse.tsx`, `MobileSocketRelay.tsx`) remains ⬜ for the dedicated Android sweep.
 - 2026-05-29: UI circle-back — mood web pixel pass detail. Rebuilt the `/apps/mood` shell to `Mood.tsx`
   + Empty/Loading. Fixed two real API-contract bugs in the prior shell: it called

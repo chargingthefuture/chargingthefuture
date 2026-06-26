@@ -105,7 +105,7 @@ source mapping the backfill used, which the live hooks mirror exactly.
 | TrustTransport ride requests | `trust_transport_requests` | `requester_user_id` | status not terminal | `trust-transport` / `/apps/trust-transport` | `request` | Ride request |
 | TrustTransport ride offers | `trust_transport_offers` | `provider_user_id` | status not terminal | `trust-transport` / `/apps/trust-transport` | `offer` | Offering rides |
 | Foundation provider offerings | `foundation_provider_skills` | `user_id` | none (a row means offering) | `foundation` / `/apps/foundation` | `provider-skill` | Provider offering |
-| SocketRelay help posts | `socketrelay_requests` | `owner_user_id` | `status = 'open'` | `socketrelay` / `/apps/socketrelay` | `post` | Help post |
+| SocketRelay help posts | `socket_relay_requests` | `owner_user_id` | `status = 'open'` | `socket-relay` / `/apps/socket-relay` | `post` | Help post |
 
 Notes on sources:
 

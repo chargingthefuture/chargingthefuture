@@ -49,7 +49,7 @@
 ## Observability
 
 - Metrics and alerts added/updated: None added. Existing `reportError` calls on the chat routes
-  (areas `socketrelay`, `lighthouse`, `trusttransport`) are unchanged.
+  (areas `socket-relay`, `lighthouse`, `trusttransport`) are unchanged.
 - Dashboard link (if available): n/a.
 
 ## Validation

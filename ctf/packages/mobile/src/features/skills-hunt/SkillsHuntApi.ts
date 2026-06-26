@@ -2,7 +2,7 @@
 //
 // Targets the same /api/skills-hunt/* endpoints as the web shell. All calls go
 // through authedFetch so the Clerk bearer token is attached and the base URL
-// comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
+// comes from runtime config (APP_URL) — same pattern as socket-relay/currency.
 
 import { authedFetchJson } from '../../auth/authedFetch';
 

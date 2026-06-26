@@ -1,5 +1,5 @@
 // All calls go through authedFetch so the Clerk bearer token is attached and the
-// base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
+// base URL comes from runtime config (APP_URL) — same pattern as socket-relay/currency.
 import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 
 export const FEED_API_BASE = '/api/feed';

@@ -11,8 +11,8 @@ export const SYSTEM_FLAGS = {
     // When ON, data-fetching surfaces must read from demo-safe (synthetic) data — see issue #102/#103.
     DEMO_MODE: 'demo-mode',
     // Reserved global kill-switch for ALL public/unauthenticated access (landing, sign-in,
-    // unlock onboarding, socketrelay public board). NOT currently wired: per-plugin public
-    // visibility is an auth-gate concern (directory has no public view in v3; socketrelay
+    // unlock onboarding, socket-relay public board). NOT currently wired: per-plugin public
+    // visibility is an auth-gate concern (directory has no public view in v3; socket-relay
     // redacts fields for unauth callers; chyme/hub are fully authenticated). Kept as a
     // registered key for a future incident/pre-launch lockdown switch — see issue #102.
     PUBLIC_SURFACE: 'public-surface',

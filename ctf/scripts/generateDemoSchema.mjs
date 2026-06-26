@@ -21,7 +21,7 @@
  *   H3:    public.users ALTER TABLE suppressed
  *   H4:    public.users unique-index DO block suppressed
  *   H5:    table_schema = 'public' → table_schema = 'demo'
- *   H6:    public.socketrelay_user_extension → unqualified (post migration 0003)
+ *   H6:    public.socket_relay_user_extension → unqualified (post migration 0003)
  */
 
 import fs from 'node:fs/promises';
@@ -36,7 +36,7 @@ const outPath = path.resolve(__dirname, '..', 'schema.demo.sql');
 function applyDemoTransforms(sql, targetSchema) {
   sql = sql.replace(/\bpublic\.chyme_room_members\b/g, 'chyme_room_members');
   sql = sql.replace(/\bpublic\.chyme_messages\b/g, 'chyme_messages');
-  sql = sql.replace(/\bpublic\.socketrelay_user_extension\b/g, 'socketrelay_user_extension');
+  sql = sql.replace(/\bpublic\.socket_relay_user_extension\b/g, 'socket_relay_user_extension');
   sql = sql.replace(
     /^ALTER TABLE IF EXISTS public\.users\b.*$/gm,
     '-- [demo-skip: public.users alter suppressed]',

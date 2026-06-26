@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 const ADMIN_AREAS: { href: string; name: string; description: string }[] = [
   { href: '/admin/unlock', name: 'Unlock', description: 'Review and decide who gets full access to the app.' },
   { href: '/admin/directory', name: 'Directory', description: 'Manage member directory listings and visibility.' },
-  { href: '/admin/socketrelay', name: 'SocketRelay', description: 'Moderate mutual-aid requests and offers.' },
+  { href: '/admin/socket-relay', name: 'SocketRelay', description: 'Moderate mutual-aid requests and offers.' },
   { href: '/admin/lighthouse', name: 'LightHouse', description: 'Manage LightHouse listings and review reports.' },
   { href: '/admin/trust-transport', name: 'TrustTransport', description: 'Oversee transport coordination and disputes.' },
   { href: '/admin/comic', name: 'AI Assistant', description: 'Review answers from the @comic assistant before they post.' },

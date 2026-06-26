@@ -22,7 +22,7 @@
     "smoke:skills-hunt": "node ./scripts/smokeSkillsHuntE2e.mjs",
     "seed:foundation": "node ./scripts/seedFoundation.mjs",
     "seed:lighthouse": "node ./scripts/seedLighthouse.mjs",
-    "seed:socketrelay": "node ./scripts/seedSocketRelay.mjs",
+    "seed:socket-relay": "node ./scripts/seedSocketRelay.mjs",
     "seed:trust-transport": "node ./scripts/seedTrustTransport.mjs",
     "seed:levelup": "node ./scripts/seedLevelup.mjs",
     "seed:what-works": "node ./scripts/seedWhatWorks.mjs",

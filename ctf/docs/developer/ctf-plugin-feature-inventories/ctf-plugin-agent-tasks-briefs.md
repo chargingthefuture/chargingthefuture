@@ -486,19 +486,19 @@ Handoff output:
 - Admin and user flow validation summary
 ```
 
-## Prompt 08 — `agent-08-socketrelay`
+## Prompt 08 — `agent-08-socket-relay`
 
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socketrelay-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socketrelay-feature-inventory.md
-- #file:ctf/docs/contracts/SOCKETRELAY_PLUGIN_COMMAND_CONTRACTS.yaml
-- #file:ctf/docs/contracts/SOCKETRELAY_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
-- #file:ctf/docs/contracts/SOCKETRELAY_PLUGIN_AUDIT_CONTRACTS.yaml
-- #file:ctf/docs/contracts/SOCKETRELAY_PROFILE_AND_DELETION_CONTRACT.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md
+- #file:ctf/docs/contracts/SOCKET_RELAY_PLUGIN_COMMAND_CONTRACTS.yaml
+- #file:ctf/docs/contracts/SOCKET_RELAY_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
+- #file:ctf/docs/contracts/SOCKET_RELAY_PLUGIN_AUDIT_CONTRACTS.yaml
+- #file:ctf/docs/contracts/SOCKET_RELAY_PROFILE_AND_DELETION_CONTRACT.md
 
-You are `agent-08-socketrelay` working only under `ctf/`.
+You are `agent-08-socket-relay` working only under `ctf/`.
 Start gate:
 - Phase 2 — parallel start after Phase 0 completion.
 

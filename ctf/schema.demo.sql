@@ -1943,7 +1943,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),
-  ('socketrelay',        'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
+  ('socket-relay',         'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
   ('trust-transport',    'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
   ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
@@ -3026,8 +3026,22 @@ ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS targ
 ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === SOCKETRELAY MODULE ===
-CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
+-- === SOCKET-RELAY MODULE ===
+-- Rename legacy socket_relay_* tables to socket_relay_* before the CREATE ... IF NOT EXISTS blocks,
+-- so an existing DB keeps its rows under the new names and a fresh DB builds the new names directly.
+-- Each RENAME is a no-op on a fresh DB (table does not yet exist) and on a DB already renamed.
+ALTER TABLE IF EXISTS socketrelay_user_extension RENAME TO socket_relay_user_extension;
+ALTER TABLE IF EXISTS socketrelay_requests RENAME TO socket_relay_requests;
+ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies RENAME TO socket_relay_request_accepted_currencies;
+ALTER TABLE IF EXISTS socketrelay_request_events RENAME TO socket_relay_request_events;
+ALTER TABLE IF EXISTS socketrelay_fulfillments RENAME TO socket_relay_fulfillments;
+ALTER TABLE IF EXISTS socketrelay_fulfillment_participants RENAME TO socket_relay_fulfillment_participants;
+ALTER TABLE IF EXISTS socketrelay_messages RENAME TO socket_relay_messages;
+ALTER TABLE IF EXISTS socketrelay_admin_audit_trail RENAME TO socket_relay_admin_audit_trail;
+-- Drop the legacy-named price-consistency CHECK constraint if an older DB still carries it; the
+-- DO-block further down recreates it under the new socket_relay_requests_price_consistency_check name.
+ALTER TABLE IF EXISTS socket_relay_requests DROP CONSTRAINT IF EXISTS socketrelay_requests_price_consistency_check;
+CREATE TABLE IF NOT EXISTS socket_relay_user_extension (
   user_id TEXT PRIMARY KEY,
   bio TEXT,
   relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -3035,14 +3049,14 @@ CREATE TABLE IF NOT EXISTS socketrelay_user_extension (
   service_deleted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS bio TEXT;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS presence_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS socketrelay_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS relay_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS presence_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS socket_relay_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_requests (
+CREATE TABLE IF NOT EXISTS socket_relay_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_user_id TEXT NOT NULL,
   owner_username TEXT,
@@ -3063,61 +3077,61 @@ CREATE TABLE IF NOT EXISTS socketrelay_requests (
   expires_at TIMESTAMPTZ,
   UNIQUE (owner_user_id, idempotency_key)
 );
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS owner_username TEXT;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS city TEXT;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS claimed_fulfillment_id UUID;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS owner_username TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS details TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS reopened_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS claimed_fulfillment_id UUID;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Auto-expiry (28 days). Nullable so it can be backfilled from each existing post's created_at without a
 -- blocking default; new posts and re-posts always set it explicitly in code.
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
-UPDATE socketrelay_requests SET expires_at = created_at + INTERVAL '28 days' WHERE expires_at IS NULL;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+UPDATE socket_relay_requests SET expires_at = created_at + INTERVAL '28 days' WHERE expires_at IS NULL;
 -- Multi-currency (issue #120): SocketRelay is mutual aid and posts are free. These OPTIONAL columns let a
 -- request name an offered reward when one exists; "Free" must render from the ABSENCE of a price (NULL),
--- never as $0. Accepted currencies (if any) live in socketrelay_request_accepted_currencies.
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
-ALTER TABLE IF EXISTS socketrelay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+-- never as $0. Accepted currencies (if any) live in socket_relay_request_accepted_currencies.
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS socket_relay_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
 -- Price/value-type consistency (issue #120 / #420): a request either names no value type (both NULL) or
 -- names a value type, with a positive amount for priced types and NO amount for amount-less types
 -- (Free, Barter — currencies.requires_amount = FALSE). "Free" therefore renders from price_currency =
 -- 'FREE' with a NULL amount, never as $0. Drop the older strict constraint (which forbade amount-less
 -- named types) so legacy DBs get the relaxed rule; the guarded block re-adds it under the same name.
-ALTER TABLE IF EXISTS socketrelay_requests DROP CONSTRAINT IF EXISTS socketrelay_requests_price_consistency_check;
-DO $socketrelay_requests_price_consistency$
+ALTER TABLE IF EXISTS socket_relay_requests DROP CONSTRAINT IF EXISTS socket_relay_requests_price_consistency_check;
+DO $socket_relay_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'socketrelay_requests_price_consistency_check'
+    WHERE constraint_name = 'socket_relay_requests_price_consistency_check'
   ) THEN
-    ALTER TABLE socketrelay_requests
-      ADD CONSTRAINT socketrelay_requests_price_consistency_check
+    ALTER TABLE socket_relay_requests
+      ADD CONSTRAINT socket_relay_requests_price_consistency_check
       CHECK (
         (price_amount IS NULL AND price_currency IS NULL) OR
         (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
       );
   END IF;
 END
-$socketrelay_requests_price_consistency$;
-CREATE TABLE IF NOT EXISTS socketrelay_request_accepted_currencies (
-  request_id UUID NOT NULL REFERENCES socketrelay_requests(id) ON DELETE CASCADE,
+$socket_relay_requests_price_consistency$;
+CREATE TABLE IF NOT EXISTS socket_relay_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES socket_relay_requests(id) ON DELETE CASCADE,
   currency_code TEXT NOT NULL REFERENCES currencies(code),
   PRIMARY KEY (request_id, currency_code)
 );
-ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
-ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
-CREATE INDEX IF NOT EXISTS idx_socketrelay_request_accepted_currencies_request ON socketrelay_request_accepted_currencies(request_id);
+ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_socket_relay_request_accepted_currencies_request ON socket_relay_request_accepted_currencies(request_id);
 
-CREATE TABLE IF NOT EXISTS socketrelay_request_events (
+CREATE TABLE IF NOT EXISTS socket_relay_request_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL,
   actor_user_id TEXT NOT NULL,
@@ -3125,14 +3139,14 @@ CREATE TABLE IF NOT EXISTS socketrelay_request_events (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS event_name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS socketrelay_request_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS event_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS socket_relay_request_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_fulfillments (
+CREATE TABLE IF NOT EXISTS socket_relay_fulfillments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL,
   requester_user_id TEXT NOT NULL,
@@ -3142,28 +3156,28 @@ CREATE TABLE IF NOT EXISTS socketrelay_fulfillments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS requester_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS socketrelay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS request_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS requester_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_fulfillment_participants (
+CREATE TABLE IF NOT EXISTS socket_relay_fulfillment_participants (
   fulfillment_id UUID NOT NULL,
   user_id TEXT NOT NULL,
   participant_role TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (fulfillment_id, user_id)
 );
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS fulfillment_id UUID;
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS participant_role TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS fulfillment_id UUID;
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS participant_role TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_messages (
+CREATE TABLE IF NOT EXISTS socket_relay_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   fulfillment_id UUID NOT NULL,
   sender_user_id TEXT NOT NULL,
@@ -3171,14 +3185,14 @@ CREATE TABLE IF NOT EXISTS socketrelay_messages (
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS fulfillment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS sender_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS message_text TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS fulfillment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS sender_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS message_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socketrelay_admin_audit_trail (
+CREATE TABLE IF NOT EXISTS socket_relay_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command TEXT NOT NULL,
@@ -3189,15 +3203,15 @@ CREATE TABLE IF NOT EXISTS socketrelay_admin_audit_trail (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS socketrelay_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS socket_relay_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === GDP MODULE ===
 CREATE TABLE IF NOT EXISTS gdp_metric_snapshots (
@@ -4074,8 +4088,8 @@ $sc_cmd_idem_command_nullable$;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS deletion_request_id UUID;
 
--- socketrelay_messages (1 missing)
-ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
+-- socket_relay_messages (1 missing)
+ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
 
 -- trust_transport_user_extension (5 missing)
 ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -5032,7 +5046,7 @@ $chyme_messages_drop_display_name$;
 
 -- ── post migration: 0003_socketrelay_drop_display_name.sql ──
 -- SocketRelay: drop the unused `display_name` column from
--- `socketrelay_user_extension`.
+-- `socket_relay_user_extension`.
 --
 -- Why this exists:
 --   The column held an optional per-user profile name, but nothing in the v3
@@ -5043,24 +5057,26 @@ $chyme_messages_drop_display_name$;
 --   carries, so the drop lives here, after the canonical schema has run.
 --
 -- What it does, only when the old column is still present:
---   Drop `display_name` from `socketrelay_user_extension`.
+--   Drop `display_name` from `socket_relay_user_extension`.
 --
 -- Safe to re-run: guarded on the column still existing, so once it has been
--- dropped every later run is a no-op.
+-- dropped every later run is a no-op. This post-migration runs after schema.sql,
+-- which has already renamed the table to socket_relay_user_extension, so it
+-- targets the new name; on a fresh DB the column is absent and this is a no-op.
 
-DO $socketrelay_user_extension_drop_display_name$
+DO $socket_relay_user_extension_drop_display_name$
 BEGIN
   IF EXISTS (
     SELECT 1
     FROM information_schema.columns
     WHERE table_schema = 'demo'
-      AND table_name = 'socketrelay_user_extension'
+      AND table_name = 'socket_relay_user_extension'
       AND column_name = 'display_name'
   ) THEN
-    ALTER TABLE socketrelay_user_extension DROP COLUMN display_name;
+    ALTER TABLE socket_relay_user_extension DROP COLUMN display_name;
   END IF;
 END
-$socketrelay_user_extension_drop_display_name$;
+$socket_relay_user_extension_drop_display_name$;
 
 
 -- ── post migration: 0004_skills_hunt_submissions_display_name_to_full_name.sql ──

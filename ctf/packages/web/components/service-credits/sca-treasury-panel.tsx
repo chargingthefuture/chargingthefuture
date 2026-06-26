@@ -187,7 +187,7 @@ export function ServiceCreditsTreasuryPanel() {
           <Field label="Treasury wallet user ID" value={treasuryUserId} onChange={setTreasuryUserId} placeholder="user_…" />
           <Field label="Amount (credits)" type="number" value={feeAmount} onChange={setFeeAmount} placeholder="0" />
           <Field label="Fee reason code" value={feeReasonCode} onChange={setFeeReasonCode} placeholder="e.g. relay_fee" />
-          <Field label="Origin plugin" value={originPlugin} onChange={setOriginPlugin} placeholder="e.g. socketrelay" />
+          <Field label="Origin plugin" value={originPlugin} onChange={setOriginPlugin} placeholder="e.g. socket-relay" />
         </div>
         <ConfirmAction
           label="Collect fee"

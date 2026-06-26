@@ -49,7 +49,7 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
 
 **Decision 2: Public visibility → auth-gate, per-plugin (RESOLVED, see Summary).**
 - No `public-surface` flag gating of individual routes. Directory public routes removed;
-  socketrelay keeps redaction-based public access; chyme/hub stay authenticated.
+  socket-relay keeps redaction-based public access; chyme/hub stay authenticated.
 - `/apps/directory/[handle]` (and legacy directory deep-links) **redirect to `/apps/directory`**
   (sign-in CTA is on the shell). Pure redirect; no design pass needed.
 
@@ -66,7 +66,7 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
   to anyone. Removed: `/api/directory/public`, `/api/directory/public/[id]`,
   `listPublicDirectory`, `getPublicDirectoryById`, `getPublicDirectoryByHandle`,
   `resolveClaimedUsernameForProfile`; `[handle]` page replaced with a redirect.
-- **SocketRelay public** (`/api/socketrelay/public`, `/api/socketrelay/public/[id]`) is a real
+- **SocketRelay public** (`/api/socket-relay/public`, `/api/socket-relay/public/[id]`) is a real
   feature using `mapPublicRequestRow()` redaction. Left public; no flag.
 - **Chyme / Hub** — fully authenticated, no public surface.
 - Demo-mode now routes **Stream** (`resolveStreamCredentials()`) and **Formance** (ledger-book
@@ -83,8 +83,8 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
 - [x] **Gated public API routes** behind `publicSurfaceGate()` (server-only, no rendered surface):
   - `GET /api/directory/public`
   - `GET /api/directory/public/[id]`
-  - `GET /api/socketrelay/public`
-  - `GET /api/socketrelay/public/[id]`
+  - `GET /api/socket-relay/public`
+  - `GET /api/socket-relay/public/[id]`
 - [x] **Flag keys confirmed** in `ctf/packages/shared/src/feature-flags/keys.ts`: `SYSTEM_FLAGS.PUBLIC_SURFACE`, `SYSTEM_FLAGS.DEMO_MODE`.
 
 ### Foundation (Remaining — Blocked on Owner Decisions)
@@ -222,7 +222,7 @@ realization of "demo tables in the prod db, not mixed":
    participant accounts (owner + testers) and auto-provision a demo profile on first demo login.
 5. **Per-plugin demo seeds (scenario matrix)** — run against the `demo` schema (seed runner sets
    `search_path=demo`), starting with credit-bearing plugins (service-credits, trusttransport, lighthouse,
-   socketrelay, foundation) so the `ctf-demo` Formance ledger is exercised E2E.
+   socket-relay, foundation) so the `ctf-demo` Formance ledger is exercised E2E.
 6. **Verify on Render**: target `demo-mode` to your own Clerk id, confirm your interactions read/write only
    `demo` + `ctf-demo`; `demo-mode` OFF → prod untouched. Then add testers.
 

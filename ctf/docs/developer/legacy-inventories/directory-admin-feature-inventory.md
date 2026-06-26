@@ -75,7 +75,7 @@ Features:
 Evidence:
 
 - `platform/client/src/pages/directory/admin-announcements.tsx`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Features:
 
@@ -133,7 +133,7 @@ Dependencies:
 Evidence:
 
 - `platform/server/routes/directory.routes.ts`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/server/routes/socket-relay.routes.ts`
 
 Controls:
 
@@ -154,7 +154,7 @@ Controls:
 
 ## 6) Gaps, Ambiguities, and Migration Risks
 
-1. **Route ownership ambiguity:** Directory admin announcement APIs are implemented in `socketrelay.routes.ts`.
+1. **Route ownership ambiguity:** Directory admin announcement APIs are implemented in `socket-relay.routes.ts`.
 2. **Legacy compatibility complexity:** Directory admin still depends on flattened compatibility skill feeds while using shared hierarchy sources.
 3. **Post-create URL action nuance:** Existing behavior is toast URL text, not a strict copy/open workflow step.
 4. **Policy drift risk:** Claimed/unclaimed guardrails must be preserved exactly in rewrite.

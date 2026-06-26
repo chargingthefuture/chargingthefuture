@@ -76,9 +76,9 @@ const SOURCES = [
     // SocketRelay favors: mutual aid with no per-favor price, so each successfully-completed favor counts
     // as one FREE exchange (by count). The standalone SocketRelay SC transfer route is intentionally not
     // also counted here to avoid double-counting a single favor.
-    pluginSlug: 'socketrelay',
+    pluginSlug: 'socket-relay',
     sql: `SELECT 'FREE' AS currency_code, COUNT(*)::numeric AS total
-            FROM socketrelay_fulfillments
+            FROM socket_relay_fulfillments
             WHERE close_reason = 'successful'`,
   },
   // Add more as approved. Keep eligible settled spend only — never incentives. A genuine peer-to-peer

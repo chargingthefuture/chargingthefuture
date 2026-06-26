@@ -692,7 +692,7 @@ async function seedSocketRelay(c) {
     [PEER_1, 'Community connector — ask me anything.'],
   ]) {
     await c.query(
-      `INSERT INTO socketrelay_user_extension
+      `INSERT INTO socket_relay_user_extension
        (user_id, bio, relay_preferences, presence_opt_in)
        VALUES ($1, $2, '{"notifications":"all"}'::jsonb, true)
        ON CONFLICT (user_id) DO UPDATE SET
@@ -707,7 +707,7 @@ async function seedSocketRelay(c) {
 
   // Request owned by peer, fulfilled by owner — shows owner as helper
   await c.query(
-    `INSERT INTO socketrelay_requests
+    `INSERT INTO socket_relay_requests
      (id, owner_user_id, title, details, category, city, is_public, status,
       idempotency_key, reopened_count, claimed_fulfillment_id)
      VALUES ($1::uuid, $2,
@@ -719,14 +719,14 @@ async function seedSocketRelay(c) {
   );
 
   await c.query(
-    `INSERT INTO socketrelay_fulfillments
+    `INSERT INTO socket_relay_fulfillments
      (id, request_id, requester_user_id, fulfiller_user_id, status)
      VALUES ($1::uuid, $2::uuid, $3, $4, 'active')
      ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
     [ID.srFulfillment, ID.srRequest, PEER_1, OWNER],
   );
 
-  console.log('  ✓ socketrelay');
+  console.log('  ✓ socket-relay');
 }
 
 async function seedClicklog(c) {

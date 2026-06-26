@@ -1,5 +1,5 @@
 // All calls go through authedFetch so the Clerk bearer token is attached and the
-// base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
+// base URL comes from runtime config (APP_URL) — same pattern as socket-relay/currency.
 // Announcements are the `announcements` channel of the feed plugin's items API.
 import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 

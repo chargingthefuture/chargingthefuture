@@ -144,7 +144,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'I’m broke but I can fix bikes. Any way to get groceries without cash?',
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     name: 'SocketRelay',
     blurb: 'Share surplus with members who need it now.',
     keywords: [

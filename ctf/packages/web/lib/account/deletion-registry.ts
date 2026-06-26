@@ -7,7 +7,7 @@
 // shipped tables. Examples of drift this registry deliberately corrects:
 //   - `gdp_user_extension` does NOT exist — GDP stores no per-user data, so GDP has nothing to delete.
 //   - feed tables key authorship by `author_user_id` / `asked_by_user_id`, not `user_id`.
-//   - `socketrelay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
+//   - `socket_relay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
 //     `provider_user_id`; Foundation threads use `created_by_user_id` / `sender_user_id`.
 //
 // The validator `ctf/scripts/check-deletion-registry.mjs` (wired into CI) checks every table and
@@ -210,17 +210,17 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     name: 'SocketRelay',
     dataSummary: 'Your relay requests, fulfillments, messages, and profile.',
     serviceScopeSupported: true,
     tables: [
-      del('socketrelay_messages', 'sender_user_id', 'Messages you sent.'),
-      del('socketrelay_fulfillment_participants', 'user_id', 'Your fulfillment participation.'),
-      del('socketrelay_fulfillments', 'requester_user_id', 'Fulfillments you requested.'),
-      del('socketrelay_requests', 'owner_user_id', 'Your relay requests.'),
-      soft('socketrelay_user_extension', 'user_id', 'service_deleted_at', 'Your SocketRelay plugin extension record.'),
-      retain('socketrelay_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
+      del('socket_relay_messages', 'sender_user_id', 'Messages you sent.'),
+      del('socket_relay_fulfillment_participants', 'user_id', 'Your fulfillment participation.'),
+      del('socket_relay_fulfillments', 'requester_user_id', 'Fulfillments you requested.'),
+      del('socket_relay_requests', 'owner_user_id', 'Your relay requests.'),
+      soft('socket_relay_user_extension', 'user_id', 'service_deleted_at', 'Your SocketRelay plugin extension record.'),
+      retain('socket_relay_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
