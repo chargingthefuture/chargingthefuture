@@ -24,7 +24,7 @@ function PrivacyFooter() {
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap", justifyContent: "center" }}>
         {[
           { icon: Shield, label: "Anonymous by design" },
-          { icon: Lock, label: "Zero personal data stored" },
+          { icon: Lock, label: "No personal data in trends" },
         ].map(({ icon: Icon, label }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: t.MUTED }}>
             <Icon size={14} color={t.ACCENT} /> {label}

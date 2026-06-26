@@ -128,7 +128,7 @@ export default function MoodShell() {
           <Smile size={18} style={{ color: t.ACCENT }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT }}>😁 Mood — Anonymous Check-ins</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Zero tracking · Community wellness</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Private check-ins · Community wellness</div>
           </div>
           <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 11, padding: "3px 10px", borderRadius: 20 }}>🔒 Anonymous</Badge>
         </header>

@@ -131,7 +131,7 @@ function CheckinView({
               <Text style={s.submitBtnText}>Submit Anonymously</Text>
             )}
           </TouchableOpacity>
-          <Text style={s.anonNote}>Not linked to your account</Text>
+          <Text style={s.anonNote}>Never shown to anyone</Text>
         </>
       )}
       {error !== null && <Text style={s.errorText}>{error}</Text>}
@@ -275,7 +275,7 @@ function PrivateView() {
     <View style={s.emptyWrap}>
       <Text style={s.emptyEmoji}>🔒</Text>
       <Text style={s.emptyTitle}>Privacy First</Text>
-      <Text style={s.emptySub}>100% anonymous. Zero tracking. Your data is only yours.</Text>
+      <Text style={s.emptySub}>Your individual check-ins are never shown to anyone — only anonymous, aggregate trends.</Text>
     </View>
   );
 }
