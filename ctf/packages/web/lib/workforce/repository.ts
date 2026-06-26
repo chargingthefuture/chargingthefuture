@@ -1,6 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
 import {
   WORKFORCE_SKILL_LEVELS,
+  deriveAnnualTrainingTarget,
   deriveWorkforceSkillLevel,
   type WorkforceSkillLevel,
 } from './skill-level';
@@ -501,6 +502,7 @@ export async function listOccupations(
     sector: occ.sector,
     skillLevel: occ.skillLevel,
     target: occ.target,
+    annualTrainingTarget: deriveAnnualTrainingTarget(occ.target, occ.skillLevel),
     members: occ.members,
     recruited: occ.recruited,
     gap: occ.gap,
@@ -528,6 +530,7 @@ export async function getOccupationById(id: string): Promise<WorkforceOccupation
     sector: occ.sector,
     skillLevel: occ.skillLevel,
     target: occ.target,
+    annualTrainingTarget: deriveAnnualTrainingTarget(occ.target, occ.skillLevel),
     members: occ.members,
     recruited: occ.recruited,
     gap: occ.gap,

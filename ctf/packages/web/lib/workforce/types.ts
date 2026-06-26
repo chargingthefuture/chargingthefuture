@@ -49,8 +49,12 @@ export type WorkforceOccupation = {
   sector: string;
   skillLevel: WorkforceSkillLevel;
   target: number; // demand share of this occupation
+  // V2-style annual training target: a fixed share of the occupation demand by skill level
+  // (Foundational 10%, Intermediate 15%, Advanced 25% — the midpoints of V2's seed ranges). V3 stores
+  // no occupation, so this is derived live, not a stored admin value.
+  annualTrainingTarget: number;
   members: number; // active Directory profiles in this occupation
-  recruited: number; // claimed Directory profiles in this occupation
+  recruited: number; // distinct matched Directory profiles in this occupation (V2 aspirational match)
   gap: number; // max(0, target - recruited)
 };
 

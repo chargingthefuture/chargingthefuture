@@ -33,3 +33,16 @@ export function deriveWorkforceSkillLevel(jobTitleName: string | null | undefine
   }
   return 'Intermediate';
 }
+
+// V2 seeded an "annual training target" as a percentage of headcount that varied by skill level
+// (Foundational 5–15%, Intermediate 10–20%, Advanced 20–30%). V3 stores no occupation, so we derive
+// it live from the occupation demand using the midpoint of each V2 range — deterministic, no column.
+const ANNUAL_TRAINING_SHARE: Record<WorkforceSkillLevel, number> = {
+  Foundational: 0.1,
+  Intermediate: 0.15,
+  Advanced: 0.25,
+};
+
+export function deriveAnnualTrainingTarget(demand: number, skillLevel: WorkforceSkillLevel): number {
+  return Math.round(Math.max(0, demand) * ANNUAL_TRAINING_SHARE[skillLevel]);
+}
