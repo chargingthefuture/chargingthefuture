@@ -87,7 +87,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Real-time resource sharing across the network.',
   },
   {
-    id: 'trusttransport',
+    id: 'trust-transport',
     name: 'TrustTransport',
     kind: 'plugin',
     summary: 'Vetted transportation for safe travel. Drivers screened by the community, for the community.',

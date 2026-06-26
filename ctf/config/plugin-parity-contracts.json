@@ -56,8 +56,8 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "trusttransport",
-      "mobileFeatureDirs": ["trusttransport"],
+      "slug": "trust-transport",
+      "mobileFeatureDirs": ["trust-transport"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },

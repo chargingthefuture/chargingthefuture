@@ -1,0 +1,105 @@
+policies:
+  - pluginId: trust-transport
+    command: trust-transport.request.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      modeValidation: required
+    consentRequirements:
+      scopes:
+        - trust_transport_marketplace
+      fallbackLawfulBasis: contract_preparation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+      allowedRegions:
+        - requester_region
+        - provider_region
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - invalid_mode
+      - region_not_permitted
+
+  - pluginId: trust-transport
+    command: trust-transport.offer.accept
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      offerEligibility: required
+      actorMustOwnRequest: true
+    consentRequirements:
+      scopes:
+        - trust_transport_marketplace
+      fallbackLawfulBasis: contract_preparation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_request_owner
+      - offer_not_eligible
+      - region_not_permitted
+
+  - pluginId: trust-transport
+    command: trust-transport.trip.status.update
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - provider
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      transitionMatrix: enforced
+      actorMustBeParticipantOrAdmin: true
+    consentRequirements:
+      scopes:
+        - trust_transport_lifecycle_updates
+      fallbackLawfulBasis: contract_preparation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - invalid_state_transition
+      - actor_not_authorized_for_transition
+      - region_not_permitted
+
+  - pluginId: trust-transport
+    command: trust-transport.payout.request
+    version: 1.0.0
+    requiredRoles:
+      - provider
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnLedger: true
+      availableBalanceCheck: required
+    consentRequirements:
+      scopes:
+        - trust_transport_payouts
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_provider
+      - insufficient_available_balance
+      - payout_channel_not_verified

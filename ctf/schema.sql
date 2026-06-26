@@ -1169,7 +1169,27 @@ END $$;
 -- uq_levelup_enrollments_user_level index. Safe no-op on databases that
 -- never had the legacy column.
 ALTER TABLE IF EXISTS levelup_enrollments DROP COLUMN IF EXISTS level_id;
-CREATE TABLE IF NOT EXISTS trusttransport_requests (
+-- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `trust-transport`; tables move to
+-- the matching snake_case prefix `trust_transport_`. Renames run first so an existing DB keeps its data;
+-- on a fresh DB the IF EXISTS renames are no-ops and the CREATE statements below build the new names.
+ALTER TABLE IF EXISTS trusttransport_requests RENAME TO trust_transport_requests;
+ALTER TABLE IF EXISTS trusttransport_status_events RENAME TO trust_transport_status_events;
+ALTER TABLE IF EXISTS trusttransport_offers RENAME TO trust_transport_offers;
+ALTER TABLE IF EXISTS trusttransport_trips RENAME TO trust_transport_trips;
+ALTER TABLE IF EXISTS trusttransport_risk_signals RENAME TO trust_transport_risk_signals;
+ALTER TABLE IF EXISTS trusttransport_disputes RENAME TO trust_transport_disputes;
+ALTER TABLE IF EXISTS trusttransport_ratings RENAME TO trust_transport_ratings;
+ALTER TABLE IF EXISTS trusttransport_market_config RENAME TO trust_transport_market_config;
+ALTER TABLE IF EXISTS trusttransport_user_extension RENAME TO trust_transport_user_extension;
+ALTER TABLE IF EXISTS trusttransport_proof_artifacts RENAME TO trust_transport_proof_artifacts;
+ALTER TABLE IF EXISTS trusttransport_payout_requests RENAME TO trust_transport_payout_requests;
+ALTER TABLE IF EXISTS trusttransport_earnings_ledger RENAME TO trust_transport_earnings_ledger;
+ALTER TABLE IF EXISTS trusttransport_admin_audit_trail RENAME TO trust_transport_admin_audit_trail;
+-- Drop the legacy-named price-consistency CHECK constraint if an older DB still carries it; the
+-- DO-block further down recreates it under the new `trust_transport_requests_price_consistency_check`
+-- name. Safe no-op on a fresh DB that never had the old constraint.
+ALTER TABLE IF EXISTS trust_transport_requests DROP CONSTRAINT IF EXISTS trusttransport_requests_price_consistency_check;
+CREATE TABLE IF NOT EXISTS trust_transport_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_user_id TEXT NOT NULL,
   mode TEXT NOT NULL,
@@ -1186,24 +1206,24 @@ CREATE TABLE IF NOT EXISTS trusttransport_requests (
 -- How the requester will settle the ride (issue #420): the chosen value type + an optional amount.
 -- "Free" (asking for a free ride — valid mutual aid) and "Barter" carry no amount; priced types
 -- (ServiceCredits, fiat, crypto) carry a positive amount. Both NULL means none was chosen.
-ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
-ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
-ALTER TABLE IF EXISTS trusttransport_requests DROP CONSTRAINT IF EXISTS trusttransport_requests_price_consistency_check;
-DO $trusttransport_requests_price_consistency$
+ALTER TABLE IF EXISTS trust_transport_requests ADD COLUMN IF NOT EXISTS price_amount NUMERIC;
+ALTER TABLE IF EXISTS trust_transport_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trust_transport_requests DROP CONSTRAINT IF EXISTS trust_transport_requests_price_consistency_check;
+DO $trust_transport_requests_price_consistency$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'trusttransport_requests_price_consistency_check'
+    WHERE constraint_name = 'trust_transport_requests_price_consistency_check'
   ) THEN
-    ALTER TABLE trusttransport_requests
-      ADD CONSTRAINT trusttransport_requests_price_consistency_check
+    ALTER TABLE trust_transport_requests
+      ADD CONSTRAINT trust_transport_requests_price_consistency_check
       CHECK (
         (price_amount IS NULL AND price_currency IS NULL) OR
         (price_currency IS NOT NULL AND (price_amount IS NULL OR price_amount > 0))
       );
   END IF;
 END
-$trusttransport_requests_price_consistency$;
+$trust_transport_requests_price_consistency$;
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -1227,9 +1247,9 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS upda
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Removed feature: drop the legacy kill-switch column if a prior DB created it.
 ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
-CREATE TABLE IF NOT EXISTS trusttransport_status_events (
+CREATE TABLE IF NOT EXISTS trust_transport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
   trip_id UUID,
   actor_user_id TEXT NOT NULL,
   event_name TEXT NOT NULL,
@@ -1238,9 +1258,9 @@ CREATE TABLE IF NOT EXISTS trusttransport_status_events (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_offers (
+CREATE TABLE IF NOT EXISTS trust_transport_offers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
   provider_user_id TEXT NOT NULL,
   note TEXT,
   proposed_amount INTEGER,
@@ -1248,9 +1268,9 @@ CREATE TABLE IF NOT EXISTS trusttransport_offers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_trips (
+CREATE TABLE IF NOT EXISTS trust_transport_trips (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID NOT NULL REFERENCES trusttransport_requests(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
   offer_id UUID,
   requester_user_id TEXT NOT NULL,
   provider_user_id TEXT NOT NULL,
@@ -1262,7 +1282,7 @@ CREATE TABLE IF NOT EXISTS trusttransport_trips (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_risk_signals (
+CREATE TABLE IF NOT EXISTS trust_transport_risk_signals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID,
   trip_id UUID,
@@ -1277,7 +1297,7 @@ CREATE TABLE IF NOT EXISTS trusttransport_risk_signals (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_disputes (
+CREATE TABLE IF NOT EXISTS trust_transport_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   trip_id UUID,
   request_id UUID,
@@ -1287,9 +1307,9 @@ CREATE TABLE IF NOT EXISTS trusttransport_disputes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_ratings (
+CREATE TABLE IF NOT EXISTS trust_transport_ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES trusttransport_trips(id) ON DELETE CASCADE,
+  trip_id UUID NOT NULL REFERENCES trust_transport_trips(id) ON DELETE CASCADE,
   requester_user_id TEXT NOT NULL,
   provider_user_id TEXT NOT NULL,
   score INTEGER NOT NULL,
@@ -1297,28 +1317,28 @@ CREATE TABLE IF NOT EXISTS trusttransport_ratings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_market_config (
+CREATE TABLE IF NOT EXISTS trust_transport_market_config (
   id BOOLEAN PRIMARY KEY DEFAULT TRUE,
   config JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_user_extension (
+CREATE TABLE IF NOT EXISTS trust_transport_user_extension (
   user_id TEXT PRIMARY KEY,
   availability_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   work_preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
   service_deleted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_proof_artifacts (
+CREATE TABLE IF NOT EXISTS trust_transport_proof_artifacts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES trusttransport_trips(id) ON DELETE CASCADE,
+  trip_id UUID NOT NULL REFERENCES trust_transport_trips(id) ON DELETE CASCADE,
   artifact_type TEXT NOT NULL,
   artifact_redacted TEXT,
   captured_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_payout_requests (
+CREATE TABLE IF NOT EXISTS trust_transport_payout_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_user_id TEXT NOT NULL,
   amount INTEGER NOT NULL,
@@ -1327,7 +1347,7 @@ CREATE TABLE IF NOT EXISTS trusttransport_payout_requests (
   idempotency_key TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS trusttransport_earnings_ledger (
+CREATE TABLE IF NOT EXISTS trust_transport_earnings_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_user_id TEXT NOT NULL,
   entry_type TEXT NOT NULL,
@@ -1342,13 +1362,13 @@ CREATE TABLE IF NOT EXISTS trusttransport_earnings_ledger (
 -- the GDP estimation layer (issue #121) reads. Existing rows are backfilled from `currency` only where it
 -- already matches a known code; unknown legacy values are left for manual reconciliation so no money data
 -- is overwritten. This never asserts a ServiceCredits<->fiat parity.
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
-ALTER TABLE IF EXISTS trusttransport_earnings_ledger ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
-UPDATE trusttransport_payout_requests SET price_currency = currency
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+ALTER TABLE IF EXISTS trust_transport_earnings_ledger ADD COLUMN IF NOT EXISTS price_currency TEXT REFERENCES currencies(code);
+UPDATE trust_transport_payout_requests SET price_currency = currency
   WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
-UPDATE trusttransport_earnings_ledger SET price_currency = currency
+UPDATE trust_transport_earnings_ledger SET price_currency = currency
   WHERE price_currency IS NULL AND currency IN (SELECT code FROM currencies);
-CREATE TABLE IF NOT EXISTS trusttransport_admin_audit_trail (
+CREATE TABLE IF NOT EXISTS trust_transport_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command TEXT NOT NULL,
@@ -1926,7 +1946,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Verified survivor housing listings.',                             'implemented_shell', 80,  TRUE),
   ('socketrelay',        'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
-  ('trusttransport',     'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
+  ('trust-transport',    'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
   ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
   ('gentlepulse',        'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
@@ -3923,37 +3943,37 @@ ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS display_orde
 ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS bonus_credited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
--- trusttransport_admin_audit_trail (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_admin_audit_trail (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_disputes (4 missing)
-ALTER TABLE IF EXISTS trusttransport_disputes ADD COLUMN IF NOT EXISTS resolution_notes TEXT;
-ALTER TABLE IF EXISTS trusttransport_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS trusttransport_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
+-- trust_transport_disputes (4 missing)
+ALTER TABLE IF EXISTS trust_transport_disputes ADD COLUMN IF NOT EXISTS resolution_notes TEXT;
+ALTER TABLE IF EXISTS trust_transport_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
 
--- trusttransport_offers (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_offers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_offers (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_offers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_payout_requests (4 missing)
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS decision_reason TEXT;
-ALTER TABLE IF EXISTS trusttransport_payout_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_payout_requests (4 missing)
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS decision_reason TEXT;
+ALTER TABLE IF EXISTS trust_transport_payout_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_requests (2 missing)
-ALTER TABLE IF EXISTS trusttransport_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+-- trust_transport_requests (2 missing)
+ALTER TABLE IF EXISTS trust_transport_requests ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 
--- trusttransport_risk_signals (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_risk_signals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_risk_signals (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_risk_signals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_trips (1 — defensive)
-ALTER TABLE IF EXISTS trusttransport_trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_trips (1 — defensive)
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- trusttransport_user_extension (4 missing)
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS account_restricted BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS restricted_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS restricted_by_user_id TEXT;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS restriction_reason TEXT;
+-- trust_transport_user_extension (4 missing)
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS account_restricted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS restricted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS restricted_by_user_id TEXT;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS restriction_reason TEXT;
 
 -- unlock_audit_log (7 missing — existing table has only id, user_id, action, details, created_at, updated_at)
 ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
@@ -4059,12 +4079,12 @@ ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS
 -- socketrelay_messages (1 missing)
 ALTER TABLE IF EXISTS socketrelay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
 
--- trusttransport_user_extension (5 missing)
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS safety_settings JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS payout_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS provider_eligible BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS trusttransport_user_extension ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- trust_transport_user_extension (5 missing)
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS safety_settings JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS payout_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS provider_eligible BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === comic AI Assistant (@comic) — conversation + supervision + training layer ===
 -- The @comic assistant captures every turn, drafts via Ollama, and routes every draft to human
@@ -4619,7 +4639,7 @@ CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
 -- One canonical record of whether a member is restricted, and at what scope. The auth gate blocks an
 -- 'all'-scope restriction on every product route; value-movement and contact points additionally
 -- honour 'trading'/'contact' scopes. Supersedes the per-plugin flags
--- (trusttransport_user_extension.account_restricted, service_credits_wallets.is_frozen), which are
+-- (trust_transport_user_extension.account_restricted, service_credits_wallets.is_frozen), which are
 -- retired in code and backfilled below. Defined at the END so the tables it backfills from already exist.
 CREATE TABLE IF NOT EXISTS account_restrictions (
   user_id TEXT PRIMARY KEY,
@@ -4653,7 +4673,7 @@ CREATE INDEX IF NOT EXISTS idx_account_restrictions_audit_created ON account_res
 -- re-restricts a member whose canonical row already exists (e.g. after an operator unrestricts).
 INSERT INTO account_restrictions (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason)
 SELECT user_id, TRUE, 'trading', COALESCE(restricted_at, NOW()), restricted_by_user_id, restriction_reason
-FROM trusttransport_user_extension
+FROM trust_transport_user_extension
 WHERE account_restricted = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 

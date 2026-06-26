@@ -22,7 +22,7 @@ Canonical contract files remain under docs/contracts to preserve existing automa
 - [Skills Taxonomy](./skills-taxonomy/README.md)
 - [SocketRelay](./socketrelay/README.md)
 - [Trust](./trust/README.md)
-- [TrustTransport](./trusttransport/README.md)
+- [TrustTransport](./trust-transport/README.md)
 - [Unlock](./unlock/README.md)
 - [Weekly Performance](./weekly-performance/README.md)
 - [Workforce](./workforce/README.md)

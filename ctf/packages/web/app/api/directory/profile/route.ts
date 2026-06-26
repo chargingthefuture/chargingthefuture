@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireDirectoryReadAccess } from '../_lib';
+import { ensureMutationCsrf, requireDirectoryReadAccess } from '../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deleteOwnDirectoryProfile, getOwnProfile, upsertOwnProfile, validateProfileInput } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
@@ -52,6 +52,11 @@ async function handleUpsert(request: Request) {
   const gate = await requireDirectoryReadAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   let body: ProfileBody;
@@ -138,10 +143,15 @@ export async function PUT(request: Request) {
   return handleUpsert(request);
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const gate = await requireDirectoryReadAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   try {

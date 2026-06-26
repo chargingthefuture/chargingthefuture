@@ -74,7 +74,7 @@ const SERVICE_GLYPH: Record<string, string> = {
   'peer-programming': '👥',
   lighthouse: '🏠',
   socketrelay: '🔂',
-  trusttransport: '📦',
+  'trust-transport': '📦',
   trust: '🛡️',
   workforce: '💼',
   'skills-hunt': '🎯',

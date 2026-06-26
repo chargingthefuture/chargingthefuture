@@ -151,25 +151,25 @@ This folder contains the rewrite monorepo scaffold for:
 ## TrustTransport Phase-2 Baseline
 
 - User APIs:
-  - `GET /api/trusttransport/modes`
-  - `GET/POST /api/trusttransport/requests`
-  - `GET /api/trusttransport/requests/:requestId`
-  - `GET /api/trusttransport/requests/:requestId/offers`
-  - `POST /api/trusttransport/offers/:offerId/accept`
-  - `POST /api/trusttransport/trips/:tripId/status`
-  - `POST /api/trusttransport/trips/:tripId/proof`
-  - `POST /api/trusttransport/trips/:tripId/emergency-stop`
-  - `POST /api/trusttransport/orders/:orderId/cancel`
-  - `POST /api/trusttransport/orders/:orderId/rating`
-  - `POST /api/trusttransport/payouts/requests`
-  - `GET /api/trusttransport/payouts`
+  - `GET /api/trust-transport/modes`
+  - `GET/POST /api/trust-transport/requests`
+  - `GET /api/trust-transport/requests/:requestId`
+  - `GET /api/trust-transport/requests/:requestId/offers`
+  - `POST /api/trust-transport/offers/:offerId/accept`
+  - `POST /api/trust-transport/trips/:tripId/status`
+  - `POST /api/trust-transport/trips/:tripId/proof`
+  - `POST /api/trust-transport/trips/:tripId/emergency-stop`
+  - `POST /api/trust-transport/orders/:orderId/cancel`
+  - `POST /api/trust-transport/orders/:orderId/rating`
+  - `POST /api/trust-transport/payouts/requests`
+  - `GET /api/trust-transport/payouts`
 - Admin APIs:
-  - `GET /api/trusttransport/admin/incidents`
-  - `POST /api/trusttransport/admin/incidents/:incidentId/resolve`
-  - `POST /api/trusttransport/admin/accounts/:userId/restrict`
-  - `POST /api/trusttransport/admin/accounts/:userId/restore`
-  - `GET/PUT /api/trusttransport/admin/market-config`
-  - `GET /api/trusttransport/admin/audit-events`
+  - `GET /api/trust-transport/admin/incidents`
+  - `POST /api/trust-transport/admin/incidents/:incidentId/resolve`
+  - `POST /api/trust-transport/admin/accounts/:userId/restrict`
+  - `POST /api/trust-transport/admin/accounts/:userId/restore`
+  - `GET/PUT /api/trust-transport/admin/market-config`
+  - `GET /api/trust-transport/admin/audit-events`
 
 ## ServiceCredits Formance Ledger Requirement
 

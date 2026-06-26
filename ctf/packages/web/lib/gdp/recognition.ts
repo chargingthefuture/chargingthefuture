@@ -92,12 +92,12 @@ export interface RecognitionSource {
  * free-text `currency`; unknown codes are surfaced (not silently dropped) by the aggregator.
  */
 export const trustTransportSource: RecognitionSource = {
-  pluginSlug: 'trusttransport',
+  pluginSlug: 'trust-transport',
   label: 'TrustTransport completed-task earnings',
   async loadVolumes() {
     const result = await queryDb<{ currency_code: string | null; total: string }>(
       `SELECT COALESCE(price_currency, currency) AS currency_code, SUM(amount)::text AS total
-         FROM trusttransport_earnings_ledger
+         FROM trust_transport_earnings_ledger
          WHERE entry_type IN ('credit', 'release')
          GROUP BY COALESCE(price_currency, currency)`,
     );

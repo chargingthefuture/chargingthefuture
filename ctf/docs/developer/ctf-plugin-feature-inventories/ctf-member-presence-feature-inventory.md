@@ -102,8 +102,8 @@ source mapping the backfill used, which the live hooks mirror exactly.
 | Source | Table | Member user-id column | Active filter | Slug / deep link | ref_type | Label |
 |---|---|---|---|---|---|---|
 | LightHouse property postings | `lighthouse_properties` | `host_user_id` | `is_active = TRUE` | `lighthouse` / `/apps/lighthouse` | `property` | Housing listing |
-| TrustTransport ride requests | `trusttransport_requests` | `requester_user_id` | status not terminal | `trusttransport` / `/apps/trusttransport` | `request` | Ride request |
-| TrustTransport ride offers | `trusttransport_offers` | `provider_user_id` | status not terminal | `trusttransport` / `/apps/trusttransport` | `offer` | Offering rides |
+| TrustTransport ride requests | `trust_transport_requests` | `requester_user_id` | status not terminal | `trust-transport` / `/apps/trust-transport` | `request` | Ride request |
+| TrustTransport ride offers | `trust_transport_offers` | `provider_user_id` | status not terminal | `trust-transport` / `/apps/trust-transport` | `offer` | Offering rides |
 | Foundation provider offerings | `foundation_provider_skills` | `user_id` | none (a row means offering) | `foundation` / `/apps/foundation` | `provider-skill` | Provider offering |
 | SocketRelay help posts | `socketrelay_requests` | `owner_user_id` | `status = 'open'` | `socketrelay` / `/apps/socketrelay` | `post` | Help post |
 

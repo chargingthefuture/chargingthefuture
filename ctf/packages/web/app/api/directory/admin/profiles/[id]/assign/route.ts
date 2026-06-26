@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { assignAdminProfile } from 'lib/directory/repository';
+import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -44,15 +45,51 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const profile = await assignAdminProfile(gate.auth.userId, id, userId);
     if (!profile) {
+      logDirectoryAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.admin.profile.assign',
+        status: 'deny',
+        reason: 'not_found',
+        targetType: 'profile',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'not_found',
+        metadata: { assignedUserId: userId },
+      });
+
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Profile not found.' },
         { status: 404 },
       );
     }
 
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.profile.assign',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'profile',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+      metadata: { assignedUserId: userId },
+    });
+
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles_id_assign' });
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.profile.assign',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'profile',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+      metadata: { assignedUserId: userId },
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to assign profile.' },
       { status: 503 },

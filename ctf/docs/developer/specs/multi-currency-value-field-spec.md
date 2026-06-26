@@ -27,7 +27,7 @@ this issue beyond ensuring nothing here implies SC↔fiat parity (see §7).
 
 | Plugin | Value field today | Currency field? | "Accepts ServiceCredits"? |
 |---|---|---|---|
-| TrustTransport | `trusttransport_payout_requests.amount` + `currency` | ✅ `currency TEXT` | implicit in currency |
+| TrustTransport | `trust_transport_payout_requests.amount` + `currency` | ✅ `currency TEXT` | implicit in currency |
 | LightHouse | `lighthouse_properties.monthly_rent` (bare `NUMERIC`) | ❌ none | ❌ none |
 | Foundation | quotes are free-text (`foundation_quote_requests.request_text`); no price model | ❌ none | ❌ none |
 | SocketRelay | none (mutual aid; reward shown only in mockup) | ❌ none | ❌ none |
@@ -153,9 +153,9 @@ join table — it is never derived from `price_currency`.
     + `foundation_provider_accepted_currencies`.
   - Do not add price fields to `foundation_quote_requests` — quotes stay free-text/manual.
 - TrustTransport (already has `amount` + `currency`): migrate `currency TEXT` → FK
-  `currencies(code)`; add `trusttransport_*_accepted_currencies` where an offer/posting exposes
-  accepted currencies. Reconcile both `trusttransport_payout_requests` and
-  `trusttransport_earnings_ledger`.
+  `currencies(code)`; add `trust_transport_*_accepted_currencies` where an offer/posting exposes
+  accepted currencies. Reconcile both `trust_transport_payout_requests` and
+  `trust_transport_earnings_ledger`.
 - SocketRelay (`socketrelay_requests` / `socketrelay_fulfillments`): if a reward/offer is shown,
   add `price_amount` + `price_currency` + accepted set; "Cost to post = Free" should render from
   absence of a price, not `$0`.
