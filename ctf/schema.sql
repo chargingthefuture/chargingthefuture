@@ -1359,6 +1359,10 @@ CREATE TABLE IF NOT EXISTS workforce_profiles (
   updated_by_user_id TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- workforce_occupations is no longer read or written by the Workforce plugin: occupations are read
+-- live from Skills Taxonomy (job titles), and Workforce never creates them. The table is retained
+-- (unused by Workforce) because the SkillsHunt rare-skill snapshot still references it; do not drop it
+-- without updating that consumer.
 CREATE TABLE IF NOT EXISTS workforce_occupations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -1381,16 +1385,30 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_events (
   user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Workforce config is the plugin's own (admin-editable) population model. Demand is derived as
+-- population * participation_rate, distributed across sectors by each sector's Skills Taxonomy
+-- workforce share. This config is never written to Directory or Skills Taxonomy.
 CREATE TABLE IF NOT EXISTS workforce_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
-  exports_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  report_week_timezone TEXT NOT NULL,
-  report_week_start_dow INTEGER NOT NULL DEFAULT 0,
-  updated_by_user_id TEXT NOT NULL,
+  population NUMERIC NOT NULL DEFAULT 5000000,
+  participation_rate NUMERIC NOT NULL DEFAULT 0.5,
+  min_recruitable NUMERIC NOT NULL DEFAULT 2000000,
+  max_recruitable NUMERIC NOT NULL DEFAULT 5000000,
+  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Removed feature: drop the legacy kill-switch column if a prior DB created it.
+-- New population-model columns (idempotent add) and removal of retired columns. The export toggle and
+-- report-week settings were removed when workforce became a read-only live tracker; the legacy
+-- kill-switch column is also dropped if a prior DB created it.
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS population NUMERIC NOT NULL DEFAULT 5000000;
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS participation_rate NUMERIC NOT NULL DEFAULT 0.5;
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS min_recruitable NUMERIC NOT NULL DEFAULT 2000000;
+ALTER TABLE IF EXISTS workforce_config ADD COLUMN IF NOT EXISTS max_recruitable NUMERIC NOT NULL DEFAULT 5000000;
+ALTER TABLE IF EXISTS workforce_config ALTER COLUMN updated_by_user_id SET DEFAULT 'system';
 ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS kill_switch_enabled;
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS exports_enabled;
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS report_week_timezone;
+ALTER TABLE IF EXISTS workforce_config DROP COLUMN IF EXISTS report_week_start_dow;
 CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -3572,7 +3590,9 @@ ALTER TABLE IF EXISTS weekly_performance_audit_trail ADD COLUMN IF NOT EXISTS ta
 ALTER TABLE IF EXISTS weekly_performance_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS weekly_performance_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === WORKFORCE MODULE (missing tables) ===
+-- workforce_export_jobs is retained but unused: report exporting was removed (no routes write it);
+-- the table is left in place rather than dropped to avoid a destructive migration. Workforce is a
+-- read-only live tracker.
 CREATE TABLE IF NOT EXISTS workforce_export_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_by_user_id TEXT NOT NULL,
@@ -3583,15 +3603,6 @@ CREATE TABLE IF NOT EXISTS workforce_export_jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS export_type TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS export_data JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_export_jobs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
 CREATE TABLE IF NOT EXISTS workforce_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -3918,10 +3929,6 @@ ALTER TABLE IF EXISTS unlock_audit_log ADD COLUMN IF NOT EXISTS target_user_id T
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_by_user_id TEXT;
 ALTER TABLE IF EXISTS weekly_performance_weeks ADD COLUMN IF NOT EXISTS selected_at TIMESTAMPTZ;
-
--- workforce_occupations (2 — defensive)
-ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_occupations ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
 
 -- workforce_recruited_events (6 missing)
 ALTER TABLE IF EXISTS workforce_recruited_events ADD COLUMN IF NOT EXISTS directory_profile_id TEXT;

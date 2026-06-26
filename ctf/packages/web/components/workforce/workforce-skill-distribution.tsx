@@ -2,10 +2,7 @@
 
 import type { WorkforceGroupedReportItem } from '../../lib/workforce/types';
 
-function recruitmentPct(recruited: number, total: number): number {
-  if (total === 0) return 0;
-  return Math.round((recruited / total) * 100);
-}
+const COLOR = '#F97316';
 
 interface WorkforceSkillDistributionProps {
   skillItems: WorkforceGroupedReportItem[];
@@ -15,6 +12,8 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
   if (skillItems.length === 0) {
     return null;
   }
+
+  const maxTarget = Math.max(...skillItems.map((item) => item.target), 1);
 
   return (
     <div
@@ -27,11 +26,11 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
       }}
     >
       <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB', marginBottom: 16 }}>
-        Workforce Status Distribution
+        Skill Level Breakdown
       </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 16 }}>
         {skillItems.map((item) => {
-          const pct = recruitmentPct(item.recruitedTotal, item.workforceTotal);
+          const heightPct = Math.max(4, Math.round((item.target / maxTarget) * 100));
           return (
             <div key={item.bucket} style={{ flex: 1, textAlign: 'center' }}>
               <div
@@ -42,48 +41,28 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
                   position: 'relative',
                   overflow: 'hidden',
                   marginBottom: 8,
+                  display: 'flex',
+                  alignItems: 'flex-end',
                 }}
               >
                 <div
                   style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: '#F97316',
-                    height: `${pct}%`,
+                    width: '100%',
+                    background: '#EF4444',
+                    height: `${heightPct}%`,
                     borderRadius: '8px 8px 0 0',
-                    opacity: 0.85,
+                    opacity: 0.75,
                   }}
                 />
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '50%',
-                    left: 0,
-                    right: 0,
-                    textAlign: 'center',
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: '#F9FAFB',
-                    transform: 'translateY(50%)',
-                  }}
-                >
-                  {pct}%
-                </div>
               </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: '#9CA3AF',
-                  textTransform: 'capitalize',
-                  marginBottom: 2,
-                }}
-              >
+              <div style={{ fontSize: 12, color: '#9CA3AF', textTransform: 'capitalize', marginBottom: 2 }}>
                 {item.bucket}
               </div>
-              <div style={{ fontSize: 13, color: '#F97316', fontWeight: 700 }}>
-                {item.recruitedTotal.toLocaleString()}
+              <div style={{ fontSize: 13, color: COLOR, fontWeight: 700 }}>
+                {item.target.toLocaleString()} target
+              </div>
+              <div style={{ fontSize: 11, color: '#6B7280' }}>
+                {item.recruited.toLocaleString()} recruited · gap {item.gap.toLocaleString()}
               </div>
             </div>
           );

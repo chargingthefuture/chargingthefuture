@@ -12,8 +12,7 @@ export async function GET(request: Request) {
 
   try {
     const pagination = parsePaginationParams(request.url);
-    const includeInactive = new URL(request.url).searchParams.get('includeInactive') === 'true' && gate.auth.isAdmin;
-    const result = await listOccupations(pagination, includeInactive);
+    const result = await listOccupations(pagination);
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'occupations' });
