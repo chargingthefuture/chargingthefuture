@@ -11,6 +11,35 @@ type RouteParams = {
 
 type MatchBody = Partial<LighthouseMatchUpdateInput>;
 
+function hasBodyField(body: MatchBody, field: keyof LighthouseMatchUpdateInput): boolean {
+  return Object.prototype.hasOwnProperty.call(body, field);
+}
+
+function applySettlementFields(input: LighthouseMatchUpdateInput, body: MatchBody): boolean {
+  if (hasBodyField(body, 'settlementAmount')) {
+    if (body.settlementAmount !== null && typeof body.settlementAmount !== 'number') {
+      return false;
+    }
+    input.settlementAmount = body.settlementAmount;
+  }
+
+  if (hasBodyField(body, 'settlementCurrency')) {
+    if (body.settlementCurrency !== null && typeof body.settlementCurrency !== 'string') {
+      return false;
+    }
+    input.settlementCurrency = body.settlementCurrency;
+  }
+
+  if (hasBodyField(body, 'settledAtIso')) {
+    if (body.settledAtIso !== null && typeof body.settledAtIso !== 'string') {
+      return false;
+    }
+    input.settledAtIso = body.settledAtIso;
+  }
+
+  return true;
+}
+
 function lighthouseErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
 
@@ -118,6 +147,13 @@ export async function PUT(request: Request, { params }: RouteParams) {
     hostResponse: typeof body.hostResponse === 'string' ? body.hostResponse : null,
   };
 
+  if (!applySettlementFields(input, body)) {
+    return NextResponse.json(
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid match settlement payload.' },
+      { status: 400 },
+    );
+  }
+
   if (!validateMatchUpdateInput(input)) {
     return NextResponse.json(
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid match update payload.' },
@@ -133,6 +169,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
       matchId,
       status: input.status,
       hostResponse: input.hostResponse,
+      settlementAmount: input.settlementAmount,
+      settlementCurrency: input.settlementCurrency,
+      settledAtIso: input.settledAtIso,
       isAdmin: gate.auth.isAdmin,
     });
 
@@ -143,7 +182,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       reason: 'ok',
       targetType: 'match',
       targetId: match.id,
-      metadata: { status: match.status },
+      metadata: { status: match.status, settlementCurrency: match.settlementCurrency },
     });
 
     return NextResponse.json({ ok: true, match }, { status: 200 });

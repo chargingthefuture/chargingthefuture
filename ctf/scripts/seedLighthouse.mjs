@@ -49,9 +49,9 @@ async function main() {
     await client.query(
       `
         INSERT INTO lighthouse_properties
-          (id, host_user_id, title, description, property_type, city, state, country, bedrooms, bathrooms, monthly_rent, amenities, house_rules, photos, is_active, created_by_user_id, updated_by_user_id)
+          (id, host_user_id, title, description, property_type, city, state, country, bedrooms, bathrooms, monthly_rent, rent_currency, amenities, house_rules, photos, is_active, created_by_user_id, updated_by_user_id)
         VALUES
-          ($1::uuid, 'seed-lighthouse-host-01', 'Seed LightHouse Property', 'Deterministic property fixture for LightHouse API validation.', 'apartment', 'Austin', 'TX', 'US', 2, 1.5, 2100, '["wifi","laundry"]'::jsonb, '["no-smoking"]'::jsonb, '[]'::jsonb, TRUE, 'seed-lighthouse-host-01', 'seed-lighthouse-host-01')
+          ($1::uuid, 'seed-lighthouse-host-01', 'Seed LightHouse Property', 'Deterministic property fixture for LightHouse API validation.', 'apartment', 'Austin', 'TX', 'US', 2, 1.5, 2100, 'USD', '["wifi","laundry"]'::jsonb, '["no-smoking"]'::jsonb, '[]'::jsonb, TRUE, 'seed-lighthouse-host-01', 'seed-lighthouse-host-01')
         ON CONFLICT (id)
         DO UPDATE SET
           title = EXCLUDED.title,
@@ -63,6 +63,7 @@ async function main() {
           bedrooms = EXCLUDED.bedrooms,
           bathrooms = EXCLUDED.bathrooms,
           monthly_rent = EXCLUDED.monthly_rent,
+          rent_currency = EXCLUDED.rent_currency,
           amenities = EXCLUDED.amenities,
           house_rules = EXCLUDED.house_rules,
           photos = EXCLUDED.photos,
@@ -76,13 +77,17 @@ async function main() {
     await client.query(
       `
         INSERT INTO lighthouse_matches
-          (id, property_id, seeker_user_id, host_user_id, message, status, stream_channel_id)
+          (id, property_id, seeker_user_id, host_user_id, message, status, settlement_amount, settlement_currency, settled_at, settlement_recorded_by_user_id, stream_channel_id)
         VALUES
-          ($1::uuid, $2::uuid, 'seed-lighthouse-seeker-01', 'seed-lighthouse-host-01', 'Seed match request message.', 'completed', 'lighthouse-match-seed-1')
+          ($1::uuid, $2::uuid, 'seed-lighthouse-seeker-01', 'seed-lighthouse-host-01', 'Seed match request message.', 'completed', 2100, 'USD', NOW(), 'seed-lighthouse-host-01', 'lighthouse-match-seed-1')
         ON CONFLICT (id)
         DO UPDATE SET
           status = EXCLUDED.status,
           message = EXCLUDED.message,
+          settlement_amount = EXCLUDED.settlement_amount,
+          settlement_currency = EXCLUDED.settlement_currency,
+          settled_at = EXCLUDED.settled_at,
+          settlement_recorded_by_user_id = EXCLUDED.settlement_recorded_by_user_id,
           updated_at = NOW()
       `,
       [seedMatchId, seedPropertyId],
@@ -95,18 +100,6 @@ async function main() {
         ON CONFLICT (blocker_user_id, blocked_user_id)
         DO UPDATE SET reason = EXCLUDED.reason
       `,
-    );
-
-    // Seed a ServiceCredits transaction for LightHouse
-    await client.query(
-      `
-        INSERT INTO lighthouse_service_credits_transactions
-          (from_user_id, to_user_id, amount, reason, match_id, created_at)
-        VALUES
-          ('seed-lighthouse-host-01', 'seed-lighthouse-seeker-01', 8, 'Seed LightHouse ServiceCredits', $1::uuid, NOW())
-        ON CONFLICT DO NOTHING
-      `,
-      [seedMatchId],
     );
 
     await client.query('COMMIT');

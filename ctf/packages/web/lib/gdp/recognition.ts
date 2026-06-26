@@ -242,6 +242,33 @@ export const socketRelayFavorSource: RecognitionSource = {
 };
 
 /**
+ * LightHouse settled rent exchanges: only a completed match with an explicit on-platform settlement
+ * record counts. A property's monthly rent is only an asking/listing price, so it is never read here.
+ * Priced value types sum `settlement_amount`; amount-less value types such as Free/Barter count one
+ * completed exchange each.
+ */
+export const lighthouseRentSource: RecognitionSource = {
+  pluginSlug: 'lighthouse',
+  label: 'LightHouse settled rent exchanges',
+  async loadVolumes() {
+    const result = await queryDb<{ currency_code: string; total: string }>(
+      `SELECT lm.settlement_currency AS currency_code,
+              SUM(CASE WHEN c.requires_amount THEN lm.settlement_amount ELSE 1 END)::text AS total
+         FROM lighthouse_matches lm
+         JOIN currencies c ON c.code = lm.settlement_currency
+         WHERE lm.status = 'completed'
+           AND lm.settled_at IS NOT NULL
+           AND (
+             (c.requires_amount = TRUE AND lm.settlement_amount > 0)
+             OR c.requires_amount = FALSE
+           )
+         GROUP BY lm.settlement_currency`,
+    );
+    return result.rows.map((row) => ({ amount: Number(row.total), currencyCode: row.currency_code }));
+  },
+};
+
+/**
  * Registered recognition sources, one per plugin. The policy: recognize ONLY non-incentive settled
  * value — value actually delivered/exchanged on-platform — and never an incentive (a reward, bonus,
  * stipend, completion grant, or "thank-you" mint) or a deletion/reclaim reallocation. A genuine
@@ -261,6 +288,7 @@ export const RECOGNITION_SOURCES: RecognitionSource[] = [
   serviceCreditsDirectTransferSource,
   chymeTipSource,
   socketRelayFavorSource,
+  lighthouseRentSource,
 ];
 
 /** The composite index plus the per-source contribution breakdown (label included for display). */

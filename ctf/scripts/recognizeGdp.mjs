@@ -1,18 +1,17 @@
 import { Pool } from 'pg';
 import crypto from 'crypto';
 
-// Community Value Index rollup (issue #121). Recognizes ACTUAL economic activity across the applicable
-// plugins and folds every value type (fiat, crypto, ServiceCredits, barter, free) into ONE relative index via
-// owner-set contribution weights (currency_usd_rates; USD is the reference base = 1). Writes the
-// `gdp_value_index` metric for the week — ALONGSIDE the projection target, not replacing it. A
-// production scheduler runs this weekly.
+// Community Value Index rollup (issue #121). Recognizes actual economic activity across applicable
+// plugins and folds every value type (fiat, crypto, ServiceCredits, barter, free) into one relative
+// index via owner-set contribution weights (currency_usd_rates; USD is only the reference base = 1).
+// Writes the `gdp_value_index` metric for the week alongside the projection target, not replacing it.
+// A production scheduler runs this weekly.
 //
-// Starts with TrustTransport and LevelUp. Add more eligible-value sources to the SOURCES list below as
-// the owner approves them, keeping it in step with ctf/packages/web/lib/gdp/recognition.ts (the app-side
-// layer). Only eligible settled value is recognized — never transfers or deletion/reclaim reallocations.
+// Keep this source list in step with ctf/packages/web/lib/gdp/recognition.ts. Only eligible settled
+// value is recognized, never incentives, transfers, or deletion/reclaim reallocations.
 //
-// IMPORTANT: the Community Value Index is NOT money and carries no currency symbol. The contribution
-// weights are never surfaced as a price, an exchange rate, or a per-wallet/per-token fiat equivalence.
+// IMPORTANT: the Community Value Index is not money and carries no currency symbol. Contribution
+// weights are never surfaced as a price, exchange rate, or per-wallet/per-token fiat equivalence.
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -32,11 +31,9 @@ const SOURCES = [
             GROUP BY COALESCE(price_currency, currency)`,
   },
   {
-    // LevelUp trainer payouts: ServiceCredits paid to a trainer for validated mentorship work, recorded
-    // as governed mint grants (reason 'levelup_trainer_split'). Always ServiceCredits (code 'SC').
-    // Eligible service delivery only — excludes learner escrow returns, completion bonuses, stipends,
-    // and microgrants. Read from governance events, not the SC ledger (whose entries are tagged
-    // accounting_scope 'service_credits_non_gdp' by design).
+    // LevelUp trainer payouts: ServiceCredits paid to a trainer for validated mentorship work,
+    // recorded as governed mint grants. Eligible service delivery only; excludes learner escrow
+    // returns, completion bonuses, stipends, and microgrants.
     pluginSlug: 'level-up',
     sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
             FROM service_credits_governance_events
@@ -44,11 +41,7 @@ const SOURCES = [
   },
   {
     // Foundation metered "Connect now" service calls: a caller pays a provider their locked rate per
-    // minute-block for a 1:1 consultation. foundation_call_sessions snapshots the locked rate and the
-    // paid-block count, so blocks_charged * rate_credits_locked is the total ServiceCredits ('SC') of
-    // delivered call value. Read Foundation's own call record (not the SC ledger, which tags these
-    // caller->provider moves accounting_scope 'service_credits_non_gdp'); only calls that charged a
-    // block count. This is service delivered, not an incentive.
+    // minute-block for a 1:1 consultation. Only calls that charged at least one block count.
     pluginSlug: 'foundation',
     sql: `SELECT 'SC' AS currency_code, SUM(blocks_charged * rate_credits_locked)::numeric AS total
             FROM foundation_call_sessions
@@ -56,38 +49,51 @@ const SOURCES = [
   },
   {
     // Direct ServiceCredits transfers: a member sending another member credits from the "Send Credits"
-    // form — peer-to-peer activity NOT tied to a plugin transaction. Read the curated transfers record
-    // for COMPLETED sends with origin_plugin 'service-credits'. Plugin-mediated transfers carry their own
-    // origin_plugin and are attributed elsewhere, so there is no double count. Mints are not transfers.
+    // form, not tied to a plugin transaction.
     pluginSlug: 'service-credits',
     sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
             FROM service_credits_transfers
             WHERE status = 'completed' AND origin_plugin = 'service-credits'`,
   },
   {
-    // Chyme peer tips: COMPLETED transfers with origin_plugin 'chyme'. Reads zero until the Chyme tip UI
-    // is wired; registered now so tips count automatically once they flow.
+    // Chyme peer tips: completed transfers with origin_plugin 'chyme'. Reads zero until the tip UI is
+    // wired; registered now so tips count automatically once they flow.
     pluginSlug: 'chyme',
     sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
             FROM service_credits_transfers
             WHERE status = 'completed' AND origin_plugin = 'chyme'`,
   },
   {
-    // SocketRelay favors: mutual aid with no per-favor price, so each successfully-completed favor counts
-    // as one FREE exchange (by count). The standalone SocketRelay SC transfer route is intentionally not
-    // also counted here to avoid double-counting a single favor.
+    // SocketRelay favors: mutual aid with no per-favor price, so each successfully completed favor
+    // counts as one FREE exchange by count.
     pluginSlug: 'socket-relay',
     sql: `SELECT 'FREE' AS currency_code, COUNT(*)::numeric AS total
             FROM socket_relay_fulfillments
             WHERE close_reason = 'successful'`,
   },
-  // Add more as approved. Keep eligible settled spend only — never incentives. A genuine peer-to-peer
-  // transfer outside a plugin transaction is economic activity and is counted (service-credits above).
+  {
+    // LightHouse rent: only completed matches with an explicit on-platform settlement record count.
+    // Property monthly_rent is only a listing price and is never recognized by itself. Priced value
+    // types sum settlement_amount; amount-less types such as Free/Barter count one exchange each.
+    pluginSlug: 'lighthouse',
+    sql: `SELECT lm.settlement_currency AS currency_code,
+                 SUM(CASE WHEN c.requires_amount THEN lm.settlement_amount ELSE 1 END)::numeric AS total
+            FROM lighthouse_matches lm
+            JOIN currencies c ON c.code = lm.settlement_currency
+            WHERE lm.status = 'completed'
+              AND lm.settled_at IS NOT NULL
+              AND (
+                (c.requires_amount = TRUE AND lm.settlement_amount > 0)
+                OR c.requires_amount = FALSE
+              )
+            GROUP BY lm.settlement_currency`,
+  },
+  // Add more as approved. Keep eligible settled spend only, never incentives.
 ];
 
 function currentWeekStartIso() {
   const now = new Date();
-  const day = now.getUTCDay(); // 0 = Sunday … 6 = Saturday
+  const day = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
   const backToMonday = day === 0 ? -6 : 1 - day;
   const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + backToMonday));
   return monday.toISOString().slice(0, 10);
@@ -109,10 +115,6 @@ async function run() {
     );
     const rates = new Map(ratesResult.rows.map((row) => [row.currency_code, Number(row.usd_rate)]));
 
-    // Community Value Index: fold EVERY value type (fiat, crypto, ServiceCredits, barter, free) into one
-    // relative figure via its owner-set contribution weight. The index is NOT money and carries no
-    // currency symbol; the weights (here USD is the reference base = 1) are never a price or redemption
-    // rate. A value type with no active weight is surfaced and excluded, never silently zeroed.
     let valueIndex = 0;
     const unweighted = new Set();
     for (const source of SOURCES) {

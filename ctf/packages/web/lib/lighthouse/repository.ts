@@ -78,10 +78,19 @@ type LighthouseMatchRow = {
   message: string | null;
   proposed_move_in_date: Date | string | null;
   host_response: string | null;
+  settlement_amount: number | string | null;
+  settlement_currency: string | null;
+  settled_at: Date | string | null;
+  settlement_recorded_by_user_id: string | null;
   status: LighthouseMatch['status'];
   created_at: Date | string;
   updated_at: Date | string;
   stream_channel_id: string;
+};
+
+type SettlementCurrencyRow = {
+  code: string;
+  requires_amount: boolean;
 };
 
 type LighthouseBlockRow = {
@@ -170,6 +179,14 @@ function parseNullableNumber(value: number | string | null | undefined): number 
 
 function isValidIsoDatetime(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
+}
+
+function hasSettlementUpdate(input: LighthouseMatchUpdateInput): boolean {
+  return (
+    Object.prototype.hasOwnProperty.call(input, 'settlementAmount')
+    || Object.prototype.hasOwnProperty.call(input, 'settlementCurrency')
+    || Object.prototype.hasOwnProperty.call(input, 'settledAtIso')
+  );
 }
 
 function mapProfile(row: LighthouseProfileRow): LighthouseProfile {
@@ -315,6 +332,10 @@ function mapMatch(row: LighthouseMatchRow): LighthouseMatch {
     message: row.message,
     proposedMoveInDateIso: row.proposed_move_in_date ? toIso(row.proposed_move_in_date) : null,
     hostResponse: row.host_response,
+    settlementAmount: parseNullableNumber(row.settlement_amount),
+    settlementCurrency: row.settlement_currency,
+    settledAtIso: row.settled_at ? toIso(row.settled_at) : null,
+    settlementRecordedByUserId: row.settlement_recorded_by_user_id,
     status: row.status,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
@@ -361,7 +382,75 @@ export function validateMatchCreateInput(input: LighthouseMatchCreateInput): boo
 }
 
 export function validateMatchUpdateInput(input: LighthouseMatchUpdateInput): boolean {
-  return LIGHTHOUSE_MATCH_STATUSES.includes(input.status);
+  const statusAllowed = LIGHTHOUSE_MATCH_STATUSES.includes(input.status);
+  const hasSettlement = hasSettlementUpdate(input);
+  const settlementStatusAllowed = !hasSettlement || input.status === 'completed';
+  const settlementAmountValid =
+    input.settlementAmount === undefined
+    || input.settlementAmount === null
+    || (Number.isFinite(input.settlementAmount) && input.settlementAmount > 0);
+  const settlementCurrencyValid =
+    !hasSettlement
+    || (typeof input.settlementCurrency === 'string' && normalizeText(input.settlementCurrency).length > 0);
+  const settledAtValid =
+    input.settledAtIso === undefined
+    || input.settledAtIso === null
+    || isValidIsoDatetime(input.settledAtIso);
+
+  return statusAllowed && settlementStatusAllowed && settlementAmountValid && settlementCurrencyValid && settledAtValid;
+}
+
+async function resolveMatchSettlement(
+  client: PoolClient,
+  input: LighthouseMatchUpdateInput & { actorUserId: string },
+  current: LighthouseMatchRow,
+): Promise<{
+  settlementAmount: number | string | null;
+  settlementCurrency: string | null;
+  settledAt: Date | string | null;
+  settlementRecordedByUserId: string | null;
+}> {
+  if (!hasSettlementUpdate(input)) {
+    return {
+      settlementAmount: current.settlement_amount,
+      settlementCurrency: current.settlement_currency,
+      settledAt: current.settled_at,
+      settlementRecordedByUserId: current.settlement_recorded_by_user_id,
+    };
+  }
+
+  if (input.status !== 'completed') {
+    throw new Error('invalid payload');
+  }
+
+  const currencyCode = normalizeNullableText(input.settlementCurrency);
+  if (!currencyCode) {
+    throw new Error('invalid payload');
+  }
+
+  const currency = await client.query<SettlementCurrencyRow>(
+    `SELECT code, requires_amount FROM currencies WHERE code = $1 AND is_active = TRUE LIMIT 1`,
+    [currencyCode],
+  );
+  const currencyRow = currency.rows[0];
+  if (!currencyRow) {
+    throw new Error('invalid payload');
+  }
+
+  const amount = input.settlementAmount ?? null;
+  if (currencyRow.requires_amount && (amount === null || amount <= 0)) {
+    throw new Error('invalid payload');
+  }
+  if (!currencyRow.requires_amount && amount !== null) {
+    throw new Error('invalid payload');
+  }
+
+  return {
+    settlementAmount: amount,
+    settlementCurrency: currencyRow.code,
+    settledAt: normalizeNullableText(input.settledAtIso) ?? new Date().toISOString(),
+    settlementRecordedByUserId: input.actorUserId,
+  };
 }
 
 export async function getProfile(userId: string): Promise<LighthouseProfile | null> {
@@ -1012,6 +1101,10 @@ export async function createMatchRequest(input: {
           message,
           proposed_move_in_date,
           host_response,
+          settlement_amount,
+          settlement_currency,
+          settled_at,
+          settlement_recorded_by_user_id,
           status,
           created_at,
           updated_at,
@@ -1050,6 +1143,10 @@ export async function createMatchRequest(input: {
           message,
           proposed_move_in_date,
           host_response,
+          settlement_amount,
+          settlement_currency,
+          settled_at,
+          settlement_recorded_by_user_id,
           status,
           created_at,
           updated_at,
@@ -1080,6 +1177,10 @@ export async function listMatches(actorUserId: string): Promise<LighthouseMatch[
         message,
         proposed_move_in_date,
         host_response,
+        settlement_amount,
+        settlement_currency,
+        settled_at,
+        settlement_recorded_by_user_id,
         status,
         created_at,
         updated_at,
@@ -1099,6 +1200,9 @@ export async function updateMatch(input: {
   matchId: string;
   status: LighthouseMatch['status'];
   hostResponse?: string | null;
+  settlementAmount?: number | null;
+  settlementCurrency?: string | null;
+  settledAtIso?: string | null;
   isAdmin: boolean;
 }): Promise<LighthouseMatch> {
   return withDbTransaction(async (client: PoolClient) => {
@@ -1112,6 +1216,10 @@ export async function updateMatch(input: {
           message,
           proposed_move_in_date,
           host_response,
+          settlement_amount,
+          settlement_currency,
+          settled_at,
+          settlement_recorded_by_user_id,
           status,
           created_at,
           updated_at,
@@ -1146,6 +1254,7 @@ export async function updateMatch(input: {
     const nextHostResponse = typeof input.hostResponse === 'undefined'
       ? match.host_response
       : normalizeNullableText(input.hostResponse);
+    const nextSettlement = await resolveMatchSettlement(client, input, match);
 
     const updated = await (client as PoolClient).query<LighthouseMatchRow>(
       `
@@ -1153,6 +1262,10 @@ export async function updateMatch(input: {
         SET
           status = $2,
           host_response = $3,
+          settlement_amount = $4,
+          settlement_currency = $5,
+          settled_at = $6::timestamptz,
+          settlement_recorded_by_user_id = $7,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
@@ -1163,12 +1276,24 @@ export async function updateMatch(input: {
           message,
           proposed_move_in_date,
           host_response,
+          settlement_amount,
+          settlement_currency,
+          settled_at,
+          settlement_recorded_by_user_id,
           status,
           created_at,
           updated_at,
           stream_channel_id
       `,
-      [input.matchId, input.status, nextHostResponse],
+      [
+        input.matchId,
+        input.status,
+        nextHostResponse,
+        nextSettlement.settlementAmount,
+        nextSettlement.settlementCurrency,
+        nextSettlement.settledAt,
+        nextSettlement.settlementRecordedByUserId,
+      ],
     );
 
     return mapMatch(updated.rows[0]);
@@ -1319,6 +1444,10 @@ export async function listLighthouseMatchesAdmin(): Promise<LighthouseMatch[]> {
         message,
         proposed_move_in_date,
         host_response,
+        settlement_amount,
+        settlement_currency,
+        settled_at,
+        settlement_recorded_by_user_id,
         status,
         created_at,
         updated_at,

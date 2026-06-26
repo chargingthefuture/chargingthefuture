@@ -94,6 +94,10 @@ longer a precondition for browsing, hosting, or matching.
 6. Status lifecycle parity target:
    - `pending`, `accepted`, `rejected`, `cancelled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
+8. A completed match can record an on-platform rent settlement on the match itself:
+   `settlement_amount`, `settlement_currency`, `settled_at`, and `settlement_recorded_by_user_id`.
+   GDP recognition reads only these settlement fields; a listing's `monthly_rent` remains an asking
+   price and is never counted as settled value by itself.
 
 ### 1.6 Blocks (User Safety)
 
@@ -124,8 +128,9 @@ longer a precondition for browsing, hosting, or matching.
 
 1. Admin property update parity target (`PUT /api/lighthouse/admin/properties/:id`).
 2. Admin match update parity target (`PUT /api/lighthouse/admin/matches/:id`).
-3. Admin moderation/status correction independent of host/seeker ownership remains required.
-4. Admin writes must preserve authz + CSRF guarantees.
+3. Admin match updates can record or correct completed-match settlement fields.
+4. Admin moderation/status correction independent of host/seeker ownership remains required.
+5. Admin writes must preserve authz + CSRF guarantees.
 
 ## 3) API Surface and Route Map
 
@@ -184,7 +189,11 @@ Required entities for parity scope:
 2. `lighthouse_properties` — includes `monthly_rent` (listed amount) and `rent_currency`
    (FK → `currencies(code)`; the currency the rent is listed in). Backfilled to `USD` for existing
    non-null rents; Canadian listings with no cost yet keep NULL.
-3. `lighthouse_matches`
+3. `lighthouse_matches` - includes match lifecycle fields plus settlement fields
+   (`settlement_amount`, `settlement_currency` FK -> `currencies(code)`, `settled_at`,
+   `settlement_recorded_by_user_id`). Only `completed` matches with explicit settlement fields are
+   eligible for GDP recognition; amount-less value types such as Free/Barter count as one completed
+   exchange when settled.
 4. `lighthouse_blocks`
 5. `lighthouse_property_accepted_currencies` — join (`property_id`, `currency_code` FK →
    `currencies`) listing every currency a property accepts. "Accepts ServiceCredits" is true iff a
@@ -241,6 +250,8 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 3. LightHouse-specific rate-limit and anti-scraping thresholds use shared platform defaults; a plugin-specific hardening contract is a known follow-up.
 
 ## 9) Change Log
+
+- 2026-06-27: Added on-platform LightHouse rent settlement recording for completed matches (issue #885). `lighthouse_matches` now carries `settlement_amount`, `settlement_currency`, `settled_at`, and `settlement_recorded_by_user_id`; member/admin match update endpoints accept settlement fields only with `completed` status and validate them against the active currency catalog. The LightHouse seed records a settled USD rent on its completed fixture and no longer writes the removed `lighthouse_service_credits_transactions` table. GDP recognition now counts LightHouse only from explicit settled match fields, never from listing `monthly_rent`.
 
 - 2026-06-26: **Code-review sweep fixes (issues #1012–#1019).** Security/correctness hardening across the plugin, no schema or contract change:
   - `POST /api/lighthouse/matches/:matchId/chat` now returns 403 unless the match status is `accepted`, so a pending/rejected/cancelled/completed match can no longer provision a live Stream channel or token (#1012).

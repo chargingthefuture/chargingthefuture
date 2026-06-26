@@ -50,6 +50,47 @@ contracts:
     idempotency: true
 
   - pluginId: lighthouse
+    command: lighthouse.match.update
+    version: 1.1.0
+    description: >-
+      Update a match status and, when the status is completed, optionally record the settled rent value
+      on the match. GDP recognition reads only these settlement fields, never the listing monthly rent.
+    inputSchema:
+      status:
+        type: string
+        required: true
+        enum:
+          - pending
+          - accepted
+          - rejected
+          - cancelled
+          - completed
+      hostResponse:
+        type: string
+        required: false
+      settlementAmount:
+        type: number
+        required: false
+        description: Required and positive when settlementCurrency references a currency that requires an amount.
+      settlementCurrency:
+        type: string
+        required: false
+        description: Active currencies.code value used for the settled exchange.
+      settledAtIso:
+        type: string
+        required: false
+        description: ISO timestamp for the settlement; defaults to now when omitted with a valid settlement.
+    outputSchema:
+      match:
+        type: object
+    dataAccess:
+      - lighthouse_matches
+      - currencies
+    purpose: housing_matching
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: lighthouse
     command: lighthouse.block.create
     version: 1.0.0
     description: Create a user safety block relation used by matching workflows.

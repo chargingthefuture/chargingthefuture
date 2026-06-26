@@ -141,13 +141,21 @@ canonical_metrics:
         type: currency
       - name: service_credits_governance_events.amount
         type: integer
+      - name: lighthouse_matches.settlement_amount
+        type: currency
+      - name: lighthouse_matches.settlement_currency
+        type: string
+      - name: lighthouse_matches.settled_at
+        type: datetime
+      - name: currencies.requires_amount
+        type: boolean
       - name: currency_usd_rates.usd_rate
         type: number
       - name: currency_usd_rates.as_of
         type: datetime
     example_values:
       - 13340
-    last_updated: "2026-06-11T00:00:00Z"
+    last_updated: "2026-06-27T00:00:00Z"
     update_cadence: weekly
     retention: 120 months
     allowed_thresholds:

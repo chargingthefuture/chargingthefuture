@@ -1708,10 +1708,22 @@ CREATE TABLE IF NOT EXISTS lighthouse_matches (
   message TEXT NULL,
   proposed_move_in_date DATE NULL,
   host_response TEXT NULL,
+  settlement_amount NUMERIC NULL,
+  settlement_currency TEXT NULL REFERENCES currencies(code),
+  settled_at TIMESTAMPTZ NULL,
+  settlement_recorded_by_user_id TEXT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled', 'completed')),
   stream_channel_id TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT lighthouse_matches_settlement_check CHECK (
+    (settlement_currency IS NULL AND settlement_amount IS NULL AND settled_at IS NULL AND settlement_recorded_by_user_id IS NULL)
+    OR (
+      settlement_currency IS NOT NULL
+      AND settled_at IS NOT NULL
+      AND (settlement_amount IS NULL OR settlement_amount > 0)
+    )
+  )
 );
 
 CREATE TABLE IF NOT EXISTS lighthouse_blocks (
@@ -1810,10 +1822,36 @@ ALTER TABLE IF EXISTS lighthouse_matches
   ADD COLUMN IF NOT EXISTS message TEXT NULL,
   ADD COLUMN IF NOT EXISTS proposed_move_in_date DATE NULL,
   ADD COLUMN IF NOT EXISTS host_response TEXT NULL,
+  ADD COLUMN IF NOT EXISTS settlement_amount NUMERIC NULL,
+  ADD COLUMN IF NOT EXISTS settlement_currency TEXT NULL REFERENCES currencies(code),
+  ADD COLUMN IF NOT EXISTS settled_at TIMESTAMPTZ NULL,
+  ADD COLUMN IF NOT EXISTS settlement_recorded_by_user_id TEXT NULL,
   ADD COLUMN IF NOT EXISTS status TEXT,
   ADD COLUMN IF NOT EXISTS stream_channel_id TEXT NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+DO $lighthouse_matches_settlement_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE table_name = 'lighthouse_matches'
+      AND constraint_name = 'lighthouse_matches_settlement_check'
+  ) THEN
+    ALTER TABLE lighthouse_matches
+      ADD CONSTRAINT lighthouse_matches_settlement_check
+      CHECK (
+        (settlement_currency IS NULL AND settlement_amount IS NULL AND settled_at IS NULL AND settlement_recorded_by_user_id IS NULL)
+        OR (
+          settlement_currency IS NOT NULL
+          AND settled_at IS NOT NULL
+          AND (settlement_amount IS NULL OR settlement_amount > 0)
+        )
+      );
+  END IF;
+END
+$lighthouse_matches_settlement_check$;
 
 ALTER TABLE IF EXISTS lighthouse_blocks
   ADD COLUMN IF NOT EXISTS id UUID,
@@ -1841,6 +1879,7 @@ CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_property_id ON lighthouse_matc
 CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_seeker_user_id ON lighthouse_matches(seeker_user_id);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_host_user_id ON lighthouse_matches(host_user_id);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_status ON lighthouse_matches(status);
+CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_settled_at ON lighthouse_matches(settled_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_updated_at ON lighthouse_matches(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_admin_audit_trail_created_at ON lighthouse_admin_audit_trail(created_at DESC);
 

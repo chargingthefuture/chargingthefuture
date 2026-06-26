@@ -57,6 +57,10 @@ export type LighthouseMatch = {
   message: string | null;
   proposedMoveInDateIso: string | null;
   hostResponse: string | null;
+  settlementAmount: number | null;
+  settlementCurrency: string | null;
+  settledAtIso: string | null;
+  settlementRecordedByUserId: string | null;
   status: LighthouseMatchStatus;
   createdAtIso: string;
   updatedAtIso: string;
@@ -116,4 +120,7 @@ export type LighthouseMatchCreateInput = {
 export type LighthouseMatchUpdateInput = {
   status: LighthouseMatchStatus;
   hostResponse?: string | null;
+  settlementAmount?: number | null;
+  settlementCurrency?: string | null;
+  settledAtIso?: string | null;
 };
