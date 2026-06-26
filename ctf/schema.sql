@@ -783,6 +783,26 @@ ALTER TABLE IF EXISTS gdp_publications ADD COLUMN IF NOT EXISTS published_by_use
 ALTER TABLE IF EXISTS gdp_publications ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS gdp_publications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS gdp_publications ADD COLUMN IF NOT EXISTS host_user_id TEXT;
+-- One publication per week. The prior upsert keyed ON CONFLICT (id) with a fresh UUID each call, so the
+-- conflict never fired and every save inserted a new row. Dedupe any legacy duplicates first — keep the
+-- best row per week (a published row over a draft, then the most recently updated) — then enforce
+-- uniqueness so the upsert can key on week_start_date. Idempotent: a no-op once there are no duplicates.
+DO $$
+BEGIN
+  IF to_regclass('public.gdp_publications') IS NOT NULL THEN
+    DELETE FROM gdp_publications p
+    USING (
+      SELECT id,
+             ROW_NUMBER() OVER (
+               PARTITION BY week_start_date
+               ORDER BY (status = 'published') DESC, updated_at DESC, id
+             ) AS rn
+      FROM gdp_publications
+    ) ranked
+    WHERE p.id = ranked.id AND ranked.rn > 1;
+  END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gdp_publications_week_start_date ON gdp_publications(week_start_date);
 CREATE TABLE IF NOT EXISTS feed_membership_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireGdpAdminAccess } from 'lib/gdp/_lib';
 import { insertGdpAudit, upsertPublication } from 'lib/gdp/repository';
+import { reportError } from 'lib/observability/report';
 
 type PublicationBody = {
   weekStartDate?: string;
@@ -49,23 +50,53 @@ export async function POST(request: Request) {
     );
   }
 
-  const publication = await upsertPublication({
-    actorId: gate.auth.userId,
-    weekStartDate: body.weekStartDate,
-    title: body.title,
-    summary: body.summary,
-    publish: Boolean(body.publish),
-  });
+  let publication;
+  try {
+    publication = await upsertPublication({
+      actorId: gate.auth.userId,
+      weekStartDate: body.weekStartDate,
+      title: body.title,
+      summary: body.summary,
+      publish: Boolean(body.publish),
+    });
+  } catch (error) {
+    // Record the failed attempt before surfacing the error, so a publish/save that errored at the
+    // persistence step is still audited. Best-effort: a failed audit write must not mask the error.
+    try {
+      await insertGdpAudit({
+        actorId: gate.auth.userId,
+        command: 'gdp.publication.upsert',
+        policyStatus: 'allow',
+        reason: 'persistence_error',
+        targetType: 'publication',
+        targetId: body.weekStartDate,
+        metadata: { publish: Boolean(body.publish), legalApproved: Boolean(body.legalApproved), weekStartDate: body.weekStartDate, result: 'failure' },
+      });
+    } catch (auditError) {
+      reportError(auditError, { area: 'gdp', op: 'publication_upsert_failure_audit' });
+    }
+    reportError(error, { area: 'gdp', op: 'publication_upsert' });
+    return NextResponse.json(
+      { ok: false, code: 'gdp_persistence_error', message: 'Unable to save the publication.' },
+      { status: 503 },
+    );
+  }
 
-  await insertGdpAudit({
-    actorId: gate.auth.userId,
-    command: 'gdp.publication.upsert',
-    policyStatus: 'allow',
-    reason: 'ok',
-    targetType: 'publication',
-    targetId: publication.id,
-      metadata: { publish: Boolean(body.publish), legalApproved: Boolean(body.legalApproved), weekStartDate: body.weekStartDate },
-  });
+  // Best-effort allow audit: the publication is already persisted, so a failed audit write must not turn
+  // a saved publication into a 500 and lose the response.
+  try {
+    await insertGdpAudit({
+      actorId: gate.auth.userId,
+      command: 'gdp.publication.upsert',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'publication',
+      targetId: publication.id,
+      metadata: { publish: Boolean(body.publish), legalApproved: Boolean(body.legalApproved), weekStartDate: body.weekStartDate, result: 'success' },
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'gdp', op: 'publication_upsert_audit' });
+  }
 
   return NextResponse.json({ ok: true, publication }, { status: 201 });
 }

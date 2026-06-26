@@ -100,7 +100,7 @@ function GdpCountries({ countries }: { countries: GdpCountry[] }) {
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
       <div style={{ fontSize: 16, fontWeight: 700, color: "#F9FAFB", marginBottom: 16 }}>Top Countries</div>
-      {countries.map((c, i) => (
+      {countries.map((c) => (
         <div key={c.country} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
           <div style={{ fontSize: 24, flexShrink: 0 }}>{c.flag}</div>
           <div style={{ flex: 1 }}>
@@ -108,9 +108,8 @@ function GdpCountries({ countries }: { countries: GdpCountry[] }) {
               <span style={{ fontSize: 13, color: "#E8EAF0", fontWeight: 600 }}>{c.country}</span>
               <span style={{ fontSize: 13, color: COLOR, fontWeight: 700 }}>{c.gdp}</span>
             </div>
-            <div style={{ height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ height: "100%", background: COLOR, borderRadius: 2, width: `${Math.max(100 - i * 15, 10)}%`, opacity: 0.7 }} />
-            </div>
+            {/* No per-country numeric share exists, so no progress bar is drawn — a width derived from
+                list position would be a fabricated visual metric (real-data-only rule). */}
             <div style={{ fontSize: 11, color: "#4B5563", marginTop: 2 }}>{c.members.toLocaleString()} members</div>
           </div>
         </div>
