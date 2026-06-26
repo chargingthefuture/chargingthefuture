@@ -355,6 +355,12 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     'Return [] if there is nothing worth filing.',
   ].join('\n');
 
+  return anthropicMessage(system, user, MAX_OUTPUT_TOKENS);
+}
+
+// One Anthropic message call. Returns the model's text. Logs (does not throw) on a max_tokens stop,
+// since callers salvage truncated output.
+async function anthropicMessage(system, user, maxTokens) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -364,7 +370,7 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
+      max_tokens: maxTokens,
       system,
       messages: [{ role: 'user', content: user }],
     }),
@@ -374,10 +380,8 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
   }
   const result = await response.json();
-  // A `max_tokens` stop means the JSON may be cut off mid-array; parseFindings salvages the
-  // complete findings rather than failing the run, but log it so the truncation is visible.
   if (result.stop_reason === 'max_tokens') {
-    console.warn('reviewCodebaseSlice: model response hit max_tokens; findings JSON may be truncated and will be salvaged.');
+    console.warn('reviewCodebaseSlice: model response hit max_tokens; output may be truncated.');
   }
   return result.content[0].text.trim();
 }
@@ -468,33 +472,94 @@ function ensureLabel(name, color, description) {
   }
 }
 
-// Every `code-review` finding we've ever filed, open OR closed, keyed by its fingerprint. Reading
-// closed issues too is what makes "close it" a durable decision: a dismissed or fixed finding is not
-// silently re-filed as a brand-new issue on the next pass. Returns fingerprint -> prior issue so the
-// caller can decide what to do (skip / regression / revisit) based on the prior issue's state.
-function existingFindings() {
+// Every `code-review` issue this sweep has ever filed for THIS slice, open OR closed. Reading closed
+// issues too is what makes "close it" a durable decision (a dismissed/fixed finding is matched, not
+// re-filed). We match on substance via the model (judgeDuplicates), not on the issue title — an LLM
+// rewrites the title every run, so a text fingerprint would miss a reworded re-flag. The embedded
+// fingerprint is kept only as a cheap exact-match fast path.
+function existingSliceIssues(sliceName) {
+  const titlePrefix = `Code review (${sliceName}):`;
   try {
     const raw = gh([
       'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'all',
-      '--json', 'number,state,stateReason,closedAt,body', '--limit', '500',
+      '--json', 'number,title,state,stateReason,closedAt,body', '--limit', '500',
     ]);
-    const map = new Map();
+    const issues = [];
     for (const issue of JSON.parse(raw)) {
-      const match = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
-      if (!match) continue;
-      const fp = match[1];
-      // First match wins; `gh` lists newest first, so the most recent issue for a fingerprint is kept.
-      if (map.has(fp)) continue;
-      map.set(fp, {
+      if (!(issue.title || '').startsWith(titlePrefix)) continue;
+      const fpMatch = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
+      issues.push({
         number: issue.number,
+        title: (issue.title || '').slice(titlePrefix.length).trim(),
+        summary: extractWhat(issue.body || ''),
         state: String(issue.state || '').toLowerCase(),
         stateReason: String(issue.stateReason || '').toLowerCase(),
         closedAt: issue.closedAt || null,
+        fingerprint: fpMatch ? fpMatch[1] : null,
       });
     }
-    return map;
+    return issues;
   } catch {
-    return new Map();
+    return [];
+  }
+}
+
+// Pull the "## What" paragraph out of an issue body for a compact dedupe signal.
+function extractWhat(body) {
+  const m = body.match(/##\s*What\s*\n+([\s\S]*?)(?:\n##\s|\n---|\n<!--|$)/);
+  return (m ? m[1] : body).replace(/\s+/g, ' ').trim().slice(0, 400);
+}
+
+// Ask the model which NEW findings are the SAME underlying problem as an EXISTING tracked issue for
+// this slice. Matches on substance, not wording (the issue text is regenerated each run). Returns an
+// array aligned to `newFindings`: the matched existing issue number, or null for a genuinely new one.
+async function judgeDuplicates(slice, newFindings, existingIssues) {
+  if (newFindings.length === 0 || existingIssues.length === 0) {
+    return newFindings.map(() => null);
+  }
+  const validNumbers = new Set(existingIssues.map((e) => e.number));
+  const system = [
+    'You decide whether each NEW code-review finding describes the SAME underlying problem as one of',
+    'the EXISTING tracked issues for this module. Match on the SUBSTANCE of the problem (same code,',
+    'same defect or concern) — the wording is rewritten every run, so identical wording is not',
+    'required, and different wording does not make it a different problem. Be conservative: only match',
+    'when you are confident it is the same concern. Two different problems in the same file are NOT a',
+    'match. Return only the JSON described; no prose.',
+  ].join('\n');
+  const existingBlock = existingIssues
+    .map((e) => `#${e.number} [${e.state}${e.stateReason ? '/' + e.stateReason : ''}]: ${e.title}\n    ${e.summary}`)
+    .join('\n');
+  const newBlock = newFindings
+    .map((f, i) => `N${i}: ${f.title}\n    ${(f.summary || '').replace(/\s+/g, ' ').slice(0, 400)}\n    files: ${(f.files || []).join(', ')}`)
+    .join('\n');
+  const user = [
+    `Module: ${slice.name}`,
+    '',
+    'EXISTING tracked issues (open and closed):',
+    existingBlock,
+    '',
+    `NEW findings from this run (N0..N${newFindings.length - 1}):`,
+    newBlock,
+    '',
+    `Return ONLY a JSON array of exactly ${newFindings.length} objects, one per NEW finding in order:`,
+    '  { "match": <existing issue number> | null }',
+    'Use the issue number of the existing issue it duplicates, or null if it is genuinely new.',
+  ].join('\n');
+
+  try {
+    const text = await anthropicMessage(system, user, 2000);
+    const fenced = text.match(/^```(?:json)?\s*\n([\s\S]*?)\n?```$/i);
+    const arr = JSON.parse((fenced ? fenced[1] : text).trim());
+    if (!Array.isArray(arr)) throw new Error('not an array');
+    return newFindings.map((_, i) => {
+      const m = arr[i] && typeof arr[i].match === 'number' ? arr[i].match : null;
+      // Ignore a number the model invented that isn't a real existing issue — safer to file a new
+      // issue than to silently suppress a finding against a non-existent match.
+      return m !== null && validNumbers.has(m) ? m : null;
+    });
+  } catch (error) {
+    console.log(`reviewCodebaseSlice: dedupe judge unavailable (${error?.message || error}); using exact fingerprint only.`);
+    return newFindings.map(() => null);
   }
 }
 
@@ -623,9 +688,19 @@ async function main() {
   ensureLabel('code-review:regression', 'b60205', 'A previously-fixed code-review finding the sweep saw recur');
   ensureLabel('code-review:revisit', 'fbca04', 'A dismissed (won\'t-fix) code-review finding the sweep re-surfaced for a fresh decision');
 
-  const seen = existingFindings();
+  // Match new findings to existing slice issues by SUBSTANCE (the model), not by title text. The
+  // embedded fingerprint is a free exact-match fast path for the rare run where the title is identical.
+  const sliceIssues = existingSliceIssues(slice.name);
+  const issuesByNumber = new Map(sliceIssues.map((i) => [i.number, i]));
+  const fingerprintToIssue = new Map();
+  for (const i of sliceIssues) {
+    if (i.fingerprint && !fingerprintToIssue.has(i.fingerprint)) fingerprintToIssue.set(i.fingerprint, i);
+  }
+  const judged = await judgeDuplicates(slice, findings, sliceIssues);
+
   let filed = 0;
-  for (const finding of findings) {
+  for (let idx = 0; idx < findings.length; idx += 1) {
+    const finding = findings[idx];
     if (filed >= MAX_ISSUES) {
       console.log(`reviewCodebaseSlice: hit MAX_ISSUES (${MAX_ISSUES}); remaining findings deferred.`);
       break;
@@ -634,7 +709,9 @@ async function main() {
       continue;
     }
     const fp = fingerprint(slice.name, finding.title);
-    const prior = seen.get(fp);
+    // Prefer the semantic match; fall back to an exact fingerprint match.
+    const matchNumber = judged[idx] ?? fingerprintToIssue.get(fp)?.number ?? null;
+    const prior = matchNumber !== null ? issuesByNumber.get(matchNumber) : undefined;
 
     if (prior && prior.state === 'open') {
       // Already tracked on an open issue — nothing to do.
@@ -667,9 +744,13 @@ async function main() {
       continue;
     }
 
-    // Genuinely new finding.
+    // Genuinely new finding — unless an identical-titled one was already filed earlier this run.
+    if (fingerprintToIssue.has(fp)) {
+      console.log(`reviewCodebaseSlice: skip same-run duplicate "${finding.title}".`);
+      continue;
+    }
     const url = fileIssue(slice, finding, fp);
-    seen.set(fp, { number: 0, state: 'open', stateReason: '', closedAt: null });
+    fingerprintToIssue.set(fp, { number: 0, state: 'open' });
     filed += 1;
     console.log(`reviewCodebaseSlice: filed ${url}`);
   }
