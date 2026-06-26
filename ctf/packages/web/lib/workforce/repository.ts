@@ -148,11 +148,20 @@ function emptyBucket(): { members: number; recruited: number } {
 // four routes that each call computeWorkforceModel(), i.e. four identical full recomputations (~16 DB
 // queries) for the same global, user-independent data. Coalesce them: an in-flight computation is
 // shared by concurrent callers, and the result is reused for a brief TTL so a burst of requests in one
-// load runs the model once. The window is tiny so an admin who just saved config still sees fresh
-// numbers on the next load.
+// load runs the model once.
+//
+// The model has NO per-user/per-workspace input — it is the same global workforce aggregate for every
+// caller (the product is single-tenant; see lib/auth/server-authz AllowDecision, which carries no
+// workspaceId). So a process-global cache is correct here. If the product ever becomes multi-tenant,
+// this cache must be keyed per workspace. To avoid serving stale numbers right after an admin edits
+// the config, updateWorkforceConfig() calls invalidateWorkforceModelCache().
 const WORKFORCE_MODEL_CACHE_MS = 1000;
 let workforceModelInFlight: Promise<WorkforceModel> | null = null;
 let workforceModelCache: { at: number; value: WorkforceModel } | null = null;
+
+export function invalidateWorkforceModelCache(): void {
+  workforceModelCache = null;
+}
 
 export async function computeWorkforceModel(): Promise<WorkforceModel> {
   if (workforceModelCache && Date.now() - workforceModelCache.at < WORKFORCE_MODEL_CACHE_MS) {
@@ -641,6 +650,10 @@ export async function updateWorkforceConfig(actorId: string, input: WorkforceCon
       actorId,
     ],
   );
+
+  // Config drives the whole model's demand numbers; drop the cached model so the next read recomputes
+  // with the new config instead of serving the pre-update snapshot for up to the cache TTL.
+  invalidateWorkforceModelCache();
 
   return mapConfig(result.rows[0]);
 }
