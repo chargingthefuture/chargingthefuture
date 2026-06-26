@@ -180,12 +180,27 @@ function reconcileSlices(ledger, discovered) {
 }
 
 // In-progress (partial) slice first, then never-reviewed, then least-recently-reviewed.
-function pickSlice(ledger) {
+// `discovered` is the map of slice name -> { name, type, paths } from discoverSlices(); it is
+// used to resolve a forced slice tolerantly and to fail loudly on an unknown one.
+function pickSlice(ledger, discovered) {
   if (FORCED_SLICE) {
+    // Resolve the forced name tolerantly: trim + lowercase both sides so `Workforce`,
+    // `workforce`, and ` workforce ` all match the `workforce` slice (slice/folder names are
+    // already lowercase, so lowercasing the comparison is safe). Match against the DISCOVERED
+    // slice names, then return that name's reconciled ledger row.
+    const wanted = FORCED_SLICE.toLowerCase();
+    const resolvedName = [...discovered.keys()].find((name) => name.trim().toLowerCase() === wanted);
+    if (!resolvedName) {
+      // A forced slice that matches no discovered folder used to fall through to a no-op review
+      // of nothing. Fail loudly instead, before any model call or ledger write.
+      const valid = [...discovered.keys()].sort().join(', ');
+      console.error(`reviewCodebaseSlice: Unknown slice '${FORCED_SLICE}'. Valid slices: ${valid}`);
+      process.exit(1);
+    }
     return (
-      ledger.slices.find((s) => s.name === FORCED_SLICE) || {
-        name: FORCED_SLICE,
-        type: 'module',
+      ledger.slices.find((s) => s.name === resolvedName) || {
+        name: resolvedName,
+        type: discovered.get(resolvedName).type,
         lastReviewedAt: null,
         lastRunIssues: 0,
         cursor: 0,
@@ -669,7 +684,7 @@ async function main() {
     return;
   }
 
-  const slice = pickSlice(ledger);
+  const slice = pickSlice(ledger, discovered);
   if (!slice) {
     console.log('reviewCodebaseSlice: nothing to review.');
     return;
