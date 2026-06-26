@@ -68,4 +68,8 @@ export type UnlockStatus = {
   reminderStage: number;
   incentiveGrantedAt: string | null;
   hasSubmission: boolean;
+  // A/B experiment: true when this member is in the "early Commons access" treatment bucket, so the
+  // UI can offer a link into the Commons to ask for help before verifying. Set by the status route
+  // (not the repository) from the Unleash rollout; defaults to false (control).
+  earlyCommonsAccess: boolean;
 };

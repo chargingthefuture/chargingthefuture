@@ -34,4 +34,11 @@ export const UNLOCK_FLAGS = {
     // Controls access to the Quora-profile-verification onboarding flow.
     // OFF (default) = user is in pending/review; ON = user has full access.
     QUORA_ONBOARDING: 'feature-unlock-quora-onboarding',
+    // A/B experiment: give a not-yet-verified member early support-only access to the Commons
+    // (the Hub general channel) so they can ask for help — e.g. trouble finding their Quora URL —
+    // instead of being confined to the Unlock screen. Configure in Unleash as a gradual rollout
+    // (e.g. 50%) with stickiness on userId so each member is sticky in one bucket. OFF (default,
+    // and when Unleash is unconfigured) = current behaviour (Unlock-only until verified). The goal
+    // is to test whether early Commons access lifts the Quora-URL submission/completion rate.
+    EARLY_COMMONS_ACCESS: 'feature-unlock-early-commons-access',
 };

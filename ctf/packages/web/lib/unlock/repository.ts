@@ -184,6 +184,9 @@ export async function getUnlockStatusForUser(userId: string): Promise<UnlockStat
     reminderStage: row?.reminder_stage ?? 0,
     incentiveGrantedAt: row?.incentive_granted_at ? row.incentive_granted_at.toISOString() : null,
     hasSubmission: Boolean(row),
+    // Default to control here; the status route overrides this with the live Unleash rollout value.
+    // Kept out of the repository to avoid a circular import with lib/unlock/access.
+    earlyCommonsAccess: false,
   };
 }
 

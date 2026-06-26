@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockUserAccess, resolveUnlockRequestId } from 'lib/unlock/_lib';
 import { getUnlockStatusForUser, insertUnlockAudit } from 'lib/unlock/repository';
+import { isUnlockEarlyCommonsEnabled } from 'lib/unlock/access';
 import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
@@ -12,7 +13,11 @@ export async function GET(request: Request) {
   const requestId = resolveUnlockRequestId(request);
 
   try {
-    const status = await getUnlockStatusForUser(gate.auth.userId);
+    const baseStatus = await getUnlockStatusForUser(gate.auth.userId);
+    // A/B experiment bucket — resolved here (not in the repository) so the UI can offer the Commons
+    // help link to the treatment group. Defaults to false (control) when the rollout is off.
+    const earlyCommonsAccess = await isUnlockEarlyCommonsEnabled(gate.auth.userId);
+    const status = { ...baseStatus, earlyCommonsAccess };
 
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,
@@ -24,6 +29,8 @@ export async function GET(request: Request) {
       metadata: {
         accessTier: status.accessTier,
         reviewStatus: status.reviewStatus,
+        // Recorded so the experiment's effect on completion rate can be measured per bucket.
+        experimentBucket: earlyCommonsAccess ? 'early_commons' : 'control',
       },
     });
 
