@@ -10,9 +10,10 @@ type ConfigBody = Partial<WorkforceConfigInput>;
 
 function toConfigInput(body: ConfigBody): WorkforceConfigInput {
   return {
-    exportsEnabled: body.exportsEnabled === true,
-    reportWeekTimezone: typeof body.reportWeekTimezone === 'string' ? body.reportWeekTimezone : 'America/New_York',
-    reportWeekStartDow: typeof body.reportWeekStartDow === 'number' ? body.reportWeekStartDow : 6,
+    population: typeof body.population === 'number' ? body.population : Number.NaN,
+    participationRate: typeof body.participationRate === 'number' ? body.participationRate : Number.NaN,
+    minRecruitable: typeof body.minRecruitable === 'number' ? body.minRecruitable : Number.NaN,
+    maxRecruitable: typeof body.maxRecruitable === 'number' ? body.maxRecruitable : Number.NaN,
   };
 }
 
@@ -73,7 +74,12 @@ export async function PUT(request: Request) {
       reason: 'admin_route_guard',
       targetType: 'config',
       targetId: 'workforce',
-      metadata: { exportsEnabled: config.exportsEnabled },
+      metadata: {
+        population: config.population,
+        participationRate: config.participationRate,
+        minRecruitable: config.minRecruitable,
+        maxRecruitable: config.maxRecruitable,
+      },
     });
 
     logWorkforceAudit({

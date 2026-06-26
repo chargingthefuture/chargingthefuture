@@ -9,13 +9,17 @@ import { authedFetch } from '../../auth/authedFetch';
 const API_ROOT = '/api/workforce';
 
 export type WorkforceConfig = {
-  exportsEnabled: boolean;
-  reportWeekTimezone: string;
-  reportWeekStartDow: number;
+  population: number;
+  participationRate: number;
+  minRecruitable: number;
+  maxRecruitable: number;
 };
 
 export type WorkforceDashboard = {
+  population: number;
   workforceTotal: number;
+  totalHeadcountTarget: number;
+  totalMembers: number;
   recruitedTotal: number;
   occupationsTotal: number;
 };

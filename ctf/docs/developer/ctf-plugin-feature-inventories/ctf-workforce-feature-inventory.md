@@ -92,24 +92,20 @@ All command contracts must conform to:
 
 Command groups:
 
-1. `workforce.dashboard.fetch`
+1. `workforce.dashboard.fetch` (live: population-scaled demand from Skills Taxonomy vs Directory supply)
 2. `workforce.profile.fetch` (the occupation/skill view is a live read-only Directory view; the read-only availability/work preferences and the deletion marker come from `workforce_user_extension`)
-4. `workforce.profile.delete` (service-scoped compliance soft delete: set `service_deleted_at`, reset preference payloads, write `workforce_deletion_events`; `workforce_recruited_events` retained; CSRF + ownership). Note: `workforce.profile.update` is intentionally retired — the profile is read-only (owner decision 2026-06-16, reaffirmed).
-6. `workforce.occupations.list`
-7. `workforce.occupations.detail.fetch`
-8. `workforce.occupations.admin.create`
-9. `workforce.occupations.admin.update`
-10. `workforce.occupations.admin.delete`
-11. `workforce.report.summary.fetch`
-12. `workforce.report.skillLevel.fetch`
-13. `workforce.report.sector.fetch`
-14. `workforce.export.job.create`
-15. `workforce.export.job.status.fetch`
-16. `workforce.export.job.result.fetch`
-17. `workforce.admin.config.fetch`
-18. `workforce.admin.config.update`
-19. `workforce.admin.auditEvents.fetch`
-20. `workforce.metric.recruited.derive`
+3. `workforce.profile.delete` (service-scoped compliance soft delete: set `service_deleted_at`, reset preference payloads, write `workforce_deletion_events`; CSRF + ownership). Note: `workforce.profile.update` is intentionally retired — the profile is read-only.
+4. `workforce.occupations.list` (read-only over Skills Taxonomy job titles with the demand/supply overlay)
+5. `workforce.occupations.detail.fetch`
+6. `workforce.report.summary.fetch`
+7. `workforce.report.skillLevel.fetch`
+8. `workforce.report.sector.fetch`
+9. `workforce.report.occupations.fetch` (per-occupation training gaps — the LevelUp recruiting/training signal)
+10. `workforce.admin.config.fetch`
+11. `workforce.admin.config.update` (population model: population, participation rate, min/max recruitable)
+12. `workforce.admin.auditEvents.fetch`
+
+Removed commands (read-only model): `workforce.occupations.admin.create` / `.update` / `.delete` (occupations are read from Skills Taxonomy, never created by Workforce), `workforce.export.job.create` / `.status.fetch` / `.result.fetch` (exporting removed), and `workforce.metric.recruited.derive` (recruited is computed live as claimed Directory profiles — no derivation/sync command).
 
 ### 3.2 HTTP Projection Routes
 
@@ -118,22 +114,19 @@ User routes:
 - `GET /api/workforce/dashboard`
 - `GET /api/workforce/profile` — the occupation/skill section is a live read-only view of the member's own claimed Directory profile (occupation = job title, skill level derived, recruited = claimed); the availability/work preferences and the `service_deleted_at` marker are read from `workforce_user_extension`. Emits a `workforce.profile.fetch` audit event. There is no profile update path — the profile is read-only (owner decision 2026-06-16, reaffirmed).
 - `DELETE /api/workforce/profile` — service-scoped compliance soft delete (deletion contract sections 5/8/9): sets `service_deleted_at = NOW()` and resets `availability_preferences` / `work_preferences` to `{}` on `workforce_user_extension`, writes a `workforce_deletion_events` row, and retains `workforce_recruited_events`. Requires CSRF + ownership. Emits the `workforce.profile.delete` audit event(s).
-- `GET /api/workforce/occupations`
-- `GET /api/workforce/occupations/:id`
+- `GET /api/workforce/occupations` — read-only list of Skills Taxonomy job titles with the demand/supply overlay (largest gap first), paginated
+- `GET /api/workforce/occupations/:id` — one occupation with its overlay
 - `GET /api/workforce/reports/summary`
 - `GET /api/workforce/reports/skill-level/:skillLevel`
 - `GET /api/workforce/reports/sector/:sector`
-- `POST /api/workforce/export/jobs`
-- `GET /api/workforce/export/jobs/:jobId`
-- `GET /api/workforce/export/jobs/:jobId/result`
+- `GET /api/workforce/reports/occupations` — per-occupation training gaps (supports `?limit=`); the breakdown that later signals LevelUp which cohorts to stand up
+
+Removed routes (read-only model): the export routes (`POST /api/workforce/export/jobs`, `GET …/jobs/:jobId`, `GET …/jobs/:jobId/result`) and the admin occupation CRUD routes (`POST/PUT/DELETE /api/workforce/admin/occupations`). Exporting was removed and occupations are read from Skills Taxonomy, so Workforce owns no occupation write surface.
 
 Admin routes:
 
 - `GET /api/workforce/admin/config`
-- `PUT /api/workforce/admin/config`
-- `POST /api/workforce/admin/occupations`
-- `PUT /api/workforce/admin/occupations/:id`
-- `DELETE /api/workforce/admin/occupations/:id`
+- `PUT /api/workforce/admin/config` — update the population model (population, participation rate, min/max recruitable)
 - `GET /api/workforce/admin/audit-events`
 
 ## 4) Data Model and Storage Contracts
@@ -146,22 +139,21 @@ Admin routes:
 
 ### 4.2 Domain Entities
 
-Tables owned by the plugin and present in `ctf/schema.sql`:
+Read-only sources (Workforce never writes these):
 
-1. `workforce_profiles` (plugin extension shape only)
-2. `workforce_occupations`
-3. `workforce_user_extension`
-4. `workforce_recruited_events` (append-only inferred events; unique on `inference_dedupe_key`)
-5. `workforce_config`
-6. `workforce_recruited_sync_cursor`
-7. `workforce_export_jobs`
-8. `workforce_admin_audit_trail`
-9. `workforce_deletion_events` (service-scoped deletion event log written by `DELETE /api/workforce/profile`; columns `id`, `user_id`, `scope`, `plugin_id`, `requested_at`, `processed_at`, `result`, `request_id`, `trace_id`, `created_at` — deletion contract section 8)
+- `directory_profiles` — the supply: active profiles are the members; `claimed_by_user_id IS NOT NULL` is recruited. Mapped to sectors/occupations via Skills Taxonomy.
+- `skills_taxonomy_sectors` (with `workforce_share`), `skills_taxonomy_job_titles` — the demand: sectors and occupations, plus each sector's share of the workforce.
 
-Note: `workforce_report_snapshots` was spec'd in an early draft of the `workforce.dashboard.fetch`
-command contract but was **removed by owner decision (2026-05-21)** rather than built — the dashboard
-derives all state live from `workforce_profiles` / `workforce_occupations`
-in `getDashboard()`, so no snapshot table is needed and none exists.
+Workforce-owned tables in `ctf/schema.sql` (the only state Workforce writes):
+
+1. `workforce_config` — the population model singleton: `population`, `participation_rate`, `min_recruitable`, `max_recruitable` (admin-editable). Demand = `population × participation_rate`, distributed across sectors by `workforce_share`.
+2. `workforce_user_extension` — read-only profile preferences + the service-scoped deletion marker.
+3. `workforce_admin_audit_trail` — admin operation audit log.
+4. `workforce_deletion_events` — service-scoped deletion event log written by `DELETE /api/workforce/profile`.
+
+No longer used by Workforce (tables retained in `schema.sql`, not dropped, to avoid breaking other consumers): `workforce_occupations` (occupations are read from Skills Taxonomy now; the table is still referenced by the SkillsHunt rare-skill snapshot and the demo seed, so it is kept) and `workforce_export_jobs` (exporting removed; no route writes it). The old `workforce_config` columns `exports_enabled` / `report_week_timezone` / `report_week_start_dow` are dropped (no report-running). The vestigial `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables are not read or written by Workforce.
+
+Note: there is no snapshot table — the dashboard, sector/skill/occupation breakdowns are all derived live from the read-only sources above in `computeWorkforceModel()`.
 
 ### 4.3 Storage and Derivation Rules
 
@@ -203,7 +195,7 @@ Canonical definition notes for `recruited`:
 
 ## 7) Seed Coverage Status
 
-`ctf/scripts/seedWorkforce.mjs` seeds deterministic recruited-state fixtures and admin export inputs for dev validation.
+`ctf/scripts/seedWorkforce.mjs` seeds the workforce config singleton only (the population model: population 5,000,000, participation 0.5, min/max recruitable). Demand (Skills Taxonomy sectors + `workforce_share`) and supply (Directory profiles) are owned by their own plugins and seeded there, not here.
 
 ## 7.5) Web and Android Delivery Status
 
@@ -243,6 +235,7 @@ Profile read + compliance-delete surface (2026-06-26): the profile is read-only 
 
 ## 10) Change Log
 
+- 2026-06-26: Restored the V2 demand/supply/gap model so the dashboard is usable, and made Workforce a fully read-only live tracker of skills distribution across a population. Demand is now population-scale: `population × participation_rate` (workforce config) distributed across sectors by `skills_taxonomy_sectors.workforce_share`, split across each sector's job titles. Supply is read live from Directory — members = active profiles, recruited = claimed. Sector gap = demand − recruited (huge when few are recruited), and per-occupation training gaps surface the LevelUp recruiting/training signal. Reworked `workforce_config` to the population model (`population`, `participation_rate`, `min_recruitable`, `max_recruitable`); dropped the `exports_enabled` / `report_week_timezone` / `report_week_start_dow` columns. Removed report exporting (routes + the three `workforce.export.*` commands) and the workforce-owned occupation CRUD (routes + the three `workforce.occupations.admin.*` commands) — occupations are read from Skills Taxonomy. Added `GET /api/workforce/reports/occupations` and the `workforce.report.occupations.fetch` command. Rebuilt the web dashboard (Population / Workforce Total / Total Headcount Target / Recruited cards, Recruitment Progress, Sector Gaps, Skill Level Breakdown, Top Training Gaps) and the web admin config (population model), and matched both on Android. The `workforce_occupations` and `workforce_export_jobs` tables are left in `schema.sql` (unused by Workforce) rather than dropped, because `workforce_occupations` is still read by the SkillsHunt rare-skill snapshot and the demo seed. Workforce never writes Directory or Skills Taxonomy; the only workforce-owned writes are the config singleton, the profile extension, the audit trail, and deletion events.
 - 2026-06-26: Removed the dead mobile admin sync/recompute buttons and the orphaned recompute command (code-review issues #823, #816 for sync; #841, #815 for recompute). The Android admin screen (`AdminWorkforce.tsx`) still POSTed to `/api/workforce/admin/sync` and `/api/workforce/admin/recompute`, but those routes were deliberately removed on 2026-06-16 when Workforce became read-only and recruited state began deriving live from Directory — so both buttons always returned 404. Owner decision: keep Workforce read-only; remove the dead client surface rather than recreate the routes. Deleted `runAdminSync` and `runAdminRecompute` from `admin-api.ts` (kept `fetchAdminOverview` and `updateAdminConfig`); removed the two buttons, the `runSync`/`runRecompute` handlers, the `'sync'`/`'recompute'` `busy` states, the now-unused styles, and the unused `Alert`/`Pressable` imports from `AdminWorkforce.tsx`; the config save flow is unchanged. Updated the admin subtitle to "Operational controls: config." Removed the orphaned `workforce.admin.recompute.enqueue` command from all three contract files (`WORKFORCE_PLUGIN_COMMAND_CONTRACTS.yaml`, `WORKFORCE_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, `WORKFORCE_PLUGIN_AUDIT_CONTRACTS.yaml`); there was no `workforce.admin.sync.*` command to remove. No schema change; no utility-token (credits) behavior change.
 - 2026-06-26: Workforce profile read path audit + compliance delete; profile update retired (code-review issues #839, #819, #842, #821, #814, #824, #812, #822, #843, #813). `GET /api/workforce/profile` now emits the `workforce.profile.fetch` audit and reads the real `availability_preferences` / `work_preferences` / `service_deleted_at` from `workforce_user_extension`. Added `DELETE /api/workforce/profile` — service-scoped compliance soft delete (sets `service_deleted_at`, resets the preference payloads, writes the new `workforce_deletion_events` table, retains `workforce_recruited_events`; CSRF + ownership) with `workforce.profile.delete` audit events. `workforce.profile.update` is intentionally retired (profile is read-only, owner decision 2026-06-16 reaffirmed): its command / access-policy / audit entries were removed from the three contract YAMLs rather than implemented.
 - 2026-06-26: Wired the standalone Android `WorkforceProfile` screen to real auth and a real API call (resolves code-review issues #845 and #827, duplicates). The screen previously defined its own local `AuthContext` (never provided a real value, so `isAuthenticated` was always false) and loaded data with a `setTimeout(() => setProfile(null), 1000)` stub marked `TODO: Replace with real API call`, so it always showed the unauthenticated / no-profile state and never hit `GET /api/workforce/profile`. It now uses `usePluginAuth('clerk')` for auth (matching `WorkforceDashboard`/`AdminWorkforce`) and `fetchWorkforceProfile()` (existing function in `api.ts`, already calling `GET /api/workforce/profile` via the shared `authedFetch`). States covered: loading (while auth resolves or the fetch is in flight), unauthenticated (sign-in prompt), error, empty (no profile / 404 → `null`), and populated. The populated state reuses the shared `WorkforceProfileCard`, so it renders only the real fields the API returns (occupation name, skill level, region, recruited state) — the old fabricated `name`/`role`/`skills` fields are gone. No backend, schema, contract, or route change.

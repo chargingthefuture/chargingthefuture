@@ -35,13 +35,13 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
           <Target size={14} /> Sector Gaps
         </div>
         <div style={{ fontSize: 13, color: '#4B5563' }}>
-          No sector data — gaps populate as workforce profiles are submitted and sectors assigned.
+          No sectors in the Skills Taxonomy yet — sector demand and gaps appear once sectors are defined.
         </div>
       </div>
     );
   }
 
-  const maxTotal = Math.max(...sectorItems.map((g) => g.workforceTotal), 1);
+  const maxTotal = Math.max(...sectorItems.map((g) => g.target), 1);
 
   return (
     <div
@@ -73,74 +73,74 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
         </Badge>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {sectorItems.map((g) => {
-          const gap = g.workforceTotal - g.recruitedTotal;
-          return (
-            <div key={g.bucket} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div
-                style={{
-                  width: 200,
-                  fontSize: 13,
-                  color: '#E8EAF0',
-                  flexShrink: 0,
-                  textTransform: 'capitalize',
-                }}
-              >
-                {g.bucket}
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {/* Supply (recruited) bar */}
-                <div
-                  style={{
-                    height: 6,
-                    background: 'rgba(255,255,255,0.05)',
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      background: '#22C55E',
-                      borderRadius: 3,
-                      width: `${Math.round((g.recruitedTotal / maxTotal) * 100)}%`,
-                    }}
-                  />
-                </div>
-                {/* Demand (total workforce) bar */}
-                <div
-                  style={{
-                    height: 6,
-                    background: 'rgba(255,255,255,0.05)',
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      background: '#EF4444',
-                      borderRadius: 3,
-                      width: `${Math.round((g.workforceTotal / maxTotal) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div
-                style={{
-                  width: 80,
-                  textAlign: 'right',
-                  fontSize: 13,
-                  color: '#EF4444',
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
-                {gap > 0 ? `–${gap.toLocaleString()}` : '—'}
+        {sectorItems.map((g) => (
+          <div key={g.bucket} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div
+              style={{
+                width: 200,
+                fontSize: 13,
+                color: '#E8EAF0',
+                flexShrink: 0,
+                textTransform: 'capitalize',
+              }}
+            >
+              {g.bucket}
+              <div style={{ fontSize: 11, color: '#6B7280' }}>
+                {g.recruited.toLocaleString()} recruited / {g.target.toLocaleString()} target
               </div>
             </div>
-          );
-        })}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {/* Supply (recruited) bar */}
+              <div
+                style={{
+                  height: 6,
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    background: '#22C55E',
+                    borderRadius: 3,
+                    width: `${Math.round((g.recruited / maxTotal) * 100)}%`,
+                  }}
+                />
+              </div>
+              {/* Demand (target) bar */}
+              <div
+                style={{
+                  height: 6,
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    background: '#EF4444',
+                    borderRadius: 3,
+                    width: `${Math.round((g.target / maxTotal) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                width: 90,
+                textAlign: 'right',
+                fontSize: 13,
+                color: '#EF4444',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {g.gap > 0 ? `–${g.gap.toLocaleString()}` : '—'}
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -149,7 +149,7 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 12, height: 4, background: '#EF4444', borderRadius: 2 }} />
-          <span style={{ fontSize: 12, color: '#6B7280' }}>Total</span>
+          <span style={{ fontSize: 12, color: '#6B7280' }}>Target</span>
         </div>
       </div>
     </div>

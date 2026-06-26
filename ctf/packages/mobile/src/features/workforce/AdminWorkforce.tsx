@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   fetchAdminOverview,
@@ -15,16 +15,32 @@ const BORDER = 'rgba(255,255,255,0.08)';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 
+type ConfigForm = {
+  population: string;
+  participationRate: string;
+  minRecruitable: string;
+  maxRecruitable: string;
+};
+
+function toForm(config: WorkforceConfig): ConfigForm {
+  return {
+    population: String(config.population),
+    participationRate: String(config.participationRate),
+    minRecruitable: String(config.minRecruitable),
+    maxRecruitable: String(config.maxRecruitable),
+  };
+}
+
 export const AdminWorkforce = () => {
   const { auth, loading: authLoading } = usePluginAuth('clerk');
 
-  const [config, setConfig] = useState<WorkforceConfig | null>(null);
+  const [form, setForm] = useState<ConfigForm | null>(null);
   const [dashboard, setDashboard] = useState<WorkforceDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'config' | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -37,7 +53,7 @@ export const AdminWorkforce = () => {
       return;
     }
     setForbidden(false);
-    setConfig(result.config);
+    setForm(result.config ? toForm(result.config) : null);
     setDashboard(result.dashboard);
     setLoading(false);
   }, [auth]);
@@ -46,33 +62,26 @@ export const AdminWorkforce = () => {
     if (!authLoading) void load();
   }, [authLoading, load]);
 
-  const persistConfig = useCallback(
-    async (next: WorkforceConfig) => {
-      if (!auth?.userId) return;
-      setBusy('config');
-      setError(null);
-      setNotice(null);
-      try {
-        const saved = await updateAdminConfig(next);
-        setConfig(saved);
-        setNotice('Config saved.');
-      } catch {
-        setError('Could not save the config. Try again.');
-        await load();
-      } finally {
-        setBusy(null);
-      }
-    },
-    [auth, load],
-  );
-
-  const toggleExports = useCallback(
-    (value: boolean) => {
-      if (!config) return;
-      void persistConfig({ ...config, exportsEnabled: value });
-    },
-    [config, persistConfig],
-  );
+  const save = useCallback(async () => {
+    if (!auth?.userId || !form) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const saved = await updateAdminConfig({
+        population: Number(form.population),
+        participationRate: Number(form.participationRate),
+        minRecruitable: Number(form.minRecruitable),
+        maxRecruitable: Number(form.maxRecruitable),
+      });
+      setForm(toForm(saved));
+      setNotice('Config saved.');
+    } catch {
+      setError('Could not save the config. Check the values and try again.');
+    } finally {
+      setBusy(false);
+    }
+  }, [auth, form]);
 
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
@@ -93,15 +102,23 @@ export const AdminWorkforce = () => {
   const summary: Array<{ label: string; value: number; color: string }> = dashboard
     ? [
         { label: 'Workforce total', value: dashboard.workforceTotal, color: COLOR },
-        { label: 'Recruited total', value: dashboard.recruitedTotal, color: '#22C55E' },
-        { label: 'Occupations', value: dashboard.occupationsTotal, color: '#A78BFA' },
+        { label: 'Headcount target', value: dashboard.totalHeadcountTarget, color: '#EF4444' },
+        { label: 'Recruited', value: dashboard.recruitedTotal, color: '#22C55E' },
+        { label: 'Directory members', value: dashboard.totalMembers, color: '#A78BFA' },
       ]
     : [];
+
+  const fields: Array<{ key: keyof ConfigForm; label: string; hint?: string }> = [
+    { key: 'population', label: 'Population', hint: 'Survivor population baseline' },
+    { key: 'participationRate', label: 'Participation rate', hint: '0–1 (e.g. 0.5)' },
+    { key: 'minRecruitable', label: 'Min recruitable' },
+    { key: 'maxRecruitable', label: 'Max recruitable' },
+  ];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Workforce Admin</Text>
-      <Text style={styles.subtitle}>Operational controls: config.</Text>
+      <Text style={styles.subtitle}>Population model. Demand = population × participation rate.</Text>
 
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
@@ -110,24 +127,35 @@ export const AdminWorkforce = () => {
         <View style={styles.statGrid}>
           {summary.map((item) => (
             <React.Fragment key={item.label}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>{item.label}</Text>
-              <Text style={[styles.statValue, { color: item.color }]}>{item.value}</Text>
-            </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>{item.label}</Text>
+                <Text style={[styles.statValue, { color: item.color }]}>{item.value.toLocaleString()}</Text>
+              </View>
             </React.Fragment>
           ))}
         </View>
       ) : null}
 
-      {config ? (
+      {form ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Config</Text>
-          <View style={styles.switchRow}>
-            <Switch value={config.exportsEnabled} onValueChange={toggleExports} disabled={busy === 'config'} />
-            <Text style={styles.switchLabel}>Exports enabled</Text>
-          </View>
-          <Text style={styles.cardMeta}>Report timezone: {config.reportWeekTimezone}</Text>
-          <Text style={styles.cardMeta}>Week start day-of-week: {config.reportWeekStartDow}</Text>
+          {fields.map((f) => (
+            <View key={f.key} style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>{f.label}</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={form[f.key]}
+                editable={!busy}
+                onChangeText={(v) => setForm((c) => (c ? { ...c, [f.key]: v } : c))}
+                placeholderTextColor={SUBTLE}
+              />
+              {f.hint ? <Text style={styles.fieldHint}>{f.hint}</Text> : null}
+            </View>
+          ))}
+          <Pressable style={[styles.button, busy && styles.buttonDisabled]} onPress={() => void save()} disabled={busy}>
+            <Text style={styles.buttonText}>{busy ? 'Saving…' : 'Save config'}</Text>
+          </Pressable>
         </View>
       ) : null}
     </ScrollView>
@@ -179,10 +207,29 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     borderRadius: 14,
     padding: 16,
-    gap: 10,
+    gap: 12,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT },
-  cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  switchLabel: { fontSize: 13, color: '#D1D5DB', flex: 1 },
+  fieldRow: { gap: 6 },
+  fieldLabel: { fontSize: 12, color: SUBTLE, fontWeight: '600' },
+  fieldHint: { fontSize: 11, color: SUBTLE },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+    color: TEXT,
+  },
+  button: {
+    backgroundColor: COLOR,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { fontSize: 14, fontWeight: '800', color: '#3a1d05' },
 });
