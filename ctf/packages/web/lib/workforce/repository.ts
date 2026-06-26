@@ -521,24 +521,27 @@ export async function softDeleteOwnProfile(userId: string): Promise<boolean> {
   return true;
 }
 
+// requested_at is the time the caller captured before any awaits (when the request was received);
+// processed_at is when this row is written (NOW() in SQL), so the two timestamps are genuinely
+// distinct as the deletion contract (section 8) requires.
 export async function insertWorkforceDeletionEvent(input: {
   userId: string;
   scope: string;
   result: string;
+  requestedAt: Date;
   requestId: string | null;
   traceId: string | null;
-  processedAt?: Date | null;
 }): Promise<void> {
   await queryDb(
     `
       INSERT INTO workforce_deletion_events
         (user_id, scope, plugin_id, requested_at, processed_at, result, request_id, trace_id)
-      VALUES ($1, $2, 'workforce', NOW(), $3, $4, $5, $6)
+      VALUES ($1, $2, 'workforce', $3, NOW(), $4, $5, $6)
     `,
     [
       input.userId,
       input.scope,
-      input.processedAt ?? new Date(),
+      input.requestedAt,
       input.result,
       input.requestId,
       input.traceId,

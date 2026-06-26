@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
 
+// The product is single-tenant: there is no workspace concept on the auth decision (see
+// lib/auth/server-authz AllowDecision). The audit contracts still carry a `workspaceId` field from
+// the shared template, so we record this constant for it rather than a real per-workspace value.
+export const WORKFORCE_AUDIT_WORKSPACE = 'global';
+
 type WorkforceAuditEvent = {
   actorId: string;
   command: string;
@@ -10,6 +15,13 @@ type WorkforceAuditEvent = {
   result: 'success' | 'failure';
   errorCategory: string | null;
   metadata?: Record<string, unknown>;
+  // Top-level correlation ids required by the audit contracts. Routes read these from the
+  // x-request-id / x-trace-id headers; null when the caller did not supply them.
+  requestId?: string | null;
+  traceId?: string | null;
+  // Extra targetContext fields a specific command's audit contract requires (e.g. workspaceId,
+  // userId, dashboardRequestId, configVersion). Merged alongside targetType / targetId.
+  targetContext?: Record<string, string | null | undefined>;
 };
 
 export function logWorkforceAudit(event: WorkforceAuditEvent): void {
@@ -27,7 +39,10 @@ export function logWorkforceAudit(event: WorkforceAuditEvent): void {
     targetContext: {
       targetType: event.targetType,
       targetId: event.targetId,
+      ...(event.targetContext ?? {}),
     },
+    requestId: event.requestId ?? null,
+    traceId: event.traceId ?? null,
     result: {
       status: event.result,
       errorCategory: event.errorCategory ?? 'none',
