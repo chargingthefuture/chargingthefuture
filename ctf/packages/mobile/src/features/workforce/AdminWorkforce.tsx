@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
   fetchAdminOverview,
-  runAdminRecompute,
-  runAdminSync,
   updateAdminConfig,
   type WorkforceConfig,
   type WorkforceDashboard,
@@ -26,7 +24,7 @@ export const AdminWorkforce = () => {
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'config' | 'sync' | 'recompute' | null>(null);
+  const [busy, setBusy] = useState<'config' | null>(null);
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -76,53 +74,6 @@ export const AdminWorkforce = () => {
     [config, persistConfig],
   );
 
-  const runSync = useCallback(() => {
-    if (!auth?.userId) return;
-    Alert.alert('Run incremental sync', 'Run the recruited incremental sync now?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Run',
-        onPress: async () => {
-          setBusy('sync');
-          setError(null);
-          setNotice(null);
-          try {
-            await runAdminSync();
-            setNotice('Incremental sync started.');
-            await load();
-          } catch {
-            setError('Could not run the sync. Try again.');
-          } finally {
-            setBusy(null);
-          }
-        },
-      },
-    ]);
-  }, [auth, load]);
-
-  const runRecompute = useCallback(() => {
-    if (!auth?.userId) return;
-    Alert.alert('Recompute recruited totals', 'Enqueue a recruited-total recompute now?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Recompute',
-        onPress: async () => {
-          setBusy('recompute');
-          setError(null);
-          setNotice(null);
-          try {
-            await runAdminRecompute();
-            setNotice('Recompute enqueued.');
-          } catch {
-            setError('Could not enqueue the recompute. Try again.');
-          } finally {
-            setBusy(null);
-          }
-        },
-      },
-    ]);
-  }, [auth]);
-
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
@@ -150,7 +101,7 @@ export const AdminWorkforce = () => {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Workforce Admin</Text>
-      <Text style={styles.subtitle}>Operational controls: config, sync, and recompute.</Text>
+      <Text style={styles.subtitle}>Operational controls: config.</Text>
 
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
@@ -179,32 +130,6 @@ export const AdminWorkforce = () => {
           <Text style={styles.cardMeta}>Week start day-of-week: {config.reportWeekStartDow}</Text>
         </View>
       ) : null}
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Operations</Text>
-        <Pressable
-          style={[styles.primaryBtn, busy === 'sync' ? styles.btnBusy : null]}
-          onPress={runSync}
-          disabled={busy !== null}
-        >
-          {busy === 'sync' ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.primaryBtnText}>Run incremental sync</Text>
-          )}
-        </Pressable>
-        <Pressable
-          style={[styles.secondaryBtn, busy === 'recompute' ? styles.btnBusy : null]}
-          onPress={runRecompute}
-          disabled={busy !== null}
-        >
-          {busy === 'recompute' ? (
-            <ActivityIndicator size="small" color={COLOR} />
-          ) : (
-            <Text style={styles.secondaryBtnText}>Recompute recruited totals</Text>
-          )}
-        </Pressable>
-      </View>
     </ScrollView>
   );
 };
@@ -260,23 +185,4 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 12, color: SUBTLE, lineHeight: 18 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   switchLabel: { fontSize: 13, color: '#D1D5DB', flex: 1 },
-  primaryBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 11,
-    backgroundColor: COLOR,
-  },
-  primaryBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  secondaryBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: COLOR,
-    backgroundColor: 'rgba(59,130,246,0.1)',
-  },
-  secondaryBtnText: { fontSize: 14, fontWeight: '700', color: COLOR },
-  btnBusy: { opacity: 0.6 },
 });

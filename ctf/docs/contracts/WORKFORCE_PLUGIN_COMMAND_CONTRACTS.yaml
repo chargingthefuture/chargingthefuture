@@ -293,26 +293,6 @@ contracts:
     idempotency: true
 
   - pluginId: workforce
-    command: workforce.admin.recompute.enqueue
-    version: 1.0.0
-    description: Enqueue recruited-state recompute derived from Directory profile writes.
-    inputSchema:
-      source:
-        type: string
-        enum: [directory_profiles]
-    outputSchema:
-      insertedEvents:
-        type: integer
-    dataAccess:
-      - directory_profiles
-      - workforce_recruited_events
-      - workforce_profiles
-      - workforce_admin_audit_trail
-    purpose: workforce_recruited_derivation
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: workforce
     command: workforce.admin.auditEvents.fetch
     version: 1.0.0
     description: Fetch workforce admin audit trail.

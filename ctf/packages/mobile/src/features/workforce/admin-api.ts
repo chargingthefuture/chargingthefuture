@@ -91,27 +91,3 @@ export async function updateAdminConfig(config: WorkforceConfig): Promise<Workfo
   const data = (await res.json()) as { config: WorkforceConfig };
   return data.config;
 }
-
-// POST run the incremental recruited sync. CSRF-confirmed mutation.
-export async function runAdminSync(): Promise<void> {
-  const res = await authedFetch(`${API_ROOT}/admin/sync`, {
-    method: 'POST',
-    headers: jsonHeaders(true),
-    body: JSON.stringify({}),
-  });
-  if (!res.ok) {
-    throw new Error(`sync_failed:${res.status}`);
-  }
-}
-
-// POST enqueue a recruited-total recompute. CSRF-confirmed mutation.
-export async function runAdminRecompute(): Promise<void> {
-  const res = await authedFetch(`${API_ROOT}/admin/recompute`, {
-    method: 'POST',
-    headers: jsonHeaders(true),
-    body: JSON.stringify({}),
-  });
-  if (!res.ok) {
-    throw new Error(`recompute_failed:${res.status}`);
-  }
-}
