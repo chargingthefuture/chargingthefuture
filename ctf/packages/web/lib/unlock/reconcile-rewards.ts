@@ -47,8 +47,16 @@ export async function grantUnlockRewardForSubmission(
     idempotencyKey: `unlock-approval-submission-${submission.id}`,
   });
 
-  // Flip the per-submission flag last. If a racing run set it first, markUnlockIncentiveGranted returns
-  // false and we report already_granted rather than a fresh grant.
+  // The credit already existed (idempotency replay) — a prior run minted it, possibly crashing before it
+  // could flip the per-submission flag. Repair the flag, but report already_granted so the caller does not
+  // double-count this as a fresh grant or write a second follow-up audit for a credit that already landed.
+  if (grant.replayed) {
+    await markUnlockIncentiveGranted(submission.id);
+    return { status: 'already_granted' };
+  }
+
+  // Fresh mint. Flip the per-submission flag last. If a racing run set it first, markUnlockIncentiveGranted
+  // returns false and we report already_granted rather than a fresh grant.
   const marked = await markUnlockIncentiveGranted(submission.id);
   if (!marked) {
     return { status: 'already_granted' };

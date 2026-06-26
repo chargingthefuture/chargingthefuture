@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { insertUnlockAudit } from 'lib/unlock/repository';
 import { reconcileUnlockRewards } from 'lib/unlock/reconcile-rewards';
 import { reportError } from 'lib/observability/report';
@@ -12,11 +12,18 @@ import { reportError } from 'lib/observability/report';
 // runtime. This route gives an admin the same drain on demand from the Unlock admin screen — gated by
 // the admin session, so it needs no CRON_SECRET. It calls the exact same idempotent mint (same actor +
 // idempotency key + markUnlockIncentiveGranted guard), so it can never double-grant a reward.
-export async function POST() {
+export async function POST(request: Request) {
+  const csrfDeny = ensureUnlockMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const gate = await requireUnlockAdminAccess();
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   try {
     const result = await reconcileUnlockRewards();
@@ -26,6 +33,7 @@ export async function POST() {
       command: 'unlock.admin.rewards.reconcile',
       policyStatus: 'allow',
       reason: 'ok',
+      requestId,
       metadata: { ...result },
     });
 

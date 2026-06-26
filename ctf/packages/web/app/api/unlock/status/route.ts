@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
-import { requireUnlockUserAccess } from 'lib/unlock/_lib';
+import { requireUnlockUserAccess, resolveUnlockRequestId } from 'lib/unlock/_lib';
 import { getUnlockStatusForUser, insertUnlockAudit } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 
-export async function GET() {
+export async function GET(request: Request) {
   const gate = await requireUnlockUserAccess();
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   try {
     const status = await getUnlockStatusForUser(gate.auth.userId);
@@ -18,6 +20,7 @@ export async function GET() {
       policyStatus: 'allow',
       reason: 'ok',
       targetUserId: gate.auth.userId,
+      requestId,
       metadata: {
         accessTier: status.accessTier,
         reviewStatus: status.reviewStatus,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireUnlockAdminAccess, unlockErrorResponse } from 'lib/unlock/_lib';
+import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { insertUnlockAudit, reviewUnlockSubmission } from 'lib/unlock/repository';
 import { grantUnlockRewardForSubmission } from 'lib/unlock/reconcile-rewards';
 import { insertServiceCreditsAudit } from 'lib/service-credits/repository';
@@ -22,10 +22,17 @@ type ReviewBody = {
 const ALLOWED_REVIEW_STATUSES = new Set<ReviewUnlockSubmissionInput['reviewStatus']>(['approved', 'rejected', 'spam']);
 
 export async function POST(request: Request, { params }: RouteParams) {
+  const csrfDeny = ensureUnlockMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const gate = await requireUnlockAdminAccess();
   if (!gate.allowed) {
     return gate.response;
   }
+
+  const requestId = resolveUnlockRequestId(request);
 
   const resolvedParams = await params;
   const submissionId = Number(resolvedParams.submissionId);
@@ -62,6 +69,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       policyStatus: 'allow',
       reason: 'ok',
       targetUserId: submission.userId,
+      requestId,
       metadata: {
         submissionId,
         reviewStatus: body.reviewStatus,
