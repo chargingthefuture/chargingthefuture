@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import { WorkforceLoading } from './WorkforceLoading';
 import { WorkforceEmpty } from './WorkforceEmpty';
+import { WorkforcePublic } from './WorkforcePublic';
 import { WorkforceStatCard } from './WorkforceStatCard';
 import { WorkforceProfileCard } from './WorkforceProfileCard';
 import {
@@ -96,6 +98,9 @@ function TrainingGaps({ items }: { items: WorkforceOccupationGapItem[] }) {
 }
 
 export function WorkforceDashboard() {
+  const { auth, loading: authLoading } = usePluginAuth('clerk');
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+
   const [dashboard, setDashboard] = useState<WorkforceDashboardData | null>(null);
   const [profile, setProfile] = useState<WorkforceProfileData | null>(null);
   const [sectors, setSectors] = useState<WorkforceGroupedReportItem[]>([]);
@@ -104,6 +109,14 @@ export function WorkforceDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Don't hit the member-scoped endpoints until auth resolves and the user is signed in — an
+    // unauthenticated dashboard otherwise fires four 401s and shows a misleading "no profile" state.
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     setLoading(true);
     setError(null);
@@ -130,10 +143,14 @@ export function WorkforceDashboard() {
       });
 
     return () => { active = false; };
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
-  if (loading) {
+  if (authLoading || (isAuthenticated && loading)) {
     return <WorkforceLoading />;
+  }
+
+  if (!isAuthenticated) {
+    return <WorkforcePublic />;
   }
 
   if (error) {
