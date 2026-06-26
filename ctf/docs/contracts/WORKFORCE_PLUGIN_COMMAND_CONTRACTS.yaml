@@ -16,8 +16,10 @@ contracts:
         type: string
     dataAccess:
       - directory_profiles
+      - directory_profile_skills
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - workforce_config
     purpose: workforce_visibility
     retentionClass: derived_short_lived
@@ -83,8 +85,10 @@ contracts:
         type: object
     dataAccess:
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - skills_taxonomy_sectors
       - directory_profiles
+      - directory_profile_skills
       - workforce_config
     purpose: workforce_catalog
     retentionClass: derived_short_lived
@@ -103,8 +107,10 @@ contracts:
         type: object
     dataAccess:
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - skills_taxonomy_sectors
       - directory_profiles
+      - directory_profile_skills
       - workforce_config
     purpose: workforce_catalog
     retentionClass: derived_short_lived
@@ -122,8 +128,10 @@ contracts:
         type: object
     dataAccess:
       - directory_profiles
+      - directory_profile_skills
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
@@ -132,7 +140,9 @@ contracts:
   - pluginId: workforce
     command: workforce.report.skillLevel.fetch
     version: 2.0.0
-    description: Fetch the workforce breakdown grouped by skill level (demand vs recruited per level).
+    description: >-
+      Fetch the workforce breakdown grouped by skill level (demand vs recruited per level). For a
+      specific (non-`all`) level, also returns `detail` with the matched-member list (the V2 drilldown).
     inputSchema:
       skillLevel:
         type: string
@@ -140,10 +150,15 @@ contracts:
     outputSchema:
       items:
         type: array
+      detail:
+        type: object
+        required: false
     dataAccess:
       - directory_profiles
+      - directory_profile_skills
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
@@ -152,7 +167,9 @@ contracts:
   - pluginId: workforce
     command: workforce.report.sector.fetch
     version: 2.0.0
-    description: Fetch the workforce breakdown grouped by sector (demand vs recruited and the gap per sector).
+    description: >-
+      Fetch the workforce breakdown grouped by sector (demand vs recruited and the gap per sector). For
+      a specific (non-`all`) sector, also returns `detail` with the matched-member list (the V2 drilldown).
     inputSchema:
       sector:
         type: string
@@ -160,10 +177,15 @@ contracts:
     outputSchema:
       items:
         type: array
+      detail:
+        type: object
+        required: false
     dataAccess:
       - directory_profiles
+      - directory_profile_skills
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
@@ -184,8 +206,10 @@ contracts:
         type: array
     dataAccess:
       - directory_profiles
+      - directory_profile_skills
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
       - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
