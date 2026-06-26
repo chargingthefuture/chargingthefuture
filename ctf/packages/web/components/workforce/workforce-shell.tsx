@@ -9,12 +9,18 @@ import { useTheme } from '@/hooks/useTheme';
 import { AppLoading } from '@/components/shared/app-loading';
 import { getAppAccent, type ThemeName } from '@/lib/theme/theme-tokens';
 import { getPluginShellTokens, type PluginShellTokens } from '@/components/shared/plugin-shell-theme';
-import type { WorkforceDashboard, WorkforceGroupedReportItem, WorkforceProfile } from '../../lib/workforce/types';
+import type {
+  WorkforceDashboard,
+  WorkforceGroupedReportItem,
+  WorkforceOccupationGapItem,
+  WorkforceProfile,
+} from '../../lib/workforce/types';
 import { WorkforceIconRail } from './workforce-icon-rail';
 import { WorkforceSidebar } from './workforce-sidebar';
 import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
+import { WorkforceTrainingGaps } from './workforce-training-gaps';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 
@@ -36,6 +42,7 @@ interface WorkforceData {
   dashboard: WorkforceDashboard | null;
   sectorItems: WorkforceGroupedReportItem[];
   skillItems: WorkforceGroupedReportItem[];
+  occupationItems: WorkforceOccupationGapItem[];
   profile: WorkforceProfile | null;
 }
 
@@ -165,15 +172,20 @@ function WorkforceDashboardContent({
   dashboard,
   sectorItems,
   skillItems,
+  occupationItems,
   activeView,
 }: {
   t: WorkforceTokens;
   dashboard: WorkforceDashboard | null;
   sectorItems: WorkforceGroupedReportItem[];
   skillItems: WorkforceGroupedReportItem[];
+  occupationItems: WorkforceOccupationGapItem[];
   activeView: SidebarView;
 }) {
-  const isEmpty = !dashboard || dashboard.workforceTotal === 0;
+  // Empty only when there is genuinely nothing to track: no taxonomy sectors/occupations and nobody
+  // in the Directory. Demand alone (population model) is enough to render the dashboard.
+  const isEmpty = !dashboard
+    || (dashboard.sectorsTotal === 0 && dashboard.occupationsTotal === 0 && dashboard.totalMembers === 0);
 
   if (isEmpty) {
     return <WorkforceEmptyState t={t} />;
@@ -191,6 +203,10 @@ function WorkforceDashboardContent({
         {(activeView === 'overview' || activeView === 'sector') ? (
           <WorkforceSectorGaps sectorItems={sectorItems} />
         ) : null}
+
+        {(activeView === 'overview' || activeView === 'sector') ? (
+          <WorkforceTrainingGaps occupationItems={occupationItems} />
+        ) : null}
       </div>
     </ScrollArea>
   );
@@ -205,6 +221,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     dashboard: null,
     sectorItems: [],
     skillItems: [],
+    occupationItems: [],
     profile: null,
   });
   const isMobile = useIsMobile();
@@ -218,10 +235,11 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       setLoading(true);
       setError(null);
       try {
-        const [dashRes, sectorRes, skillRes, profileRes] = await Promise.all([
+        const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
           fetch('/api/workforce/dashboard', { signal: controller.signal }),
           fetch('/api/workforce/reports/sector/all', { signal: controller.signal }),
           fetch('/api/workforce/reports/skill-level/all', { signal: controller.signal }),
+          fetch('/api/workforce/reports/occupations?limit=10', { signal: controller.signal }),
           fetch('/api/workforce/profile', { signal: controller.signal }),
         ]);
 
@@ -236,6 +254,9 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
         const skillJson = skillRes.ok
           ? ((await skillRes.json()) as { items?: WorkforceGroupedReportItem[] })
           : null;
+        const occJson = occRes.ok
+          ? ((await occRes.json()) as { items?: WorkforceOccupationGapItem[] })
+          : null;
         const profileJson = profileRes.ok
           ? ((await profileRes.json()) as { profile?: WorkforceProfile })
           : null;
@@ -244,6 +265,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
           dashboard: dashJson?.dashboard ?? null,
           sectorItems: sectorJson?.items ?? [],
           skillItems: skillJson?.items ?? [],
+          occupationItems: occJson?.items ?? [],
           profile: profileJson?.profile ?? null,
         });
       } catch (e: unknown) {
@@ -262,7 +284,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     };
   }, []);
 
-  const { dashboard, sectorItems, skillItems, profile } = data;
+  const { dashboard, sectorItems, skillItems, occupationItems, profile } = data;
 
   if (loading) {
     return <WorkforceLoadingState />;
@@ -294,6 +316,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       dashboard={dashboard}
       sectorItems={sectorItems}
       skillItems={skillItems}
+      occupationItems={occupationItems}
       activeView={view}
     />
   );
@@ -371,7 +394,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
             </div>
             <div style={{ fontSize: 12, color: t.MUTED }}>
               {dashboard
-                ? `${dashboard.workforceTotal.toLocaleString()} members · ${dashboard.recruitedTotal.toLocaleString()} recruited`
+                ? `${dashboard.totalMembers.toLocaleString()} members · ${dashboard.recruitedTotal.toLocaleString()} recruited`
                 : 'Live workforce tracker'}
             </div>
           </div>

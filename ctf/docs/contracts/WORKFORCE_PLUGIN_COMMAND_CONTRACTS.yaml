@@ -1,27 +1,34 @@
 contracts:
   - pluginId: workforce
     command: workforce.dashboard.fetch
-    version: 1.0.0
-    description: Fetch workforce dashboard metrics and current-state summaries.
+    version: 2.0.0
+    description: >-
+      Fetch the live workforce dashboard: population-scaled demand (from Skills Taxonomy sector
+      workforce shares and the workforce config) vs Directory supply (members + recruited). Read-only.
     inputSchema:
       scope:
         type: object
         required: false
     outputSchema:
-      summary:
+      dashboard:
         type: object
       generatedAt:
         type: string
     dataAccess:
-      - canonical_metrics_registry
+      - directory_profiles
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - workforce_config
     purpose: workforce_visibility
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
     command: workforce.profile.fetch
-    version: 1.0.0
-    description: Fetch caller workforce profile extension.
+    version: 2.0.0
+    description: >-
+      Fetch the caller's read-only workforce profile (occupation/skill derived live from their claimed
+      Directory profile) plus the workforce-owned extension preferences and deletion marker.
     inputSchema:
       userScope:
         type: self
@@ -30,7 +37,8 @@ contracts:
       profile:
         type: object
     dataAccess:
-      - workforce_profiles
+      - directory_profiles
+      - skills_taxonomy_job_titles
       - workforce_user_extension
     purpose: workforce_profile_management
     retentionClass: transactional_long_lived
@@ -38,8 +46,10 @@ contracts:
 
   - pluginId: workforce
     command: workforce.profile.delete
-    version: 1.0.0
-    description: Service-scoped workforce profile deletion and extension reset.
+    version: 2.0.0
+    description: >-
+      Service-scoped workforce profile soft delete: set service_deleted_at and reset the workforce
+      extension preferences. Directory and Skills Taxonomy are never written.
     inputSchema:
       scope:
         type: string
@@ -50,9 +60,7 @@ contracts:
       requestedAtIso:
         type: string
     dataAccess:
-      - workforce_profiles
       - workforce_user_extension
-      - workforce_recruited_events
       - workforce_deletion_events
       - workforce_admin_audit_trail
     purpose: workforce_profile_management
@@ -61,8 +69,10 @@ contracts:
 
   - pluginId: workforce
     command: workforce.occupations.list
-    version: 1.0.0
-    description: List workforce occupations.
+    version: 2.0.0
+    description: >-
+      List occupations (Skills Taxonomy job titles) with their demand/supply overlay, largest gap
+      first. Read-only; occupations are owned by Skills Taxonomy, never by Workforce.
     inputSchema:
       pagination:
         type: object
@@ -72,15 +82,18 @@ contracts:
       pagination:
         type: object
     dataAccess:
-      - workforce_occupations
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_sectors
+      - directory_profiles
+      - workforce_config
     purpose: workforce_catalog
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
     command: workforce.occupations.detail.fetch
-    version: 1.0.0
-    description: Fetch workforce occupation details.
+    version: 2.0.0
+    description: Fetch one occupation (Skills Taxonomy job title) with its demand/supply overlay.
     inputSchema:
       occupationId:
         type: string
@@ -89,69 +102,18 @@ contracts:
       occupation:
         type: object
     dataAccess:
-      - workforce_occupations
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_sectors
+      - directory_profiles
+      - workforce_config
     purpose: workforce_catalog
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
-    command: workforce.occupations.admin.create
-    version: 1.0.0
-    description: Create workforce occupation entry.
-    inputSchema:
-      occupation:
-        type: object
-        required: true
-    outputSchema:
-      occupation:
-        type: object
-    dataAccess:
-      - workforce_occupations
-      - workforce_admin_audit_trail
-    purpose: workforce_admin_operations
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: workforce
-    command: workforce.occupations.admin.update
-    version: 1.0.0
-    description: Update workforce occupation entry.
-    inputSchema:
-      occupationId:
-        type: string
-      occupation:
-        type: object
-    outputSchema:
-      occupation:
-        type: object
-    dataAccess:
-      - workforce_occupations
-      - workforce_admin_audit_trail
-    purpose: workforce_admin_operations
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: workforce
-    command: workforce.occupations.admin.delete
-    version: 1.0.0
-    description: Delete workforce occupation entry.
-    inputSchema:
-      occupationId:
-        type: string
-    outputSchema:
-      status:
-        type: string
-    dataAccess:
-      - workforce_occupations
-      - workforce_admin_audit_trail
-    purpose: workforce_admin_operations
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: workforce
     command: workforce.report.summary.fetch
-    version: 1.0.0
-    description: Fetch workforce summary report.
+    version: 2.0.0
+    description: Fetch the workforce summary (population, workforce total, headcount target, members, recruited).
     inputSchema:
       scope:
         type: object
@@ -159,16 +121,18 @@ contracts:
       summary:
         type: object
     dataAccess:
-      - workforce_profiles
-      - canonical_metrics_registry
+      - directory_profiles
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
     command: workforce.report.skillLevel.fetch
-    version: 1.0.0
-    description: Fetch workforce grouped report by skill level.
+    version: 2.0.0
+    description: Fetch the workforce breakdown grouped by skill level (demand vs recruited per level).
     inputSchema:
       skillLevel:
         type: string
@@ -177,16 +141,18 @@ contracts:
       items:
         type: array
     dataAccess:
-      - workforce_profiles
-      - canonical_metrics_registry
+      - directory_profiles
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
     command: workforce.report.sector.fetch
-    version: 1.0.0
-    description: Fetch workforce grouped report by sector.
+    version: 2.0.0
+    description: Fetch the workforce breakdown grouped by sector (demand vs recruited and the gap per sector).
     inputSchema:
       sector:
         type: string
@@ -195,71 +161,40 @@ contracts:
       items:
         type: array
     dataAccess:
-      - workforce_profiles
-      - workforce_occupations
-      - canonical_metrics_registry
+      - directory_profiles
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - workforce_config
     purpose: workforce_reporting
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
-    command: workforce.export.job.create
+    command: workforce.report.occupations.fetch
     version: 1.0.0
-    description: Record deferred export job request (execution deferred in phase-1).
+    description: >-
+      Fetch per-occupation training gaps (demand vs recruited per Skills Taxonomy job title), largest
+      gap first. This is the signal that later tells LevelUp which training cohorts to stand up.
     inputSchema:
-      exportType:
-        type: string
-        required: true
-      filters:
-        type: object
+      limit:
+        type: number
         required: false
     outputSchema:
-      jobId:
-        type: string
-      status:
-        type: string
+      items:
+        type: array
     dataAccess:
-      - workforce_export_jobs
-    purpose: workforce_reporting_exports
-    retentionClass: operational_medium_lived
-    idempotency: true
-
-  - pluginId: workforce
-    command: workforce.export.job.status.fetch
-    version: 1.0.0
-    description: Fetch deferred export job status.
-    inputSchema:
-      jobId:
-        type: string
-    outputSchema:
-      job:
-        type: object
-    dataAccess:
-      - workforce_export_jobs
-    purpose: workforce_reporting_exports
-    retentionClass: operational_medium_lived
-    idempotency: true
-
-  - pluginId: workforce
-    command: workforce.export.job.result.fetch
-    version: 1.0.0
-    description: Fetch deferred export job result metadata.
-    inputSchema:
-      jobId:
-        type: string
-    outputSchema:
-      result:
-        type: object
-    dataAccess:
-      - workforce_export_jobs
-    purpose: workforce_reporting_exports
-    retentionClass: operational_medium_lived
+      - directory_profiles
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - workforce_config
+    purpose: workforce_reporting
+    retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: workforce
     command: workforce.admin.config.fetch
-    version: 1.0.0
-    description: Fetch workforce admin configuration.
+    version: 2.0.0
+    description: Fetch the workforce config (population model — population, participation rate, min/max recruitable).
     inputSchema:
       scope:
         type: object
@@ -274,15 +209,17 @@ contracts:
 
   - pluginId: workforce
     command: workforce.admin.config.update
-    version: 1.0.0
-    description: Update workforce planning configuration and policy flags.
+    version: 2.0.0
+    description: >-
+      Update the workforce config (population, participation rate, min/max recruitable). This is the
+      only workforce-owned, admin-editable state; Directory and Skills Taxonomy are never written.
     inputSchema:
       config:
         type: object
         required: true
     outputSchema:
-      configVersion:
-        type: string
+      config:
+        type: object
       updatedAt:
         type: string
     dataAccess:
@@ -307,25 +244,5 @@ contracts:
     dataAccess:
       - workforce_admin_audit_trail
     purpose: workforce_governance
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: workforce
-    command: workforce.metric.recruited.derive
-    version: 1.0.0
-    description: Derive recruited metric state from directory source events with deterministic dedupe keys.
-    inputSchema:
-      sourceEvent:
-        type: string
-    outputSchema:
-      dedupeKey:
-        type: string
-      resolvedRecruited:
-        type: boolean
-    dataAccess:
-      - workforce_recruited_events
-      - workforce_profiles
-      - canonical_metrics_registry
-    purpose: workforce_recruited_derivation
     retentionClass: audit_long_lived
     idempotency: true

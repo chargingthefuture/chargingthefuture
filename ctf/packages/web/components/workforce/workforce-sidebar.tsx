@@ -27,7 +27,7 @@ export function WorkforceSidebar({
   dashboard,
   sectorItems,
 }: WorkforceSidebarProps) {
-  const gapCount = sectorItems.filter((g) => g.workforceTotal > g.recruitedTotal).length;
+  const gapCount = sectorItems.filter((g) => g.gap > 0).length;
 
   return (
     <aside
@@ -150,8 +150,9 @@ export function WorkforceSidebar({
                 Quick Stats
               </div>
               {[
-                { l: 'Total Members', v: dashboard.workforceTotal.toLocaleString() },
+                { l: 'Headcount Target', v: dashboard.totalHeadcountTarget.toLocaleString() },
                 { l: 'Recruited', v: dashboard.recruitedTotal.toLocaleString() },
+                { l: 'Directory Members', v: dashboard.totalMembers.toLocaleString() },
                 { l: 'Skill Gaps', v: gapCount > 0 ? `${gapCount} sectors` : 'None' },
               ].map(({ l, v }) => (
                 <div key={l} style={{ padding: '7px 10px', fontSize: 12, color: '#6B7280' }}>

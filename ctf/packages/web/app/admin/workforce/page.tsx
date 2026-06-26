@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { getDashboard, getWorkforceConfig, listOccupations } from 'lib/workforce/repository';
+import { getDashboard, getWorkforceConfig } from 'lib/workforce/repository';
 import { WorkforceAdminShell } from '@/components/workforce/workforce-admin-shell';
 
 export const dynamic = 'force-dynamic';
@@ -11,17 +11,15 @@ export default async function WorkforceAdminPage() {
     redirect('/apps/workforce');
   }
 
-  const [dashboard, config, occupations] = await Promise.all([
+  const [dashboard, config] = await Promise.all([
     getDashboard(),
     getWorkforceConfig(),
-    listOccupations({ page: 1, pageSize: 100 }, true),
   ]);
 
   return (
     <WorkforceAdminShell
       dashboard={dashboard}
       config={config}
-      occupations={occupations.items}
     />
   );
 }
