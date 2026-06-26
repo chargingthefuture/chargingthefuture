@@ -680,15 +680,25 @@ contracts:
 
   - pluginId: foundation
     command: foundation.push.subscribe
-    version: 1.0.0
-    description: Save the signed-in member's Web Push subscription for one device (issue #808 task 5). A provider who enabled instant calls turns on "call alerts on this device"; the browser's push subscription is stored so the instant-call ring can wake that device with the app closed. The member acts only on their own subscription; the endpoint and per-subscription keys are stored but never logged.
+    version: 1.1.0
+    description: Save the signed-in member's push subscription for one device. A provider who enabled instant calls turns on "call alerts on this device" so the instant-call ring can wake that device with the app closed. Two kinds share this command, branched on the body's kind field — kind 'web' (default, issue #808 task 5) stores the browser's Web Push subscription (endpoint + the p256dh/auth encryption keys); kind 'expo' (issue #884) stores the Android app's Expo push token (the token is the identity, stored as the endpoint; no encryption keys). Both store into the user-global push_subscriptions table on (user_id, endpoint). The member acts only on their own subscription; the endpoint/token and any keys are stored but never logged.
     inputSchema:
+      kind:
+        type: string
+        required: false
+        description: "'web' (default) or 'expo'. Selects which subscription shape the body carries."
       endpoint:
         type: string
-        required: true
+        required: false
+        description: Web Push only — required when kind is 'web' (omitted for 'expo').
       keys:
         type: object
-        required: true
+        required: false
+        description: Web Push only — required when kind is 'web' (the p256dh/auth encryption keys).
+      token:
+        type: string
+        required: false
+        description: Expo only — required when kind is 'expo' (the device's Expo push token).
       userAgent:
         type: string
         required: false
@@ -704,7 +714,7 @@ contracts:
   - pluginId: foundation
     command: foundation.push.unsubscribe
     version: 1.0.0
-    description: Remove the signed-in member's Web Push subscription for one device (issue #808 task 5) — they turned call alerts off on that device, or the browser revoked it. Identified by its endpoint; the member acts only on their own subscription.
+    description: Remove the signed-in member's push subscription for one device (issue #808 task 5; issue #884 for Expo) — they turned call alerts off on that device, or the browser/app revoked it. Identified by its endpoint (the Web Push endpoint URL, or the Expo push token for an Android device); the member acts only on their own subscription. Kind-agnostic — the same endpoint match removes a web or expo row.
     inputSchema:
       endpoint:
         type: string
@@ -746,3 +756,5 @@ changelog:
     change: Added per-block billing (issue #808 task 4) to the instant 1:1 call. ring is now v1.1.0 — it takes an optional authorizedBlocks (buyer-set per-session block cap, default 6, never exceeded in v1), pre-checks the caller can afford the first block, and reads foundation_user_extension + service_credits_wallets (still moves no credits). answer is now v1.1.0 — it snapshots the provider's rate + interval onto the call and charges the first block via the canonical peer-to-peer ServiceCredits transfer (direct, no escrow), so its dataAccess now includes the service_credits_* tables and it is idempotent on the deterministic per-block key. Added foundation.connection.instant-call.extend (caller-only) to charge each subsequent block at the LOCKED rate under the authorized cap. Disputes/refunds and mid-session cap re-authorization are deferred follow-ups.
   - date: 2026-06-25
     change: Added Web Push delivery for the instant-call ring (issue #808 task 5) — foundation.push.subscribe / .unsubscribe / .vapid-public-key.read. A provider enables "call alerts on this device"; the device's Web Push subscription is stored in the user-global push_subscriptions table, and the ring sends a push so the device wakes with the app closed. The in-app incoming-call poll remains the fallback; push only augments it. The ring also writes a foundation_notification_events row of kind instant_call.ring for the in-app inbox. Server keys (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT) are read from env and the send is a graceful no-op when unset. Android/Expo native push is deferred to the #808 Android parity ticket.
+  - date: 2026-06-26
+    change: Added Expo (Android native) push delivery for the instant-call ring (issue #884). foundation.push.subscribe is now v1.1.0 — it takes an optional kind field; kind 'expo' stores the Android app's Expo push token in the same push_subscriptions table (kind 'expo'; token as endpoint, no encryption keys). foundation.push.unsubscribe is kind-agnostic (matches by endpoint, so the same call removes a web or expo row). The ring now also sends an Expo push alongside the Web Push, best-effort and isolated so neither push can affect the ring. The optional EXPO_ACCESS_TOKEN secret is read from env for the send and the send is a graceful no-op-shaped degrade when unset (it still sends for projects without enhanced push security); never logged. A 'DeviceNotRegistered' Expo receipt prunes the dead token. Expo native push needs an EAS native build (expo-notifications cannot run in Expo Go).

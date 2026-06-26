@@ -69,6 +69,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     //     text shown to the user (iOS Info.plist usage strings + Android
     //     RECORD_AUDIO). Chyme is audio-only, but the camera string is required
     //     by the WebRTC layer even when video is never published.
+    //   - expo-notifications: the Foundation instant-call ring native push
+    //     (issue #884). expo-notifications needs native code (it cannot run in
+    //     Expo Go), so this config plugin must be present in the EAS build for a
+    //     device to be woken by an incoming call. Registering the plugin sets up
+    //     the Android notification channel/icon defaults; no per-user identity is
+    //     baked in — the device's Expo push token is fetched at runtime when the
+    //     member turns on "Call alerts on this device".
     plugins: [
       ...(config.plugins ?? []),
       '@stream-io/video-react-native-sdk',
@@ -81,6 +88,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             'Charging the Future does not record video; this permission is required by the audio engine and is never used to capture video.',
         },
       ],
+      'expo-notifications',
     ],
     updates: {
       ...(updatesUrl ? { url: updatesUrl } : {}),

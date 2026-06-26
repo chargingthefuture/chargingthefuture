@@ -22,6 +22,7 @@ import { FoundationEmpty } from './FoundationEmpty';
 import { FoundationProviderCard } from './FoundationProviderCard';
 import { FoundationProviderDetail } from './FoundationProviderDetail';
 import { FoundationDirectLine } from './FoundationDirectLine';
+import { FoundationCallAlerts } from './FoundationCallAlerts';
 
 const BG = '#0F1117';
 const SURFACE_DARK = '#090B0F';
@@ -322,6 +323,10 @@ export function Foundation() {
               </TouchableOpacity>
             </>
           )}
+          {/* "Enable call alerts on this device" (issue #884) — native push so a
+              provider who takes instant 1:1 calls is woken on this phone when a
+              member rings them. Mirrors the web instant-call settings placement. */}
+          <FoundationCallAlerts />
         </ScrollView>
       ) : (
         <FlatList

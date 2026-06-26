@@ -26,6 +26,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useAuth } from '../../auth/auth-context';
 import {
   answerInstantCall,
@@ -49,6 +50,19 @@ const COLOR = '#F59E0B';
 const TEXT = '#F9FAFB';
 const TEXT_DIM = '#9CA3AF';
 const SUBTLE = '#6B7280';
+
+// Foreground display for the Foundation ring native push (issue #884). When a push
+// arrives while the app is open, show the system alert so the member still notices
+// the incoming call even if they are on another screen. Set once at module load;
+// harmless on Expo Go (no remote push is delivered there anyway).
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 // Poll cadence while following a ring/in-call. Kept short so ring/answer/decline/
 // timeout feel live without hammering the server. Matches the web cadence.
@@ -250,27 +264,38 @@ export const FoundationInstantCallController: React.FC<{ children: ReactNode }> 
     };
   }, [activeCallId, displayName, reset]);
 
+  // Show one incoming ring if there is one (callee side). Shared by the idle inbox
+  // poll and the push-tap handler so both reach the same answer/decline surface.
+  // Only acts while idle so a member following their own active call is not
+  // interrupted. Returns true when a ring was shown.
+  const showIncomingIfAny = useCallback(async (): Promise<boolean> => {
+    try {
+      const data = await getIncomingCall();
+      if (data.call) {
+        setRingStatus('ringing');
+        setBilling(billingFromCall(data.call));
+        setActive({ kind: 'callee', callId: data.call.id });
+        return true;
+      }
+    } catch {
+      /* transient — the next poll reconciles */
+    }
+    return false;
+  }, []);
+
   // Incoming-ring inbox poll (callee side). Only runs while idle and signed in, so a
   // member follows their own active call without also being interrupted by the inbox.
-  // When a ring appears, switch to the callee surface.
+  // When a ring appears, switch to the callee surface. This is the fallback that
+  // works with no push configured; native push (issue #884) only wakes the device
+  // sooner — the answer/decline surface still comes from this poll.
   useEffect(() => {
     if (active.kind !== 'idle' || !isAuthenticated) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const tick = async () => {
-      try {
-        const data = await getIncomingCall();
-        if (!cancelled && data.call) {
-          setRingStatus('ringing');
-          setBilling(billingFromCall(data.call));
-          setActive({ kind: 'callee', callId: data.call.id });
-          return;
-        }
-      } catch {
-        /* transient — retry */
-      }
-      if (!cancelled) {
+      const shown = !cancelled && (await showIncomingIfAny());
+      if (!cancelled && !shown) {
         timer = setTimeout(() => void tick(), INBOX_POLL_MS);
       }
     };
@@ -280,7 +305,23 @@ export const FoundationInstantCallController: React.FC<{ children: ReactNode }> 
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [active.kind, isAuthenticated]);
+  }, [active.kind, isAuthenticated, showIncomingIfAny]);
+
+  // Native-push tap handling (issue #884). When the member taps the incoming-call
+  // notification — delivered by Expo native push when "call alerts" is on — the OS
+  // opens the app and fires this listener; we immediately check the incoming-call
+  // inbox so the answer/decline surface appears at once rather than waiting for the
+  // next poll tick. The poll above remains the source of truth for the ring state.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = (response.notification.request.content.data ?? {}) as { type?: unknown };
+      if (data.type === 'foundation.instant_call.ring') {
+        void showIncomingIfAny();
+      }
+    });
+    return () => subscription.remove();
+  }, [isAuthenticated, showIncomingIfAny]);
 
   const onAnswer = useCallback(async () => {
     if (active.kind !== 'callee') return;
