@@ -16,7 +16,7 @@ import { SkillsHuntPublicShell } from '@/components/skills-hunt/skills-hunt-publ
 import { SkillsTaxonomyPublicShell } from '@/components/skills-taxonomy/skills-taxonomy-public-shell';
 import { SocketRelayPublicShell } from '@/components/socketrelay/socketrelay-public-shell';
 import { TrustPublicShell } from '@/components/trust/trust-public-shell';
-import { TrustTransportPublicShell } from '@/components/trusttransport/trusttransport-public-shell';
+import { TrustTransportPublicShell } from '@/components/trust-transport/trust-transport-public-shell';
 import { UnlockPublicShell } from '@/components/unlock/unlock-public-shell';
 import { WeeklyPerformancePublicShell } from '@/components/weekly-performance/weekly-performance-public-shell';
 import { WhatWorksPublicShell } from '@/components/what-works/what-works-public-shell';
@@ -74,7 +74,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   'skills-taxonomy': SkillsTaxonomyPublicShell,
   socketrelay: SocketRelayPublicShell,
   trust: TrustPublicShell,
-  trusttransport: TrustTransportPublicShell,
+  'trust-transport': TrustTransportPublicShell,
   unlock: UnlockPublicShell,
   'weekly-performance': WeeklyPerformancePublicShell,
   'what-works': WhatWorksPublicShell,

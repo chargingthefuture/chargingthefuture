@@ -529,8 +529,8 @@ Handoff output:
 ```text
 Read this first: #file:index.mdc
 Then read:
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trusttransport-feature-inventory.md
-- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trusttransport-feature-inventory.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md
+- #file:ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md
 - #file:ctf/docs/contracts/TRUSTTRANSPORT_PLUGIN_COMMAND_CONTRACTS.yaml
 - #file:ctf/docs/contracts/TRUSTTRANSPORT_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml
 - #file:ctf/docs/contracts/TRUSTTRANSPORT_PLUGIN_AUDIT_CONTRACTS.yaml

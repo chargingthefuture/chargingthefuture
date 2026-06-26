@@ -35,7 +35,7 @@ type AccentPair = { standard: string; comic: string };
 export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   chyme: { standard: '#22C55E', comic: '#1A5C32' },
   lighthouse: { standard: '#60A5FA', comic: '#1A4A7A' },
-  trusttransport: { standard: '#38BDF8', comic: '#0C4A6E' },
+  'trust-transport': { standard: '#38BDF8', comic: '#0C4A6E' },
   directory: { standard: '#93C5FD', comic: '#1A3A6A' },
   foundation: { standard: '#F59E0B', comic: '#7A4A05' },
   'peer-programming': { standard: '#6EE7B7', comic: '#1A5C40' },

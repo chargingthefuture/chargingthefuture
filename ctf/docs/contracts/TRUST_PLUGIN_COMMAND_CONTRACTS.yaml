@@ -121,7 +121,7 @@ contracts:
       - service_credits_transfers
       - service_credits_disputes
       - lighthouse_matches
-      - trusttransport_trips
+      - trust_transport_trips
       - skills_hunt_submissions
       - levelup_enrollments
       - chyme_room_members

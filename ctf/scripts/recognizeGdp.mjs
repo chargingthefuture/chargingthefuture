@@ -25,9 +25,9 @@ function requireEnv(name) {
 // One per contributing plugin: a SQL query returning (currency_code, total) of eligible settled spend.
 const SOURCES = [
   {
-    pluginSlug: 'trusttransport',
+    pluginSlug: 'trust-transport',
     sql: `SELECT COALESCE(price_currency, currency) AS currency_code, SUM(amount)::numeric AS total
-            FROM trusttransport_earnings_ledger
+            FROM trust_transport_earnings_ledger
             WHERE entry_type IN ('credit', 'release')
             GROUP BY COALESCE(price_currency, currency)`,
   },

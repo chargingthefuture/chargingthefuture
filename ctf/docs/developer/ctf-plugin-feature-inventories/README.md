@@ -23,7 +23,7 @@ Examples:
 
 - [CTF plugin coding readiness matrix](./ctf-plugin-coding-readiness-matrix.md)
 - [Chyme](./ctf-chyme-feature-inventory.md)
-- [TrustTransport](./ctf-trusttransport-feature-inventory.md)
+- [TrustTransport](./ctf-trust-transport-feature-inventory.md)
 - [Feed](./ctf-feed-feature-inventory.md)
 - [Announcements](./ctf-announcements-feature-inventory.md)
 - [comic (AI assistant in the Feed/Hub chat)](./ctf-comic-feature-inventory.md)

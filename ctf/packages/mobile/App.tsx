@@ -22,7 +22,7 @@ import { SkillsHunt, AdminSkillsHunt } from './src/features/skills-hunt';
 import { Foundation, FoundationInstantCallController } from './src/features/foundation';
 import { Lighthouse, AdminLighthouse } from './src/features/lighthouse';
 import { SocketRelay, AdminSocketRelay } from './src/features/socketrelay';
-import { TrustTransport, AdminTrustTransport } from './src/features/trusttransport';
+import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
 import { GentlePulse } from './src/features/gentlepulse';
@@ -36,7 +36,7 @@ import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { Beacon } from './src/features/beacon';
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
-import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
+import { AuthProvider, useAuth } from './src/features/trust-transport/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 
@@ -53,8 +53,8 @@ type FeatureKey =
   | 'foundation'
   | 'lighthouse'
   | 'socketrelay'
-  | 'trusttransport'
-  | 'trusttransport-admin'
+  | 'trust-transport'
+  | 'trust-transport-admin'
   | 'peer-programming'
   | 'mood'
   | 'gentlepulse'
@@ -90,8 +90,8 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'foundation', label: 'Foundation' },
   { key: 'lighthouse', label: 'Lighthouse' },
   { key: 'socketrelay', label: 'SocketRelay' },
-  { key: 'trusttransport', label: 'TrustTransport' },
-  { key: 'trusttransport-admin', label: 'TrustTransport Admin' },
+  { key: 'trust-transport', label: 'TrustTransport' },
+  { key: 'trust-transport-admin', label: 'TrustTransport Admin' },
   { key: 'peer-programming', label: 'PeerProgramming' },
   { key: 'mood', label: 'Mood' },
   { key: 'gentlepulse', label: 'GentlePulse' },
@@ -160,8 +160,8 @@ function buildFeatureViews(
     foundation: () => <Foundation />,
     lighthouse: () => <Lighthouse />,
     socketrelay: () => <SocketRelay />,
-    trusttransport: () => <TrustTransport />,
-    'trusttransport-admin': () => <AdminTrustTransport />,
+    'trust-transport': () => <TrustTransport />,
+    'trust-transport-admin': () => <AdminTrustTransport />,
     'peer-programming': () => <PeerProgramming />,
     mood: () => <Mood />,
     gentlepulse: () => <GentlePulse />,

@@ -56,7 +56,7 @@ const APPROVED_SOURCE_MAP: Record<FeedQuestionCategory, FeedAnswerSource[]> = {
   ],
   safety: [
     {
-      id: 'trusttransport-safety',
+      id: 'trust-transport-safety',
       label: 'TrustTransport safety workflows',
       detail: 'Safety-first transport policies and escalation guidance inside TrustTransport.',
     },

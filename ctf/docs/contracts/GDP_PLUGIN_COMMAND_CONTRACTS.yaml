@@ -90,7 +90,7 @@ contracts:
     dataAccess:
       # Live recognition sources (non-incentive settled value) + activity counts read on each request:
       - foundation_call_sessions
-      - trusttransport_earnings_ledger
+      - trust_transport_earnings_ledger
       - service_credits_governance_events
       - service_credits_transfers
       - socketrelay_fulfillments

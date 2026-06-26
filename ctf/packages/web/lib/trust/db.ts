@@ -51,7 +51,7 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 //   - socketrelay_*            → completed SocketRelay trades + requests opened
 //   - service_credits_*        → completed transfers received + distinct payers; disputes withhold clean-record
 //   - lighthouse_matches       → accepted/completed LightHouse matches
-//   - trusttransport_trips     → completed TrustTransport trips
+//   - trust_transport_trips     → completed TrustTransport trips
 //   - skills_hunt_submissions  → accepted SkillsHunt submissions
 //   - levelup_enrollments      → completed LevelUp cohorts
 //   - chyme_room_members       → Chyme rooms joined
@@ -137,7 +137,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
       [userId]
     ),
     queryDb<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM trusttransport_trips
+      `SELECT COUNT(*) AS count FROM trust_transport_trips
        WHERE (requester_user_id = $1 OR provider_user_id = $1) AND status = 'completed'`,
       [userId]
     ),
@@ -265,7 +265,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
   // complexity; each emits one categorical "verb N noun" item only when the real count is > 0.
   const participationSignals: { count: number; type: string; verb: string; singular: string; plural: string }[] = [
     { count: metrics.lighthouseMatchesAccepted, type: 'engagement-lighthouse-matches', verb: 'Accepted', singular: 'LightHouse match', plural: 'LightHouse matches' },
-    { count: metrics.trustTransportTripsCompleted, type: 'engagement-trusttransport-trips', verb: 'Completed', singular: 'TrustTransport trip', plural: 'TrustTransport trips' },
+    { count: metrics.trustTransportTripsCompleted, type: 'engagement-trust-transport-trips', verb: 'Completed', singular: 'TrustTransport trip', plural: 'TrustTransport trips' },
     { count: metrics.skillsHuntSubmissionsAccepted, type: 'engagement-skillshunt-submissions', verb: 'Accepted', singular: 'SkillsHunt submission', plural: 'SkillsHunt submissions' },
     { count: metrics.levelupCohortsCompleted, type: 'engagement-levelup-cohorts', verb: 'Completed', singular: 'LevelUp cohort', plural: 'LevelUp cohorts' },
     { count: metrics.chymeRoomsJoined, type: 'engagement-chyme-rooms', verb: 'Joined', singular: 'Chyme room', plural: 'Chyme rooms' },
