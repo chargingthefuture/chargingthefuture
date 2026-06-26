@@ -8,7 +8,7 @@ import {
   COLOR, initials, quoteStatus, formatQuoteDate,
   type ProviderView, type QuoteView,
 } from "./foundation-ui";
-import { ConnectNowButton, canOfferConnectNow } from "./foundation-connect-now";
+import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls } from "./foundation-connect-now";
 
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
@@ -87,6 +87,10 @@ export function BrowsePanel({
                   {canOfferConnectNow(p, viewerUserId) ? (
                     <div style={{ marginTop: 10 }}>
                       <ConnectNowButton provider={p} compact />
+                    </div>
+                  ) : acceptsInstantCalls(p) ? (
+                    <div style={{ marginTop: 10 }}>
+                      <InstantCallAvailabilityBadge provider={p} compact />
                     </div>
                   ) : null}
                 </div>

@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Shield } from "lucide-react";
 import { COLOR, FONT, initials, type ProviderView } from "./foundation-ui";
-import { ConnectNowButton, canOfferConnectNow, isOwnProfile } from "./foundation-connect-now";
+import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, isOwnProfile } from "./foundation-connect-now";
 
 export function ProviderProfile({
   provider, viewerUserId = null, submitting, quoteError, quoteSuccess, onBack, onRequestQuote,
@@ -54,6 +54,8 @@ export function ProviderProfile({
               )}
               {canOfferConnectNow(provider, viewerUserId) ? (
                 <ConnectNowButton provider={provider} />
+              ) : acceptsInstantCalls(provider) ? (
+                <InstantCallAvailabilityBadge provider={provider} />
               ) : null}
             </div>
           </div>
