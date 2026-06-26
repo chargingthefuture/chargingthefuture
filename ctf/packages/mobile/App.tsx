@@ -35,6 +35,7 @@ import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
 import { Beacon } from './src/features/beacon';
 import { AccountData } from './src/features/account-data';
+import { BlockedMembers } from './src/features/blocks';
 import { AuthProvider, useAuth } from './src/features/trusttransport/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
@@ -67,6 +68,7 @@ type FeatureKey =
   | 'unlock'
   | 'unlock-admin'
   | 'account-data'
+  | 'blocked-members'
   | 'comic-review'
   | 'peer-programming-admin'
   | 'socketrelay-admin'
@@ -103,6 +105,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'unlock', label: 'Unlock' },
   { key: 'unlock-admin', label: 'Unlock Admin' },
   { key: 'account-data', label: 'Account & Data' },
+  { key: 'blocked-members', label: 'Blocked members' },
   { key: 'comic-review', label: 'AI Review' },
   { key: 'peer-programming-admin', label: 'PeerProgramming Admin' },
   { key: 'socketrelay-admin', label: 'SocketRelay Admin' },
@@ -172,6 +175,7 @@ function buildFeatureViews(
     unlock: () => <Unlock />,
     'unlock-admin': () => <AdminUnlock />,
     'account-data': () => <AccountData />,
+    'blocked-members': () => <BlockedMembers />,
     'comic-review': () => <ComicReviewDashboard />,
     'peer-programming-admin': () => <AdminPeerProgramming />,
     'socketrelay-admin': () => <AdminSocketRelay />,
