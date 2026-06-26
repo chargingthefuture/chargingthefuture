@@ -3313,13 +3313,30 @@ ALTER TABLE IF EXISTS currency_usd_rates ADD COLUMN IF NOT EXISTS created_at TIM
 CREATE INDEX IF NOT EXISTS idx_currency_usd_rates_code_asof ON currency_usd_rates(currency_code, as_of DESC);
 
 -- === MOOD MODULE ===
+-- Pseudonymous identity mapping (decoupling). This is the ONLY place a mood
+-- pseudonym is linked back to a user_id. Check-ins (mood_submissions below) are
+-- stored under the pseudonym, so the check-in/note rows carry no direct account
+-- link (pseudo-anonymity). The 7-day cooldown is enforced on this
+-- server-controlled pseudonym, which a member cannot mint for themselves, so the
+-- cooldown still cannot be bypassed. See ctf/packages/web/lib/mood/repository.ts.
+CREATE TABLE IF NOT EXISTS mood_client_identities (
+  pseudonym UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS mood_client_identities ADD COLUMN IF NOT EXISTS pseudonym UUID;
+ALTER TABLE IF EXISTS mood_client_identities ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS mood_client_identities ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_mood_client_identities_user ON mood_client_identities(user_id);
+
 CREATE TABLE IF NOT EXISTS mood_submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   client_id TEXT NOT NULL,
   mood_value INTEGER NOT NULL,
   note TEXT,
-  submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  pseudonym UUID
 );
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
@@ -3327,6 +3344,34 @@ ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS client_id TEXT N
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS mood_value INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS note TEXT;
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS pseudonym UUID;
+
+-- Backfill + sever (idempotent, safe to re-run): assign one pseudonym per existing
+-- user, repoint that user's check-ins to it, then blank the direct user_id link on
+-- the submission rows so past data is decoupled too.
+INSERT INTO mood_client_identities (user_id)
+SELECT DISTINCT user_id FROM mood_submissions
+WHERE user_id IS NOT NULL AND user_id <> ''
+ON CONFLICT (user_id) DO NOTHING;
+UPDATE mood_submissions s
+SET pseudonym = m.pseudonym
+FROM mood_client_identities m
+WHERE m.user_id = s.user_id AND s.pseudonym IS NULL AND s.user_id <> '';
+UPDATE mood_submissions SET user_id = '' WHERE pseudonym IS NOT NULL AND user_id <> '';
+
+-- Deleting a mapping row cascades that user's check-ins, so account deletion runs
+-- through the mapping (see ctf/packages/web/lib/account/deletion-registry.ts).
+-- Guarded so re-running schema.sql is idempotent (Postgres has no
+-- ADD CONSTRAINT IF NOT EXISTS).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mood_submissions_pseudonym_fkey') THEN
+    ALTER TABLE mood_submissions
+      ADD CONSTRAINT mood_submissions_pseudonym_fkey
+      FOREIGN KEY (pseudonym) REFERENCES mood_client_identities(pseudonym) ON DELETE CASCADE;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_mood_submissions_pseudonym ON mood_submissions(pseudonym, submitted_at DESC);
 
 -- === GENTLEPULSE MODULE ===
 CREATE TABLE IF NOT EXISTS gentlepulse_library_items (

@@ -17,6 +17,7 @@ contracts:
         type: string
     dataAccess:
       - mood_submissions
+      - mood_client_identities
     purpose: wellbeing_checkin_tracking
     retentionClass: transactional_long_lived
     idempotency: false
@@ -36,6 +37,7 @@ contracts:
         type: string
     dataAccess:
       - mood_submissions
+      - mood_client_identities
     purpose: wellbeing_checkin_eligibility
     retentionClass: derived_short_lived
     idempotency: true
