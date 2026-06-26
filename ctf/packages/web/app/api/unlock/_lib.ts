@@ -22,6 +22,17 @@ export function ensureUnlockMutationCsrf(request: Request): NextResponse | null 
   return null;
 }
 
+// A per-request correlation id for unlock audit rows. Prefer an inbound trace header; fall back to a
+// fresh UUID so every audit entry is correlatable even when no upstream id was supplied. The audit
+// contract marks requestId as a required field, so every insertUnlockAudit call passes one.
+export function resolveUnlockRequestId(request: Request): string {
+  return (
+    request.headers.get('x-request-id') ??
+    request.headers.get('x-ctf-request-id') ??
+    crypto.randomUUID()
+  );
+}
+
 // Validate and normalize a Quora profile URL. Returns the canonical form (host lowercased, hash and
 // query stripped) or null when the URL is not a valid Quora profile link. Shared by the member
 // submission path and the admin URL-edit path so both apply the exact same rules.

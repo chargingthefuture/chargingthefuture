@@ -1,7 +1,7 @@
 // Unlock admin screen (mobile) — verification queue with approve / reject actions.
 // Mirrors the web admin at ctf/packages/web/app/admin/unlock and the mockup
 // design/.../survivor-hub/MobileUnlockAdmin.tsx. Binds only existing endpoints:
-//   GET  /api/unlock/admin/submissions?reviewStatus=pending
+//   GET  /api/unlock/admin/submissions?reviewStatus=pending|approved (or no filter for all)
 //   POST /api/unlock/admin/submissions/:submissionId/review  (x-ctf-csrf: '1')
 // Admin access is enforced server-side; a 401/403 surfaces an "admins only" notice.
 
@@ -10,12 +10,21 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { usePluginAuth } from '../peer-programming/usePluginAuth';
 import {
-  fetchPendingSubmissions,
+  fetchSubmissions,
   reconcileRewards,
   reviewSubmission,
+  type UnlockAdminQueueFilter,
   type UnlockAdminSubmission,
   type UnlockReviewDecision,
 } from './admin-api';
+
+// Status tabs, mirroring the web admin shell. 'Approved' surfaces approved-but-uncredited rows (reward
+// pending) that need operator attention; 'All' shows every status.
+const QUEUE_TABS: { key: UnlockAdminQueueFilter; label: string }[] = [
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'all', label: 'All' },
+];
 
 const COLOR = '#C084FC';
 const BG = '#0F1117';
@@ -34,11 +43,13 @@ export const AdminUnlock = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [acting, setActing] = useState<number | null>(null);
   const [reconciling, setReconciling] = useState(false);
+  const [filter, setFilter] = useState<UnlockAdminQueueFilter>('pending');
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
     setError(null);
-    const result = await fetchPendingSubmissions();
+    setLoading(true);
+    const result = await fetchSubmissions(filter);
     if (result.forbidden) {
       setForbidden(true);
       setLoading(false);
@@ -48,7 +59,7 @@ export const AdminUnlock = () => {
     if (!result.ok && result.message) setError(result.message);
     setItems(result.items);
     setLoading(false);
-  }, [auth]);
+  }, [auth, filter]);
 
   useEffect(() => {
     if (!authLoading) void load();
@@ -80,9 +91,14 @@ export const AdminUnlock = () => {
     setNotice(null);
     try {
       const result = await reconcileRewards();
+      const heldNote =
+        result.withheld > 0
+          ? ` ${result.withheld} held for a duplicate-identity review.`
+          : '';
       setNotice(
         `Retried rewards — scanned ${result.scanned}, granted ${result.granted}, ` +
-          `already granted ${result.alreadyGranted}, failed ${result.failed}.`,
+          `already granted ${result.alreadyGranted}, withheld ${result.withheld}, failed ${result.failed}.` +
+          heldNote,
       );
       await load();
     } catch {
@@ -163,9 +179,27 @@ export const AdminUnlock = () => {
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
 
-      <Text style={styles.sectionHeading}>Pending submissions</Text>
+      <View style={styles.tabRow}>
+        {QUEUE_TABS.map((tab) => {
+          const active = filter === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              style={[styles.tab, active ? styles.tabActive : null]}
+              onPress={() => setFilter(tab.key)}
+              disabled={active}
+            >
+              <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.sectionHeading}>
+        {filter === 'pending' ? 'Pending submissions' : filter === 'approved' ? 'Approved submissions' : 'All submissions'}
+      </Text>
       {items.length === 0 ? (
-        <Text style={styles.emptyText}>No pending submissions.</Text>
+        <Text style={styles.emptyText}>No submissions in this view.</Text>
       ) : (
         items.map((submission) => (
           <React.Fragment key={submission.id}>
@@ -199,22 +233,24 @@ export const AdminUnlock = () => {
               <Text style={styles.cardMeta}>
                 Window expires: {submission.unlockWindowExpiresAt.slice(0, 10)}
               </Text>
-              <View style={styles.actionRow}>
-                <Pressable
-                  style={[styles.actionBtn, styles.acceptBtn, acting === submission.id ? styles.btnBusy : null]}
-                  onPress={() => confirmReview(submission, 'approved')}
-                  disabled={acting === submission.id}
-                >
-                  <Text style={[styles.actionText, styles.acceptText]}>Approve</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.actionBtn, styles.rejectBtn, acting === submission.id ? styles.btnBusy : null]}
-                  onPress={() => confirmReview(submission, 'rejected')}
-                  disabled={acting === submission.id}
-                >
-                  <Text style={[styles.actionText, styles.rejectText]}>Reject</Text>
-                </Pressable>
-              </View>
+              {submission.reviewStatus === 'pending' ? (
+                <View style={styles.actionRow}>
+                  <Pressable
+                    style={[styles.actionBtn, styles.acceptBtn, acting === submission.id ? styles.btnBusy : null]}
+                    onPress={() => confirmReview(submission, 'approved')}
+                    disabled={acting === submission.id}
+                  >
+                    <Text style={[styles.actionText, styles.acceptText]}>Approve</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.actionBtn, styles.rejectBtn, acting === submission.id ? styles.btnBusy : null]}
+                    onPress={() => confirmReview(submission, 'rejected')}
+                    disabled={acting === submission.id}
+                  >
+                    <Text style={[styles.actionText, styles.rejectText]}>Reject</Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </React.Fragment>
         ))
@@ -261,6 +297,20 @@ const styles = StyleSheet.create({
   },
   reconcileBtnText: { fontSize: 13, fontWeight: '700', color: COLOR },
   emptyText: { fontSize: 13, color: SUBTLE },
+  tabRow: { flexDirection: 'row', gap: 8 },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: PANEL,
+  },
+  tabActive: { backgroundColor: `${COLOR}1F`, borderColor: `${COLOR}4D` },
+  tabText: { fontSize: 13, fontWeight: '600', color: SUBTLE },
+  tabTextActive: { color: COLOR },
   sectionHeading: { fontSize: 16, fontWeight: '700', color: TEXT },
   card: {
     backgroundColor: PANEL,
