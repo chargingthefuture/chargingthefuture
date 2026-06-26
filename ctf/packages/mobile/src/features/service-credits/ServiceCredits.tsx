@@ -23,10 +23,10 @@ import { styles, colors, COLOR } from './sc-styles';
 // Real-data-only bindings:
 //   availableBalance, escrowBalance  ← GET /api/service-credits/wallet
 //   transfer creation                ← POST /api/service-credits/transfers
+//   recent transactions list         ← GET /api/service-credits/transactions (member's own ledger)
 //
 // Omitted (no API backing, not fabricated):
-//   earned total, spent total, this-month delta, network rank — no ledger-entries read endpoint
-//   recent transactions list — no ledger-entries read endpoint
+//   earned total, spent total, this-month delta, network rank — no aggregate read endpoint
 
 type NavKey = 'wallet' | 'earn' | 'send' | 'economy';
 

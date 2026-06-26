@@ -96,6 +96,21 @@ export async function fetchTreasuryConfig(): Promise<TreasuryConfigResult> {
   }
 }
 
+// Read-only ledger configuration status. We use this only for its demoMode flag: when true, the
+// signed-in operator is a demo participant and every admin action below runs against the demo schema,
+// not production (see the web AdminDemoBanner). Surfacing it lets the mobile admin screen warn loudly,
+// mirroring the web /admin demo banner.
+export type LedgerStatus = {
+  configured: boolean;
+  apiUrlSet: boolean;
+  ledger: string | null;
+  asset: string;
+  demoMode: boolean;
+};
+export function fetchLedgerStatus(): Promise<AdminResult<{ formance: LedgerStatus }>> {
+  return adminGet('/ledger-status');
+}
+
 export type GovernanceEvent = { governanceEventId: string };
 export function mintGrant(
   input: { targetUserId: string; amount: number; grantReason: string; governanceTicketId: string },
