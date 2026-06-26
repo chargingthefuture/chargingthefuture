@@ -3395,6 +3395,7 @@ CREATE TABLE IF NOT EXISTS peer_programming_cohorts (
   fallback_open BOOLEAN NOT NULL DEFAULT FALSE,
   topic_id UUID,
   assigned_by_user_id TEXT NOT NULL,
+  is_standing BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (week_start_date, cohort_label)
@@ -3405,8 +3406,18 @@ ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS cohort_l
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS fallback_open BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS topic_id UUID;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS assigned_by_user_id TEXT NOT NULL DEFAULT '';
+-- The single standing, always-open Cohort 1 used in low-population mode
+-- (PEER_PROGRAMMING_SINGLE_OPEN_COHORT). At most one row may have is_standing = TRUE, enforced by
+-- the partial-unique index below; that one row persists across weeks and is found by is_standing,
+-- not by the current week.
+ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS is_standing BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Guarantee there is at most one standing cohort. The find-or-create helper uses this partial-unique
+-- index for its ON CONFLICT (is_standing) WHERE is_standing inference.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_peer_programming_cohorts_standing
+  ON peer_programming_cohorts (is_standing)
+  WHERE is_standing;
 
 CREATE TABLE IF NOT EXISTS peer_programming_cohort_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
