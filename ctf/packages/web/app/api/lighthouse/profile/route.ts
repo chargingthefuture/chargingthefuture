@@ -152,6 +152,21 @@ async function upsertProfileHandler(request: Request) {
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'profile' });
+    // The audit contract marks lighthouse.profile.upsert as allow_or_deny (with an ownership and a
+    // profile-type-lock check). A policy denial raised by the repository must emit a deny audit
+    // event, not only the success path.
+    const code = error instanceof Error ? error.message : '';
+    if (code === 'not_owner' || code === 'policy_denied') {
+      await insertLighthouseAudit({
+        actorId: gate.auth.userId,
+        command: 'lighthouse.profile.upsert',
+        policyStatus: 'deny',
+        reason: code,
+        targetType: 'profile',
+        targetId: gate.auth.userId,
+        metadata: { profileType: input.profileType },
+      });
+    }
     return lighthouseErrorResponse(error, 'Profile upsert unavailable.');
   }
 }
