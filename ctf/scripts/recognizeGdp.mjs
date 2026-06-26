@@ -54,7 +54,35 @@ const SOURCES = [
             FROM foundation_call_sessions
             WHERE blocks_charged > 0 AND rate_credits_locked IS NOT NULL`,
   },
-  // Add more as approved. Keep eligible settled spend only — never incentives or plain transfers.
+  {
+    // Direct ServiceCredits transfers: a member sending another member credits from the "Send Credits"
+    // form — peer-to-peer activity NOT tied to a plugin transaction. Read the curated transfers record
+    // for COMPLETED sends with origin_plugin 'service-credits'. Plugin-mediated transfers carry their own
+    // origin_plugin and are attributed elsewhere, so there is no double count. Mints are not transfers.
+    pluginSlug: 'service-credits',
+    sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
+            FROM service_credits_transfers
+            WHERE status = 'completed' AND origin_plugin = 'service-credits'`,
+  },
+  {
+    // Chyme peer tips: COMPLETED transfers with origin_plugin 'chyme'. Reads zero until the Chyme tip UI
+    // is wired; registered now so tips count automatically once they flow.
+    pluginSlug: 'chyme',
+    sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
+            FROM service_credits_transfers
+            WHERE status = 'completed' AND origin_plugin = 'chyme'`,
+  },
+  {
+    // SocketRelay favors: mutual aid with no per-favor price, so each successfully-completed favor counts
+    // as one FREE exchange (by count). The standalone SocketRelay SC transfer route is intentionally not
+    // also counted here to avoid double-counting a single favor.
+    pluginSlug: 'socketrelay',
+    sql: `SELECT 'FREE' AS currency_code, COUNT(*)::numeric AS total
+            FROM socketrelay_fulfillments
+            WHERE close_reason = 'successful'`,
+  },
+  // Add more as approved. Keep eligible settled spend only — never incentives. A genuine peer-to-peer
+  // transfer outside a plugin transaction is economic activity and is counted (service-credits above).
 ];
 
 function currentWeekStartIso() {
