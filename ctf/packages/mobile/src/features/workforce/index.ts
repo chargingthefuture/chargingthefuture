@@ -1,4 +1,5 @@
 export { WorkforceDashboard } from './WorkforceDashboard';
+export { WorkforceExplore } from './WorkforceExplore';
 export { WorkforceProfile } from './WorkforceProfile';
 export { Workforce } from './Workforce';
 export { WorkforceLoading } from './WorkforceLoading';
