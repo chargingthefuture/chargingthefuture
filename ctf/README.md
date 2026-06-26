@@ -181,18 +181,18 @@ This folder contains the rewrite monorepo scaffold for:
 
 ## LevelUp Plugin (Phase 3)
 
-- Plugin shell route: `/apps/levelup`
-- Admin route: `/admin/levelup`
-- Primary migration: `ctf/migrations/2026-03-24-levelup-core-phase3.sql`
-- Deterministic seed script: `pnpm run seed:levelup`
+- Plugin shell route: `/apps/level-up`
+- Admin route: `/admin/level-up`
+- Primary migration: `ctf/migrations/2026-03-24-level-up-core-phase3.sql`
+- Deterministic seed script: `pnpm run seed:level-up`
 
 ### LevelUp environment variables
 
-- `LEVELUP_STARTER_CREDITS` default: `500`
-- `LEVELUP_ENROLL_RATE_LIMIT_WINDOW_MS` default: `60000`
-- `LEVELUP_ENROLL_RATE_LIMIT_MAX` default: `6`
-- `LEVELUP_MILESTONE_RATE_LIMIT_WINDOW_MS` default: `60000`
-- `LEVELUP_MILESTONE_RATE_LIMIT_MAX` default: `20`
+- `LEVEL_UP_STARTER_CREDITS` default: `500`
+- `LEVEL_UP_ENROLL_RATE_LIMIT_WINDOW_MS` default: `60000`
+- `LEVEL_UP_ENROLL_RATE_LIMIT_MAX` default: `6`
+- `LEVEL_UP_MILESTONE_RATE_LIMIT_WINDOW_MS` default: `60000`
+- `LEVEL_UP_MILESTONE_RATE_LIMIT_MAX` default: `20`
 
 ### MVP testing posture
 

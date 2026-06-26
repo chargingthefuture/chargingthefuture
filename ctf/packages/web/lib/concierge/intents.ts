@@ -174,7 +174,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: "I want to learn something new but I don't even know what's out there.",
   },
   {
-    slug: 'levelup',
+    slug: 'level-up',
     name: 'LevelUp',
     blurb: 'Goal-based cohorts with milestones and stipends.',
     keywords: [

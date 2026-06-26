@@ -7,7 +7,7 @@ import { DirectoryPublicShell } from '@/components/directory/directory-public-sh
 import { FoundationPublicShell } from '@/components/foundation/foundation-public-shell';
 import { GdpPublicShell } from '@/components/gdp/gdp-public-shell';
 import { GentlePulsePublicShell } from '@/components/gentlepulse/gentlepulse-public-shell';
-import { LevelupPublicShell } from '@/components/levelup/levelup-public-shell';
+import { LevelUpPublicShell } from '@/components/level-up/level-up-public-shell';
 import { LighthousePublicShell } from '@/components/lighthouse/lighthouse-public-shell';
 import { MoodPublicShell } from '@/components/mood/mood-public-shell';
 import { PeerProgrammingPublicShell } from '@/components/peer-programming/peer-programming-public-shell';
@@ -65,7 +65,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   foundation: FoundationPublicShell,
   gdp: GdpPublicShell,
   gentlepulse: GentlePulsePublicShell,
-  levelup: LevelupPublicShell,
+  'level-up': LevelUpPublicShell,
   lighthouse: LighthousePublicShell,
   mood: MoodPublicShell,
   'peer-programming': PeerProgrammingPublicShell,

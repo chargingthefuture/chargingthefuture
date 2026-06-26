@@ -338,15 +338,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'levelup',
+    slug: 'level-up',
     name: 'LevelUp',
     dataSummary: 'Your cohort enrollments.',
     serviceScopeSupported: true,
     tables: [
-      del('levelup_enrollments', 'user_id', 'Your cohort enrollments.'),
-      del('levelup_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
-      retain('levelup_audit_events', 'Audit log; retained for compliance.'),
-      // levelup_cohorts are shared; disbursements/escrows/disputes are money records (retained).
+      del('level_up_enrollments', 'user_id', 'Your cohort enrollments.'),
+      del('level_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
+      retain('level_up_audit_events', 'Audit log; retained for compliance.'),
+      // level_up_cohorts are shared; disbursements/escrows/disputes are money records (retained).
     ],
   },
   {

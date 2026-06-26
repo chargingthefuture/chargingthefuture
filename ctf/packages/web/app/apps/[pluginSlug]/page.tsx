@@ -10,7 +10,7 @@ import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
 import { GentlePulseShell } from '@/components/gentlepulse/gentlepulse-shell';
 import { LighthouseShell } from '@/components/lighthouse/lighthouse-shell';
-import { LevelupShell } from '@/components/levelup/levelup-shell';
+import { LevelUpShell } from '@/components/level-up/level-up-shell';
 import MoodShell from '@/components/mood/mood-shell';
 import { PeerProgrammingShell } from '@/components/peer-programming/peer-programming-shell';
 import { ServiceCreditsShell } from '@/components/service-credits/service-credits-shell';
@@ -276,8 +276,8 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <ServiceCreditsShell isAdmin={decision.isAdmin} />;
   }
 
-  if (selectedPlugin.slug === 'levelup') {
-    return <LevelupShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
+  if (selectedPlugin.slug === 'level-up') {
+    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={resolvedSearchParams} />;
   }
 
   return (

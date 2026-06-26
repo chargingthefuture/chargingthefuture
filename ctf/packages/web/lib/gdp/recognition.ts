@@ -117,7 +117,7 @@ export const trustTransportSource: RecognitionSource = {
  * ledger marks these entries `accounting_scope = service_credits_non_gdp` by design.
  */
 export const levelUpTrainerPayoutSource: RecognitionSource = {
-  pluginSlug: 'levelup',
+  pluginSlug: 'level-up',
   label: 'LevelUp trainer payouts for validated work',
   async loadVolumes() {
     const result = await queryDb<{ total: string | null }>(

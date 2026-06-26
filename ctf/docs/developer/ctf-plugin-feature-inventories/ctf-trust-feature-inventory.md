@@ -71,7 +71,7 @@ human-readable evidence items on `trust_user_extension`. Real signals that feed 
   - LightHouse — `lighthouse_matches` accepted/completed → "Accepted N LightHouse matches"
   - TrustTransport — `trust_transport_trips` completed → "Completed N TrustTransport trips"
   - SkillsHunt — `skills_hunt_submissions` accepted → "Accepted N SkillsHunt submissions"
-  - LevelUp — `levelup_enrollments` completed → "Completed N LevelUp cohorts"
+  - LevelUp — `level_up_enrollments` completed → "Completed N LevelUp cohorts"
   - Chyme — `chyme_room_members` → "Joined N Chyme rooms"
   - Directory — `directory_profiles` (`claimed_by_user_id`) → "Claimed N Directory profiles"
   - WhatWorks — `what_works_endorsements` → "Endorsed N WhatWorks products"

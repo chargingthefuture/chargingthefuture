@@ -29,7 +29,7 @@ import { GentlePulse } from './src/features/gentlepulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
-import { Levelup, AdminLevelup } from './src/features/levelup';
+import { LevelUp, AdminLevelUp } from './src/features/level-up';
 import { Unlock, AdminUnlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { SkillsTaxonomy } from './src/features/skills-taxonomy';
@@ -64,7 +64,7 @@ type FeatureKey =
   | 'gdp-rate-admin'
   | 'service-credits'
   | 'service-credits-admin'
-  | 'levelup'
+  | 'level-up'
   | 'unlock'
   | 'unlock-admin'
   | 'account-data'
@@ -75,7 +75,7 @@ type FeatureKey =
   | 'skills-hunt-admin'
   | 'lighthouse-admin'
   | 'workforce-admin'
-  | 'levelup-admin';
+  | 'level-up-admin';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'home', label: 'Home' },
@@ -101,7 +101,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'gdp-rate-admin', label: 'GDP Rate Admin' },
   { key: 'service-credits', label: 'ServiceCredits' },
   { key: 'service-credits-admin', label: 'ServiceCredits Admin' },
-  { key: 'levelup', label: 'LevelUp' },
+  { key: 'level-up', label: 'LevelUp' },
   { key: 'unlock', label: 'Unlock' },
   { key: 'unlock-admin', label: 'Unlock Admin' },
   { key: 'account-data', label: 'Account & Data' },
@@ -112,7 +112,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'skills-hunt-admin', label: 'SkillsHunt Admin' },
   { key: 'lighthouse-admin', label: 'Lighthouse Admin' },
   { key: 'workforce-admin', label: 'Workforce Admin' },
-  { key: 'levelup-admin', label: 'LevelUp Admin' },
+  { key: 'level-up-admin', label: 'LevelUp Admin' },
 ];
 
 export default function App() {
@@ -171,7 +171,7 @@ function buildFeatureViews(
     'gdp-rate-admin': () => <GdpRateAdmin />,
     'service-credits': () => <ServiceCredits />,
     'service-credits-admin': () => <AdminServiceCredits />,
-    levelup: () => <Levelup />,
+    'level-up': () => <LevelUp />,
     unlock: () => <Unlock />,
     'unlock-admin': () => <AdminUnlock />,
     'account-data': () => <AccountData />,
@@ -182,7 +182,7 @@ function buildFeatureViews(
     'skills-hunt-admin': () => <AdminSkillsHunt />,
     'lighthouse-admin': () => <AdminLighthouse />,
     'workforce-admin': () => <AdminWorkforce />,
-    'levelup-admin': () => <AdminLevelup />,
+    'level-up-admin': () => <AdminLevelUp />,
   };
 }
 

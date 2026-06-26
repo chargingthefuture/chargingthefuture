@@ -24,7 +24,7 @@
     "seed:lighthouse": "node ./scripts/seedLighthouse.mjs",
     "seed:socket-relay": "node ./scripts/seedSocketRelay.mjs",
     "seed:trust-transport": "node ./scripts/seedTrustTransport.mjs",
-    "seed:levelup": "node ./scripts/seedLevelup.mjs",
+    "seed:level-up": "node ./scripts/seedLevelUp.mjs",
     "seed:what-works": "node ./scripts/seedWhatWorks.mjs",
     "sync:skills-taxonomy:legacy": "node ./scripts/syncSkillsTaxonomyFromPlatform.mjs --mode=sync",
     "migrate:file": "node ./scripts/runMigrationFile.mjs",

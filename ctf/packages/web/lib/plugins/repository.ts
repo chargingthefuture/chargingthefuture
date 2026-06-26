@@ -171,7 +171,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'levelup',
+    slug: 'level-up',
     name: 'LevelUp',
     summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
     availabilityState: 'implemented_shell',
@@ -230,7 +230,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
 
 const pluginAliasMap: Record<string, string> = {
   'gross-domestic-product': 'gdp',
-  leveluptraining: 'levelup',
+  leveluptraining: 'level-up',
   servicecredits: 'service-credits',
 };
 
