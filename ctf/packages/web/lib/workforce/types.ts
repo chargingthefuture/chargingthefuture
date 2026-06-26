@@ -44,7 +44,9 @@ export type WorkforceProfile = {
 export type WorkforceOccupation = {
   id: string; // skills_taxonomy_job_titles.id
   name: string;
-  sector: string | null;
+  // Always a string at runtime — the repository falls back to the 'Unassigned' bucket name rather than
+  // null (matches the mobile WorkforceOccupationGapItem.sector type).
+  sector: string;
   skillLevel: WorkforceSkillLevel;
   target: number; // demand share of this occupation
   members: number; // active Directory profiles in this occupation

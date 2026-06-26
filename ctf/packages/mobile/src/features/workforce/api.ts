@@ -40,11 +40,10 @@ export interface WorkforceOccupationGapItem {
   gap: number;
 }
 
-// GET /api/workforce/profile returns the same full profile object to web and mobile. Mobile
-// intentionally types only the fields the profile card renders. The extension fields the web type
-// also carries — availabilityPreferences, workPreferences, serviceDeletedAtIso — are deliberately
-// omitted here because no mobile screen reads them; add them to this type if/when a screen needs them
-// (the server already sends them, so it is purely a client-type decision, not missing data).
+// GET /api/workforce/profile returns the same full profile object to web and mobile, so this type
+// mirrors the web WorkforceProfile shape (including the extension fields) even though the mobile
+// profile card does not render the extension fields today — keeping the types aligned avoids silent
+// drift between the two clients.
 export interface WorkforceProfileData {
   userId: string;
   occupationId: string | null;
@@ -53,6 +52,9 @@ export interface WorkforceProfileData {
   region: string | null;
   recruitedState: boolean;
   recruitedResolvedAtIso: string | null;
+  availabilityPreferences: Record<string, unknown>;
+  workPreferences: Record<string, unknown>;
+  serviceDeletedAtIso: string | null;
   updatedAtIso: string;
 }
 

@@ -17,14 +17,34 @@ function toConfigInput(body: ConfigBody): WorkforceConfigInput {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const gate = await requireWorkforceAdminAccess();
   if (!gate.allowed) {
     return gate.response;
   }
 
+  const requestId = request.headers.get('x-request-id');
+  const traceId = request.headers.get('x-trace-id');
+
   try {
     const config = await getWorkforceConfig();
+    // Audit the admin read of config so it leaves a trail like the other admin GETs (audit-events,
+    // dashboard). The PUT is already audited; this keeps reads and writes of the same sensitive config
+    // symmetric.
+    logWorkforceAudit({
+      actorId: gate.auth.userId,
+      command: 'workforce.admin.config.fetch',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'config',
+      targetId: 'workforce',
+      result: 'success',
+      errorCategory: null,
+      requestId,
+      traceId,
+      targetContext: { workspaceId: WORKFORCE_AUDIT_WORKSPACE },
+      metadata: { roleCheck: 'pass', configProjectionOnlyCheck: 'pass' },
+    });
     return NextResponse.json({ config }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'admin_config' });
