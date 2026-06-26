@@ -163,21 +163,104 @@ export const foundationCallSource: RecognitionSource = {
 };
 
 /**
+ * Direct ServiceCredits transfers: a member sending another member credits from the ServiceCredits
+ * "Send Credits" form — genuine peer-to-peer economic activity that is NOT tied to any plugin
+ * transaction. We read the curated `service_credits_transfers` record (one row per transfer, an `amount`
+ * in ServiceCredits) for COMPLETED sends whose `origin_plugin = 'service-credits'`. This is the only
+ * transfer source read directly from the transfers table; plugin-mediated transfers carry their own
+ * `origin_plugin` and are counted (or not) by that plugin's source, so there is no double count. Counts
+ * nothing until a send actually delivers — a transfer is `completed` only once the recipient is credited
+ * (fixed so a send delivers immediately rather than parking in escrow). Never an incentive: mints live in
+ * `service_credits_governance_events`, not here.
+ */
+export const serviceCreditsDirectTransferSource: RecognitionSource = {
+  pluginSlug: 'service-credits',
+  label: 'Direct ServiceCredits transfers',
+  async loadVolumes() {
+    const result = await queryDb<{ total: string | null }>(
+      `SELECT SUM(amount)::text AS total
+         FROM service_credits_transfers
+         WHERE status = 'completed' AND origin_plugin = 'service-credits'`,
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return [];
+    }
+    return [{ amount: total, currencyCode: 'SC' }];
+  },
+};
+
+/**
+ * Chyme peer tips: a member tipping another member in a Chyme audio room, recorded as a COMPLETED
+ * `service_credits_transfers` row with `origin_plugin = 'chyme'`. Read the same way as direct transfers
+ * but attributed to Chyme. NOTE: the Chyme tip backend exists but is not yet wired to a UI, so this
+ * reads zero until tipping is connected — it is registered now so the value is counted automatically the
+ * moment real tips start flowing. Never an incentive.
+ */
+export const chymeTipSource: RecognitionSource = {
+  pluginSlug: 'chyme',
+  label: 'Chyme peer tips',
+  async loadVolumes() {
+    const result = await queryDb<{ total: string | null }>(
+      `SELECT SUM(amount)::text AS total
+         FROM service_credits_transfers
+         WHERE status = 'completed' AND origin_plugin = 'chyme'`,
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return [];
+    }
+    return [{ amount: total, currencyCode: 'SC' }];
+  },
+};
+
+/**
+ * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, and a fulfillment carries
+ * no price/currency, so there is no money amount to sum. We recognize each successfully-completed favor
+ * as one `FREE` exchange (counted by completed-exchange count, the way the index treats BARTER/FREE),
+ * read from `socketrelay_fulfillments` where `close_reason = 'successful'`. Unsuccessful, reopened, or
+ * cancelled favors do not count. We deliberately do NOT also count SocketRelay's standalone
+ * ServiceCredits transfer route here: it is rare, unlinked to a fulfillment, and counting both could
+ * double-count one favor; the completed-favor count is the mutual-aid value SocketRelay actually
+ * settles. If `FREE` has no active contribution weight it is surfaced and excluded, never zeroed.
+ */
+export const socketRelayFavorSource: RecognitionSource = {
+  pluginSlug: 'socketrelay',
+  label: 'SocketRelay completed favors',
+  async loadVolumes() {
+    const result = await queryDb<{ total: string | null }>(
+      `SELECT COUNT(*)::text AS total
+         FROM socketrelay_fulfillments
+         WHERE close_reason = 'successful'`,
+    );
+    const total = Number(result.rows[0]?.total ?? 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      return [];
+    }
+    return [{ amount: total, currencyCode: FREE_CODE }];
+  },
+};
+
+/**
  * Registered recognition sources, one per plugin. The policy: recognize ONLY non-incentive settled
  * value — value actually delivered/exchanged on-platform — and never an incentive (a reward, bonus,
- * stipend, completion grant, or "thank-you" mint), a plain member-to-member transfer, or a
- * deletion/reclaim reallocation. Concretely excluded today by that policy: Skills Hunt accept rewards,
- * Unlock verification incentives, and Contributions thank-you grants (all incentive mints), plus every
- * ServiceCredits ledger row (tagged `service_credits_non_gdp`). LightHouse rent, SocketRelay favors,
- * and other plugins join here once they record a settled on-platform exchange (a completed-exchange
- * row with a chosen value type, or a countable BARTER/FREE exchange) via the shared payment selector
- * (issue #420) — listings and asking-prices alone are not settled value. Append a source here (and
- * document it in the GDP inventory) when a plugin starts recording such settlement.
+ * stipend, completion grant, or "thank-you" mint) or a deletion/reclaim reallocation. A genuine
+ * peer-to-peer transfer that is NOT part of a plugin transaction IS economic activity and is counted
+ * (the direct ServiceCredits source); plugin-mediated transfers are attributed to each plugin by
+ * `origin_plugin`, so nothing is double-counted and the ledger is never blindly summed. Concretely
+ * excluded today: Skills Hunt accept rewards, Unlock verification incentives, and Contributions
+ * thank-you grants (all incentive mints). LightHouse rent joins here once it records a settled
+ * on-platform exchange (issue #420 / issue #885) — listings and asking-prices alone are not settled
+ * value. Append a source here (and document it in the GDP inventory) when a plugin starts recording
+ * such settlement.
  */
 export const RECOGNITION_SOURCES: RecognitionSource[] = [
   trustTransportSource,
   levelUpTrainerPayoutSource,
   foundationCallSource,
+  serviceCreditsDirectTransferSource,
+  chymeTipSource,
+  socketRelayFavorSource,
 ];
 
 /** The composite index plus the per-source contribution breakdown (label included for display). */
