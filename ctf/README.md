@@ -127,26 +127,26 @@ This folder contains the rewrite monorepo scaffold for:
 ## SocketRelay Phase-2 Baseline
 
 - User APIs:
-  - `GET/POST/PUT/DELETE /api/socketrelay/profile`
-  - `GET/POST /api/socketrelay/requests`
-  - `GET/PUT /api/socketrelay/requests/:id`
-  - `POST /api/socketrelay/requests/:id/repost`
-  - `POST /api/socketrelay/requests/:id/fulfill`
-  - `GET /api/socketrelay/my-requests`
-  - `GET /api/socketrelay/fulfillments/:id`
-  - `POST /api/socketrelay/fulfillments/:id/close`
-  - `GET/POST /api/socketrelay/fulfillments/:id/messages`
-  - `GET /api/socketrelay/my-fulfillments`
-  - `GET /api/socketrelay/announcements`
+  - `GET/POST/PUT/DELETE /api/socket-relay/profile`
+  - `GET/POST /api/socket-relay/requests`
+  - `GET/PUT /api/socket-relay/requests/:id`
+  - `POST /api/socket-relay/requests/:id/repost`
+  - `POST /api/socket-relay/requests/:id/fulfill`
+  - `GET /api/socket-relay/my-requests`
+  - `GET /api/socket-relay/fulfillments/:id`
+  - `POST /api/socket-relay/fulfillments/:id/close`
+  - `GET/POST /api/socket-relay/fulfillments/:id/messages`
+  - `GET /api/socket-relay/my-fulfillments`
+  - `GET /api/socket-relay/announcements`
 - Public APIs:
-  - `GET /api/socketrelay/public`
-  - `GET /api/socketrelay/public/:id`
+  - `GET /api/socket-relay/public`
+  - `GET /api/socket-relay/public/:id`
 - Admin APIs:
-  - `GET /api/socketrelay/admin/requests`
-  - `DELETE /api/socketrelay/admin/requests/:id`
-  - `GET /api/socketrelay/admin/fulfillments`
-  - `GET/POST /api/socketrelay/admin/announcements`
-  - `PUT/DELETE /api/socketrelay/admin/announcements/:id`
+  - `GET /api/socket-relay/admin/requests`
+  - `DELETE /api/socket-relay/admin/requests/:id`
+  - `GET /api/socket-relay/admin/fulfillments`
+  - `GET/POST /api/socket-relay/admin/announcements`
+  - `PUT/DELETE /api/socket-relay/admin/announcements/:id`
 
 ## TrustTransport Phase-2 Baseline
 

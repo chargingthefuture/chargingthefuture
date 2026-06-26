@@ -156,7 +156,7 @@ join table — it is never derived from `price_currency`.
   `currencies(code)`; add `trust_transport_*_accepted_currencies` where an offer/posting exposes
   accepted currencies. Reconcile both `trust_transport_payout_requests` and
   `trust_transport_earnings_ledger`.
-- SocketRelay (`socketrelay_requests` / `socketrelay_fulfillments`): if a reward/offer is shown,
+- SocketRelay (`socket_relay_requests` / `socket_relay_fulfillments`): if a reward/offer is shown,
   add `price_amount` + `price_currency` + accepted set; "Cost to post = Free" should render from
   absence of a price, not `$0`.
 - LevelUp (`levelup_cohorts`): add `stipend_currency` / `microgrant_currency` FK, defaulted to

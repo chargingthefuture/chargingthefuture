@@ -116,8 +116,8 @@ contracts:
       - trust_user_extension
       - trust_admin_audit_trail
       - login_events
-      - socketrelay_fulfillments
-      - socketrelay_requests
+      - socket_relay_fulfillments
+      - socket_relay_requests
       - service_credits_transfers
       - service_credits_disputes
       - lighthouse_matches

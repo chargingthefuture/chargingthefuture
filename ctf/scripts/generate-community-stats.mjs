@@ -59,14 +59,14 @@ const pool = new Pool({
  */
 const STAT_PROVIDERS = [
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     displayName: 'SocketRelay',
     async collect(client) {
       const open = await client.query(
-        `SELECT COUNT(*)::int AS n FROM socketrelay_requests WHERE status = 'open'`,
+        `SELECT COUNT(*)::int AS n FROM socket_relay_requests WHERE status = 'open'`,
       );
       const fulfilledThisWeek = await client.query(
-        `SELECT COUNT(*)::int AS n FROM socketrelay_requests
+        `SELECT COUNT(*)::int AS n FROM socket_relay_requests
          WHERE status = 'fulfilled' AND updated_at >= NOW() - INTERVAL '7 days'`,
       );
       return [

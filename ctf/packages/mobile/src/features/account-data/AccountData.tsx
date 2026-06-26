@@ -37,7 +37,7 @@ const CONFIRM_PHRASE = 'delete my account';
 
 const SERVICE_GLYPH: Record<string, string> = {
   chyme: '💬', directory: '📇', 'feed-announcements': '📣', foundation: '🪛', mood: '🌿',
-  gentlepulse: '🎵', 'peer-programming': '👥', lighthouse: '🏠', socketrelay: '🔂',
+  gentlepulse: '🎵', 'peer-programming': '👥', lighthouse: '🏠', 'socket-relay': '🔂',
   'trust-transport': '📦', trust: '🛡️', workforce: '💼', 'skills-hunt': '🎯',
   'skills-taxonomy': '🗂️', unlock: '🔓', levelup: '🚀', clicklog: '🚨', comic: '🤖',
   feedback: '💬', 'service-credits': '⚙️', 'gross-domestic-product': '📊', 'weekly-performance': '📊',

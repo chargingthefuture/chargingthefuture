@@ -25,7 +25,7 @@ Require a living feature inventory artifact for every plugin implemented in `ctf
   - `ctf-{plugin-slug}-feature-inventory.md`
   - Examples:
     - `ctf-directory-feature-inventory.md`
-    - `ctf-socketrelay-feature-inventory.md`
+    - `ctf-socket-relay-feature-inventory.md`
     - `ctf-workforce-feature-inventory.md`
 
 ## Inventory Is a Living Snapshot of the Plugin

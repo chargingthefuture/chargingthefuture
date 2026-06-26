@@ -16,7 +16,7 @@ contract files (`{PLUGIN}_PLUGIN_COMMAND_CONTRACTS.yaml`, `..._ACCESS_POLICY_CON
 Examples:
 
 - `ctf-directory-feature-inventory.md`
-- `ctf-socketrelay-feature-inventory.md`
+- `ctf-socket-relay-feature-inventory.md`
 - `ctf-workforce-feature-inventory.md`
 
 ## Current inventories
@@ -37,7 +37,7 @@ Examples:
 - [Workforce](./ctf-workforce-feature-inventory.md)
 - [GentlePulse](./ctf-gentlepulse-feature-inventory.md)
 - [Mood](./ctf-mood-feature-inventory.md)
-- [SocketRelay](./ctf-socketrelay-feature-inventory.md)
+- [SocketRelay](./ctf-socket-relay-feature-inventory.md)
 - [Weekly Performance](./ctf-weekly-performance-feature-inventory.md)
 - [Skills Taxonomy](./ctf-skills-taxonomy-feature-inventory.md)
 - [Unlock](./ctf-unlock-feature-inventory.md)

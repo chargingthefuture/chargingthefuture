@@ -27,11 +27,11 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socketrelay_user_extension
+        INSERT INTO socket_relay_user_extension
           (user_id, bio, relay_preferences, presence_opt_in, service_deleted_at)
         VALUES
-          ('seed-socketrelay-owner-01', 'Seed owner profile for SocketRelay validation.', '{"notifications":"all"}'::jsonb, TRUE, NULL),
-          ('seed-socketrelay-fulfiller-01', 'Seed fulfiller profile for SocketRelay validation.', '{"notifications":"mentions"}'::jsonb, TRUE, NULL)
+          ('seed-socket-relay-owner-01', 'Seed owner profile for SocketRelay validation.', '{"notifications":"all"}'::jsonb, TRUE, NULL),
+          ('seed-socket-relay-fulfiller-01', 'Seed fulfiller profile for SocketRelay validation.', '{"notifications":"mentions"}'::jsonb, TRUE, NULL)
         ON CONFLICT (user_id)
         DO UPDATE SET
           bio = EXCLUDED.bio,
@@ -44,10 +44,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socketrelay_requests
+        INSERT INTO socket_relay_requests
           (id, owner_user_id, title, details, category, tags, city, is_public, status, idempotency_key, reopened_count, claimed_fulfillment_id)
         VALUES
-          ($1::uuid, 'seed-socketrelay-owner-01', 'Seed SocketRelay Request', 'Deterministic request fixture for SocketRelay API validation.', 'logistics', ARRAY['logistics', 'moving'], 'Austin', TRUE, 'claimed', 'seed-socketrelay-request-01', 0, $2::uuid)
+          ($1::uuid, 'seed-socket-relay-owner-01', 'Seed SocketRelay Request', 'Deterministic request fixture for SocketRelay API validation.', 'logistics', ARRAY['logistics', 'moving'], 'Austin', TRUE, 'claimed', 'seed-socket-relay-request-01', 0, $2::uuid)
         ON CONFLICT (id)
         DO UPDATE SET
           title = EXCLUDED.title,
@@ -65,10 +65,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socketrelay_fulfillments
+        INSERT INTO socket_relay_fulfillments
           (id, request_id, requester_user_id, fulfiller_user_id, status, close_reason)
         VALUES
-          ($1::uuid, $2::uuid, 'seed-socketrelay-owner-01', 'seed-socketrelay-fulfiller-01', 'active', NULL)
+          ($1::uuid, $2::uuid, 'seed-socket-relay-owner-01', 'seed-socket-relay-fulfiller-01', 'active', NULL)
         ON CONFLICT (id)
         DO UPDATE SET
           status = EXCLUDED.status,
@@ -80,11 +80,11 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socketrelay_fulfillment_participants
+        INSERT INTO socket_relay_fulfillment_participants
           (fulfillment_id, user_id, participant_role)
         VALUES
-          ($1::uuid, 'seed-socketrelay-owner-01', 'requester'),
-          ($1::uuid, 'seed-socketrelay-fulfiller-01', 'fulfiller')
+          ($1::uuid, 'seed-socket-relay-owner-01', 'requester'),
+          ($1::uuid, 'seed-socket-relay-fulfiller-01', 'fulfiller')
         ON CONFLICT (fulfillment_id, user_id)
         DO UPDATE SET participant_role = EXCLUDED.participant_role
       `,
@@ -93,11 +93,11 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socketrelay_messages
+        INSERT INTO socket_relay_messages
           (fulfillment_id, sender_user_id, message_text, client_message_id, moderation_status)
         VALUES
-          ($1::uuid, 'seed-socketrelay-owner-01', 'Seed message from requester.', 'seed-msg-1', 'accepted'),
-          ($1::uuid, 'seed-socketrelay-fulfiller-01', 'Seed reply from fulfiller.', 'seed-msg-2', 'accepted')
+          ($1::uuid, 'seed-socket-relay-owner-01', 'Seed message from requester.', 'seed-msg-1', 'accepted'),
+          ($1::uuid, 'seed-socket-relay-fulfiller-01', 'Seed reply from fulfiller.', 'seed-msg-2', 'accepted')
         ON CONFLICT (fulfillment_id, sender_user_id, client_message_id)
         DO UPDATE SET
           message_text = EXCLUDED.message_text,
@@ -108,10 +108,10 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socketrelay_request_events (request_id, actor_user_id, event_name, metadata)
+        INSERT INTO socket_relay_request_events (request_id, actor_user_id, event_name, metadata)
         VALUES
-          ($1::uuid, 'seed-socketrelay-owner-01', 'request_created', '{"seed":true}'::jsonb),
-          ($1::uuid, 'seed-socketrelay-fulfiller-01', 'request_claimed', jsonb_build_object('seed', true, 'fulfillmentId', $2::uuid))
+          ($1::uuid, 'seed-socket-relay-owner-01', 'request_created', '{"seed":true}'::jsonb),
+          ($1::uuid, 'seed-socket-relay-fulfiller-01', 'request_claimed', jsonb_build_object('seed', true, 'fulfillmentId', $2::uuid))
         ON CONFLICT DO NOTHING
       `,
       [seedRequestId, seedFulfillmentId],
@@ -120,10 +120,10 @@ async function main() {
     // Seed a ServiceCredits transaction for SocketRelay
     await client.query(
       `
-        INSERT INTO socketrelay_service_credits_transactions
+        INSERT INTO socket_relay_service_credits_transactions
           (from_user_id, to_user_id, amount, reason, fulfillment_id, created_at)
         VALUES
-          ('seed-socketrelay-owner-01', 'seed-socketrelay-fulfiller-01', 6, 'Seed SocketRelay ServiceCredits', $1::uuid, NOW())
+          ('seed-socket-relay-owner-01', 'seed-socket-relay-fulfiller-01', 6, 'Seed SocketRelay ServiceCredits', $1::uuid, NOW())
         ON CONFLICT DO NOTHING
       `,
       [seedFulfillmentId],

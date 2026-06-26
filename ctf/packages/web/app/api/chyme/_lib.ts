@@ -51,7 +51,7 @@ export async function requireChymeAccess(): Promise<ChymeApiGate> {
 
 // Same-origin CSRF guard for chyme mutations: a state-changing request must carry the
 // `x-ctf-csrf: '1'` confirmation header and originate from our own host. Mirrors the helper the
-// other plugins expose (e.g. socketrelay/foundation), so a money-moving route like
+// other plugins expose (e.g. socket-relay/foundation), so a money-moving route like
 // `POST /api/chyme/service-credits` is protected the same way. Returns a 403 response to send back,
 // or `null` when the request passes (and for GET/HEAD, which never mutate).
 export function ensureMutationCsrf(request: Request): NextResponse | null {

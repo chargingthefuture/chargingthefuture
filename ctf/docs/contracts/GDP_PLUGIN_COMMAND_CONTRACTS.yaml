@@ -93,7 +93,7 @@ contracts:
       - trust_transport_earnings_ledger
       - service_credits_governance_events
       - service_credits_transfers
-      - socketrelay_fulfillments
+      - socket_relay_fulfillments
       - currency_usd_rates
       - login_events
       - users

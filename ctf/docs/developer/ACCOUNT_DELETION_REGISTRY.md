@@ -19,7 +19,7 @@ check. Examples of drift the registry corrects:
 
 - `gdp_user_extension` does not exist — GDP stores no per-user data, so it has nothing to delete.
 - Feed tables key authorship by `author_user_id` / `asked_by_user_id`, not `user_id`.
-- `socketrelay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
+- `socket_relay_requests` uses `owner_user_id`; TrustTransport uses `requester_user_id` /
   `provider_user_id`; Foundation threads use `created_by_user_id` / `sender_user_id`.
 
 ## How each table is handled

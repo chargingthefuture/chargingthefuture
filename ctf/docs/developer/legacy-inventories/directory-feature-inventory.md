@@ -125,7 +125,7 @@ Evidence:
 - `platform/client/src/pages/directory/announcements.tsx`
 - `platform/client/src/pages/directory/dashboard.tsx`
 - `platform/client/src/pages/directory/profile.tsx`
-- `platform/server/routes/socketrelay.routes.ts` (`GET /api/directory/announcements`)
+- `platform/server/routes/socket-relay.routes.ts` (`GET /api/directory/announcements`)
 
 Features:
 
@@ -201,7 +201,7 @@ Features:
 Evidence:
 
 - `platform/client/src/pages/directory/admin-announcements.tsx`
-- `platform/server/routes/socketrelay.routes.ts` (Directory announcement admin endpoints)
+- `platform/server/routes/socket-relay.routes.ts` (Directory announcement admin endpoints)
 
 Features:
 
@@ -242,7 +242,7 @@ Evidence: `platform/server/routes/directory.routes.ts`
 
 ### 3.2 Announcement APIs
 
-Evidence: `platform/server/routes/socketrelay.routes.ts`
+Evidence: `platform/server/routes/socket-relay.routes.ts`
 
 | Endpoint                                        | Auth | Admin | CSRF | Purpose                           |
 | ----------------------------------------------- | ---- | ----- | ---- | --------------------------------- |
@@ -381,7 +381,7 @@ Covered/indicated behaviors:
    - Decide whether these are legacy leftovers or intended model additions.
 
 3. **Announcement route placement**
-   - Directory announcement endpoints are implemented inside `socketrelay.routes.ts`.
+   - Directory announcement endpoints are implemented inside `socket-relay.routes.ts`.
    - For ctf rewrite, place Directory endpoints in Directory-specific route/module boundaries.
 
 4. **Admin delete semantics for skills**
@@ -421,7 +421,7 @@ Per `.claude/rules/index.mdc`:
 ### Server
 
 - `platform/server/routes/directory.routes.ts`
-- `platform/server/routes/socketrelay.routes.ts`
+- `platform/server/routes/socket-relay.routes.ts`
 - `platform/server/routes/index.ts`
 - `platform/server/rateLimiter.ts`
 - `platform/server/antiScraping.ts`

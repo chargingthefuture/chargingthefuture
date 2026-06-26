@@ -107,7 +107,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     name: 'SocketRelay',
     summary: 'Real-time resource sharing across the network.',
     availabilityState: 'implemented_shell',
@@ -232,7 +232,6 @@ const pluginAliasMap: Record<string, string> = {
   'gross-domestic-product': 'gdp',
   leveluptraining: 'levelup',
   servicecredits: 'service-credits',
-  'socket-relay': 'socketrelay',
 };
 
 export function canonicalizePluginSlug(input: string): string {

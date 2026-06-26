@@ -43,7 +43,7 @@ Then, in order:
 6. `skills-hunt` — blocked by #2 (generates unclaimed Directory profiles, must honor ownership policy).
 7. `foundation` — blocked by #2 (reads Directory projections, read-only boundary).
 8. `lighthouse` — no dependency.
-9. `socketrelay` — no dependency.
+9. `socket-relay` — no dependency.
 10. `trusttransport` — no dependency.
 11. `peer-programming` — no dependency.
 12. `mood` — no dependency.

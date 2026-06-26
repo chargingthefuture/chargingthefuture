@@ -81,7 +81,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Verified survivor housing listings.',
   },
   {
-    id: 'socketrelay',
+    id: 'socket-relay',
     name: 'SocketRelay',
     kind: 'plugin',
     summary: 'Real-time resource sharing across the network.',

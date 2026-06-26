@@ -115,18 +115,18 @@ const PRESENCE_SOURCES: PresenceSource[] = [
     },
   },
   {
-    slug: 'socketrelay',
+    slug: 'socket-relay',
     read: async (userId) => {
       const result = await queryDb<{ id: string }>(
-        `SELECT id::text AS id FROM socketrelay_requests WHERE owner_user_id = $1 AND status = 'open'`,
+        `SELECT id::text AS id FROM socket_relay_requests WHERE owner_user_id = $1 AND status = 'open'`,
         [userId],
       );
       return result.rows.map((row) => ({
-        pluginSlug: 'socketrelay',
+        pluginSlug: 'socket-relay',
         refType: 'post',
         refId: row.id,
         label: 'Help post',
-        deepLink: '/apps/socketrelay',
+        deepLink: '/apps/socket-relay',
       }));
     },
   },

@@ -50,8 +50,8 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "socketrelay",
-      "mobileFeatureDirs": ["socketrelay"],
+      "slug": "socket-relay",
+      "mobileFeatureDirs": ["socket-relay"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },

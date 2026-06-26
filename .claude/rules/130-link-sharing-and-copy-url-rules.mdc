@@ -30,10 +30,10 @@ Every share / copy-link affordance MUST use the shared control — never a custo
    - **Copy link** — on web, copies the absolute URL and shows clear "Copied!" feedback; on mobile,
      hands off to the OS share sheet (React Native `Share`), which includes Copy plus share-to-app, so
      no extra clipboard dependency is needed.
-2. **Share an absolute URL.** A relative path (e.g. `/apps/socketrelay`) is resolved against the
+2. **Share an absolute URL.** A relative path (e.g. `/apps/socket-relay`) is resolved against the
    current origin before sharing — never share or copy a bare relative path.
 3. **Point at the specific resource**, never the app homepage. A "share this post" link must carry the
-   post's id (e.g. `/apps/socketrelay?request=<id>`), not `/apps/socketrelay`. If the resource has no
+   post's id (e.g. `/apps/socket-relay?request=<id>`), not `/apps/socket-relay`. If the resource has no
    deep-linkable destination yet, build the destination (or the deep-link param) — do not fall back to
    the homepage.
 4. **Be accessible** (see `ctf/docs/developer/ACCESSIBLE_FORMS_STANDARD.md`): the trigger announces it

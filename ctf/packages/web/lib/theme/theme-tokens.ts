@@ -44,7 +44,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   workforce: { standard: '#F97316', comic: '#6A2A05' },
   gentlepulse: { standard: '#34D399', comic: '#1A5C45' },
   mood: { standard: '#4ADE80', comic: '#1A5C2A' },
-  socketrelay: { standard: '#FB923C', comic: '#7A3A0C' },
+  'socket-relay': { standard: '#FB923C', comic: '#7A3A0C' },
   'skills-hunt': { standard: '#FBBF24', comic: '#7A5A05' },
   levelup: { standard: '#10B981', comic: '#1A5C30' },
   'what-works': { standard: '#84CC16', comic: '#4A6B10' },

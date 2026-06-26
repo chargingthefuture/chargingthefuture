@@ -17,7 +17,7 @@ This index is the Rule 114 baseline artifact map for coding readiness.
 | `service-credits`        | `ctf/docs/contracts/SERVICE_CREDITS_PROFILE_AND_DELETION_CONTRACT.md`    | Present |
 | `skills-hunt`            | `ctf/docs/contracts/SKILLS_HUNT_PROFILE_AND_DELETION_CONTRACT.md`        | Present |
 | `skills-taxonomy`        | `ctf/docs/contracts/SKILLS_TAXONOMY_PROFILE_AND_DELETION_CONTRACT.md`    | Present |
-| `socketrelay`            | `ctf/docs/contracts/SOCKETRELAY_PROFILE_AND_DELETION_CONTRACT.md`        | Present |
+| `socket-relay`            | `ctf/docs/contracts/SOCKET_RELAY_PROFILE_AND_DELETION_CONTRACT.md`        | Present |
 | `trust`                  | `ctf/docs/contracts/TRUST_PROFILE_AND_DELETION_CONTRACT.md`              | Present |
 | `trust-transport`         | `ctf/docs/contracts/TRUST_TRANSPORT_PROFILE_AND_DELETION_CONTRACT.md`     | Present |
 | `unlock`                 | `ctf/docs/contracts/UNLOCK_PROFILE_AND_DELETION_CONTRACT.md`             | Present |
