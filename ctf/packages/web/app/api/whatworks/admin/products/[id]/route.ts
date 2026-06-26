@@ -8,6 +8,7 @@ import {
   requireWhatWorksAdminAccess,
   whatworksError,
 } from '../../../_lib';
+import { logWhatWorksAudit } from 'lib/whatworks/audit';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,6 +46,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     reviewerId: gate.auth.userId,
     rejectionReason,
   });
+  logWhatWorksAudit({
+    actorId: gate.auth.userId,
+    command: 'whatworks.admin.product.review',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'product',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+    metadata: { action, status: product?.status ?? null },
+  });
   return NextResponse.json({ ok: true, status: product?.status ?? null });
 }
 
@@ -63,5 +75,15 @@ export async function DELETE(request: Request, context: RouteContext) {
     return whatworksError('That item could not be found.', 'whatworks_product_not_found', 404);
   }
   await deleteProduct(id);
+  logWhatWorksAudit({
+    actorId: gate.auth.userId,
+    command: 'whatworks.admin.product.delete',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'product',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+  });
   return NextResponse.json({ ok: true });
 }

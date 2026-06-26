@@ -52,7 +52,7 @@ the problem categories and review every suggestion before it joins the shared li
 ## 5. API Surface and Route Map
 
 - `GET /api/whatworks` — Authenticated read of the shared list (problems + approved tools + per-viewer endorsement state + stats + `viewer.isAdmin`).
-- `GET /api/whatworks/public` — Public, identity-free teaser slice of the list + stats.
+- `GET /api/whatworks/public` — Public, identity-free teaser slice of the list + stats. The returned stats describe only the teaser slice (not the full list), so the public payload never advertises counts a signed-out visitor cannot see.
 - `GET /api/whatworks/problems` — Active problems for the suggest form (authenticated).
 - `POST /api/whatworks/products` — Suggest a tool (lands `pending`; suggester auto-recorded as first verifier).
 - `POST /api/whatworks/products/[id]/endorse` — Mark an approved tool helpful.
@@ -108,7 +108,14 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
   suggestions require an admin (`isAdmin`). Admin page redirects non-admins to `/apps/whatworks`.
 - CSRF: all mutations require `x-ctf-csrf: 1` and same-origin (`ensureMutationCsrf`).
 - Anonymity: `suggested_by` is stored for moderation/abuse control only and is excluded from every
-  reader and admin projection. No survivor identity is rendered anywhere in the plugin.
+  reader and admin projection. No survivor identity is rendered anywhere in the plugin. The
+  `getProductById` lookup selects an explicit column list that omits `suggested_by`/`reviewed_by`, so
+  those identity fields are never present on the returned object (defence in depth).
+- Audit: every command emits one structured audit line via `logWhatWorksAudit`
+  (`lib/whatworks/audit.ts`) on its success path — reads (`whatworks.list.read`,
+  `whatworks.public.read`, `whatworks.problems.list`, the two admin list reads), mutations
+  (suggest/endorse/unendorse), and all admin curation/moderation commands — matching every event
+  declared in the audit contract. The public read records `anonymous` as the actor.
 - Input validation: lengths and `http(s)`-only purchase URLs are enforced server-side.
 - Contracts: see
   [WHATWORKS_PLUGIN_COMMAND_CONTRACTS.yaml](../../contracts/WHATWORKS_PLUGIN_COMMAND_CONTRACTS.yaml),
@@ -125,7 +132,10 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
   real (`/api/whatworks*`); no stub arrays in the production shells.
 - Android: complete. Expo feature at `packages/mobile/src/features/whatworks/` (list + Helpful
   toggle + suggest, against the `MobileWhatWorks*` references), registered in
-  `config/plugin-parity-contracts.json`. Pending on-device QA (no device runtime in the build env).
+  `config/plugin-parity-contracts.json`. A signed-out visitor sees `WhatWorksPublic` — the same
+  public teaser the web shows, fetched from `/api/whatworks/public` with no bearer token — instead of
+  an authed list that would 401 (parity with web). Pending on-device QA (no device runtime in the
+  build env).
 - Parity contract: [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json).
 
 ## 9. Seed Coverage Status
@@ -149,6 +159,20 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-06-26: Code-review batch (issues #931–#938). (1) Audit: added `lib/whatworks/audit.ts` and
+  emit one structured audit line per command on its success path across all `/api/whatworks/*` route
+  handlers, closing the gap where no command was logged against the audit contract (#931). (2) Public
+  read now scopes its returned `stats` to the teaser slice instead of the full list, so the signed-out
+  payload no longer advertises hidden counts (#934). (3) Mobile gains a `WhatWorksPublic` signed-out
+  teaser (fetched from `/api/whatworks/public`) so a signed-out visitor sees the public preview rather
+  than a 401, matching web (#935). (4) `getProductById` selects an explicit column list that omits the
+  `suggested_by`/`reviewed_by` identity fields (#936). (5) `ensureUniqueSlug` is now bounded (max 100
+  attempts, throws a clear error) instead of an unbounded `while (true)` (#937). Reviewed and not
+  changed: #932 (partial-update already preserves an omitted `context`/`emoji` via the
+  `undefined → null → COALESCE` path; sending an explicit empty string to clear is intended), #933
+  (every reader projection and the stats query already filter to `status = 'approved'`, so a
+  suggester's auto-endorsement on a later-rejected product is never counted), #938 (mobile already
+  leaves product state untouched on a failed toggle, so it stays consistent).
 - 2026-06-17: Restyled the `/admin/whatworks` surface (`ww-admin-shell`, `ww-admin-products`, `ww-admin-problems`) to the shared dark admin design system (icon header with `ADMIN` badge, dark panel/surface tokens, status pills, tinted action buttons) per rule 131. Visual only — no change to data, endpoints, or moderation actions. The mockup's invented submitter handles, upvote counts, and per-entry flag have no backing fields, so they were not added; the real four-value status filter and verified counts are kept. Web typecheck + eslint clean.
 - 2026-06-12: The Android What Works API client (`packages/mobile/src/features/whatworks/api.ts`) now uses the shared authenticated fetch helper — every call carries the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against a hardcoded development URL with an empty token.
 - 2026-05-31: Initial implementation. Schema (`whatworks_problems`, `whatworks_products`,

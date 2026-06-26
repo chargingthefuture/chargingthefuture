@@ -297,7 +297,25 @@ function gatherContracts(sliceName) {
   return { text, files };
 }
 
-async function askClaude(slice, source, chunkNote, contractsText) {
+function buildAlreadyTrackedBlock(existingFindings) {
+  if (!existingFindings || existingFindings.length === 0) {
+    return [];
+  }
+  // Newest first (gh order); cap so the list never crowds out the source budget.
+  const lines = existingFindings.slice(0, 60).map((e) => {
+    const state = e.state === 'closed'
+      ? (e.stateReason === 'completed' ? 'closed: fixed' : 'closed: dismissed')
+      : 'open';
+    return `- [${state}] ${e.title}: ${e.summary}`;
+  });
+  return [
+    '',
+    'ALREADY-TRACKED findings for this slice (each is tracked on its own GitHub issue — do NOT refile these):',
+    ...lines,
+  ];
+}
+
+async function askClaude(slice, source, chunkNote, contractsText, existingFindings = []) {
   const layers = slice.paths.join('\n  ');
   const system = [
     'You are a senior engineer doing a code review of one plugin/module of "Charging the',
@@ -321,6 +339,15 @@ async function askClaude(slice, source, chunkNote, contractsText) {
     'handling, clear dead code, obvious simplifications, and TypeScript type-safety violations',
     '(no `any` without an eslint-disable + reason).',
     '',
+    'You may be given an ALREADY-TRACKED list of findings previously raised for this slice. These are',
+    'already tracked elsewhere — do NOT report them again, with two narrow exceptions:',
+    '  - a tracked finding marked "closed: fixed" that the CURRENT code shown to you clearly STILL',
+    '    exhibits — report it and begin the summary with "Regression:" and point to the exact code;',
+    '  - a NEW, distinct problem (even in the same file) that is not the same concern as any tracked one.',
+    'Do NOT re-report a tracked finding just because it is similar; if the code already addresses it, or',
+    'it was "closed: dismissed", leave it out. When unsure whether something is already tracked, prefer',
+    'NOT reporting it.',
+    '',
     'Do NOT report pure style or formatting nits, and do not invent problems. If the slice looks',
     'fine, return []. Write every field in plain language. Be specific and brief.',
   ].join('\n');
@@ -336,6 +363,7 @@ async function askClaude(slice, source, chunkNote, contractsText) {
           contractsText,
         ]
       : []),
+    ...buildAlreadyTrackedBlock(existingFindings),
     '',
     'The source files follow, each after a "===== FILE: <path> =====" header. Some long files',
     'may be truncated; do not flag truncation itself as a problem.',
@@ -669,8 +697,12 @@ async function main() {
 
   const contracts = gatherContracts(slice.name);
   const contractNote = contracts.files.length ? ` + ${contracts.files.length} contract file(s)` : '';
-  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote} with ${MODEL}.`);
-  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote, contracts.text));
+  // The findings already raised for this slice (open + closed). Passed to the reviewer so it doesn't
+  // re-report a concern already tracked or already fixed (the main source of re-run churn), and reused
+  // below for substance-based dedup. One fetch serves both.
+  const sliceIssues = existingSliceIssues(slice.name);
+  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote} with ${MODEL} (${sliceIssues.length} already-tracked).`);
+  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote, contracts.text, sliceIssues));
 
   if (findings.length === 0) {
     console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);
@@ -688,9 +720,9 @@ async function main() {
   ensureLabel('code-review:regression', 'b60205', 'A previously-fixed code-review finding the sweep saw recur');
   ensureLabel('code-review:revisit', 'fbca04', 'A dismissed (won\'t-fix) code-review finding the sweep re-surfaced for a fresh decision');
 
-  // Match new findings to existing slice issues by SUBSTANCE (the model), not by title text. The
-  // embedded fingerprint is a free exact-match fast path for the rare run where the title is identical.
-  const sliceIssues = existingSliceIssues(slice.name);
+  // Match new findings to existing slice issues by SUBSTANCE (the model), not by title text — reusing
+  // the sliceIssues fetched above. The embedded fingerprint is a free exact-match fast path for the
+  // rare run where the title is identical.
   const issuesByNumber = new Map(sliceIssues.map((i) => [i.number, i]));
   const fingerprintToIssue = new Map();
   for (const i of sliceIssues) {

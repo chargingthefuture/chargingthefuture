@@ -3,6 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { WhatWorksList } from './WhatWorksList';
 import { WhatWorksSuggest } from './WhatWorksSuggest';
+import { WhatWorksPublic } from './WhatWorksPublic';
+import { useAuth } from '../../auth/auth-context';
 
 type WhatWorksTabParamList = {
   List: undefined;
@@ -17,6 +19,14 @@ const Tab = createBottomTabNavigator<WhatWorksTabParamList>();
 const TabNavigator = Tab.Navigator as React.ComponentType<any>;
 
 export function WhatWorksTabs() {
+  const { isAuthenticated, signIn } = useAuth();
+
+  // Signed-out visitors see the public teaser (matching web), not an authed list that 401s.
+  // The List/Suggest tabs both need a signed-in survivor, so they only mount once authenticated.
+  if (!isAuthenticated) {
+    return <WhatWorksPublic onSignIn={() => { void signIn(); }} />;
+  }
+
   return (
     <TabNavigator>
       <Tab.Screen
