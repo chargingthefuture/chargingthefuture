@@ -21,3 +21,15 @@ export const WORKFORCE_MAX_REGION_LENGTH = 80;
 
 export const WORKFORCE_DEFAULT_TIMEZONE = 'America/New_York';
 export const WORKFORCE_DEFAULT_WEEK_START_DOW = 6;
+
+// Allowed export dataset types for workforce export jobs. These mirror the report drill-down
+// surfaces the plugin can produce: an overall summary, a skill-level breakdown, and a sector
+// breakdown. The export POST route rejects any other value; the command contract inputSchema
+// (WORKFORCE_PLUGIN_COMMAND_CONTRACTS.yaml, workforce.export.job.create) lists the same enum so
+// code and contract agree.
+export const WORKFORCE_EXPORT_TYPES = ['summary', 'skill-level', 'sector'] as const;
+export type WorkforceExportType = (typeof WORKFORCE_EXPORT_TYPES)[number];
+
+export function isWorkforceExportType(value: unknown): value is WorkforceExportType {
+  return typeof value === 'string' && (WORKFORCE_EXPORT_TYPES as readonly string[]).includes(value);
+}
