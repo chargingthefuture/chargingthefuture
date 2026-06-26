@@ -42,6 +42,18 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
 
 export function moodErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
+  if (code === 'invalid_payload') {
+    return NextResponse.json(
+      { ok: false, code: MOOD_ERROR_CODE.invalidPayload, message: 'Invalid payload.' },
+      { status: 400 },
+    );
+  }
+  if (code === 'cooldown_active') {
+    return NextResponse.json(
+      { ok: false, code: MOOD_ERROR_CODE.cooldownActive, message: 'Mood submission cooldown is active.' },
+      { status: 409 },
+    );
+  }
   if (code === 'eligibility_not_found') {
     return NextResponse.json(
       { ok: false, code: MOOD_ERROR_CODE.eligibilityNotFound, message: 'Eligibility not found.' },

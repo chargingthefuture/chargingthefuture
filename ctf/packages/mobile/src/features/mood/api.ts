@@ -36,9 +36,10 @@ export type CommunityResponse = {
 
 export type SubmitResponse = {
   ok: boolean;
+  // Field names match the mood.check.submit command contract outputSchema.
   submission: {
-    id: string;
-    submittedAtIso: string;
+    checkId: string;
+    submittedAt: string;
   };
 };
 
