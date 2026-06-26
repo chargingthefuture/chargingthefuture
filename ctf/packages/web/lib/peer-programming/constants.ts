@@ -19,7 +19,11 @@ export const PEER_PROGRAMMING_STANDING_COHORT_LABEL = 'C1';
 // opening the room, the weekly auto-split is paused, and the cohort is not week-scoped. The flag
 // DEFAULTS ON: unset or empty is treated as ON. Only the explicit values '0' or 'false'
 // (case-insensitive) turn it OFF, which restores the exact pre-existing weekly cohorting behavior.
-// This is the single resolver — do not read PEER_PROGRAMMING_SINGLE_OPEN_COHORT elsewhere.
+//
+// This is the env-only fallback read. The effective mode now comes from the async resolver
+// isSingleOpenCohortModeEnabled() in repository.ts, which prefers the persisted admin setting
+// (peer_programming_settings.single_open_cohort_enabled) and only falls back to this env read when
+// the admin setting is unset. Do not read PEER_PROGRAMMING_SINGLE_OPEN_COHORT anywhere except here.
 export function isPeerProgrammingSingleOpenCohortEnabled(): boolean {
   const raw = process.env.PEER_PROGRAMMING_SINGLE_OPEN_COHORT;
   if (raw === undefined) {

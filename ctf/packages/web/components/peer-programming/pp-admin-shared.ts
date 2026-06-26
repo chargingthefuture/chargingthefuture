@@ -10,6 +10,17 @@ export type AssignmentRunResult = {
   membersSelected: number;
 };
 
+// Effective single-standing-cohort mode returned by the admin single-open-cohort route. Mirrors the
+// `SingleOpenCohortMode` shape in lib/peer-programming/repository.ts: `enabled` is the resolved
+// on/off decision, `source` says whether it came from the persisted admin setting, the env flag, or
+// the built-in default; `adminSetting` is the stored value (null when unset).
+export type SingleOpenCohortMode = {
+  enabled: boolean;
+  source: 'admin_setting' | 'env_flag' | 'default';
+  adminSetting: boolean | null;
+  envFlagEnabled: boolean;
+};
+
 export type AdminMutationResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; message: string };

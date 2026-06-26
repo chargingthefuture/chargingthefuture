@@ -4,14 +4,16 @@
 // designed admin shells (see unlock-admin-shell). Mobile-responsive single column.
 //
 // Binds only endpoints that exist today:
-//   - GET  /api/peer-programming/admin/topics          (current published topic)
-//   - PUT  /api/peer-programming/admin/topics          (upsert / publish a weekly topic)
-//   - POST /api/peer-programming/admin/assignments/run (run weekly cohort assignment)
+//   - GET  /api/peer-programming/admin/topics             (current published topic)
+//   - PUT  /api/peer-programming/admin/topics             (upsert / publish a weekly topic)
+//   - POST /api/peer-programming/admin/assignments/run    (run weekly cohort assignment)
+//   - GET  /api/peer-programming/admin/single-open-cohort (effective mode + source)
+//   - POST /api/peer-programming/admin/single-open-cohort (set / clear the mode toggle)
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Code2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import type { AssignmentRunResult, PeerProgrammingCohort, PeerProgrammingTopic } from './pp-admin-shared';
+import type { AssignmentRunResult, PeerProgrammingCohort, PeerProgrammingTopic, SingleOpenCohortMode } from './pp-admin-shared';
 import { ppAdminMutate } from './pp-admin-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
@@ -56,6 +58,8 @@ export function PeerProgrammingAdminShell() {
   const [savingTopic, setSavingTopic] = useState(false);
   const [runningAssignment, setRunningAssignment] = useState(false);
   const [lastRun, setLastRun] = useState<AssignmentRunResult | null>(null);
+  const [mode, setMode] = useState<SingleOpenCohortMode | null>(null);
+  const [savingMode, setSavingMode] = useState(false);
 
   const loadTopic = useCallback(async () => {
     const res = await fetch('/api/peer-programming/admin/topics');
@@ -75,17 +79,26 @@ export function PeerProgrammingAdminShell() {
     setCohorts(data.cohorts ?? []);
   }, []);
 
+  const loadMode = useCallback(async () => {
+    const res = await fetch('/api/peer-programming/admin/single-open-cohort');
+    if (!res.ok) {
+      throw new Error('Could not load the single-open-cohort setting.');
+    }
+    const data = (await res.json()) as { ok: boolean; mode: SingleOpenCohortMode };
+    setMode(data.mode ?? null);
+  }, []);
+
   useEffect(() => {
     void (async () => {
       try {
-        await Promise.all([loadTopic(), loadCohorts()]);
+        await Promise.all([loadTopic(), loadCohorts(), loadMode()]);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Could not load the admin data.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [loadTopic, loadCohorts]);
+  }, [loadTopic, loadCohorts, loadMode]);
 
   const submitTopic = useCallback(
     async (draft: {
@@ -152,6 +165,42 @@ export function PeerProgrammingAdminShell() {
       setRunningAssignment(false);
     },
     [loadCohorts],
+  );
+
+  // Persist (or clear) the single-standing-cohort mode toggle. `enabled` is true/false for an
+  // explicit admin choice, or null to clear the admin setting and fall back to the env flag / default.
+  const setSingleOpenCohort = useCallback(
+    async (enabled: boolean | null) => {
+      setSavingMode(true);
+      setError(null);
+      setNotice(null);
+      const result = await ppAdminMutate<{ mode: SingleOpenCohortMode }>(
+        '/api/peer-programming/admin/single-open-cohort',
+        'POST',
+        { enabled },
+      );
+      if (!result.ok) {
+        setError(result.message);
+      } else {
+        if (result.data.mode) {
+          setMode(result.data.mode);
+        }
+        setNotice(
+          enabled === null
+            ? 'Cleared the admin override. The mode now follows the server setting.'
+            : enabled
+              ? 'Single standing Cohort 1 mode is on.'
+              : 'Single standing Cohort 1 mode is off. Weekly cohorts resume.',
+        );
+        try {
+          await Promise.all([loadMode(), loadCohorts()]);
+        } catch {
+          // The save succeeded; a refresh failure is non-fatal.
+        }
+      }
+      setSavingMode(false);
+    },
+    [loadMode, loadCohorts],
   );
 
   return (
@@ -262,6 +311,130 @@ export function PeerProgrammingAdminShell() {
           </div>
         ) : (
           <>
+            <section
+              style={{
+                marginBottom: 16,
+                padding: 16,
+                borderRadius: 12,
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: TEXT, margin: '0 0 4px' }}>
+                Single standing Cohort 1 mode
+              </h2>
+              <p style={{ fontSize: 12, color: SUBTLE, margin: '0 0 12px', lineHeight: 1.5 }}>
+                While there are too few active members to fill weekly cohorts of five, everyone shares
+                one standing, always-open Cohort 1 instead of being split into tiny rooms. Turn it off
+                to resume the weekly split into C1, C2, C3.
+              </p>
+              {mode ? (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      background: PANEL,
+                      border: `1px solid ${BORDER}`,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        background: mode.enabled ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.18)',
+                        color: mode.enabled ? '#22C55E' : SUBTLE,
+                        border: `1px solid ${mode.enabled ? 'rgba(34,197,94,0.3)' : BORDER}`,
+                      }}
+                    >
+                      {mode.enabled ? 'On' : 'Off'}
+                    </span>
+                    <span style={{ fontSize: 12, color: SUBTLE }}>
+                      Source:{' '}
+                      <span style={{ color: TEXT, fontWeight: 600 }}>
+                        {mode.source === 'admin_setting'
+                          ? 'admin setting'
+                          : mode.source === 'env_flag'
+                            ? 'server setting'
+                            : 'default'}
+                      </span>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <button
+                      type="button"
+                      disabled={savingMode || (mode.source === 'admin_setting' && mode.adminSetting === true)}
+                      onClick={() => void setSingleOpenCohort(true)}
+                      style={{
+                        flex: isMobile ? '1 1 100%' : '0 1 auto',
+                        padding: '9px 16px',
+                        borderRadius: 9,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: savingMode ? 'progress' : 'pointer',
+                        background: `${COLOR}1F`,
+                        color: COLOR,
+                        border: `1px solid ${COLOR}40`,
+                        opacity: savingMode ? 0.7 : 1,
+                      }}
+                    >
+                      Turn on
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingMode || (mode.source === 'admin_setting' && mode.adminSetting === false)}
+                      onClick={() => void setSingleOpenCohort(false)}
+                      style={{
+                        flex: isMobile ? '1 1 100%' : '0 1 auto',
+                        padding: '9px 16px',
+                        borderRadius: 9,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: savingMode ? 'progress' : 'pointer',
+                        background: 'rgba(239,68,68,0.12)',
+                        color: '#EF4444',
+                        border: '1px solid rgba(239,68,68,0.3)',
+                        opacity: savingMode ? 0.7 : 1,
+                      }}
+                    >
+                      Turn off
+                    </button>
+                    {mode.source === 'admin_setting' ? (
+                      <button
+                        type="button"
+                        disabled={savingMode}
+                        onClick={() => void setSingleOpenCohort(null)}
+                        style={{
+                          flex: isMobile ? '1 1 100%' : '0 1 auto',
+                          padding: '9px 16px',
+                          borderRadius: 9,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: savingMode ? 'progress' : 'pointer',
+                          background: 'transparent',
+                          color: SUBTLE,
+                          border: `1px solid ${BORDER}`,
+                          opacity: savingMode ? 0.7 : 1,
+                        }}
+                      >
+                        Clear override (use server setting)
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: SUBTLE, margin: 0 }}>
+                  The current mode could not be read.
+                </p>
+              )}
+            </section>
+
             <section
               style={{
                 marginBottom: 16,
