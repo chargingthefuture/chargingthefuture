@@ -61,6 +61,12 @@ const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES |
 // room (Sonnet allows far more), overridable for cost tuning.
 const MAX_OUTPUT_TOKENS = Number(process.env.CODE_REVIEW_MAX_OUTPUT_TOKENS || '16000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
+// How long a won't-fix (closed as "not planned") finding stays suppressed before a recurrence is
+// re-surfaced for a fresh decision. Dedup keys off the finding TITLE, not the code, so a dismissal is
+// "not now", not "never": after this window the code may have changed and the call may differ. A
+// finding that was closed via a fix (completed) has no window — if it recurs it is a regression and is
+// re-surfaced immediately. 0 disables the window (won't-fix suppressed forever).
+const WONTFIX_REVISIT_DAYS = Number(process.env.CODE_REVIEW_WONTFIX_DAYS || '90');
 
 // A plugin's declared contracts are sent as read-only reference so the reviewer can check
 // the code against them. Looked up by exact filename (prefix = SLICE_NAME upper-snake);
@@ -462,23 +468,56 @@ function ensureLabel(name, color, description) {
   }
 }
 
-// Fingerprints already on open `code-review` issues, so reruns don't refile the same thing.
-function existingFingerprints() {
+// Every `code-review` finding we've ever filed, open OR closed, keyed by its fingerprint. Reading
+// closed issues too is what makes "close it" a durable decision: a dismissed or fixed finding is not
+// silently re-filed as a brand-new issue on the next pass. Returns fingerprint -> prior issue so the
+// caller can decide what to do (skip / regression / revisit) based on the prior issue's state.
+function existingFindings() {
   try {
     const raw = gh([
-      'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'open',
-      '--json', 'body', '--limit', '300',
+      'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'all',
+      '--json', 'number,state,stateReason,closedAt,body', '--limit', '500',
     ]);
-    const set = new Set();
+    const map = new Map();
     for (const issue of JSON.parse(raw)) {
       const match = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
-      if (match) {
-        set.add(match[1]);
-      }
+      if (!match) continue;
+      const fp = match[1];
+      // First match wins; `gh` lists newest first, so the most recent issue for a fingerprint is kept.
+      if (map.has(fp)) continue;
+      map.set(fp, {
+        number: issue.number,
+        state: String(issue.state || '').toLowerCase(),
+        stateReason: String(issue.stateReason || '').toLowerCase(),
+        closedAt: issue.closedAt || null,
+      });
     }
-    return set;
+    return map;
   } catch {
-    return new Set();
+    return new Map();
+  }
+}
+
+function daysSince(iso) {
+  if (!iso) return Infinity;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return Infinity;
+  return (Date.now() - then) / 86_400_000;
+}
+
+// Re-surface a finding that recurs after its issue was closed: reopen it, add the given marker label,
+// and leave one comment explaining why. Used for both regressions (closed via a fix) and revisits
+// (a won't-fix whose suppression window has lapsed). No new issue is created, so the issue list does
+// not grow on recurrence — the history stays on the one original issue.
+function resurfaceIssue(number, label, comment) {
+  try {
+    gh(['issue', 'reopen', String(number), '--repo', REPO]);
+    gh(['issue', 'edit', String(number), '--repo', REPO, '--add-label', label]);
+    gh(['issue', 'comment', String(number), '--repo', REPO, '--body', comment]);
+    return true;
+  } catch (error) {
+    console.log(`reviewCodebaseSlice: could not resurface #${number}: ${error?.message || error}`);
+    return false;
   }
 }
 
@@ -507,6 +546,12 @@ function buildIssueBody(slice, finding, fp) {
     'When labelled `code-review:actionable`, the implement workflow',
     '(`.github/workflows/code-review-implement.yml`) can open a pull request for it. Remove',
     'that label to keep this as a tracking note only.',
+    '',
+    'Closing this issue is durable — the sweep dedupes against closed issues too, so it will not be',
+    're-filed as a new issue. Close as **not planned** to dismiss it (the sweep may re-surface it for',
+    `a fresh look after ${WONTFIX_REVISIT_DAYS} days, tagged \`code-review:revisit\`, since the code may have`,
+    'changed by then). If it is closed as **completed**/fixed and the same finding recurs later, the',
+    'sweep reopens this issue tagged `code-review:regression` rather than opening a duplicate.',
   ].join('\n');
 }
 
@@ -575,8 +620,10 @@ async function main() {
 
   ensureLabel('code-review', '5319e7', 'Filed by the scheduled code-review sweep');
   ensureLabel('code-review:actionable', '0e8a16', 'Code-review finding with a small, safe fix; eligible for an auto PR');
+  ensureLabel('code-review:regression', 'b60205', 'A previously-fixed code-review finding the sweep saw recur');
+  ensureLabel('code-review:revisit', 'fbca04', 'A dismissed (won\'t-fix) code-review finding the sweep re-surfaced for a fresh decision');
 
-  const seen = existingFingerprints();
+  const seen = existingFindings();
   let filed = 0;
   for (const finding of findings) {
     if (filed >= MAX_ISSUES) {
@@ -587,12 +634,42 @@ async function main() {
       continue;
     }
     const fp = fingerprint(slice.name, finding.title);
-    if (seen.has(fp)) {
-      console.log(`reviewCodebaseSlice: skip duplicate "${finding.title}".`);
+    const prior = seen.get(fp);
+
+    if (prior && prior.state === 'open') {
+      // Already tracked on an open issue — nothing to do.
+      console.log(`reviewCodebaseSlice: skip duplicate of open #${prior.number} "${finding.title}".`);
       continue;
     }
+
+    if (prior && prior.state === 'closed') {
+      if (prior.stateReason === 'completed') {
+        // Closed via a fix but the finding is back — a regression. Reopen the original, don't duplicate.
+        if (resurfaceIssue(prior.number, 'code-review:regression',
+          `The code-review sweep flagged this again after it was closed as fixed — possible regression.\n\n**${finding.title}**\n\n${finding.summary || ''}`)) {
+          filed += 1;
+          console.log(`reviewCodebaseSlice: regression — reopened #${prior.number} "${finding.title}".`);
+        }
+        continue;
+      }
+      // Closed as "not planned" (or closed with no reason): a dismissal. Suppress within the window;
+      // after it lapses, re-surface once for a fresh decision against possibly-changed code.
+      const age = daysSince(prior.closedAt);
+      if (WONTFIX_REVISIT_DAYS <= 0 || age <= WONTFIX_REVISIT_DAYS) {
+        console.log(`reviewCodebaseSlice: skip dismissed #${prior.number} "${finding.title}" (closed ${Math.round(age)}d ago).`);
+        continue;
+      }
+      if (resurfaceIssue(prior.number, 'code-review:revisit',
+        `This was dismissed (closed as not planned) ${Math.round(age)} days ago. The code-review sweep raised it again; since the code may have changed, please re-decide whether it still applies.\n\n**${finding.title}**\n\n${finding.summary || ''}`)) {
+        filed += 1;
+        console.log(`reviewCodebaseSlice: revisit — reopened #${prior.number} "${finding.title}".`);
+      }
+      continue;
+    }
+
+    // Genuinely new finding.
     const url = fileIssue(slice, finding, fp);
-    seen.add(fp);
+    seen.set(fp, { number: 0, state: 'open', stateReason: '', closedAt: null });
     filed += 1;
     console.log(`reviewCodebaseSlice: filed ${url}`);
   }
