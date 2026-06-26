@@ -21,6 +21,8 @@ import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
 import { WorkforceTrainingGaps } from './workforce-training-gaps';
+import { WorkforceBucketDrilldown } from './workforce-bucket-drilldown';
+import { WorkforceOccupations } from './workforce-occupations';
 import { WorkforceProfilePanel } from './workforce-profile-panel';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 
@@ -36,7 +38,7 @@ function getWorkforceTokens(theme: ThemeName): WorkforceTokens {
 }
 
 type Tab = 'dashboard';
-type SidebarView = 'overview' | 'sector' | 'skill-level';
+type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations';
 
 interface WorkforceData {
   dashboard: WorkforceDashboard | null;
@@ -222,12 +224,24 @@ function WorkforceDashboardContent({
           <WorkforceSkillDistribution skillItems={skillItems} />
         ) : null}
 
-        {(activeView === 'overview' || activeView === 'sector') ? (
-          <WorkforceSectorGaps sectorItems={sectorItems} />
+        {/* Skill-level drilldown: expand a level to see the matched members (the V2 drilldown). */}
+        {activeView === 'skill-level' ? (
+          <div style={{ marginTop: 16 }}>
+            <WorkforceBucketDrilldown kind="skill-level" title="Members by skill level" items={skillItems} />
+          </div>
+        ) : null}
+
+        {/* Overview keeps the aggregate sector bars; the Sectors view uses the expandable drilldown so
+            members are reachable. */}
+        {activeView === 'overview' ? <WorkforceSectorGaps sectorItems={sectorItems} /> : null}
+        {activeView === 'sector' ? (
+          <WorkforceBucketDrilldown kind="sector" title="Members by sector" items={sectorItems} />
         ) : null}
 
         {(activeView === 'overview' || activeView === 'sector') ? (
-          <WorkforceTrainingGaps occupationItems={occupationItems} />
+          <div style={{ marginTop: 16 }}>
+            <WorkforceTrainingGaps occupationItems={occupationItems} />
+          </div>
         ) : null}
       </div>
     </ScrollArea>
@@ -357,7 +371,9 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     );
   }
 
-  const content = (
+  const content = view === 'occupations' ? (
+    <WorkforceOccupations />
+  ) : (
     <WorkforceDashboardContent
       t={t}
       dashboard={dashboard}
@@ -374,6 +390,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       { key: 'overview', label: 'Overview' },
       { key: 'sector', label: 'Sectors' },
       { key: 'skill-level', label: 'Skill Level' },
+      { key: 'occupations', label: 'Occupations' },
     ];
     // ctf-self-responsive opts out of the global mobile de-flex so this flex
     // column keeps a real height — the dashboard's ScrollArea needs it to scroll.

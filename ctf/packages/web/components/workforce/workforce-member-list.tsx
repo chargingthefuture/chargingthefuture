@@ -1,0 +1,130 @@
+'use client';
+
+import type { WorkforceMatchedMember, WorkforceMatchReason } from '../../lib/workforce/types';
+
+// Colors for the match-reason badge (mirrors V2: job title = green, skill = purple, sector = blue,
+// no match = red). Workforce shows member names by design — it is a sign-in-only filtered view of the
+// Directory whose purpose is surfacing who has or wants a skill.
+const REASON_STYLE: Record<WorkforceMatchReason, { label: string; color: string }> = {
+  jobTitle: { label: 'Job title match', color: '#22C55E' },
+  skill: { label: 'Skill match', color: '#A855F7' },
+  sector: { label: 'Sector match', color: '#3B82F6' },
+  none: { label: 'No match', color: '#EF4444' },
+};
+
+function Chip({ text }: { text: string }) {
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        color: '#9CA3AF',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 6,
+        padding: '2px 7px',
+      }}
+    >
+      {text}
+    </span>
+  );
+}
+
+export function WorkforceMemberList({ members }: { members: WorkforceMatchedMember[] }) {
+  if (members.length === 0) {
+    return (
+      <div style={{ fontSize: 13, color: '#6B7280', padding: '8px 2px' }}>
+        No matching members yet.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {members.map((m) => {
+        const reason = REASON_STYLE[m.matchReason];
+        return (
+          <div
+            key={m.profileId}
+            style={{
+              padding: '12px 14px',
+              borderRadius: 12,
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#E8EAF0' }}>{m.displayName}</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: reason.color,
+                  background: `${reason.color}1A`,
+                  border: `1px solid ${reason.color}40`,
+                  borderRadius: 6,
+                  padding: '1px 7px',
+                }}
+              >
+                {reason.label}
+              </span>
+              {m.matchingOccupations.length > 0 ? (
+                <span style={{ fontSize: 11, color: '#6B7280' }}>
+                  {m.matchingOccupations.length} matching occupation
+                  {m.matchingOccupations.length === 1 ? '' : 's'}
+                </span>
+              ) : null}
+            </div>
+
+            {m.matchingOccupations.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {m.matchingOccupations.map((o) => (
+                  <Chip key={o.id} text={`${o.title} (${o.sector})`} />
+                ))}
+              </div>
+            ) : null}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {m.jobTitles.length > 0 ? (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#6B7280', minWidth: 64 }}>Job titles</span>
+                  {m.jobTitles.map((j) => <Chip key={j} text={j} />)}
+                </div>
+              ) : null}
+              {m.sectors.length > 0 ? (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#6B7280', minWidth: 64 }}>Sectors</span>
+                  {m.sectors.map((s) => <Chip key={s} text={s} />)}
+                </div>
+              ) : null}
+              {m.skills.length > 0 ? (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#6B7280', minWidth: 64 }}>Skills</span>
+                  {m.skills.map((s) => <Chip key={s} text={s} />)}
+                </div>
+              ) : null}
+            </div>
+
+            {m.matchReason === 'none' ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: '#F59E0B',
+                  background: 'rgba(245,158,11,0.08)',
+                  border: '1px solid rgba(245,158,11,0.25)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                }}
+              >
+                This member does not match any occupation in this view — their skills, sector, or job
+                title may need updating in the Directory.
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
