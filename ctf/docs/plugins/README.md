@@ -13,7 +13,7 @@ Canonical contract files remain under docs/contracts to preserve existing automa
 - [Foundation](./foundation/README.md)
 - [GentlePulse](./gentlepulse/README.md)
 - [Gross Domestic Product](./gross-domestic-product/README.md)
-- [LevelUp](./levelup/README.md)
+- [LevelUp](./level-up/README.md)
 - [LightHouse](./lighthouse/README.md)
 - [Mood](./mood/README.md)
 - [PeerProgramming](./peer-programming/README.md)

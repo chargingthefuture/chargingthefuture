@@ -98,8 +98,8 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "levelup",
-      "mobileFeatureDirs": ["levelup"],
+      "slug": "level-up",
+      "mobileFeatureDirs": ["level-up"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },

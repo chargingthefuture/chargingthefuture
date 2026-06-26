@@ -185,7 +185,7 @@ async function seedWeeklyPerformance(c) {
   console.log('  ✓ weekly-performance');
 }
 
-async function seedLevelup(c) {
+async function seedLevelUp(c) {
   // Wallet pre-seeded in service-credits above; also ensure trainer wallet exists
   await c.query(
     `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
@@ -195,7 +195,7 @@ async function seedLevelup(c) {
   );
 
   await c.query(
-    `INSERT INTO levelup_cohorts
+    `INSERT INTO level_up_cohorts
      (id, title, description, track, seats, start_date, end_date, required_credits,
       materials_cost, device_support, status, allow_no_deposit, trainer_split_percent,
       completion_bonus_credits, stipend_mode, stipend_amount_per_payout,
@@ -218,7 +218,7 @@ async function seedLevelup(c) {
   );
 
   await c.query(
-    `INSERT INTO levelup_curriculum_items
+    `INSERT INTO level_up_curriculum_items
      (id, cohort_id, title, description, sequence_no, required)
      VALUES ($1::uuid, $2::uuid, 'API Design & Delivery', 'Ship one milestone-gated service endpoint.', 1, true)
      ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title`,
@@ -226,7 +226,7 @@ async function seedLevelup(c) {
   );
 
   await c.query(
-    `INSERT INTO levelup_milestones
+    `INSERT INTO level_up_milestones
      (id, cohort_id, name, percent_release, required_task, sequence_no)
      VALUES
        ($1::uuid, $3::uuid, 'Foundation Review', 30, 'Submit and pass the foundation task review.', 1),
@@ -237,7 +237,7 @@ async function seedLevelup(c) {
 
   // Enroll owner as active participant
   await c.query(
-    `INSERT INTO levelup_enrollments
+    `INSERT INTO level_up_enrollments
      (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
      VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
      ON CONFLICT (id) DO UPDATE SET
@@ -245,7 +245,7 @@ async function seedLevelup(c) {
     [ID.enrollmentOwner, ID.cohort, OWNER, TRAINER],
   );
 
-  console.log('  ✓ levelup');
+  console.log('  ✓ level-up');
 }
 
 async function seedSkillsHunt(c) {
@@ -833,7 +833,7 @@ async function main() {
     await seedServiceCredits(client);
     await seedGdp(client);
     await seedWeeklyPerformance(client);
-    await seedLevelup(client);
+    await seedLevelUp(client);
     await seedSkillsHunt(client);
     await seedDirectory(client);
     await seedWorkforce(client);

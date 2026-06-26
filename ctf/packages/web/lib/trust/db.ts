@@ -53,7 +53,7 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
 //   - lighthouse_matches       → accepted/completed LightHouse matches
 //   - trust_transport_trips     → completed TrustTransport trips
 //   - skills_hunt_submissions  → accepted SkillsHunt submissions
-//   - levelup_enrollments      → completed LevelUp cohorts
+//   - level_up_enrollments      → completed LevelUp cohorts
 //   - chyme_room_members       → Chyme rooms joined
 //   - directory_profiles       → claimed Directory profile
 //   - what_works_endorsements   → WhatWorks endorsements
@@ -79,7 +79,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     lighthouse,
     trustTransport,
     skillsHunt,
-    levelup,
+    levelUp,
     chyme,
     directory,
     whatWorks,
@@ -146,7 +146,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
       [userId]
     ),
     queryDb<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM levelup_enrollments WHERE user_id = $1 AND status = 'completed'`,
+      `SELECT COUNT(*) AS count FROM level_up_enrollments WHERE user_id = $1 AND status = 'completed'`,
       [userId]
     ),
     queryDb<{ count: string }>(
@@ -190,7 +190,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     lighthouseMatchesAccepted: countOf(lighthouse),
     trustTransportTripsCompleted: countOf(trustTransport),
     skillsHuntSubmissionsAccepted: countOf(skillsHunt),
-    levelupCohortsCompleted: countOf(levelup),
+    levelUpCohortsCompleted: countOf(levelUp),
     chymeRoomsJoined: countOf(chyme),
     directoryProfilesClaimed: countOf(directory),
     whatWorksEndorsements: countOf(whatWorks),
@@ -267,7 +267,7 @@ export function buildTrustEvidence(metrics: TrustSignalMetrics, nowIso: string):
     { count: metrics.lighthouseMatchesAccepted, type: 'engagement-lighthouse-matches', verb: 'Accepted', singular: 'LightHouse match', plural: 'LightHouse matches' },
     { count: metrics.trustTransportTripsCompleted, type: 'engagement-trust-transport-trips', verb: 'Completed', singular: 'TrustTransport trip', plural: 'TrustTransport trips' },
     { count: metrics.skillsHuntSubmissionsAccepted, type: 'engagement-skillshunt-submissions', verb: 'Accepted', singular: 'SkillsHunt submission', plural: 'SkillsHunt submissions' },
-    { count: metrics.levelupCohortsCompleted, type: 'engagement-levelup-cohorts', verb: 'Completed', singular: 'LevelUp cohort', plural: 'LevelUp cohorts' },
+    { count: metrics.levelUpCohortsCompleted, type: 'engagement-level-up-cohorts', verb: 'Completed', singular: 'LevelUp cohort', plural: 'LevelUp cohorts' },
     { count: metrics.chymeRoomsJoined, type: 'engagement-chyme-rooms', verb: 'Joined', singular: 'Chyme room', plural: 'Chyme rooms' },
     { count: metrics.directoryProfilesClaimed, type: 'engagement-directory-profile', verb: 'Claimed', singular: 'Directory profile', plural: 'Directory profiles' },
     { count: metrics.whatWorksEndorsements, type: 'engagement-what-works-endorsements', verb: 'Endorsed', singular: 'WhatWorks product', plural: 'WhatWorks products' },

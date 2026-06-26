@@ -37,7 +37,7 @@ const SOURCES = [
     // Eligible service delivery only — excludes learner escrow returns, completion bonuses, stipends,
     // and microgrants. Read from governance events, not the SC ledger (whose entries are tagged
     // accounting_scope 'service_credits_non_gdp' by design).
-    pluginSlug: 'levelup',
+    pluginSlug: 'level-up',
     sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
             FROM service_credits_governance_events
             WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split'`,
