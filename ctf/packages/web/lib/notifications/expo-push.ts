@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
-import { deleteWebPushSubscription, type WebPushPayload } from './push';
+import { deletePushSubscriptionByEndpoint, type WebPushPayload } from './push';
 
 // Expo (Android native) push delivery (issue #884). The first caller is the Foundation instant-call ring:
 // when a member rings a provider, dispatchRingDelivery calls sendExpoPushToUser alongside sendWebPushToUser
@@ -9,8 +9,8 @@ import { deleteWebPushSubscription, type WebPushPayload } from './push';
 //
 // This mirrors the web push module's contract exactly:
 //   - It stores tokens in the SAME user-global push_subscriptions table, with kind 'expo' (the token is the
-//     endpoint/identity; p256dh/auth are null). saveExpoPushSubscription / deleteWebPushSubscription handle
-//     storage (deletion is kind-agnostic — it matches on endpoint).
+//     endpoint/identity; p256dh/auth are null). saveExpoPushSubscription / deletePushSubscriptionByEndpoint
+//     handle storage (deletion is kind-agnostic — it matches on endpoint).
 //   - Graceful no-op (critical): an Expo access token MAY be required to send (for an Expo project with
 //     "Enhanced Security for Push Notifications" turned on). It is read from EXPO_ACCESS_TOKEN. When it is
 //     unset, sends still work for projects without that setting; the request simply carries no auth header.
@@ -62,10 +62,10 @@ function resolveExpoAccessToken(): string | null {
 type ExpoSubscriptionRow = { endpoint: string };
 
 // Drop a token Expo has reported as gone ('DeviceNotRegistered'). Best-effort: a delete failure here must
-// not mask the original send result. Reuses the kind-agnostic deleteWebPushSubscription (matches by endpoint).
+// not mask the original send result. Reuses the kind-agnostic deletePushSubscriptionByEndpoint (by endpoint).
 async function pruneDeadExpoSubscription(userId: string, endpoint: string): Promise<void> {
   try {
-    await deleteWebPushSubscription({ userId, endpoint });
+    await deletePushSubscriptionByEndpoint({ userId, endpoint });
   } catch (error) {
     reportError(error, { area: 'notifications', op: 'expo_push_prune_dead' });
   }

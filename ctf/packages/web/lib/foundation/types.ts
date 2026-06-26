@@ -50,12 +50,18 @@ export type FoundationInstantCall = {
 
 // What the client needs to join the audio room for an answered instant call. Mirrors the Direct Line
 // participant-only token shape. Null Stream fields mean the integration is not configured (demo/local).
+//
+// Two distinct Stream ids travel here and must not be confused (issue #987):
+//   - streamCallId is the Stream **Video** call id the audio room joins (mirror of `call.streamCallId`,
+//     surfaced flat so a caller never has to reach into `call` to find it).
+//   - streamChannelId is the Stream **Chat** channel id for the thread's Direct Line — NOT a call id.
 export type FoundationInstantCallJoin = {
   call: FoundationInstantCall;
   role: 'caller' | 'callee';
   streamApiKey: string | null;
   streamUserId: string | null;
   streamToken: string | null;
+  streamCallId: string;
   streamChannelId: string;
 };
 

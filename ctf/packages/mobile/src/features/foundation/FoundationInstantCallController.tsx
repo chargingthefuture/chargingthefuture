@@ -325,13 +325,31 @@ export const FoundationInstantCallController: React.FC<{ children: ReactNode }> 
 
   const onAnswer = useCallback(async () => {
     if (active.kind !== 'callee') return;
+    const callId = active.callId;
     try {
-      const data = await answerInstantCall(active.callId);
+      const data = await answerInstantCall(callId);
       if (data.call) setRingStatus(data.call.ringStatus);
+      // The answer response carries no Stream credentials, so fetch the call state once right away rather
+      // than waiting up to RING_POLL_MS for the next scheduled tick — this gets the callee into the audio
+      // room without a "Connecting…" gap (issue #991). The poll remains the source of truth.
+      try {
+        const state = await getInstantCallState(callId);
+        if (state.call?.ringStatus === 'answered' && state.streamApiKey && state.streamToken && state.streamUserId) {
+          setCredentials({
+            streamApiKey: state.streamApiKey,
+            streamUserId: state.streamUserId,
+            streamToken: state.streamToken,
+            streamCallId: state.call.streamCallId,
+            displayName,
+          });
+        }
+      } catch {
+        /* transient — the active-call poll reconciles on its next tick */
+      }
     } catch (e) {
       setError(describeCallError(e, 'Could not answer the call.').message);
     }
-  }, [active]);
+  }, [active, displayName]);
 
   const onDecline = useCallback(async () => {
     if (active.kind !== 'callee') return;
@@ -499,6 +517,21 @@ const CallOverlay: React.FC<{
             </>
           ) : terminalLabel ? (
             <Text style={styles.terminalText}>{terminalLabel}</Text>
+          ) : ringStatus === 'answered' ? (
+            // Answered but the audio-join credentials have not arrived yet: show an explicit connecting
+            // state (not a blank card) with an end control, until the next poll/fetch sets credentials
+            // and the audio room renders (issue #991).
+            <>
+              <Text style={styles.terminalText}>Connecting…</Text>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.declineBtn, styles.fullWidthBtn]}
+                onPress={onEnd}
+                accessibilityRole="button"
+                accessibilityLabel="End call"
+              >
+                <Text style={styles.declineText}>End call</Text>
+              </TouchableOpacity>
+            </>
           ) : isCallee && ringStatus === 'ringing' ? (
             <View style={styles.answerRow}>
               <TouchableOpacity
