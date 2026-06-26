@@ -87,14 +87,21 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
   };
 }
 
-export async function getMoodEligibility(input: { clientId: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
+// Eligibility / cooldown is keyed on the authenticated user_id, not the
+// client-supplied clientId. The clientId is attacker-controlled (a random
+// string generated client-side and sent in the request), so keying the cooldown
+// on it lets a member bypass the 7-day window by sending a fresh clientId each
+// time, and lets a member probe any other clientId's state. Keying on the
+// verified user_id closes both holes: a member can only ever see and is only
+// ever gated by their own check-in history.
+export async function getMoodEligibility(input: { userId: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
   const result = await queryDb<{ submitted_at: Date }>(
     `SELECT submitted_at
      FROM mood_submissions
-     WHERE client_id = $1
+     WHERE user_id = $1
      ORDER BY submitted_at DESC
      LIMIT 1`,
-    [input.clientId],
+    [input.userId],
   );
 
   if (result.rows.length === 0) {
@@ -117,7 +124,7 @@ export async function createMoodSubmission(input: { userId: string; clientId: st
     throw new Error('invalid_payload');
   }
 
-  const eligibility = await getMoodEligibility({ clientId: input.clientId });
+  const eligibility = await getMoodEligibility({ userId: input.userId });
   if (!eligibility.eligible) {
     throw new Error('cooldown_active');
   }
@@ -129,8 +136,10 @@ export async function createMoodSubmission(input: { userId: string; clientId: st
     [randomUUID(), input.userId, input.clientId, input.moodValue, input.note],
   );
 
+  // Field names match the mood.check.submit command contract outputSchema
+  // (checkId / submittedAt).
   return {
-    id: inserted.rows[0].id,
-    submittedAtIso: inserted.rows[0].submitted_at.toISOString(),
+    checkId: inserted.rows[0].id,
+    submittedAt: inserted.rows[0].submitted_at.toISOString(),
   };
 }

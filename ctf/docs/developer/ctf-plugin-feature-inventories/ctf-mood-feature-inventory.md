@@ -30,8 +30,9 @@ Scope decisions locked for this rewrite:
 ### 1.2 Eligibility Window
 
 1. Eligibility endpoint: `GET /api/mood/eligibility?clientId=...`.
-2. Cooldown model: one check every 7 days.
-3. If no prior record (or parse failure), client is treated as eligible.
+2. Cooldown model: one check every 7 days, keyed on the authenticated `user_id`. `clientId` is still required as input but is not the cooldown key — keying on the client-supplied value let a member bypass the window or probe another device's state.
+3. If no prior record (or parse failure), the user is treated as eligible.
+4. The submission response uses the command-contract field names `checkId` and `submittedAt`.
 
 ## 2) Admin Features
 
@@ -65,9 +66,9 @@ Excluded route groups:
 
 ### 4.1 Mood Checks
 
-1. Mood checks store `clientId`, `moodValue`, and check timestamp metadata in `mood_submissions` (`id`, `user_id`, `client_id`, `mood_value`, `note`, `submitted_at`).
-2. Mood values are validated as integer range `1..5`.
-3. Eligibility evaluation is derived from last check timestamp per `clientId`.
+1. Mood checks store `user_id`, `clientId`, `moodValue`, and check timestamp metadata in `mood_submissions` (`id`, `user_id`, `client_id`, `mood_value`, `note`, `submitted_at`). Command contracts for `mood.check.submit` and `mood.check.eligibility.fetch` declare `dataAccess: [mood_submissions]` (the real table; the prior `mood_checks` name was a documentation-only mismatch — no such table exists).
+2. Mood values are validated as integer range `1..5` at the API boundary (returns `400 mood_invalid_payload`) and again in the repository.
+3. Eligibility evaluation is derived from the last check timestamp per authenticated `user_id`.
 
 ### 4.2 Community Pulse (aggregate-only, no new storage)
 
@@ -78,9 +79,11 @@ Excluded route groups:
 ## 5) Security, Privacy, and Compliance Controls
 
 1. Auth required for all Mood API routes.
-2. Server-side validation on every submission and eligibility request.
+2. Server-side validation on every submission and eligibility request. `moodValue` bounds (`1..5` integer) are enforced at the API boundary so an out-of-range value returns `400 mood_invalid_payload`, not a 500.
 3. Logs/diagnostics enforce data minimization and avoid unnecessary request metadata.
-4. Anonymous persistence contract is maintained by storing mood values under `clientId` instead of `user_id`.
+4. Mood checks store both `user_id` and an anonymous `clientId`. The cooldown and eligibility decisions are keyed on the authenticated `user_id` (not the attacker-controlled `clientId`), so a member can neither bypass the 7-day window by rotating `clientId` nor read another device's eligibility. The aggregate community pulse never reads `user_id`, `client_id`, or `note`, so public output stays anonymous.
+5. Every `mood.check.submit` and `mood.check.eligibility.fetch` decision (allow and deny) emits a structured audit event via `logMoodAudit` (`lib/mood/audit.ts`): `pluginId`, `command`, `policyDecision` with per-check evidence (submit: `roleCheck`/`moodBoundsCheck`/`cooldownCheck`; eligibility: `roleCheck`/`clientIdCheck`), `dataClassesAccessed`, `targetContext`, and `result`. Both commands are marked `containsPHI` in the access policy.
+6. Error mapping is centralized in `lib/mood/_lib.ts` (`moodErrorResponse`): `invalid_payload` → 400, `cooldown_active` → 409, `eligibility_not_found` → 404. The duplicate `app/api/mood/_lib.ts` that lacked the 400/409 cases (so cooldowns surfaced as 500) was removed.
 
 ## 6) Web and Android Delivery Status
 
@@ -107,6 +110,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-06-26: Code-review sweep fixes (issues #1004–#1011). Cooldown/eligibility now keyed on the authenticated `user_id` instead of the client-supplied `clientId`, closing the 7-day-window bypass and cross-client probing (`getMoodEligibility` queries `WHERE user_id = $1`). Added `moodValue` `1..5` bounds enforcement at the submissions route (returns `400 mood_invalid_payload`). Added `lib/mood/audit.ts` (`logMoodAudit`) and emit an audit event on every submit and eligibility decision, allow and deny, per the audit contract. Aligned the submit response shape to the contract (`checkId`/`submittedAt`, was `id`/`submittedAtIso`) in the repository, route, and mobile `SubmitResponse`. Removed the duplicate `app/api/mood/_lib.ts`; the surviving `lib/mood/_lib.ts` `moodErrorResponse` now maps `invalid_payload`→400 and `cooldown_active`→409 (previously these fell through to 500, so the mobile cooldown message never showed). Corrected `mood.check.submit` / `mood.check.eligibility.fetch` command-contract `dataAccess` from the nonexistent `mood_checks` to the real `mood_submissions`. No schema change.
 - 2026-06-12: Android API client (`api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. No backend, schema, or contract change.
 - 2026-06-07: Community Pulse delivered for real (web + Android). Added `getMoodCommunityPulse` to `lib/mood/repository.ts` and `GET /api/mood/community`, computing an aggregate, anonymous 7-day average-mood chart + counts from the existing `mood_submissions` table (no schema change). Reads only `mood_value` + `submitted_at`; withholds data until 5 check-ins exist in the window. Web `mood-community.tsx` and mobile `Mood.tsx` Trends tab now render the real chart with loading/empty/error states; the previous "coming soon" stub and the omitted mobile chart are replaced. No schema change.
 - 2026-05-31: Android pixel pass. Built `Mood.tsx` + `api.ts` in `ctf/packages/mobile/src/features/mood/`; retired `MockMood.tsx`. Real bindings to `GET /api/mood/eligibility` and `POST /api/mood/submissions`. Omitted Trends tab chart and community-avg card (no aggregate-stats API). TypeScript, EOF, and parity gates pass. Android delivery status: ✅.
