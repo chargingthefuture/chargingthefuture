@@ -1,6 +1,6 @@
 // All calls go through authedFetch so the Clerk bearer token is attached and the
 // base URL comes from runtime config (APP_URL) — same pattern as socketrelay/currency.
-import { authedFetchJson } from '../../auth/authedFetch';
+import { authedFetchJson, getApiBaseUrl } from '../../auth/authedFetch';
 
 export type WhatWorksProduct = {
   id: string;
@@ -28,6 +28,22 @@ export type WhatWorksProblemOption = { id: string; slug: string; emoji: string; 
 
 export async function fetchList(): Promise<{ problems: WhatWorksProblem[]; stats: WhatWorksStats }> {
   return authedFetchJson<{ problems: WhatWorksProblem[]; stats: WhatWorksStats }>('/api/whatworks');
+}
+
+// Public, sign-in-free teaser slice — mirrors the web public flow. Uses a plain fetch (no
+// bearer token) so a signed-out visitor sees the same readable preview the web shows.
+export async function fetchPublicList(): Promise<{ problems: WhatWorksProblem[]; stats: WhatWorksStats }> {
+  const response = await fetch(`${getApiBaseUrl()}/api/whatworks/public`);
+  const payload = (await response.json().catch(() => null)) as
+    | { problems?: WhatWorksProblem[]; stats?: WhatWorksStats }
+    | null;
+  if (!response.ok || !payload) {
+    throw new Error(`Network request failed: ${response.status}`);
+  }
+  return {
+    problems: payload.problems ?? [],
+    stats: payload.stats ?? { problems: 0, verifiedTools: 0, survivorsHelped: 0 },
+  };
 }
 
 export async function fetchProblems(): Promise<{ problems: WhatWorksProblemOption[] }> {

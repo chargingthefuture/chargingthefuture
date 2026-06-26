@@ -12,6 +12,7 @@ import {
   whatworksError,
   type WhatWorksApiGate,
 } from '../../../_lib';
+import { logWhatWorksAudit } from 'lib/whatworks/audit';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -50,6 +51,16 @@ export async function POST(request: Request, context: RouteContext) {
   }
   await addEndorsement(id, auth.gate.auth.userId);
   const state = await getProductEndorsementState(id, auth.gate.auth.userId);
+  logWhatWorksAudit({
+    actorId: auth.gate.auth.userId,
+    command: 'whatworks.product.endorse',
+    status: 'allow',
+    reason: 'access_route_guard',
+    targetType: 'product',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+  });
   return NextResponse.json({ ok: true, ...state });
 }
 
@@ -65,5 +76,15 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
   await removeEndorsement(id, auth.gate.auth.userId);
   const state = await getProductEndorsementState(id, auth.gate.auth.userId);
+  logWhatWorksAudit({
+    actorId: auth.gate.auth.userId,
+    command: 'whatworks.product.unendorse',
+    status: 'allow',
+    reason: 'access_route_guard',
+    targetType: 'product',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+  });
   return NextResponse.json({ ok: true, ...state });
 }

@@ -23,11 +23,14 @@ function slugifyTitle(title: string): string {
   return base.length > 0 ? base : 'problem';
 }
 
+// Collisions are tiny in practice, but the loop is capped so a degraded DB or a pathological
+// run of identically-named problems fails with a clear error instead of hanging the request.
+const MAX_SLUG_ATTEMPTS = 100;
+
 async function ensureUniqueSlug(base: string): Promise<string> {
   let candidate = base;
   let suffix = 2;
-  // Loop is bounded by the number of existing collisions, which is tiny in practice.
-  while (true) {
+  for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt += 1) {
     const existing = await queryDb<{ id: string }>(
       'SELECT id FROM whatworks_problems WHERE slug = $1 LIMIT 1',
       [candidate],
@@ -38,6 +41,7 @@ async function ensureUniqueSlug(base: string): Promise<string> {
     candidate = `${base}-${suffix}`;
     suffix += 1;
   }
+  throw new Error(`whatworks: could not find a unique slug for "${base}" after ${MAX_SLUG_ATTEMPTS} attempts`);
 }
 
 type ProductProjectionRow = {
@@ -164,9 +168,19 @@ export async function getProblemById(id: string): Promise<WhatWorksProblem | nul
   return result.rows[0] ?? null;
 }
 
-export async function getProductById(id: string): Promise<WhatWorksProduct | null> {
-  const result = await queryDb<WhatWorksProduct>(
-    'SELECT * FROM whatworks_products WHERE id = $1 LIMIT 1',
+// Identity columns (`suggested_by`, `reviewed_by`) are deliberately omitted: the anonymity
+// contract excludes them from every reader and admin projection, and no caller of this lookup
+// needs them. Selecting an explicit column list keeps those fields out of the returned object
+// entirely, so a future route cannot accidentally serialise or forward them.
+export type WhatWorksProductLookup = Omit<WhatWorksProduct, 'suggested_by' | 'reviewed_by'>;
+
+export async function getProductById(id: string): Promise<WhatWorksProductLookup | null> {
+  const result = await queryDb<WhatWorksProductLookup>(
+    `SELECT id, problem_id, emoji, name, kind, note, purchase_url, status,
+            reviewed_at, rejection_reason, created_at, updated_at
+       FROM whatworks_products
+      WHERE id = $1
+      LIMIT 1`,
     [id],
   );
   return result.rows[0] ?? null;
