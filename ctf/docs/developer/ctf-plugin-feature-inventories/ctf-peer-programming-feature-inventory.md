@@ -23,6 +23,32 @@ The plugin:
 8. Captures structured feedback for iteration,
 9. Supports admin-defined weekly topic guidance.
 
+### Single standing, always-open Cohort 1 mode (low-population, flag-gated)
+
+When there are not enough active members to fill weekly cohorts of five, the plugin runs in a
+single standing, always-open Cohort 1 mode instead of splitting members into tiny one-person rooms.
+This mode is controlled by the server flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT`, read by the one
+resolver `isPeerProgrammingSingleOpenCohortEnabled()` in
+`ctf/packages/web/lib/peer-programming/constants.ts`. The flag **defaults ON** (unset or empty is
+ON); only `0`/`false` turns it OFF.
+
+- **When ON (default):** there is a single standing cohort — the one row with `is_standing = TRUE`,
+  label `C1`, always open (`fallback_open = TRUE`). It is not week-scoped: it persists across weeks
+  and is found by `is_standing = TRUE`, not by the current week. `getMyCohort` resolves this standing
+  cohort and idempotently adds the requesting member to it (a find-or-create plus an
+  `ON CONFLICT DO NOTHING` membership insert), so any active member who opens PeerProgramming
+  auto-joins Cohort 1 and can post, not just listen — the room read-access gate still authorizes the
+  request first. `listActiveCohorts`/`getCohortById`/`listManagedCohorts` include the standing cohort
+  regardless of week so the room's cohort list and `?cohortId=` listen-in resolve it. The weekly
+  auto-split is paused: `runWeeklyAssignment` (cron and admin manual run) ensures the standing cohort
+  exists and idempotently joins all the provided active members into it (same idempotent assignment
+  notifications), creating no `C2`/`C3`. The find-or-create helper `ensureStandingCohort(actorId)` is
+  idempotent and races safely against the partial-unique standing index.
+- **When OFF (`PEER_PROGRAMMING_SINGLE_OPEN_COHORT=0`):** behavior is exactly the original weekly
+  cohorting — members are sliced into week-scoped cohorts of five, `getMyCohort` resolves the current
+  week's cohort, and `runWeeklyAssignment` forms `C1`/`C2`/`C3`. The flag is the only thing that
+  changes behavior, so it can be flipped to restore weekly cohorting.
+
 ---
 
 ## Target User Features
@@ -117,7 +143,7 @@ form a cohort immediately with the manual user-id override.
 ### Tables Owned by This Plugin
 
 1. `peer_programming_weekly_topics` — Weekly topic guidance (id, week_start_date, title, guidance, revision_note, status, created_by_user_id, published_by_user_id, published_at).
-2. `peer_programming_cohorts` — Weekly cohorts (id, week_start_date, cohort_label, fallback_open, topic_id, assigned_by_user_id).
+2. `peer_programming_cohorts` — Weekly cohorts (id, week_start_date, cohort_label, fallback_open, topic_id, assigned_by_user_id, is_standing). `is_standing` (BOOLEAN NOT NULL DEFAULT FALSE) marks the single standing, always-open Cohort 1 used in low-population mode (see "Single standing, always-open Cohort 1 mode" below); a partial-unique index `uq_peer_programming_cohorts_standing ON (is_standing) WHERE is_standing` guarantees at most one standing row. The standing row persists across weeks and is found by `is_standing = TRUE`, not by the current week. Ordinary weekly cohorts keep `is_standing = FALSE`.
 3. `peer_programming_cohort_members` — Cohort membership (id, cohort_id, user_id).
 4. `peer_programming_messages` — Cohort messages with threaded replies (id, cohort_id, author_user_id, parent_message_id, body, tier).
 5. `peer_programming_feedback` — Structured feedback (id, cohort_id, user_id, issue_type, suggestion_category, release_surface, note).
@@ -162,6 +188,7 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-06-26: **Single standing, always-open Cohort 1 mode (owner directive, low population).** Added the server flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT`, read by one resolver `isPeerProgrammingSingleOpenCohortEnabled()` in `lib/peer-programming/constants.ts`; it **defaults ON** (unset/empty = ON; only `0`/`false` turns it OFF). Added an `is_standing BOOLEAN NOT NULL DEFAULT FALSE` column to `peer_programming_cohorts` in `schema.sql` and `schema.demo.sql` (`ALTER TABLE IF EXISTS … ADD COLUMN IF NOT EXISTS`) plus a partial-unique index `uq_peer_programming_cohorts_standing ON (is_standing) WHERE is_standing` so there can only ever be one standing row. New repository helper `ensureStandingCohort(actorId)` find-or-creates the single standing cohort (label `C1`, `fallback_open = TRUE`, `is_standing = TRUE`), idempotent and race-safe via `ON CONFLICT (is_standing) WHERE is_standing DO NOTHING`. When the mode is ON: `getMyCohort` resolves the standing cohort (regardless of week) and idempotently joins the requesting (already access-gated) member so any active member can post, not just listen; `listActiveCohorts`/`getCohortById`/`listManagedCohorts` include the standing cohort regardless of week; and `runWeeklyAssignment` (cron + admin manual run) pauses the weekly split — it ensures the standing cohort exists and idempotently joins all provided active members into it with the same per-user+week notifications, creating no `C2`/`C3` (returns `cohortsCreated: 1`). When the flag is OFF the original weekly cohorting is byte-for-byte unchanged. Documented the flag in `.claude/rules/123-environment-configuration-rules.mdc`. Updated the seed script to set `is_standing` explicitly. No new API route or command added. Web typecheck + eslint + EOF + inventory-drift checks clean.
 - 2026-06-25: **Documented the `peer_programming_admin_audit_trail` table** (inventory-debt burn-down — documentation catch-up, no code change). Added it as item 7 in "Tables Owned by This Plugin": the immutable admin-action audit trail (one row per privileged command, `allow`/`deny` outcome captured), retained on account deletion for compliance. Verified against `schema.sql`, `lib/peer-programming/repository.ts`, and `lib/account/deletion-registry.ts`. Removed `peer_programming_admin_audit_trail` from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-23: **Android parity — live video Session tab (#555).** The React Native Session tab now joins the same per-cohort GetStream video call as web, replacing the static placeholder. (1) `joinSession()` in `packages/mobile/src/features/peer-programming/api.ts` calls `POST /api/peer-programming/session/join` through `authedFetch` (Clerk bearer + `x-ctf-csrf` header) and returns a typed result: `ok` with the credential shape (`cohortId`, `displayName`, `streamApiKey`, `streamCallId`, `streamUserId`, `streamToken`), `no-cohort` (404), `stream-disabled` (503), or `error`. (2) New `PeerProgrammingSessionCall.tsx` renders the live call with `@stream-io/video-react-native-sdk`, reusing the Chyme `ChymeAudioRoom` lifecycle pattern (create the `StreamVideoClient`, join the `default` call, enable camera + mic, render one de-duplicated tile per participant via `ParticipantView`, mute/camera/leave controls, and `leave()` + `disconnectUser()` on unmount). (3) `pp-session-tab.tsx` adds a "Join Session" button above the cohort text room, with loading, error (retry), 404 ("you're not in a cohort yet — join a cohort"), and 503 ("live video unavailable") states; leaving the call returns to the tab. A read-only listener (viewing another cohort) sees a short note instead of a join button, because the call is always the caller's own cohort. No new call is created — mobile members join the existing per-cohort call. Added quota note `ctf/docs/quota-impact/2026-06-23-mobile-peer-programming-session-video.md`. No schema or contract change — the join route, command/access/audit contracts, and `lib/peer-programming/stream.ts` already exist from the web work. Mobile typecheck + eslint (0 warnings) clean.
 - 2026-06-23: **Cohort assignment is now unlocked-only (bug fix).** Weekly assignment selected from `getActiveUserIdsLastDays(7)` (everyone who signed in within 7 days) with no Unlock check, so a person who signed into v3 but never completed Unlock — e.g. a v2 account returning to v3 — was placed into a cohort and shown as a member. Added `listUnlockedUserIds(userIds)` to the Unlock repository (one query against `unlock_verification_submissions` for `access_tier = 'approved_full'`) and filtered the recent-login set through it in both assignment routes (`app/api/internal/peer-programming/assignments/run` and `app/api/peer-programming/admin/assignments/run`) before forming cohorts. The admin **manual override** path is left unfiltered (an explicit admin choice). Filtering lives in the routes (the composition layer) so the peer-programming repository stays decoupled from Unlock. No schema or contract change.
