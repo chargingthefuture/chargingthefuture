@@ -228,6 +228,10 @@ contracts:
       exportType:
         type: string
         required: true
+        enum:
+          - summary
+          - skill-level
+          - sector
       filters:
         type: object
         required: false

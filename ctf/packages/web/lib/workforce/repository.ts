@@ -524,8 +524,10 @@ export async function createDeferredExportJob(actorId: string, exportType: strin
     completed_at: Date | null;
   }>(
     `
-      INSERT INTO workforce_export_jobs (status, export_type, created_by_user_id, completed_at)
-      VALUES ('deferred', $1, $2, NOW())
+      -- A deferred job has not completed, so completed_at is left NULL (it defaults to NULL).
+      -- Only a job that actually finishes should carry a completed_at timestamp.
+      INSERT INTO workforce_export_jobs (status, export_type, created_by_user_id)
+      VALUES ('deferred', $1, $2)
       RETURNING id, status, export_type, created_by_user_id, created_at, completed_at
     `,
     [exportType, actorId],
