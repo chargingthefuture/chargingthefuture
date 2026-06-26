@@ -17,8 +17,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sec
   try {
     const items = await fetchSectorReport();
     const normalizedSector = sector.toLowerCase();
+    // `all` returns the full breakdown (the dashboard uses this); a specific sector returns only its own
+    // bucket, so a single-sector request never leaks the whole cross-sector dataset. Output is `{ items }`
+    // per the workforce.report.sector.fetch contract in both cases.
+    if (normalizedSector === 'all') {
+      return NextResponse.json({ items }, { status: 200 });
+    }
     const bucket = items.find((item) => item.bucket.toLowerCase() === normalizedSector) ?? null;
-    return NextResponse.json({ bucket, items }, { status: 200 });
+    return NextResponse.json({ items: bucket ? [bucket] : [] }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'reports_sector_sector' });
     return NextResponse.json(
