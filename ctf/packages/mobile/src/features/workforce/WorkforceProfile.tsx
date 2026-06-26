@@ -1,53 +1,65 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { usePluginAuth } from '../peer-programming/usePluginAuth';
+import { WorkforceProfileCard } from './WorkforceProfileCard';
+import { fetchWorkforceProfile } from './api';
+import type { WorkforceProfileData } from './api';
 
-
-import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Button } from 'react-native';
-
-// Placeholder generic auth context
-const AuthContext = React.createContext({ isAuthenticated: false, signIn: () => {} });
-
-type Profile = {
-  name: string;
-  role: string;
-  skills: string[];
-  region: string;
-  status: string;
-};
-
+// Standalone "My Workforce Profile" screen.
+// Binds to GET /api/workforce/profile through the shared authedFetch wrapper
+// (Clerk bearer token attached) and renders only fields the API returns
+// (occupationName, skillLevel, region, recruitedState) via WorkforceProfileCard.
+// The profile is a read-only Directory-derived view; there is no editor.
+const COLOR = '#F97316';
 
 export function WorkforceProfile() {
-  const auth = useContext(AuthContext);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { auth, loading: authLoading } = usePluginAuth('clerk');
+
+  const [profile, setProfile] = useState<WorkforceProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!auth?.isAuthenticated) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchWorkforceProfile();
+      setProfile(result);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load workforce profile');
+    } finally {
+      setLoading(false);
+    }
+  }, [auth]);
 
   useEffect(() => {
-    // TODO: Replace with real API call
-    setTimeout(() => {
-      setProfile(null);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    if (!authLoading) void load();
+  }, [authLoading, load]);
 
-  if (!auth.isAuthenticated) {
+  if (authLoading || (auth?.isAuthenticated && loading)) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.header}>Sign in required</Text>
-        <Text style={styles.empty}>Please sign in to view your Workforce profile.</Text>
-        <Button title="Sign In" onPress={auth.signIn} />
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={COLOR} />
       </View>
     );
   }
 
-  if (loading) {
+  if (!auth?.isAuthenticated) {
     return (
-      <View style={styles.container}><ActivityIndicator size="large" color="#6366F1" /></View>
+      <View style={styles.container}>
+        <Text style={styles.header}>My Workforce Profile</Text>
+        <Text style={styles.empty}>Sign in to view your Workforce profile.</Text>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}><Text style={styles.error}>{error}</Text></View>
+      <View style={styles.container}>
+        <Text style={styles.header}>My Workforce Profile</Text>
+        <Text style={styles.error}>{error}</Text>
+      </View>
     );
   }
 
@@ -55,44 +67,32 @@ export function WorkforceProfile() {
     return (
       <View style={styles.container}>
         <Text style={styles.header}>My Workforce Profile</Text>
-        <Text style={styles.empty}>No profile data found. Complete your profile to get started.</Text>
+        <Text style={styles.empty}>
+          No workforce profile yet. Complete your Directory profile to appear in workforce data.
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>My Workforce Profile</Text>
-      <View style={styles.section}>
-        <Text style={styles.label}>Name:</Text>
-        <Text style={styles.value}>{profile.name}</Text>
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Role:</Text>
-        <Text style={styles.value}>{profile.role}</Text>
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Skills:</Text>
-        <Text style={styles.value}>{profile.skills.join(', ')}</Text>
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Region:</Text>
-        <Text style={styles.value}>{profile.region}</Text>
-      </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Status:</Text>
-        <Text style={styles.value}>{profile.status}</Text>
-      </View>
-    </View>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <WorkforceProfileCard profile={profile} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: '#0F1117' },
+  scrollContent: { padding: 16 },
   container: { flex: 1, backgroundColor: '#0F1117', padding: 16 },
+  center: {
+    flex: 1,
+    backgroundColor: '#0F1117',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
   header: { fontSize: 24, fontWeight: 'bold', color: '#E8EAF0', marginBottom: 20 },
-  section: { marginBottom: 14 },
-  label: { fontSize: 16, color: '#6366F1', fontWeight: '600' },
-  value: { fontSize: 16, color: '#E8EAF0', marginLeft: 8 },
-  empty: { fontSize: 16, color: '#9CA3AF', marginTop: 24 },
+  empty: { fontSize: 16, color: '#9CA3AF', marginTop: 24, lineHeight: 24 },
   error: { fontSize: 16, color: '#EF4444', marginTop: 24 },
 });
