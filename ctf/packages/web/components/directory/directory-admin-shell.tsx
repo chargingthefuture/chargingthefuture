@@ -66,6 +66,13 @@ export interface AdminDirectoryProfile {
   unclaimedHandle: string | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // Payment addresses are part of the GET /api/directory/admin/profiles response
+  // shape (mirroring the mobile DirectoryListItem). They are member-owned and are
+  // not editable from the admin shell, so they are preserved untouched on save.
+  venmoAddress?: string | null;
+  moneroAddress?: string | null;
+  bitcoinAddress?: string | null;
+  serviceCreditsAddress?: string | null;
 }
 
 type FilterKey = "All" | "Claimed" | "Unclaimed";

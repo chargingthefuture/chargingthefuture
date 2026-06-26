@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { createAnnouncement, listDirectoryAnnouncements, validateAnnouncementInput } from 'lib/directory/repository';
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
+import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 
 type AnnouncementBody = Partial<DirectoryAnnouncementInput>;
@@ -58,6 +59,17 @@ export async function POST(request: Request) {
 
   const input = parseBody(body);
   if (!validateAnnouncementInput(input)) {
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'deny',
+      reason: 'invalid_payload',
+      targetType: 'announcement',
+      targetId: 'pending',
+      result: 'failure',
+      errorCategory: 'validation',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid announcement payload.' },
       { status: 400 },
@@ -66,9 +78,32 @@ export async function POST(request: Request) {
 
   try {
     const announcement = await createAnnouncement(gate.auth.userId, input);
+
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'announcement',
+      targetId: announcement.id,
+      result: 'success',
+      errorCategory: null,
+    });
+
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements' });
+    logDirectoryAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.announcement.upsert',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'announcement',
+      targetId: 'pending',
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to create announcement.' },
       { status: 503 },
