@@ -38,14 +38,16 @@ function badRequest(message: string): NextResponse {
 // stable code ('invalid_rate' / 'invalid_interval') that maps to a clear member-facing 400; anything
 // else is a persistence failure.
 export async function PUT(request: Request) {
-  const gate = await requireFoundationReadAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
+  // CSRF first, then auth — the canonical mutation order across this plugin (e.g. connections/threads),
+  // so a cross-origin request is bounced before it reaches the auth subsystem (issue #989).
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  const gate = await requireFoundationReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
 
   let body: InstantCallBody;

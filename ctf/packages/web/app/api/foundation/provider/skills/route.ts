@@ -27,14 +27,16 @@ export async function GET() {
 // Replace the member's set of offered skills. Only skills they actually list on their own claimed
 // Directory profile are accepted; the server returns the accepted set.
 export async function PUT(request: Request) {
-  const gate = await requireFoundationReadAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
+  // CSRF first, then auth — the canonical mutation order across this plugin (e.g. connections/threads),
+  // so a cross-origin request is bounced before it reaches the auth subsystem (issue #989).
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  const gate = await requireFoundationReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
 
   let body: { skillIds?: unknown };
