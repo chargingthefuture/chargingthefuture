@@ -20,6 +20,7 @@
     "seed:workforce": "node ./scripts/seedWorkforce.mjs",
     "seed:skills-hunt": "node ./scripts/seedSkillsHunt.mjs",
     "smoke:skills-hunt": "node ./scripts/smokeSkillsHuntE2e.mjs",
+    "test-script:generate": "node ./scripts/generateManualTestScript.mjs",
     "seed:foundation": "node ./scripts/seedFoundation.mjs",
     "seed:lighthouse": "node ./scripts/seedLighthouse.mjs",
     "seed:socket-relay": "node ./scripts/seedSocketRelay.mjs",
