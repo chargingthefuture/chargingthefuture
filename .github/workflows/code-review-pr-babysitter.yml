@@ -109,6 +109,11 @@ jobs:
         with:
           anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_PAT }}
+          # Run fully unattended: this agent must run git/gh/pnpm and edit files to resolve the
+          # conflict. The action's `agent` mode applies its own permission mode and ignores the
+          # repo `.claude/settings.json` bypassPermissions default, so without this flag every
+          # Bash/Edit call is denied and the conflict is never resolved.
+          claude_args: "--dangerously-skip-permissions"
           prompt: |
             A code-review auto PR has a merge conflict with main and cannot auto-merge. Resolve
             it, fully unattended. Follow CLAUDE.md, including the no-pleasantries / banned-term
