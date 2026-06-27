@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { COLOR, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
+import { COLOR, MAX_TAG_LENGTH, MAX_TAGS_PER_POST, SUBTLE } from "./sr-shared";
 import { CurrencySelect } from "@/components/shared/currency-select";
 import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
@@ -40,7 +40,9 @@ function TagEditor({
   const full = tags.length >= MAX_TAGS_PER_POST;
 
   const addTag = (raw: string) => {
-    const tag = raw.trim().replace(/\s+/g, " ");
+    // Truncate to the server's max so a long tag can't be added and then bounce off the API as an
+    // invalid payload — the form stays the source of truth for what is submittable.
+    const tag = raw.trim().replace(/\s+/g, " ").slice(0, MAX_TAG_LENGTH);
     if (!tag || full) return;
     if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
     onChange([...tags, tag]);
