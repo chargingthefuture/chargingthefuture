@@ -359,10 +359,21 @@ export function SkillsTaxonomy() {
   const isAdmin = user?.isAdmin ?? false;
 
   const [sectors, setSectors] = useState<TaxonomyHierarchySector[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isAuthenticated);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // The hierarchy endpoint requires an authenticated caller. When the viewer is
+    // not signed in we skip the fetch entirely and render the public splash with
+    // zeroed counts — issuing the request without a token would 401 and the error
+    // would be swallowed, leaving a misleading empty state.
+    if (!isAuthenticated) {
+      setLoading(false);
+      setSectors([]);
+      setError(null);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -379,25 +390,17 @@ export function SkillsTaxonomy() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   if (loading) {
     return <LoadingScreen />;
   }
 
+  // Unauthenticated viewers always see the public splash (no real data is fetched
+  // for them, so counts are zero). Checked before the error branch so a transient
+  // signed-out fetch state never renders an error view.
   if (!isAuthenticated) {
-    const totalSkills = sectors.reduce(
-      (acc, s) => acc + s.jobTitles.reduce((a, jt) => a + jt.skills.length, 0),
-      0,
-    );
-    const totalJobs = sectors.reduce((acc, s) => acc + s.jobTitles.length, 0);
-    return (
-      <PublicScreen
-        sectorCount={sectors.length}
-        jobTitleCount={totalJobs}
-        skillCount={totalSkills}
-      />
-    );
+    return <PublicScreen sectorCount={0} jobTitleCount={0} skillCount={0} />;
   }
 
   if (error) {

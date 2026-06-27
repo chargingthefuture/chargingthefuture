@@ -68,7 +68,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_sectors
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -100,7 +100,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_sectors
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -129,7 +129,7 @@ contracts:
     dataAccess:
       - skills_taxonomy_sectors
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_destructive_governance
     retentionClass: audit_long_lived
     idempotency: false
@@ -157,7 +157,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_job_titles
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -189,7 +189,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_job_titles
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -218,7 +218,7 @@ contracts:
     dataAccess:
       - skills_taxonomy_job_titles
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_destructive_governance
     retentionClass: audit_long_lived
     idempotency: false
@@ -249,7 +249,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_skills
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -284,7 +284,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_skills
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -313,7 +313,7 @@ contracts:
     dataAccess:
       - skills_taxonomy_skills
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_destructive_governance
     retentionClass: audit_long_lived
     idempotency: false
@@ -351,3 +351,5 @@ contracts:
 changelog:
   - date: 2026-02-25
     change: Initial Skills Taxonomy command contract skeleton added with hierarchy reads, CRUD commands, and dependency-impact preview governance.
+  - date: 2026-06-27
+    change: Reconciled the audit data class name from skills_taxonomy_audit_log to skills_taxonomy_change_events to match the actual durable audit store written by the delete path; no skills_taxonomy_audit_log table exists.
