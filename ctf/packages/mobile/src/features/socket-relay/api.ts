@@ -120,6 +120,13 @@ export async function listMyRequests(): Promise<ListRequestsResponse> {
   return authedFetchJson<ListRequestsResponse>(`${BASE}/my-requests`);
 }
 
+// A stable per-attempt key so a retry of a lost-in-transit POST is treated as the same create
+// (the contract marks idempotencyKey as required). Generated once, before the fetch, so a retry
+// reuses it. Web mirrors this; the server falls back only when none is sent.
+function newIdempotencyKey(): string {
+  return `sr-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export async function createRequest(
   input: SocketRelayRequestInput,
 ): Promise<SocketRelayRequest> {
@@ -131,7 +138,7 @@ export async function createRequest(
         'Content-Type': 'application/json',
         'x-ctf-csrf': '1',
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ ...input, idempotencyKey: newIdempotencyKey() }),
     },
   );
   return data.item;

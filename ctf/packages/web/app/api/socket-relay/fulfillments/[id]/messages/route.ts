@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
 import { SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
-import { listFulfillmentMessages, sendFulfillmentMessage, validateMessageInput } from 'lib/socket-relay/repository';
+import { insertSocketRelayAudit, listFulfillmentMessages, sendFulfillmentMessage, validateMessageInput } from 'lib/socket-relay/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
@@ -62,6 +62,15 @@ export async function POST(request: Request, { params }: RouteProps) {
 
   try {
     const item = await sendFulfillmentMessage(id, gate.auth.userId, gate.auth.isAdmin, messageText, clientMessageId);
+    await insertSocketRelayAudit({
+      actorId: gate.auth.userId,
+      command: 'socket-relay.fulfillment.message.send',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'fulfillment',
+      targetId: id,
+      metadata: { messageId: item.id, moderationStatus: item.moderationStatus },
+    });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'fulfillments_id_messages' });

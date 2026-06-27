@@ -78,6 +78,9 @@ export type SrChatCredentials = {
 };
 
 export const MAX_TAGS_PER_POST = 3;
+// Mirrors the server's SOCKET_RELAY_MAX_TAG_LENGTH so a too-long tag is caught in the form
+// instead of bouncing off the server as an invalid payload.
+export const MAX_TAG_LENGTH = 64;
 const MAX_FILTER_CHIPS = 10;
 
 export function requestTags(r: Pick<SrRequest, "category" | "tags">): string[] {

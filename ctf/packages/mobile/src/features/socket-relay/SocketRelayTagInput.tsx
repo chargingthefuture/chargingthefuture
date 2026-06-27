@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { MAX_TAGS_PER_POST } from './tags';
+import { MAX_TAG_LENGTH, MAX_TAGS_PER_POST } from './tags';
 
 const COLOR = '#FB923C';
 
@@ -25,7 +25,9 @@ export function SocketRelayTagInput({
   const full = tags.length >= MAX_TAGS_PER_POST;
 
   const addTag = (raw: string) => {
-    const tag = raw.trim().replace(/\s+/g, ' ');
+    // Truncate to the server's max so a long tag can't be added and then bounce off the API as an
+    // invalid payload — the form stays the source of truth for what is submittable.
+    const tag = raw.trim().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
     if (!tag || full) return;
     if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
     onChange([...tags, tag]);
