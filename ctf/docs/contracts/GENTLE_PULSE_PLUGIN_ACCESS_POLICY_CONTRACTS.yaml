@@ -1,6 +1,6 @@
 policies:
-  - pluginId: gentlepulse
-    command: gentlepulse.library.list
+  - pluginId: gentle-pulse
+    command: gentle-pulse.library.list
     version: 1.0.0
     requiredRoles:
       - member
@@ -9,7 +9,7 @@ policies:
       onlyActiveMeditations: true
     consentRequirements:
       scopes:
-        - gentlepulse_library_access
+        - gentle_pulse_library_access
       fallbackLawfulBasis: explicit_consent_required
     regionRestrictions:
       allowedTransferMechanisms:
@@ -22,8 +22,8 @@ policies:
       - actor_not_authenticated
       - cross_workspace_access
 
-  - pluginId: gentlepulse
-    command: gentlepulse.meditation.play.record
+  - pluginId: gentle-pulse
+    command: gentle-pulse.meditation.play.record
     version: 1.0.0
     requiredRoles:
       - member
@@ -32,7 +32,7 @@ policies:
       meditationMustBeActive: true
     consentRequirements:
       scopes:
-        - gentlepulse_engagement_tracking
+        - gentle_pulse_engagement_tracking
       fallbackLawfulBasis: explicit_consent_required
     regionRestrictions:
       allowedTransferMechanisms:
@@ -45,8 +45,8 @@ policies:
       - actor_not_authenticated
       - meditation_not_active
 
-  - pluginId: gentlepulse
-    command: gentlepulse.rating.upsert
+  - pluginId: gentle-pulse
+    command: gentle-pulse.rating.upsert
     version: 1.0.0
     requiredRoles:
       - member
@@ -56,7 +56,7 @@ policies:
       ratingBoundsValidation: required
     consentRequirements:
       scopes:
-        - gentlepulse_feedback
+        - gentle_pulse_feedback
       fallbackLawfulBasis: explicit_consent_required
     regionRestrictions:
       allowedTransferMechanisms:

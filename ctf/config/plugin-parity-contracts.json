@@ -74,8 +74,8 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "gentlepulse",
-      "mobileFeatureDirs": ["gentlepulse"],
+      "slug": "gentle-pulse",
+      "mobileFeatureDirs": ["gentle-pulse"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },

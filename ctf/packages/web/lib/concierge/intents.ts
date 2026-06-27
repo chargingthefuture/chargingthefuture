@@ -82,7 +82,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: 'I want a private record of what happened — and a check-in for when I get home.',
   },
   {
-    slug: 'gentlepulse',
+    slug: 'gentle-pulse',
     name: 'GentlePulse',
     blurb: 'A short, guided breath — nothing to download.',
     keywords: [

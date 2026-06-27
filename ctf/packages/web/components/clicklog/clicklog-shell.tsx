@@ -22,6 +22,7 @@ export function ClicklogShell() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [incidents, setIncidents] = useState<ClicklogIncident[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
   const [geo, setGeo] = useState<Geo>({});
@@ -40,6 +41,7 @@ export function ClicklogShell() {
       if (!res.ok) throw new Error("Failed to fetch incidents");
       const data = (await res.json()) as { incidents: ClicklogIncident[]; count: number };
       setIncidents(data.incidents);
+      setTotalCount(typeof data.count === "number" ? data.count : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch incidents");
     } finally {
@@ -96,7 +98,7 @@ export function ClicklogShell() {
     try {
       const res = await fetch("/api/clicklog", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ metadata }),
       });
       if (!res.ok) throw new Error("Failed to log incident");
@@ -119,7 +121,7 @@ export function ClicklogShell() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/clicklog/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/clicklog/${id}`, { method: "DELETE", headers: { "x-ctf-csrf": "1" } });
       if (!res.ok) throw new Error("Failed to delete incident");
       await fetchIncidents();
     } catch (e) {
@@ -136,6 +138,10 @@ export function ClicklogShell() {
   }
 
   const stats = deriveClicklogStats(incidents);
+  // The GET response is capped at 50 incidents but returns the true DB `count`. Use
+  // that for the headline total so a user with >50 incidents sees the real number;
+  // fall back to the loaded array length if `count` is unavailable.
+  const displayTotal = totalCount ?? stats.total;
 
   const content = (
     <>
@@ -177,7 +183,7 @@ export function ClicklogShell() {
             <AlertTriangle size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Incident Log</div>
-              <div style={{ fontSize: 11, color: t.MUTED }}>{stats.total} incidents total</div>
+              <div style={{ fontSize: 11, color: t.MUTED }}>{displayTotal} incidents total</div>
             </div>
           </div>
         </div>
@@ -189,14 +195,14 @@ export function ClicklogShell() {
   return (
     <div style={{ display: "flex", height: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, overflow: "hidden" }}>
       <ClicklogIconRail />
-      <ClicklogSidebar total={stats.total} weekdayCounts={stats.weekdayCounts} />
+      <ClicklogSidebar total={displayTotal} weekdayCounts={stats.weekdayCounts} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
         <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, background: t.HEADER, flexShrink: 0 }}>
           <AlertTriangle size={18} color={t.ACCENT} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Incident Log</div>
-            <div style={{ fontSize: 12, color: t.MUTED }}>Personal safety tracking — {stats.total} incidents total</div>
+            <div style={{ fontSize: 12, color: t.MUTED }}>Personal safety tracking — {displayTotal} incidents total</div>
           </div>
         </header>
 

@@ -37,7 +37,7 @@ export function GentlePulseShell() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/gentlepulse/library", { signal: controller.signal });
+        const res = await fetch("/api/gentle-pulse/library", { signal: controller.signal });
         if (!res.ok) throw new Error("Failed to load wellness content");
         const data = await res.json() as { sessions?: Session[]; categories?: string[] };
         if (!didAbort) {
@@ -62,7 +62,7 @@ export function GentlePulseShell() {
     setPlaying(sessionId);
     setTab("playing");
     try {
-      await fetch(`/api/gentlepulse/library/${sessionId}/play`, { method: "POST" });
+      await fetch(`/api/gentle-pulse/library/${sessionId}/play`, { method: "POST" });
     } catch {
       // Fire-and-forget play tracking
     }
@@ -72,7 +72,7 @@ export function GentlePulseShell() {
     setSubmitting(true);
     try {
       const method = isFav ? "DELETE" : "POST";
-      await fetch(`/api/gentlepulse/library/${sessionId}/favorite`, { method });
+      await fetch(`/api/gentle-pulse/library/${sessionId}/favorite`, { method });
       setFavorites((prev) => {
         const next = new Set(prev);
         if (isFav) next.delete(sessionId); else next.add(sessionId);

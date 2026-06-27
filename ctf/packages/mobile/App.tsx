@@ -25,7 +25,7 @@ import { SocketRelay, AdminSocketRelay } from './src/features/socket-relay';
 import { TrustTransport, AdminTrustTransport } from './src/features/trust-transport';
 import { PeerProgramming, AdminPeerProgramming } from './src/features/peer-programming';
 import { Mood } from './src/features/mood';
-import { GentlePulse } from './src/features/gentlepulse';
+import { GentlePulse } from './src/features/gentle-pulse';
 import { WeeklyPerformance, AdminWeeklyPerformance } from './src/features/weekly-performance';
 import { Gdp, GdpRateAdmin } from './src/features/gdp';
 import { ServiceCredits, AdminServiceCredits } from './src/features/service-credits';
@@ -57,7 +57,7 @@ type FeatureKey =
   | 'trust-transport-admin'
   | 'peer-programming'
   | 'mood'
-  | 'gentlepulse'
+  | 'gentle-pulse'
   | 'weekly-performance'
   | 'weekly-performance-admin'
   | 'gdp'
@@ -94,7 +94,7 @@ const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'trust-transport-admin', label: 'TrustTransport Admin' },
   { key: 'peer-programming', label: 'PeerProgramming' },
   { key: 'mood', label: 'Mood' },
-  { key: 'gentlepulse', label: 'GentlePulse' },
+  { key: 'gentle-pulse', label: 'GentlePulse' },
   { key: 'weekly-performance', label: 'Weekly Performance' },
   { key: 'weekly-performance-admin', label: 'Weekly Performance Admin' },
   { key: 'gdp', label: 'GDP' },
@@ -164,7 +164,7 @@ function buildFeatureViews(
     'trust-transport-admin': () => <AdminTrustTransport />,
     'peer-programming': () => <PeerProgramming />,
     mood: () => <Mood />,
-    gentlepulse: () => <GentlePulse />,
+    'gentle-pulse': () => <GentlePulse />,
     'weekly-performance': () => <WeeklyPerformance />,
     'weekly-performance-admin': () => <AdminWeeklyPerformance />,
     gdp: () => <Gdp />,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireGentlePulseWriteAccess } from 'lib/gentlepulse/_lib';
-import { upsertRating } from 'lib/gentlepulse/repository';
+import { ensureMutationCsrf, requireGentlePulseWriteAccess } from 'lib/gentle-pulse/_lib';
+import { upsertRating } from 'lib/gentle-pulse/repository';
 
 type ItemParams = {
   params: Promise<{ itemId: string }>;
@@ -25,11 +25,11 @@ export async function PUT(request: Request, context: ItemParams) {
   try {
     body = (await request.json()) as RatingBody;
   } catch {
-    return NextResponse.json({ ok: false, code: 'gentlepulse_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+    return NextResponse.json({ ok: false, code: 'gentle_pulse_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
   if (typeof body.rating !== 'number') {
-    return NextResponse.json({ ok: false, code: 'gentlepulse_invalid_payload', message: 'rating is required.' }, { status: 400 });
+    return NextResponse.json({ ok: false, code: 'gentle_pulse_invalid_payload', message: 'rating is required.' }, { status: 400 });
   }
 
   const { itemId } = await context.params;
@@ -38,6 +38,6 @@ export async function PUT(request: Request, context: ItemParams) {
     await upsertRating({ userId: gate.auth.userId, itemId, rating: body.rating });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch {
-    return NextResponse.json({ ok: false, code: 'gentlepulse_invalid_payload', message: 'Invalid rating payload.' }, { status: 400 });
+    return NextResponse.json({ ok: false, code: 'gentle_pulse_invalid_payload', message: 'Invalid rating payload.' }, { status: 400 });
   }
 }

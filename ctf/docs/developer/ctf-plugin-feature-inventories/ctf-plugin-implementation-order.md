@@ -47,7 +47,7 @@ Then, in order:
 10. `trusttransport` — no dependency.
 11. `peer-programming` — no dependency.
 12. `mood` — no dependency.
-13. `gentlepulse` — no dependency.
+13. `gentle-pulse` — no dependency.
 14. `weekly-performance` — no dependency.
 15. `gross-domestic-product` — best after upstream metric/event semantics settle (#5–#14).
 16. `service-credits` — blocked by #15 (GDP accounting/reclaim coupling); sequencing it after GDP reduces rework.
