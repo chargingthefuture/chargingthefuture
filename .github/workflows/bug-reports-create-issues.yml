@@ -13,7 +13,11 @@ name: Bug Reports — Create Github Issues
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 */8 * * *"   # every 8 hours (00:00, 08:00, 16:00 UTC)
+    # Every 8 hours at 00:13, 08:13, 16:13 UTC. Offset to :13 on purpose: the
+    # top of the hour is crowded (generate-product-update also runs 0 */8, and
+    # several daily jobs fire at :00), so this is staggered off it to avoid a
+    # same-minute stampede that GitHub can delay under load.
+    - cron: "13 */8 * * *"
 
 jobs:
   create-triage-issues:
