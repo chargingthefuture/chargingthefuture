@@ -647,18 +647,12 @@ CREATE INDEX IF NOT EXISTS idx_account_deletion_events_user_scope
   ON account_deletion_events(user_id, scope, requested_at DESC);
 
 -- === skills-hunt-service-credits ===
-CREATE TABLE IF NOT EXISTS skills_hunt_service_credits_transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    from_user_id TEXT NOT NULL,
-    to_user_id TEXT NOT NULL,
-    amount INTEGER NOT NULL CHECK (amount > 0),
-    reason TEXT,
-    submission_id UUID REFERENCES skills_hunt_submissions(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_from_user ON skills_hunt_service_credits_transactions (from_user_id);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_to_user ON skills_hunt_service_credits_transactions (to_user_id);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_service_credits_submission_id ON skills_hunt_service_credits_transactions (submission_id);
+-- Dropped 2026-06-27: `skills_hunt_service_credits_transactions` was a member-to-member transfer log
+-- that was never wired into the reward flow. SkillsHunt is reward-only — the treasury mints the round
+-- reward to a scout on an accepted nomination (recorded in the canonical ServiceCredits ledger +
+-- `skills_hunt_submissions.credit_*`). The peer-transfer route that would have written here was removed
+-- (#1105). Drop the unused table; nothing references it.
+DROP TABLE IF EXISTS skills_hunt_service_credits_transactions CASCADE;
 
 CREATE TABLE IF NOT EXISTS feed_render_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
