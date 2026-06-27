@@ -13,7 +13,9 @@ export async function GET(request: Request) {
   }
 
   const limitParam = Number(new URL(request.url).searchParams.get('limit') ?? 50);
-  const limit = Number.isFinite(limitParam) ? limitParam : 50;
+  // Cap the caller-supplied page size so a member cannot request an arbitrarily large ledger dump.
+  // The repository also clamps to [1, 200]; this enforces the same ceiling at the route boundary.
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 200) : 50;
 
   try {
     const entries = await listWalletLedgerEntries(gate.auth.userId, limit);

@@ -22,7 +22,10 @@ commands:
       properties:
         userId:
           type: string
-      required: [userId]
+      # userId is optional: the list route never accepts a caller-supplied userId — it
+      # always derives the user from the authenticated Clerk token server-side and scopes
+      # the query to the caller's own incidents. Marking it required would put the declared
+      # contract out of step with both clients, which send no userId.
     outputSchema:
       type: object
       properties:

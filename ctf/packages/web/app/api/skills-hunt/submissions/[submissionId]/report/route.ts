@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { createReport, validateCreateReportInput, type CreateReportInput } from 'lib/skills-hunt/moderation';
+import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 
@@ -47,6 +48,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     const report = await withDbTransaction((client) =>
       createReport(client, gate.auth.userId, gate.auth.username, input),
     );
+
+    await insertSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.submission.report',
+      policyStatus: 'allow',
+      reason: 'community_moderation',
+      targetType: 'submission',
+      targetId: submissionId,
+      metadata: { reportId: report.id, reason: input.reason, directoryProfileId: input.directoryProfileId },
+    });
+
     return NextResponse.json({ ok: true, report }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'submissions_submissionid_report' });

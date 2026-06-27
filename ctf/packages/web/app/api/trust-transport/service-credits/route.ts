@@ -12,14 +12,14 @@ type TrustTransportServiceCreditsSendInput = {
 };
 
 export async function POST(request: Request) {
-  const gate = await requireTrustTransportReadAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  const gate = await requireTrustTransportReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
   }
 
   let input: TrustTransportServiceCreditsSendInput;

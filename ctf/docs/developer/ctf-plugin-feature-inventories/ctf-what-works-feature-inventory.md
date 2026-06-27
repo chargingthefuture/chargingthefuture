@@ -159,6 +159,21 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-06-27: Code-review batch (issues #1127–#1136). (1) `listAdminProblems` now selects an explicit
+  column list instead of `SELECT pr.*`, so a future identity column added to `what_works_problems` is
+  never auto-included in the admin response; output is unchanged (#1127). (2) The endorse/un-endorse
+  route (`/api/what-works/products/[id]/endorse`) wraps its DB writes and endorsement-state read in a
+  try/catch, reports the error, and returns a structured 500 instead of an unhandled rejection (#1132).
+  (3) Admin moderation UI: the rejection reason is now an inline, themable textarea with a length
+  hint (replacing the blocking `window.prompt`), and both product and problem deletes use an inline
+  two-step confirm (replacing `window.confirm`) — same data and endpoints, no contract change (#1131,
+  #1135). (4) Documentation-only clarifications: a teaser-scope note on the mobile `fetchPublicList`
+  stats (#1134), a note that the mobile suggest form intentionally omits `kind`/`emoji` (server stores
+  empty strings; admin can fill in during review) (#1133), and a scale/pagination note on
+  `getReaderList` (#1136). Reviewed and not changed: #1129 — `updateProblem`'s `COALESCE` lets an
+  explicit empty `context` clear that optional field while the required `title` cannot be blanked
+  (uses `readTrimmedString`); this is the intended, consistent behavior for the always-send admin edit
+  form, and an explicit null sentinel would be an unneeded API contract change.
 - 2026-06-26: Hyphenation/cleanup rename (hard cutover, no back-compat alias). The plugin slug,
   folder names, every route, and the command/audit namespace moved from `whatworks` to the
   kebab-case `what-works` (so `/api/whatworks/*` no longer exists — `/api/what-works/*` is the only

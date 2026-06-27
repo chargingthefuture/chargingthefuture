@@ -54,6 +54,9 @@ export interface TripRequest {
   priceCurrency?: string | null;
   priceAmount?: number | null;
   createdAt?: string;
+  // The trip id once an offer has been accepted. Chat is keyed by trip id, so opening chat needs this
+  // (a request id is not a trip id). Null/absent until a trip exists.
+  tripId?: string | null;
 }
 
 // Plain label for how a ride is settled (issue #420). Honors the ServiceCredits rule (never the bare
