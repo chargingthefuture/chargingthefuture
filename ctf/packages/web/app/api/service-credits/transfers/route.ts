@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  if (!body.recipientUserId || typeof body.amount !== 'number' || !body.idempotencyKey) {
+  if (!body.recipientUserId || typeof body.amount !== 'number' || !(body.amount > 0) || !Number.isFinite(body.amount) || !body.idempotencyKey) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'recipientUserId, amount and idempotencyKey are required.' }, { status: 400 });
   }
 

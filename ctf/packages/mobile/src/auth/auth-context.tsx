@@ -34,6 +34,8 @@ export interface AuthUser {
   id: string;
   username?: string | null;
   email?: string | null;
+  /** Normalized lowercase role claim (e.g. 'admin', 'operations'), or null. */
+  role?: string | null;
   isAdmin?: boolean;
   isApproved?: boolean;
   provider?: string | null;
@@ -85,6 +87,7 @@ function deriveUserFromClaims(claims: Record<string, unknown> | null): AuthUser 
       (typeof claims.username === 'string' ? claims.username : null) ??
       (typeof metadata.username === 'string' ? (metadata.username as string) : null),
     email: typeof claims.email === 'string' ? claims.email : null,
+    role,
     isAdmin: role === 'admin',
     isApproved:
       typeof approved === 'boolean'

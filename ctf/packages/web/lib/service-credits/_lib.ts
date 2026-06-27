@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from '../auth/server-authz';
 import { ensureServiceCreditsAdmin } from './policy';
 import { checkMutationOrigin } from '../auth/csrf';
+import { pluginAuthDeny } from '../auth/deny-taxonomy';
 
 export async function requireServiceCreditsReadAccess() {
   const decision = await evaluatePluginAccess({ requireUsername: false });
@@ -20,6 +21,27 @@ export async function requireServiceCreditsAdminAccess() {
 
   const deny = ensureServiceCreditsAdmin(gate.auth);
   if (deny) {
+    return { allowed: false as const, response: NextResponse.json(deny, { status: deny.status }) };
+  }
+
+  return gate;
+}
+
+// Escrow hold/release/refund are system/service-level operations, not self-service: the access
+// policy contract restricts them to the 'service', 'system', or 'dispute_moderator' roles. An admin
+// always qualifies. A plain authenticated member (any other role) is denied here so they cannot
+// create, release, or refund escrow holds against another member's balance.
+const SERVICE_CREDITS_ESCROW_ROLES = new Set(['service', 'system', 'dispute_moderator', 'admin']);
+
+export async function requireServiceCreditsServiceAccess() {
+  const gate = await requireServiceCreditsReadAccess();
+  if (!gate.allowed) {
+    return gate;
+  }
+
+  const role = gate.auth.role;
+  if (!gate.auth.isAdmin && (!role || !SERVICE_CREDITS_ESCROW_ROLES.has(role))) {
+    const deny = pluginAuthDeny.forbiddenRole(['service', 'system', 'dispute_moderator']);
     return { allowed: false as const, response: NextResponse.json(deny, { status: deny.status }) };
   }
 

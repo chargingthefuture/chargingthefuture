@@ -144,9 +144,16 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     setSelectedRequest(req);
     setChatCredentials(null);
     setChatError(null);
+    // Chat is keyed by trip id, which only exists once an offer is accepted. The request id is not a
+    // trip id, so calling the chat route with it would always 404. Guard until a trip exists.
+    if (!req.tripId) {
+      setChatLoading(false);
+      setChatError("Chat opens once a driver accepts this request.");
+      return;
+    }
     setChatLoading(true);
     try {
-      const res = await fetch(`/api/trust-transport/trips/${req.id}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
+      const res = await fetch(`/api/trust-transport/trips/${req.tripId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
       if (!res.ok) throw new Error("Failed to fetch chat credentials");
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "No chat credentials");

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import { Menu } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -128,7 +128,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   const [sortMode, setSortMode] = useState<PluginSortMode>('recent');
   const [recentPluginSlugs, setRecentPluginSlugs] = useState<string[]>([]);
   const [pluginUsageCounts, setPluginUsageCounts] = useState<Record<string, number>>({});
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Self-heal an out-of-date signed-out render. A back/forward navigation can restore a
   // cached "guest" version of this route (the server resolved the visitor before
@@ -263,15 +262,6 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
   return (
     <div className={`${styles.shell} ctf-self-responsive`}>
       <header className={styles.mobileBar}>
-        <button
-          type="button"
-          className={styles.mobileBarMenuBtn}
-          onClick={() => setMobileNavOpen((open) => !open)}
-          aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-          aria-expanded={mobileNavOpen}
-        >
-          <Menu size={18} />
-        </button>
         <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
           <button
             type="button"
@@ -292,6 +282,15 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
             Apps
           </button>
         </div>
+        {/* Admins reach /admin straight from the top bar on phones — the left rail
+            (which used to carry this link) is hidden on phones, so this replaces the
+            extra tap through the drawer. Admins only; hidden for everyone else. */}
+        {isAdmin ? (
+          <Link href="/admin" className={styles.mobileBarAdminBtn}>
+            <SlidersHorizontal size={15} aria-hidden="true" />
+            <span>Admin</span>
+          </Link>
+        ) : null}
         <div className={styles.mobileBarAuth}>
           {/* Help control on the phone-width top bar: the desktop icon rail (which
               hosts it) is hidden below 900px, so signed-in members reach the
@@ -310,22 +309,15 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
       </header>
       <div className={styles.frame}>
         <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
+        {/* Channel rail — desktop only. It is hidden on phones (single "general"
+            channel, no real navigation value yet), so there is no phone drawer to
+            slide it in; bring one back when there is more than one option to show. */}
         <ShellSidebar
           channels={channels}
           activeChannel={activeChannel}
           onChannelSelect={handleChannelSelect}
-          mobileOpen={mobileNavOpen}
-          onNavigate={() => setMobileNavOpen(false)}
           isAdmin={isAdmin}
         />
-        {mobileNavOpen ? (
-          <button
-            type="button"
-            className={styles.mobileBackdrop}
-            aria-label="Close navigation"
-            onClick={() => setMobileNavOpen(false)}
-          />
-        ) : null}
         <main className={`${styles.panel} ${styles.content}`}>
           {/* App-wide fundraiser banner — non-blocking, top of the content area, signed-in only.
               The banner self-hides unless a drive is active and visible for this member. */}

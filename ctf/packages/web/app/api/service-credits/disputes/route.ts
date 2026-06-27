@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createDispute, insertServiceCreditsAudit } from 'lib/service-credits/repository';
+import { createDispute, getTransferParties, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { ensureMutationCsrf, requireServiceCreditsReadAccess } from 'lib/service-credits/_lib';
 
 type DisputeBody = {
@@ -27,6 +27,19 @@ export async function POST(request: Request) {
 
   if (!body.transferId || !body.reason) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'transferId and reason are required.' }, { status: 400 });
+  }
+
+  // Ownership check: only a party to the transfer (its sender or recipient) may open a dispute on it.
+  // Without this any authenticated member could dispute a transfer they were never part of.
+  const parties = await getTransferParties(body.transferId);
+  if (!parties) {
+    return NextResponse.json({ ok: false, code: 'service_credits_transfer_not_found', message: 'Transfer not found.' }, { status: 404 });
+  }
+  if (parties.senderUserId !== gate.auth.userId && parties.recipientUserId !== gate.auth.userId) {
+    return NextResponse.json(
+      { ok: false, code: 'service_credits_dispute_forbidden', message: 'You can only dispute a transfer you were a party to.' },
+      { status: 403 },
+    );
   }
 
   const disputeId = await createDispute({ transferId: body.transferId, openedByUserId: gate.auth.userId, reason: body.reason });

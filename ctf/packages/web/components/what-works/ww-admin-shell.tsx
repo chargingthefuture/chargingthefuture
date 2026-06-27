@@ -92,8 +92,9 @@ export function WhatWorksAdminShell() {
     });
   }
 
-  function reviewProduct(id: string, action: 'approve' | 'reject'): void {
-    const rejectionReason = action === 'reject' ? window.prompt('Reason (optional, shown only to admins):') ?? undefined : undefined;
+  // Rejection reason now comes from an inline textarea in the products list (see ww-admin-products),
+  // not a blocking window.prompt: it is themable, testable, and never blocks the main thread.
+  function reviewProduct(id: string, action: 'approve' | 'reject', rejectionReason?: string): void {
     void run(id, async () => {
       const result = await adminMutate(`/api/what-works/admin/products/${id}`, 'PATCH', { action, rejectionReason });
       if (!result.ok) {
@@ -104,8 +105,9 @@ export function WhatWorksAdminShell() {
     });
   }
 
+  // Delete confirmation is now an inline step inside the products/problems lists (themable and
+  // testable), not a blocking window.confirm.
   function deleteProduct(id: string): void {
-    if (!window.confirm('Delete this suggestion permanently?')) return;
     void run(id, async () => {
       const result = await adminMutate(`/api/what-works/admin/products/${id}`, 'DELETE');
       if (!result.ok) {
@@ -170,7 +172,6 @@ export function WhatWorksAdminShell() {
   }
 
   function deleteProblem(problem: AdminProblem): void {
-    if (!window.confirm(`Delete “${problem.title}” and its ${problem.productCount} tool(s)? This cannot be undone.`)) return;
     void run(problem.id, async () => {
       const result = await adminMutate(`/api/what-works/admin/problems/${problem.id}`, 'DELETE');
       if (!result.ok) {
