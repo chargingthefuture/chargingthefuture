@@ -1,22 +1,40 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
-import type { SkillsHuntRoundInput } from 'lib/skills-hunt/types';
+import { getRound, insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
+import type { SkillsHuntRound, SkillsHuntRoundInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 
 type RoundBody = Partial<SkillsHuntRoundInput>;
 
-function toRoundInput(body: RoundBody): SkillsHuntRoundInput {
+// round.update is a partial update: every field is optional in the contract, so
+// a body that omits a field must preserve the round's existing value rather than
+// silently reset it to a default. Merge each present field over the current round.
+function mergeRoundInput(existing: SkillsHuntRound, body: RoundBody): SkillsHuntRoundInput {
   return {
-    name: typeof body.name === 'string' ? body.name : '',
-    description: typeof body.description === 'string' ? body.description : null,
-    status: body.status === 'active' || body.status === 'closed' || body.status === 'archived' ? body.status : 'draft',
-    startsAtIso: typeof body.startsAtIso === 'string' ? body.startsAtIso : new Date().toISOString(),
-    endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : new Date(Date.now() + 86400000).toISOString(),
-    scoringConfig: body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : {},
-    rewardCreditsPerAccept: typeof body.rewardCreditsPerAccept === 'number' ? body.rewardCreditsPerAccept : 0,
-    rewardPerUserRoundCap: typeof body.rewardPerUserRoundCap === 'number' ? body.rewardPerUserRoundCap : null,
+    name: typeof body.name === 'string' ? body.name : existing.name,
+    description:
+      body.description === undefined
+        ? existing.description
+        : typeof body.description === 'string'
+          ? body.description
+          : null,
+    status:
+      body.status === 'draft' || body.status === 'active' || body.status === 'closed' || body.status === 'archived'
+        ? body.status
+        : existing.status,
+    startsAtIso: typeof body.startsAtIso === 'string' ? body.startsAtIso : existing.startsAtIso,
+    endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : existing.endsAtIso,
+    scoringConfig:
+      body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : existing.scoringConfig,
+    rewardCreditsPerAccept:
+      typeof body.rewardCreditsPerAccept === 'number' ? body.rewardCreditsPerAccept : existing.rewardCreditsPerAccept,
+    rewardPerUserRoundCap:
+      body.rewardPerUserRoundCap === undefined
+        ? existing.rewardPerUserRoundCap
+        : typeof body.rewardPerUserRoundCap === 'number'
+          ? body.rewardPerUserRoundCap
+          : null,
   };
 }
 
@@ -43,7 +61,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
     );
   }
 
-  const input = toRoundInput(body);
+  const existing = await getRound(roundId);
+  if (!existing) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.roundNotFound, message: 'Round not found.' },
+      { status: 404 },
+    );
+  }
+
+  const input = mergeRoundInput(existing, body);
   if (!validateRoundInput(input)) {
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid round payload.' },

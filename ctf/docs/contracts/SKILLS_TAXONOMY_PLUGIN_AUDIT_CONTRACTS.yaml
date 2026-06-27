@@ -53,7 +53,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_taxonomy_sectors
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       sectorId: sector_identifier
@@ -75,7 +75,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_taxonomy_sectors
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       sectorId: sector_identifier
@@ -98,7 +98,7 @@ auditEvents:
     dataClassesAccessed:
       - skills_taxonomy_sectors
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       sectorId: sector_identifier
@@ -121,7 +121,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_taxonomy_job_titles
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       sectorId: sector_identifier
@@ -144,7 +144,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_taxonomy_job_titles
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       jobTitleId: job_title_identifier
@@ -167,7 +167,7 @@ auditEvents:
     dataClassesAccessed:
       - skills_taxonomy_job_titles
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       jobTitleId: job_title_identifier
@@ -190,7 +190,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_taxonomy_skills
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       jobTitleId: job_title_identifier
@@ -213,7 +213,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_taxonomy_skills
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       skillId: skill_identifier
@@ -236,7 +236,7 @@ auditEvents:
     dataClassesAccessed:
       - skills_taxonomy_skills
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     targetContext:
       workspaceId: workspace_identifier
       skillId: skill_identifier
@@ -274,3 +274,5 @@ auditEvents:
 changelog:
   - date: 2026-02-25
     change: Initial Skills Taxonomy audit contract skeleton added with policy decision evidence for reads, CRUD actions, and dependency-impact previews.
+  - date: 2026-06-27
+    change: Reconciled the audit data class name from skills_taxonomy_audit_log to skills_taxonomy_change_events to match the actual durable audit store written by the delete path; no skills_taxonomy_audit_log table exists.

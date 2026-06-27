@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { BookOpen, Lock, ChevronRight, UserPlus, LogIn } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -21,7 +22,65 @@ const WHY_JOIN = [
   { icon: '🗺️', t: 'GDP contribution', d: 'Each skill added grows the survivor-economy estimate.' },
 ];
 
-function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+type TaxonomyCounts = { skills: number; jobTitles: number; sectors: number };
+
+// Live public teaser counts (sectors / job titles / skills) from the unauthenticated summary endpoint.
+// Best-effort: while loading or on failure, `null` is returned and the UI falls back to neutral phrasing
+// rather than showing zeros or invented numbers. The counts are read live from the tables, so adding a
+// skill or job title is reflected here on the next visit.
+function useTaxonomySummary(): TaxonomyCounts | null {
+  const [counts, setCounts] = useState<TaxonomyCounts | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/skills-taxonomy/summary');
+        if (!res.ok) return;
+        const data = (await res.json()) as Partial<TaxonomyCounts>;
+        if (
+          !cancelled
+          && typeof data.skills === 'number'
+          && typeof data.jobTitles === 'number'
+          && typeof data.sectors === 'number'
+        ) {
+          setCounts({ skills: data.skills, jobTitles: data.jobTitles, sectors: data.sectors });
+        }
+      } catch {
+        // Teaser counts are non-essential; keep the neutral phrasing on any failure.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return counts;
+}
+
+function heroPillText(counts: TaxonomyCounts | null): string {
+  return counts
+    ? `${counts.skills.toLocaleString()} skills · ${counts.sectors.toLocaleString()} sectors · ${counts.jobTitles.toLocaleString()} job titles`
+    : 'Skills · sectors · job titles';
+}
+
+function StatTriplet({ counts, fontSize }: { counts: TaxonomyCounts; fontSize: number }) {
+  const items: Array<[number, string]> = [
+    [counts.skills, 'Skills'],
+    [counts.jobTitles, 'Job Titles'],
+    [counts.sectors, 'Sectors'],
+  ];
+  return (
+    <div style={{ display: 'flex', gap: 28 }}>
+      {items.map(([n, label]) => (
+        <div key={label}>
+          <div style={{ fontSize, fontWeight: 800, color: BRAND, lineHeight: 1.1 }}>{n.toLocaleString()}</div>
+          <div style={{ fontSize: 12, color: SUBTLE }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInUrl: string; verifyUrl?: string; counts: TaxonomyCounts | null }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -50,7 +109,7 @@ function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: stri
       <div style={{ padding: '48px 64px 32px', display: 'flex', gap: 48, alignItems: 'flex-start' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <span style={{ padding: '4px 14px', borderRadius: 20, background: `${BRAND}15`, border: `1px solid ${BRAND}30`, fontSize: 12, color: BRAND, fontWeight: 600, display: 'inline-block', width: 'fit-content' }}>
-            Skills · sectors · job titles
+            {heroPillText(counts)}
           </span>
           <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.15 }}>
             The survivor skills database<br />
@@ -59,6 +118,7 @@ function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: stri
           <p style={{ margin: 0, fontSize: 15, color: '#9CA3AF', maxWidth: 500, lineHeight: 1.7 }}>
             Browse every skill, job title, and sector represented by survivors worldwide. Sign in to search, filter, and match skills to real opportunities.
           </p>
+          {counts ? <StatTriplet counts={counts} fontSize={26} /> : null}
           <a href={verifyUrl ?? signInUrl} style={{ padding: '14px 32px', borderRadius: 10, background: BRAND, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
             {verifyUrl ? 'Finish verifying' : <>Sign in to explore <ChevronRight size={16} /></>}
           </a>
@@ -120,7 +180,7 @@ function DesktopSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: stri
   );
 }
 
-function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInUrl: string; verifyUrl?: string; counts: TaxonomyCounts | null }) {
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -151,6 +211,11 @@ function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: strin
         <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 16 }}>
           Every skill, job title, and sector represented by survivors. Sign in to search, filter, and trade with survivors who have the skills you need.
         </div>
+        {counts ? (
+          <div style={{ marginBottom: 16 }}>
+            <StatTriplet counts={counts} fontSize={22} />
+          </div>
+        ) : null}
         <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 12, background: BRAND, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', marginBottom: 16, textDecoration: 'none' }}>
           {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Create free account</>}
         </a>
@@ -187,17 +252,19 @@ function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl }: { signInUrl: strin
  * SkillsTaxonomyPublic (desktop) and MobileSkillsTaxonomyPublic (phone) design
  * mockups, with every sign-in affordance pointing at the real hosted sign-in URL.
  *
- * Real-data-only deviations from the mockup (no session = no live data): the
- * mockup's exact aggregate counts (128 skills, 47 job titles, 9 sectors), shown
- * in the hero pill, the stat triplet, and the stats strip, are hardcoded sample
- * figures, so they are replaced with neutral phrasing ("Skills · sectors · job
- * titles") rather than fabricated totals. The blurred sector/job-title preview
- * (Technology / Healthcare / Trades with named jobs and "Skill A/B/C" tags, and
- * the six named sector rows) renders as neutral blurred placeholder cards behind
- * the sign-in lock instead of invented taxonomy rows. The simulated phone status
- * bar is dropped because the real app renders inside the browser chrome.
+ * The mockup's aggregate counts (the hero pill, the stat triplet) are now LIVE: they come from the
+ * public, unauthenticated `/api/skills-taxonomy/summary` endpoint, which returns only counts of active
+ * sectors / job titles / skills (no taxonomy rows, no member data). The mockup's literal 128 / 47 / 9
+ * were sample figures — these update automatically as the taxonomy grows. While the counts load (or if
+ * the fetch fails) the hero pill falls back to neutral phrasing and the triplet is hidden, so nothing
+ * shows zeros or invented numbers. The blurred sector/job-title preview behind the sign-in lock stays
+ * neutral placeholder cards (no invented taxonomy rows). The simulated phone status bar is dropped
+ * because the real app renders inside the browser chrome.
  */
 export function SkillsTaxonomyPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  const counts = useTaxonomySummary();
+  return isMobile
+    ? <MobileSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} counts={counts} />
+    : <DesktopSkillsTaxonomyPublic signInUrl={signInUrl} verifyUrl={verifyUrl} counts={counts} />;
 }

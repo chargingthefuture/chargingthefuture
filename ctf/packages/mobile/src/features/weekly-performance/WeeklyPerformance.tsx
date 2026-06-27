@@ -58,6 +58,27 @@ const BLURRED_LABELS = [
   { label: 'GDP Delta', color: '#06B6D4' },
 ];
 
+// ── Access-restricted state (authenticated, but lacks admin/operations role) ──
+
+function WpAccessRestricted() {
+  return (
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Weekly Performance</Text>
+      </View>
+      <View style={styles.emptyBody}>
+        <View style={styles.emptyIcon}>
+          <Text style={styles.emptyIconText}>🔒</Text>
+        </View>
+        <Text style={styles.emptyTitle}>Access restricted</Text>
+        <Text style={styles.emptySub}>
+          Weekly Performance is available to administrators and the operations team only.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function WpPublic() {
   return (
     <View style={styles.root}>
@@ -270,6 +291,10 @@ function WpBottomNav({
 export const WeeklyPerformance: React.FC = () => {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const isAdmin = !!user?.isAdmin;
+  // The access-policy contract restricts every weekly-performance command to the
+  // admin and operations roles. The API enforces this server-side; gate the screen
+  // too so other authenticated members get a clear message, not silent API errors.
+  const hasAccess = isAdmin || user?.role === 'operations';
 
   const [tab, setTab] = useState<Tab>('metrics');
   const [weeks, setWeeks] = useState<WeekRow[]>([]);
@@ -280,9 +305,9 @@ export const WeeklyPerformance: React.FC = () => {
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch weeks + current week when authenticated
+  // Fetch weeks + current week when authenticated and authorized
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !hasAccess) return;
     setDataLoading(true);
     setError(null);
     Promise.all([fetchWeeks(), fetchCurrentWeek()])
@@ -297,7 +322,7 @@ export const WeeklyPerformance: React.FC = () => {
         setError(e instanceof Error ? e.message : 'Failed to load data');
       })
       .finally(() => setDataLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, hasAccess]);
 
   // Fetch metrics whenever selected week changes
   useEffect(() => {
@@ -314,6 +339,7 @@ export const WeeklyPerformance: React.FC = () => {
 
   if (authLoading) return <WpLoading />;
   if (!isAuthenticated) return <WpPublic />;
+  if (!hasAccess) return <WpAccessRestricted />;
   if (dataLoading) return <WpLoading />;
 
   const weekLabel = selectedWeek

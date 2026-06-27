@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
 
 type WeekRow = {
@@ -146,6 +145,6 @@ export async function insertWeeklyPerformanceAudit(input: {
     `INSERT INTO weekly_performance_audit_trail
       (id, actor_id, command, policy_status, reason, target_type, target_id, metadata)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-    [randomUUID(), input.actorId, input.command, input.policyStatus, input.reason, input.targetType, input.targetId, JSON.stringify(input.metadata ?? {})],
+    [crypto.randomUUID(), input.actorId, input.command, input.policyStatus, input.reason, input.targetType, input.targetId, JSON.stringify(input.metadata ?? {})],
   );
 }
