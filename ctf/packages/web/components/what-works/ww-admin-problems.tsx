@@ -48,6 +48,9 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
   const [editTitle, setEditTitle] = useState('');
   const [editContext, setEditContext] = useState('');
 
+  // Inline two-step delete confirmation (replaces window.confirm).
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
   async function create(): Promise<void> {
     if (!title.trim() || creating) return;
     const ok = await onCreate({ emoji: emoji.trim(), title: title.trim(), context: context.trim() });
@@ -138,9 +141,25 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
                 <button type="button" disabled={busy} onClick={() => onToggleActive(problem)} style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                   {problem.is_active ? 'Deactivate' : 'Activate'}
                 </button>
-                <button type="button" disabled={busy} onClick={() => onDelete(problem)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-                  <Trash2 size={13} /> Delete
-                </button>
+                {confirmingDeleteId === problem.id ? (
+                  <>
+                    <div style={{ fontSize: 11, color: SUBTLE, textAlign: 'right' }}>
+                      Delete “{problem.title}” and its {problem.productCount} tool(s)? This cannot be undone.
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" disabled={busy} onClick={() => { setConfirmingDeleteId(null); onDelete(problem); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                        <Trash2 size={13} /> Confirm
+                      </button>
+                      <button type="button" onClick={() => setConfirmingDeleteId(null)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        <X size={13} /> Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button type="button" disabled={busy} onClick={() => setConfirmingDeleteId(problem.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                )}
               </div>
             </div>
           );

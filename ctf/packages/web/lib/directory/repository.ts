@@ -881,6 +881,10 @@ export async function listAdminProfiles(
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.venmo_address,
+          p.monero_address,
+          p.bitcoin_address,
+          p.service_credits_address,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -962,6 +966,10 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.venmo_address,
+          p.monero_address,
+          p.bitcoin_address,
+          p.service_credits_address,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -1046,6 +1054,10 @@ export async function updateAdminProfile(
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.venmo_address,
+          p.monero_address,
+          p.bitcoin_address,
+          p.service_credits_address,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -1128,6 +1140,10 @@ export async function assignAdminProfile(
           p.job_title_id,
           jt.name AS job_title_name,
           p.is_active,
+          p.venmo_address,
+          p.monero_address,
+          p.bitcoin_address,
+          p.service_credits_address,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
