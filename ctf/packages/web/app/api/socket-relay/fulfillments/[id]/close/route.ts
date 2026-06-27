@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
-import { resolveFulfillment } from 'lib/socket-relay/repository';
+import { insertSocketRelayAudit, resolveFulfillment } from 'lib/socket-relay/repository';
 import type { SocketRelayResolveOutcome } from 'lib/socket-relay/types';
 import { reportError } from 'lib/observability/report';
 
@@ -41,6 +41,15 @@ export async function POST(request: Request, { params }: RouteProps) {
   try {
     // resolveFulfillment enforces that only the requester (or an admin) can resolve.
     const item = await resolveFulfillment(id, gate.auth.userId, gate.auth.isAdmin, outcome as SocketRelayResolveOutcome);
+    await insertSocketRelayAudit({
+      actorId: gate.auth.userId,
+      command: 'socket-relay.fulfillment.resolve',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'fulfillment',
+      targetId: id,
+      metadata: { outcome },
+    });
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'fulfillments_id_close' });

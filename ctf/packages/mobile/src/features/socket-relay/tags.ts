@@ -3,6 +3,9 @@ import type { SocketRelayRequest } from './api';
 // Mirrors the web shell's tag rules (sr-shared.ts): tags are free text, posts carry
 // up to MAX_TAGS_PER_POST of them, and filter chips are derived from the tags in use.
 export const MAX_TAGS_PER_POST = 3;
+// Mirrors the server's SOCKET_RELAY_MAX_TAG_LENGTH so a too-long tag is caught in the form
+// instead of bouncing off the server as an invalid payload.
+export const MAX_TAG_LENGTH = 64;
 const MAX_FILTER_CHIPS = 10;
 
 // Legacy rows predate the tags field; fall back to the single category.

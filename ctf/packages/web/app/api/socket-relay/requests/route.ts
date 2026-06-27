@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
 import { SOCKET_RELAY_DEFAULT_PAGE, SOCKET_RELAY_DEFAULT_PAGE_SIZE, SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
-import { createRequest, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/socket-relay/repository';
+import { createRequest, insertSocketRelayAudit, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/socket-relay/repository';
 import type { SocketRelayRequestInput } from 'lib/socket-relay/types';
 import { reportError } from 'lib/observability/report';
 
@@ -99,6 +99,14 @@ export async function POST(request: Request) {
 
   try {
     const item = await createRequest(gate.auth.userId, gate.auth.username ?? null, input, idempotencyKey);
+    await insertSocketRelayAudit({
+      actorId: gate.auth.userId,
+      command: 'socket-relay.request.create',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'request',
+      targetId: item.id,
+    });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests' });
