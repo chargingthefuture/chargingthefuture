@@ -1,0 +1,25 @@
+policies:
+  - pluginId: click-log
+    command: click-log.incident.create
+    version: 1.0.0
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - pluginId: click-log
+    command: click-log.incident.list
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - pluginId: click-log
+    command: click-log.incident.delete
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+    consentRequirements: []

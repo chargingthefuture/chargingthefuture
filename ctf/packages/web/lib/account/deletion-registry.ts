@@ -164,19 +164,24 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your mood check-in submissions.',
     serviceScopeSupported: true,
     tables: [
-      del('mood_submissions', 'user_id', 'Your mood check-ins.'),
+      // Mood check-ins are stored pseudonymously: mood_submissions rows carry a
+      // pseudonym, not user_id, and the only user link lives in
+      // mood_client_identities. Deleting that mapping row cascades all the user's
+      // check-ins via the mood_submissions.pseudonym FK (ON DELETE CASCADE), so
+      // this single entry removes everything for the user.
+      del('mood_client_identities', 'user_id', 'Your mood check-ins (deleting your pseudonym mapping removes every check-in stored under it).'),
     ],
   },
   {
-    slug: 'gentlepulse',
+    slug: 'gentle-pulse',
     name: 'GentlePulse',
     dataSummary: 'Your favorited sessions, play history, and ratings.',
     serviceScopeSupported: true,
     tables: [
-      del('gentlepulse_ratings', 'user_id', 'Your ratings.'),
-      del('gentlepulse_play_events', 'user_id', 'Your play history.'),
-      del('gentlepulse_favorites', 'user_id', 'Your favorited sessions.'),
-      // gentlepulse_library_items is the shared session library.
+      del('gentle_pulse_ratings', 'user_id', 'Your ratings.'),
+      del('gentle_pulse_play_events', 'user_id', 'Your play history.'),
+      del('gentle_pulse_favorites', 'user_id', 'Your favorited sessions.'),
+      // gentle_pulse_library_items is the shared session library.
     ],
   },
   {
@@ -350,12 +355,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'clicklog',
-    name: 'Clicklog',
+    slug: 'click-log',
+    name: 'ClickLog',
     dataSummary: 'Your logged incidents.',
     serviceScopeSupported: true,
     tables: [
-      del('clicklog_incidents', 'user_id', 'Your logged incidents.'),
+      del('click_log_incidents', 'user_id', 'Your logged incidents.'),
     ],
   },
   {

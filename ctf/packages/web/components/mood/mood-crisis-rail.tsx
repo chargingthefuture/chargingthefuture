@@ -20,7 +20,7 @@ export function MoodCrisisRail() {
       </div>
       <div style={{ padding: "14px 16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}18` }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT, marginBottom: 8 }}>🔒 Privacy First</div>
-        <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.6 }}>Your individual mood check-ins are never shown to anyone — only anonymous, aggregate trends. One check-in per week.</div>
+        <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.6 }}>Your mood check-ins are pseudonymous — stored under a random ID kept separate from your account, and never shown to anyone. Community trends are anonymous and aggregate-only. One check-in per week.</div>
       </div>
     </aside>
   );

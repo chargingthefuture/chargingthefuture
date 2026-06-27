@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireMoodAccess, moodErrorResponse } from 'lib/mood/_lib';
-import { getMoodEligibility } from 'lib/mood/repository';
+import { getMoodEligibility, getOrCreateMoodPseudonym } from 'lib/mood/repository';
 import { logMoodAudit } from 'lib/mood/audit';
 import { reportError } from 'lib/observability/report';
 
@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
   }
 
   // clientId stays required by contract (clientIdRequired), but the eligibility
-  // lookup is keyed on the authenticated user_id, not this value — a member can
-  // only ever read their own cooldown state.
+  // lookup is keyed on the server-controlled pseudonym (resolved from the
+  // authenticated user), not this value — a member can only ever read their own
+  // cooldown state, and the lookup touches no user_id.
   const clientId = request.nextUrl.searchParams.get('clientId')?.trim() ?? '';
   if (!clientId) {
     logMoodAudit({
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const eligibility = await getMoodEligibility({ userId: gate.auth.userId });
+    const pseudonym = await getOrCreateMoodPseudonym(gate.auth.userId);
+    const eligibility = await getMoodEligibility({ pseudonym });
     logMoodAudit({
       actorId: gate.auth.userId,
       command: 'mood.check.eligibility.fetch',

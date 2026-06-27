@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { insertFoundationAudit } from 'lib/foundation/repository';
-import { deleteWebPushSubscription } from 'lib/notifications/push';
+import { deletePushSubscriptionByEndpoint } from 'lib/notifications/push';
 import { reportError } from 'lib/observability/report';
 
-// Remove the signed-in member's Web Push subscription for one device (issue #808 task 5): they turned call
-// alerts off on that device, or the browser revoked the subscription. The member acts only on their own
-// subscription, identified by its endpoint. Secrets policy: the endpoint is never logged.
+// Remove the signed-in member's push subscription for one device (issue #808 task 5): they turned call
+// alerts off on that device, or the browser/app revoked the subscription. The member acts only on their own
+// subscription, identified by its endpoint. This route is kind-agnostic: the endpoint is either a Web Push
+// endpoint URL or an Expo push token, and the deletion matches on (user_id, endpoint) regardless of kind,
+// so the same call removes a web or expo row. Secrets policy: the endpoint is never logged.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -38,8 +40,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    await deleteWebPushSubscription({ userId: gate.auth.userId, endpoint });
+    await deletePushSubscriptionByEndpoint({ userId: gate.auth.userId, endpoint });
 
+    // The route deletes by endpoint and does not know the row's kind, so the audit omits `kind` rather
+    // than hard-coding a (possibly wrong) value.
     await insertFoundationAudit({
       actorId: gate.auth.userId,
       command: 'foundation.push.unsubscribe',
@@ -47,7 +51,6 @@ export async function POST(request: Request) {
       reason: 'ok',
       targetType: 'push_subscription',
       targetId: gate.auth.userId,
-      metadata: { kind: 'web' },
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });

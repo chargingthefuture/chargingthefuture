@@ -1,12 +1,12 @@
 import type { ComponentType } from 'react';
 import { BeaconPublicShell } from '@/components/beacon/beacon-public-shell';
 import { ChymePublicShell } from '@/components/chyme/chyme-public-shell';
-import { ClicklogPublicShell } from '@/components/clicklog/clicklog-public-shell';
+import { ClickLogPublicShell } from '@/components/click-log/click-log-public-shell';
 import { ContributionsPublicShell } from '@/components/contributions/contributions-public-shell';
 import { DirectoryPublicShell } from '@/components/directory/directory-public-shell';
 import { FoundationPublicShell } from '@/components/foundation/foundation-public-shell';
 import { GdpPublicShell } from '@/components/gdp/gdp-public-shell';
-import { GentlePulsePublicShell } from '@/components/gentlepulse/gentlepulse-public-shell';
+import { GentlePulsePublicShell } from '@/components/gentle-pulse/gentle-pulse-public-shell';
 import { LevelUpPublicShell } from '@/components/level-up/level-up-public-shell';
 import { LighthousePublicShell } from '@/components/lighthouse/lighthouse-public-shell';
 import { MoodPublicShell } from '@/components/mood/mood-public-shell';
@@ -59,12 +59,12 @@ export type PublicVisitorShell = ComponentType<PublicVisitorShellProps>;
 const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   beacon: BeaconPublicShell,
   chyme: ChymePublicShell,
-  clicklog: ClicklogPublicShell,
+  'click-log': ClickLogPublicShell,
   contributions: ContributionsPublicShell,
   directory: DirectoryPublicShell,
   foundation: FoundationPublicShell,
   gdp: GdpPublicShell,
-  gentlepulse: GentlePulsePublicShell,
+  'gentle-pulse': GentlePulsePublicShell,
   'level-up': LevelUpPublicShell,
   lighthouse: LighthousePublicShell,
   mood: MoodPublicShell,

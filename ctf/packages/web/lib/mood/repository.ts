@@ -87,21 +87,46 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
   };
 }
 
-// Eligibility / cooldown is keyed on the authenticated user_id, not the
-// client-supplied clientId. The clientId is attacker-controlled (a random
-// string generated client-side and sent in the request), so keying the cooldown
-// on it lets a member bypass the 7-day window by sending a fresh clientId each
-// time, and lets a member probe any other clientId's state. Keying on the
-// verified user_id closes both holes: a member can only ever see and is only
-// ever gated by their own check-in history.
-export async function getMoodEligibility(input: { userId: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
+// Resolve the caller's stable, server-controlled mood pseudonym, creating it on
+// first use. This is the ONLY function that reads the user_id ↔ pseudonym map
+// (mood_client_identities); every other mood query keys on the pseudonym, so the
+// check-in rows never carry the user_id (pseudo-anonymity). Because the pseudonym
+// is server-owned and one-per-user, a member cannot mint a fresh one, so keying
+// the cooldown on it still cannot be bypassed.
+export async function getOrCreateMoodPseudonym(userId: string): Promise<string> {
+  const existing = await queryDb<{ pseudonym: string }>(
+    `SELECT pseudonym FROM mood_client_identities WHERE user_id = $1`,
+    [userId],
+  );
+  if (existing.rows.length > 0) {
+    return existing.rows[0].pseudonym;
+  }
+
+  // ON CONFLICT DO UPDATE (no-op) so a concurrent insert still returns the row.
+  const inserted = await queryDb<{ pseudonym: string }>(
+    `INSERT INTO mood_client_identities (user_id)
+     VALUES ($1)
+     ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
+     RETURNING pseudonym`,
+    [userId],
+  );
+  return inserted.rows[0].pseudonym;
+}
+
+// Eligibility / cooldown is keyed on the server-controlled pseudonym (resolved
+// from the verified user via getOrCreateMoodPseudonym), never on the
+// client-supplied clientId. The clientId is attacker-controlled, so keying the
+// cooldown on it would let a member bypass the 7-day window by rotating it; the
+// pseudonym is stable per account and cannot be rotated by the member, and the
+// check-in rows carry no user_id.
+export async function getMoodEligibility(input: { pseudonym: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
   const result = await queryDb<{ submitted_at: Date }>(
     `SELECT submitted_at
      FROM mood_submissions
-     WHERE user_id = $1
+     WHERE pseudonym = $1
      ORDER BY submitted_at DESC
      LIMIT 1`,
-    [input.userId],
+    [input.pseudonym],
   );
 
   if (result.rows.length === 0) {
@@ -119,21 +144,23 @@ export async function getMoodEligibility(input: { userId: string }): Promise<{ e
   };
 }
 
-export async function createMoodSubmission(input: { userId: string; clientId: string; moodValue: number; note: string | null }) {
+export async function createMoodSubmission(input: { pseudonym: string; clientId: string; moodValue: number; note: string | null }) {
   if (!Number.isInteger(input.moodValue) || input.moodValue < 1 || input.moodValue > 5) {
     throw new Error('invalid_payload');
   }
 
-  const eligibility = await getMoodEligibility({ userId: input.userId });
+  const eligibility = await getMoodEligibility({ pseudonym: input.pseudonym });
   if (!eligibility.eligible) {
     throw new Error('cooldown_active');
   }
 
+  // user_id is stored empty on purpose: the check-in row is decoupled from the
+  // account. The link lives only in mood_client_identities, keyed by pseudonym.
   const inserted = await queryDb<{ id: string; submitted_at: Date }>(
-    `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, pseudonym)
+     VALUES ($1, '', $2, $3, $4, $5)
      RETURNING id, submitted_at`,
-    [randomUUID(), input.userId, input.clientId, input.moodValue, input.note],
+    [randomUUID(), input.clientId, input.moodValue, input.note, input.pseudonym],
   );
 
   // Field names match the mood.check.submit command contract outputSchema

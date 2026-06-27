@@ -76,35 +76,32 @@ export async function upsertPublication(input: {
   summary: string;
   publish: boolean;
 }) {
+  // One publication per week: key the upsert on week_start_date (a UNIQUE index), so re-saving a week
+  // updates its existing row instead of inserting a duplicate. The previous ON CONFLICT (id) clause could
+  // never fire — a fresh randomUUID() is generated on every call — so each save silently created a new
+  // row, and the now-removed fallback SELECT then returned whichever week row was most recently updated.
   const result = await queryDb<PublicationRow>(
     `INSERT INTO gdp_publications
       (id, week_start_date, title, summary, status, created_by_user_id, published_by_user_id, published_at)
      VALUES
       ($1, $2, $3, $4, $5, $6, CASE WHEN $5 = 'published' THEN $6 ELSE NULL END, CASE WHEN $5 = 'published' THEN NOW() ELSE NULL END)
-     ON CONFLICT (id)
-     DO NOTHING
+     ON CONFLICT (week_start_date)
+     DO UPDATE SET
+       title = EXCLUDED.title,
+       summary = EXCLUDED.summary,
+       status = EXCLUDED.status,
+       published_by_user_id = CASE WHEN EXCLUDED.status = 'published' THEN EXCLUDED.published_by_user_id ELSE gdp_publications.published_by_user_id END,
+       published_at = CASE WHEN EXCLUDED.status = 'published' THEN NOW() ELSE gdp_publications.published_at END,
+       updated_at = NOW()
      RETURNING id::text, week_start_date::text, title, summary, status`,
     [randomUUID(), input.weekStartDate, input.title.trim(), input.summary.trim(), input.publish ? 'published' : 'draft', input.actorId],
   );
 
-  if (result.rows[0]) {
-    return mapPublication(result.rows[0]);
-  }
-
-  const fallback = await queryDb<PublicationRow>(
-    `SELECT id::text, week_start_date::text, title, summary, status
-     FROM gdp_publications
-     WHERE week_start_date = $1
-     ORDER BY updated_at DESC
-     LIMIT 1`,
-    [input.weekStartDate],
-  );
-
-  if (!fallback.rows[0]) {
+  if (!result.rows[0]) {
     throw new Error('not_found');
   }
 
-  return mapPublication(fallback.rows[0]);
+  return mapPublication(result.rows[0]);
 }
 
 export async function getGdpShellStats(): Promise<{ memberCount: number | null; gdpValueUsd: number | null }> {
