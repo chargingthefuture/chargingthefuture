@@ -43,8 +43,11 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       setLoading(true);
       setError(null);
       try {
-        const propRes = await fetch("/api/lighthouse/my-properties");
-        setProperties(propRes.ok ? (await propRes.json()).items ?? [] : []);
+        // Browse shows all active public listings to seekers, so it reads the public listings
+        // endpoint — not the current user's own listings. The Host tab loads the user's own
+        // listings itself (LighthouseHost fetches /api/lighthouse/my-properties).
+        const browseRes = await fetch("/api/lighthouse/properties");
+        setProperties(browseRes.ok ? (await browseRes.json()).items ?? [] : []);
 
         const matchRes = await fetch("/api/lighthouse/matches");
         setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);

@@ -67,7 +67,7 @@ export type CurrentWeekResponse = {
 
 export type WeeksResponse = { ok: boolean; weeks: WpWeek[] };
 export type MetricsResponse = { ok: boolean; metrics: WpMetric[] };
-export type ComparisonResponse = { ok: boolean; comparison: WpComparison };
+export type ComparisonResponse = { ok: boolean; comparison?: WpComparison | null };
 export type WeekSelectionResponse = { ok: boolean; selectedWeek?: WpWeek; message?: string };
 
 // A week is "live" while open; locked/published weeks are closed.
