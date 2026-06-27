@@ -2,8 +2,10 @@
 
 // Moderation queue (functional admin surface, dark admin design system — accent lime).
 // Submitter identity is never shown; admins moderate content.
+import { useState } from 'react';
 import { CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import type { WhatWorksProductStatus } from 'lib/what-works/types';
+import { MAX_PRODUCT_NOTE_LENGTH } from 'lib/what-works/constants';
 import type { AdminProduct } from './ww-admin-shared';
 
 const COLOR = '#84CC16';
@@ -17,7 +19,7 @@ type Props = {
   busyId: string | null;
   statusFilter: WhatWorksProductStatus | 'all';
   onChangeFilter: (status: WhatWorksProductStatus | 'all') => void;
-  onReview: (id: string, action: 'approve' | 'reject') => void;
+  onReview: (id: string, action: 'approve' | 'reject', rejectionReason?: string) => void;
   onDelete: (id: string) => void;
 };
 
@@ -35,6 +37,29 @@ const STATUS_STYLE: Record<WhatWorksProductStatus, { bg: string; color: string; 
 };
 
 export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChangeFilter, onReview, onDelete }: Props) {
+  // Which row's inline reject form is open, and the reason text being typed. Replaces the old
+  // blocking window.prompt with a themable, testable inline textarea.
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  // Inline two-step delete confirmation (replaces window.confirm).
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  function openReject(id: string): void {
+    setRejectingId(id);
+    setReason('');
+  }
+
+  function closeReject(): void {
+    setRejectingId(null);
+    setReason('');
+  }
+
+  function confirmReject(id: string): void {
+    const trimmed = reason.trim();
+    onReview(id, 'reject', trimmed.length > 0 ? trimmed : undefined);
+    closeReject();
+  }
+
   return (
     <section style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -90,14 +115,51 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                   </button>
                 ) : null}
                 {product.status !== 'rejected' ? (
-                  <button type="button" disabled={busy} onClick={() => onReview(product.id, 'reject')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                  <button type="button" disabled={busy} onClick={() => openReject(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                     <XCircle size={13} /> {product.status === 'approved' ? 'Unpublish' : 'Reject'}
                   </button>
                 ) : null}
-                <button type="button" disabled={busy} onClick={() => onDelete(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-                  <Trash2 size={13} /> Delete
-                </button>
+                {confirmingDeleteId === product.id ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: SUBTLE }}>Delete permanently?</span>
+                    <button type="button" disabled={busy} onClick={() => { setConfirmingDeleteId(null); onDelete(product.id); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                      <Trash2 size={13} /> Confirm
+                    </button>
+                    <button type="button" onClick={() => setConfirmingDeleteId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button type="button" disabled={busy} onClick={() => setConfirmingDeleteId(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                )}
               </div>
+              {rejectingId === product.id ? (
+                <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  <label htmlFor={`reject-reason-${product.id}`} style={{ display: 'block', fontSize: 12, color: SUBTLE, marginBottom: 6 }}>
+                    Reason (optional, shown only to admins)
+                  </label>
+                  <textarea
+                    id={`reject-reason-${product.id}`}
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value.slice(0, MAX_PRODUCT_NOTE_LENGTH))}
+                    maxLength={MAX_PRODUCT_NOTE_LENGTH}
+                    rows={3}
+                    placeholder="Why is this being rejected?"
+                    style={{ width: '100%', resize: 'vertical', padding: '8px 10px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontFamily: 'inherit' }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <span style={{ fontSize: 11, color: SUBTLE, marginRight: 'auto' }}>{reason.length}/{MAX_PRODUCT_NOTE_LENGTH}</span>
+                    <button type="button" onClick={closeReject} style={{ padding: '6px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => confirmReject(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                      <XCircle size={13} /> {product.status === 'approved' ? 'Unpublish' : 'Reject'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })

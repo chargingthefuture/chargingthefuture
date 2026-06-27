@@ -79,6 +79,11 @@ function toPublicProduct(row: ProductProjectionRow): WhatWorksPublicProduct {
 
 // Single shared reader list: active problems that have at least one approved product,
 // each with the approved products beneath it. `viewerId` toggles the per-row endorsed flag.
+//
+// Scale note: this returns every active problem and every approved product in two unbounded
+// queries (no LIMIT/cursor). The list is admin-curated and expected to stay in the low hundreds
+// of approved tools, so the full list is fetched in one pass. Add pagination (problem cursor and a
+// per-problem product LIMIT) before the approved-product count grows past a few hundred.
 export async function getReaderList(viewerId: string | null): Promise<WhatWorksList> {
   const problemsResult = await queryDb<ProblemProjectionRow>(
     `SELECT id, slug, emoji, title, context
@@ -258,8 +263,13 @@ export async function listAdminProblems(): Promise<WhatWorksAdminProblem[]> {
     approved_count: number;
     pending_count: number;
   }>(
+    // Explicit column list (not `pr.*`) so a future identity column added to the table is never
+    // auto-included in the admin response. `created_by` is the admin's own user ID — it carries no
+    // survivor identity — and is part of the admin problem type; survivor-facing identity columns
+    // live only on what_works_products and are never selected here.
     `SELECT
-        pr.*,
+        pr.id, pr.slug, pr.emoji, pr.title, pr.context, pr.sort_order,
+        pr.is_active, pr.created_by, pr.created_at, pr.updated_at,
         COUNT(p.id)::int AS product_count,
         COUNT(p.id) FILTER (WHERE p.status = 'approved')::int AS approved_count,
         COUNT(p.id) FILTER (WHERE p.status = 'pending')::int AS pending_count
