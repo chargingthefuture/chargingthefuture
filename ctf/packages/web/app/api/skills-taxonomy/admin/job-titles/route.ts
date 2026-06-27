@@ -11,6 +11,9 @@ type JobTitleCreateBody = {
   displayOrder?: unknown;
 };
 
+// Admin list reads use the opt-OUT default (inactive records included unless
+// `includeInactive=false`), matching admin/hierarchy and the inverse of the
+// public read endpoint. See app/api/skills-taxonomy/hierarchy/route.ts.
 function parseIncludeInactive(url: string): boolean {
   return new URL(url).searchParams.get('includeInactive') !== 'false';
 }
@@ -23,9 +26,32 @@ export async function GET(request: Request) {
 
   try {
     const jobTitles = await listJobTitles(parseIncludeInactive(request.url));
+
+    logSkillsTaxonomyAudit({
+      pluginId: 'skills-taxonomy',
+      command: 'skills-taxonomy.hierarchy.get',
+      actorId: gate.auth.userId,
+      status: 'allow',
+      reason: 'admin_or_taxonomy_admin',
+      target: { scope: 'admin', resource: 'job-titles' },
+      result: 'success',
+      errorCategory: null,
+    });
+
     return NextResponse.json({ items: jobTitles }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-taxonomy', op: 'admin_job_titles' });
+    logSkillsTaxonomyAudit({
+      pluginId: 'skills-taxonomy',
+      command: 'skills-taxonomy.hierarchy.get',
+      actorId: gate.auth.userId,
+      status: 'allow',
+      reason: 'admin_or_taxonomy_admin',
+      target: { scope: 'admin', resource: 'job-titles' },
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list job titles.' },
       { status: 503 },
