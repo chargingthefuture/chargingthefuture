@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWeeklyPerformanceAdminAccess } from 'lib/weekly-performance/_lib';
-import { getWeekMetrics } from 'lib/weekly-performance/repository';
+import { getWeekMetrics, insertWeeklyPerformanceAudit } from 'lib/weekly-performance/repository';
 
 function isExportEnabled(): boolean {
   const candidate = process.env.WEEKLY_PERFORMANCE_EXPORT_ENABLED?.trim().toLowerCase();
@@ -23,5 +23,18 @@ export async function GET(request: NextRequest) {
   }
 
   const metrics = await getWeekMetrics(weekStartDate);
+
+  // Export is a high-risk audited command (requiresAdditionalAudit in the access
+  // policy); record the access on every allow decision per the audit contract.
+  await insertWeeklyPerformanceAudit({
+    actorId: gate.auth.userId,
+    command: 'weekly-performance.report.export',
+    policyStatus: 'allow',
+    reason: 'ok',
+    targetType: 'week',
+    targetId: weekStartDate,
+    metadata: { weekStartDate },
+  });
+
   return NextResponse.json({ ok: true, weekStartDate, metrics }, { status: 200 });
 }

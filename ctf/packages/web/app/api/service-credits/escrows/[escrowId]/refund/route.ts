@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { insertServiceCreditsAudit, refundEscrow } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 
 type EscrowParams = {
@@ -19,7 +19,7 @@ export async function POST(request: Request, context: EscrowParams) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsReadAccess();
+  const gate = await requireServiceCreditsServiceAccess();
   if (!gate.allowed) {
     return gate.response;
   }

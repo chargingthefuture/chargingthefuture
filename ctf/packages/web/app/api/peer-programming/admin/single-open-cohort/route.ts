@@ -49,16 +49,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  // enabled must be exactly true, false, or null (clear the setting). Anything else is rejected.
-  if (!(body.enabled === true || body.enabled === false || body.enabled === null)) {
+  // enabled is true / false = explicit admin choice; null OR a missing key (undefined) both mean
+  // "clear the setting" (revert to env / default), since the contract treats enabled as optional.
+  // Any other value (string, number, etc.) is rejected.
+  if (!(body.enabled === true || body.enabled === false || body.enabled === null || body.enabled === undefined)) {
     return NextResponse.json(
       { ok: false, code: 'peer_programming_invalid_payload', message: 'enabled must be true, false, or null.' },
       { status: 400 },
     );
   }
 
+  // Normalize a missing key to null so an empty POST body {} clears the setting rather than erroring.
+  const enabled = body.enabled ?? null;
+
   try {
-    await setPeerProgrammingSingleOpenCohort({ actorId: gate.auth.userId, enabled: body.enabled });
+    await setPeerProgrammingSingleOpenCohort({ actorId: gate.auth.userId, enabled });
     const mode = await resolveSingleOpenCohortMode();
 
     await insertPeerProgrammingAudit({
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
       reason: 'ok',
       targetType: 'peer_programming_settings',
       targetId: 'single_open_cohort_enabled',
-      metadata: { requested: body.enabled, effective: mode.enabled, source: mode.source },
+      metadata: { requested: enabled, effective: mode.enabled, source: mode.source },
     });
 
     return NextResponse.json({ ok: true, mode }, { status: 200 });

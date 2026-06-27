@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { createMessage, insertPeerProgrammingAudit, isCohortMember } from 'lib/peer-programming/repository';
+import { PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
 
 type CreateMessageBody = {
@@ -28,6 +29,13 @@ export async function POST(request: Request) {
 
   if (!body.cohortId || !body.body) {
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'cohortId and body are required.' }, { status: 400 });
+  }
+
+  if (body.body.length > PEER_PROGRAMMING_MAX_MESSAGE_LENGTH) {
+    return NextResponse.json(
+      { ok: false, code: 'peer_programming_invalid_payload', message: `Message body must be ${PEER_PROGRAMMING_MAX_MESSAGE_LENGTH} characters or fewer.` },
+      { status: 400 },
+    );
   }
 
   // Only a member of the cohort may post into it. The tier is decided here from that

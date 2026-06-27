@@ -274,9 +274,9 @@
   flex-shrink: 0;
 }
 
-/* Admins-only link to /admin, shown in the drawer footer. The desktop icon rail
-   carries its own Admin entry, but that rail is hidden on phones, so this is the
-   way admins reach the admin directory on a phone. */
+/* Admins-only link to /admin in the desktop sidebar footer. The desktop icon rail
+   also carries its own Admin entry; on phones this sidebar is hidden and admins
+   reach /admin from the top bar instead. */
 .sidebarAdminLink {
   display: flex;
   align-items: center;
@@ -1313,11 +1313,12 @@
   border: 0;
 }
 
-/* ─── Mobile top bar + nav drawer ────────────────────────────────────────── */
+/* ─── Mobile top bar ─────────────────────────────────────────────────────── */
 /*
- * On phones the icon rail and sidebar are replaced by a top bar (brand, section
- * switch, sign-in/avatar) plus a menu button that slides the sidebar in as a
- * drawer. These pieces stay hidden on desktop and are switched on inside the
+ * On phones the icon rail and sidebar are replaced by a top bar (section switch,
+ * an Admin shortcut for admins, sign-in/avatar). The channel sidebar is hidden
+ * entirely on phones (one "general" channel, no navigation value yet), so there
+ * is no nav drawer. The bar stays hidden on desktop and is switched on inside the
  * max-width: 900px block below, where the multi-column grid also collapses.
  */
 .mobileBar {
@@ -1331,18 +1332,28 @@
   flex-shrink: 0;
 }
 
-.mobileBarMenuBtn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+/* Admin shortcut on the phone-width top bar, sitting just right of the section
+   tabs. Admins-only; it replaces the Admin link that used to live in the (now
+   hidden) phone nav drawer, so admins reach /admin without the extra taps. */
+.mobileBarAdminBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--ctf-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.mobileBarAdminBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ctf-text-shell);
 }
 
 .mobileBarBrand {
@@ -1430,17 +1441,6 @@
   white-space: nowrap;
 }
 
-.mobileBackdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  background: rgba(8, 9, 13, 0.6);
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1280px) {
   .frame {
@@ -1484,22 +1484,6 @@
     border-right: none;
     flex: 1;
     min-height: 0;
-  }
-
-  /* Sidebar slides in as a drawer when the menu button is pressed. */
-  .leftNav.leftNavMobileOpen {
-    display: flex;
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: min(280px, 85vw);
-    z-index: 1000;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
-  }
-
-  .mobileBackdrop {
-    display: block;
   }
 
   .heroBanner {

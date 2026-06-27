@@ -205,16 +205,21 @@ async function writeAdapterOutbox(
   );
 }
 
+// Returns the caller's wallet, creating it on first access. The `created` flag is true only when this
+// call inserted a brand-new wallet row (detected via Postgres `xmax = 0`, which is 0 for a fresh
+// insert and non-zero when the ON CONFLICT branch updated an existing row). The wallet route uses the
+// flag to emit the contract-required `wallet.create` audit event exactly once, on first provisioning.
 export async function getOrCreateWallet(userId: string) {
-  const upsert = await queryDb<WalletRow>(
+  const upsert = await queryDb<WalletRow & { was_inserted: boolean }>(
     `INSERT INTO service_credits_wallets (user_id)
      VALUES ($1)
      ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
-     RETURNING user_id, available_balance::text, escrow_balance::text`,
+     RETURNING user_id, available_balance::text, escrow_balance::text, (xmax = 0) AS was_inserted`,
     [userId],
   );
 
-  return mapWallet(upsert.rows[0]);
+  const row = upsert.rows[0];
+  return { ...mapWallet(row), created: row.was_inserted === true };
 }
 
 export type WalletLedgerEntry = {
@@ -1562,6 +1567,27 @@ export async function executeDeletionReclaim(input: {
     await writeCommandIdempotency(client, input.actorId, 'account.deletion.reclaim.execute', input.idempotencyKey, response);
     return response;
   });
+}
+
+// Look up the sender/recipient of a transfer so a dispute-create route can confirm the caller was a
+// party to it. Returns null when the transfer does not exist. Read-only; no balance change.
+export async function getTransferParties(
+  transferId: string,
+): Promise<{ senderUserId: string; recipientUserId: string } | null> {
+  const result = await queryDb<{ sender_user_id: string; recipient_user_id: string }>(
+    `SELECT sender_user_id, recipient_user_id
+       FROM service_credits_transfers
+      WHERE id = $1
+      LIMIT 1`,
+    [transferId],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+
+  return { senderUserId: row.sender_user_id, recipientUserId: row.recipient_user_id };
 }
 
 export async function createDispute(input: { transferId: string; openedByUserId: string; reason: string }) {

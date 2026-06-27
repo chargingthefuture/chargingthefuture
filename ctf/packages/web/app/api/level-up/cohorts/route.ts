@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createCohort, insertLevelUpAudit, listCohorts } from 'lib/level-up/repository';
-import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpAdminAccess, requireLevelUpReadAccess } from 'lib/level-up/_lib';
+import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpReadAccess } from 'lib/level-up/_lib';
 import { reportError } from 'lib/observability/report';
 
 const querySchema = z.object({
@@ -86,9 +86,14 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireLevelUpAdminAccess();
+  const gate = await requireLevelUpReadAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  // cohort.create is permitted for admins and trainers (per the access policy contract).
+  if (!gate.auth.isAdmin && gate.auth.role !== 'trainer') {
+    return NextResponse.json({ ok: false, code: 'level_up_forbidden', message: 'Trainer or admin role required to create cohorts.' }, { status: 403 });
   }
 
   let body: unknown;

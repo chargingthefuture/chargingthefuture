@@ -9,28 +9,23 @@ type ShellSidebarProps = {
   channels: HubChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
-  // On phones the sidebar is a slide-in drawer; `mobileOpen` controls whether it
-  // is shown and `onNavigate` lets it close itself once a destination is picked.
-  mobileOpen?: boolean;
-  onNavigate?: () => void;
-  // Admins get an Admin link in the drawer footer. The desktop icon rail has its own
-  // Admin entry, but that rail is hidden on phones, so this is how admins reach /admin there.
+  // Admins get an Admin link in the sidebar footer. This rail is desktop-only
+  // (hidden on phones); on phones admins reach /admin from the top bar instead.
   isAdmin?: boolean;
 };
 
 // The sidebar is the chat-channel navigation only. Apps are browsed in the main "Apps"
 // grid (ShellAppsPanel), so the sidebar deliberately does not list them — having the same
-// app list in both the grid and the drawer was redundant.
+// app list in both the grid and the drawer was redundant. Desktop-only: on phones it is
+// hidden entirely (one "general" channel offers no real navigation yet).
 export function ShellSidebar({
   channels,
   activeChannel,
   onChannelSelect,
-  mobileOpen = false,
-  onNavigate,
   isAdmin = false,
 }: ShellSidebarProps) {
   return (
-    <aside className={`${styles.panel} ${styles.leftNav}${mobileOpen ? ` ${styles.leftNavMobileOpen}` : ''}`}>
+    <aside className={`${styles.panel} ${styles.leftNav}`}>
       <div className={styles.sidebarHeader}>
         <p className={styles.sectionTitle}>Channels</p>
       </div>
@@ -44,10 +39,7 @@ export function ShellSidebar({
               type="button"
               className={isActive ? `${styles.sidebarChannel} ${styles.sidebarChannelActive}` : styles.sidebarChannel}
               aria-current={isActive ? 'true' : undefined}
-              onClick={() => {
-                onChannelSelect(ch.slug);
-                onNavigate?.();
-              }}
+              onClick={() => onChannelSelect(ch.slug)}
             >
               <span className={styles.sidebarChannelHash}>#</span>
               <span className={styles.sidebarChannelName}>{ch.slug}</span>
@@ -58,7 +50,7 @@ export function ShellSidebar({
 
       <div className={styles.sidebarFooter}>
         {isAdmin ? (
-          <Link href="/admin" className={styles.sidebarAdminLink} onClick={() => onNavigate?.()}>
+          <Link href="/admin" className={styles.sidebarAdminLink}>
             <SlidersHorizontal size={16} aria-hidden="true" />
             <span>Admin</span>
           </Link>

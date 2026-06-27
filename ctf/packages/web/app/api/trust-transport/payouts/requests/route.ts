@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportProviderAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
-import { requestPayout } from 'lib/trust-transport/repository';
+import { insertTrustTransportAudit, requestPayout } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request) {
@@ -32,6 +32,15 @@ export async function POST(request: Request) {
 
   try {
     const payout = await requestPayout(gate.auth.userId, amount, idempotencyKey);
+    await insertTrustTransportAudit({
+      actorId: gate.auth.userId,
+      command: 'trust-transport.payout.request',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'payout_request',
+      targetId: payout.id,
+      metadata: { amount: payout.amount, currency: payout.currency },
+    });
     return NextResponse.json({ ok: true, payout }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'payouts_requests' });

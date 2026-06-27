@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import { authedFetch } from '../../auth/authedFetch';
 
 // Admin client for the ServiceCredits plugin. Mirrors the web admin routes under
@@ -17,8 +18,17 @@ export type AdminResult<T> = {
   message: string | null;
 };
 
+// A unique idempotency key per money-moving admin action (governance mint/burn, treasury fee,
+// dispute adjustment). Uses a cryptographically strong UUID from expo-crypto so two distinct attempts
+// cannot collide — a collision would make the server replay the wrong prior result. Mirrors the web
+// `newIdempotencyKey` in sca-shared.ts. Falls back to Date.now()+Math.random only if randomUUID is
+// somehow unavailable at runtime, matching the web fallback.
 function idempotencyKey(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const random =
+    typeof Crypto.randomUUID === 'function'
+      ? Crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${prefix}-${random}`;
 }
 
 async function adminGet<T>(path: string): Promise<AdminResult<T>> {
