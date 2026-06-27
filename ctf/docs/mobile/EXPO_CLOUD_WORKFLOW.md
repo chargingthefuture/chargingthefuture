@@ -137,7 +137,7 @@ input enabled.
   - Fails fast when `EXPO_TOKEN` is missing.
 
 - `.github/workflows/expo-android-scheduled-build.yml`
-  - Runs on its own three times a week (Mon/Wed/Fri 08:00 UTC) — the hands-free path. You do not have
+  - Runs on its own three times a week (Mon/Wed/Fri 08:41 UTC) — the hands-free path. You do not have
     to remember how to deploy the Android app; this builds a `preview` test APK for you.
   - Checks the free-tier quota first and skips cleanly when this month's automated build budget is
     used up, so it never pushes you past the free allotment.

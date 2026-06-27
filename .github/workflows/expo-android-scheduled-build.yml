@@ -26,8 +26,11 @@ name: Expo — Scheduled Android Test Build
 
 on:
   schedule:
-    # 3x a week, spread out: Monday, Wednesday, Friday at 08:00 UTC.
-    - cron: "0 8 * * 1,3,5"
+    # 3x a week, spread out: Monday, Wednesday, Friday at 08:41 UTC. Offset to an
+    # odd minute on purpose: two daily jobs already fire at 08:00 (generate-product
+    # -update, bug-reports-create-issues), and the repo convention is to offset
+    # crons off the top of the hour so GitHub does not delay them under load.
+    - cron: "41 8 * * 1,3,5"
   workflow_dispatch:
     inputs:
       force:
