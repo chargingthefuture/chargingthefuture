@@ -122,7 +122,7 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
           {POINTS.map(({ icon: Icon, title, desc }) => (
             <li key={title} className={styles.comicConsentPoint}>
               <span className={styles.comicConsentPointIcon} aria-hidden="true">
-                <Icon size={18} color="#A78BFA" />
+                <Icon size={18} color="currentColor" />
               </span>
               <span className={styles.comicConsentPointBody}>
                 <span className={styles.comicConsentPointTitle}>{title}</span>

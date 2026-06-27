@@ -49,7 +49,7 @@ export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardP
     <article className={styles.comicCard} aria-label="AI Assistant answer">
       <div className={styles.comicCardHead}>
         <div className={styles.comicCardAvatar} aria-hidden="true">
-          <Sparkles size={18} color="#38BDF8" />
+          <Sparkles size={18} color="currentColor" />
         </div>
         <div>
           <div className={styles.comicCardTitleRow}>
@@ -127,7 +127,7 @@ export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) 
     <article className={styles.comicPendingCard} aria-label="AI Assistant is reviewing">
       <div className={styles.comicCardHead}>
         <div className={styles.comicPendingAvatar} aria-hidden="true">
-          <Sparkles size={18} color="#38BDF8" />
+          <Sparkles size={18} color="currentColor" />
         </div>
         <div>
           <div className={styles.comicCardTitleRow}>

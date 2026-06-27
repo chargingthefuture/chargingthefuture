@@ -1,10 +1,14 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme } from '../../theme';
 import type { ComicAnswerRating, ComicStreamItem } from './api';
 
-// Cyan AI Assistant treatment from the locked mobile mockup (MobileHome.tsx ai_qa / ai_pending).
-const CYAN = '#38BDF8';
+// AI Assistant accent. Standard theme uses cyan (the locked MobileHome ai_qa / ai_pending mockup);
+// comic theme uses ink-dim #7A6A50 — no blue in comic theme (COMIC_THEME_TOKENS.md §6, §9.3). The
+// accent is resolved per-render from the active theme, never hardcoded, so it follows the toggle.
+const AI_ACCENT_STANDARD = '#38BDF8';
+const AI_ACCENT_COMIC = '#7A6A50';
 const TEXT = '#F9FAFB';
 const BODY = '#D1D5DB';
 const SUBTLE = '#9CA3AF';
@@ -20,17 +24,17 @@ function formatTime(iso: string): string {
   return date.toLocaleDateString();
 }
 
-function CardHead({ askedByLabel, time }: { askedByLabel: string; time: string }) {
+function CardHead({ askedByLabel, time, accent }: { askedByLabel: string; time: string; accent: string }) {
   return (
     <View style={styles.head}>
       <View style={styles.avatar}>
-        <Ionicons name="sparkles" size={14} color={CYAN} />
+        <Ionicons name="sparkles" size={14} color={accent} />
       </View>
       <View style={styles.titleWrap}>
         <View style={styles.titleRow}>
           <Text style={styles.name}>AI Assistant</Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>🤖 AI Q&A</Text>
+            <Text style={[styles.badgeText, { color: accent }]}>🤖 AI Q&A</Text>
           </View>
         </View>
         <Text style={styles.meta}>Asked by {askedByLabel} · {time}</Text>
@@ -45,34 +49,39 @@ type ComicAnswerCardProps = {
   onRate: (_turnId: string, _rating: ComicAnswerRating) => void;
 };
 
-// Answered AI Assistant card: cyan treatment, Sparkles avatar, "AI Assistant" label, 🤖 AI Q&A
-// badge, Q/A layout, and a helpful / not helpful / flag rating row.
+// Answered AI Assistant card: theme-aware accent (cyan in standard, ink-dim in comic), Sparkles
+// avatar, "AI Assistant" label, 🤖 AI Q&A badge, Q/A layout, and a helpful / not helpful / flag row.
 export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardProps) {
+  const { tokens } = useTheme();
+  const accent = tokens.isComic ? AI_ACCENT_COMIC : AI_ACCENT_STANDARD;
   const ratable = item.answerTurnId !== null;
   const rating = item.currentUserRating;
 
   return (
     <View style={[styles.card, styles.answerCard]}>
-      <CardHead askedByLabel={askedByLabel} time={formatTime(item.askedAtIso)} />
+      <CardHead askedByLabel={askedByLabel} time={formatTime(item.askedAtIso)} accent={accent} />
 
       <View style={styles.questionBox}>
         <Text style={styles.bodyText}>
-          <Text style={styles.qaLabel}>Q: </Text>
+          <Text style={[styles.qaLabel, { color: accent }]}>Q: </Text>
           {item.question}
         </Text>
       </View>
 
       <Text style={styles.answerText}>
-        <Text style={styles.qaLabel}>A: </Text>
+        <Text style={[styles.qaLabel, { color: accent }]}>A: </Text>
         {item.answer}
       </Text>
 
       {item.linkedPlugins.length > 0 ? (
         <View style={styles.linkedPluginsRow}>
           {item.linkedPlugins.map((plugin) => (
-            <View key={plugin.slug} style={styles.linkedPluginChip}>
-              <Ionicons name="link" size={10} color={CYAN} />
-              <Text style={styles.linkedPluginText}>{plugin.name}</Text>
+            <View
+              key={plugin.slug}
+              style={[styles.linkedPluginChip, { backgroundColor: `${accent}12`, borderColor: `${accent}30` }]}
+            >
+              <Ionicons name="link" size={10} color={accent} />
+              <Text style={[styles.linkedPluginText, { color: accent }]}>{plugin.name}</Text>
             </View>
           ))}
         </View>
@@ -129,11 +138,13 @@ type ComicPendingCardProps = {
 // an in-flight @comic question — never an unreviewed AI draft. The server enforces this; this card
 // reflects that holding state.
 export function ComicPendingCard({ item, askedByLabel }: ComicPendingCardProps) {
+  const { tokens } = useTheme();
+  const accent = tokens.isComic ? AI_ACCENT_COMIC : AI_ACCENT_STANDARD;
   return (
     <View style={[styles.card, styles.pendingCard]}>
       <View style={styles.head}>
         <View style={styles.avatar}>
-          <Ionicons name="sparkles" size={14} color={CYAN} />
+          <Ionicons name="sparkles" size={14} color={accent} />
         </View>
         <View style={styles.titleWrap}>
           <View style={styles.titleRow}>
@@ -215,7 +226,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: CYAN,
+    color: AI_ACCENT_STANDARD,
   },
   pendingBadge: {
     flexDirection: 'row',
@@ -246,7 +257,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   qaLabel: {
-    color: CYAN,
+    color: AI_ACCENT_STANDARD,
     fontWeight: '600',
   },
   bodyText: {
@@ -272,11 +283,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    backgroundColor: `${CYAN}12`,
+    backgroundColor: `${AI_ACCENT_STANDARD}12`,
     borderWidth: 1,
-    borderColor: `${CYAN}30`,
+    borderColor: `${AI_ACCENT_STANDARD}30`,
   },
-  linkedPluginText: { fontSize: 11, fontWeight: '600', color: CYAN },
+  linkedPluginText: { fontSize: 11, fontWeight: '600', color: AI_ACCENT_STANDARD },
   pendingText: {
     fontSize: 12,
     color: '#7DD3FC',

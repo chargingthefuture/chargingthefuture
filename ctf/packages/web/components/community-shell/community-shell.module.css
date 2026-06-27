@@ -1539,6 +1539,8 @@
   border-radius: 12px;
   background: rgba(14, 165, 233, 0.12);
   border: 1px solid rgba(14, 165, 233, 0.25);
+  /* Drives the inline Sparkles icon (color="currentColor"). Comic theme overrides this below. */
+  color: #38BDF8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1714,6 +1716,8 @@
   border-radius: 12px;
   background: rgba(14, 165, 233, 0.1);
   border: 1px solid rgba(14, 165, 233, 0.22);
+  /* Drives the inline Sparkles icon (color="currentColor"). Comic theme overrides this below. */
+  color: #38BDF8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1942,6 +1946,8 @@
   border-radius: 11px;
   background: rgba(124, 58, 237, 0.12);
   border: 1px solid rgba(124, 58, 237, 0.25);
+  /* Drives the inline point icon (color="currentColor"). Comic theme overrides this below. */
+  color: #A78BFA;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2146,6 +2152,8 @@
 :global([data-theme='comic']) .comicPendingAvatar {
   background: #7a6a5014;
   border: 1.5px solid #7a6a5050;
+  /* inkDim glyph — the inline Sparkles inherits this via currentColor (§9, no blue in comic). */
+  color: var(--ctf-border-dim);
 }
 
 :global([data-theme='comic']) .comicCardBadge {
@@ -2224,6 +2232,13 @@
 
 :global([data-theme='comic']) .comicConsentHeader {
   background: var(--ctf-surface);
+}
+
+/* Consent point icons → inkDim glyph on an ink tint. The inline icon inherits via currentColor. */
+:global([data-theme='comic']) .comicConsentPointIcon {
+  background: #7a6a5014;
+  border: 1.5px solid #7a6a5050;
+  color: var(--ctf-border-dim);
 }
 
 /* "X is typing…" line above the composer. Subtle, single quiet line in the dark palette, with three
