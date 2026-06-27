@@ -56,6 +56,9 @@ export async function GET(_request: Request, context: { params: Promise<{ callId
       streamApiKey,
       streamUserId,
       streamToken,
+      // The Stream Video call id the audio room joins (distinct from streamChannelId, the chat channel).
+      // Surfaced flat so the client does not have to reach into `call` to find it (issue #987).
+      streamCallId: call.streamCallId,
       streamChannelId,
     };
     return NextResponse.json({ ok: true, ...payload }, { status: 200 });

@@ -111,12 +111,17 @@ export async function fetchQuoteHistory(): Promise<QuoteHistoryResult> {
   return authedFetchJson<QuoteHistoryResult>(`${BASE}/quotes/history`);
 }
 
+// Open (or reuse) the Direct Line thread with a provider. The server returns the thread under
+// `thread.id` (alongside Stream credentials), so we read that and expose it as `threadId` — the flat
+// `threadId` the caller expects. Reading a non-existent top-level `threadId` was leaving it undefined and
+// breaking the ring flow (issue #985).
 export async function createConnectionThread(providerId: string): Promise<{ threadId: string; ok: boolean }> {
-  return authedFetchJson<{ threadId: string; ok: boolean }>(`${BASE}/connections/threads`, {
+  const data = await authedFetchJson<{ ok: boolean; thread?: { id?: string } }>(`${BASE}/connections/threads`, {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify({ providerId }),
   });
+  return { threadId: data.thread?.id ?? '', ok: data.ok };
 }
 
 // Re-mint fresh Stream credentials for an existing connection thread's Direct Line. Mirrors the web
@@ -235,6 +240,9 @@ export interface FoundationInstantCallStateResponse {
   streamApiKey?: string | null;
   streamUserId?: string | null;
   streamToken?: string | null;
+  // The Stream Video call id the audio room joins (mirror of call.streamCallId). Distinct from
+  // streamChannelId, which is the Stream Chat channel id for the Direct Line — never a call id (issue #987).
+  streamCallId?: string;
   streamChannelId?: string;
 }
 
@@ -293,7 +301,10 @@ export async function ringInstantCall(
   threadId: string,
   authorizedBlocks?: number,
 ): Promise<FoundationInstantCallActionResponse> {
-  const body = authorizedBlocks === undefined ? undefined : JSON.stringify({ authorizedBlocks });
+  // Always send a JSON body so the Content-Type: application/json header always has a matching body — a
+  // POST with that header but no body can be rejected or misparsed by some proxies (issue #994). The
+  // server reads an absent cap from `{}` exactly as before.
+  const body = JSON.stringify(authorizedBlocks !== undefined ? { authorizedBlocks } : {});
   return authedFetchJson<FoundationInstantCallActionResponse>(
     `${BASE}/connections/threads/${threadId}/instant-call`,
     { method: 'POST', headers: JSON_HEADERS, body },
