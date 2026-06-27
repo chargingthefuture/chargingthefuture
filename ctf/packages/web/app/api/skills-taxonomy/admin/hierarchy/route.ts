@@ -5,6 +5,12 @@ import { getHierarchy } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
 
+// Admin reads deliberately use an opt-OUT model: inactive (soft-deleted/disabled)
+// records are included by default so admins see the full taxonomy, and a caller
+// must pass `includeInactive=false` to hide them. This is the inverse of the
+// public `/api/skills-taxonomy/hierarchy` endpoint, which opts IN (members see
+// only active records unless they explicitly ask for inactive ones). The two
+// defaults are intentionally different because the audiences differ.
 function parseIncludeInactive(url: string): boolean {
   return new URL(url).searchParams.get('includeInactive') !== 'false';
 }

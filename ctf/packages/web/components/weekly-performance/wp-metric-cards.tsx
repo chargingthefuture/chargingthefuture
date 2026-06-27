@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { BRAND, SUBTLE, SURFACE, type WpComparison, type WpMetric, formatDelta, formatMetricValue, humanizeMetricKey } from "./wp-shared";
 
 const CARD_COLORS = ["#A78BFA", "#22C55E", BRAND, "#06B6D4", "#EC4899", "#F97316"];
@@ -36,7 +36,7 @@ export function WeeklyPerformanceMetricCards({
             <div style={{ fontSize: 26, fontWeight: 800, color, marginBottom: 4 }}>{formatMetricValue(metric.metricValue, metric.metricUnit)}</div>
             {delta !== null ? (
               <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: positive ? "#22C55E" : "#F87171" }}>
-                <TrendingUp size={11} /> {formatDelta(delta, metric.metricUnit)}
+                {positive ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {formatDelta(delta, metric.metricUnit)}
               </div>
             ) : (
               <div style={{ fontSize: 11, color: SUBTLE }}>No prior-week comparison</div>

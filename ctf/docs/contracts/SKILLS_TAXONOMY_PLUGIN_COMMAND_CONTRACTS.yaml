@@ -24,6 +24,26 @@ contracts:
     idempotency: true
 
   - pluginId: skills-taxonomy
+    command: skills-taxonomy.summary.get
+    version: 1.0.0
+    description: Public, unauthenticated aggregate counts of active sectors, job titles, and skills for the signed-out splash teaser. Returns only counts (read live from the tables), never taxonomy rows or member data, so it carries no access gate.
+    inputSchema: {}
+    outputSchema:
+      sectors:
+        type: number
+      jobTitles:
+        type: number
+      skills:
+        type: number
+    dataAccess:
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
+    purpose: taxonomy_read_model
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: skills-taxonomy
     command: skills-taxonomy.flattened.get
     version: 1.0.0
     description: Read flattened taxonomy projection for selector and compatibility consumers.
@@ -68,7 +88,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_sectors
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -100,7 +120,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_sectors
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -129,7 +149,7 @@ contracts:
     dataAccess:
       - skills_taxonomy_sectors
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_destructive_governance
     retentionClass: audit_long_lived
     idempotency: false
@@ -157,7 +177,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_job_titles
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -189,7 +209,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_job_titles
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -218,7 +238,7 @@ contracts:
     dataAccess:
       - skills_taxonomy_job_titles
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_destructive_governance
     retentionClass: audit_long_lived
     idempotency: false
@@ -249,7 +269,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_skills
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -284,7 +304,7 @@ contracts:
         type: string
     dataAccess:
       - skills_taxonomy_skills
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -313,7 +333,7 @@ contracts:
     dataAccess:
       - skills_taxonomy_skills
       - skills_taxonomy_dependency_graph
-      - skills_taxonomy_audit_log
+      - skills_taxonomy_change_events
     purpose: taxonomy_destructive_governance
     retentionClass: audit_long_lived
     idempotency: false
@@ -351,3 +371,5 @@ contracts:
 changelog:
   - date: 2026-02-25
     change: Initial Skills Taxonomy command contract skeleton added with hierarchy reads, CRUD commands, and dependency-impact preview governance.
+  - date: 2026-06-27
+    change: Reconciled the audit data class name from skills_taxonomy_audit_log to skills_taxonomy_change_events to match the actual durable audit store written by the delete path; no skills_taxonomy_audit_log table exists.

@@ -13,6 +13,7 @@ import {
   type WhatWorksApiGate,
 } from '../../../_lib';
 import { logWhatWorksAudit } from 'lib/what-works/audit';
+import { reportError } from 'lib/observability/report';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,19 +50,24 @@ export async function POST(request: Request, context: RouteContext) {
   if (!product || product.status !== 'approved') {
     return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
   }
-  await addEndorsement(id, auth.gate.auth.userId);
-  const state = await getProductEndorsementState(id, auth.gate.auth.userId);
-  logWhatWorksAudit({
-    actorId: auth.gate.auth.userId,
-    command: 'what-works.product.endorse',
-    status: 'allow',
-    reason: 'access_route_guard',
-    targetType: 'product',
-    targetId: id,
-    result: 'success',
-    errorCategory: null,
-  });
-  return NextResponse.json({ ok: true, ...state });
+  try {
+    await addEndorsement(id, auth.gate.auth.userId);
+    const state = await getProductEndorsementState(id, auth.gate.auth.userId);
+    logWhatWorksAudit({
+      actorId: auth.gate.auth.userId,
+      command: 'what-works.product.endorse',
+      status: 'allow',
+      reason: 'access_route_guard',
+      targetType: 'product',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+    return NextResponse.json({ ok: true, ...state });
+  } catch (error) {
+    reportError(error, { area: 'what-works', op: 'endorse' });
+    return whatWorksError('We could not mark this item helpful. Try again.', 'what_works_endorse_failed', 500);
+  }
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
@@ -74,17 +80,22 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (!product || product.status !== 'approved') {
     return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
   }
-  await removeEndorsement(id, auth.gate.auth.userId);
-  const state = await getProductEndorsementState(id, auth.gate.auth.userId);
-  logWhatWorksAudit({
-    actorId: auth.gate.auth.userId,
-    command: 'what-works.product.unendorse',
-    status: 'allow',
-    reason: 'access_route_guard',
-    targetType: 'product',
-    targetId: id,
-    result: 'success',
-    errorCategory: null,
-  });
-  return NextResponse.json({ ok: true, ...state });
+  try {
+    await removeEndorsement(id, auth.gate.auth.userId);
+    const state = await getProductEndorsementState(id, auth.gate.auth.userId);
+    logWhatWorksAudit({
+      actorId: auth.gate.auth.userId,
+      command: 'what-works.product.unendorse',
+      status: 'allow',
+      reason: 'access_route_guard',
+      targetType: 'product',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+    return NextResponse.json({ ok: true, ...state });
+  } catch (error) {
+    reportError(error, { area: 'what-works', op: 'unendorse' });
+    return whatWorksError('We could not update this item. Try again.', 'what_works_unendorse_failed', 500);
+  }
 }
