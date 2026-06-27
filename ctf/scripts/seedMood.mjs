@@ -79,19 +79,44 @@ function deterministicId(user_id, client_id, mood_value, note) {
   return crypto.createHash('sha256').update(user_id + client_id + mood_value + (note || '')).digest('hex').slice(0, 32);
 }
 
+// Deterministic pseudonym (formatted as a UUID) so re-seeding is stable. In
+// production these are random; the seed derives them from the user id only so the
+// dev dataset is reproducible.
+function deterministicPseudonym(user_id) {
+  const h = crypto.createHash('sha256').update(`mood-pseudonym:${user_id}`).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
 async function seed() {
   await withDbTransaction(async (client) => {
+    // Mood check-ins are pseudonymous: each user maps to a server-controlled
+    // pseudonym (mood_client_identities) and the check-in rows are stored under
+    // that pseudonym with no user_id. Create the mappings first so the
+    // mood_submissions.pseudonym FK is satisfied.
+    const pseudonymByUser = new Map();
+    for (const userId of SEED_USER_IDS) {
+      const pseudonym = deterministicPseudonym(userId);
+      pseudonymByUser.set(userId, pseudonym);
+      await client.query(
+        `INSERT INTO mood_client_identities (pseudonym, user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [pseudonym, userId]
+      );
+    }
+
     for (const submission of MOOD_SUBMISSIONS) {
       const id = deterministicId(submission.user_id, submission.client_id, submission.mood_value, submission.note);
+      const pseudonym = pseudonymByUser.get(submission.user_id);
       await client.query(
-        `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, submitted_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
+        `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, submitted_at, pseudonym)
+         VALUES ($1, '', $2, $3, $4, NOW(), $5)
          ON CONFLICT (id) DO NOTHING`,
-        [id, submission.user_id, submission.client_id, submission.mood_value, submission.note]
+        [id, submission.client_id, submission.mood_value, submission.note, pseudonym]
       );
     }
   });
-  console.log('Seeded mood submissions.');
+  console.log('Seeded mood pseudonym mappings and submissions.');
 }
 
 seed()

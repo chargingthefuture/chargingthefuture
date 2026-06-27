@@ -164,7 +164,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your mood check-in submissions.',
     serviceScopeSupported: true,
     tables: [
-      del('mood_submissions', 'user_id', 'Your mood check-ins.'),
+      // Mood check-ins are stored pseudonymously: mood_submissions rows carry a
+      // pseudonym, not user_id, and the only user link lives in
+      // mood_client_identities. Deleting that mapping row cascades all the user's
+      // check-ins via the mood_submissions.pseudonym FK (ON DELETE CASCADE), so
+      // this single entry removes everything for the user.
+      del('mood_client_identities', 'user_id', 'Your mood check-ins (deleting your pseudonym mapping removes every check-in stored under it).'),
     ],
   },
   {

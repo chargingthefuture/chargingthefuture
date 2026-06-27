@@ -11,7 +11,7 @@ const TEXT = '#F9FAFB';
 const SUBTLE = '#9CA3AF';
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-const PRIVACY = ['No identity link', 'Zero logs retained', 'Aggregate only'];
+const PRIVACY = ['Never shown to others', 'Aggregate only', 'No public profile'];
 // The mood faces are a static, non-interactive marketing preview of the check-in
 // scale — labels describe the scale, not any per-user data.
 const MOOD_FACES: { emoji: string; label: string }[] = [
@@ -49,12 +49,12 @@ function DesktopMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
           <div style={{ width: 80, height: 80, borderRadius: 40, background: COLOR + '20', border: `2px solid ${COLOR}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Smile size={36} color={COLOR} />
           </div>
-          <span style={{ padding: '4px 14px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 12, color: COLOR, fontWeight: 600 }}>100% anonymous</span>
+          <span style={{ padding: '4px 14px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 12, color: COLOR, fontWeight: 600 }}>Pseudonymous</span>
           <h1 style={{ margin: 0, fontSize: 34, fontWeight: 800, lineHeight: 1.1 }}>
-            Check in with yourself.<br /><span style={{ color: COLOR }}>No names, no records.</span>
+            Check in with yourself.<br /><span style={{ color: COLOR }}>No names, no spotlight.</span>
           </h1>
           <p style={{ margin: 0, fontSize: 15, color: SUBTLE, maxWidth: 440 }}>
-            Your mood check-in is completely anonymous — never linked to your identity. Daily check-ins unlock resources, peer support, and gentle nudges.
+            Your mood check-ins are pseudonymous — kept under a random ID separate from your account and never shown to anyone. Community trends are anonymous and aggregate-only. Daily check-ins unlock resources, peer support, and gentle nudges.
           </p>
 
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -95,11 +95,11 @@ function MobileMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
         <div style={{ width: 64, height: 64, borderRadius: 32, background: COLOR + '20', border: `2px solid ${COLOR}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Smile size={28} color={COLOR} />
         </div>
-        <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600 }}>100% anonymous</span>
+        <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600 }}>Pseudonymous</span>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, lineHeight: 1.2 }}>
-          Check in with yourself.<br /><span style={{ color: COLOR }}>No names, no records.</span>
+          Check in with yourself.<br /><span style={{ color: COLOR }}>No names, no spotlight.</span>
         </h1>
-        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, maxWidth: 300 }}>Your mood is never linked to your identity. Daily check-ins unlock resources and gentle nudges.</p>
+        <p style={{ margin: 0, fontSize: 14, color: SUBTLE, maxWidth: 300 }}>Your check-ins are pseudonymous — kept under a random ID separate from your account. Daily check-ins unlock resources and gentle nudges.</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {PRIVACY.map((t) => (

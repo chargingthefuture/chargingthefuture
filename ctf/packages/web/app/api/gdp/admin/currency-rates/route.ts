@@ -6,6 +6,7 @@ import {
   listCurrencyRateAdmin,
   upsertCurrencyUsdRate,
 } from 'lib/gdp/repository';
+import { reportError } from 'lib/observability/report';
 
 // Admin-only currency USD-rate management (issue #312 P2). These factors exist
 // ONLY to roll multi-currency volume into the single USD-denominated GDP estimate.
@@ -97,15 +98,21 @@ export async function POST(request: Request) {
 
   const rate = await upsertCurrencyUsdRate({ currencyCode, usdRate, asOf, source });
 
-  await insertGdpAudit({
-    actorId: gate.auth.userId,
-    command: 'gdp.currency-rate.revise',
-    policyStatus: 'allow',
-    reason: 'ok',
-    targetType: 'currency_usd_rate',
-    targetId: `${currencyCode}:${asOf}`,
-    metadata: { currencyCode, usdRate, asOf, source },
-  });
+  // Best-effort audit: the rate is already persisted, so a failed audit write must not turn a saved
+  // change into a 500 and lose the response. Report the audit failure but still return success.
+  try {
+    await insertGdpAudit({
+      actorId: gate.auth.userId,
+      command: 'gdp.currency-rate.revise',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'currency_usd_rate',
+      targetId: `${currencyCode}:${asOf}`,
+      metadata: { currencyCode, usdRate, asOf, source },
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'gdp', op: 'currency_rate_revise_audit' });
+  }
 
   return NextResponse.json({ ok: true, rate }, { status: 201 });
 }

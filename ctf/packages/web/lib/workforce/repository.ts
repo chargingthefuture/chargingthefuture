@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 import {
   WORKFORCE_SKILL_LEVELS,
   deriveAnnualTrainingTarget,
@@ -183,11 +184,32 @@ export async function computeWorkforceModel(): Promise<WorkforceModel> {
   return workforceModelInFlight;
 }
 
+// Sector demand distribution — shared by the full model and the lightweight dashboard summary so the
+// dashboard's totalHeadcountTarget can never diverge from the sector reports' implied total. Shares are
+// normalized so they always sum to the workforce total even if the raw shares don't sum to 1. If no
+// sector carries a positive share, fall back to an even split so the breakdown is never blank.
+function buildSectorDemand(sectors: SectorModelRow[], workforceTotal: number): Map<string, number> {
+  const shareById = new Map<string, number>();
+  let shareSum = 0;
+  for (const s of sectors) {
+    const share = Math.max(0, toFiniteNumber(s.workforce_share, 0));
+    shareById.set(s.id, share);
+    shareSum += share;
+  }
+  const evenWeight = sectors.length > 0 ? 1 / sectors.length : 0;
+  const sectorDemand = new Map<string, number>();
+  for (const s of sectors) {
+    const weight = shareSum > 0 ? (shareById.get(s.id) ?? 0) / shareSum : evenWeight;
+    sectorDemand.set(s.id, Math.round(weight * workforceTotal));
+  }
+  return sectorDemand;
+}
+
 async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   const config = await getWorkforceConfig();
   const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
 
-  const [sectorsRes, jobTitlesRes, membersRes, profileSkillsRes] = await Promise.all([
+  const [sectorsRes, jobTitlesRes, membersRes] = await Promise.all([
     queryDb<SectorModelRow>(
       `SELECT id::text AS id, name, workforce_share::text AS workforce_share
        FROM skills_taxonomy_sectors
@@ -211,36 +233,32 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
        WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
     ),
-    queryDb<ProfileSkillJobTitleRow>(
-      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
-       FROM directory_profile_skills dps
-       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE
-       JOIN directory_profiles dp ON dp.id = dps.profile_id
-       WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
-    ),
   ]);
 
   const sectors = sectorsRes.rows;
   const jobTitles = jobTitlesRes.rows;
   const members = membersRes.rows;
-  const profileSkillRows = profileSkillsRes.rows;
 
-  // Demand: distribute the workforce total across sectors by each sector's workforce share. Shares
-  // are normalized so they always sum to the workforce total even if the raw shares don't sum to 1.
-  // If no sector carries a positive share, fall back to an even split so the breakdown is never blank.
-  const shareById = new Map<string, number>();
-  let shareSum = 0;
-  for (const s of sectors) {
-    const share = Math.max(0, toFiniteNumber(s.workforce_share, 0));
-    shareById.set(s.id, share);
-    shareSum += share;
+  // Skill arm of the recruited match, loaded separately and defensively. A profile counts toward an
+  // occupation if it carries a skill registered under that job title. These rows are keyed by profile
+  // and only read for the active members loaded above, so there is no need to re-join (and filter)
+  // directory_profiles here. If this optional query fails on a given database, recruited degrades to
+  // the sector and job-title arms rather than failing the whole read-only dashboard with a 503.
+  let profileSkillRows: ProfileSkillJobTitleRow[] = [];
+  try {
+    const profileSkillsRes = await queryDb<ProfileSkillJobTitleRow>(
+      `SELECT DISTINCT dps.profile_id::text AS profile_id, sts.job_title_id::text AS job_title_id
+       FROM directory_profile_skills dps
+       JOIN skills_taxonomy_skills sts ON sts.id = dps.skill_id AND sts.is_active = TRUE`,
+    );
+    profileSkillRows = profileSkillsRes.rows;
+  } catch (error) {
+    reportError(error, { area: 'workforce', op: 'computeWorkforceModel_skillArm' });
   }
-  const evenWeight = sectors.length > 0 ? 1 / sectors.length : 0;
-  const sectorDemand = new Map<string, number>();
-  for (const s of sectors) {
-    const weight = shareSum > 0 ? (shareById.get(s.id) ?? 0) / shareSum : evenWeight;
-    sectorDemand.set(s.id, Math.round(weight * workforceTotal));
-  }
+
+  // Demand: distribute the workforce total across sectors by each sector's workforce share (shared with
+  // the lightweight dashboard summary so the two can never disagree on the headcount target).
+  const sectorDemand = buildSectorDemand(sectors, workforceTotal);
 
   // Per-occupation demand: split a sector's demand evenly across its active job titles.
   const jobTitlesBySector = new Map<string, JobTitleModelRow[]>();
@@ -441,22 +459,56 @@ function percentRecruited(recruited: number, target: number): number {
   return Math.round(((recruited / target) * 100 + Number.EPSILON) * 100) / 100;
 }
 
+// The dashboard returns only top-line totals — it has no per-bucket supply breakdown — so it does NOT
+// need the expensive V2 supply-match work the full model does (the per-member expansion across every
+// occupation in a member's sector, and the DISTINCT profile-skill -> job-title join). Running the full
+// model here made the most-loaded workforce endpoint compute work it never returns; at production data
+// scale that extra join/expansion can exceed the DB statement timeout and throw, which the dashboard
+// route turns into a 503 that blanks the whole page. This lightweight summary reads only what the
+// dashboard shows: the config, the sector demand, and two counts. recruitedTotal mirrors the full model
+// exactly (the count of all active Directory profiles), so the numbers never diverge.
 export async function getDashboard(): Promise<WorkforceDashboard> {
-  const model = await computeWorkforceModel();
+  const config = await getWorkforceConfig();
+  const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
+
+  const [sectorsRes, occupationsCountRes, membersCountRes] = await Promise.all([
+    queryDb<SectorModelRow>(
+      `SELECT id::text AS id, name, workforce_share::text AS workforce_share
+       FROM skills_taxonomy_sectors
+       WHERE is_active = TRUE`,
+    ),
+    queryDb<CountRow>(
+      `SELECT COUNT(*)::text AS total FROM skills_taxonomy_job_titles WHERE is_active = TRUE`,
+    ),
+    queryDb<CountRow>(
+      `SELECT COUNT(*)::text AS total
+       FROM directory_profiles
+       WHERE is_active = TRUE AND deleted_at IS NULL`,
+    ),
+  ]);
+
+  const sectors = sectorsRes.rows;
+  const sectorDemand = buildSectorDemand(sectors, workforceTotal);
+  const totalHeadcountTarget = Array.from(sectorDemand.values()).reduce((sum, n) => sum + n, 0);
+  const totalMembers = Math.max(0, Number.parseInt(membersCountRes.rows[0]?.total ?? '0', 10) || 0);
+  const occupationsTotal = Math.max(0, Number.parseInt(occupationsCountRes.rows[0]?.total ?? '0', 10) || 0);
+  // Top-line recruited mirrors V2 exactly: the count of all active Directory profiles.
+  const recruitedTotal = totalMembers;
+
   return {
-    population: model.config.population,
-    participationRate: model.config.participationRate,
-    workforceTotal: model.workforceTotal,
-    totalHeadcountTarget: model.totalHeadcountTarget,
-    totalMembers: model.totalMembers,
-    recruitedTotal: model.recruitedTotal,
-    percentRecruited: percentRecruited(model.recruitedTotal, model.totalHeadcountTarget),
-    remainingCapacity: Math.max(0, model.config.maxRecruitable - model.recruitedTotal),
-    minRecruitable: model.config.minRecruitable,
-    maxRecruitable: model.config.maxRecruitable,
-    sectorsTotal: model.sectorsTotal,
-    occupationsTotal: model.occupationsTotal,
-    generatedAtIso: model.generatedAtIso,
+    population: config.population,
+    participationRate: config.participationRate,
+    workforceTotal,
+    totalHeadcountTarget,
+    totalMembers,
+    recruitedTotal,
+    percentRecruited: percentRecruited(recruitedTotal, totalHeadcountTarget),
+    remainingCapacity: Math.max(0, config.maxRecruitable - recruitedTotal),
+    minRecruitable: config.minRecruitable,
+    maxRecruitable: config.maxRecruitable,
+    sectorsTotal: sectors.length,
+    occupationsTotal,
+    generatedAtIso: new Date().toISOString(),
   };
 }
 

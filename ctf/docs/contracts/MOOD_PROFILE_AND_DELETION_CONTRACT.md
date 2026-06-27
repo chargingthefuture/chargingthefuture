@@ -1,5 +1,22 @@
 # Mood Profile and Deletion Contract (Draft)
 
+> **Implemented schema (authoritative, 2026-06-26).** Sections 2–10 below are the
+> original planning draft and name tables that never shipped (`mood_user_extension`,
+> `mood_entries`, etc.). The shipped v3 Mood plugin stores only:
+> - `mood_client_identities` — `pseudonym` (PK) ↔ `user_id` (unique). The only place
+>   a check-in is linked to an account. Pseudo-anonymous by design.
+> - `mood_submissions` — the check-ins (`pseudonym`, `client_id`, `mood_value`,
+>   `note`, `submitted_at`). Rows carry **no** `user_id` (it is stored empty); the
+>   account link exists only via the pseudonym in `mood_client_identities`.
+>
+> **Deletion (service-scope and full-account):** the account-deletion registry
+> (`ctf/packages/web/lib/account/deletion-registry.ts`) deletes the user's
+> `mood_client_identities` row by `user_id`; every `mood_submissions` row stored
+> under that pseudonym is removed by the `mood_submissions.pseudonym` foreign key
+> (`ON DELETE CASCADE`). No mood data tied to the user survives. The community
+> pulse aggregate reads only `mood_value` + `submitted_at`, so it never exposed
+> per-user data in the first place.
+
 ## 1) Plugin Metadata
 
 - Plugin Name: Mood

@@ -106,13 +106,13 @@ function CheckinView({
   return (
     <View>
       <Text style={s.checkinTitle}>How are you feeling?</Text>
-      <Text style={s.checkinSub}>Anonymous · Safe · Private</Text>
+      <Text style={s.checkinSub}>Pseudonymous · Safe · Private</Text>
       <MoodPicker selected={selected} onSelect={setSelected} />
       {selected !== null && (
         <>
           <TextInput
             style={s.noteInput}
-            placeholder="(Optional) Anything to share? Completely anonymous…"
+            placeholder="(Optional) Anything to share? Pseudonymous and private…"
             placeholderTextColor="#4B5563"
             multiline
             numberOfLines={3}
@@ -128,10 +128,10 @@ function CheckinView({
             {submitting ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={s.submitBtnText}>Submit Anonymously</Text>
+              <Text style={s.submitBtnText}>Submit Privately</Text>
             )}
           </TouchableOpacity>
-          <Text style={s.anonNote}>Not linked to your account</Text>
+          <Text style={s.anonNote}>Never shown to anyone</Text>
         </>
       )}
       {error !== null && <Text style={s.errorText}>{error}</Text>}
@@ -275,7 +275,7 @@ function PrivateView() {
     <View style={s.emptyWrap}>
       <Text style={s.emptyEmoji}>🔒</Text>
       <Text style={s.emptyTitle}>Privacy First</Text>
-      <Text style={s.emptySub}>100% anonymous. Zero tracking. Your data is only yours.</Text>
+      <Text style={s.emptySub}>Your check-ins are pseudonymous — stored under a random ID kept separate from your account. Community trends are anonymous and aggregate-only.</Text>
     </View>
   );
 }
@@ -336,10 +336,10 @@ export function Mood() {
         </View>
         <View>
           <Text style={s.headerTitle}>Mood</Text>
-          <Text style={s.headerSub}>100% anonymous check-ins</Text>
+          <Text style={s.headerSub}>Pseudonymous check-ins</Text>
         </View>
         <View style={s.anonBadge}>
-          <Text style={s.anonBadgeText}>🔒 Anonymous</Text>
+          <Text style={s.anonBadgeText}>🔒 Pseudonymous</Text>
         </View>
       </View>
 

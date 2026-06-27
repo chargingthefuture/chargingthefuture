@@ -20,9 +20,9 @@ export function MoodSidebar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => voi
         <div style={{ padding: "14px 16px", borderRadius: 12, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
             <Lock size={12} style={{ color: t.ACCENT }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT }}>100% Anonymous</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: t.ACCENT }}>Pseudonymous</span>
           </div>
-          <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>Your mood is never linked to your identity. Rate-limited per device.</div>
+          <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>Your check-ins are stored under a random ID kept separate from your account, and never shown to anyone. One check-in per week.</div>
         </div>
       </div>
       <ScrollArea style={{ flex: 1 }}>

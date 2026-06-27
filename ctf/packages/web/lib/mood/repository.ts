@@ -87,14 +87,46 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
   };
 }
 
-export async function getMoodEligibility(input: { clientId: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
+// Resolve the caller's stable, server-controlled mood pseudonym, creating it on
+// first use. This is the ONLY function that reads the user_id ↔ pseudonym map
+// (mood_client_identities); every other mood query keys on the pseudonym, so the
+// check-in rows never carry the user_id (pseudo-anonymity). Because the pseudonym
+// is server-owned and one-per-user, a member cannot mint a fresh one, so keying
+// the cooldown on it still cannot be bypassed.
+export async function getOrCreateMoodPseudonym(userId: string): Promise<string> {
+  const existing = await queryDb<{ pseudonym: string }>(
+    `SELECT pseudonym FROM mood_client_identities WHERE user_id = $1`,
+    [userId],
+  );
+  if (existing.rows.length > 0) {
+    return existing.rows[0].pseudonym;
+  }
+
+  // ON CONFLICT DO UPDATE (no-op) so a concurrent insert still returns the row.
+  const inserted = await queryDb<{ pseudonym: string }>(
+    `INSERT INTO mood_client_identities (user_id)
+     VALUES ($1)
+     ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
+     RETURNING pseudonym`,
+    [userId],
+  );
+  return inserted.rows[0].pseudonym;
+}
+
+// Eligibility / cooldown is keyed on the server-controlled pseudonym (resolved
+// from the verified user via getOrCreateMoodPseudonym), never on the
+// client-supplied clientId. The clientId is attacker-controlled, so keying the
+// cooldown on it would let a member bypass the 7-day window by rotating it; the
+// pseudonym is stable per account and cannot be rotated by the member, and the
+// check-in rows carry no user_id.
+export async function getMoodEligibility(input: { pseudonym: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
   const result = await queryDb<{ submitted_at: Date }>(
     `SELECT submitted_at
      FROM mood_submissions
-     WHERE client_id = $1
+     WHERE pseudonym = $1
      ORDER BY submitted_at DESC
      LIMIT 1`,
-    [input.clientId],
+    [input.pseudonym],
   );
 
   if (result.rows.length === 0) {
@@ -112,25 +144,29 @@ export async function getMoodEligibility(input: { clientId: string }): Promise<{
   };
 }
 
-export async function createMoodSubmission(input: { userId: string; clientId: string; moodValue: number; note: string | null }) {
+export async function createMoodSubmission(input: { pseudonym: string; clientId: string; moodValue: number; note: string | null }) {
   if (!Number.isInteger(input.moodValue) || input.moodValue < 1 || input.moodValue > 5) {
     throw new Error('invalid_payload');
   }
 
-  const eligibility = await getMoodEligibility({ clientId: input.clientId });
+  const eligibility = await getMoodEligibility({ pseudonym: input.pseudonym });
   if (!eligibility.eligible) {
     throw new Error('cooldown_active');
   }
 
+  // user_id is stored empty on purpose: the check-in row is decoupled from the
+  // account. The link lives only in mood_client_identities, keyed by pseudonym.
   const inserted = await queryDb<{ id: string; submitted_at: Date }>(
-    `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, pseudonym)
+     VALUES ($1, '', $2, $3, $4, $5)
      RETURNING id, submitted_at`,
-    [randomUUID(), input.userId, input.clientId, input.moodValue, input.note],
+    [randomUUID(), input.clientId, input.moodValue, input.note, input.pseudonym],
   );
 
+  // Field names match the mood.check.submit command contract outputSchema
+  // (checkId / submittedAt).
   return {
-    id: inserted.rows[0].id,
-    submittedAtIso: inserted.rows[0].submitted_at.toISOString(),
+    checkId: inserted.rows[0].id,
+    submittedAt: inserted.rows[0].submitted_at.toISOString(),
   };
 }

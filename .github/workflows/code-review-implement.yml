@@ -2,13 +2,20 @@ name: Code Review — Open PR for Actionable Finding
 
 # Turns ONE code-review finding into a pull request. It only ever runs against an issue the
 # sweep (code-review-sweep.yml) labelled `code-review:actionable` — meaning the reviewer
-# judged the fix small, safe, and self-contained. This is the autonomous-coding step, so
-# it is manual-dispatch on purpose: you kick each build until the pipeline is trusted.
-# Enable a schedule later if you want it hands-off.
+# judged the fix small, safe, and self-contained, so it is low-risk by construction and the
+# PR can auto-merge.
 #
-# To target a specific issue, pass its number; otherwise the oldest actionable issue is
-# picked. Uses the external Claude Code GitHub Action — the same one bug-reports-build.yml
-# uses. Pin it to a version you trust before relying on it in production.
+# It runs automatically after the sweep finishes (workflow_run), so the find → fix loop is
+# hands-off: the sweep files issues, this builds the oldest actionable one. It can still be
+# kicked by hand, and you can target a specific issue by number.
+#
+# Hard one-at-a-time rule: every PR it opens is labelled `code-review:auto-pr`, and the run
+# bails out cleanly if any such PR is still open — so at most one auto PR exists at a time and
+# they merge in series. The `code-review-pr-babysitter.yml` workflow keeps that one PR moving
+# (updates it when it falls behind main, resolves real conflicts) so it can't sit stuck.
+#
+# Uses the external Claude Code GitHub Action — the same one bug-reports-build.yml uses. Pin
+# it to a version you trust before relying on it in production.
 on:
   workflow_dispatch:
     inputs:
@@ -16,16 +23,48 @@ on:
         description: "Code-review issue number to build (blank = oldest actionable)"
         required: false
         type: string
+  workflow_run:
+    workflows: ["Code Review — Sweep and File Issues"]
+    types: [completed]
+
+# Never let two implement runs race (e.g. a manual kick during a workflow_run). One at a time.
+concurrency:
+  group: code-review-implement
+  cancel-in-progress: false
 
 jobs:
   build-actionable-finding:
     name: Build actionable finding and open PR
     runs-on: ubuntu-latest
+    # When chained from the sweep, only run if the sweep succeeded. Manual dispatch always runs.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
       issues: write
       pull-requests: write
     steps:
+      # One auto PR at a time. If the previous one hasn't merged yet, skip this whole run — the
+      # babysitter is responsible for getting it unstuck. gh is preinstalled, so no checkout needed.
+      - name: Only one auto PR at a time
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # The label is both the one-at-a-time marker and the babysitter's selector. Create it
+          # if missing so the list below never errors on a fresh repo.
+          gh label create code-review:auto-pr --repo "$REPO" --color 1d76db \
+            --description "PR opened by the code-review implement loop (gates one-at-a-time)" --force >/dev/null 2>&1 || true
+          OPEN=$(gh pr list --repo "$REPO" --label code-review:auto-pr --state open --json number --jq 'length')
+          if [ "$OPEN" -gt 0 ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "An auto code-review PR is already open; skipping until it merges."
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "No open auto code-review PR; proceeding."
+          fi
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -48,6 +87,7 @@ jobs:
       # Decide which actionable issue to build. Skips the job cleanly if there is none.
       - name: Select actionable issue
         id: pick
+        if: steps.gate.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           REPO: ${{ github.repository }}
@@ -70,7 +110,7 @@ jobs:
           fi
 
       - name: Implement finding and open PR
-        if: steps.pick.outputs.number != ''
+        if: steps.gate.outputs.proceed == 'true' && steps.pick.outputs.number != ''
         # Pin this to a version you trust before relying on it in production.
         uses: anthropics/claude-code-action@v1
         env:
@@ -80,33 +120,45 @@ jobs:
           anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_PAT }}
           prompt: |
-            You are implementing one code-review finding for the "Charging the Future" app.
-            Follow the repository rules in CLAUDE.md and .claude/rules exactly.
+            You are implementing one code-review finding for the "Charging the Future" app,
+            fully unattended. Follow the repository rules in CLAUDE.md and .claude/rules
+            exactly — including the no-pleasantries / banned-term dictionary in CLAUDE.md.
+            Everything you write to GitHub (PR title, PR description, commit messages, issue
+            comments) must obey that dictionary: no thanks/sorry/glad/"hope"/sign-offs, no
+            first-person feeling words, plain factual language only.
 
             The work item is issue #${{ steps.pick.outputs.number }} in this repo
             `${{ github.repository }}`. Do this in order:
 
             1. Read the full issue: `gh issue view ${{ steps.pick.outputs.number }} --repo ${{ github.repository }}`.
                It describes the finding, the files involved, and the suggested fix.
-            2. Implement the SMALLEST change that resolves the finding. Do not refactor beyond
-               what the fix needs. If the finding turns out to be wrong or already fixed, do not
-               open a PR — comment that on the issue and stop.
-            3. Create a DESCRIPTIVE branch — `fix/<short-kebab-summary>` for a bug,
+            2. Decide if it is still valid and genuinely small, safe, and self-contained. If the
+               finding is wrong, already fixed, or would actually need a large or risky change
+               (money/ServiceCredits ledger, auth/authz, CSRF, data deletion, schema/migrations,
+               a new or changed API contract, or brand-new stateful logic), do NOT open a PR:
+               comment the reason on the issue and remove the `code-review:actionable` label
+               (`gh issue edit ${{ steps.pick.outputs.number }} --repo ${{ github.repository }} --remove-label code-review:actionable`),
+               then stop.
+            3. Otherwise implement the SMALLEST change that resolves the finding. Do not refactor
+               beyond what the fix needs. If the change alters a route, the data model, a
+               contract, or delivery status, update the plugin's feature inventory too (CLAUDE.md).
+            4. Create a DESCRIPTIVE branch — `fix/<short-kebab-summary>` for a bug,
                `refactor/<...>` for a cleanup, `docs/<...>` for docs — never random words or an
                opaque slug. Commit with a clear message.
-            4. Run `pnpm --filter @ctf/web typecheck` and fix any errors before pushing.
-            5. Push the branch and open a pull request on `${{ github.repository }}` with a
+            5. Run `pnpm --filter @ctf/web typecheck` and fix any errors before pushing.
+            6. Push the branch and open a pull request on `${{ github.repository }}` with a
                Conventional-Commit title and a description that includes the line
                `Parity Status: web + mobile-responsive + android complete` (or a `Parity Ticket:`
                line if UI parity is deferred). Link the issue with `Closes #${{ steps.pick.outputs.number }}`.
-            6. Pick the lane per CLAUDE.md: if the change is low-risk (restyle, copy, refactor,
-               docs, type/lint/test), open it ready for review and enable auto-merge. If it is
-               risky (money/ledger, auth, CSRF, data deletion, schema/migrations, new or changed
-               API contracts, or brand-new stateful logic), open it ready for review but do NOT
-               enable auto-merge — leave it for the owner.
-            7. Comment the PR URL on the issue, then relabel it: add `code-review:built`, remove
+            7. Label the PR `code-review:auto-pr` right away — this is the one-at-a-time marker the
+               loop and the babysitter rely on:
+               `gh pr edit <pr-number> --repo ${{ github.repository }} --add-label code-review:auto-pr`.
+            8. Enable auto-merge so it merges itself once CI is green:
+               `gh pr merge <pr-number> --repo ${{ github.repository }} --auto --squash`.
+               Required CI checks still gate the merge, so a broken fix cannot land.
+            9. Comment the PR URL on the issue, then relabel it: add `code-review:built`, remove
                `code-review:actionable`
                (`gh issue edit ${{ steps.pick.outputs.number }} --repo ${{ github.repository }} --add-label code-review:built --remove-label code-review:actionable`).
 
-            If the fix would be large or risky beyond a small self-contained change, do NOT
-            guess: comment on the issue explaining the blocker and stop without opening a PR.
+            Open exactly one PR. If anything blocks you, comment the blocker on the issue and stop
+            — do not guess or open a half-finished PR.
