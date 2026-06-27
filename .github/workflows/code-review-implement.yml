@@ -119,6 +119,12 @@ jobs:
         with:
           anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_PAT }}
+          # Run fully unattended: this agent must edit files and run git/gh/pnpm. The action
+          # runs Claude through the Agent SDK in `agent` mode, which applies its OWN permission
+          # mode and does NOT honour the repo `.claude/settings.json` `bypassPermissions`
+          # default — so without this flag every Bash/Edit/Write call is denied and no PR is
+          # opened (the symptom: a "success" run with a high permission_denials_count and no PR).
+          claude_args: "--dangerously-skip-permissions"
           prompt: |
             You are implementing one code-review finding for the "Charging the Future" app,
             fully unattended. Follow the repository rules in CLAUDE.md and .claude/rules
