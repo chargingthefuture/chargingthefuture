@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requirePeerProgrammingReadAccess, peerProgrammingErrorResponse } from 'lib/peer-programming/_lib';
+import { PEER_PROGRAMMING_ROOM_ROSTER_LIMIT } from 'lib/peer-programming/constants';
 import {
   getCohortById,
   getMyCohort,
@@ -8,7 +9,7 @@ import {
   listActiveCohorts,
   listMessages,
 } from 'lib/peer-programming/repository';
-import { buildCohortRosters } from 'lib/peer-programming/roster';
+import { buildCohortRosters, type CohortMember } from 'lib/peer-programming/roster';
 import { reportError } from 'lib/observability/report';
 
 // How the requester relates to the cohort they are viewing:
@@ -51,7 +52,20 @@ export async function GET(request: Request) {
     const messages = cohort ? await listMessages(cohort.id) : [];
     // Who is in the open cohort, with resolved usernames, so members (and listeners) can see who
     // their cohort-mates are. Membership is not secret. Empty when no cohort is open.
-    const members = cohort ? (await buildCohortRosters([cohort.id])).get(cohort.id) ?? [] : [];
+    //
+    // The roster is best-effort and must never blank the room: each name is resolved via an external
+    // Clerk lookup, so if that is slow or fails the room still renders with an empty roster rather
+    // than the whole page failing. It is also capped (PEER_PROGRAMMING_ROOM_ROSTER_LIMIT) because the
+    // standing cohort can hold every active member; the true total still shows as the member count.
+    let members: CohortMember[] = [];
+    if (cohort) {
+      try {
+        members = (await buildCohortRosters([cohort.id], PEER_PROGRAMMING_ROOM_ROSTER_LIMIT)).get(cohort.id) ?? [];
+      } catch (rosterError) {
+        reportError(rosterError, { area: 'peer-programming', op: 'room_roster' });
+        members = [];
+      }
+    }
 
     return NextResponse.json({
       ok: true,
