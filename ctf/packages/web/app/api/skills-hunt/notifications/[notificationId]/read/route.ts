@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireSkillsHuntReadAccess } from '../../../_lib';
+import { ensureMutationCsrf, requireSkillsHuntSubmitAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { markNotificationRead } from 'lib/skills-hunt/repository';
 import { reportError } from 'lib/observability/report';
 
 export async function POST(request: Request, { params }: { params: Promise<{ notificationId: string }> }) {
-  const gate = await requireSkillsHuntReadAccess();
+  // Mark-read is a mutation: require an authenticated member with a username
+  // (the skills_hunt_notifications scope per the access-policy contract). The
+  // repository ownership filter (user_id = caller) still enforces that a member
+  // can only acknowledge their own notifications.
+  const gate = await requireSkillsHuntSubmitAccess();
   if (!gate.allowed) {
     return gate.response;
   }
