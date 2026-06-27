@@ -51,6 +51,12 @@ export async function POST(request: Request) {
       metadata: {
         amount: parsed.data.amount,
         governanceTicketId: parsed.data.governanceTicketId,
+        // Structured target context per the admin.adjust_credits audit contract, which
+        // requires both targetUserId and governanceTicketId in targetContext.
+        targetContext: {
+          targetUserId: parsed.data.targetUserId,
+          governanceTicketId: parsed.data.governanceTicketId,
+        },
       },
     });
 

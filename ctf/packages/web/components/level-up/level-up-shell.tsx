@@ -218,7 +218,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     try {
       const res = await fetch("/api/level-up/enroll", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ cohortId: cohort.id, idempotencyKey: idempotencyKey(), depositCredits: cohort.requiredCredits ?? 0 }),
       });
       if (!res.ok) {
@@ -234,10 +234,19 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     }
   }
 
-  async function handleValidate(milestoneId: string) {
+  async function handleValidate(validation: PendingValidation) {
     try {
-      await fetch(`/api/level-up/milestones/${milestoneId}/validate`, { method: "POST", headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" }, body: JSON.stringify({}) });
-      setPendingValidations((prev) => prev.filter((v) => v.milestoneId !== milestoneId));
+      const res = await fetch(`/api/level-up/milestones/${validation.milestoneId}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({
+          enrollmentId: validation.enrollmentId,
+          cohortId: validation.cohortId,
+          idempotencyKey: idempotencyKey(),
+        }),
+      });
+      if (!res.ok) return;
+      setPendingValidations((prev) => prev.filter((v) => v.milestoneId !== validation.milestoneId));
     } catch {
       // optimistic remove already applied on success path only
     }
@@ -321,7 +330,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           pendingValidations={pendingValidations}
           isAdmin={isAdmin}
           onBrowse={() => setNav("browse")}
-          onValidate={(milestoneId) => void handleValidate(milestoneId)}
+          onValidate={(validation) => void handleValidate(validation)}
         />
       </div>
     </div>
