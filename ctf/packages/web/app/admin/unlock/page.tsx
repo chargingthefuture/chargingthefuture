@@ -1,5 +1,9 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { getUnlockDashboardSnapshot, listUnlockSubmissions } from 'lib/unlock/repository';
+import {
+  getUnlockDashboardSnapshot,
+  getUnlockExperimentSplit,
+  listUnlockSubmissions,
+} from 'lib/unlock/repository';
 import { redirect } from 'next/navigation';
 import { UnlockAdminShell } from '@/components/unlock/unlock-admin-shell';
 
@@ -11,10 +15,13 @@ export default async function UnlockAdminPage() {
     redirect('/');
   }
 
-  const [dashboard, submissions] = await Promise.all([
+  const [dashboard, submissions, experimentSplit] = await Promise.all([
     getUnlockDashboardSnapshot(),
     listUnlockSubmissions({ limit: 50 }),
+    getUnlockExperimentSplit(),
   ]);
 
-  return <UnlockAdminShell dashboard={dashboard} submissions={submissions} />;
+  return (
+    <UnlockAdminShell dashboard={dashboard} submissions={submissions} experimentSplit={experimentSplit} />
+  );
 }

@@ -60,6 +60,18 @@ export type UnlockDashboardSnapshot = {
   lockedSupportOnlyCount: number;
 };
 
+// One row of the "early Commons access" A/B experiment readout, per bucket.
+//   bucket        — 'early_commons' (treatment) or 'control'.
+//   exposed       — distinct members seen in this bucket (counted from unlock.status.get audit rows).
+//   submitted     — of those, how many have a successful Quora-URL submission.
+//   completionPct — submitted / exposed, as a percentage (one decimal).
+export type UnlockExperimentBucketStat = {
+  bucket: string;
+  exposed: number;
+  submitted: number;
+  completionPct: number;
+};
+
 export type UnlockStatus = {
   userId: string;
   accessTier: UnlockAccessTier | null;
