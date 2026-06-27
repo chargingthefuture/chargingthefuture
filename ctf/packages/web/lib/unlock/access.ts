@@ -34,3 +34,20 @@ export async function getUnlockAccessTier(userId: string): Promise<UnlockAccessT
 export async function isUserUnlocked(userId: string): Promise<boolean> {
 	return (await getUnlockAccessTier(userId)) === 'approved_full';
 }
+
+// A/B experiment bucket. True when this user is in the "early Commons access" treatment group —
+// a not-yet-verified member who is allowed into the Commons (Hub general channel) to ask for help
+// before completing Quora verification. Bucketing is the Unleash flag's gradual rollout (sticky on
+// userId); the default is false, so when the flag is off or Unleash is unconfigured, behaviour is
+// the current control (Unlock-only until verified). A flag-backend failure must never widen access,
+// so any error resolves to false (control).
+export async function isUnlockEarlyCommonsEnabled(userId: string): Promise<boolean> {
+	try {
+		return await evaluateBooleanFlag(UNLOCK_FLAGS.EARLY_COMMONS_ACCESS, false, {
+			targetingKey: userId,
+		});
+	} catch (error) {
+		console.error('[unlock] early-commons flag evaluation failed; defaulting to control', error);
+		return false;
+	}
+}

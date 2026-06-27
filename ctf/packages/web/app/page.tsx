@@ -3,7 +3,7 @@ import { CommunityShell } from '../components/community-shell/community-shell';
 import type { ShellCurrentUser } from '../components/community-shell/shell-types';
 import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity } from '../lib/auth/request-identity';
-import { getUnlockAccessTier } from '../lib/unlock/access';
+import { getUnlockAccessTier, isUnlockEarlyCommonsEnabled } from '../lib/unlock/access';
 import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry } from '../lib/plugins/repository';
 import { getTrustUserExtension } from '../lib/trust/repository';
@@ -55,7 +55,16 @@ export default async function HomePage() {
   // landing page (handled at the plugin route), not a denial wall. Nothing is hidden here.
   const tier = userId ? await getUnlockAccessTier(userId).catch(() => null) : null;
 
-  if (userId && !isAdmin && tier !== 'approved_full' && tier !== 'locked_support_only') {
+  // A/B experiment: a not-yet-verified member in the early-Commons treatment bucket lands on the
+  // Commons (this Hub) instead of being redirected to the Unlock screen, so they can ask for help —
+  // e.g. trouble finding their Quora URL. Only evaluated for users who would otherwise be redirected,
+  // and defaults to false (control), so production routing is unchanged until the rollout is enabled.
+  const earlyCommons =
+    userId && tier !== 'approved_full' && tier !== 'locked_support_only'
+      ? await isUnlockEarlyCommonsEnabled(userId).catch(() => false)
+      : false;
+
+  if (userId && !isAdmin && tier !== 'approved_full' && tier !== 'locked_support_only' && !earlyCommons) {
     redirect('/plugin/unlock');
   }
 

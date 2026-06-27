@@ -17,6 +17,9 @@ export type UnlockStatus = {
   reminderStage: number;
   incentiveGrantedAt: string | null;
   hasSubmission: boolean;
+  // A/B experiment: true when the member is in the early-Commons treatment bucket. Mirrored from the
+  // web status payload. The mobile Commons help link is a parity follow-up (see Android parity note).
+  earlyCommonsAccess?: boolean;
 };
 
 export async function fetchUnlockStatus(): Promise<UnlockStatus> {

@@ -9,6 +9,7 @@ import { UnlockIconRail } from "./unlock-icon-rail";
 import { UnlockSidebar } from "./unlock-sidebar";
 import { UnlockStatusCard } from "./unlock-status-card";
 import { UnlockRightRail } from "./unlock-right-rail";
+import { UnlockCommonsHelp } from "./unlock-commons-help";
 
 export function UnlockStatusView({
   status,
@@ -17,6 +18,7 @@ export function UnlockStatusView({
   onResubmit,
   submitting,
   error,
+  earlyCommonsAccess = false,
 }: {
   status: DisplayStatus;
   resubmitUrl: string;
@@ -24,6 +26,7 @@ export function UnlockStatusView({
   onResubmit: () => void;
   submitting: boolean;
   error: string | null;
+  earlyCommonsAccess?: boolean;
 }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
@@ -32,14 +35,21 @@ export function UnlockStatusView({
   const t = getUnlockTokens(theme);
 
   const content = (
-    <UnlockStatusCard
-      status={status}
-      resubmitUrl={resubmitUrl}
-      onResubmitUrlChange={onResubmitUrlChange}
-      onResubmit={onResubmit}
-      submitting={submitting}
-      error={error}
-    />
+    <>
+      <UnlockStatusCard
+        status={status}
+        resubmitUrl={resubmitUrl}
+        onResubmitUrlChange={onResubmitUrlChange}
+        onResubmit={onResubmit}
+        submitting={submitting}
+        error={error}
+      />
+      {earlyCommonsAccess && (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <UnlockCommonsHelp />
+        </div>
+      )}
+    </>
   );
 
   if (isMobile) {
