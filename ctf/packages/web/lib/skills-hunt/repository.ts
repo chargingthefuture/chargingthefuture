@@ -1444,6 +1444,53 @@ export async function getRound(roundId: string): Promise<SkillsHuntRound | null>
   return row ? mapRound(row) : null;
 }
 
+// Read a single submission by id, returning the authoritative database row.
+// Used to refresh the response body after a best-effort reward mutation so the
+// API never reports in-memory state that diverges from what was committed.
+export async function getSubmissionById(submissionId: string): Promise<SkillsHuntSubmission | null> {
+  const result = await queryDb<SkillsHuntSubmissionRow>(
+    `
+      SELECT
+        id,
+        round_id,
+        submitter_user_id,
+        submitter_username,
+        full_name,
+        bio,
+        quora_profile_url,
+        skills,
+        proposed_skills,
+        claimed_professions,
+        status,
+        points_awarded,
+        participation_points,
+        credit_granted,
+        credit_amount,
+        credit_granted_at,
+        url_validation_result,
+        url_validation_checked_at,
+        score_breakdown,
+        review_action,
+        review_notes,
+        reviewed_by_user_id,
+        reviewed_at,
+        edit_history,
+        edited_at,
+        deleted_at,
+        directory_profile_generated_at,
+        created_at,
+        updated_at
+      FROM skills_hunt_submissions
+      WHERE id = $1::uuid
+      LIMIT 1
+    `,
+    [submissionId],
+  );
+
+  const row = result.rows[0];
+  return row ? mapSubmission(row) : null;
+}
+
 // Atomically claim the accept reward for a submission under the per-scout,
 // per-round cap. A transaction-scoped advisory lock keyed on (round, scout)
 // serializes concurrent accepts for the same scout so two of them cannot both
