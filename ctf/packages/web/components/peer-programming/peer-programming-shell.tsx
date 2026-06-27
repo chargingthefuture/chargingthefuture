@@ -42,9 +42,21 @@ type RoomData = {
   access: RoomAccess;
 };
 
-function mapMessages(rows: RoomApiMessage[]): Message[] {
+// Resolve a message author's display name: their @username from the cohort roster, or a short
+// id fallback when Clerk could not resolve them. Matches the mobile memberName helper so the same
+// author reads the same way on both surfaces.
+function authorDisplayName(authorUserId: string, namesByUserId: Map<string, string>): string {
+  return namesByUserId.get(authorUserId) ?? `Member ${authorUserId.slice(0, 6)}`;
+}
+
+function mapMessages(rows: RoomApiMessage[], members: RoomMember[] = []): Message[] {
+  const namesByUserId = new Map<string, string>();
+  for (const member of members) {
+    if (member.username) namesByUserId.set(member.userId, member.username);
+  }
   return rows.map((row) => ({
     id: row.id,
+    author: authorDisplayName(row.authorUserId, namesByUserId),
     authorId: row.authorUserId,
     content: row.body,
     timestamp: row.createdAtIso,
@@ -69,7 +81,7 @@ async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Pro
   };
   return {
     room,
-    messages: mapMessages(data.messages ?? []),
+    messages: mapMessages(data.messages ?? [], data.members ?? []),
     cohorts: data.cohorts ?? [],
     members: data.members ?? [],
     myCohortId: data.myCohortId ?? null,
@@ -195,7 +207,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       const roomRes = await fetch(roomUrl(activeCohortId));
       if (roomRes.ok) {
         const data = (await roomRes.json()) as RoomApiResponse;
-        setMessages(mapMessages(data.messages ?? []));
+        setMessages(mapMessages(data.messages ?? [], data.members ?? []));
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to post message.");

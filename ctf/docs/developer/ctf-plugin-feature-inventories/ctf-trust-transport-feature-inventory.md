@@ -254,6 +254,20 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-06-27: Code-review findings pass (issues #1113–#1122). (1) Member-facing mutation routes now emit
+  audit events to `trust_transport_admin_audit_trail`, matching the audit contract: `request.create`
+  (requests route), `offer.accept` (offers accept route), `trip.status.update` (trip status route), and
+  `payout.request` (payouts requests route) — previously only admin routes wrote audit rows. (2) Trip
+  chat fix: the requests list API now returns `tripId` (LEFT JOIN to `trust_transport_trips`), and the
+  web shell opens chat with the trip id instead of the request id, so accepted trips no longer 404; when
+  no trip exists yet the chat tab shows "Chat opens once a driver accepts this request." (3) Service-credits
+  POST route now runs the CSRF check before the auth check, consistent with every other mutation route.
+  Verified already-correct guards and closed as completed: `offer.accept` ownership (`actorMustOwnRequest`)
+  is enforced in `acceptOffer` (`request.requesterUserId !== actorUserId` → 403), and `requestPayout`
+  already rejects non-finite/non-positive amounts (→ 400) and checks available balance (→ 403); payout
+  ownership comes from the authenticated user id, so no `providerId` body field is needed. No schema or
+  contract changes; `tripId` is an additive read-only response field.
+
 - 2026-06-26: Hyphenation/cleanup rename (hard cutover, no back-compat alias). The plugin slug, folder
   names, every route, and the command/audit namespace moved from `trusttransport` to the kebab-case
   `trust-transport` (so `/api/trusttransport/*` no longer exists — `/api/trust-transport/*` is the only

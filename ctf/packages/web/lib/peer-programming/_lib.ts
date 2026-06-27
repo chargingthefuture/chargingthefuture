@@ -3,6 +3,7 @@ import { evaluatePluginAccess, type AllowDecision } from '../auth/server-authz';
 import { checkMutationOrigin } from '../auth/csrf';
 import { PEER_PROGRAMMING_ERROR_CODE } from './constants';
 import { ensurePeerProgrammingAdmin } from './policy';
+import { reportError } from 'lib/observability/report';
 
 export type PeerProgrammingApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -54,14 +55,38 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
   return null;
 }
 
-export function peerProgrammingErrorResponse(error: unknown, fallbackMessage: string) {
+export function peerProgrammingErrorResponse(error: unknown, fallbackMessage: string): NextResponse {
   const code = error instanceof Error ? error.message : '';
+
+  if (code === 'invalid_payload') {
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.invalidPayload, message: 'Invalid payload.' },
+      { status: 400 },
+    );
+  }
+
+  if (code === 'policy_denied') {
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.policyDenied, message: 'Operation denied by policy.' },
+      { status: 403 },
+    );
+  }
+
   if (code === 'assignment_not_found') {
     return NextResponse.json(
       { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.notFound, message: 'Assignment not found.' },
       { status: 404 },
     );
   }
+
+  if (code === 'not_found') {
+    return NextResponse.json(
+      { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.notFound, message: 'Requested resource not found.' },
+      { status: 404 },
+    );
+  }
+
+  reportError(error, { area: 'peer-programming', op: 'unknown' });
   return NextResponse.json(
     { ok: false, code: PEER_PROGRAMMING_ERROR_CODE.persistenceUnavailable, message: fallbackMessage },
     { status: 503 },

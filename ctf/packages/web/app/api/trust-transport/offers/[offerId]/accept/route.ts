@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
-import { acceptOffer } from 'lib/trust-transport/repository';
+import { acceptOffer, insertTrustTransportAudit } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
@@ -45,6 +45,15 @@ export async function POST(request: Request, { params }: RouteProps) {
 
   try {
     const result = await acceptOffer(requestId, offerId, gate.auth.userId, idempotencyKey);
+    await insertTrustTransportAudit({
+      actorId: gate.auth.userId,
+      command: 'trust-transport.offer.accept',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'offer',
+      targetId: offerId,
+      metadata: { requestId, tripId: result.trip.id },
+    });
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'offers_offerid_accept' });

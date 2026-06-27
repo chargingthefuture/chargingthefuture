@@ -58,16 +58,16 @@ The route set below is the **shipped** surface (the earlier draft above named a
 different, never-built `/admin/weeks/:weekStart/...` shape; the routes that
 actually exist are listed here).
 
-Read routes (admin or approved user):
+Read routes (admin or approved user). Each writes a `weekly_performance_audit_trail` row on an allow decision:
 
-- `GET /api/weekly-performance/weeks` — tracked weeks (most recent 52).
-- `GET /api/weekly-performance/current-week` — current week plus active-user count (last 7 days).
-- `GET /api/weekly-performance/metrics?weekStartDate=...[&compareWeekStartDate=...]` — week metrics, or a week-over-week comparison when `compareWeekStartDate` is supplied.
+- `GET /api/weekly-performance/weeks` — tracked weeks (most recent 52); audits `weekly-performance.week.list`.
+- `GET /api/weekly-performance/current-week` — current week plus active-user count (last 7 days); audits `weekly-performance.week.get`.
+- `GET /api/weekly-performance/metrics?weekStartDate=...[&compareWeekStartDate=...]` — week metrics, or a week-over-week comparison when `compareWeekStartDate` is supplied; audits `weekly-performance.metrics.get` or `weekly-performance.comparison.get` per branch.
 
-Admin-only routes:
+Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or the `operations` role):
 
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
-- `GET /api/weekly-performance/export?weekStartDate=...` — export gate (admin-only, additionally guarded by the `WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag).
+- `GET /api/weekly-performance/export?weekStartDate=...` — export gate (additionally guarded by the `WEEKLY_PERFORMANCE_EXPORT_ENABLED` environment flag); writes a `weekly-performance.report.export` audit row.
 
 ## 3) Data Dependencies and Contracts
 
@@ -110,12 +110,13 @@ Weekly performance metrics are derived from upstream plugin tables (workforce, s
 ## 7) Gaps and Known Technical Debt
 
 1. Non-financial metric dictionary and formulas live in code; no canonical governance document captures the dictionary outside the implementation.
-2. Authorized non-admin read-only access is not surfaced; all read paths require admin role.
+2. The `operations` role now passes the admin gate (week-selection and export) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. Read routes already admit any approved member.
 3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, `comparison.get`, and `report.export`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
 
+- 2026-06-27: **Resolved the weekly-performance code-review sweep findings.** (1) Every read/export route now writes a `weekly_performance_audit_trail` row on an allow decision, so `week.list`, `week.get`, `metrics.get`, `comparison.get`, and `report.export` are all audited per the audit contract (was: only the admin week-selection mutation wrote an audit row). (2) The admin gate (`ensureWeeklyPerformanceAdmin`) now admits the `operations` role as well as `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. (3) The mobile regular screen now shows an "Access restricted" state for members without the admin/operations role instead of silent API failures; the mobile `AuthUser` now carries the normalized `role` claim. (4) The command and audit contract YAMLs were aligned to the shipped table names (`weekly_performance_week_windows` -> `weekly_performance_weeks`, `weekly_performance_metric_snapshots` -> `weekly_performance_metrics`, `weekly_performance_audit_log` -> `weekly_performance_audit_trail`) — documentation alignment only, no schema or table rename. (5) Web-shell fixes: `randomUUID` now uses the runtime-global `crypto.randomUUID()` (Edge-safe), the declining-metric card shows a downward-trend icon, and `ComparisonResponse.comparison` is typed optional/nullable to match the route. No schema change.
 - 2026-06-25: **Documented the two owned storage tables** (inventory-debt burn-down — documentation catch-up, no code change). Added `weekly_performance_metrics` (per-week aggregate store) and `weekly_performance_audit_trail` (admin allow/deny audit log) to §3.1, each from its `schema.sql` definition. Removed these two tables from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-16: The active-member signal now has a writer. The current-week active-member count (`GET /current-week`) reads `login_events` via `countActiveUsersLastDays`, but nothing wrote that table, so the count was always 0. Added `recordLoginEvent` (`lib/engagement/login-activity.ts`), called from the shared access gate for every signed-in member (deduplicated to one row per member per UTC day), which now populates the table this review reads. No schema, route, or contract change here (the writer lives in shared engagement/auth code); the same fix unblocked PeerProgramming weekly cohort assignment, which reads the same table.
 - 2026-06-16: The current week is now always shown, even before any metrics exist for it. Previously, when the `weekly_performance_weeks` table had no rows (the normal state in production until upstream metrics are recorded), `listWeeks()` returned an empty list and `getCurrentWeek()` returned `null`, so the admin surface rendered only a bare "No weeks are tracked yet" message. `lib/weekly-performance/repository.ts` now synthesizes the current week (open, derived from `DATE_TRUNC('week', NOW())`) at read time in both `listWeeks()` (via a `UNION` that adds the current week when absent) and `getCurrentWeek()` (via a `LEFT JOIN`), so the dashboard and admin shells render their normal structure with zero/empty values instead of a blank page. The synthesized week is persisted only when an admin sets it active: `selectWeek()` now inserts the row on first activation when no row exists yet (the table has no unique constraint on `week_start_date`, so an `UPDATE`-then-`INSERT` is used rather than an upsert). Web and Android both consume the same read routes, so this fixes parity for free. No schema or contract change.

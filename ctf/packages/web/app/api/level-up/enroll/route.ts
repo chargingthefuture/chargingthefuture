@@ -23,6 +23,12 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
+  // enrollment.create is restricted to members and admins (per the access policy contract).
+  // Trainer-only accounts are not permitted to self-enroll.
+  if (!gate.auth.isAdmin && gate.auth.role === 'trainer') {
+    return NextResponse.json({ ok: false, code: 'level_up_forbidden', message: 'Trainers cannot enroll in cohorts.' }, { status: 403 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();

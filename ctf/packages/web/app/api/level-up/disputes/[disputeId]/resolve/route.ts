@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { insertLevelUpAudit, resolveDispute } from 'lib/level-up/repository';
+import { getDisputeCohortId, insertLevelUpAudit, isTrainerForCohort, resolveDispute } from 'lib/level-up/repository';
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpReadAccess } from 'lib/level-up/_lib';
 import { reportError } from 'lib/observability/report';
 
@@ -33,11 +33,17 @@ export async function POST(request: Request, { params }: RouteProps) {
     return gate.response;
   }
 
-  if (!gate.auth.isAdmin) {
-    return NextResponse.json({ ok: false, code: 'level_up_forbidden', message: 'Admin role required to resolve disputes.' }, { status: 403 });
-  }
-
   const resolvedParams = await params;
+
+  // dispute.resolve is permitted for admins and for the trainer assigned to the dispute's
+  // cohort (per the access policy contract's trainerAssignmentOrAdmin rule).
+  if (!gate.auth.isAdmin) {
+    const cohortId = await getDisputeCohortId(resolvedParams.disputeId);
+    const trainerForScope = cohortId ? await isTrainerForCohort(gate.auth.userId, cohortId) : false;
+    if (!trainerForScope) {
+      return NextResponse.json({ ok: false, code: 'level_up_forbidden', message: 'Assigned trainer or admin role required to resolve disputes.' }, { status: 403 });
+    }
+  }
 
   let body: unknown;
   try {

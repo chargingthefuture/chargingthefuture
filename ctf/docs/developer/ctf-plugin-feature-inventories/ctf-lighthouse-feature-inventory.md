@@ -242,6 +242,10 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-06-27: **Code-review sweep fixes (issues #1060, #1064, #1071).** No schema or contract change:
+  - The member shell's Browse tab now reads `GET /api/lighthouse/properties` (all active public listings) instead of `GET /api/lighthouse/my-properties` (the user's own listings), so a seeker with no listings of their own sees available housing. The Host tab still loads the user's own listings itself (#1071).
+  - `createMatchRequest` no longer inserts the literal placeholder `'pending'` into `stream_channel_id` and then overwrites it with a second `UPDATE`. The match id is generated up front, the Stream channel is provisioned first, and the real channel id is written in a single `INSERT`, so a committed match always carries its real channel id and a transaction retry cannot leave a `'pending'` placeholder or attempt a duplicate channel creation (#1060).
+  - Removed the unused `lib/lighthouse/audit.ts` (`logLighthouseAudit`), which only wrote to the application log and was never called; the durable audit path is `insertLighthouseAudit` writing to `lighthouse_admin_audit_trail` (#1064).
 - 2026-06-26: **Code-review sweep fixes (issues #1012–#1019).** Security/correctness hardening across the plugin, no schema or contract change:
   - `POST /api/lighthouse/matches/:matchId/chat` now returns 403 unless the match status is `accepted`, so a pending/rejected/cancelled/completed match can no longer provision a live Stream channel or token (#1012).
   - `POST /api/lighthouse/service-credits` runs the CSRF gate before the auth/DB lookup, matching every other mutation handler in the plugin (#1014).

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createEscrowHold, insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 
 type EscrowHoldBody = {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsReadAccess();
+  const gate = await requireServiceCreditsServiceAccess();
   if (!gate.allowed) {
     return gate.response;
   }
@@ -33,6 +33,8 @@ export async function POST(request: Request) {
   if (
     !body.sourceUserId
     || typeof body.amount !== 'number'
+    || !(body.amount > 0)
+    || !Number.isFinite(body.amount)
     || !body.originPlugin
     || !body.releasePolicy
     || !body.idempotencyKey

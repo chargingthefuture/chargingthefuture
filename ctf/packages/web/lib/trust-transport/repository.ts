@@ -97,6 +97,8 @@ type RequestRow = {
   price_currency: string | null;
   created_at: Date;
   updated_at: Date;
+  // Present only when the row is selected with a join to trust_transport_trips (e.g. listRequests).
+  trip_id?: string | null;
 };
 
 type OfferRow = {
@@ -221,6 +223,7 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
+    tripId: row.trip_id ?? null,
   };
 }
 
@@ -440,10 +443,11 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
-    `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
-     FROM trust_transport_requests
-     WHERE ($1::text IS NULL OR requester_user_id = $1)
-     ORDER BY created_at DESC
+    `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at, t.id AS trip_id
+     FROM trust_transport_requests r
+     LEFT JOIN trust_transport_trips t ON t.request_id = r.id
+     WHERE ($1::text IS NULL OR r.requester_user_id = $1)
+     ORDER BY r.created_at DESC
      OFFSET $2 LIMIT $3`,
     [requesterUserId, offset, pageSize],
   );

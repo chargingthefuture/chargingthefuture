@@ -26,6 +26,15 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   }
   const deleted = await deleteIncident(id, gate.auth.userId, gate.auth.isAdmin);
   if (!deleted) {
+    // The request was authorized but the row was gone (rowCount 0 — e.g. a concurrent
+    // delete). The audit contract requires an event for every authorized operation, so
+    // log the failure result here rather than only on the success path below.
+    logClickLogAudit({
+      actorId: gate.auth.userId,
+      command: 'click-log.incident.delete',
+      result: 'failure',
+      target: { incidentId: id },
+    });
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
   logClickLogAudit({

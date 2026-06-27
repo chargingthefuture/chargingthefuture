@@ -33,7 +33,7 @@ function EnrollmentRow({ enr }: { enr: Enrollment }) {
   );
 }
 
-function ValidationPanel({ pending, onValidate }: { pending: PendingValidation[]; onValidate: (milestoneId: string) => void }) {
+function ValidationPanel({ pending, onValidate }: { pending: PendingValidation[]; onValidate: (validation: PendingValidation) => void }) {
   return (
     <div style={{ marginTop: 8, padding: "14px", background: `${GREEN}08`, borderRadius: 10, border: `1px solid ${GREEN}20` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: GREEN, marginBottom: 10 }}>
@@ -43,7 +43,7 @@ function ValidationPanel({ pending, onValidate }: { pending: PendingValidation[]
         <div key={v.milestoneId} style={{ marginBottom: 10, padding: "10px", background: SURFACE, borderRadius: 8, border: `1px solid ${BORDER}` }}>
           {v.learnerName && <div style={{ fontSize: 12, color: TEXT, fontWeight: 500 }}>{v.learnerName}</div>}
           {v.task && <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 8 }}>{v.task}</div>}
-          <button type="button" onClick={() => onValidate(v.milestoneId)}
+          <button type="button" onClick={() => onValidate(v)}
             style={{ width: "100%", background: GREEN, color: "#000", border: "none", borderRadius: 6, padding: "5px 0", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
             Approve
           </button>
@@ -64,7 +64,7 @@ export function LevelUpRightPanel({
   pendingValidations: PendingValidation[];
   isAdmin: boolean;
   onBrowse: () => void;
-  onValidate: (milestoneId: string) => void;
+  onValidate: (validation: PendingValidation) => void;
 }) {
   return (
     <aside style={{ width: 300, background: SURFACE, borderLeft: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>

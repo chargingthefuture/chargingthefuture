@@ -81,12 +81,13 @@ Admin routes:
 - `POST /api/skills-taxonomy/admin/skills`
 - `PUT /api/skills-taxonomy/admin/skills/:id`
 - `DELETE /api/skills-taxonomy/admin/skills/:id`
-- `GET /api/skills-taxonomy/admin/dependency-impact`
+- `GET /api/skills-taxonomy/admin/dependency-impact` — query params `targetType`, `targetId`, and `operation` (one of `delete`/`deactivate`); all three are required and validated.
 
 Consumer routes:
 
 - `GET /api/skills-taxonomy/hierarchy`
 - `GET /api/skills-taxonomy/flattened`
+- `GET /api/skills-taxonomy/summary` — **public, unauthenticated.** Returns live aggregate counts `{ sectors, jobTitles, skills }` of active rows (no taxonomy rows, no member data) for the signed-out splash teaser. Command `skills-taxonomy.summary.get`.
 
 ## 3) Data Dependencies and Downstream Safeguards
 
@@ -122,6 +123,7 @@ The canonical entities live in `skills_taxonomy_sectors`, `skills_taxonomy_job_t
 5. Admin action logging is required for sector/job-title/skill create/update/delete mutations.
 6. Audit coverage for create/update/delete and dependency-impact checks.
 7. Request validation and integrity constraints to prevent hierarchy corruption.
+8. Durable audit store: the delete path writes one row to `skills_taxonomy_change_events` (see §3.1) as the durable evidence of a destructive decision. The contract `dataAccess`/`dataClassesAccessed` audit data class is named `skills_taxonomy_change_events` to match this real store (there is no `skills_taxonomy_audit_log` table). Create/update/list/preview commands additionally emit a policy-decision audit line via `logSkillsTaxonomyAudit`; only the delete path persists a durable row today.
 
 ## 6) Operator Safety and Destructive Risk
 
@@ -152,6 +154,8 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 ## 10) Change Log
 
+- 2026-06-27: Added a public, unauthenticated `GET /api/skills-taxonomy/summary` (command `skills-taxonomy.summary.get`) returning live aggregate counts `{ sectors, jobTitles, skills }` of active rows, and wired the signed-out splash teaser to it on both web (`skills-taxonomy-public-shell.tsx`) and mobile (`SkillsTaxonomy.tsx` / `SkillsTaxonomyApi.ts`). This replaces the earlier behavior where the signed-out splash showed zeros (the only counts source, `/hierarchy`, is auth-gated). The endpoint returns only counts — no taxonomy rows or member data — so it carries no access gate; the counts are read straight from the tables, so adding a sector/job title/skill is reflected on the next load. While the counts load or if the fetch fails, both surfaces fall back to neutral phrasing rather than showing zeros. `getTaxonomySummary()` added to the repository; command + access-policy (publicAccess) contracts updated.
+- 2026-06-27: Resolved code-review sweep findings for this plugin. (1) Reconciled the audit data class name in the command and audit contracts from `skills_taxonomy_audit_log` to `skills_taxonomy_change_events`, which is the real durable store the delete path writes to (no `skills_taxonomy_audit_log` table exists); noted the audit-store policy in §5. (2) The mobile screen now skips the hierarchy fetch when the viewer is signed out and renders the public splash, and the unauthenticated branch is checked before the error branch. (3) Documented the deliberate `includeInactive` defaults (admin opts out, public opts in) inline on both endpoints. (4) The `dependency-impact` route now reads, validates, and audits a required `operation` param (`delete`/`deactivate`), and emits a `deny` / `invalid_target` audit decision when the target is not found. (5) The admin sectors/job-titles/skills list GETs now emit a policy-decision audit line on success and failure. Documented the `operation` param on the dependency-impact route in §2.2.
 - 2026-06-25: **Documented the three owned support tables** (inventory-debt burn-down — documentation catch-up, no code change). Added `skills_taxonomy_flattened_projection` (flattened read model), `skills_taxonomy_consumer_bindings` (downstream-reference tracker for dependency-impact), and `skills_taxonomy_change_events` (mutation audit log) to §3.1, each from its `schema.sql` definition. Removed these three tables from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-25: Added the owner-approved promotion for game design / development. New occupation "Game Designers / Developers" under the existing "Creative & Media" sector, with 14 skills: Game Design, Level Design, Narrative Design, Game Systems Design, Game Development, Gameplay Programming, Game Physics, Game AI Programming, Multiplayer Networking, Unity, Unreal Engine, Godot, Game Prototyping, and Playtesting & QA. Appended to `APPROVED_SKILL_PROMOTIONS` in `ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs`; it upserts the occupation and skills on the next reseed (idempotent), looking the sector up by name (never creating it). No SkillsHunt proposal backs it, so `proposalNormalizedSkills` is empty. Data/script only — no schema change.
 - 2026-06-21: Added a durable, idempotent promotion path for owner-approved free-text skills. New `ctf/scripts/seedSkillsTaxonomyPromotions.mjs` plus shared list in `ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs`, wired to run right after the legacy backfill in `seedSkillsTaxonomy.mjs`. First promotion: occupation "Marketing Specialist" under the existing "Professional & Business Services" sector, with skills Marketing, Social Media Marketing, Content Marketing, Search Engine Optimization (SEO), Email Marketing, Market Research, Brand Management, and Copywriting (fulfils the "Marketing" proposal, issue #681). The promotion step also marks the matching `skills_hunt_proposed_skill_promotions` row `status = 'promoted'`. Also added a "Context for the agent picking this up" section to the generated skill-proposal issue body in `ctf/scripts/proposeSkillPromotions.mjs` documenting the taxonomy model, tables, file locations, and the promote recipe. Data/script only — no schema change.
