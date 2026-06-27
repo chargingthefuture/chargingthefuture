@@ -3,7 +3,7 @@
 ## 1) Plugin Metadata
 
 - Plugin Name: GentlePulse
-- Service Key (lowercase, stable): `gentlepulse`
+- Service Key (lowercase, stable): `gentle-pulse`
 - Owner Team: Wellbeing Experiences (proposed)
 - Rollout Stage: Planning
 
@@ -29,7 +29,7 @@ Rule 114 baseline: GentlePulse uses canonical profile identity and stores plugin
 
 ## 3) Plugin Extension Fields
 
-- Storage location (table or json path): `gentlepulse_user_extension`
+- Storage location (table or json path): `gentle_pulse_user_extension`
 - Fields:
   - field name: `user_id`
     - type: uuid
@@ -50,19 +50,19 @@ Rule 114 baseline: GentlePulse uses canonical profile identity and stores plugin
 
 ## 4) Domain Data Owned by Plugin
 
-- Table/entity: `gentlepulse_checkins`
+- Table/entity: `gentle_pulse_checkins`
   - Contains personal data? yes (wellbeing entries)
   - Retention period: user-controlled with policy minimums
   - Legal/compliance note: sensitive wellbeing data
-- Table/entity: `gentlepulse_reminders`
+- Table/entity: `gentle_pulse_reminders`
   - Contains personal data? yes (schedule + user linkage)
   - Retention period: short/medium-lived
   - Legal/compliance note: operational metadata only
-- Table/entity: `gentlepulse_trends_cache`
+- Table/entity: `gentle_pulse_trends_cache`
   - Contains personal data? yes (derived user insights)
   - Retention period: short-lived recomputable cache
   - Legal/compliance note: avoid sensitive text payloads
-- Table/entity: `gentlepulse_deletion_events`
+- Table/entity: `gentle_pulse_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, timestamps)
   - Retention period: compliance retention window
   - Legal/compliance note: Rule 114 deletion audit trail
@@ -72,12 +72,12 @@ Rule 114 baseline: GentlePulse uses canonical profile identity and stores plugin
 When user deletes GentlePulse usage only:
 
 - Delete immediately:
-  - `gentlepulse_user_extension`
+  - `gentle_pulse_user_extension`
   - user check-ins, reminder schedules, and trends cache
 - Anonymize/pseudonymize:
   - none expected; plugin data is user-scoped and removable
 - Retain for compliance/fraud/finance:
-  - `gentlepulse_deletion_events`
+  - `gentle_pulse_deletion_events`
 - Never touch (must remain):
   - canonical profile
   - non-GentlePulse plugin data
@@ -100,7 +100,7 @@ When user requests full account deletion:
 If user returns after service-scoped deletion:
 
 - Recreated defaults:
-  - new `gentlepulse_user_extension` with default cadence
+  - new `gentle_pulse_user_extension` with default cadence
 - Data that is not restored:
   - deleted check-ins and reminder history
 - Re-consent required? (yes/no):
@@ -111,7 +111,7 @@ If user returns after service-scoped deletion:
 - Deletion event schema fields:
   - `id`, `user_id`, `scope`, `plugin_id`, `requested_at`, `processed_at`, `result`, `request_id`, `trace_id`
 - Event table/path:
-  - `gentlepulse_deletion_events`
+  - `gentle_pulse_deletion_events`
 - Who can trigger deletion:
   - authenticated user (self)
   - full-account orchestrator/system actor
@@ -121,7 +121,7 @@ If user returns after service-scoped deletion:
 ## 9) API and UX Surface
 
 - Service delete endpoint:
-  - `DELETE /api/account/gentlepulse-profile` (planned)
+  - `DELETE /api/account/gentle-pulse-profile` (planned)
 - Full account delete endpoint (or orchestrator):
   - `DELETE /api/account/full-account`
 - Status model (`requested`, `processing`, `completed`, `failed`):

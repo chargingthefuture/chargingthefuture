@@ -41,8 +41,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 7. Security, Privacy, and Compliance Controls
 
 - Auth required for all actions
-- Users can only view/delete their own incidents
-- Admins (future) can view/delete all
+- Users can only view/delete their own incidents; admins can view/delete any incident
+- Web and mobile mutations send the `x-ctf-csrf: 1` header
+- Every allowed operation emits an audit event (`clicklog.incident.create`/`.list`/`.delete`)
+  via `lib/clicklog/audit.ts`, matching [CLICKLOG_PLUGIN_AUDIT_CONTRACTS.yaml](../../contracts/CLICKLOG_PLUGIN_AUDIT_CONTRACTS.yaml)
 - See [CLICKLOG_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml](../../contracts/CLICKLOG_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml)
 
 ## 8. Web and Android Delivery Status
@@ -75,6 +77,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-06-26: **Resolved the clicklog code-review sweep findings (#972–#979).** Added `lib/clicklog/audit.ts` and emit an audit event on every allowed `GET`/`POST`/`DELETE` so the audit contract is honoured (#972). `POST /api/clicklog` no longer rejects a missing `metadata` — it defaults to `{}` per the command contract (#973) — and trims `notes` before the length check so trailing whitespace can't slip past `MAX_NOTES_LENGTH` or be stored unnormalised (#978). The web shell now sends `x-ctf-csrf: 1` on its POST and DELETE fetches, matching the mobile client (#974). `deleteIncident` takes an `isAdmin` flag and drops the `user_id` condition for admins, so an admin deleting another member's incident no longer returns a spurious 500 (#975). Fixed import ordering in `lib/clicklog/repository.ts` (imports now precede `getIncidentById`) (#976). The web shell stores the true DB `count` from the GET response and shows it as the headline total instead of the capped-at-50 array length (#977). Removed the unused `refreshing` prop from the mobile `ClicklogMain` (and the now-unused `refreshing` state) (#979). No schema change.
 - 2026-06-23: **Closed an unlock-gating gap (audit finding).** The ClickLog API routes gated only on "is signed in" (`resolveRequestIdentity` + `canCreateIncident`/`canDeleteIncident`), so a signed-in but not-yet-unlocked member could create, read, and delete incidents by calling the API directly — even though the `/apps/clicklog` page was gated. This violated the rule that no plugin works while Unlock is pending. Added `app/api/clicklog/_lib.ts` `requireClicklogAccess()` over the shared `evaluatePluginAccess()` (default `minUnlockTier: 'approved_full'`, admins pass) and routed `GET`/`POST` (`route.ts`) and `DELETE` (`[id]/route.ts`) through it; the `DELETE` ownership check now reads `userId`/`isAdmin` from the gate decision. Matches every other plugin's `_lib` pattern. No schema change.
 - 2026-06-14: Registered ClickLog in the production plugin registry. The plugin was fully built (schema `clicklog_incidents`, API routes, web shell + components, mobile feature, contracts, seed) and the dynamic apps route already renders `<ClicklogShell />` for slug `clicklog`, but the `ctf_plugin_registry` seed in `schema.sql` was missing the `clicklog` row — so production (which reads the DB registry, not the code fallback) never listed or routed to it, leaving the app invisible and the "live plugins" count one short. Added the row (`ClickLog`, `implemented_shell`, nav_rank 180, visible). Run "Update Neon DB" so production gets the row. No code/contract change.
 

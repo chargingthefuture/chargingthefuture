@@ -1,4 +1,4 @@
-// GentlePulse — real screen bound to /api/gentlepulse/library routes.
+// GentlePulse — real screen bound to /api/gentle-pulse/library routes.
 // Mockup: design/.../survivor-hub/MobileGentlePulse.tsx + Empty/Loading/Public variants.
 // Omitted (no backing API field): emoji, duration, category, play-count, streak, filter chips.
 

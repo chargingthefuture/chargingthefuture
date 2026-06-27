@@ -50,11 +50,13 @@ function getEasProjectId(): string | null {
   return typeof id === 'string' && id.trim().length > 0 ? id.trim() : null;
 }
 
-// True only on a native build with a usable projectId. Expo Go cannot deliver a
-// remote push (it has no native notification module wired for this app), so we
-// treat it as unsupported and lean on the in-app poll.
+// True only on a native Android build with a usable projectId. Expo Go cannot deliver a
+// remote push (it has no native notification module wired for this app), so we treat it
+// as unsupported and lean on the in-app poll. iOS native push is intentionally deferred
+// (issue #884 contract + changelog): the guard is Android-only so iOS reports
+// "unsupported" and uses the in-app poll until iOS push is built (issue #995).
 function pushSupported(): boolean {
-  return (Platform.OS === 'android' || Platform.OS === 'ios') && getEasProjectId() !== null;
+  return Platform.OS === 'android' && getEasProjectId() !== null;
 }
 
 // A short, non-identifying device label stored alongside the subscription so a
@@ -63,6 +65,19 @@ function deviceLabel(): string {
   const name = Constants.deviceName ?? '';
   const os = Platform.OS;
   return `${name ? `${name} · ` : ''}${os}`.slice(0, 256);
+}
+
+// Android needs a notification channel for a heads-up incoming-call alert. No-op on
+// other platforms. Idempotent — safe to call on every enable/open.
+async function ensureCallChannel(): Promise<void> {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('foundation-calls', {
+      name: 'Incoming calls',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
+  }
 }
 
 export const FoundationCallAlerts: React.FC = () => {
@@ -74,9 +89,12 @@ export const FoundationCallAlerts: React.FC = () => {
   const tokenRef = useRef<string | null>(null);
 
   // Work out the initial state: is native push supported here, and has the user
-  // already granted permission? We cannot know server-side subscription state
-  // cheaply, so a granted permission is shown as "enabled" (re-enabling is
-  // idempotent on the server — it upserts the same token).
+  // already granted permission? When permission is granted we also resolve this
+  // device's Expo token and re-register it (an idempotent upsert) so the "enabled"
+  // state reflects an actual server subscription, not just an OS permission — and so
+  // tokenRef is populated, letting a later disable target the right server row. This
+  // self-heals the case where the app was reinstalled (new token) or the server row
+  // was removed externally while the OS permission stayed granted (issue #993).
   const init = useCallback(async () => {
     setError(null);
     if (!pushSupported()) {
@@ -89,7 +107,32 @@ export const FoundationCallAlerts: React.FC = () => {
         setStatus('denied');
         return;
       }
-      setStatus(settings.status === 'granted' ? 'enabled' : 'disabled');
+      if (settings.status !== 'granted') {
+        setStatus('disabled');
+        return;
+      }
+
+      // Permission granted: resolve the token and re-register so the server row exists and tokenRef is set.
+      const projectId = getEasProjectId();
+      if (projectId) {
+        try {
+          const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+          if (token) {
+            tokenRef.current = token;
+            await ensureCallChannel();
+            // Idempotent upsert on (user_id, endpoint); best-effort so a transient server error never
+            // wrongly downgrades a granted device to "disabled".
+            await authedFetch('/api/foundation/push/subscribe', {
+              method: 'POST',
+              headers: JSON_HEADERS,
+              body: JSON.stringify({ kind: 'expo', token, userAgent: deviceLabel() }),
+            });
+          }
+        } catch {
+          /* keep enabled on a transient token/network error — disable can still re-resolve the token */
+        }
+      }
+      setStatus('enabled');
     } catch {
       setStatus('disabled');
     }
@@ -115,15 +158,7 @@ export const FoundationCallAlerts: React.FC = () => {
         return;
       }
 
-      // Android needs a notification channel for a heads-up incoming-call alert.
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('foundation-calls', {
-          name: 'Incoming calls',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-        });
-      }
+      await ensureCallChannel();
 
       const tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
       const token = tokenResponse.data;

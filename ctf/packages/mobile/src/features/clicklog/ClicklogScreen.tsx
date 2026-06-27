@@ -247,7 +247,6 @@ function ClicklogMain({
   totalCount: number;
   onLog: (_notes: string, _includeLocation: boolean) => Promise<void>;
   onDelete: (_id: string) => void;
-  refreshing: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>('log');
   const [logged, setLogged] = useState(false);
@@ -463,11 +462,11 @@ export function ClicklogScreen() {
   const [screenState, setScreenState] = useState<ScreenState>('loading');
   const [incidents, setIncidents] = useState<ClicklogIncident[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setScreenState('loading');
+    // On a background refresh (after a mutation) keep the current screen rather than
+    // flashing the full loading state; only the initial load shows 'loading'.
+    if (!isRefresh) setScreenState('loading');
     try {
       const data = await fetchIncidents();
       const list: ClicklogIncident[] = data.incidents ?? [];
@@ -483,8 +482,6 @@ export function ClicklogScreen() {
         // Network / server error — show empty so user can still attempt to log
         setScreenState('empty');
       }
-    } finally {
-      setRefreshing(false);
     }
   }, []);
 
@@ -548,7 +545,6 @@ export function ClicklogScreen() {
       totalCount={totalCount}
       onLog={handleLog}
       onDelete={handleDelete}
-      refreshing={refreshing}
     />
   );
 }

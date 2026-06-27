@@ -89,7 +89,7 @@ in the `design/` submodule** — build backend now, circle back for UI.
 11. **trusttransport** backend — no dependency.
 12. **peer-programming** backend — no dependency.
 13. **mood** backend — no dependency.
-14. **gentlepulse** backend — no dependency.
+14. **gentle-pulse** backend — no dependency.
 15. **weekly-performance** backend — no dependency.
 16. **gdp** backend — best done after upstream metric/event semantics settle (#6–#14).
 17. **service-credits** backend — blocked by #16 (GDP accounting/reclaim coupling).
@@ -124,7 +124,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | trust-transport | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | peer-programming | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | mood | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| gentlepulse | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| gentle-pulse | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | gdp | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -187,7 +187,7 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       level-up (cohort + enrollment), skills-hunt (active round + accepted submission + leaderboard),
       skills-taxonomy (sector + job-title + 2 skills), directory (3 profiles), workforce (profile +
       occupation), lighthouse (seeker + host + 2 properties + match), socket-relay (user-extension +
-      request + fulfillment), feed + announcements, trust, mood, gentlepulse (library + play + rating +
+      request + fulfillment), feed + announcements, trust, mood, gentle-pulse (library + play + rating +
       favorite), foundation (thread + capacity policy), chyme (room + members + messages), trusttransport
       (request + offer), peer-programming (topic + cohort + members), clicklog (3 incidents).
 - [x] **#102 remaining** (done by owner): runtime validation — owner steps:
@@ -281,7 +281,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
 - 2026-05-21: Batch backend audit — discovered most plugins already have backend implementations. Verified
   7 additional backends complete (schema, contracts, routes, seed script all present and coherent):
   lighthouse (5 tables, 23 routes), socket-relay (7 tables, 20 routes), trusttransport (13 tables, 20 routes),
-  gentlepulse (4 tables, 6 routes), level-up (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
+  gentle-pulse (4 tables, 6 routes), level-up (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
   4 routes). Marked all 7 backends ✅. Detailed audit of remaining 6 plugins: peer-programming (7 tables, 6 routes,
   NO seed script), mood (1 table, 2 routes, NO seed), gdp (3 tables, 2 routes, NO seed), service-credits (15 tables,
   11 routes, NO seed), weekly-performance (3 tables, 5 routes, NO seed), clicklog (1 table, 2 routes, ✅ seed).
@@ -361,7 +361,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   on pull — no per-session setup needed. `.claude/settings.local.json` added to `.gitignore` (was
   untracked but contained session-scoped Neon credentials; deleted).
 - 2026-05-27: **Demo seed script shipped (`pnpm seed:demo`).** `ctf/scripts/seedDemo.mjs` — idempotent
-  orchestrator seeding all 19 plugins (all 17 production-seed equivalents + trust + gentlepulse) in
+  orchestrator seeding all 19 plugins (all 17 production-seed equivalents + trust + gentle-pulse) in
   the `demo` schema for a named `DEMO_OWNER_ID`. Uses `DATABASE_URL_DIRECT` + `search_path=demo,public`
   (bypasses flag layer; safe to run without Unleash). Fixed stream-chat v8 API break:
   `new StreamChat(key, { apiSecret })` → `new StreamChat(key, apiSecret)` in all 6 plugin stream files.
@@ -479,15 +479,15 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   (`MobileSkillsTaxonomy.tsx`) remains ⬜. All four previously design-gated plugins are now web-pixel
   complete; no design-gated plugins remain.
 - 2026-05-29: UI circle-back — non-gated web pixel passes (designs existed since `dcaaf15`): mood,
-  gentlepulse, and socket-relay. Each aligned/rebuilt its shell to the design mockup + Loading/Empty
+  gentle-pulse, and socket-relay. Each aligned/rebuilt its shell to the design mockup + Loading/Empty
   states and was decomposed into modular sub-components within the rule-116 limits. Real bugs fixed
   along the way: mood (eligibility `?clientId=` + submission `{ clientId, moodValue, note }` + CSRF —
-  prior shell 400'd), gentlepulse (removed a dead duplicate `components/gentle-pulse/` dir), socket-relay
+  prior shell 400'd), gentle-pulse (removed a dead duplicate `components/gentle-pulse/` dir), socket-relay
   (prior shell read the paged `requests` response as a bare array and POSTed non-existent
   `type`/`description`/`credits` fields without CSRF — rebuilt to the real request/claim/fulfillment
   model). All counts derive from real data; unbacked mockup figures were omitted, not faked. typecheck,
   lint, modularity, build:ci, EOF, parity, and schema-drift gates green for each. Marked mood,
-  gentlepulse, socket-relay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
+  gentle-pulse, socket-relay Web px ✅; their Android pixel parity (`MobileMood.tsx`,
   `MobileGentlePulse.tsx`, `MobileSocketRelay.tsx`) remains ⬜ for the dedicated Android sweep.
 - 2026-05-29: UI circle-back — mood web pixel pass detail. Rebuilt the `/apps/mood` shell to `Mood.tsx`
   + Empty/Loading. Fixed two real API-contract bugs in the prior shell: it called

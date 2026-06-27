@@ -23,7 +23,7 @@ export type GentlePulseTokens = PluginShellTokens;
 
 export function getGentlePulseTokens(theme: ThemeName): GentlePulseTokens {
   if (theme === "comic") {
-    return getPluginShellTokens(getAppAccent("gentlepulse", "comic"), theme);
+    return getPluginShellTokens(getAppAccent("gentle-pulse", "comic"), theme);
   }
   return {
     ...getPluginShellTokens(COLOR, theme),

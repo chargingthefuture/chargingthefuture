@@ -1,3 +1,6 @@
+import { queryDb } from 'lib/db/postgres';
+import { ClicklogIncident, CreateIncidentInput } from './types';
+
 export async function getIncidentById(id: string): Promise<ClicklogIncident | null> {
   const result = await queryDb<ClicklogIncident>(
     `SELECT * FROM clicklog_incidents WHERE id = $1`,
@@ -5,9 +8,6 @@ export async function getIncidentById(id: string): Promise<ClicklogIncident | nu
   );
   return result.rows[0] || null;
 }
-
-import { queryDb } from 'lib/db/postgres';
-import { ClicklogIncident, CreateIncidentInput } from './types';
 
 export async function createIncident(input: CreateIncidentInput): Promise<ClicklogIncident> {
   const { userId, metadata } = input;
@@ -36,10 +36,13 @@ export async function getIncidentCount(userId: string): Promise<number> {
   return parseInt(result.rows[0]?.count ?? '0', 10);
 }
 
-export async function deleteIncident(id: string, userId: string): Promise<boolean> {
-  const result = await queryDb(
-    `DELETE FROM clicklog_incidents WHERE id = $1 AND user_id = $2`,
-    [id, userId]
-  );
+// Deletes an incident. Members may delete only their own (the user_id condition
+// scopes the DELETE); admins may delete any incident, so for them the ownership
+// condition is dropped. The route performs the authorization check (canDeleteIncident)
+// before calling this.
+export async function deleteIncident(id: string, userId: string, isAdmin = false): Promise<boolean> {
+  const result = isAdmin
+    ? await queryDb(`DELETE FROM clicklog_incidents WHERE id = $1`, [id])
+    : await queryDb(`DELETE FROM clicklog_incidents WHERE id = $1 AND user_id = $2`, [id, userId]);
   return (result.rowCount ?? 0) > 0;
 }
