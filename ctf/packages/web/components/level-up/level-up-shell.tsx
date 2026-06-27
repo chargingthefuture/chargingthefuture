@@ -236,7 +236,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
 
   async function handleValidate(milestoneId: string) {
     try {
-      await fetch(`/api/level-up/milestones/${milestoneId}/validate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      await fetch(`/api/level-up/milestones/${milestoneId}/validate`, { method: "POST", headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" }, body: JSON.stringify({}) });
       setPendingValidations((prev) => prev.filter((v) => v.milestoneId !== milestoneId));
     } catch {
       // optimistic remove already applied on success path only
