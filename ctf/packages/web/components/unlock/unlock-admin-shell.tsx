@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { Unlock, Key, CheckCircle, XCircle, Ban, RefreshCw, Pencil } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
-import type { UnlockDashboardSnapshot, UnlockSubmission } from 'lib/unlock/types';
+import type { UnlockDashboardSnapshot, UnlockExperimentBucketStat, UnlockSubmission } from 'lib/unlock/types';
 
 // Admin design tokens (shared admin look from the design system). Unlock accent is purple.
 const COLOR = '#C084FC';
@@ -65,9 +65,11 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
 export function UnlockAdminShell({
   dashboard,
   submissions: initialSubmissions,
+  experimentSplit = [],
 }: {
   dashboard: UnlockDashboardSnapshot;
   submissions: UnlockSubmission[];
+  experimentSplit?: UnlockExperimentBucketStat[];
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -301,6 +303,37 @@ export function UnlockAdminShell({
           <StatBlock label="Rejected" value={dashboard.rejectedCount} accent="#EF4444" />
           <StatBlock label="Spam" value={dashboard.spamCount} />
           <StatBlock label="Support-only" value={dashboard.lockedSupportOnlyCount} />
+        </div>
+
+        {/* Early Commons access A/B experiment readout. Driven by the experimentBucket recorded on the
+            unlock.status.get / unlock.verification.submit audit rows. Empty until the Unleash rollout is on. */}
+        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 2 }}>Early Commons access — A/B experiment</div>
+          <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 10 }}>
+            Quora-URL completion rate by bucket. Treatment members get early access to the Commons to ask for help before verifying.
+          </div>
+          {experimentSplit.length === 0 ? (
+            <div style={{ fontSize: 12, color: SUBTLE }}>
+              No experiment data yet. Turn on the <code>feature-unlock-early-commons-access</code> rollout in Unleash (sticky on userId) to start the test.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {experimentSplit.map((row) => {
+                const label =
+                  row.bucket === 'early_commons' ? 'Early Commons (treatment)' : row.bucket === 'control' ? 'Control' : row.bucket;
+                const accent = row.bucket === 'early_commons' ? COLOR : '#9CA3AF';
+                return (
+                  <div key={row.bucket} style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 10, background: SURFACE, border: `1px solid ${BORDER}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: TEXT }}>{row.completionPct}%</div>
+                    <div style={{ fontSize: 11, color: SUBTLE, marginTop: 2 }}>
+                      {row.submitted} of {row.exposed} submitted
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Reward self-heal: grant any approved verification whose reward is still pending. Idempotent. */}
