@@ -105,7 +105,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',
   },
   {
-    id: 'gentlepulse',
+    id: 'gentle-pulse',
     name: 'GentlePulse',
     kind: 'plugin',
     summary: 'Meditations: gentle, consistent, non-intrusive.',
@@ -135,7 +135,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
   },
   {
-    id: 'clicklog',
+    id: 'click-log',
     name: 'ClickLog',
     kind: 'plugin',
     summary: 'Safety check-in and incident logging — location optional. Log what happened, check in when you\'re safe.',

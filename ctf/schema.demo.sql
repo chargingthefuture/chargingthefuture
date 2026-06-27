@@ -15,7 +15,7 @@ SET search_path = demo, public;
 
 -- Combined schema.sql for CTF (rewrite, no /platform)
 --
--- Maintenance note (2026-05-31): seed scripts seedClicklog/seedGdp/seedMood/seedPeerProgramming
+-- Maintenance note (2026-05-31): seed scripts seedClickLog/seedGdp/seedMood/seedPeerProgramming
 -- were refactored to open their own `pg` Pool instead of importing the TypeScript
 -- `packages/web/lib/db/postgres.ts` (which plain Node cannot load on the Node 20 seed/provision
 -- workflows). This is a connection-boilerplate change only: no table, column, constraint, index,
@@ -23,7 +23,13 @@ SET search_path = demo, public;
 -- schema.sql touch alongside any seed-script change.
 
 BEGIN;
-CREATE TABLE IF NOT EXISTS clicklog_incidents (
+-- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `click-log`; the table moves to the
+-- matching snake_case prefix `click_log_`. Renames run first so an existing DB keeps its data; on a
+-- fresh DB the IF EXISTS renames are no-ops and the CREATE statement below builds the new name.
+ALTER TABLE IF EXISTS clicklog_incidents RENAME TO click_log_incidents;
+ALTER INDEX IF EXISTS idx_clicklog_incidents_user_id RENAME TO idx_click_log_incidents_user_id;
+ALTER INDEX IF EXISTS idx_clicklog_incidents_created_at RENAME TO idx_click_log_incidents_created_at;
+CREATE TABLE IF NOT EXISTS click_log_incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
@@ -31,8 +37,8 @@ CREATE TABLE IF NOT EXISTS clicklog_incidents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
-CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(user_id);
-CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
@@ -1953,11 +1959,11 @@ ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS created_at TI
 ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Remove orphaned pre-rename plugin-registry rows. The hyphenation renames changed these slugs
--- (whatworks->what-works, trusttransport->trust-transport, socketrelay->socket-relay, levelup->level-up)
--- and the new-slug rows are seeded below; but the ON CONFLICT (plugin_slug) upsert cannot delete the old
--- slug, so an existing DB kept BOTH rows and listed the plugin twice in the Apps list. Purge the old rows.
--- (gentlepulse/clicklog still use their original slug until their rename ships.)
-DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup');
+-- (whatworks->what-works, trusttransport->trust-transport, socketrelay->socket-relay, levelup->level-up,
+-- gentlepulse->gentle-pulse, clicklog->click-log) and the new-slug rows are seeded below; but the
+-- ON CONFLICT (plugin_slug) upsert cannot delete the old slug, so an existing DB kept BOTH rows and
+-- listed the plugin twice in the Apps list. Purge the old rows.
+DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup', 'gentlepulse', 'clicklog');
 
 -- Seed plugin registry (upsert so re-running is safe)
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
@@ -1973,12 +1979,12 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('trust-transport',    'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
   ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
-  ('gentlepulse',        'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
+  ('gentle-pulse',       'GentlePulse',          'Meditations: gentle, consistent, non-intrusive.',                       'implemented_shell', 130, TRUE),
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('level-up',           'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
-  ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
+  ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)
@@ -3326,8 +3332,15 @@ ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS mood_value INTEG
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS note TEXT;
 ALTER TABLE IF EXISTS mood_submissions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === GENTLEPULSE MODULE ===
-CREATE TABLE IF NOT EXISTS gentlepulse_library_items (
+-- === GENTLE PULSE MODULE ===
+-- Rename pre-hyphenation tables first so an existing database keeps its data; on a fresh DB these
+-- are no-ops (the gentlepulse_* tables do not exist) and the CREATE TABLE statements below run.
+ALTER TABLE IF EXISTS gentlepulse_library_items RENAME TO gentle_pulse_library_items;
+ALTER TABLE IF EXISTS gentlepulse_play_events RENAME TO gentle_pulse_play_events;
+ALTER TABLE IF EXISTS gentlepulse_ratings RENAME TO gentle_pulse_ratings;
+ALTER TABLE IF EXISTS gentlepulse_favorites RENAME TO gentle_pulse_favorites;
+
+CREATE TABLE IF NOT EXISTS gentle_pulse_library_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,
   title TEXT NOT NULL,
@@ -3338,17 +3351,17 @@ CREATE TABLE IF NOT EXISTS gentlepulse_library_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS media_url TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS support_route TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS gentlepulse_library_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS media_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS support_route TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS gentle_pulse_library_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS gentlepulse_play_events (
+CREATE TABLE IF NOT EXISTS gentle_pulse_play_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT,
   anonymous_client_id TEXT,
@@ -3356,14 +3369,14 @@ CREATE TABLE IF NOT EXISTS gentlepulse_play_events (
   completed BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS gentlepulse_play_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS gentlepulse_play_events ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS gentlepulse_play_events ADD COLUMN IF NOT EXISTS anonymous_client_id TEXT;
-ALTER TABLE IF EXISTS gentlepulse_play_events ADD COLUMN IF NOT EXISTS item_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS gentlepulse_play_events ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS gentlepulse_play_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS gentle_pulse_play_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS gentle_pulse_play_events ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS gentle_pulse_play_events ADD COLUMN IF NOT EXISTS anonymous_client_id TEXT;
+ALTER TABLE IF EXISTS gentle_pulse_play_events ADD COLUMN IF NOT EXISTS item_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS gentle_pulse_play_events ADD COLUMN IF NOT EXISTS completed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS gentle_pulse_play_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS gentlepulse_ratings (
+CREATE TABLE IF NOT EXISTS gentle_pulse_ratings (
   user_id TEXT NOT NULL,
   item_id UUID NOT NULL,
   rating INTEGER NOT NULL,
@@ -3371,23 +3384,23 @@ CREATE TABLE IF NOT EXISTS gentlepulse_ratings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, item_id)
 );
-ALTER TABLE IF EXISTS gentlepulse_ratings ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS gentlepulse_ratings ADD COLUMN IF NOT EXISTS item_id UUID;
-ALTER TABLE IF EXISTS gentlepulse_ratings ADD COLUMN IF NOT EXISTS rating INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS gentlepulse_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS gentlepulse_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS gentle_pulse_ratings ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS gentle_pulse_ratings ADD COLUMN IF NOT EXISTS item_id UUID;
+ALTER TABLE IF EXISTS gentle_pulse_ratings ADD COLUMN IF NOT EXISTS rating INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS gentle_pulse_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS gentle_pulse_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS gentlepulse_favorites (
+CREATE TABLE IF NOT EXISTS gentle_pulse_favorites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   item_id UUID NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, item_id)
 );
-ALTER TABLE IF EXISTS gentlepulse_favorites ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS gentlepulse_favorites ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS gentlepulse_favorites ADD COLUMN IF NOT EXISTS item_id UUID;
-ALTER TABLE IF EXISTS gentlepulse_favorites ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS gentle_pulse_favorites ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS gentle_pulse_favorites ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS gentle_pulse_favorites ADD COLUMN IF NOT EXISTS item_id UUID;
+ALTER TABLE IF EXISTS gentle_pulse_favorites ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === LEGACY REDIRECTS ===
 CREATE TABLE IF NOT EXISTS legacy_profile_redirects (
@@ -4056,8 +4069,8 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS notific
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS accessibility_runtime_prefs JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS trauma_informed_defaults JSONB NOT NULL DEFAULT '{}'::jsonb;
 
--- gentlepulse_ratings (1 missing)
-ALTER TABLE IF EXISTS gentlepulse_ratings ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+-- gentle_pulse_ratings (1 missing)
+ALTER TABLE IF EXISTS gentle_pulse_ratings ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 
 -- service_credits_account_deletion_reclaims (7 missing)
 ALTER TABLE IF EXISTS service_credits_account_deletion_reclaims ADD COLUMN IF NOT EXISTS account_id TEXT;

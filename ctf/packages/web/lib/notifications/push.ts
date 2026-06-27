@@ -72,9 +72,11 @@ export async function saveWebPushSubscription(input: SaveWebPushSubscriptionInpu
   );
 }
 
-// Remove one device's subscription (the member turned alerts off on that device, or the browser revoked
-// it). Scoped to the owner so a member can only delete their own rows.
-export async function deleteWebPushSubscription(input: { userId: string; endpoint: string }): Promise<void> {
+// Remove one device's subscription (the member turned alerts off on that device, or the browser/app
+// revoked it). Kind-agnostic: it matches on (user_id, endpoint) with no `kind` filter, so the same call
+// removes a web row (endpoint = Push endpoint URL) or an expo row (endpoint = Expo push token). Scoped to
+// the owner so a member can only delete their own rows.
+export async function deletePushSubscriptionByEndpoint(input: { userId: string; endpoint: string }): Promise<void> {
   await queryDb(
     `DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2`,
     [input.userId, input.endpoint],
@@ -91,7 +93,7 @@ type SubscriptionRow = {
 // must not mask the original send result.
 async function pruneDeadSubscription(userId: string, endpoint: string): Promise<void> {
   try {
-    await deleteWebPushSubscription({ userId, endpoint });
+    await deletePushSubscriptionByEndpoint({ userId, endpoint });
   } catch (error) {
     reportError(error, { area: 'notifications', op: 'web_push_prune_dead' });
   }

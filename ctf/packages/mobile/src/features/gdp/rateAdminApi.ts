@@ -9,6 +9,21 @@ import { authedFetch } from '../../auth/authedFetch';
 
 const BASE = '/api/gdp/admin/currency-rates';
 
+// Abort a request that hangs so the rate-admin UI never sticks in a loading or saving state with no way
+// out. authedFetch forwards the signal to fetch; the timer is always cleared so a completed request can
+// never fire a late abort. Mirrors the web rate-admin screen, which aborts its GET via AbortController.
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function withTimeout<T>(run: (_signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await run(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type CurrencyRateFactor = { usdRate: number; asOf: string; source: string };
 
 export type CurrencyRateEntry = {
@@ -37,7 +52,7 @@ type ReviseResponse = {
 };
 
 export async function fetchCurrencyRates(): Promise<CurrencyRateEntry[]> {
-  const res = await authedFetch(BASE);
+  const res = await withTimeout((signal) => authedFetch(BASE, { signal }));
   if (!res.ok) {
     throw new Error(`gdp_currency_rates_fetch_failed:${res.status}`);
   }
@@ -53,11 +68,14 @@ export async function reviseCurrencyRate(input: {
   usdRate: number;
   source: string;
 }): Promise<void> {
-  const res = await authedFetch(BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-    body: JSON.stringify(input),
-  });
+  const res = await withTimeout((signal) =>
+    authedFetch(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify(input),
+      signal,
+    }),
+  );
   const json: ReviseResponse = await res.json().catch(() => ({ ok: false }) as ReviseResponse);
   if (res.ok && json.ok) {
     return;

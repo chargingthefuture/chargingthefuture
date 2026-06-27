@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createMoodSubmission } from 'lib/mood/repository';
+import { createMoodSubmission, getOrCreateMoodPseudonym } from 'lib/mood/repository';
 import { ensureMutationCsrf, moodErrorResponse, requireMoodAccess } from 'lib/mood/_lib';
 import { logMoodAudit } from 'lib/mood/audit';
 import { reportError } from 'lib/observability/report';
@@ -64,8 +64,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Resolve the server-controlled pseudonym for this user; the check-in is
+    // stored under it, decoupled from the account.
+    const pseudonym = await getOrCreateMoodPseudonym(gate.auth.userId);
     const submission = await createMoodSubmission({
-      userId: gate.auth.userId,
+      pseudonym,
       clientId: body.clientId,
       moodValue: body.moodValue,
       note: typeof body.note === 'string' ? body.note : null,

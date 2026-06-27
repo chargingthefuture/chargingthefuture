@@ -68,7 +68,7 @@ export function MoodCheckin({
           <>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>How are you feeling right now?</div>
-              <div style={{ fontSize: 15, color: t.MUTED }}>Anonymous and safe. Your individual check-in is never shown to anyone.</div>
+              <div style={{ fontSize: 15, color: t.MUTED }}>Pseudonymous and safe. Your check-in is stored under a random ID kept separate from your account.</div>
             </div>
             <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 40, flexWrap: "wrap" }}>
               {MOODS.map((m) => (
@@ -80,9 +80,9 @@ export function MoodCheckin({
             </div>
             {selected && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <textarea value={note} onChange={(e) => onNoteChange(e.target.value)} placeholder="(Optional) Anything you'd like to add? Completely anonymous…" rows={3} style={{ width: "100%", padding: "14px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, borderRadius: 12, fontSize: 14, color: t.TEXT, outline: "none", resize: "none", boxSizing: "border-box" }} />
+                <textarea value={note} onChange={(e) => onNoteChange(e.target.value)} placeholder="(Optional) Anything you'd like to add? Pseudonymous and private…" rows={3} style={{ width: "100%", padding: "14px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, borderRadius: 12, fontSize: 14, color: t.TEXT, outline: "none", resize: "none", boxSizing: "border-box" }} />
                 <button type="button" onClick={onSubmit} disabled={submitting} style={{ padding: "14px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 16, fontWeight: 800, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1 }}>
-                  {submitting ? "Submitting…" : "Submit Anonymously"}
+                  {submitting ? "Submitting…" : "Submit Privately"}
                 </button>
                 <div style={{ textAlign: "center", fontSize: 12, color: t.FAINT }}>Never shown to anyone · One check-in per week</div>
               </div>

@@ -8,7 +8,7 @@ import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
-import { GentlePulseShell } from '@/components/gentlepulse/gentlepulse-shell';
+import { GentlePulseShell } from '@/components/gentle-pulse/gentle-pulse-shell';
 import { LighthouseShell } from '@/components/lighthouse/lighthouse-shell';
 import { LevelUpShell } from '@/components/level-up/level-up-shell';
 import MoodShell from '@/components/mood/mood-shell';
@@ -19,7 +19,7 @@ import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
 import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
 import { WeeklyPerformanceShell } from '@/components/weekly-performance/weekly-performance-shell';
-import { ClicklogShell } from '@/components/clicklog/clicklog-shell';
+import { ClickLogShell } from '@/components/click-log/click-log-shell';
 import { WhatWorksShell } from '@/components/what-works/what-works-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
@@ -201,8 +201,8 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <BeaconShell />;
   }
 
-  if (selectedPlugin.slug === 'clicklog') {
-    return <ClicklogShell />;
+  if (selectedPlugin.slug === 'click-log') {
+    return <ClickLogShell />;
   }
 
   if (selectedPlugin.slug === 'what-works') {
@@ -260,7 +260,7 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     return <MoodShell />;
   }
 
-  if (selectedPlugin.slug === 'gentlepulse') {
+  if (selectedPlugin.slug === 'gentle-pulse') {
     return <GentlePulseShell />;
   }
 
