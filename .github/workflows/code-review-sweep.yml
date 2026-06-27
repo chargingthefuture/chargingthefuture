@@ -45,18 +45,52 @@ jobs:
       # The rotation ledger lives on its own branch (`code-review-ledger`), never on main.
       # main is gated by a ruleset that requires status checks, which a direct push can't
       # satisfy, so the daily bot must not push there. Restore the latest ledger from its
-      # branch into the working tree before reviewing. First run (no branch yet): fall back
-      # to the in-repo stub checked out from main.
+      # branch into the working tree before reviewing.
+      #
+      # CRITICAL — never silently reset the ledger. There are two very different situations and
+      # only the first may fall back to the in-repo stub:
+      #   1. The branch does NOT exist yet (first run ever) → seeding from the stub is correct.
+      #   2. The branch EXISTS but the fetch/parse failed (transient network blip, or a corrupt
+      #      ledger) → falling back to the empty stub here would, at the commit step, FORCE-PUSH a
+      #      blank ledger over real rotation state and wipe every slice's review history. That is
+      #      the bug that reset the whole sweep before. In that case we FAIL LOUDLY (non-zero) so
+      #      the run can simply be retried, instead of destroying the rotation.
       - name: Restore rotation ledger from its branch
         run: |
           set -euo pipefail
-          if git fetch --depth=1 origin code-review-ledger 2>/dev/null \
-            && git cat-file -e FETCH_HEAD:ctf/config/code-review-ledger.json 2>/dev/null; then
-            git show FETCH_HEAD:ctf/config/code-review-ledger.json > ctf/config/code-review-ledger.json
-            echo "Restored ledger from the code-review-ledger branch."
-          else
-            echo "No code-review-ledger branch yet; using the in-repo stub from main."
+          LEDGER=ctf/config/code-review-ledger.json
+
+          if ! git ls-remote --exit-code --heads origin code-review-ledger >/dev/null 2>&1; then
+            echo "No code-review-ledger branch yet (first run); seeding from the in-repo stub on main."
+            exit 0
           fi
+
+          echo "code-review-ledger branch exists; restoring it (a fallback to the stub here would wipe rotation state)."
+          ok=0
+          for attempt in 1 2 3; do
+            if git fetch --depth=1 origin code-review-ledger 2>/dev/null \
+              && git cat-file -e "FETCH_HEAD:$LEDGER" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            echo "Ledger fetch attempt $attempt failed; retrying..." >&2
+            sleep $((attempt * 3))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::code-review-ledger branch exists but its ledger could not be fetched after 3 attempts. Refusing to fall back to the empty stub (that would wipe all rotation state). Re-run the workflow." >&2
+            exit 1
+          fi
+
+          git show "FETCH_HEAD:$LEDGER" > "$LEDGER"
+
+          # A corrupt or truncated ledger would otherwise reconcile to "everything never-reviewed"
+          # and overwrite the good history on commit. Require a valid ledger (a JSON object with a
+          # non-empty `slices` array — the rotation always has at least one slice) or fail loudly.
+          if ! jq -e 'type == "object" and (.slices | type == "array") and (.slices | length > 0)' "$LEDGER" >/dev/null 2>&1; then
+            echo "::error::Restored code-review-ledger is not a valid, non-empty ledger (expected a JSON .slices array). Refusing to proceed and overwrite rotation state." >&2
+            exit 1
+          fi
+          echo "Restored ledger from the code-review-ledger branch ($(jq '.slices | length' "$LEDGER") slices)."
 
       # ANTHROPIC_API_KEY is a runtime secret; Infisical is the single source of truth
       # (this matches the other AI workflows in this folder).
