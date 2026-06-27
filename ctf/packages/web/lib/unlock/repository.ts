@@ -5,6 +5,7 @@ import type {
   RevokeUnlockRewardInput,
   UnlockAccessTier,
   UnlockDashboardSnapshot,
+  UnlockExperimentBucketStat,
   UnlockQueueFilters,
   UnlockStatus,
   UnlockSubmission,
@@ -538,6 +539,51 @@ export async function getUnlockDashboardSnapshot(): Promise<UnlockDashboardSnaps
     spamCount: Number(row?.spam_count ?? 0),
     lockedSupportOnlyCount: Number(row?.locked_support_only_count ?? 0),
   };
+}
+
+// "Early Commons access" A/B experiment readout. Buckets each member by the experimentBucket recorded
+// on their unlock.status.get audit rows, then counts how many of those members have a successful
+// Quora-URL submission — i.e. the completion rate per bucket. Best-effort: a query failure (e.g. a
+// legacy audit table missing the request_id column) returns an empty array rather than breaking the
+// admin page. Note: with the rollout sticky on userId a member stays in one bucket; if the rollout
+// percentage is later changed a member could appear in both buckets, which would slightly inflate the
+// exposed counts — acceptable for a directional read.
+export async function getUnlockExperimentSplit(): Promise<UnlockExperimentBucketStat[]> {
+  try {
+    const result = await queryDb<{ bucket: string; exposed: string; submitted: string }>(
+      `WITH buckets AS (
+         SELECT DISTINCT actor_user_id AS user_id, metadata->>'experimentBucket' AS bucket
+         FROM unlock_audit_log
+         WHERE command = 'unlock.status.get' AND metadata->>'experimentBucket' IS NOT NULL
+       ),
+       submitted AS (
+         SELECT DISTINCT actor_user_id AS user_id
+         FROM unlock_audit_log
+         WHERE command = 'unlock.verification.submit' AND policy_status = 'allow'
+       )
+       SELECT b.bucket,
+              COUNT(*)::text AS exposed,
+              COUNT(s.user_id)::text AS submitted
+       FROM buckets b
+       LEFT JOIN submitted s ON s.user_id = b.user_id
+       GROUP BY b.bucket
+       ORDER BY b.bucket`,
+    );
+
+    return result.rows.map((row) => {
+      const exposed = Number(row.exposed);
+      const submitted = Number(row.submitted);
+      return {
+        bucket: row.bucket,
+        exposed,
+        submitted,
+        completionPct: exposed > 0 ? Math.round((1000 * submitted) / exposed) / 10 : 0,
+      };
+    });
+  } catch (error) {
+    console.error('[unlock] experiment split read failed; returning empty', error);
+    return [];
+  }
 }
 
 export async function insertUnlockAudit(input: {
