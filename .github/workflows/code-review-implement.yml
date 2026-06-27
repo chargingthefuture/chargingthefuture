@@ -98,8 +98,13 @@ jobs:
             echo "Selected requested issue #$REQUESTED."
             exit 0
           fi
+          # Pick the genuinely OLDEST open actionable issue. `gh issue list` returns newest-first,
+          # so --limit caps the fetch to the N newest BEFORE the jq sort runs. With the old --limit 50,
+          # once more than 50 actionable issues were open the true oldest (e.g. #1012) fell outside the
+          # window and the sort picked the oldest-of-the-newest-50 instead. Use a cap comfortably above
+          # any realistic backlog so the sort sees every open actionable issue.
           NUM=$(gh issue list --repo "$REPO" --label "code-review:actionable" --state open \
-            --json number,createdAt --limit 50 \
+            --json number,createdAt --limit 500 \
             --jq 'sort_by(.createdAt) | .[0].number // empty')
           if [ -z "$NUM" ]; then
             echo "number=" >> "$GITHUB_OUTPUT"

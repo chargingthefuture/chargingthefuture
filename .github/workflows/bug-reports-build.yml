@@ -61,8 +61,12 @@ jobs:
             echo "Selected requested issue #$REQUESTED."
             exit 0
           fi
+          # Pick the genuinely OLDEST open approved issue. `gh issue list` returns newest-first, so
+          # --limit caps the fetch to the N newest BEFORE the jq sort — once more than the cap are open,
+          # the true oldest falls outside the window and the sort picks the wrong one. Use a cap well
+          # above any realistic backlog so the sort sees every open approved issue.
           NUM=$(gh issue list --repo "$TRIAGE_REPO" --label approved-to-build --state open \
-            --json number,createdAt --limit 50 \
+            --json number,createdAt --limit 500 \
             --jq 'sort_by(.createdAt) | .[0].number // empty')
           if [ -z "$NUM" ]; then
             echo "number=" >> "$GITHUB_OUTPUT"
