@@ -24,6 +24,26 @@ contracts:
     idempotency: true
 
   - pluginId: skills-taxonomy
+    command: skills-taxonomy.summary.get
+    version: 1.0.0
+    description: Public, unauthenticated aggregate counts of active sectors, job titles, and skills for the signed-out splash teaser. Returns only counts (read live from the tables), never taxonomy rows or member data, so it carries no access gate.
+    inputSchema: {}
+    outputSchema:
+      sectors:
+        type: number
+      jobTitles:
+        type: number
+      skills:
+        type: number
+    dataAccess:
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
+    purpose: taxonomy_read_model
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: skills-taxonomy
     command: skills-taxonomy.flattened.get
     version: 1.0.0
     description: Read flattened taxonomy projection for selector and compatibility consumers.

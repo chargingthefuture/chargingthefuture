@@ -20,7 +20,7 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
-import { SkillsTaxonomyApi, type TaxonomyHierarchySector, type TaxonomyHierarchyJobTitle } from './SkillsTaxonomyApi';
+import { SkillsTaxonomyApi, type TaxonomyHierarchySector, type TaxonomyHierarchyJobTitle, type TaxonomySummary } from './SkillsTaxonomyApi';
 
 // ---------------------------------------------------------------------------
 // Design tokens (from mockup)
@@ -95,11 +95,10 @@ function EmptyScreen({ isAdmin }: { isAdmin: boolean }) {
 // Public state — matches MobileSkillsTaxonomyPublic.tsx
 // ---------------------------------------------------------------------------
 
-function PublicScreen({ sectorCount, jobTitleCount, skillCount }: {
-  sectorCount: number;
-  jobTitleCount: number;
-  skillCount: number;
-}) {
+// `summary` carries the live public counts from /api/skills-taxonomy/summary. When it is null
+// (the best-effort fetch is still loading or failed) the numeric stat strip is hidden and the hero
+// copy falls back to neutral phrasing, so the splash never shows misleading zeros.
+function PublicScreen({ summary }: { summary: TaxonomySummary | null }) {
   return (
     <View style={styles.root}>
       <View style={styles.statusBar}>
@@ -120,25 +119,28 @@ function PublicScreen({ sectorCount, jobTitleCount, skillCount }: {
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.statsStrip}>
-        <View style={styles.statCell}>
-          <Text style={styles.statValue}>{skillCount}</Text>
-          <Text style={styles.statLabel}>Skills</Text>
+      {summary ? (
+        <View style={styles.statsStrip}>
+          <View style={styles.statCell}>
+            <Text style={styles.statValue}>{summary.skills}</Text>
+            <Text style={styles.statLabel}>Skills</Text>
+          </View>
+          <View style={[styles.statCell, styles.statCellBorder]}>
+            <Text style={styles.statValue}>{summary.jobTitles}</Text>
+            <Text style={styles.statLabel}>Job Titles</Text>
+          </View>
+          <View style={styles.statCell}>
+            <Text style={styles.statValue}>{summary.sectors}</Text>
+            <Text style={styles.statLabel}>Sectors</Text>
+          </View>
         </View>
-        <View style={[styles.statCell, styles.statCellBorder]}>
-          <Text style={styles.statValue}>{jobTitleCount}</Text>
-          <Text style={styles.statLabel}>Job Titles</Text>
-        </View>
-        <View style={styles.statCell}>
-          <Text style={styles.statValue}>{sectorCount}</Text>
-          <Text style={styles.statLabel}>Sectors</Text>
-        </View>
-      </View>
+      ) : null}
       <View style={styles.publicHero}>
         <Text style={styles.publicHeroTitle}>Explore the survivor skills database</Text>
         <Text style={styles.publicHeroBody}>
-          {skillCount} skills, {jobTitleCount} job titles, {sectorCount} sectors. Sign in to
-          search, filter, and trade with survivors who have the skills you need.
+          {summary
+            ? `${summary.skills} skills, ${summary.jobTitles} job titles, ${summary.sectors} sectors. Sign in to search, filter, and trade with survivors who have the skills you need.`
+            : 'Every skill, job title, and sector represented by survivors. Sign in to search, filter, and trade with survivors who have the skills you need.'}
         </Text>
       </View>
     </View>
@@ -359,30 +361,32 @@ export function SkillsTaxonomy() {
   const isAdmin = user?.isAdmin ?? false;
 
   const [sectors, setSectors] = useState<TaxonomyHierarchySector[]>([]);
-  const [loading, setLoading] = useState(isAuthenticated);
+  const [summary, setSummary] = useState<TaxonomySummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // The hierarchy endpoint requires an authenticated caller. When the viewer is
-    // not signed in we skip the fetch entirely and render the public splash with
-    // zeroed counts — issuing the request without a token would 401 and the error
-    // would be swallowed, leaving a misleading empty state.
-    if (!isAuthenticated) {
-      setLoading(false);
-      setSectors([]);
-      setError(null);
-      return;
-    }
-
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await SkillsTaxonomyApi.getHierarchy();
-        if (!cancelled) setSectors(data.items);
+        if (isAuthenticated) {
+          // The hierarchy endpoint requires an authenticated caller.
+          const data = await SkillsTaxonomyApi.getHierarchy();
+          if (!cancelled) setSectors(data.items);
+        } else {
+          // Signed out: the hierarchy read is auth-gated, but the PUBLIC /summary endpoint
+          // returns live aggregate counts (sectors / job titles / skills) for the splash
+          // teaser without a token. Best-effort — on failure `summary` stays null and the
+          // splash shows neutral copy rather than zeros.
+          const s = await SkillsTaxonomyApi.getSummary();
+          if (!cancelled) setSummary(s);
+        }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load taxonomy.');
+        if (!cancelled && isAuthenticated) {
+          setError(e instanceof Error ? e.message : 'Failed to load taxonomy.');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -396,11 +400,10 @@ export function SkillsTaxonomy() {
     return <LoadingScreen />;
   }
 
-  // Unauthenticated viewers always see the public splash (no real data is fetched
-  // for them, so counts are zero). Checked before the error branch so a transient
-  // signed-out fetch state never renders an error view.
+  // Unauthenticated viewers see the public splash with live teaser counts from /summary.
+  // Checked before the error branch so a transient signed-out fetch state never renders an error view.
   if (!isAuthenticated) {
-    return <PublicScreen sectorCount={0} jobTitleCount={0} skillCount={0} />;
+    return <PublicScreen summary={summary} />;
   }
 
   if (error) {
