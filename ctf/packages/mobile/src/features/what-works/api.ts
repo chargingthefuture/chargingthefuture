@@ -32,6 +32,11 @@ export async function fetchList(): Promise<{ problems: WhatWorksProblem[]; stats
 
 // Public, sign-in-free teaser slice — mirrors the web public flow. Uses a plain fetch (no
 // bearer token) so a signed-out visitor sees the same readable preview the web shows.
+//
+// Note: `stats` here are teaser-scoped, not full-list stats. The /api/what-works/public endpoint
+// deliberately computes its counts only from the returned preview slice (at most a couple of
+// problems, each with a couple of products), so a signed-out visitor never sees totals they cannot
+// browse. Do not treat these numbers as the full-list totals — fetch the signed-in list for those.
 export async function fetchPublicList(): Promise<{ problems: WhatWorksProblem[]; stats: WhatWorksStats }> {
   const response = await fetch(`${getApiBaseUrl()}/api/what-works/public`);
   const payload = (await response.json().catch(() => null)) as
@@ -50,6 +55,10 @@ export async function fetchProblems(): Promise<{ problems: WhatWorksProblemOptio
   return authedFetchJson<{ problems: WhatWorksProblemOption[] }>('/api/what-works/problems');
 }
 
+// Mobile suggest intentionally collects only the problem, product name, link, and an optional
+// note. `kind` and `emoji` (which the web suggest panel offers) are omitted to keep the mobile
+// form short; the server accepts their absence and stores empty strings, and an admin can fill
+// them in during review. The reader list renders fine with empty kind/emoji.
 export async function suggestProduct(input: {
   problemId: string;
   name: string;

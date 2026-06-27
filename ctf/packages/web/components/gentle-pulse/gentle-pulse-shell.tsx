@@ -39,10 +39,14 @@ export function GentlePulseShell() {
       try {
         const res = await fetch("/api/gentle-pulse/library", { signal: controller.signal });
         if (!res.ok) throw new Error("Failed to load wellness content");
-        const data = await res.json() as { sessions?: Session[]; categories?: string[] };
+        const data = await res.json() as { items?: Session[] };
         if (!didAbort) {
-          setSessions(data.sessions ?? []);
-          setCategories(["All", ...(data.categories ?? [])]);
+          const items = data.items ?? [];
+          setSessions(items);
+          const derivedCategories = Array.from(
+            new Set(items.map((s) => s.category).filter((c): c is string => Boolean(c))),
+          );
+          setCategories(["All", ...derivedCategories]);
         }
       } catch (e: unknown) {
         if ((e as Error).name === "AbortError") {
@@ -62,7 +66,7 @@ export function GentlePulseShell() {
     setPlaying(sessionId);
     setTab("playing");
     try {
-      await fetch(`/api/gentle-pulse/library/${sessionId}/play`, { method: "POST" });
+      await fetch(`/api/gentle-pulse/library/${sessionId}/play`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
     } catch {
       // Fire-and-forget play tracking
     }
@@ -72,7 +76,7 @@ export function GentlePulseShell() {
     setSubmitting(true);
     try {
       const method = isFav ? "DELETE" : "POST";
-      await fetch(`/api/gentle-pulse/library/${sessionId}/favorite`, { method });
+      await fetch(`/api/gentle-pulse/library/${sessionId}/favorite`, { method, headers: { "x-ctf-csrf": "1" } });
       setFavorites((prev) => {
         const next = new Set(prev);
         if (isFav) next.delete(sessionId); else next.add(sessionId);

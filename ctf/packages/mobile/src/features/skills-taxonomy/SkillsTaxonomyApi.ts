@@ -42,6 +42,13 @@ export type HierarchyResponse = {
   generatedAt: string;
 };
 
+// Live aggregate counts for the signed-out splash teaser, from the PUBLIC /summary endpoint.
+export type TaxonomySummary = {
+  skills: number;
+  jobTitles: number;
+  sectors: number;
+};
+
 // ---------------------------------------------------------------------------
 // Fetch helper
 // ---------------------------------------------------------------------------
@@ -62,4 +69,11 @@ export const SkillsTaxonomyApi = {
    */
   getHierarchy: (includeInactive = false) =>
     getJson<HierarchyResponse>(`/hierarchy${includeInactive ? '?includeInactive=true' : ''}`),
+
+  /**
+   * GET /api/skills-taxonomy/summary (PUBLIC — no auth required)
+   * Live aggregate counts of active sectors / job titles / skills for the signed-out
+   * splash teaser. Works without a session token (the endpoint has no auth gate).
+   */
+  getSummary: () => getJson<TaxonomySummary>('/summary'),
 };

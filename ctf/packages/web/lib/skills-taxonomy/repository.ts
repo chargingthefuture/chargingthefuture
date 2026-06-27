@@ -398,6 +398,33 @@ async function ensureSkillExists(client: PoolClient, skillId: string): Promise<v
   }
 }
 
+export type TaxonomySummary = {
+  sectors: number;
+  jobTitles: number;
+  skills: number;
+};
+
+// Live aggregate counts of the active taxonomy (sectors / job titles / skills) for the signed-out
+// splash teaser. Returns ONLY counts — no taxonomy rows and no member data — so it is safe to serve
+// without auth, unlike the gated /hierarchy read. The counts are read straight from the tables, so
+// adding a sector / job title / skill is reflected on the next load with no extra wiring.
+export async function getTaxonomySummary(): Promise<TaxonomySummary> {
+  const result = await queryDb<{ sectors: string; job_titles: string; skills: string }>(
+    `
+      SELECT
+        (SELECT COUNT(*) FROM skills_taxonomy_sectors WHERE is_active = true)::text AS sectors,
+        (SELECT COUNT(*) FROM skills_taxonomy_job_titles WHERE is_active = true)::text AS job_titles,
+        (SELECT COUNT(*) FROM skills_taxonomy_skills WHERE is_active = true)::text AS skills
+    `,
+  );
+  const row = result.rows[0];
+  return {
+    sectors: Number.parseInt(row?.sectors ?? '0', 10) || 0,
+    jobTitles: Number.parseInt(row?.job_titles ?? '0', 10) || 0,
+    skills: Number.parseInt(row?.skills ?? '0', 10) || 0,
+  };
+}
+
 export async function listSectors(includeInactive = true): Promise<TaxonomySector[]> {
   const result = await queryDb<SectorRow>(
     `
