@@ -35,6 +35,8 @@ export async function POST(request: Request) {
     || !body.sourceUserId
     || !body.destinationUserId
     || typeof body.amount !== 'number'
+    || !(body.amount > 0)
+    || !Number.isFinite(body.amount)
     || !body.adjustmentReason
     || !body.idempotencyKey
   ) {
