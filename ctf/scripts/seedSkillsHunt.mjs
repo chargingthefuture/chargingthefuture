@@ -159,18 +159,6 @@ async function main() {
       `,
     );
 
-    // Seed a ServiceCredits transaction tied to the accepted submission
-    await client.query(
-      `
-        INSERT INTO skills_hunt_service_credits_transactions
-          (from_user_id, to_user_id, amount, reason, submission_id, created_at)
-        VALUES
-          ('seed-moderator', 'seed-user-01', 10, 'Seed reward for accepted submission', $1::uuid, NOW())
-        ON CONFLICT DO NOTHING
-      `,
-      [submissionId],
-    );
-
     // Seed a community-generated Directory profile so the @handle route and
     // "Community generated" badge / "Nominated by" attribution can be
     // exercised end-to-end against this branch. Linked back to the seed
