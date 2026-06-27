@@ -49,7 +49,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'level-up': { standard: '#10B981', comic: '#1A5C30' },
   'what-works': { standard: '#84CC16', comic: '#4A6B10' },
   trust: { standard: '#0EA5E9', comic: '#0C5278' },
-  clicklog: { standard: '#EC4899', comic: '#7A1A4A' },
+  'click-log': { standard: '#EC4899', comic: '#7A1A4A' },
   'skills-taxonomy': { standard: '#818CF8', comic: '#2A2A7A' },
   unlock: { standard: '#C084FC', comic: '#5C1A8A' },
   'weekly-performance': { standard: '#6366F1', comic: '#2A2A6A' },

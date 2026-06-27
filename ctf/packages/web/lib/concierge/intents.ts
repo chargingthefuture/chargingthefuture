@@ -67,7 +67,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
     starter: "I have a court date Thursday, my car's dead, and I don't trust rideshare apps.",
   },
   {
-    slug: 'clicklog',
+    slug: 'click-log',
     name: 'ClickLog',
     blurb: 'Keep a private record and check in when you are safe.',
     // Narrow on purpose. ClickLog is for someone who EXPLICITLY wants to record something or set a
@@ -218,7 +218,7 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
 // A few intents share a problem space with a different canonical slug than their display name (kept
 // readable above). Resolve display→registry slug here so routes are always valid.
 const SLUG_OVERRIDES: Record<string, string> = {
-  'lighthouse-safety': 'clicklog',
+  'lighthouse-safety': 'click-log',
 };
 
 export function conciergeRouteSlug(intent: ConciergeIntent): string {

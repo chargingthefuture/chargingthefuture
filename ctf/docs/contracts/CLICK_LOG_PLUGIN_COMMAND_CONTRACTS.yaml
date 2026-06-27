@@ -1,0 +1,82 @@
+commands:
+  - pluginId: click-log
+    command: click-log.incident.create
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/definitions/IncidentMetadata'
+      # metadata is not required, matches implementation
+    outputSchema:
+      $ref: '#/definitions/ClickLogIncident'
+    dataAccess:
+      - click_log_incidents (insert)
+    purpose: Log a new incident for the authenticated user
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.incident.list
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        userId:
+          type: string
+      required: [userId]
+    outputSchema:
+      type: object
+      properties:
+        incidents:
+          type: array
+          items:
+            $ref: '#/definitions/ClickLogIncident'
+        count:
+          type: integer
+    dataAccess:
+      - click_log_incidents (select)
+    purpose: List incidents for a user
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.incident.delete
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required: [id]
+    outputSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+    dataAccess:
+      - click_log_incidents (delete)
+    purpose: Delete an incident by id
+    retentionClass: user_event
+
+definitions:
+  IncidentMetadata:
+    type: object
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+      notes:
+        type: string
+    additionalProperties: false
+  ClickLogIncident:
+    type: object
+    properties:
+      id:
+        type: string
+      user_id:
+        type:
+          - string
+          - 'null'
+      metadata:
+        $ref: '#/definitions/IncidentMetadata'
+      created_at:
+        type: string
+    required: [id, user_id, metadata, created_at]

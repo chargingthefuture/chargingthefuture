@@ -81,7 +81,7 @@ const SERVICE_GLYPH: Record<string, string> = {
   'skills-taxonomy': '🗂️',
   unlock: '🔓',
   'level-up': '🚀',
-  clicklog: '🚨',
+  'click-log': '🚨',
   comic: '🤖',
   feedback: '💬',
   'service-credits': '⚙️',

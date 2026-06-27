@@ -1,6 +1,6 @@
 -- Combined schema.sql for CTF (rewrite, no /platform)
 --
--- Maintenance note (2026-05-31): seed scripts seedClicklog/seedGdp/seedMood/seedPeerProgramming
+-- Maintenance note (2026-05-31): seed scripts seedClickLog/seedGdp/seedMood/seedPeerProgramming
 -- were refactored to open their own `pg` Pool instead of importing the TypeScript
 -- `packages/web/lib/db/postgres.ts` (which plain Node cannot load on the Node 20 seed/provision
 -- workflows). This is a connection-boilerplate change only: no table, column, constraint, index,
@@ -8,7 +8,13 @@
 -- schema.sql touch alongside any seed-script change.
 
 BEGIN;
-CREATE TABLE IF NOT EXISTS clicklog_incidents (
+-- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `click-log`; the table moves to the
+-- matching snake_case prefix `click_log_`. Renames run first so an existing DB keeps its data; on a
+-- fresh DB the IF EXISTS renames are no-ops and the CREATE statement below builds the new name.
+ALTER TABLE IF EXISTS clicklog_incidents RENAME TO click_log_incidents;
+ALTER INDEX IF EXISTS idx_clicklog_incidents_user_id RENAME TO idx_click_log_incidents_user_id;
+ALTER INDEX IF EXISTS idx_clicklog_incidents_created_at RENAME TO idx_click_log_incidents_created_at;
+CREATE TABLE IF NOT EXISTS click_log_incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
@@ -16,8 +22,8 @@ CREATE TABLE IF NOT EXISTS clicklog_incidents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
-CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_user_id ON clicklog_incidents(user_id);
-CREATE INDEX IF NOT EXISTS idx_clicklog_incidents_created_at ON clicklog_incidents(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
@@ -1976,10 +1982,10 @@ ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS updated_at TI
 
 -- Remove orphaned pre-rename plugin-registry rows. The hyphenation renames changed these slugs
 -- (whatworks->what-works, trusttransport->trust-transport, socketrelay->socket-relay, levelup->level-up,
--- gentlepulse->gentle-pulse) and the new-slug rows are seeded below; but the ON CONFLICT (plugin_slug)
--- upsert cannot delete the old slug, so an existing DB kept BOTH rows and listed the plugin twice in the
--- Apps list. Purge the old rows. (clicklog still uses its original slug until its rename ships.)
-DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup', 'gentlepulse');
+-- gentlepulse->gentle-pulse, clicklog->click-log) and the new-slug rows are seeded below; but the
+-- ON CONFLICT (plugin_slug) upsert cannot delete the old slug, so an existing DB kept BOTH rows and
+-- listed the plugin twice in the Apps list. Purge the old rows.
+DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup', 'gentlepulse', 'clicklog');
 
 -- Seed plugin registry (upsert so re-running is safe)
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
@@ -2000,7 +2006,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('level-up',           'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
-  ('clicklog',           'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
+  ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
   ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'alpha',             210, FALSE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE)

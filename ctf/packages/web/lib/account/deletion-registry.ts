@@ -355,12 +355,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'clicklog',
-    name: 'Clicklog',
+    slug: 'click-log',
+    name: 'ClickLog',
     dataSummary: 'Your logged incidents.',
     serviceScopeSupported: true,
     tables: [
-      del('clicklog_incidents', 'user_id', 'Your logged incidents.'),
+      del('click_log_incidents', 'user_id', 'Your logged incidents.'),
     ],
   },
   {
