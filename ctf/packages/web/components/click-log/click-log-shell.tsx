@@ -101,7 +101,10 @@ export function ClickLogShell() {
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ metadata }),
       });
-      if (!res.ok) throw new Error("Failed to log incident");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Failed to log incident");
+      }
       setShowForm(false);
       setNote("");
       setGeo({});
@@ -122,7 +125,10 @@ export function ClickLogShell() {
     setError(null);
     try {
       const res = await fetch(`/api/click-log/${id}`, { method: "DELETE", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) throw new Error("Failed to delete incident");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Failed to delete incident");
+      }
       await fetchIncidents();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete incident");
