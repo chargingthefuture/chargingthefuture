@@ -1,11 +1,16 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme } from '../../theme';
 
 // First-use AI-processing consent bottom sheet (the llm_consent_granted gate). Matches the locked
 // MobileAIConsent mockup: self-hosted, no third parties, a teammate reviews answers, safety first.
 const BRAND = '#7C3AED';
-const BRAND_LIGHT = '#A78BFA';
+// AI accent for the consent point icons and the @comic trigger text. Standard theme uses the brand
+// light purple; comic theme uses ink-dim #7A6A50 — no blue/purple (COMIC_THEME_TOKENS.md §6, §9.3),
+// matching the web consent fix. Resolved per-render from the active theme, never hardcoded.
+const AI_ACCENT_STANDARD = '#A78BFA';
+const AI_ACCENT_COMIC = '#7A6A50';
 const TEXT = '#E8EAF0';
 const SUBTLE = '#6B7280';
 
@@ -45,6 +50,8 @@ type ComicConsentSheetProps = {
 };
 
 export function ComicConsentSheet({ open, onConfirm, onDismiss }: ComicConsentSheetProps) {
+  const { tokens } = useTheme();
+  const accent = tokens.isComic ? AI_ACCENT_COMIC : AI_ACCENT_STANDARD;
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onDismiss} />
@@ -58,7 +65,7 @@ export function ComicConsentSheet({ open, onConfirm, onDismiss }: ComicConsentSh
               </View>
               <View style={styles.titleTextWrap}>
                 <Text style={styles.title}>Meet the AI Assistant</Text>
-                <Text style={styles.trigger}>
+                <Text style={[styles.trigger, { color: accent }]}>
                   Summon it by typing <Text style={styles.triggerToken}>@comic</Text>
                 </Text>
               </View>
@@ -73,7 +80,7 @@ export function ComicConsentSheet({ open, onConfirm, onDismiss }: ComicConsentSh
                 <React.Fragment key={point.title}>
                   <View style={styles.point}>
                     <View style={styles.pointIcon}>
-                      <Ionicons name={point.icon} size={15} color={BRAND_LIGHT} />
+                      <Ionicons name={point.icon} size={15} color={accent} />
                     </View>
                     <View style={styles.pointTextWrap}>
                       <Text style={styles.pointTitle}>{point.title}</Text>
@@ -153,7 +160,7 @@ const styles = StyleSheet.create({
   },
   trigger: {
     fontSize: 12,
-    color: BRAND_LIGHT,
+    color: AI_ACCENT_STANDARD,
     marginTop: 1,
   },
   triggerToken: {
