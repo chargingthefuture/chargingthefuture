@@ -5,9 +5,9 @@
 
 import { authedFetch } from '../../auth/authedFetch';
 
-const API_BASE = '/api/gentlepulse';
+const API_BASE = '/api/gentle-pulse';
 
-// Shape returned by GET /api/gentlepulse/library → { ok, items }
+// Shape returned by GET /api/gentle-pulse/library → { ok, items }
 export interface GentlePulseSession {
   id: string;
   slug: string;
@@ -24,7 +24,7 @@ export async function fetchSessions(): Promise<GentlePulseSession[]> {
   return (data.items ?? []) as GentlePulseSession[];
 }
 
-// POST /api/gentlepulse/library/:itemId/play — requires CSRF header
+// POST /api/gentle-pulse/library/:itemId/play — requires CSRF header
 export async function recordPlay(itemId: string, completed = false): Promise<void> {
   const res = await authedFetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/play`, {
     method: 'POST',
@@ -34,7 +34,7 @@ export async function recordPlay(itemId: string, completed = false): Promise<voi
   if (!res.ok) throw new Error('Failed to record play event');
 }
 
-// POST /api/gentlepulse/library/:itemId/favorite — requires CSRF header
+// POST /api/gentle-pulse/library/:itemId/favorite — requires CSRF header
 export async function addFavorite(itemId: string): Promise<void> {
   const res = await authedFetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/favorite`, {
     method: 'POST',
@@ -43,7 +43,7 @@ export async function addFavorite(itemId: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to add favorite');
 }
 
-// DELETE /api/gentlepulse/library/:itemId/favorite — requires CSRF header
+// DELETE /api/gentle-pulse/library/:itemId/favorite — requires CSRF header
 export async function removeFavorite(itemId: string): Promise<void> {
   const res = await authedFetch(`${API_BASE}/library/${encodeURIComponent(itemId)}/favorite`, {
     method: 'DELETE',

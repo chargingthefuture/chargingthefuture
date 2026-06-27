@@ -2,8 +2,8 @@ auditEvents:
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
-    pluginId: gentlepulse
-    command: gentlepulse.library.list
+    pluginId: gentle-pulse
+    command: gentle-pulse.library.list
     commandVersion: 1.0.0
     purpose: wellbeing_content_discovery
     policyDecision:
@@ -27,8 +27,8 @@ auditEvents:
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
-    pluginId: gentlepulse
-    command: gentlepulse.meditation.play.record
+    pluginId: gentle-pulse
+    command: gentle-pulse.meditation.play.record
     commandVersion: 1.0.0
     purpose: wellbeing_engagement_tracking
     policyDecision:
@@ -52,8 +52,8 @@ auditEvents:
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
-    pluginId: gentlepulse
-    command: gentlepulse.rating.upsert
+    pluginId: gentle-pulse
+    command: gentle-pulse.rating.upsert
     commandVersion: 1.0.0
     purpose: wellbeing_feedback
     policyDecision:

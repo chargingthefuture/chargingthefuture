@@ -43,7 +43,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   'gross-domestic-product': { standard: '#06B6D4', comic: '#0E5A68' },
   'service-credits': { standard: '#A855F7', comic: '#5C2C8A' },
   workforce: { standard: '#F97316', comic: '#6A2A05' },
-  gentlepulse: { standard: '#34D399', comic: '#1A5C45' },
+  'gentle-pulse': { standard: '#34D399', comic: '#1A5C45' },
   mood: { standard: '#4ADE80', comic: '#1A5C2A' },
   'socket-relay': { standard: '#FB923C', comic: '#7A3A0C' },
   'skills-hunt': { standard: '#FBBF24', comic: '#7A5A05' },

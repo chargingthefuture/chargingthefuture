@@ -42,7 +42,7 @@
     - **File**: `ctf/packages/web/components/gentle-pulse/gentle-pulse-shell.tsx` (new)
     - **Design ref**: `GentlePulse.tsx` — COLOR=#14B8A6, BG=#0A0F0E
     - **Structure**: 72px icon rail + 240px category sidebar + main area + 280px right rail. Three tabs: Sessions (grid of library items), Playing (player view), Support chat.
-    - **API backing**: `/api/gentlepulse/library` (GET), `/api/gentlepulse/support` (POST)
+    - **API backing**: `/api/gentle-pulse/library` (GET), `/api/gentle-pulse/support` (POST)
     - **Status**: ✅ committed
 
     ### 5. Community shell — created from scratch

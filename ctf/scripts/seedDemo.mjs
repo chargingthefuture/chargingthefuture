@@ -487,19 +487,19 @@ async function seedMood(c) {
   console.log('  ✓ mood');
 }
 
-async function seedGentlepulse(c) {
+async function seedGentlePulse(c) {
   const items = [
     [ID.gpItem1, 'breath-reset', '4-7-8 Breathing Reset',
      'A guided breathing exercise to reset focus and reduce stress.',
-     'https://cdn.ctf.app/demo/gentlepulse/breath-reset.mp4', '/api/foundation/support'],
+     'https://cdn.ctf.app/demo/gentle-pulse/breath-reset.mp4', '/api/foundation/support'],
     [ID.gpItem2, 'grounding-5x5', '5-5-5 Grounding',
      'Quick sensory grounding technique for moments of overwhelm.',
-     'https://cdn.ctf.app/demo/gentlepulse/grounding.mp4', '/api/foundation/support'],
+     'https://cdn.ctf.app/demo/gentle-pulse/grounding.mp4', '/api/foundation/support'],
   ];
 
   for (const [id, slug, title, desc, url, route] of items) {
     await c.query(
-      `INSERT INTO gentlepulse_library_items
+      `INSERT INTO gentle_pulse_library_items
        (id, slug, title, description, media_url, support_route, is_active)
        VALUES ($1::uuid, $2, $3, $4, $5, $6, true)
        ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, is_active = true`,
@@ -509,26 +509,26 @@ async function seedGentlepulse(c) {
 
   // Owner played and rated the first item
   await c.query(
-    `INSERT INTO gentlepulse_play_events (user_id, item_id, completed)
+    `INSERT INTO gentle_pulse_play_events (user_id, item_id, completed)
      VALUES ($1, $2::uuid, true)`,
     [OWNER, ID.gpItem1],
   );
 
   await c.query(
-    `INSERT INTO gentlepulse_ratings (user_id, item_id, rating)
+    `INSERT INTO gentle_pulse_ratings (user_id, item_id, rating)
      VALUES ($1, $2::uuid, 5)
      ON CONFLICT (user_id, item_id) DO UPDATE SET rating = EXCLUDED.rating`,
     [OWNER, ID.gpItem1],
   );
 
   await c.query(
-    `INSERT INTO gentlepulse_favorites (user_id, item_id)
+    `INSERT INTO gentle_pulse_favorites (user_id, item_id)
      VALUES ($1, $2::uuid)
      ON CONFLICT (user_id, item_id) DO NOTHING`,
     [OWNER, ID.gpItem1],
   );
 
-  console.log('  ✓ gentlepulse');
+  console.log('  ✓ gentle-pulse');
 }
 
 async function seedFoundation(c) {
@@ -841,7 +841,7 @@ async function main() {
     await seedFeedAnnouncements(client);
     await seedTrust(client);
     await seedMood(client);
-    await seedGentlepulse(client);
+    await seedGentlePulse(client);
     await seedFoundation(client);
     await seedChyme(client);
     await seedTrustTransport(client);

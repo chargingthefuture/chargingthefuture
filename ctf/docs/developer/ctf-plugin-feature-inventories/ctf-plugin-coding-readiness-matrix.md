@@ -16,7 +16,7 @@ This matrix tracks coding-readiness status across CTF feature inventories and ap
 | `ctf-directory-feature-inventory.md` | `ctf-directory-feature-inventory.md` | Present | `ctf/docs/contracts/DIRECTORY_PROFILE_AND_DELETION_CONTRACT.md` | Present (`DIRECTORY_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-feed-feature-inventory.md` | `ctf-feed-feature-inventory.md` | Present | `ctf/docs/contracts/FEED_PROFILE_AND_DELETION_CONTRACT.md` | Present (`FEED_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-foundation-feature-inventory.md` | `ctf-foundation-feature-inventory.md` | Present | `ctf/docs/contracts/FOUNDATION_PROFILE_AND_DELETION_CONTRACT.md` | Present (`FOUNDATION_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
-| `ctf-gentlepulse-feature-inventory.md` | `ctf-gentlepulse-feature-inventory.md` | Present | `ctf/docs/contracts/GENTLEPULSE_PROFILE_AND_DELETION_CONTRACT.md` | Present (`GENTLEPULSE_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
+| `ctf-gentle-pulse-feature-inventory.md` | `ctf-gentle-pulse-feature-inventory.md` | Present | `ctf/docs/contracts/GENTLE_PULSE_PROFILE_AND_DELETION_CONTRACT.md` | Present (`GENTLE_PULSE_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-gross-domestic-product-feature-inventory.md` | `ctf-gross-domestic-product-feature-inventory.md` | Present | `ctf/docs/contracts/GDP_PROFILE_AND_DELETION_CONTRACT.md` | Present (`GDP_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-lighthouse-feature-inventory.md` | `ctf-lighthouse-feature-inventory.md` | Present | `ctf/docs/contracts/LIGHTHOUSE_PROFILE_AND_DELETION_CONTRACT.md` | Present (`LIGHTHOUSE_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
 | `ctf-mood-feature-inventory.md` | `ctf-mood-feature-inventory.md` | Present | `ctf/docs/contracts/MOOD_PROFILE_AND_DELETION_CONTRACT.md` | Present (`MOOD_*` YAML triplet) | Planned; checklist gate | Ready | None for coding start |
@@ -37,7 +37,7 @@ No plugins are currently missing command/access/audit YAML triplets.
 ## Change Log
 
 - 2026-02-25: Created initial coding readiness matrix with Rule 114 baseline and release-gate backlog.
-- 2026-02-25: Added triplets for announcements, directory, feed, gentlepulse, lighthouse, mood, socket-relay, trusttransport, and workforce; cleared release-gate backlog.
+- 2026-02-25: Added triplets for announcements, directory, feed, gentle-pulse, lighthouse, mood, socket-relay, trusttransport, and workforce; cleared release-gate backlog.
 - 2026-02-25: Added Chyme inventory/checklist row and reopened release-gate backlog for missing `CHYME_*` command/access/audit triplet artifacts.
 - 2026-02-25: Added `CHYME_PLUGIN_COMMAND_CONTRACTS.yaml`, `CHYME_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, and `CHYME_PLUGIN_AUDIT_CONTRACTS.yaml`; cleared Chyme release-gate contract debt.
 - 2026-03-01: Rebased Chyme readiness for fresh-start rewrite planning; removed implemented-baseline assumption and added mandatory baseline Phase -1 gate (Clerk → Railway → Vercel → Expo).

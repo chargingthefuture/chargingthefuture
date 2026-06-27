@@ -39,7 +39,7 @@ Each agent handoff should include:
 | `agent-09-trusttransport`           | `trusttransport`                                   | Phase 2 — parallel start after Phase 0 completion.                                                            | Ride/package/food request-fulfillment lifecycle, payout and trust/safety controls                                   | Safety policy evidence; dispute/proof contracts; payout and earnings audit trail notes                        |
 | `agent-10-peer-programming`         | `peer-programming`                                 | Phase 2 — parallel start after Phase 0 completion.                                                            | Weekly cohort assignment, persistent room/thread model, tiered participation, topic guidance admin                  | Fallback-open behavior evidence; notification retry/idempotency notes                                         |
 | `agent-11-mood`                     | `mood`                                             | Phase 2 — parallel start after Phase 0 completion.                                                            | Authenticated mood check + eligibility window with anonymous `clientId` persistence                                 | Cooldown semantics validation; auth + anonymous persistence policy note; parity outcomes                      |
-| `agent-12-gentlepulse`              | `gentlepulse`                                      | Phase 2 — parallel start after Phase 0 completion.                                                            | Library/favorites/ratings/play endpoints; no in-app admin scope                                                     | Migration/cutover note for anonymous-to-auth model; excluded-scope checks; parity evidence                    |
+| `agent-12-gentle-pulse`              | `gentle-pulse`                                      | Phase 2 — parallel start after Phase 0 completion.                                                            | Library/favorites/ratings/play endpoints; no in-app admin scope                                                     | Migration/cutover note for anonymous-to-auth model; excluded-scope checks; parity evidence                    |
 | `agent-13-weekly-performance`       | `weekly-performance`                               | Phase 2 — parallel start after Phase 0 completion.                                                            | Week-based admin analytics, deterministic week boundaries, comparison/export contracts                              | Metric dictionary lock notes; export gate decision status                                                     |
 | `agent-14-gdp`                      | `gross-domestic-product`                           | Phase 3 — start after upstream metric/event semantics are stable from Phases 1 and 2.                         | Aggregate GDP metrics/reporting/admin publish governance                                                            | DP/suppression controls evidence; canonical metric mapping; deletion-accounting exclusion checks              |
 | `agent-15-service-credits`          | `service-credits`                                  | Phase 3 — start with/after GDP policy and accounting semantics lock.                                          | Wallet/escrow/transfer/governance/dispute/deletion-reclaim policy flows                                             | Non-GDP reclaim accounting evidence; cross-plugin path validation; ledger adapter controls                    |
@@ -50,7 +50,7 @@ Each agent handoff should include:
 - **Phase -1E to -1H (mandatory baseline pass 2):** `agent-bf-01-clerk-foundation-v2`, `agent-bf-02-railway-baseline-v2`, `agent-bf-03-vercel-integration-v2`, `agent-bf-04-expo-baseline-v2`
 - **Phase 0 (start after baseline):** `agent-00-chyme-core`, `agent-01-taxonomy-core`, `agent-02-directory-core`, `agent-03-feed-announcements`
 - **Phase 1 (dependency-gated):** `agent-04-workforce`, `agent-05-skills-hunt`, `agent-06-foundation`
-- **Phase 2 (parallel after Phase 0 completion):** `agent-07-lighthouse`, `agent-08-socket-relay`, `agent-09-trusttransport`, `agent-10-peer-programming`, `agent-11-mood`, `agent-12-gentlepulse`, `agent-13-weekly-performance`
+- **Phase 2 (parallel after Phase 0 completion):** `agent-07-lighthouse`, `agent-08-socket-relay`, `agent-09-trusttransport`, `agent-10-peer-programming`, `agent-11-mood`, `agent-12-gentle-pulse`, `agent-13-weekly-performance`
 - **Phase 3 (stabilization/finance lock):** `agent-14-gdp`, `agent-15-service-credits`
 
 ## Coordination checkpoints
@@ -63,7 +63,7 @@ Each agent handoff should include:
 
 ## Dispatch notes
 
-- If you need fewer agents, merge `agent-11-mood` + `agent-12-gentlepulse` and merge `agent-14-gdp` + `agent-15-service-credits`.
+- If you need fewer agents, merge `agent-11-mood` + `agent-12-gentle-pulse` and merge `agent-14-gdp` + `agent-15-service-credits`.
 - If you need faster throughput, split `agent-03-feed-announcements` into two agents only after shared admin-surface contract lock is merged.
 - Do not dispatch Phase 0+ plugin prompts before the full baseline sequence (Phase -1 pass 1 and pass 2) completes.
 - Dispatch policy for every agent: require clarify-first Q&A until requirements are unambiguous, and reject scaffold-only handoffs.
@@ -102,7 +102,7 @@ Status legend:
 | `agent-09-trusttransport`           | Phase 2   | Done   | 2026-03-03 |       |           | Yes              |
 | `agent-10-peer-programming`         | Phase 2   | Done   | 2026-03-04 |       |           | Yes              |
 | `agent-11-mood`                     | Phase 2   | Done   | 2026-03-04 |       |           | Yes              |
-| `agent-12-gentlepulse`              | Phase 2   | Done   | 2026-03-04 |       |           | Yes              |
+| `agent-12-gentle-pulse`              | Phase 2   | Done   | 2026-03-04 |       |           | Yes              |
 | `agent-13-weekly-performance`       | Phase 2   | Done   | 2026-03-04 |       |           | Yes              |
 | `agent-14-gdp`                      | Phase 3   | Done   | 2026-03-04 |       |           | Yes              |
 | `agent-15-service-credits`          | Phase 3   | Done   | 2026-03-04 |       |           | Yes              |
