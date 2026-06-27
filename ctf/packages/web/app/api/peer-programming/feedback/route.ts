@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { insertPeerProgrammingAudit, submitFeedback } from 'lib/peer-programming/repository';
+import { PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
 
 type FeedbackBody = {
@@ -31,6 +32,13 @@ export async function POST(request: Request) {
 
   if (!body.issueType || !body.suggestionCategory || !body.note) {
     return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'issueType, suggestionCategory and note are required.' }, { status: 400 });
+  }
+
+  if (body.note.length > PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH) {
+    return NextResponse.json(
+      { ok: false, code: 'peer_programming_invalid_payload', message: `Feedback note must be ${PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH} characters or fewer.` },
+      { status: 400 },
+    );
   }
 
   try {
