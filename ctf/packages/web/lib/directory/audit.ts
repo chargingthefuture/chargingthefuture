@@ -10,6 +10,14 @@ type DirectoryAuditEvent = {
   result: 'success' | 'failure';
   errorCategory: string | null;
   metadata?: Record<string, unknown>;
+  // The audit contract (DIRECTORY_PLUGIN_AUDIT_CONTRACTS.yaml) requires a workspaceId in
+  // targetContext and a top-level requestId + traceId on every event, for cross-service
+  // correlation and compliance tracing. They are optional on the call site so existing
+  // callers keep compiling; when a caller does not pass them the helper records 'unknown'
+  // rather than dropping the field, so the serialized payload always matches the schema shape.
+  workspaceId?: string | null;
+  requestId?: string | null;
+  traceId?: string | null;
 };
 
 export function logDirectoryAudit(event: DirectoryAuditEvent): void {
@@ -25,9 +33,12 @@ export function logDirectoryAudit(event: DirectoryAuditEvent): void {
       reason: event.reason,
     },
     targetContext: {
+      workspaceId: event.workspaceId ?? 'unknown',
       targetType: event.targetType,
       targetId: event.targetId,
     },
+    requestId: event.requestId ?? 'unknown',
+    traceId: event.traceId ?? 'unknown',
     result: {
       status: event.result,
       errorCategory: event.errorCategory ?? 'none',

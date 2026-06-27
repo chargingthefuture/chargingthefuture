@@ -44,6 +44,29 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   try {
     const profile = await assignAdminProfile(gate.auth.userId, id, userId);
+    if (profile === 'already_claimed') {
+      logDirectoryAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.admin.profile.assign',
+        status: 'deny',
+        reason: 'invalid_claimed_unclaimed_transition',
+        targetType: 'profile',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'claimed_guard',
+        metadata: { assignedUserId: userId },
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          code: DIRECTORY_ERROR_CODE.claimedProfileGuard,
+          message: 'This profile is already claimed by another member.',
+        },
+        { status: 409 },
+      );
+    }
+
     if (!profile) {
       logDirectoryAudit({
         actorId: gate.auth.userId,
