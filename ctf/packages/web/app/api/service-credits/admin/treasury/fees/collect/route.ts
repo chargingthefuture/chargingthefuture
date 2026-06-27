@@ -34,6 +34,8 @@ export async function POST(request: Request) {
     !body.sourceUserId
     || !body.treasuryUserId
     || typeof body.amount !== 'number'
+    || !(body.amount > 0)
+    || !Number.isFinite(body.amount)
     || !body.feeReasonCode
     || !body.originPlugin
     || !body.idempotencyKey
