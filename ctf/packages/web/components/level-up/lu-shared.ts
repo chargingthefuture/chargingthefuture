@@ -110,6 +110,8 @@ export interface Wallet {
 
 export interface PendingValidation {
   milestoneId: string;
+  enrollmentId: string;
+  cohortId: string;
   learnerName?: string;
   task?: string;
 }

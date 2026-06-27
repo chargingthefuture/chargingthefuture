@@ -34,6 +34,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'level_up_invalid_payload', message: 'Invalid transfer payload.', issues: parsed.error.issues }, { status: 400 });
   }
 
+  // Block self-transfers: a user must not be able to send credits to their own account.
+  if (parsed.data.recipientUserId === gate.auth.userId) {
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_payload', message: 'Cannot transfer credits to yourself.' }, { status: 400 });
+  }
+
   try {
     const transfer = await transferCreditsForLevelUp({
       actorId: gate.auth.userId,

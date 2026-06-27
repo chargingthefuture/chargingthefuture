@@ -383,6 +383,19 @@ export async function getCohortDetail(cohortId: string) {
   };
 }
 
+export async function getDisputeCohortId(disputeId: string): Promise<string | null> {
+  const result = await queryDb<{ cohort_id: string }>(
+    `SELECT e.cohort_id::text AS cohort_id
+     FROM level_up_disputes d
+     JOIN level_up_enrollments e ON e.id = d.enrollment_id
+     WHERE d.id = $1::uuid
+     LIMIT 1`,
+    [disputeId],
+  );
+
+  return result.rows[0]?.cohort_id ?? null;
+}
+
 export async function isTrainerForCohort(actorId: string, cohortId: string): Promise<boolean> {
   const cohort = await queryDb<{ created_by_user_id: string }>(
     `SELECT created_by_user_id
