@@ -29,7 +29,7 @@
    and previews are per-agent-branch/PR via flag targeting rather than ephemeral environments.
    Infisical (self-hosted on Railway) remains the single source of truth for secrets.
 3. **Nothing is design-skippable** (Rule 127 updated 2026-05-20). Every rendered surface — including
-   admin/internal (`clicklog`, `weekly-performance`, `skills-taxonomy` admin, `unlock`, `community`) —
+   admin/internal (`click-log`, `weekly-performance`, `skills-taxonomy` admin, `unlock`, `community`) —
    requires a design pass. The Replit design agent is producing these mockups **in parallel** in a
    separate thread. Agents build **non-UI foundation now** (schema, routes, contracts, seeds) and
    **circle back to build the UI** once each design lands.
@@ -93,7 +93,7 @@ in the `design/` submodule** — build backend now, circle back for UI.
 15. **weekly-performance** backend — no dependency.
 16. **gdp** backend — best done after upstream metric/event semantics settle (#6–#14).
 17. **service-credits** backend — blocked by #16 (GDP accounting/reclaim coupling).
-18. **level-up**, **trust**, **clicklog**, **unlock** backend — no dependency.
+18. **level-up**, **trust**, **click-log**, **unlock** backend — no dependency.
 19. **UI circle-back** (per plugin) — blocked by that plugin's design landing in `design/`. Implement web pixel-perfect + android parity once the design agent finishes it.
 
 ## Progress checklist
@@ -130,7 +130,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | level-up | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | trust | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| clicklog | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| click-log | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | unlock | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 All rows are complete (backend + web pixel + Android parity + gates + deployed). No ⏳/⬜ rows remain.
@@ -189,7 +189,7 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       occupation), lighthouse (seeker + host + 2 properties + match), socket-relay (user-extension +
       request + fulfillment), feed + announcements, trust, mood, gentle-pulse (library + play + rating +
       favorite), foundation (thread + capacity policy), chyme (room + members + messages), trusttransport
-      (request + offer), peer-programming (topic + cohort + members), clicklog (3 incidents).
+      (request + offer), peer-programming (topic + cohort + members), click-log (3 incidents).
 - [x] **#102 remaining** (done by owner): runtime validation — owner steps:
       (1) Add `DATABASE_URL_DIRECT` (Neon unpooled URL) as a GitHub repo secret under Settings → Secrets → Actions.
       (2) Go to Actions → **"Provision demo schema in Neon"** → Run workflow (pastes `schema.demo.sql` into Neon via psql).
@@ -284,8 +284,8 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   gentle-pulse (4 tables, 6 routes), level-up (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
   4 routes). Marked all 7 backends ✅. Detailed audit of remaining 6 plugins: peer-programming (7 tables, 6 routes,
   NO seed script), mood (1 table, 2 routes, NO seed), gdp (3 tables, 2 routes, NO seed), service-credits (15 tables,
-  11 routes, NO seed), weekly-performance (3 tables, 5 routes, NO seed), clicklog (1 table, 2 routes, ✅ seed).
-  Marked clicklog ✅, others 🟡 (schema+contracts+routes complete but missing deterministic seed scripts per 7-gate
+  11 routes, NO seed), weekly-performance (3 tables, 5 routes, NO seed), click-log (1 table, 2 routes, ✅ seed).
+  Marked click-log ✅, others 🟡 (schema+contracts+routes complete but missing deterministic seed scripts per 7-gate
   requirement). Foundation is UI-gated; feed+workforce remain 🟡 due to documented drift.
 - 2026-05-21: Created deterministic seed scripts for all 5 seed-pending plugins, completing 100% backend production-readiness.
   Seed scripts added: seedPeerProgrammingPhase0.mjs (topics, cohorts, members, messages, feedback, notifications—7 tables),
@@ -420,7 +420,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   pixel parity (`MobileLightHouse.tsx` → RN feature) remains ⬜.
 - 2026-05-29: Design re-pin `dcaaf15` → `c5d83c0` (76 commits; separate design-sync PR) + copy
   reconcile. The newer design removed all user-facing "GetStream" wording and added mockups for the
-  four previously design-gated plugins (skills-taxonomy, weekly-performance, clicklog, unlock). Began
+  four previously design-gated plugins (skills-taxonomy, weekly-performance, click-log, unlock). Began
   reconciling the shipped shells to the new copy: chyme and directory and lighthouse (folded
   into its open PR) drop "GetStream" branding for "end-to-end encrypted" wording; Directory's detail
   "Reviews" → "Endorsements". Copy-only; no structural/API changes. Follow-up: `ChymeLiveShell` remains
@@ -433,15 +433,15 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   change; data wiring and the c5d83c0 copy are preserved. typecheck, lint, modularity, build:ci, EOF,
   parity, and schema-drift gates green. All three circle-backed plugins (chyme, directory, lighthouse)
   now satisfy rule 116.
-- 2026-05-29: UI circle-back — clicklog web pixel pass (first of the four plugins unblocked by the
-  `c5d83c0` design re-pin). Rebuilt the plain Tailwind `ClicklogShell` to the `ClickLog.tsx` mockup and
+- 2026-05-29: UI circle-back — click-log web pixel pass (first of the four plugins unblocked by the
+  `c5d83c0` design re-pin). Rebuilt the plain Tailwind `ClickLogShell` to the `ClickLog.tsx` mockup and
   its Empty/Loading states: the dark (`#0F1117` / brand `#E91E8C`) icon-rail + sidebar (total +
   this-week strip + encryption note) + circular log button with inline note form + recent-incidents
-  list + right-rail stats/safety-reminder layout. All counters derive from real `/api/clicklog` data
+  list + right-rail stats/safety-reminder layout. All counters derive from real `/api/click-log` data
   (no dummy counts); the modal became the mockup's inline form. Decomposed into modular sub-components
   within the rule-116 limits, cleared the prior `any` lint debt, and dropped the unused `userId` prop.
   No public state by design (ClickLog is private/auth-only). typecheck, lint, modularity, build:ci, EOF,
-  parity, and schema-drift gates green. Marked clicklog Design 🎨 / Web px ✅; Android pixel parity
+  parity, and schema-drift gates green. Marked click-log Design 🎨 / Web px ✅; Android pixel parity
   (`MobileClickLog.tsx`) remains ⬜. Three design-gated plugins remain: skills-taxonomy,
   weekly-performance, unlock.
 - 2026-05-29: UI circle-back — unlock web pixel pass (second of the four plugins unblocked by the

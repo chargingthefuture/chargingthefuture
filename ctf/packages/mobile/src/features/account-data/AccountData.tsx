@@ -39,7 +39,7 @@ const SERVICE_GLYPH: Record<string, string> = {
   chyme: '💬', directory: '📇', 'feed-announcements': '📣', foundation: '🪛', mood: '🌿',
   'gentle-pulse': '🎵', 'peer-programming': '👥', lighthouse: '🏠', 'socket-relay': '🔂',
   'trust-transport': '📦', trust: '🛡️', workforce: '💼', 'skills-hunt': '🎯',
-  'skills-taxonomy': '🗂️', unlock: '🔓', 'level-up': '🚀', clicklog: '🚨', comic: '🤖',
+  'skills-taxonomy': '🗂️', unlock: '🔓', 'level-up': '🚀', 'click-log': '🚨', comic: '🤖',
   feedback: '💬', 'service-credits': '⚙️', 'gross-domestic-product': '📊', 'weekly-performance': '📊',
 };
 

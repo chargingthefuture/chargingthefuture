@@ -135,7 +135,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
   },
   {
-    id: 'clicklog',
+    id: 'click-log',
     name: 'ClickLog',
     kind: 'plugin',
     summary: 'Safety check-in and incident logging — location optional. Log what happened, check in when you\'re safe.',

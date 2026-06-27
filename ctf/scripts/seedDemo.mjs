@@ -729,7 +729,7 @@ async function seedSocketRelay(c) {
   console.log('  ✓ socket-relay');
 }
 
-async function seedClicklog(c) {
+async function seedClickLog(c) {
   const incidents = [
     { uid: OWNER, meta: { latitude: 37.7749, longitude: -122.4194, notes: 'Demo check-in — SF' } },
     { uid: OWNER, meta: { latitude: 37.8044, longitude: -122.2712, notes: 'Demo check-in — Oakland' } },
@@ -738,14 +738,14 @@ async function seedClicklog(c) {
 
   for (const { uid, meta } of incidents) {
     await c.query(
-      `INSERT INTO clicklog_incidents (user_id, metadata)
+      `INSERT INTO click_log_incidents (user_id, metadata)
        VALUES ($1, $2::jsonb)
        ON CONFLICT (user_id, metadata_hash) DO NOTHING`,
       [uid, JSON.stringify(meta)],
     );
   }
 
-  console.log('  ✓ clicklog');
+  console.log('  ✓ click-log');
 }
 
 async function seedWhatWorks(c) {
@@ -848,7 +848,7 @@ async function main() {
     await seedPeerProgramming(client);
     await seedSkillsTaxonomy(client);
     await seedSocketRelay(client);
-    await seedClicklog(client);
+    await seedClickLog(client);
     await seedWhatWorks(client);
 
     await client.query('COMMIT');

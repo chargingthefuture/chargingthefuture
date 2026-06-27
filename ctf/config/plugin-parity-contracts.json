@@ -104,8 +104,8 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "clicklog",
-      "mobileFeatureDirs": ["clicklog"],
+      "slug": "click-log",
+      "mobileFeatureDirs": ["click-log"],
       "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },

@@ -179,7 +179,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'clicklog',
+    slug: 'click-log',
     name: 'ClickLog',
     summary: 'Safety check-in and incident logging — location optional. Log what happened, check in when you\'re safe.',
     availabilityState: 'implemented_shell',
