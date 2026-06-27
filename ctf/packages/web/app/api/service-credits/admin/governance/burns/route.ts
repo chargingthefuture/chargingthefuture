@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  if (!body.targetUserId || typeof body.amount !== 'number' || !body.burnReason || !body.governanceTicketId || !body.idempotencyKey) {
+  if (!body.targetUserId || typeof body.amount !== 'number' || !(body.amount > 0) || !Number.isFinite(body.amount) || !body.burnReason || !body.governanceTicketId || !body.idempotencyKey) {
     return NextResponse.json(
       { ok: false, code: 'service_credits_invalid_payload', message: 'targetUserId, amount, burnReason, governanceTicketId, and idempotencyKey are required.' },
       { status: 400 },

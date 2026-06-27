@@ -5,6 +5,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import {
   claimSkillsHuntRewardUnderCap,
   getRound,
+  getSubmissionById,
   insertSkillsHuntAudit,
   revertSkillsHuntCreditClaim,
   reviewSubmission,
@@ -167,7 +168,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     // accept reward is a best-effort follow-up (see grantAcceptRewardBestEffort).
     await grantAcceptRewardBestEffort(submission, gate.auth.userId);
 
-    return NextResponse.json({ ok: true, submission }, { status: 200 });
+    // Re-read from the database so the response reflects the committed reward
+    // state (credit_granted / credit_amount) rather than the in-memory mutation,
+    // which could diverge if the claim-then-mint sequence partially failed.
+    const fresh = await getSubmissionById(submission.id);
+
+    return NextResponse.json({ ok: true, submission: fresh ?? submission }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_review' });
     const message = error instanceof Error ? error.message : 'unknown';

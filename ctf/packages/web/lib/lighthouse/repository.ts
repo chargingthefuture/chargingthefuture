@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
@@ -998,12 +999,28 @@ export async function createMatchRequest(input: {
       throw new Error('duplicate_match');
     }
 
+    // Generate the match id up front so the Stream channel can be provisioned before the row is
+    // inserted. This avoids the old two-step INSERT('pending') + UPDATE pattern, which could leave a
+    // committed row holding the literal placeholder 'pending' if the UPDATE failed, and could attempt
+    // a duplicate channel creation on a transaction retry. The channel id is now written in the single
+    // INSERT, so a committed match always carries its real channel id.
+    const matchId = randomUUID();
+    const fallbackChannelId = `lighthouse-match-${matchId}`;
+    const ensuredChannelId = await ensureLighthouseMatchChannel({
+      matchId,
+      seekerUserId: input.actorUserId,
+      seekerDisplayName: normalizeText(input.actorDisplayName || input.actorUserId),
+      hostUserId,
+      hostDisplayName: hostUserId,
+    });
+    const streamChannelId = ensuredChannelId ?? fallbackChannelId;
+
     const created = await client.query(
       `
         INSERT INTO lighthouse_matches
-          (property_id, seeker_user_id, host_user_id, message, proposed_move_in_date, status, stream_channel_id)
+          (id, property_id, seeker_user_id, host_user_id, message, proposed_move_in_date, status, stream_channel_id)
         VALUES
-          ($1, $2, $3, $4, $5::date, 'pending', 'pending')
+          ($1::uuid, $2, $3, $4, $5, $6::date, 'pending', $7)
         RETURNING
           id,
           property_id,
@@ -1018,50 +1035,20 @@ export async function createMatchRequest(input: {
           stream_channel_id
       `,
       [
+        matchId,
         input.propertyId,
         input.actorUserId,
         hostUserId,
         normalizeNullableText(input.message),
         normalizeNullableText(input.desiredMoveInDateIso),
+        streamChannelId,
       ],
-    );
-
-    const createdMatch = created.rows[0];
-    const fallbackChannelId = `lighthouse-match-${createdMatch.id}`;
-    const ensuredChannelId = await ensureLighthouseMatchChannel({
-      matchId: createdMatch.id,
-      seekerUserId: input.actorUserId,
-      seekerDisplayName: normalizeText(input.actorDisplayName || input.actorUserId),
-      hostUserId,
-      hostDisplayName: hostUserId,
-    });
-
-    const streamChannelId = ensuredChannelId ?? fallbackChannelId;
-    const updated = await client.query(
-      `
-        UPDATE lighthouse_matches
-        SET stream_channel_id = $2, updated_at = NOW()
-        WHERE id = $1::uuid
-        RETURNING
-          id,
-          property_id,
-          seeker_user_id,
-          host_user_id,
-          message,
-          proposed_move_in_date,
-          host_response,
-          status,
-          created_at,
-          updated_at,
-          stream_channel_id
-      `,
-      [createdMatch.id, streamChannelId],
     );
 
     const token = await createLighthouseParticipantToken(input.actorUserId, normalizeText(input.actorDisplayName || input.actorUserId));
 
     return {
-      match: mapMatch(updated.rows[0]),
+      match: mapMatch(created.rows[0]),
       streamApiKey: token?.streamApiKey ?? null,
       streamUserId: token?.streamUserId ?? null,
       streamToken: token?.streamToken ?? null,

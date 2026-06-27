@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createIncident, getIncidentsByUser, getIncidentCount } from 'lib/click-log/repository';
 import { MAX_NOTES_LENGTH } from 'lib/click-log/constants';
+import { canViewIncidents } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import type { IncidentMetadata } from 'lib/click-log/types';
 import { requireClickLogAccess } from './_lib';
@@ -11,6 +12,13 @@ export async function GET() {
     return gate.response;
   }
   const userId = gate.auth.userId;
+  // The userId is always the caller's own id, so this guard is satisfied today, but
+  // calling the policy function keeps the access decision active and auditable (and
+  // enforces the contract's mustMatch attribute policy) rather than leaving it as dead
+  // code that a future admin-list path could bypass.
+  if (!canViewIncidents(gate.auth.userId, userId, gate.auth.isAdmin)) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  }
   const incidents = await getIncidentsByUser(userId);
   const count = await getIncidentCount(userId);
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.list', result: 'success' });
@@ -65,5 +73,8 @@ export async function POST(req: NextRequest) {
   };
   const incident = await createIncident({ userId, metadata });
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.create', result: 'success' });
-  return NextResponse.json({ incident });
+  // Return the incident flat to match the command contract's outputSchema
+  // (ClickLogIncident, not a { incident } wrapper). No current caller reads this body,
+  // so unwrapping here aligns the route with the contract without breaking a reader.
+  return NextResponse.json(incident);
 }

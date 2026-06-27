@@ -1,59 +1,3 @@
-// ServiceCredits Transaction Row and Mapping
-type SkillsHuntServiceCreditsTransactionRow = {
-  id: string;
-  from_user_id: string;
-  to_user_id: string;
-  amount: number;
-  reason: string | null;
-  submission_id: string | null;
-  created_at: Date;
-};
-
-import type { SkillsHuntServiceCreditsTransaction, SkillsHuntServiceCreditsTransactionInput } from './types';
-
-function mapServiceCreditsTransaction(row: SkillsHuntServiceCreditsTransactionRow): SkillsHuntServiceCreditsTransaction {
-  return {
-    id: row.id,
-    fromUserId: row.from_user_id,
-    toUserId: row.to_user_id,
-    amount: row.amount,
-    reason: row.reason,
-    submissionId: row.submission_id,
-    createdAtIso: toIso(row.created_at),
-  };
-}
-
-export async function createSkillsHuntServiceCreditsTransaction(
-  client: PoolClient,
-  fromUserId: string,
-  input: SkillsHuntServiceCreditsTransactionInput
-): Promise<SkillsHuntServiceCreditsTransaction> {
-  const result = await client.query<SkillsHuntServiceCreditsTransactionRow>(
-    `
-      INSERT INTO skills_hunt_service_credits_transactions
-        (from_user_id, to_user_id, amount, reason, submission_id)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `,
-    [fromUserId, input.toUserId, input.amount, input.reason ?? null, input.submissionId ?? null]
-  );
-  return mapServiceCreditsTransaction(result.rows[0]);
-}
-
-export async function getSkillsHuntServiceCreditsTransactionsForUser(
-  client: PoolClient,
-  userId: string
-): Promise<SkillsHuntServiceCreditsTransaction[]> {
-  const result = await client.query<SkillsHuntServiceCreditsTransactionRow>(
-    `
-      SELECT * FROM skills_hunt_service_credits_transactions
-      WHERE from_user_id = $1 OR to_user_id = $1
-      ORDER BY created_at DESC
-    `,
-    [userId]
-  );
-  return result.rows.map(mapServiceCreditsTransaction);
-}
 import { createHash, randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
@@ -1498,6 +1442,53 @@ export async function getRound(roundId: string): Promise<SkillsHuntRound | null>
 
   const row = result.rows[0];
   return row ? mapRound(row) : null;
+}
+
+// Read a single submission by id, returning the authoritative database row.
+// Used to refresh the response body after a best-effort reward mutation so the
+// API never reports in-memory state that diverges from what was committed.
+export async function getSubmissionById(submissionId: string): Promise<SkillsHuntSubmission | null> {
+  const result = await queryDb<SkillsHuntSubmissionRow>(
+    `
+      SELECT
+        id,
+        round_id,
+        submitter_user_id,
+        submitter_username,
+        full_name,
+        bio,
+        quora_profile_url,
+        skills,
+        proposed_skills,
+        claimed_professions,
+        status,
+        points_awarded,
+        participation_points,
+        credit_granted,
+        credit_amount,
+        credit_granted_at,
+        url_validation_result,
+        url_validation_checked_at,
+        score_breakdown,
+        review_action,
+        review_notes,
+        reviewed_by_user_id,
+        reviewed_at,
+        edit_history,
+        edited_at,
+        deleted_at,
+        directory_profile_generated_at,
+        created_at,
+        updated_at
+      FROM skills_hunt_submissions
+      WHERE id = $1::uuid
+      LIMIT 1
+    `,
+    [submissionId],
+  );
+
+  const row = result.rows[0];
+  return row ? mapSubmission(row) : null;
 }
 
 // Atomically claim the accept reward for a submission under the per-scout,
