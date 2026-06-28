@@ -99,29 +99,23 @@ contracts:
   - pluginId: weekly-performance
     command: weekly-performance.report.export
     version: 1.0.0
-    description: Export an approved weekly performance report artifact for authorized operator workflows.
+    description: >-
+      Return the approved weekly metrics snapshot for a selected week as a synchronous inline JSON
+      download for authorized operator workflows. The export is gated behind the
+      WEEKLY_PERFORMANCE_EXPORT_ENABLED environment flag and writes an audit record on every allowed
+      access. There is no asynchronous artifact pipeline: the response carries the metrics directly,
+      so there is no exportId, persisted export record, or downloadable artifact URL.
     inputSchema:
       weekStart:
         type: string
         required: true
-      format:
-        type: string
-        required: true
-      includeComparison:
-        type: boolean
-        required: false
     outputSchema:
-      exportId:
+      weekStartDate:
         type: string
-      status:
-        type: string
-      artifactUrl:
-        type: string
-      expiresAt:
-        type: string
+      metrics:
+        type: array
     dataAccess:
       - weekly_performance_metrics
-      - weekly_performance_exports
       - weekly_performance_audit_trail
     purpose: operational_metrics_export
     retentionClass: audit_long_lived
@@ -132,3 +126,12 @@ changelog:
     change: Initial Weekly Performance command contract skeleton added for week listing, snapshot retrieval, comparison, and export workflows.
   - date: 2026-06-27
     change: Aligned dataAccess table names to the shipped schema — weekly_performance_week_windows -> weekly_performance_weeks, weekly_performance_metric_snapshots -> weekly_performance_metrics, weekly_performance_audit_log -> weekly_performance_audit_trail. Documentation alignment only; no schema or table rename.
+  - date: 2026-06-27
+    change: >-
+      Reconciled weekly-performance.report.export to the shipped behavior (#1128). The route returns
+      the metrics snapshot as a synchronous inline JSON download, not an asynchronous artifact, so the
+      output schema is now {weekStartDate, metrics}; the unbuilt {exportId, status, artifactUrl,
+      expiresAt} shape and the unbuilt weekly_performance_exports dataAccess entry were removed, and
+      the never-read format and includeComparison inputs were dropped. This is contract-to-reality
+      documentation alignment, not a feature removal — a real async artifact-export pipeline (with a
+      weekly_performance_exports table) can be added later if the owner wants it.
