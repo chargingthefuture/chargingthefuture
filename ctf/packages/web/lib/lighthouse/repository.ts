@@ -1326,7 +1326,45 @@ export async function insertLighthouseAudit(input: {
   targetType: string;
   targetId: string;
   metadata?: Record<string, unknown>;
+  // The audit contract (LIGHTHOUSE_PLUGIN_AUDIT_CONTRACTS.yaml) requires every event to carry
+  // commandVersion, a structured policyDecision.evidence object, a targetContext.workspaceId, and
+  // top-level requestId + traceId for cross-service correlation and compliance tracing. The
+  // existing columns (actor_id, command, policy_status, reason, target_type, target_id) cover the
+  // flat fields; the remaining contract fields are folded into the metadata jsonb column so the
+  // stored record matches the contract shape without a schema migration. All of these are optional
+  // at the call site so existing callers keep compiling; when a caller omits one, the helper
+  // records 'unknown' / 'none' / {} rather than dropping the field, so the serialized payload
+  // always matches the schema shape.
+  commandVersion?: string;
+  workspaceId?: string | null;
+  requestId?: string | null;
+  traceId?: string | null;
+  evidence?: Record<string, string>;
+  result?: 'success' | 'failure';
+  errorCategory?: string | null;
 }): Promise<void> {
+  const auditEnvelope = {
+    eventId: randomUUID(),
+    commandVersion: input.commandVersion ?? '1.0.0',
+    policyDecision: {
+      status: input.policyStatus,
+      reason: input.reason,
+      evidence: input.evidence ?? {},
+    },
+    targetContext: {
+      workspaceId: input.workspaceId ?? 'unknown',
+      targetType: input.targetType,
+      targetId: input.targetId,
+    },
+    requestId: input.requestId ?? 'unknown',
+    traceId: input.traceId ?? 'unknown',
+    result: {
+      status: input.result ?? 'success',
+      errorCategory: input.errorCategory ?? 'none',
+    },
+    metadata: parseJsonObject(input.metadata),
+  };
+
   await queryDb(
     `
       INSERT INTO lighthouse_admin_audit_trail
@@ -1341,7 +1379,7 @@ export async function insertLighthouseAudit(input: {
       input.reason,
       input.targetType,
       input.targetId,
-      JSON.stringify(parseJsonObject(input.metadata)),
+      JSON.stringify(auditEnvelope),
     ],
   );
 }
@@ -1349,10 +1387,16 @@ export async function insertLighthouseAudit(input: {
 export async function listLighthouseAuditEvents(limit = 100): Promise<Array<{
   actorId: string;
   command: string;
+  commandVersion: string;
   policyStatus: 'allow' | 'deny';
   reason: string;
+  evidence: Record<string, unknown>;
   targetType: string;
   targetId: string;
+  workspaceId: string;
+  requestId: string;
+  traceId: string;
+  result: { status: string; errorCategory: string };
   metadata: Record<string, unknown>;
   createdAtIso: string;
 }>> {
@@ -1376,14 +1420,35 @@ export async function listLighthouseAuditEvents(limit = 100): Promise<Array<{
     [boundedLimit],
   );
 
-  return result.rows.map((row) => ({
-    actorId: row.actor_id,
-    command: row.command,
-    policyStatus: row.policy_status,
-    reason: row.reason,
-    targetType: row.target_type,
-    targetId: row.target_id,
-    metadata: parseJsonObject(row.metadata),
-    createdAtIso: toIso(row.created_at),
-  }));
+  return result.rows.map((row) => {
+    // Newer rows store the full contract envelope in the metadata column; older rows stored only
+    // the caller's flat metadata. Detect the envelope by its marker keys and fall back gracefully
+    // so both shapes read back without error.
+    const stored = parseJsonObject(row.metadata);
+    const isEnvelope =
+      typeof stored.policyDecision === 'object' && stored.policyDecision !== null;
+    const policyDecision = isEnvelope ? parseJsonObject(stored.policyDecision) : {};
+    const targetContext = isEnvelope ? parseJsonObject(stored.targetContext) : {};
+    const resultBlock = isEnvelope ? parseJsonObject(stored.result) : {};
+
+    return {
+      actorId: row.actor_id,
+      command: row.command,
+      commandVersion: isEnvelope ? String(stored.commandVersion ?? '1.0.0') : '1.0.0',
+      policyStatus: row.policy_status,
+      reason: row.reason,
+      evidence: isEnvelope ? parseJsonObject(policyDecision.evidence) : {},
+      targetType: row.target_type,
+      targetId: row.target_id,
+      workspaceId: isEnvelope ? String(targetContext.workspaceId ?? 'unknown') : 'unknown',
+      requestId: isEnvelope ? String(stored.requestId ?? 'unknown') : 'unknown',
+      traceId: isEnvelope ? String(stored.traceId ?? 'unknown') : 'unknown',
+      result: {
+        status: isEnvelope ? String(resultBlock.status ?? 'success') : 'success',
+        errorCategory: isEnvelope ? String(resultBlock.errorCategory ?? 'none') : 'none',
+      },
+      metadata: isEnvelope ? parseJsonObject(stored.metadata) : stored,
+      createdAtIso: toIso(row.created_at),
+    };
+  });
 }
