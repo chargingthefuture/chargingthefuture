@@ -30,7 +30,9 @@
 
 ## Core smoke (every session)
 
-Money plugin — these are the can't-ship-broken checks. Member role unless noted.
+Critical economic rail — these are the can't-ship-broken checks. (ServiceCredits are non-fiat,
+non-cash, non-withdrawable internal credits — not money, not a currency, not redeemable for cash.)
+Member role unless noted.
 
 1. **Wallet loads.** Open the ServiceCredits wallet. Available / held / total balances render with
    numbers, not a spinner or error. → web ☐ mobile ☐ android ☐
