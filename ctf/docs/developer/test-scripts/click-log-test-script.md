@@ -1,0 +1,117 @@
+# ClickLog — Manual Test Script
+
+> Walk these steps on a real device to confirm the plugin works end to end. This script is
+> generated from the plugin's feature inventory and contracts — those files are the source of
+> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
+> bug; fix the code (or the inventory) and regenerate.
+>
+> **How to regenerate:** `pnpm --dir ctf test-script:generate -- click-log`
+
+| | |
+|---|---|
+| **Plugin** | ClickLog (`click-log`) |
+| **Visibility** | Member-facing |
+| **Roles to test** | member, admin |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Seed first** | `pnpm --dir ctf seed:demo` |
+| **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+
+## How to run this
+
+- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
+- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
+- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
+  next run knows it's already filed.
+- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
+  plugin or on a pre-release sweep.
+
+---
+
+## Core smoke (every session)
+
+A private, sign-in-only incident counter — these confirm logging works and stays private to the
+member. Member role unless noted.
+
+1. **Counter loads.** Open ClickLog. The total count and recent-incident list render with real
+   numbers, not a spinner or error. → web ☐ mobile ☐ android ☐
+2. **One-tap log works.** Press the large "Log Incident" button. A new incident is recorded and the
+   total rises by one. → web ☐ mobile ☐ android ☐
+3. **Private to the member.** Confirm the list shows only the signed-in member's own incidents — no
+   other member's rows appear. → web ☐ mobile ☐ android ☐
+4. **Sign-in required.** Sign out and try to reach ClickLog. Access is denied; there is no public
+   view. → web ☐ mobile ☐ android ☐
+
+---
+
+## Member walkthrough
+
+### CL-1 · Log an incident with notes and location
+**Role:** member · **Surfaces:** all · **Seed:** `seed:demo`
+**Steps:**
+1. Open the inline note form and add a short note.
+2. Allow the browser/device location, then log the incident.
+**Expected:** The incident is created and appears at the top of the recent list. The interaction is
+logged (the new row is the member-visible result of that log). Notes and location are stored as
+optional metadata; logging still works when location is declined.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CL-2 · Count and history are real
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Read the headline total and the recent-incident list.
+2. Read the derived stats (this week, this month, with notes, with location).
+**Expected:** The headline total is the true database count, not the capped length of the visible
+list. Every stat is derived from real `/api/click-log` data — none are placeholders.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CL-3 · Delete an own incident
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Delete one of your own incidents.
+2. Re-read the count and list.
+**Expected:** The row is removed, the total drops by one, and the delete is logged. A member cannot
+delete another member's incident.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### CL-4 · Readable error on a failed action
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Trigger a failed log or delete (e.g. a note longer than the allowed length).
+**Expected:** The surface shows the server's specific message from the response, not a generic
+string. Trailing whitespace on a note is trimmed before the length check.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
+## Admin walkthrough
+
+### CL-A1 · Admin can delete any incident
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. As admin, delete an incident that belongs to another member.
+**Expected:** The delete succeeds (admins are not limited to their own rows). The authorized request
+is logged; deleting a row that is already gone is logged as a failure result, not a server error.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
+## Parity check (web ↔ android)
+
+For CL-1, CL-2, and CL-3, the android app and the mobile-responsive web layout must behave the same:
+same one-tap log, same true total count, same own-only delete. Both clients send the CSRF header on
+log and delete. Note any drift here rather than filing separate bugs.
+
+**Result:** matches ☐ — drift notes:
+
+---
+
+## Known gaps — do not file these as bugs
+
+Carried from the inventory's "Gaps and Known Technical Debt" section at generation time. If you hit one
+of these, it is already tracked, not a new bug:
+
+- There is no admin UI for a global view/delete; admin access to other members' incidents is via
+  direct database tooling.
+- There is no rate limiting on incident creation beyond the shared platform defaults.
+- There is no advanced search or filtering on incident history.
