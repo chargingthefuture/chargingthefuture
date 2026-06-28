@@ -259,6 +259,7 @@ and hides meaning.
 - [130-link-sharing-and-copy-url-rules.mdc](.claude/rules/130-link-sharing-and-copy-url-rules.mdc)
 - [131-admin-surface-design-and-build-rules.mdc](.claude/rules/131-admin-surface-design-and-build-rules.mdc)
 - [132-trust-signal-coverage-rules.mdc](.claude/rules/132-trust-signal-coverage-rules.mdc)
+- [133-manual-test-script-sweep-rules.mdc](.claude/rules/133-manual-test-script-sweep-rules.mdc)
 - [200-plugin-command-contract-templates.mdc](.claude/rules/200-plugin-command-contract-templates.mdc)
 - [201-plugin-command-schema-template.mdc](.claude/rules/201-plugin-command-schema-template.mdc)
 - [202-plugin-access-policy-schema-template.mdc](.claude/rules/202-plugin-access-policy-schema-template.mdc)
