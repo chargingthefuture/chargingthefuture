@@ -182,12 +182,12 @@ contracts:
   - pluginId: service-credits
     command: escrow.release
     version: 1.0.0
-    description: Release escrowed credits to a destination wallet when release conditions are satisfied.
+    description: Release escrowed credits to the destination member's wallet (resolved from their user id) when release conditions are satisfied.
     inputSchema:
       escrowId:
         type: string
         required: true
-      destinationWalletId:
+      destinationUserId:
         type: string
         required: true
       releaseReason:
