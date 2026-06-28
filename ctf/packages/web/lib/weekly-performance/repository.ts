@@ -106,6 +106,42 @@ export async function getCurrentWeek() {
   return result.rows[0] ? mapWeek(result.rows[0]) : null;
 }
 
+// Returns the canonical window metadata for an arbitrary week start date, per the
+// weekly-performance.week.get command contract ({weekStart, weekEnd, isCurrentWeek}). The window is
+// derived from the date itself (week end = start + 6 days; isCurrentWeek compares against
+// DATE_TRUNC('week', NOW())), so a week that has no row in weekly_performance_weeks yet still
+// resolves; status falls back to 'open' for such synthesized weeks. The caller must validate the
+// date format before calling — an unparseable value makes the $1::date cast throw.
+export async function getWeekWindow(weekStartDate: string) {
+  const result = await queryDb<{
+    week_start_date: string;
+    week_end_date: string;
+    status: 'open' | 'locked' | 'published';
+    is_current_week: boolean;
+  }>(
+    `SELECT $1::date::text AS week_start_date,
+            ($1::date + INTERVAL '6 days')::date::text AS week_end_date,
+            COALESCE(w.status, 'open') AS status,
+            ($1::date = DATE_TRUNC('week', NOW())::date) AS is_current_week
+     FROM (SELECT 1) AS anchor
+     LEFT JOIN weekly_performance_weeks w ON w.week_start_date = $1::date
+     LIMIT 1`,
+    [weekStartDate],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+
+  return {
+    weekStart: row.week_start_date,
+    weekEnd: row.week_end_date,
+    status: row.status,
+    isCurrentWeek: row.is_current_week,
+  };
+}
+
 export async function getWeekMetrics(weekStartDate: string) {
   const result = await queryDb<MetricRow>(
     `SELECT metric_key, metric_value::text, metric_unit, source_plugin
