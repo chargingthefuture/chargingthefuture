@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-29 (modes auth gate + ServiceCredits transfer self-transfer/audit; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -35,7 +35,8 @@ TrustTransport is a rides / package / food logistics board. Member role unless n
 1. **Surface loads.** Open TrustTransport. The booking surface and the request list render real
    data — no crash, spinner, or error page. → web ☐ mobile ☐ android ☐
 2. **Modes are real.** The mode picker offers the modes the backend returns (ride / package / food),
-   not a hardcoded mockup list. → web ☐ mobile ☐ android ☐
+   not a hardcoded mockup list. The mode list requires a signed-in member — an unauthenticated call to
+   `/api/trust-transport/modes` is refused, not served. → web ☐ mobile ☐ android ☐
 3. **Create a request.** Submit a request for one mode. It is created and shows in the request list.
    → web ☐ mobile ☐ android ☐
 4. **No fabricated safety claims.** Confirm the panel shows the "Good to know" reminders (share your
@@ -118,6 +119,18 @@ dual-sided review.
 2. Request a payout for an amount within the available balance, then try one above it.
 **Expected:** Payout history lists earnings entries. A payout within the balance is accepted; one
 above the available balance, or a non-positive amount, is refused with a readable error.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### TT-8 · Send ServiceCredits for a trip
+**Role:** member · **Surfaces:** all
+**Precondition:** signed in with a ServiceCredits balance, plus a second member to receive.
+**Steps:**
+1. Send a positive amount of ServiceCredits to the second member.
+2. Try to send to yourself.
+3. Try a zero / negative / non-numeric amount.
+**Expected:** A valid transfer to another member completes and records a
+`trust-transport.service-credits.transfer` audit row. Sending to yourself is refused with "Cannot
+transfer credits to yourself." A zero/negative/non-numeric amount is refused with a readable error.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

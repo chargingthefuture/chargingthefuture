@@ -123,9 +123,9 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
             <Stat label="Members" value={occ.members.toLocaleString()} />
             <Stat label="Recruited (matched)" value={occ.recruited.toLocaleString()} accent="#22C55E" />
             <Stat
-              label="Training gap"
-              value={occ.gap > 0 ? `–${occ.gap.toLocaleString()}` : '—'}
-              accent={occ.gap > 0 ? '#EF4444' : '#22C55E'}
+              label="Roles to fill"
+              value={occ.gap > 0 ? occ.gap.toLocaleString() : '—'}
+              accent={occ.gap > 0 ? '#F97316' : '#22C55E'}
             />
           </div>
           <div
@@ -288,8 +288,8 @@ export function WorkforceOccupations() {
                       <span style={{ width: 110, textAlign: 'right', fontSize: 12, color: '#6B7280', flexShrink: 0 }}>
                         {o.recruited.toLocaleString()} / {o.target.toLocaleString()}
                       </span>
-                      <span style={{ width: 90, textAlign: 'right', fontSize: 13, fontWeight: 700, color: o.gap > 0 ? '#EF4444' : '#22C55E', flexShrink: 0 }}>
-                        {o.gap > 0 ? `–${o.gap.toLocaleString()}` : 'met'}
+                      <span style={{ width: 96, textAlign: 'right', fontSize: 13, fontWeight: 700, color: o.gap > 0 ? '#F97316' : '#22C55E', flexShrink: 0 }}>
+                        {o.gap > 0 ? `${o.gap.toLocaleString()} to fill` : 'filled'}
                       </span>
                       <Eye size={16} style={{ color: '#6B7280', flexShrink: 0 }} />
                     </button>

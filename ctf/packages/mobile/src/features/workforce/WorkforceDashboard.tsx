@@ -66,12 +66,12 @@ function SectorGaps({ items }: { items: WorkforceGroupedReportItem[] }) {
   if (items.length === 0) return null;
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Sector Gaps</Text>
+      <Text style={styles.cardTitle}>Sector Opportunities</Text>
       {items.map((g) => (
         <View key={g.bucket} style={styles.row}>
           <Text style={styles.rowLabel} numberOfLines={1}>{g.bucket}</Text>
           <Text style={styles.rowMeta}>{formatCount(g.recruited)} / {formatCount(g.target)}</Text>
-          <Text style={styles.rowGap}>{g.gap > 0 ? `–${formatCount(g.gap)}` : '—'}</Text>
+          <Text style={styles.rowGap}>{g.gap > 0 ? `${formatCount(g.gap)} to fill` : '—'}</Text>
         </View>
       ))}
     </View>
@@ -83,14 +83,14 @@ function TrainingGaps({ items }: { items: WorkforceOccupationGapItem[] }) {
   if (gaps.length === 0) return null;
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Top Training Gaps</Text>
+      <Text style={styles.cardTitle}>Top Training Opportunities</Text>
       {gaps.map((o) => (
         <View key={o.jobTitleId} style={styles.row}>
           <View style={styles.rowLabelWrap}>
             <Text style={styles.rowLabel} numberOfLines={1}>{o.occupation}</Text>
             <Text style={styles.rowSub} numberOfLines={1}>{o.sector} · {o.skillLevel}</Text>
           </View>
-          <Text style={styles.rowGap}>Gap {formatCount(o.gap)}</Text>
+          <Text style={styles.rowGap}>{formatCount(o.gap)} to fill</Text>
         </View>
       ))}
     </View>
@@ -354,10 +354,10 @@ const styles = StyleSheet.create({
   },
   rowGap: {
     fontSize: 13,
-    color: '#EF4444',
+    color: '#F97316',
     fontWeight: '700',
     textAlign: 'right',
-    minWidth: 70,
+    minWidth: 90,
   },
   noProfileCard: {
     padding: 16,
