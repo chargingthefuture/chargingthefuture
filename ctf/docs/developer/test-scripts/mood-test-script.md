@@ -97,6 +97,17 @@ per-user row, note, or identifier appears. When fewer than the minimum sample (5
 window) exist, the surface withholds data and shows the not-enough-data state with a zeroed series.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### MD-6 · "Talk to someone" support links (no crisis hotlines)
+**Role:** member · **Surfaces:** web (desktop) + web (mobile-responsive)
+**Steps:**
+1. Open Mood and find the resources rail ("Talk to someone").
+**Expected:** The rail shows two in-app links — **Find someone in the Directory** (→ `/apps/directory`)
+and **Reach out through Foundation** (→ `/apps/foundation`) — that route a struggling member to a
+community member with mental-health expertise. There are **no** external crisis-hotline numbers
+(National Hotline / Crisis Text Line / RAINN are removed). The Privacy First card still appears below.
+The Android Mood screen has no resources rail, so this case is web-only.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
