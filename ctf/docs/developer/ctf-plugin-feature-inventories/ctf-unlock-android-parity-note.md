@@ -4,9 +4,11 @@ In-progress: implement mobile parity items for unlock. Refer to checklist: ctf/d
 
 Work started by agent. Will add UI mocks and tests in follow-up commits.
 
-Deferred parity items:
-- Early Commons access experiment (web shipped 2026-06-26): the mobile `UnlockStatus` type mirrors the
-  `earlyCommonsAccess` flag, but the mobile Unlock screen does not yet show the "Ask in the Commons"
-  help link, and mobile landing/routing for a treatment-bucket member is not yet wired to the mobile
-  Commons surface. The server-side access change (support-only widening for the treatment bucket)
-  already applies to mobile API calls; only the mobile UI/navigation is deferred.
+Completed parity items:
+- Early Commons access experiment (web shipped 2026-06-26; Android parity 2026-06-29, #1034): the
+  mobile Unlock submission and status screens now show the "Trouble finding your Quora URL? Ask in the
+  Commons" link for treatment-bucket members only (gated on the `earlyCommonsAccess` status field),
+  tapping it to the Hub home (Commons). Mobile landing/routing already admits a treatment-bucket member
+  to the Commons: the App.tsx unlock gate passes `locked_support_only` through to the navigator, which
+  lands on `HubHome`, so no separate routing change was needed. The server-side support-only widening
+  was already applied to mobile API calls.

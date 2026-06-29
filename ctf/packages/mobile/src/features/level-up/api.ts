@@ -39,6 +39,12 @@ export interface Cohort {
   completionBonusCredits: number;
   createdByUserId: string;
   seatsAvailable: number;
+  // Auto-cohort signals (issue #904), returned by the /cohorts list endpoint.
+  // autoCreated: this cohort was opened by the auto-cohort run, not hand-built.
+  // needsTrainer: auto-created and still assigned to the system actor (no real
+  // trainer of record yet).
+  autoCreated?: boolean;
+  needsTrainer?: boolean;
   // trainerName — not returned by /cohorts list endpoint; omitted
   // tags/curriculum — not returned by /cohorts list endpoint; omitted
   // milestoneCount — not returned by /cohorts list endpoint; omitted
