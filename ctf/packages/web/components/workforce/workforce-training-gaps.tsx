@@ -31,7 +31,7 @@ export function WorkforceTrainingGaps({ occupationItems, limit = 10 }: Workforce
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700, color: '#F9FAFB' }}>
-          <GraduationCap size={16} style={{ color: COLOR }} /> Top Training Gaps
+          <GraduationCap size={16} style={{ color: COLOR }} /> Top Training Opportunities
         </div>
         <Badge
           style={{ background: `${COLOR}20`, color: COLOR, border: `1px solid ${COLOR}35`, fontSize: 11 }}
@@ -66,13 +66,13 @@ export function WorkforceTrainingGaps({ occupationItems, limit = 10 }: Workforce
               style={{
                 width: 96,
                 textAlign: 'right',
-                fontSize: 13,
-                color: '#EF4444',
-                fontWeight: 700,
                 flexShrink: 0,
               }}
             >
-              Gap {o.gap.toLocaleString()}
+              <div style={{ fontSize: 13, fontWeight: 700, color: COLOR }}>
+                {o.gap.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 10, color: '#6B7280' }}>to fill</div>
             </div>
           </div>
         ))}

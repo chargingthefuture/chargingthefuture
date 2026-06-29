@@ -56,14 +56,16 @@ Recruited = the count of all active Directory members. Recruitment Progress read
 target.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### WF-2 · Sector gaps
+### WF-2 · Sector opportunities
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Open the Sector Gaps panel/view.
-2. Read at least one sector's recruited / target / gap.
-**Expected:** Each sector row shows recruited, target, and gap, with gap = max(0, demand − recruited).
-Demand is spread across sectors by each sector's share; if no sector carries a positive share the
-breakdown still renders (an even split), never blank.
+1. Open the Sector Opportunities panel/view.
+2. Read at least one sector's recruited / target / openings.
+**Expected:** The panel is titled "Sector Opportunities". Each sector row shows recruited, target, and
+the opening count as "{n} to fill" (or "filled" at zero), where n = max(0, demand − recruited). The
+figure is the brand orange — never a red negative number — and the panel shows no alarm-red (the
+target bar/legend is orange too). Demand is spread across sectors by each sector's share; if no sector
+carries a positive share the breakdown still renders (an even split), never blank.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-3 · Skill level breakdown
@@ -76,12 +78,13 @@ at that level (not the target), so the level with the most people is the tallest
 green number is the recruited count, with target and gap shown beneath as secondary context.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### WF-4 · Top training gaps (per occupation)
+### WF-4 · Top training opportunities (per occupation)
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Open the Top Training Gaps panel/view (per-occupation gaps, largest first).
-**Expected:** Occupations are listed largest gap first, each with its demand/target and gap. The
-list is read-only — there is no create/edit occupation control.
+1. Open the Top Training Opportunities panel/view (per-occupation openings, largest first).
+**Expected:** The panel is titled "Top Training Opportunities". Occupations are listed largest opening
+first, each with its demand/target and the opening shown as "{n} to fill" in the brand orange (no red
+negative number). The list is read-only — there is no create/edit occupation control.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-5 · Occupations browse and detail
@@ -89,9 +92,10 @@ list is read-only — there is no create/edit occupation control.
 **Steps:**
 1. Open the Occupations browse view; use the search box and skill-level filter; page through results.
 2. Open one occupation's detail.
-**Expected:** The browse list is paginated, sorted largest gap first, and filters by search and skill
-level. The detail shows demand/target, annual training target, members, recruited, gap, and a plain
-explanation of the math. No occupation can be created or edited here.
+**Expected:** The browse list is paginated, sorted largest opening first, and filters by search and skill
+level. Each row's opening reads "{n} to fill" (or "filled") in the brand orange, never a red negative.
+The detail shows demand/target, annual training target, members, recruited, the "Roles to fill" count,
+and a plain explanation of the math. No occupation can be created or edited here.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-6 · Sector / skill-level member drilldown
@@ -128,7 +132,7 @@ member's Directory profile.
 **Expected:** The two bars show real network-wide aggregate numbers (not the old Employed / In
 Training / Seeking Work / Exploring placeholders, and not empty dashes once loaded). Recruited matches
 the dashboard's recruited count and "Sectors to fill" is the active-sector count (the signed-in
-dashboard calls the same figure "Sector Gaps" — the public page uses the positive marketing label). The bars scale to the larger
+dashboard shows the same figure under "Sector Opportunities" — both use the positive opportunity framing). The bars scale to the larger
 of the two. There is **no** "Not Recruited" row (the multi-million unfilled-headcount figure is
 deliberately not exposed). No per-member or identifying data is shown. If the public endpoint is
 unavailable the rows fall back to neutral dashes rather than fabricated figures.
