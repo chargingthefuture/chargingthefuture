@@ -14,7 +14,7 @@ import {
   type WpComparison,
   type WpMetric,
   type WpWeek,
-  isLiveWeek,
+  isCurrentWeek,
 } from "./wp-shared";
 import { WeeklyPerformanceLoading } from "./wp-loading";
 import { WeeklyPerformanceIconRail } from "./wp-icon-rail";
@@ -31,6 +31,7 @@ type WeeklyPerformanceShellProps = {
 type ShellData = {
   weeks: WpWeek[];
   activeUsers: number | null;
+  currentWeekStart: string | null;
   initialWeekStart: string | null;
 };
 
@@ -50,10 +51,12 @@ async function fetchShellData(): Promise<ShellData> {
   if (!weeksRes.ok) throw new Error("Failed to load weeks.");
   const weeksData = (await weeksRes.json()) as WeeksResponse;
   const currentData = currentRes.ok ? ((await currentRes.json()) as CurrentWeekResponse) : null;
+  const currentWeekStart = currentData?.currentWeek?.weekStartDate ?? null;
   return {
     weeks: weeksData.weeks,
     activeUsers: currentData?.activeUsersLast7Days ?? null,
-    initialWeekStart: currentData?.currentWeek?.weekStartDate ?? weeksData.weeks[0]?.weekStartDate ?? null,
+    currentWeekStart,
+    initialWeekStart: currentWeekStart ?? weeksData.weeks[0]?.weekStartDate ?? null,
   };
 }
 
@@ -61,6 +64,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
   const [loading, setLoading] = useState(true);
   const [weeks, setWeeks] = useState<WpWeek[]>([]);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
+  const [currentWeekStart, setCurrentWeekStart] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [comparison, setComparison] = useState<WpComparison | null>(null);
@@ -76,6 +80,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
         if (!active) return;
         setWeeks(data.weeks);
         setActiveUsers(data.activeUsers);
+        setCurrentWeekStart(data.currentWeekStart);
         setSelectedWeekStart(data.initialWeekStart);
       })
       .catch((e) => {
@@ -111,13 +116,12 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
     void loadWeekData(selectedWeekStart, priorWeekStart(weeks, selectedWeekStart));
   }, [selectedWeekStart, weeks, loadWeekData]);
 
-  // The open week's numbers are computed live, so keep them moving: re-fetch on a 60s
-  // interval and whenever the tab regains focus, but only for the current (open) week —
-  // closed/past weeks are settled and never change. Refreshes are silent (no flash to the
-  // empty state).
-  const selectedIsLive = isLiveWeek(weeks.find((w) => w.weekStartDate === selectedWeekStart) ?? null);
+  // The current week's numbers are computed live, so keep them moving: re-fetch on a 60s
+  // interval and whenever the tab regains focus, but only for the current week — past weeks are
+  // settled historical windows and never change. Refreshes are silent (no flash to the empty state).
+  const selectedIsCurrent = isCurrentWeek(selectedWeekStart, currentWeekStart);
   useEffect(() => {
-    if (!selectedWeekStart || !selectedIsLive) return;
+    if (!selectedWeekStart || !selectedIsCurrent) return;
     const compare = priorWeekStart(weeks, selectedWeekStart);
     const refresh = () => { void loadWeekData(selectedWeekStart, compare, true); };
     const interval = window.setInterval(refresh, 60_000);
@@ -129,7 +133,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       document.removeEventListener("visibilitychange", onFocus);
       window.removeEventListener("focus", onFocus);
     };
-  }, [selectedWeekStart, selectedIsLive, weeks, loadWeekData]);
+  }, [selectedWeekStart, selectedIsCurrent, weeks, loadWeekData]);
 
   if (loading) return <WeeklyPerformanceLoading />;
 
@@ -151,6 +155,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       isAdmin={isAdmin}
       onExport={exportSelected}
       isMobile={isMobile}
+      isCurrent={selectedIsCurrent}
     />
   );
 
@@ -188,6 +193,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
       <WeeklyPerformanceSidebar
         weeks={weeks}
         selectedWeekStart={selectedWeekStart}
+        currentWeekStart={currentWeekStart}
         onSelect={setSelectedWeekStart}
         isAdmin={isAdmin}
         onExport={exportSelected}
@@ -198,6 +204,7 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
         metricCount={metrics.length}
         activeUsersLast7Days={activeUsers}
         isAdmin={isAdmin}
+        isCurrent={selectedIsCurrent}
       />
     </div>
   );

@@ -1,22 +1,28 @@
 "use client";
 
 import { BarChart2, Lock } from "lucide-react";
-import { BORDER, BRAND, SUBTLE, TEXT, type WpWeek, formatWeekRange, isLiveWeek } from "./wp-shared";
+import { BORDER, BRAND, SUBTLE, TEXT, type WpWeek, formatWeekRange } from "./wp-shared";
 
 export function WeeklyPerformanceRightRail({
   week,
   metricCount,
   activeUsersLast7Days,
   isAdmin,
+  isCurrent = false,
 }: {
   week: WpWeek | null;
   metricCount: number;
   activeUsersLast7Days: number | null;
   isAdmin: boolean;
+  isCurrent?: boolean;
 }) {
   const rows: { k: string; v: string }[] = [];
   if (week) {
-    rows.push({ k: "Status", v: isLiveWeek(week) ? "In Progress" : "Closed" });
+    // The current week is live; past weeks are historical and carry no status — there is no
+    // "closed" week.
+    if (isCurrent) {
+      rows.push({ k: "Status", v: "Live" });
+    }
     rows.push({ k: "Metrics tracked", v: String(metricCount) });
   }
   if (activeUsersLast7Days !== null) {
