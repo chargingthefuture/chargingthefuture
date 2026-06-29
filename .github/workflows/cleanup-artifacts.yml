@@ -3,7 +3,7 @@ name: Cleanup — Old Artifacts and Close CI Budget Issues
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 2 * * 0' # weekly, Sundays at 2am UTC (was daily; the artifact-removal action paginates
+    - cron: '13 2 * * 0' # weekly, Sundays at 02:13 UTC, offset off the top of the hour (was daily; the artifact-removal action paginates
                         # every run/artifact in the repo each time, which was burning GitHub API rate limit)
 
 permissions:

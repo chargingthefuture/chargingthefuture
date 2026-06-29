@@ -1,7 +1,7 @@
 name: GitHub Actions — Billing Token Rotation Reminder
 on:
   schedule:
-    - cron: "0 12 * * 1"
+    - cron: "34 12 * * 1"   # Mondays 12:34 UTC (off the top of the hour)
   workflow_dispatch:
 
 permissions:

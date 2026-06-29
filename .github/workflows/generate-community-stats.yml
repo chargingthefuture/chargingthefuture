@@ -8,7 +8,7 @@ name: Generate — Community Stats Draft
 
 on:
   schedule:
-    - cron: "0 14 * * 1" # Mondays 14:00 UTC (10:00 ET)
+    - cron: "48 14 * * 1" # Mondays 14:48 UTC (off the top of the hour)
   workflow_dispatch: {}
 
 jobs:

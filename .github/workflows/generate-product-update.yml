@@ -2,7 +2,7 @@ name: Generate — Product Update
 
 on:
   schedule:
-    - cron: "0 */8 * * *"   # 00:00, 08:00, 16:00 UTC
+    - cron: "33 */12 * * *"   # every 12 hours at :33 (00:33, 12:33 UTC), offset to avoid a top-of-hour stampede
   workflow_dispatch:
     inputs:
       force:
