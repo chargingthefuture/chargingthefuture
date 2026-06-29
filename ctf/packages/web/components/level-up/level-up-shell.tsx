@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { getLevelUpTokens, type LevelUpTokens, type Cohort, type Enrollment, type PendingValidation, type NavKey, type Wallet, type Trainer, type Achievement, type WalletView, idempotencyKey } from "./lu-shared";
@@ -80,12 +80,6 @@ function ShellHeader({ nav, isAdmin, t, showAdminButton = false }: { nav: NavKey
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {nav === "browse" && (
-          <button type="button" disabled={!isAdmin}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", color: t.TEXT_SUBTLE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: isAdmin ? "pointer" : "not-allowed", opacity: isAdmin ? 1 : 0.5 }}>
-            <Plus size={14} /> Create Cohort
-          </button>
-        )}
         {showAdminButton && <PluginAdminButton href="/admin/level-up" isAdmin={isAdmin} accent={t.ACCENT} />}
       </div>
     </div>
@@ -145,7 +139,10 @@ function ShellContent({
 
 export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: boolean; query?: { track?: string; status?: string; startDate?: string; cohortId?: string } }) {
   const [nav, setNav] = useState<NavKey>("browse");
-  const [track, setTrack] = useState("All Tracks");
+  // Track filtering is pinned to "All Tracks" — the preset track chips were hidden because they were a
+  // hardcoded list that did not reflect real cohorts (deferred to #1197). The track-filter plumbing
+  // (fetchCohorts/deriveView) is kept so dynamic, data-driven filters can be restored later.
+  const track = "All Tracks";
   const [search, setSearch] = useState("");
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -270,10 +267,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
             cohorts={filtered}
             openCount={openCount}
             enrolledCount={enrollments.length}
-            balance={balance}
             escrow={escrow}
-            track={track}
-            onTrack={setTrack}
             search={search}
             onSearch={setSearch}
             enrollError={enrollError}
