@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, ChevronLeft, Search } from "lucide-react";
@@ -14,6 +13,8 @@ import { DirectoryLoadingSkeleton } from "./directory-loading-skeleton";
 import { DirectoryBrowse } from "./directory-browse";
 import { DirectoryRightPanel } from "./directory-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   title: "Help grow the Directory",
@@ -232,6 +233,7 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
             <BookOpen size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Directory</span>
             <PluginAdminButton href="/admin/directory" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ position: "relative" }}>
@@ -252,17 +254,15 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
 
   return (
     <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      {/* Icon rail — the logo links back to /apps, and the bottom holds the real signed-in account
-          (Clerk), matching the other plugin shells. The previous rail had a dead notifications and
-          settings button and a hardcoded "S" avatar, which is why it read as wrong. */}
+      {/* Icon rail — the BookOpen brand mark at the top, then the shared PluginRailFooter at the
+          bottom. The footer carries the same three controls every plugin rail has (back to all apps,
+          account & settings, and the signed-in avatar), so the Directory rail no longer drops the
+          standard bottom options. */}
       <aside style={{ width: 72, background: t.RAIL, borderRight: `1px solid ${t.BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-        <Link href="/apps" aria-label="Back to apps" title="Back to apps" style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: t.ACCENT, textDecoration: "none" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: `${t.ACCENT}30`, border: `1px solid ${t.ACCENT}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, color: t.ACCENT }}>
           <BookOpen size={20} />
-        </Link>
-        <div style={{ flex: 1 }} />
-        <span title="Your account — edit name, username, and email" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <UserButton appearance={{ elements: { avatarBox: { width: 36, height: 36 } } }} />
-        </span>
+        </div>
+        <PluginRailFooter />
       </aside>
 
       {/* Sidebar */}

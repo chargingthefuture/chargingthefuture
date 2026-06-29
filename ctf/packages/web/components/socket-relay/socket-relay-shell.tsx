@@ -28,6 +28,7 @@ import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { SocketRelayChat } from "./sr-chat";
 import { SocketRelayRightPanel } from "./sr-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
 
@@ -350,6 +351,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, flex: 1 }}>SocketRelay</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{openCount} open</Badge>
             <PluginAdminButton href="/admin/socket-relay" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

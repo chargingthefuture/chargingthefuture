@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { AppLoading } from "@/components/shared/app-loading";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import {
   getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
@@ -268,6 +269,7 @@ export function SkillsHuntShell({
               <Bell size={18} />
               {unreadCount > 0 && <span style={{ position: "absolute", top: 5, right: 5, width: 8, height: 8, borderRadius: "50%", background: "#EF4444" }} />}
             </button>
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
             {TABS.map((tabItem) => (

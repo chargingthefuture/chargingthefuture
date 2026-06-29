@@ -36,6 +36,8 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 
 const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
@@ -411,6 +413,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
               <div style={{ fontSize: 11, color: SUBTLE }}>{profiles.length} profiles · {unclaimedCount} unclaimed</div>
             </div>
             <Bell size={18} color={SUBTLE} />
+            <MobileTopActions />
           </div>
           <div style={{ position: "relative", marginBottom: 8 }}>
             <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: SUBTLE }} />
@@ -481,8 +484,7 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
         <div style={{ width: 44, height: 44, borderRadius: 12, background: `${COLOR}20`, border: `1px solid ${COLOR}40`, display: "flex", alignItems: "center", justifyContent: "center", color: COLOR }}>
           <Users size={20} />
         </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${COLOR}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: COLOR }}>A</div>
+        <PluginRailFooter />
       </aside>
 
       {/* Left sidebar */}

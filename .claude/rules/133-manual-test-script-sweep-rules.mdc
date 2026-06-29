@@ -1,0 +1,77 @@
+# Manual Test Script Sweep Rules
+
+## Status
+
+Built and owner-approved 2026-06-28. Read this alongside Rule 118 (Platform Testing and Release).
+Rule 118 defers *automated* testing during MVP; this rule defines the *manual* testing that fills that
+gap — a runnable checklist per plugin that a person walks on a real device. (One narrow exception:
+Rule 118 keeps non-blocking unit tests on three settled logic cores — ServiceCredits amount math,
+economic-models, and Trust evidence — covering the deterministic logic that manual testing can't pin
+exactly.)
+
+## Intent
+
+The app is large. A single change can break something far from where you were working, and static code
+review cannot see runtime breakage — a control off-screen at phone width, a 500 from a live integration
+(Clerk / Stream / Formance), seed data that does not render, or a web-vs-android parity gap. So every
+plugin has a **manual test script**: the steps to confirm it works, tagged by role (member/admin) and
+surface (web desktop / web mobile-responsive ~390px / android), with a pass/fail box per surface.
+
+These scripts are the runtime counterpart of the **code-review sweep** (Rule 119,
+`.github/workflows/code-review-sweep.yml`). Same source of truth — each plugin's feature inventory and
+contracts — but a different artifact and a different reader:
+
+- **Code review** reads static code and files `code-review` issues an agent can fix.
+- **A manual test script** describes what to do in the running app. A code-review finding exists the
+  moment the agent reasons about the code; a manual-test finding only exists once a person runs the
+  step. So the script is a checklist for the owner, and a failed step becomes a **Bug Reporting** row
+  (the bug link goes in the step's notes line).
+
+## Where it lives
+
+- Scripts: `ctf/docs/developer/test-scripts/<slug>-test-script.md` (one per plugin) + a `README.md`.
+- Generator: `ctf/scripts/generateManualTestScript.mjs` — reads the manifest, the plugin's inventory,
+  and its contracts, and writes the script. No-ops without `ANTHROPIC_API_KEY`.
+- Manifest: `ctf/config/manual-test-script-manifest.json` — the one place the irregular
+  slug ↔ inventory ↔ code-folder ↔ role mapping is pinned down (e.g. slug `gdp` ↔ inventory
+  `gross-domestic-product`, api dir `bug-reports` ↔ slug `bug-reporting`). Keep it in sync when a
+  plugin's folders, slug, or visibility change.
+
+## Two triggers (one generator)
+
+1. **Auto (rotation).** The daily code-review sweep reviews one plugin per run; right after, the same
+   workflow regenerates that plugin's test script (`TEST_SCRIPT_FROM_REVIEW=1`) and lands it via a
+   low-risk auto-merge PR. One rotation, two artifacts. Over time every script stays current with no
+   action from anyone.
+2. **On demand.** `pnpm --dir ctf test-script:generate -- <slug>` for one plugin,
+   `TEST_SCRIPT_DIFF=origin/main pnpm --dir ctf test-script:generate` for every plugin touched since a
+   base ref, or `TEST_SCRIPT_ALL=1 …` for all. Also runnable in CI from
+   `.github/workflows/manual-test-script.yml` (dispatch with `slice` / `diff_base` / `all`).
+
+Rotation alone is too slow to answer "did my last change break this" — it might not reach that plugin
+for weeks. The on-demand trigger covers that; rotation keeps the long tail from going out of date.
+
+## Keeping inventory and script in step (CI gate)
+
+`ctf/scripts/check-test-script-drift.mjs` (job `test-script-drift-gate` in `.github/workflows/ci.yml`;
+local: `pnpm --dir ctf run check:test-script-drift`) **fails a PR when a plugin's inventory changed but
+its test script did not.** Same drift idea the inventory-drift gate uses, applied to the scripts:
+change what a plugin does and you must regenerate or update its test script in the same PR. If the
+inventory change genuinely does not affect how the plugin is tested, make a matching note/edit in the
+script so the two stay in step.
+
+## Constraints
+
+- **Derive only from the source of truth.** Steps come from the plugin's inventory (and contracts) —
+  never invent features. The inventory is authoritative; the script is its runnable projection.
+- **Tag every case by role and surface.** Not every plugin is tested as a logged-in member: most are
+  member-facing, `weekly-performance` is admin-only, and `unlock` / `trust` / `bug-reporting` are
+  internal surfaces tested through their admin/internal entry points (Bug Reporting keeps a member
+  submit flow). Reflect each plugin's `visibility` and `roles` from the manifest.
+- **Plain language, brand voice.** Follow CLAUDE.md and Rule 124 — no jargon, no pleasantries, never
+  the word "phase". These docs are read by the owner and by agents.
+- **Never surface sensitive data as a public check.** For wellbeing/safety/verification plugins
+  (Mood, GentlePulse, ClickLog, Unlock, Trust) do not write steps that expose a member's private data;
+  mirror the privacy exclusions in Rule 132.
+- **Credits are not money.** Never frame ServiceCredits or any in-app credit as money / cash / currency
+  / a payment / redeemable. They are non-fiat, non-cash, non-withdrawable internal credits.

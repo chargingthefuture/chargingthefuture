@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BarChart3, Coins } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 
 // Admin design tokens (shared admin look). GDP accent is cyan.
 const COLOR = '#06B6D4';
@@ -94,6 +95,7 @@ export function GdpAdminShell({ report }: { report: GdpReport }) {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="GDP Admin" accent={COLOR} icon={<BarChart3 size={18} color={COLOR} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>

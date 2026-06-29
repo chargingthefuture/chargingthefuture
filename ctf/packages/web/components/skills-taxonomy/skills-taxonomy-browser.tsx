@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { getSkillsTaxonomyTokens, type StSector } from "./st-shared";
 import { SkillsTaxonomyIconRail } from "./st-icon-rail";
 import { SkillsTaxonomySectorsColumn } from "./st-sectors-column";
@@ -65,6 +66,7 @@ export function SkillsTaxonomyBrowser({ isAdmin }: { isAdmin: boolean }) {
               <ChevronLeft size={20} />
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Skills Taxonomy</span>
+            <MobileTopActions />
           </div>
           {mobileView !== "sectors" && (
             <div style={{ padding: "0 12px 10px" }}>

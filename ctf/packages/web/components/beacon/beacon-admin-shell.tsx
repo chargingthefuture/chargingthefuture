@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Radio, Copy, Check } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { BEACON_COLOR } from 'lib/beacon/constants';
@@ -242,6 +243,7 @@ export function BeaconAdminShell() {
         color: TEXT,
       }}
     >
+      <MobileScreenHeader title="Beacon Admin" accent={BEACON_COLOR} icon={<Radio size={18} color={BEACON_COLOR} />} />
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '32px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Radio size={22} style={{ color: BEACON_COLOR }} />

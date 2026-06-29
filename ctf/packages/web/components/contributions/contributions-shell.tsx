@@ -15,6 +15,7 @@ import {
   type SubmissionsResponse,
 } from './contributions-shared';
 import { AppLoading } from '@/components/shared/app-loading';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { goalsFromFundraiser, GoalCard, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
@@ -309,6 +310,7 @@ function MobileFrame({ t, children, tab, onTab }: { t: ContributionsTokens; chil
   ];
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: t.BG, fontFamily: FONT_FAMILY, color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+      <MobileScreenHeader title="Contributions" accent={t.ACCENT} icon={<Gift size={18} color={t.ACCENT} />} />
       <div style={{ padding: '12px 16px 10px', background: t.SURFACE, borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <div style={{ width: 26, height: 26, borderRadius: 7, background: t.ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

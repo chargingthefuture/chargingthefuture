@@ -25,6 +25,7 @@ import { GdpSidebar } from "./gdp-sidebar";
 import { GdpDashboard } from "./gdp-dashboard";
 import { GdpMap } from "./gdp-map";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 function ShellHeader({ t, metrics, isAdmin }: { t: GdpTokens; metrics: GdpMetrics; isAdmin?: boolean }) {
   return (
@@ -151,6 +152,7 @@ export default function GdpShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GDP</span>
             <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>↑ Live</Badge>
             <PluginAdminButton href="/admin/gdp" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

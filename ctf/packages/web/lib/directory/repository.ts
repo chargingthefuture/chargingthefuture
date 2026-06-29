@@ -412,6 +412,10 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
         p.source,
         p.invited_by_username,
         p.unclaimed_handle,
+        p.venmo_address,
+        p.monero_address,
+        p.bitcoin_address,
+        p.service_credits_address,
         p.created_at,
         p.updated_at
       FROM directory_profiles p
@@ -445,6 +449,10 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
     const proposedSkills = normalizeProposedSkills(input.proposedSkills);
+    const venmoAddress = normalizeNullableText(input.venmoAddress);
+    const moneroAddress = normalizeNullableText(input.moneroAddress);
+    const bitcoinAddress = normalizeNullableText(input.bitcoinAddress);
+    const serviceCreditsAddress = normalizeNullableText(input.serviceCreditsAddress);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
@@ -467,22 +475,53 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
             profile_url = $6,
             sector_id = $7::uuid,
             job_title_id = $8::uuid,
+            venmo_address = $9,
+            monero_address = $10,
+            bitcoin_address = $11,
+            service_credits_address = $12,
             is_active = true,
             updated_at = NOW()
           WHERE id = $1
         `,
-        [profileId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
+        [
+          profileId,
+          firstName,
+          lastName,
+          headline,
+          bio,
+          profileUrl,
+          sectorId,
+          jobTitleId,
+          venmoAddress,
+          moneroAddress,
+          bitcoinAddress,
+          serviceCreditsAddress,
+        ],
       );
     } else {
       const inserted = await client.query<{ id: string }>(
         `
           INSERT INTO directory_profiles
-            (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, is_active, source)
+            (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id,
+             venmo_address, monero_address, bitcoin_address, service_credits_address, is_active, source)
           VALUES
-            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, true, 'self')
+            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, $9, $10, $11, $12, true, 'self')
           RETURNING id
         `,
-        [userId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
+        [
+          userId,
+          firstName,
+          lastName,
+          headline,
+          bio,
+          profileUrl,
+          sectorId,
+          jobTitleId,
+          venmoAddress,
+          moneroAddress,
+          bitcoinAddress,
+          serviceCreditsAddress,
+        ],
       );
 
       profileId = inserted.rows[0].id;
@@ -537,6 +576,10 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
+          p.venmo_address,
+          p.monero_address,
+          p.bitcoin_address,
+          p.service_credits_address,
           p.created_at,
           p.updated_at
         FROM directory_profiles p
@@ -1005,6 +1048,10 @@ export async function updateAdminProfile(
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
+    const venmoAddress = normalizeNullableText(input.venmoAddress);
+    const moneroAddress = normalizeNullableText(input.moneroAddress);
+    const bitcoinAddress = normalizeNullableText(input.bitcoinAddress);
+    const serviceCreditsAddress = normalizeNullableText(input.serviceCreditsAddress);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
@@ -1019,11 +1066,28 @@ export async function updateAdminProfile(
           profile_url = $6,
           sector_id = $7::uuid,
           job_title_id = $8::uuid,
+          venmo_address = $9,
+          monero_address = $10,
+          bitcoin_address = $11,
+          service_credits_address = $12,
           is_active = true,
           updated_at = NOW()
         WHERE id::text = $1
       `,
-      [profileId, firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId],
+      [
+        profileId,
+        firstName,
+        lastName,
+        headline,
+        bio,
+        profileUrl,
+        sectorId,
+        jobTitleId,
+        venmoAddress,
+        moneroAddress,
+        bitcoinAddress,
+        serviceCreditsAddress,
+      ],
     );
 
     await replaceProfileSkills(client, profileId, skillIds);
@@ -1076,7 +1140,7 @@ export async function assignAdminProfile(
   actorId: string,
   profileId: string,
   userId: string,
-): Promise<DirectoryProfile | null> {
+): Promise<DirectoryProfile | 'already_claimed' | null> {
   return withDbTransaction(async (client) => {
     // Compare ids as text: directory_profiles.id carried over from v2 as varchar,
     // so casting the bind param to ::uuid against a varchar column fails to plan
@@ -1091,6 +1155,26 @@ export async function assignAdminProfile(
 
     if (existing.rows.length === 0) {
       return null;
+    }
+
+    // Ownership guard: assign only targets *unclaimed* profiles. If another user has already
+    // claimed this profile, refuse to silently overwrite their ownership — emit a deny audit
+    // event (mirroring the deleteAdminProfile claimed_guard pattern) and return a sentinel the
+    // route maps to a 409 conflict. The contract command directory.admin.profile.assign is
+    // scoped to "an unclaimed directory profile".
+    if (existing.rows[0].claimed_by_user_id) {
+      await client.query(
+        `
+          INSERT INTO directory_profile_change_events
+            (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+          VALUES
+            ($1, 'directory.admin.profile.assign', 'deny', 'invalid_claimed_unclaimed_transition', 'profile', $2,
+             jsonb_build_object('assignedUserId', $3::text))
+        `,
+        [actorId, profileId, userId],
+      );
+
+      return 'already_claimed';
     }
 
     await client.query(

@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import { ensureSocketRelayFulfillmentChannel, createSocketRelayParticipantToken } from 'lib/socket-relay/stream';
-import { requireSocketRelayReadAccess } from 'lib/socket-relay/_lib';
+import { ensureMutationCsrf, requireSocketRelayReadAccess } from 'lib/socket-relay/_lib';
 import { getFulfillmentById } from 'lib/socket-relay/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { reportError } from 'lib/observability/report';
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const { id } = await params;
   if (!id) {
     return NextResponse.json({ ok: false, message: 'Missing fulfillment id' }, { status: 400 });

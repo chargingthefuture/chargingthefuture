@@ -1,4 +1,4 @@
-name: Github Actions — Workflow Health Check
+name: Github Workflows — Health Check
 
 # Surfaces failing workflows so they don't go unnoticed. Every 8 hours (and on demand) it asks the
 # GitHub API for every active workflow's most recent run on `main`; any whose latest run failed or
@@ -7,7 +7,7 @@ name: Github Actions — Workflow Health Check
 
 on:
   schedule:
-    - cron: '0 5,13,21 * * *'
+    - cron: '9 5,13,21 * * *'   # 05:09, 13:09, 21:09 UTC (off the top of the hour)
   workflow_dispatch:
 
 permissions:

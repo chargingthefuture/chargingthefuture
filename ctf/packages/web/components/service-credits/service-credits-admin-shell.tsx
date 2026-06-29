@@ -15,6 +15,7 @@ import { ServiceCreditsCreditLimitsPanel } from './sca-credit-limits-panel';
 import { ServiceCreditsWalletStatusPanel } from './sca-wallet-status-panel';
 import { ServiceCreditsLedgerStatus } from './sca-ledger-status';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 
 // Admin design tokens (shared dark admin look). ServiceCredits accent is purple #A855F7.
 const COLOR = '#A855F7';
@@ -38,6 +39,7 @@ export function ServiceCreditsAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="ServiceCredits Admin" accent={COLOR} icon={<Coins size={18} color={COLOR} />} />
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div

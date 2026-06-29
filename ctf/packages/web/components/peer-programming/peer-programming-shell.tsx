@@ -14,6 +14,7 @@ import { PeerProgrammingSessionTab } from "./pp-session-tab";
 import { PeerProgrammingChatTab } from "./pp-chat-tab";
 import { PeerProgrammingRightPanel } from "./pp-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 // Shape returned by GET /api/peer-programming/room. The shell's view models (Room,
 // Message) differ from the API, so map explicitly here rather than casting.
@@ -42,9 +43,21 @@ type RoomData = {
   access: RoomAccess;
 };
 
-function mapMessages(rows: RoomApiMessage[]): Message[] {
+// Resolve a message author's display name: their @username from the cohort roster, or a short
+// id fallback when Clerk could not resolve them. Matches the mobile memberName helper so the same
+// author reads the same way on both surfaces.
+function authorDisplayName(authorUserId: string, namesByUserId: Map<string, string>): string {
+  return namesByUserId.get(authorUserId) ?? `Member ${authorUserId.slice(0, 6)}`;
+}
+
+function mapMessages(rows: RoomApiMessage[], members: RoomMember[] = []): Message[] {
+  const namesByUserId = new Map<string, string>();
+  for (const member of members) {
+    if (member.username) namesByUserId.set(member.userId, member.username);
+  }
   return rows.map((row) => ({
     id: row.id,
+    author: authorDisplayName(row.authorUserId, namesByUserId),
     authorId: row.authorUserId,
     content: row.body,
     timestamp: row.createdAtIso,
@@ -69,7 +82,7 @@ async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Pro
   };
   return {
     room,
-    messages: mapMessages(data.messages ?? []),
+    messages: mapMessages(data.messages ?? [], data.members ?? []),
     cohorts: data.cohorts ?? [],
     members: data.members ?? [],
     myCohortId: data.myCohortId ?? null,
@@ -195,7 +208,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       const roomRes = await fetch(roomUrl(activeCohortId));
       if (roomRes.ok) {
         const data = (await roomRes.json()) as RoomApiResponse;
-        setMessages(mapMessages(data.messages ?? []));
+        setMessages(mapMessages(data.messages ?? [], data.members ?? []));
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to post message.");
@@ -298,6 +311,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Users size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>PeerProgramming</span>
             <PluginAdminButton href="/admin/peer-programming" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

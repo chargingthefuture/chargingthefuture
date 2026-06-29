@@ -15,6 +15,7 @@ import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 function ShellHeader({ t, isAdmin }: { t: TrustTransportTokens; isAdmin?: boolean }) {
   return (
@@ -144,9 +145,16 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     setSelectedRequest(req);
     setChatCredentials(null);
     setChatError(null);
+    // Chat is keyed by trip id, which only exists once an offer is accepted. The request id is not a
+    // trip id, so calling the chat route with it would always 404. Guard until a trip exists.
+    if (!req.tripId) {
+      setChatLoading(false);
+      setChatError("Chat opens once a driver accepts this request.");
+      return;
+    }
     setChatLoading(true);
     try {
-      const res = await fetch(`/api/trust-transport/trips/${req.id}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
+      const res = await fetch(`/api/trust-transport/trips/${req.tripId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
       if (!res.ok) throw new Error("Failed to fetch chat credentials");
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "No chat credentials");
@@ -237,6 +245,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>TrustTransport</span>
             <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

@@ -107,7 +107,6 @@ policies:
       - operations
     attributePolicies:
       tenancy: same_workspace
-      exportFormatPolicy: approved_formats_only
       reportRetentionPolicy: enforced
     consentRequirements:
       scopes:
@@ -122,9 +121,16 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - insufficient_role
-      - invalid_export_format
+      - export_disabled
       - export_retention_policy_violation
 
 changelog:
   - date: 2026-02-25
     change: Initial Weekly Performance access policy skeleton added with admin-only controls, canonical metric safeguards, and export policy gates.
+  - date: 2026-06-27
+    change: >-
+      Reconciled the report.export access policy to the shipped behavior (#1128). The shipped export is
+      a single inline JSON download with no format selection, so the exportFormatPolicy attribute and
+      the invalid_export_format deny condition were removed; the route's real gate (the
+      WEEKLY_PERFORMANCE_EXPORT_ENABLED environment flag) is now reflected as the export_disabled deny
+      condition.

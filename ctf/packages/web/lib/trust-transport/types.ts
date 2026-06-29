@@ -54,6 +54,9 @@ export type TrustTransportRequest = {
   priceAmount: number | null;
   createdAtIso: string;
   updatedAtIso: string;
+  // The trip id once an offer has been accepted for this request, otherwise null. Chat is keyed by
+  // trip id, so the UI needs this to open the right channel (a request id is not a trip id).
+  tripId?: string | null;
 };
 
 export type TrustTransportOffer = {

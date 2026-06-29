@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart2, ChevronLeft, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import {
   BG,
   BORDER,
@@ -252,6 +253,7 @@ export function WeeklyPerformanceAdminShell() {
         padding: isMobile ? 16 : 32,
       }}
     >
+      <MobileScreenHeader title="Weekly Performance Admin" accent={BRAND} icon={<BarChart2 size={18} color={BRAND} />} />
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
         {header}
         {body}

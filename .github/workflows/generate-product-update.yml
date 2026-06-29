@@ -2,11 +2,7 @@ name: Generate — Product Update
 
 on:
   schedule:
-    # Every 8 hours at 00:43, 08:43, 16:43 UTC. Offset to :43 on purpose: the top
-    # of the hour is crowded, so this is staggered off it (and off bug-reports at
-    # :13 and the expo build at 08:41) to avoid a same-minute stampede GitHub can
-    # delay under load.
-    - cron: "43 */8 * * *"
+    - cron: "33 */12 * * *"   # every 12 hours at :33 (00:33, 12:33 UTC), offset to avoid a top-of-hour stampede
   workflow_dispatch:
     inputs:
       force:

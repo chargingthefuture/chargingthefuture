@@ -17,6 +17,7 @@ import { LighthouseHost } from "./lighthouse-host";
 import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -182,6 +183,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>🏠 LightHouse</span>
             <PluginAdminButton href="/admin/lighthouse" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

@@ -15,6 +15,7 @@ import { LevelUpTrainers } from "./lu-trainers";
 import { LevelUpAchievements } from "./lu-achievements";
 import { LevelUpWallet } from "./lu-wallet";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 const HEADINGS: Record<NavKey, string> = {
   browse: "Browse Cohorts",
@@ -218,7 +219,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     try {
       const res = await fetch("/api/level-up/enroll", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ cohortId: cohort.id, idempotencyKey: idempotencyKey(), depositCredits: cohort.requiredCredits ?? 0 }),
       });
       if (!res.ok) {
@@ -234,10 +235,19 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     }
   }
 
-  async function handleValidate(milestoneId: string) {
+  async function handleValidate(validation: PendingValidation) {
     try {
-      await fetch(`/api/level-up/milestones/${milestoneId}/validate`, { method: "POST", headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" }, body: JSON.stringify({}) });
-      setPendingValidations((prev) => prev.filter((v) => v.milestoneId !== milestoneId));
+      const res = await fetch(`/api/level-up/milestones/${validation.milestoneId}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({
+          enrollmentId: validation.enrollmentId,
+          cohortId: validation.cohortId,
+          idempotencyKey: idempotencyKey(),
+        }),
+      });
+      if (!res.ok) return;
+      setPendingValidations((prev) => prev.filter((v) => v.milestoneId !== validation.milestoneId));
     } catch {
       // optimistic remove already applied on success path only
     }
@@ -297,6 +307,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>LevelUp</span>
             <PluginAdminButton href="/admin/level-up" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
             {navItems.map(({ key, label }) => (
@@ -321,7 +332,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           pendingValidations={pendingValidations}
           isAdmin={isAdmin}
           onBrowse={() => setNav("browse")}
-          onValidate={(milestoneId) => void handleValidate(milestoneId)}
+          onValidate={(validation) => void handleValidate(validation)}
         />
       </div>
     </div>

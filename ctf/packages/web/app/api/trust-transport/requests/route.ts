@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, parsePositiveInteger, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { TRUST_TRANSPORT_DEFAULT_PAGE, TRUST_TRANSPORT_DEFAULT_PAGE_SIZE, TRUST_TRANSPORT_ERROR_CODE, TRUST_TRANSPORT_MODES } from 'lib/trust-transport/constants';
-import { createRequest, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/trust-transport/repository';
+import { createRequest, insertTrustTransportAudit, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/trust-transport/repository';
 import type { TrustTransportMode, TrustTransportRequestInput } from 'lib/trust-transport/types';
 import { reportError } from 'lib/observability/report';
 
@@ -98,6 +98,15 @@ export async function POST(request: Request) {
 
   try {
     const item = await createRequest(gate.auth.userId, input, idempotencyKey);
+    await insertTrustTransportAudit({
+      actorId: gate.auth.userId,
+      command: 'trust-transport.request.create',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'request',
+      targetId: item.id,
+      metadata: { mode: item.mode },
+    });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'requests' });
