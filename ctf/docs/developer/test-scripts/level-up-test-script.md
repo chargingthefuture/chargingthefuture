@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:level-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-level-up-feature-inventory.md` |
-| **Generated** | 2026-06-29 (auto-cohort creation from Workforce gaps added; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-29 (auto-cohort creation + economic policy/milestone skeleton added; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -158,6 +158,10 @@ least one Foundational-level occupation whose gap is at or above the configured 
 open cohorts tagged `auto` and `needs trainer` (one per largest Foundational gap, up to the
 concurrency and per-sector caps). The second run creates **no** duplicates for the same occupations.
 If no sector carries a workforce share, the run reports it was skipped rather than creating cohorts.
+Each created cohort carries the configured economic policy (deposit from `default_required_credits`,
+default 0 = free to join; trainer split `default_trainer_split_percent`, default 25%; completion bonus
+`default_completion_bonus_credits`, default 0) and the standard 3-milestone skeleton (40/30/30) — open
+a created cohort's detail and confirm the milestones are present.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

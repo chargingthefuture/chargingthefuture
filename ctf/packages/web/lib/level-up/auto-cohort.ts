@@ -14,7 +14,11 @@ import { queryDb } from 'lib/db/postgres';
 import { fetchOccupationGapReport } from 'lib/workforce/repository';
 import type { WorkforceOccupationGapItem } from 'lib/workforce/types';
 import { createCohort, insertLevelUpAudit } from 'lib/level-up/repository';
-import { LEVEL_UP_AUTO_COHORT_ACTOR_ID, LEVEL_UP_AUTO_COHORT_DEFAULTS } from 'lib/level-up/constants';
+import {
+  LEVEL_UP_AUTO_COHORT_ACTOR_ID,
+  LEVEL_UP_AUTO_COHORT_DEFAULT_MILESTONES,
+  LEVEL_UP_AUTO_COHORT_DEFAULTS,
+} from 'lib/level-up/constants';
 
 export type AutoCohortConfig = {
   enabled: boolean;
@@ -25,6 +29,9 @@ export type AutoCohortConfig = {
   topN: number;
   defaultTermDays: number;
   defaultSeats: number;
+  defaultRequiredCredits: number;
+  defaultTrainerSplitPercent: number;
+  defaultCompletionBonusCredits: number;
 };
 
 export type AutoCohortRunSummary = {
@@ -47,11 +54,16 @@ type ConfigRow = {
   top_n: number;
   default_term_days: number;
   default_seats: number;
+  default_required_credits: string;
+  default_trainer_split_percent: string;
+  default_completion_bonus_credits: string;
 };
 
 export async function getAutoCohortConfig(): Promise<AutoCohortConfig> {
   const result = await queryDb<ConfigRow>(
-    `SELECT enabled, min_gap_threshold::text, max_concurrent, per_sector_cap, skill_level_filter, top_n, default_term_days, default_seats
+    `SELECT enabled, min_gap_threshold::text, max_concurrent, per_sector_cap, skill_level_filter, top_n,
+            default_term_days, default_seats, default_required_credits::text,
+            default_trainer_split_percent::text, default_completion_bonus_credits::text
      FROM level_up_auto_cohort_config
      WHERE singleton_key = TRUE
      LIMIT 1`,
@@ -69,6 +81,9 @@ export async function getAutoCohortConfig(): Promise<AutoCohortConfig> {
       topN: LEVEL_UP_AUTO_COHORT_DEFAULTS.topN,
       defaultTermDays: LEVEL_UP_AUTO_COHORT_DEFAULTS.defaultTermDays,
       defaultSeats: LEVEL_UP_AUTO_COHORT_DEFAULTS.defaultSeats,
+      defaultRequiredCredits: LEVEL_UP_AUTO_COHORT_DEFAULTS.defaultRequiredCredits,
+      defaultTrainerSplitPercent: LEVEL_UP_AUTO_COHORT_DEFAULTS.defaultTrainerSplitPercent,
+      defaultCompletionBonusCredits: LEVEL_UP_AUTO_COHORT_DEFAULTS.defaultCompletionBonusCredits,
     };
   }
 
@@ -81,6 +96,9 @@ export async function getAutoCohortConfig(): Promise<AutoCohortConfig> {
     topN: Number(row.top_n),
     defaultTermDays: Number(row.default_term_days),
     defaultSeats: Number(row.default_seats),
+    defaultRequiredCredits: Number(row.default_required_credits),
+    defaultTrainerSplitPercent: Number(row.default_trainer_split_percent),
+    defaultCompletionBonusCredits: Number(row.default_completion_bonus_credits),
   };
 }
 
@@ -234,8 +252,14 @@ export async function runAutoCohortCreation(input: { source: string } = { source
         seats: config.defaultSeats,
         startDate: start,
         endDate,
-        requiredCredits: 0,
-        allowNoDeposit: true,
+        // Economic policy: one global, admin-editable default applied to every auto cohort (per-occupation
+        // tuning deferred — issue #1197). A deposit is only required when defaultRequiredCredits > 0.
+        requiredCredits: config.defaultRequiredCredits,
+        allowNoDeposit: config.defaultRequiredCredits <= 0,
+        trainerSplitPercent: config.defaultTrainerSplitPercent,
+        completionBonusCredits: config.defaultCompletionBonusCredits,
+        // Milestones drive the escrow split, the trainer payout, and the completion bonus on release.
+        milestones: LEVEL_UP_AUTO_COHORT_DEFAULT_MILESTONES.map((m) => ({ ...m })),
         status: 'open',
         autoCreated: true,
         sourceJobTitleId: item.jobTitleId,
