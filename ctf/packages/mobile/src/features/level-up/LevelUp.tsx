@@ -43,7 +43,9 @@ const TRACK_COLORS: Record<string, string> = {
   'Life Skills': '#A855F7',
 };
 
-const TRACKS = ['All', 'Tech', 'Finance', 'Wellness', 'Life Skills'];
+// Preset track filter pills were a fixed, hardcoded list that did not reflect the cohorts that
+// actually exist, so they are hidden until they can be driven by real cohort data at scale
+// (deferred — see #1197). TRACK_COLORS above is kept — it colors a cohort card by its real track.
 
 // ---------------------------------------------------------------------------
 // Loading state — aligned to MobileLevelUpLoading.tsx
@@ -174,25 +176,6 @@ export function LevelUp() {
     }
     return (
       <>
-        {/* Track filter pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.trackPills}
-        >
-          {TRACKS.map((track) => (
-            <TouchableOpacity
-              key={track}
-              style={[styles.trackPill, activeTrack === track && styles.trackPillActive]}
-              onPress={() => setActiveTrack(track)}
-            >
-              <Text style={[styles.trackPillText, activeTrack === track && styles.trackPillTextActive]}>
-                {track}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* Cohort list */}
         {filtered.length === 0 ? (
           <LevelUpEmpty onBrowse={() => setActiveTrack('All')} />
@@ -305,15 +288,6 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
   tabTextActive: { color: GREEN },
 
-  // Track pills
-  trackPills: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
-  trackPill: {
-    flexShrink: 0, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
-    backgroundColor: BORDER,
-  },
-  trackPillActive: { backgroundColor: GREEN },
-  trackPillText: { fontSize: 11, fontWeight: '400', color: SUBTLE },
-  trackPillTextActive: { color: '#000', fontWeight: '600' },
 
   // List
   list: { paddingHorizontal: 16, paddingBottom: 80 },

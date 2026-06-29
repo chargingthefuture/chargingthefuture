@@ -67,6 +67,9 @@ export const STATUS_COLOR: Record<string, string> = {
   draft: MUTED,
 };
 
+// Preset track filter chips. Hidden from the Browse UI for now because this is a fixed, hardcoded list
+// that does not reflect the cohorts that actually exist; kept here to restore as data-driven filters
+// once cohorts are automated at scale (deferred — see #1197).
 export const TRACKS = ["All Tracks", "Tech", "Finance", "Wellness", "Life Skills"];
 
 export type NavKey = "browse" | "progress" | "trainers" | "achievements" | "wallet";

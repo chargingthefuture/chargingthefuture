@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, CheckCircle, Coins, DollarSign, Plus, Target, Trophy, TrendingUp, Users } from "lucide-react";
+import { BookOpen, CheckCircle, Coins, DollarSign, Target, Trophy, TrendingUp, Users } from "lucide-react";
 import { BORDER, GREEN, MUTED, SUBTLE, SURFACE, TEXT, type NavKey } from "./lu-shared";
 
 const NAV_ITEMS: { icon: React.ElementType; label: string; key: NavKey }[] = [
@@ -12,7 +12,6 @@ const NAV_ITEMS: { icon: React.ElementType; label: string; key: NavKey }[] = [
 ];
 
 const TRAINER_TOOLS = [
-  { icon: Plus, label: "Create Cohort" },
   { icon: CheckCircle, label: "Validate Milestones" },
   { icon: DollarSign, label: "Payout History" },
 ];
