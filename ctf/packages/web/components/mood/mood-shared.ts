@@ -46,12 +46,6 @@ export const MOODS: MoodOption[] = [
   { emoji: "😢", label: "Struggling", value: 1, color: "#EF4444" },
 ];
 
-export const CRISIS_RESOURCES = [
-  { name: "National Hotline", number: "1-888-373-7888", available: "24/7" },
-  { name: "Crisis Text Line", number: "Text HOME to 233733", available: "24/7" },
-  { name: "RAINN Hotline", number: "1-800-656-4673", available: "24/7" },
-];
-
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Eligibility response from GET /api/mood/eligibility?clientId=…
