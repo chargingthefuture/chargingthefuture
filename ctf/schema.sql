@@ -2524,6 +2524,11 @@ CREATE TABLE IF NOT EXISTS level_up_auto_cohort_config (
   top_n INTEGER NOT NULL DEFAULT 10,
   default_term_days INTEGER NOT NULL DEFAULT 90,
   default_seats INTEGER NOT NULL DEFAULT 12,
+  -- Economic policy applied to every auto-created cohort (issue #904). One global policy for now;
+  -- per-occupation tuning is deferred (see #1197). default_required_credits 0 = free to join.
+  default_required_credits NUMERIC NOT NULL DEFAULT 0,
+  default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25,
+  default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0,
   updated_by_user_id TEXT NOT NULL DEFAULT 'system',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -2535,6 +2540,9 @@ ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS skill
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS top_n INTEGER NOT NULL DEFAULT 10;
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_term_days INTEGER NOT NULL DEFAULT 90;
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_seats INTEGER NOT NULL DEFAULT 12;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_required_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
