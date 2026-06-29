@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { computeLiveWeekMetrics } from 'lib/weekly-performance/live-metrics';
 
 type WeekRow = {
   week_start_date: string;
@@ -151,7 +152,16 @@ export async function getWeekMetrics(weekStartDate: string) {
     [weekStartDate],
   );
 
-  return result.rows.map(mapMetric);
+  // A stored snapshot (a closed/published week) is authoritative and wins.
+  if (result.rows.length > 0) {
+    return result.rows.map(mapMetric);
+  }
+
+  // No snapshot yet — compute the week's numbers live from upstream plugin tables so the
+  // current (open) week auto-populates instead of showing the "appears when the week closes"
+  // placeholder. Scoped to the week window, so past weeks without a snapshot report their
+  // real counts too.
+  return computeLiveWeekMetrics(weekStartDate);
 }
 
 export async function getWeekComparison(input: { weekStartDate: string; compareWeekStartDate: string }) {

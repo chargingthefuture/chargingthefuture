@@ -141,9 +141,9 @@ function WpEmpty({ weekLabel }: { weekLabel: string }) {
         <View style={styles.emptyIcon}>
           <Text style={styles.emptyIconText}>📊</Text>
         </View>
-        <Text style={styles.emptyTitle}>Week in progress</Text>
+        <Text style={styles.emptyTitle}>Weekly numbers are updating</Text>
         <Text style={styles.emptySub}>
-          Metrics will populate when an admin closes the week. Check back at the end of the week.
+          Engagement numbers update live as members use the platform this week. They'll appear here in a moment.
         </Text>
         {/* Placeholder metric cards */}
         <View style={styles.metricsGrid}>

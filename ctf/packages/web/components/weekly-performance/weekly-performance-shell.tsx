@@ -14,6 +14,7 @@ import {
   type WpComparison,
   type WpMetric,
   type WpWeek,
+  isLiveWeek,
 } from "./wp-shared";
 import { WeeklyPerformanceLoading } from "./wp-loading";
 import { WeeklyPerformanceIconRail } from "./wp-icon-rail";
@@ -86,9 +87,13 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
     return () => { active = false; };
   }, []);
 
-  const loadWeekData = useCallback(async (weekStartDate: string, compareWeekStartDate: string | null) => {
-    setMetrics([]);
-    setComparison(null);
+  const loadWeekData = useCallback(async (weekStartDate: string, compareWeekStartDate: string | null, silent = false) => {
+    // A silent refresh (current-week polling / focus refetch) keeps the numbers on screen
+    // and swaps them in place; a week switch clears first so last week's cards don't linger.
+    if (!silent) {
+      setMetrics([]);
+      setComparison(null);
+    }
     const metricsRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`, { cache: "no-store" });
     if (metricsRes.ok) {
       setMetrics(((await metricsRes.json()) as MetricsResponse).metrics ?? []);
@@ -105,6 +110,26 @@ export function WeeklyPerformanceShell({ isAdmin }: WeeklyPerformanceShellProps)
     if (!selectedWeekStart) return;
     void loadWeekData(selectedWeekStart, priorWeekStart(weeks, selectedWeekStart));
   }, [selectedWeekStart, weeks, loadWeekData]);
+
+  // The open week's numbers are computed live, so keep them moving: re-fetch on a 60s
+  // interval and whenever the tab regains focus, but only for the current (open) week —
+  // closed/past weeks are settled and never change. Refreshes are silent (no flash to the
+  // empty state).
+  const selectedIsLive = isLiveWeek(weeks.find((w) => w.weekStartDate === selectedWeekStart) ?? null);
+  useEffect(() => {
+    if (!selectedWeekStart || !selectedIsLive) return;
+    const compare = priorWeekStart(weeks, selectedWeekStart);
+    const refresh = () => { void loadWeekData(selectedWeekStart, compare, true); };
+    const interval = window.setInterval(refresh, 60_000);
+    const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [selectedWeekStart, selectedIsLive, weeks, loadWeekData]);
 
   if (loading) return <WeeklyPerformanceLoading />;
 
