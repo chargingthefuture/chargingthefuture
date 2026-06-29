@@ -17,6 +17,7 @@ import {
   luAdminMutate,
   type AdminCohort,
   type AdminKpis,
+  type AutoCohortRunResult,
 } from './lu-admin-shared';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -74,6 +75,11 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Auto-cohort run (issue #904): manual fallback for the daily cron.
+  const [autoRunning, setAutoRunning] = useState(false);
+  const [autoNotice, setAutoNotice] = useState<string | null>(null);
+  const [autoError, setAutoError] = useState<string | null>(null);
 
   const loadCohorts = useCallback(async () => {
     setCohortsError(null);
@@ -147,6 +153,29 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
     setGovernanceTicketId('');
   }, [targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
+  const runAutoCohorts = useCallback(async () => {
+    setAutoRunning(true);
+    setAutoNotice(null);
+    setAutoError(null);
+    const result = await luAdminMutate<AutoCohortRunResult>('/api/level-up/admin/auto-cohorts/run', {});
+    setAutoRunning(false);
+    if (!result.ok) {
+      setAutoError(result.message);
+      return;
+    }
+    const data = result.data;
+    if (data.skipped === 'disabled') {
+      setAutoNotice('Auto-cohort creation is turned off in config — nothing was created.');
+    } else if (data.skipped === 'no_workforce_share') {
+      setAutoNotice('Skipped: no sector carries a workforce share yet, so the gap ranking is not meaningful.');
+    } else {
+      const createdCount = data.created?.length ?? 0;
+      const closedCount = data.closed?.length ?? 0;
+      setAutoNotice(`Run complete: ${createdCount} cohort(s) created, ${closedCount} closed (term ended).`);
+    }
+    await loadCohorts();
+  }, [loadCohorts]);
+
   return (
     <div
       style={{
@@ -180,6 +209,34 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
           <StatBlock label="Avg days to first trainer payout" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
         </div>
 
+        {/* Auto cohorts (issue #904) */}
+        <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}` }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Auto cohorts from Workforce gaps</h2>
+          <p style={{ fontSize: 12, color: SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
+            The daily run reads the Workforce talent gaps and opens cohorts for the largest of them. Run
+            it now to apply the current gaps right away. It is safe to run more than once — a cohort is
+            never created twice for the same occupation, and cohorts past their term are closed.
+          </p>
+          {autoError ? (
+            <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+              {autoError}
+            </div>
+          ) : null}
+          {autoNotice ? (
+            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>
+              {autoNotice}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={runAutoCohorts}
+            disabled={autoRunning}
+            style={{ padding: '9px 18px', borderRadius: 8, background: COLOR, border: `1px solid ${COLOR}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
+          >
+            {autoRunning ? 'Running…' : 'Run now'}
+          </button>
+        </div>
+
         {/* Cohorts */}
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Cohorts</h2>
@@ -201,6 +258,12 @@ export function LevelUpAdminShell({ kpis }: { kpis: AdminKpis }) {
                   <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{cohort.title}</span>
                   <Pill>{cohort.track}</Pill>
                   <Pill>{cohort.status}</Pill>
+                  {cohort.autoCreated ? <Pill>auto</Pill> : null}
+                  {cohort.needsTrainer ? (
+                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#FBBF24', border: '1px solid rgba(245,158,11,0.4)' }}>
+                      needs trainer
+                    </span>
+                  ) : null}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', fontSize: 12, color: SUBTLE }}>
                   <span>Seats: {cohort.seatsAvailable} of {cohort.seats} open</span>
