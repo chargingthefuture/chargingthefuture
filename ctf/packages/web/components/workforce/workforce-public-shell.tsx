@@ -13,13 +13,13 @@ const SUBTLE = '#6B7280';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-type WorkforceSnapshot = { recruited: number; notRecruited: number; sectorGaps: number };
+type WorkforceSnapshot = { recruited: number; sectorGaps: number };
 
-// The three real, public aggregate counts the signed-in dashboard exposes — the same legend the
-// owner approved for the landing snapshot. Each maps to a field on the public-snapshot response.
+// The real, public aggregate counts the snapshot shows. "Not Recruited" (the unfilled headcount target
+// against the 5M goal) is intentionally left out — it is a multi-million number that reads as
+// off-putting marketing — so the public endpoint does not return it either.
 const SNAPSHOT_ROWS: { key: keyof WorkforceSnapshot; label: string; color: string }[] = [
   { key: 'recruited', label: 'Recruited', color: '#22C55E' },
-  { key: 'notRecruited', label: 'Not Recruited', color: '#F59E0B' },
   { key: 'sectorGaps', label: 'Sector Gaps', color: '#EF4444' },
 ];
 
@@ -33,7 +33,7 @@ function useWorkforceSnapshot(): WorkforceSnapshot | null {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (active && data && typeof data.recruited === 'number') {
-          setSnapshot({ recruited: data.recruited, notRecruited: data.notRecruited, sectorGaps: data.sectorGaps });
+          setSnapshot({ recruited: data.recruited, sectorGaps: data.sectorGaps });
         }
       })
       .catch(() => {
@@ -50,7 +50,7 @@ function snapshotMax(snapshot: WorkforceSnapshot | null): number {
   if (!snapshot) {
     return 1;
   }
-  return Math.max(1, snapshot.recruited, snapshot.notRecruited, snapshot.sectorGaps);
+  return Math.max(1, snapshot.recruited, snapshot.sectorGaps);
 }
 
 function DesktopWorkforcePublic({ signInUrl, verifyUrl, snapshot }: { signInUrl: string; verifyUrl?: string; snapshot: WorkforceSnapshot | null }) {
@@ -198,13 +198,15 @@ function MobileWorkforcePublic({ signInUrl, verifyUrl, snapshot }: { signInUrl: 
  * (desktop) and MobileWorkforcePublic (phone) design mockups, with every
  * sign-in, join, and call-to-action pointing at the real hosted sign-in URL.
  *
- * The "Live snapshot" shows real network-wide aggregate counts — Recruited,
- * Not Recruited (the unfilled headcount target), and Sector Gaps — fetched from
- * the public `/api/workforce/public-snapshot` endpoint (the same three figures
- * the signed-in dashboard exposes, no per-member or identifying data). The bars
- * scale to the largest of the three; while the snapshot is loading or if the
- * endpoint is unavailable, they degrade to neutral dashes rather than showing a
- * fabricated distribution. The per-survivor skill-gap table stays locked behind
+ * The "Live snapshot" shows real network-wide aggregate counts — Recruited and
+ * Sector Gaps — fetched from the public `/api/workforce/public-snapshot`
+ * endpoint (no per-member or identifying data). The unfilled-headcount-target
+ * figure ("Not Recruited") is deliberately omitted: against the 5M goal it is a
+ * multi-million number that reads as off-putting marketing, so it is left out of
+ * both the endpoint and the page. The bars scale to the larger of the two; while
+ * the snapshot is loading or if the endpoint is unavailable, they degrade to
+ * neutral dashes rather than showing a fabricated distribution. The per-survivor
+ * skill-gap table stays locked behind
  * sign-in. The mockup's invented figures (37/25/20/18% bars, a "4.9M survivors
  * tracked" count, fabricated gap rows) are not used.
  */
