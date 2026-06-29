@@ -45,6 +45,26 @@ Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewe
 
 ---
 
+## Member walkthrough
+
+### UNLOCK-M1 · Early Commons access help link (A/B treatment)
+**Role:** member (not yet verified) · **Surfaces:** web (member Unlock screen), android
+**Precondition:** the `feature-unlock-early-commons-access` Unleash flag is enabled and the test
+member falls in the treatment bucket (so `GET /api/unlock/status` returns `earlyCommonsAccess: true`).
+**Steps:**
+1. As an unverified treatment member, open the Unlock screen (both the submission form and, if a
+   submission exists, the status view).
+2. Confirm the "Trouble finding your Quora URL? Ask in the Commons" link shows.
+3. Tap it.
+4. Repeat as a control member (flag off, or control bucket).
+**Expected:** A treatment member sees the link on both the submission and status screens and tapping
+it reaches the Commons (the Hub home) where they can ask for help. A control member sees **no** link
+(and could not post there anyway). On android the link behaves the same and lands on the Hub home.
+With the flag off everywhere, no member sees the link (default state).
+**Result:** web ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### UNLOCK-A1 · Queue loads and filters by status
@@ -114,8 +134,10 @@ admin-gated, CSRF-guarded (`x-ctf-csrf: '1'`), and audited.
 
 ## Parity check (web ↔ android)
 
-Unlock has no member-facing android surface for this internal verification queue — there is no web
-↔ android parity row to check here. (An android admin screen exists for the review queue; the
+The internal verification **queue** is admin-only, so there is no web ↔ android parity row for it.
+But the member-facing Unlock screen does have a parity row: **UNLOCK-M1** (the early-Commons help
+link) must behave the same on web and android — same link for treatment members, none for control,
+both landing on the Commons (Hub home). (An android admin screen exists for the review queue; the
 grant/revoke determination actions are an android follow-up per the inventory's Gaps section.)
 
 ---
