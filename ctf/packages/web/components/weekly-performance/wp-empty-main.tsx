@@ -16,11 +16,11 @@ export function WeeklyPerformanceEmptyMain({ week }: { week: WpWeek | null }) {
             <BarChart2 size={28} style={{ color: BRAND, opacity: 0.4 }} />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: TEXT }}>
-            {inProgress ? "Metrics appear when the week closes" : "No metrics recorded for this week"}
+            {inProgress ? "Weekly numbers are updating" : "No metrics recorded for this week"}
           </div>
           <div style={{ fontSize: 13, color: SUBTLE, maxWidth: 440, lineHeight: 1.6 }}>
             {inProgress
-              ? "Engagement data is collected throughout the week. The dashboard populates once the week is marked closed by an admin."
+              ? "Engagement numbers update live as members use the platform this week. They'll appear here in a moment."
               : "This week has no recorded metrics."}
           </div>
           {week && (
