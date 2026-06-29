@@ -466,8 +466,10 @@ export async function enrollInCohort(input: {
       status: string;
       required_credits: string;
       allow_no_deposit: boolean;
+      created_by_user_id: string;
+      auto_created: boolean;
     }>(
-      `SELECT seats, status, required_credits::text, allow_no_deposit
+      `SELECT seats, status, required_credits::text, allow_no_deposit, created_by_user_id, auto_created
        FROM level_up_cohorts
        WHERE id = $1::uuid
        FOR UPDATE`,
@@ -523,11 +525,22 @@ export async function enrollInCohort(input: {
       throw new Error('invalid_payload');
     }
 
+    // Trainer of record for the enrollment (drives the milestone-release payout). Prefer an explicitly
+    // supplied trainer; otherwise, for an auto-created cohort a trainer has claimed (its
+    // created_by_user_id is no longer the scheduler placeholder), default to that claiming trainer so
+    // their split actually settles on milestone release. Admin/human-built cohorts get null unless a
+    // trainer is passed in (created_by there may be an admin, not the trainer).
+    const claimedAutoTrainer =
+      cohort.rows[0].auto_created && cohort.rows[0].created_by_user_id !== LEVEL_UP_AUTO_COHORT_ACTOR_ID
+        ? cohort.rows[0].created_by_user_id
+        : null;
+    const resolvedTrainerId = input.assignedTrainerId ?? claimedAutoTrainer;
+
     const enrollmentId = randomUUID();
     await client.query(
       `INSERT INTO level_up_enrollments (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
        VALUES ($1, $2::uuid, $3, 'enrolled', $4, $5)`,
-      [enrollmentId, input.cohortId, input.actorId, Math.max(depositRequested, 0), input.assignedTrainerId ?? null],
+      [enrollmentId, input.cohortId, input.actorId, Math.max(depositRequested, 0), resolvedTrainerId],
     );
 
     const milestones = await client.query(

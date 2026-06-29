@@ -338,6 +338,16 @@ export async function claimAutoCohortTrainer(input: { cohortId: string; trainerU
     [input.cohortId, input.trainerUserId, LEVEL_UP_AUTO_COHORT_ACTOR_ID],
   );
 
+  // Backfill the trainer of record onto any enrollments that were created while the cohort still had
+  // no trainer (members can enroll in an open auto cohort before it is claimed). Without this their
+  // milestone-release payouts would have no trainer to pay. Only fill rows not already assigned.
+  await queryDb(
+    `UPDATE level_up_enrollments
+     SET assigned_trainer_id = $2, updated_at = NOW()
+     WHERE cohort_id = $1::uuid AND assigned_trainer_id IS NULL`,
+    [input.cohortId, input.trainerUserId],
+  );
+
   await insertLevelUpAudit({
     actorId: input.trainerUserId,
     command: 'level-up.cohort.claim_trainer',
