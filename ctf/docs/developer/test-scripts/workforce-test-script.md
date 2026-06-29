@@ -120,12 +120,13 @@ member's Directory profile.
 **Role:** anonymous (signed out) · **Surfaces:** web + mobile-responsive
 **Steps:**
 1. Sign out (or open a private window) and open the Workforce landing page.
-2. Read the "Live snapshot" card: it has two rows — **Recruited** and **Sector Gaps**.
+2. Read the "Live snapshot" card: it has two rows — **Recruited** and **Sectors to fill**.
 3. Compare the numbers against the signed-in dashboard's recruited / sector count
    (`GET /api/workforce/public-snapshot` vs the dashboard).
 **Expected:** The two bars show real network-wide aggregate numbers (not the old Employed / In
 Training / Seeking Work / Exploring placeholders, and not empty dashes once loaded). Recruited matches
-the dashboard's recruited count and Sector Gaps is the active-sector count. The bars scale to the larger
+the dashboard's recruited count and "Sectors to fill" is the active-sector count (the signed-in
+dashboard calls the same figure "Sector Gaps" — the public page uses the positive marketing label). The bars scale to the larger
 of the two. There is **no** "Not Recruited" row (the multi-million unfilled-headcount figure is
 deliberately not exposed). No per-member or identifying data is shown. If the public endpoint is
 unavailable the rows fall back to neutral dashes rather than fabricated figures.

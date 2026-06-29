@@ -15,12 +15,14 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 type WorkforceSnapshot = { recruited: number; sectorGaps: number };
 
-// The real, public aggregate counts the snapshot shows. "Not Recruited" (the unfilled headcount target
-// against the 5M goal) is intentionally left out — it is a multi-million number that reads as
-// off-putting marketing — so the public endpoint does not return it either.
+// The real, public aggregate counts the snapshot shows. These are the signed-out marketing labels:
+// "Sectors to fill" is the count of active sectors with demand (the signed-in dashboard calls the same
+// figure "Sector Gaps" — internal framing, not for the public page). "Not Recruited" (the unfilled
+// headcount target against the 5M goal) is intentionally left out — it is a multi-million number that
+// reads as off-putting marketing — so the public endpoint does not return it either.
 const SNAPSHOT_ROWS: { key: keyof WorkforceSnapshot; label: string; color: string }[] = [
   { key: 'recruited', label: 'Recruited', color: '#22C55E' },
-  { key: 'sectorGaps', label: 'Sector Gaps', color: '#EF4444' },
+  { key: 'sectorGaps', label: 'Sectors to fill', color: COLOR },
 ];
 
 // Fetches the live, signed-out workforce snapshot. Returns null while loading or if the endpoint is
@@ -199,7 +201,9 @@ function MobileWorkforcePublic({ signInUrl, verifyUrl, snapshot }: { signInUrl: 
  * sign-in, join, and call-to-action pointing at the real hosted sign-in URL.
  *
  * The "Live snapshot" shows real network-wide aggregate counts — Recruited and
- * Sector Gaps — fetched from the public `/api/workforce/public-snapshot`
+ * "Sectors to fill" (the active-sector figure the signed-in dashboard calls
+ * "Sector Gaps"; the public page uses the positive marketing label) — fetched
+ * from the public `/api/workforce/public-snapshot`
  * endpoint (no per-member or identifying data). The unfilled-headcount-target
  * figure ("Not Recruited") is deliberately omitted: against the 5M goal it is a
  * multi-million number that reads as off-putting marketing, so it is left out of
