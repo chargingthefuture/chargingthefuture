@@ -13,14 +13,17 @@ interface TrustTransportStreamTabProps {
 export const TrustTransportStreamTab: React.FC<TrustTransportStreamTabProps> = ({ tripId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // `stream-chat` and `stream-chat-react-native` bundle divergent StreamChat type definitions:
+  // StreamChat.getInstance() returns StreamChat<DefaultGenerics>, but the <Chat>/<Channel> props want the
+  // RN package's generic-less StreamChat, so neither single type satisfies both ends (TS2740). Hold the
+  // client loosely and let the JSX below consume it; the runtime object is the same StreamChat instance.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatClient, setChatClient] = useState<any>(null);
   const [channelId, setChannelId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let chat: any = null;
+    let chat: StreamChat | null = null;
 
     fetchTrustTransportStreamCredentials(tripId)
       .then(async (creds) => {
