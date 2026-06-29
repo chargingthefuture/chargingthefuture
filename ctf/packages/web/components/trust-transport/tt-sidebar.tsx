@@ -40,7 +40,9 @@ export function TrustTransportSidebar({
             requests.slice(0, 3).map((r) => (
               <div key={r.id} style={{ padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", marginBottom: 6 }}>
                 <div style={{ fontSize: 12, color: "#E8EAF0", fontWeight: 600, marginBottom: 2 }}>
-                  {r.fromLocation ?? "—"} → {r.toLocation ?? "—"}
+                  {/* The API returns pickupCity/dropoffCity (and a title), never fromLocation/toLocation,
+                      so read those first — matching the tracking and chat tabs — to avoid always showing "— → —". */}
+                  {r.pickupCity ?? r.fromLocation ?? "—"} → {r.dropoffCity ?? r.toLocation ?? "—"}
                 </div>
                 <div style={{ fontSize: 11, color: "#4B5563" }}>{r.status ?? "Pending"}</div>
               </div>
