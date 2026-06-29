@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { SafetyReportStatus } from 'lib/safety/constants';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 
 // Admin design tokens (shared admin look, rule 131). Safety reports are cross-cutting platform
 // safety tooling with no plugin accent, so the chrome uses the neutral admin indigo; the open/alert
@@ -151,6 +152,7 @@ export function SafetyAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="Safety Admin" accent={COLOR} icon={<ShieldAlert size={18} color={COLOR} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>

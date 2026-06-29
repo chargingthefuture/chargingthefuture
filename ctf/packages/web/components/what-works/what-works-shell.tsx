@@ -20,6 +20,7 @@ import { WhatWorksHero } from './ww-hero';
 import { WhatWorksRightRail } from './ww-right-rail';
 import { WhatWorksProblemSection } from './ww-problem-section';
 import { WhatWorksSuggestPanel } from './ww-suggest-panel';
+import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 
 const EMPTY_STATS: WhatWorksStats = { problems: 0, verifiedTools: 0, survivorsHelped: 0 };
 
@@ -218,6 +219,7 @@ export function WhatWorksShell() {
                 <ShieldCheck size={13} /> Admin
               </Link>
             ) : null}
+            <MobileTopActions />
           </div>
           <div style={{ padding: '0 12px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}` }}>

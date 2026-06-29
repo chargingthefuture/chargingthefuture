@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Smile } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { getMoodClientId, getMoodTokens, type MoodEligibility, type Tab } from "./mood-shared";
 import { MoodLoading } from "./mood-loading";
 import { MoodIconRail } from "./mood-icon-rail";
@@ -105,6 +106,7 @@ export default function MoodShell() {
             <Smile size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Mood</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>🔒 Pseudonymous</Badge>
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

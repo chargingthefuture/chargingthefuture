@@ -15,6 +15,7 @@ import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 function ShellHeader({ t, isAdmin }: { t: TrustTransportTokens; isAdmin?: boolean }) {
   return (
@@ -244,6 +245,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>TrustTransport</span>
             <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

@@ -14,6 +14,7 @@ import { ProviderProfile } from "./foundation-profile";
 import { DirectLineFromQuote, DirectLineFromThread, type DirectLineCredentials } from "./foundation-direct-line";
 import { FoundationInstantCallController } from "./foundation-instant-call";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 
@@ -266,6 +267,7 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <Hammer size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Foundation</span>
             <PluginAdminButton href="/admin/foundation" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

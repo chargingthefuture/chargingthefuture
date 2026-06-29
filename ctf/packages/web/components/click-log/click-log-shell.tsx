@@ -14,6 +14,7 @@ import { ClickLogIncidentList } from "./click-log-incident-list";
 import { ClickLogEmptyState } from "./click-log-empty-state";
 import { ClickLogLoading } from "./click-log-loading";
 import { AlertTriangle, ChevronLeft } from "lucide-react";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 type Geo = { latitude?: number; longitude?: number };
 
@@ -191,6 +192,7 @@ export function ClickLogShell() {
               <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Incident Log</div>
               <div style={{ fontSize: 11, color: t.MUTED }}>{displayTotal} incidents total</div>
             </div>
+            <MobileTopActions />
           </div>
         </div>
         <div style={{ padding: 16 }}>{content}</div>

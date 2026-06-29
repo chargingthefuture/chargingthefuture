@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Megaphone, Send, Archive } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { Announcement, FeedConfig } from 'lib/feed/types';
 
 // Admin design tokens (shared admin look). Feed/announcements accent is the official purple.
@@ -119,6 +120,7 @@ export function FeedAnnouncementsAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="Feed & Announcements Admin" accent={COLOR} icon={<Megaphone size={18} color={COLOR} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
