@@ -14,6 +14,24 @@ export const LEVEL_UP_ERROR_CODE = {
 export const LEVEL_UP_DEFAULT_STARTER_CREDITS = 500;
 export const LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT = 25;
 
+// Auto-cohort creation (issue #904). The scheduled run is the actor on every cohort it stands up,
+// so an auto-created cohort that still carries this id has no human trainer yet ("needs trainer").
+// A trainer claiming the cohort replaces created_by_user_id with their own id.
+export const LEVEL_UP_AUTO_COHORT_ACTOR_ID = 'level-up-auto-cohort-scheduler';
+
+// Coded fallbacks used when the level_up_auto_cohort_config singleton row has not been written yet.
+// These mirror the column defaults in schema.sql and the lean launch policy agreed for issue #904.
+export const LEVEL_UP_AUTO_COHORT_DEFAULTS = {
+  enabled: true,
+  minGapThreshold: 25,
+  maxConcurrent: 3,
+  perSectorCap: 1,
+  skillLevelFilter: 'Foundational' as const,
+  topN: 10,
+  defaultTermDays: 90,
+  defaultSeats: 12,
+} as const;
+
 export const LEVEL_UP_RATE_LIMIT = {
   enrollPerMinute: 6,
   milestoneValidatePerMinute: 20,

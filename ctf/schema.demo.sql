@@ -2494,6 +2494,61 @@ ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMES
 -- both default to ServiceCredits (code 'SC').
 ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+-- Auto-cohort creation (issue #904): LevelUp stands up cohorts from Workforce occupation gaps.
+-- auto_created marks a cohort the scheduled run created (vs a human-built one). source_job_title_id
+-- ties it to the exact Skills Taxonomy occupation that triggered it (the Workforce gap's jobTitleId),
+-- so a re-run never duplicates a cohort for the same occupation. source_sector / source_gap_at_creation
+-- are kept for display and audit. source_job_title_id intentionally has no hard FK (it mirrors
+-- directory_profiles.job_title_id, which is also a plain UUID reference to skills_taxonomy_job_titles).
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS auto_created BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS source_sector TEXT;
+ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
+-- Database-level idempotency guard: at most one open/active auto-created cohort per source occupation.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_level_up_auto_cohort_active_source
+  ON level_up_cohorts (source_job_title_id)
+  WHERE auto_created = TRUE AND status IN ('open', 'active');
+
+-- Auto-cohort configuration (issue #904). Singleton row holding the knobs the scheduled run reads;
+-- admin-editable. Defaults match the lean launch policy: top 10 Foundational gaps, 3 concurrent
+-- cohorts, one per sector, above a minimum gap, fixed 90-day term.
+CREATE TABLE IF NOT EXISTS level_up_auto_cohort_config (
+  singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  min_gap_threshold NUMERIC NOT NULL DEFAULT 25,
+  max_concurrent INTEGER NOT NULL DEFAULT 3,
+  per_sector_cap INTEGER NOT NULL DEFAULT 1,
+  skill_level_filter TEXT NOT NULL DEFAULT 'Foundational',
+  top_n INTEGER NOT NULL DEFAULT 10,
+  default_term_days INTEGER NOT NULL DEFAULT 90,
+  default_seats INTEGER NOT NULL DEFAULT 12,
+  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS min_gap_threshold NUMERIC NOT NULL DEFAULT 25;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS max_concurrent INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS per_sector_cap INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS skill_level_filter TEXT NOT NULL DEFAULT 'Foundational';
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS top_n INTEGER NOT NULL DEFAULT 10;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_term_days INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_seats INTEGER NOT NULL DEFAULT 12;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
+ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Per-occupation term overrides (issue #904): admins set how long a given occupation's auto cohort
+-- runs ("Mechanics × term", "Elementary teachers × term"); falls back to default_term_days when absent.
+CREATE TABLE IF NOT EXISTS level_up_auto_cohort_term_overrides (
+  job_title_id UUID PRIMARY KEY,
+  occupation TEXT NOT NULL DEFAULT '',
+  term_days INTEGER NOT NULL,
+  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS term_days INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
+ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS level_up_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -23,6 +23,19 @@ export type AdminCohort = {
   completionBonusCredits: number;
   createdByUserId: string;
   seatsAvailable: number;
+  // Auto-cohort fields (issue #904). Present on cohorts the scheduled run created.
+  autoCreated?: boolean;
+  needsTrainer?: boolean;
+  sourceSector?: string | null;
+};
+
+// Summary returned by POST /api/level-up/admin/auto-cohorts/run (and the cron route).
+export type AutoCohortRunResult = {
+  ok: boolean;
+  skipped?: 'disabled' | 'no_workforce_share';
+  created?: Array<{ cohortId: string; occupation: string; sector: string; gap: number; endDate: string }>;
+  closed?: Array<{ cohortId: string; occupation: string }>;
+  message?: string;
 };
 
 export type AdminKpis = {

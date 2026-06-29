@@ -29,11 +29,48 @@
 1. Admin credit grant endpoint (`mint`/`adjustment` path), wired to a real admin UI on both web and Android. Owner decision (2026-06-06): the admin UI is grant-only — it only ever grants ServiceCredits to a member ("earn or earn nothing") and exposes no remove/negative path; the amount input accepts positive values only and submit is disabled client-side for non-positive amounts. (The backend endpoint still technically accepts a signed amount so a mistaken grant can be corrected later, but the UI never sends a negative.) Every grant requires a member user ID, an amount greater than zero, a reason, and a governance ticket ID, and goes behind an explicit in-screen confirm step that restates exactly what will change ("add N credits to member X") before submit. The mutation carries the `x-ctf-csrf: '1'` header and is written to the audit log.
 2. Dispute resolution endpoint with optional adjustment transfer.
 3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout) plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/level-up/cohorts`.
+4. Auto-cohort run control (issue #904): a "Run now" button that triggers the same auto-cohort creation the daily cron runs (reads the Workforce talent gaps and opens cohorts for the largest of them). The admin cohort overview shows `auto` and `needs trainer` badges on auto-created cohorts that have no human trainer yet.
+
+## Auto-Cohort Creation from Workforce Gaps (issue #904)
+
+LevelUp stands up training cohorts from the Workforce talent gaps without an admin hand-building each
+one. The behaviour is deliberately lean for the current small active user base; the gap×talent-spread
+algorithm that will later set cadence and caps is deferred (see the deferral issues in the Change Log).
+
+**LevelUp ↔ Workforce read interface (the contract the issue asked for before build):**
+
+- LevelUp reads the gap signal **server-side, in-process** via `fetchOccupationGapReport()` from
+  `lib/workforce/repository` — it does not call Workforce over HTTP. The return is the per-occupation
+  list `{ jobTitleId, occupation, sector, skillLevel, target, recruited, gap }`, sorted largest-gap-first.
+- The read is **one-way**: LevelUp never writes Workforce, Directory, or Skills Taxonomy. The cohort's
+  `source_job_title_id` is the gap's `jobTitleId` (a Skills Taxonomy job title id), so a cohort ties to
+  the exact occupation with no fuzzy title match.
+- **Cadence:** a daily GitHub Actions cron (`.github/workflows/level-up-auto-cohorts.yml`) calls
+  `POST /api/internal/level-up/auto-cohorts/run` (CRON_SECRET bearer). An admin "Run now" button is the
+  manual fallback.
+- **Selection / caps (admin-editable in `level_up_auto_cohort_config`):** filter to the configured skill
+  level (default `Foundational`), require `gap ≥ min_gap_threshold`, take the `top_n` largest, cap total
+  concurrent auto cohorts at `max_concurrent` (default 3) and at `per_sector_cap` per sector (default 1).
+- **Lifecycle:** fixed term — each cohort's end date is start + the per-occupation term override (or
+  `default_term_days`). The run closes any auto cohort whose term has elapsed (status → `completed`).
+- **Idempotency:** a deterministic command idempotency key plus the partial unique index mean a re-run
+  never duplicates a cohort for an occupation; a concurrent duplicate is caught as the occupation being
+  already covered.
+- **Pre-flight guard:** if no sector carries a positive `skills_taxonomy_sectors.workforce_share`,
+  Workforce demand falls back to an even split and the "largest gap" order is meaningless, so the run
+  does nothing and records `skipped: no_workforce_share`.
+- **Recruiting:** an auto cohort opens with the scheduler as a placeholder owner and `status='open'`
+  (so it shows in the existing cohort browse and trainees can enroll). A trainer claims it via
+  `POST /api/level-up/cohorts/[cohortId]/claim-trainer`, which makes them the trainer of record; until
+  then the cohort carries a derived `needsTrainer` flag.
 
 ## API Surface and Route Map
 
 - `GET /api/level-up/cohorts`
-- `POST /api/level-up/cohorts` — create a cohort; admin or trainer role (per `cohort.create` contract).
+- `POST /api/level-up/cohorts` — create a cohort; admin or trainer role (per `cohort.create` contract). The cohort list response now also carries `autoCreated`, `sourceJobTitleId`, `sourceSector`, and a derived `needsTrainer` flag.
+- `POST /api/level-up/cohorts/[cohortId]/claim-trainer` — a trainer or admin claims an auto-created cohort that has no human trainer yet, becoming its trainer of record (per `cohort.claim_trainer` contract).
+- `POST /api/level-up/admin/auto-cohorts/run` — admin-only manual trigger for the auto-cohort run (the fallback for the daily cron); CSRF-guarded (per `cohort.auto_create` contract).
+- `POST /api/internal/level-up/auto-cohorts/run` — cron-only auto-cohort run, guarded by `Authorization: Bearer ${CRON_SECRET}` (no user session). Reads the Workforce occupation gaps and stands up cohorts for the largest of them, then closes any auto cohort whose term has elapsed. Idempotent.
 - `POST /api/level-up/enroll` — member or admin only; trainer-only accounts are blocked (per `enrollment.create` contract).
 - `POST /api/level-up/milestones/[milestoneId]/validate`
 - `POST /api/level-up/milestones/[milestoneId]/release`
@@ -68,6 +105,10 @@ Core tables:
 15. `level_up_trainers` — trainer directory profile. Columns: `id` (PK), `user_id` (unique), `display_name`, `headline`, `bio`, `tracks` (jsonb array), `status`, `created_at`, `updated_at`. Read-only browse surface.
 16. `level_up_achievements` — grant-only badge definitions. Columns: `id` (PK), `slug` (unique), `name`, `description`, `track`, `icon`, `credit_reward` (display-only grant amount), `sequence_no`, `status`, `created_at`, `updated_at`.
 17. `level_up_user_achievements` — per-user earned badge rows (grant-only: a row means earned). Columns: `id` (PK), `user_id`, `achievement_id`, `earned_at`, `granted_credits`, `source_reference`, `created_at`; unique on `(user_id, achievement_id)`.
+18. `level_up_auto_cohort_config` — singleton config for auto-cohort creation (issue #904). Columns: `singleton_key` (PK bool), `enabled`, `min_gap_threshold`, `max_concurrent` (default 3), `per_sector_cap` (default 1), `skill_level_filter` (default `Foundational`), `top_n` (default 10), `default_term_days` (default 90), `default_seats` (default 12), `updated_by_user_id`, `updated_at`. Admin-editable.
+19. `level_up_auto_cohort_term_overrides` — per-occupation fixed-term overrides (issue #904). Columns: `job_title_id` (PK), `occupation`, `term_days`, `updated_by_user_id`, `updated_at`. Falls back to `default_term_days` when an occupation has no override.
+
+Auto-cohort columns on `level_up_cohorts` (issue #904): `auto_created` (bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text), `source_gap_at_creation` (numeric). A partial unique index `uq_level_up_auto_cohort_active_source` on `source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` enforces at most one open/active auto cohort per occupation (the database-level idempotency guard).
 
 Multi-currency (issue #120): `level_up_cohorts` carries `stipend_currency` and `microgrant_currency`
 (FK → `currencies.code`), naming the currency of `stipend_amount_per_payout` and `microgrant_amount`.
@@ -159,6 +200,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-06-29: Auto-cohort creation from Workforce gaps (issue #904). LevelUp now stands up training cohorts from the Workforce occupation talent gaps without an admin hand-building each one. New module `lib/level-up/auto-cohort.ts` reads the gap signal server-side via `fetchOccupationGapReport()` (no HTTP, one-way read — Workforce/Directory/Skills Taxonomy are never written), filters to the configured skill level (default `Foundational`) and a minimum gap, takes the top N, and creates cohorts up to a concurrency cap (default 3) and a per-sector cap (default 1), anchoring each to the gap's `source_job_title_id`. Fixed-term lifecycle: each cohort's end date is start + a per-occupation term override (or `default_term_days`); the run closes cohorts whose term has elapsed. Idempotent via a deterministic command key + a partial unique index (`uq_level_up_auto_cohort_active_source`). Pre-flight guard skips the run when no sector carries a positive `workforce_share`. New schema: `auto_created` / `source_job_title_id` / `source_sector` / `source_gap_at_creation` columns on `level_up_cohorts`, plus `level_up_auto_cohort_config` (singleton knobs) and `level_up_auto_cohort_term_overrides` tables. New routes: `POST /api/internal/level-up/auto-cohorts/run` (CRON_SECRET), `POST /api/level-up/admin/auto-cohorts/run` (admin manual fallback), `POST /api/level-up/cohorts/[cohortId]/claim-trainer` (trainer claims an auto cohort). Cadence: daily cron `.github/workflows/level-up-auto-cohorts.yml`. Admin UI: a "Run now" button and `auto` / `needs trainer` badges on the LevelUp admin screen. New contracts `cohort.auto_create` and `cohort.claim_trainer` (command / access-policy / audit). The cohort list response gained `autoCreated` / `sourceJobTitleId` / `sourceSector` / `needsTrainer`. Deferred to follow-up issues (current user base is small): the gap×talent-spread cadence/cap algorithm (#1197); sector-mixed cohorts with a per-trainee skills picker (#1198); and the graduation skill-attach that writes learned skills to the Directory profile (#1199 — the loop-closing write, which needs its own contract + consent).
 - 2026-06-27: Resolved code-review sweep findings for level-up. Access-policy alignment: `POST /api/level-up/cohorts` now allows admin or trainer (was admin-only) per `cohort.create`; `POST /api/level-up/disputes/[disputeId]/resolve` now allows the trainer assigned to the dispute's cohort in addition to admin (added `getDisputeCohortId` repository helper to map dispute → enrollment → cohort and reuse `isTrainerForCohort`) per `dispute.resolve` `trainerAssignmentOrAdmin`; `POST /api/level-up/enroll` now blocks trainer-only accounts (member or admin only) per `enrollment.create`. Money safety: `POST /api/level-up/transfers` rejects a self-transfer (recipient equals actor) with 400. Audit compliance: `admin.adjust_credits` audit event now writes a structured `targetContext` (`targetUserId`, `governanceTicketId`) inside metadata per the audit contract. Web shell bug fixes: `handleEnroll` now sends the `x-ctf-csrf: '1'` header (enrollment from the shell was failing CSRF); `handleValidate` now sends the required `enrollmentId`, `cohortId`, and `idempotencyKey` (the trainer Approve button posted an empty body that always failed validation) — `PendingValidation` extended to carry `enrollmentId` and `cohortId`. No schema table or column changes.
 - 2026-06-26: Hyphenation/cleanup rename of the LevelUp plugin as a hard cutover with no backward-compatible aliases — `levelup` → `level-up` everywhere. `/api/levelup/*` no longer exists; the app shell (`/apps/level-up`), admin surface (`/admin/level-up`), web components, and the mobile API client all repoint to `/api/level-up/*`. Plugin slug in the registry/catalog/concierge/parity contract is now `level-up`; command names are `level-up.*`; constant family moved `LEVELUP_*` → `LEVEL_UP_*` (including the client-facing error-code string values `level_up_*`). Every database table renamed to the matching snake_case prefix: each `levelup_*` table becomes `level_up_*` (15 tables: enrollments, cohorts, curriculum_items, milestones, command_idempotency, audit_events, rate_limit_counters, enrollment_milestone_escrows, milestone_validations, disputes, dispute_comments, disbursements, trainers, achievements, user_achievements). `schema.sql` runs `ALTER TABLE ... RENAME TO` first so an existing database keeps its data; `schema.demo.sql` regenerated. Contract files renamed `LEVELUP_*` → `LEVEL_UP_*` (pluginId, dataAccess tables, scopes updated). Cross-plugin refs updated: Trust signal type `engagement-level-up-cohorts`, Trust `level_up_enrollments` read + `levelUpCohortsCompleted` metric; GDP recognition `pluginSlug: 'level-up'` and `level_up_*` table refs (the `levelUpTrainerPayoutSource` identifier kept). Deliberately UNCHANGED (stored ServiceCredits ledger/governance values matched against existing production rows; renaming them would orphan data and break the GDP recognizer): the mint-grant `reason` values `levelup_trainer_split` / `levelup_completion_bonus`, the `releasePolicy`/`releaseReason` value `levelup_milestone_validated`, the `refundReason` `levelup_enrollment_setup_failed`, the `reasonCode` `levelup_transfer`, and the `governanceTicketId` prefix `levelup:`. No `levelup → level-up` slug alias was added (hard cutover). Web + mobile typecheck/lint clean.
 - 2026-06-17: Restyled the `/admin/level-up` surface (`lu-admin-shell`) to the shared dark admin design system (icon header with `ADMIN` badge, dark tokens, stat blocks, dark form inputs) per rule 131. Visual only — the grant-only confirmation flow, amount validation, governance ticket, idempotency key, and endpoints are unchanged. The mockup's track/badge management has no backing endpoints (see Gaps), so the real KPIs, cohort list, and credit-grant form are kept rather than the mockup's tabs/counts. Web typecheck + eslint clean.
