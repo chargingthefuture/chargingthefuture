@@ -42,8 +42,9 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    enrollments) — there is no "metrics appear when the week closes" placeholder and no week status to
    wait on. The current week is marked **Live**; past weeks are plain historical windows with no
    "Closed" badge. With no activity yet the cards read zero, which is still a real value. → web ☐ mobile ☐ android ☐
-3. **Week selection is audited.** Set a week active as admin. It writes a
-   `weekly-performance.admin.week.select` audit row and requires the `x-ctf-csrf: '1'` header. → web ☐
+3. **Admin surface is review-only — no "set active week".** Open `/admin/weekly-performance`. There is
+   one header (no duplicate), a pick-a-week-to-review picker, the week's live metrics, and Export. There
+   is **no** "Active week / Set as active week" control and no open/locked/published status. → web ☐ mobile ☐ android ☐
 4. **Numbers, not a spinner.** Metric cards and the this-week-vs-last-week comparison render real
    values, not a stuck loading state. → web ☐ mobile ☐ android ☐
 
@@ -64,22 +65,22 @@ admin sees the full admin UI. The admin gate (`ensureWeeklyPerformanceAdmin`) ad
 `operations` role, matching `requiredRoles: [admin, operations]`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### WP-A2 · Week navigation and selection
+### WP-A2 · Week navigation and review picker
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
 1. Read the tracked-week history (most recent weeks) and the current week.
-2. Move previous / current / next.
-3. Pick a week and **set it active** (`PUT /api/weekly-performance/admin/week-selection`).
-**Expected:** Weeks use a Saturday-based start with deterministic range labels. Future-week
-navigation is guarded. Setting a week active posts with `x-ctf-csrf: '1'`, persists the row on
-first activation when none exists, and writes a `weekly-performance.admin.week.select` audit row.
-The current week is shown even when the weeks table has no stored rows.
+2. Pick a week to review (web admin picker, or the History tab on Android).
+**Expected:** Weeks use a Saturday-based start with deterministic range labels. Picking a week shows
+that week's live metrics; the current week is marked **Live**. There is no "set active week" action
+and no per-week status. The current week is shown even when the weeks table has no stored rows.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WP-A3 · Metrics and week-over-week comparison
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive), android
 **Steps:**
-1. Open a week's metric cards (growth, user-state, engagement — non-financial only).
+1. Open a week's metric cards. The set mirrors V2 minus revenue (non-financial only): total members,
+   new members, weekly/daily/monthly active members, lapsed members (churn), questions, answers,
+   community posts, enrollments, and aggregate mood (check-ins + average). No revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
 3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab
