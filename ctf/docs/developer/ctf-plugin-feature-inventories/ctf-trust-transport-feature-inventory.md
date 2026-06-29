@@ -146,7 +146,7 @@ Command groups in scope:
 
 User routes:
 
-- `GET /api/trust-transport/modes` — Available transport modes.
+- `GET /api/trust-transport/modes` — Available transport modes (requires member read access).
 - `POST /api/trust-transport/requests` — Create a request.
 - `GET /api/trust-transport/requests/:requestId` — Request detail.
 - `GET /api/trust-transport/requests/:requestId/offers` — Offers on a request.
@@ -159,7 +159,7 @@ User routes:
 - `POST /api/trust-transport/orders/:orderId/rating` — Submit a rating.
 - `GET /api/trust-transport/payouts` — Payout history.
 - `POST /api/trust-transport/payouts/requests` — Request a payout.
-- `POST /api/trust-transport/service-credits` — Service-credit interactions for trip economics.
+- `POST /api/trust-transport/service-credits` — Cross-user ServiceCredits transfer for trip economics (rejects self-transfer; emits a `trust-transport.service-credits.transfer` audit event).
 
 Admin routes:
 
@@ -253,6 +253,19 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-29: Code-review findings pass (issues #1113, #1204–#1208). (1) `GET /api/trust-transport/modes`
+  now runs `requireTrustTransportReadAccess()` like every other read route — the mode list is no longer
+  served to unauthenticated callers (#1206). (2) `POST /api/trust-transport/service-credits` now rejects a
+  self-transfer (`toUserId === actor`, 400) and emits a `trust-transport.service-credits.transfer` audit
+  event after a successful `createTransfer` (#1204, #1205); the new audited command is added to
+  `TRUST_TRANSPORT_PLUGIN_AUDIT_CONTRACTS.yaml`. (3) Web `tt-sidebar` "My Trips" now reads
+  `pickupCity`/`dropoffCity` (with the legacy `fromLocation`/`toLocation` and title fallbacks) instead of
+  the never-returned `fromLocation`/`toLocation`, so cards no longer always show "— → —" (#1113). (4) Mobile
+  `TrustTransportStreamTab` is typed with `StreamChat` instead of `any` (#1207). Verified already-correct and
+  closed as not planned: `offer.accept` ownership is enforced in `acceptOffer` (#1118), `requestPayout`
+  already rejects non-finite/non-positive amounts (#1120), and the trip-chat route reads no request body so a
+  missing `Content-Type` header is inert (#1208). No schema changes.
 
 - 2026-06-27: Code-review findings pass (issues #1113–#1122). (1) Member-facing mutation routes now emit
   audit events to `trust_transport_admin_audit_trail`, matching the audit contract: `request.create`
