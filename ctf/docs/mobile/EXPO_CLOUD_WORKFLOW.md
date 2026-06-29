@@ -141,6 +141,10 @@ input enabled.
     to remember how to deploy the Android app; this builds a `preview` test APK for you.
   - Checks the free-tier quota first and skips cleanly when this month's automated build budget is
     used up, so it never pushes you past the free allotment.
+  - On success it writes install links to the run's summary: an Expo "internal distribution" install
+    page (the easy phone path) and the direct `.apk` URL. To install, open the completed run on your
+    Android phone (Actions tab → the run → Summary) and tap the install-page link. The APK itself is
+    hosted by Expo, not attached to the GitHub run.
   - If the build **fails**, a Claude agent (`anthropics/claude-code-action`) diagnoses it, opens a
     descriptive `fix/expo-android-build-*` branch, and files a pull request with the smallest fix —
     low-risk fixes auto-merge after CI; risky ones wait for owner review (the two-lane rule in
