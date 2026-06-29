@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:level-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-level-up-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-29 (auto-cohort creation from Workforce gaps added; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -146,6 +146,20 @@ open, required deposit, trainer split, and completion bonus. It is read-only.
 adjustment transfer applies. An unrelated trainer is denied with a readable message.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### LVL-A4 · Auto-cohort run from Workforce gaps
+**Role:** admin · **Surfaces:** web (`/admin/level-up`)
+**Precondition:** Skills Taxonomy has at least one sector with a positive `workforce_share` and at
+least one Foundational-level occupation whose gap is at or above the configured minimum.
+**Steps:**
+1. In the "Auto cohorts from Workforce gaps" panel, press **Run now**.
+2. Re-read the cohort overview.
+3. Press **Run now** a second time.
+**Expected:** The first run reports how many cohorts were created/closed and the overview gains
+open cohorts tagged `auto` and `needs trainer` (one per largest Foundational gap, up to the
+concurrency and per-sector caps). The second run creates **no** duplicates for the same occupations.
+If no sector carries a workforce share, the run reports it was skipped rather than creating cohorts.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
@@ -171,3 +185,6 @@ of these, it is already tracked, not a new bug:
   by role before render; it relies on the server-side admin gate on the grant action.
 - The track/badge management mockup has no backing endpoints, so that surface is not built (tracks are
   a free-text field and there is no badge-editing model).
+- The auto-cohort **Run now** button and the `auto` / `needs trainer` badges are web-only for now; the
+  Android admin screen does not mirror them yet (tracked in #1200). The daily cron runs regardless of
+  platform, so LVL-A4 is a web-only check until then.
