@@ -74,13 +74,15 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sectorItems.map((g) => (
-          <div key={g.bucket} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div key={g.bucket} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
               style={{
-                width: 200,
+                // Shrinkable (was a fixed 200px that, with the fixed number column, pushed the row
+                // past the card on phone width). Basis 200 on desktop, shrinks to fit on small screens.
+                flex: '0 1 200px',
+                minWidth: 0,
                 fontSize: 13,
                 color: '#E8EAF0',
-                flexShrink: 0,
                 textTransform: 'capitalize',
               }}
             >
@@ -89,7 +91,7 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
                 {g.recruited.toLocaleString()} recruited / {g.target.toLocaleString()} target
               </div>
             </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {/* Supply (recruited) bar */}
               <div
                 style={{
