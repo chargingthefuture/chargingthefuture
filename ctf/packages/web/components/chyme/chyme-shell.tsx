@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTheme } from '@/hooks/useTheme';
 import { ChymeLiveShell } from '@/components/chyme/chyme-live-shell';
 import { PluginRailFooter } from '@/components/shared/plugin-rail-footer';
+import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { getChymeTokens } from './chyme-shared';
 
 type ChymeShellProps = {
@@ -37,6 +38,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
             <Radio size={18} />
           </div>
           <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Chyme</span>
+          <MobileTopActions />
         </div>
         <ChymeLiveShell currentUser={currentUser} />
       </div>

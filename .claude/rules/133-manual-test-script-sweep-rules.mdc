@@ -4,7 +4,10 @@
 
 Built and owner-approved 2026-06-28. Read this alongside Rule 118 (Platform Testing and Release).
 Rule 118 defers *automated* testing during MVP; this rule defines the *manual* testing that fills that
-gap — a runnable checklist per plugin that a person walks on a real device.
+gap — a runnable checklist per plugin that a person walks on a real device. (One narrow exception:
+Rule 118 keeps non-blocking unit tests on three settled logic cores — ServiceCredits amount math,
+economic-models, and Trust evidence — covering the deterministic logic that manual testing can't pin
+exactly.)
 
 ## Intent
 
