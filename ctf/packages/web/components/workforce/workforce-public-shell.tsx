@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { BarChart2, TrendingUp, Lock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -12,17 +13,48 @@ const SUBTLE = '#6B7280';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// Snapshot categories from the mockup. The mockup filled these bars with sample
-// percentages; a public visitor has no session, so the bars render empty as a
-// neutral placeholder rather than showing fabricated distribution figures.
-const SNAPSHOT = [
-  { label: 'Employed', color: '#22C55E' },
-  { label: 'In Training', color: COLOR },
-  { label: 'Seeking Work', color: '#F59E0B' },
-  { label: 'Exploring', color: '#6B7280' },
+type WorkforceSnapshot = { recruited: number; notRecruited: number; sectorGaps: number };
+
+// The three real, public aggregate counts the signed-in dashboard exposes — the same legend the
+// owner approved for the landing snapshot. Each maps to a field on the public-snapshot response.
+const SNAPSHOT_ROWS: { key: keyof WorkforceSnapshot; label: string; color: string }[] = [
+  { key: 'recruited', label: 'Recruited', color: '#22C55E' },
+  { key: 'notRecruited', label: 'Not Recruited', color: '#F59E0B' },
+  { key: 'sectorGaps', label: 'Sector Gaps', color: '#EF4444' },
 ];
 
-function DesktopWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+// Fetches the live, signed-out workforce snapshot. Returns null while loading or if the endpoint is
+// unavailable, so the bars fall back to neutral dashes rather than showing a fabricated distribution.
+function useWorkforceSnapshot(): WorkforceSnapshot | null {
+  const [snapshot, setSnapshot] = useState<WorkforceSnapshot | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/workforce/public-snapshot', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data && typeof data.recruited === 'number') {
+          setSnapshot({ recruited: data.recruited, notRecruited: data.notRecruited, sectorGaps: data.sectorGaps });
+        }
+      })
+      .catch(() => {
+        /* leave null — the snapshot degrades to neutral dashes */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return snapshot;
+}
+
+function snapshotMax(snapshot: WorkforceSnapshot | null): number {
+  if (!snapshot) {
+    return 1;
+  }
+  return Math.max(1, snapshot.recruited, snapshot.notRecruited, snapshot.sectorGaps);
+}
+
+function DesktopWorkforcePublic({ signInUrl, verifyUrl, snapshot }: { signInUrl: string; verifyUrl?: string; snapshot: WorkforceSnapshot | null }) {
+  const max = snapshotMax(snapshot);
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, fontFamily: FONT_FAMILY, color: TEXT, display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -60,19 +92,27 @@ function DesktopWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           </a>
         </div>
 
-        {/* Snapshot — empty bars (no fabricated distribution) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 260 }}>
+        {/* Live snapshot — real network-wide aggregate counts (no per-member data). */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 280 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live workforce snapshot</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {SNAPSHOT.map(({ label }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 80, fontSize: 12, color: '#9CA3AF' }}>{label}</div>
-                <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
-                <div style={{ fontSize: 13, fontWeight: 700, color: SUBTLE, width: 32, textAlign: 'right' }}>—</div>
-              </div>
-            ))}
+            {SNAPSHOT_ROWS.map(({ key, label, color }) => {
+              const value = snapshot ? snapshot[key] : null;
+              const pct = snapshot ? Math.round((snapshot[key] / max) * 100) : 0;
+              return (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 96, fontSize: 12, color: '#9CA3AF' }}>{label}</div>
+                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', borderRadius: 4, background: color, transition: 'width 0.3s ease' }} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: value != null ? TEXT : SUBTLE, minWidth: 48, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {value != null ? value.toLocaleString() : '—'}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.5 }}>The snapshot fills in once you sign in.</div>
+          <div style={{ fontSize: 11, color: SUBTLE, lineHeight: 1.5 }}>Live across the network. Sign in for your personalized pathway.</div>
         </div>
       </div>
 
@@ -83,7 +123,7 @@ function DesktopWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
             <TrendingUp size={14} color={COLOR} />
             <span style={{ fontSize: 13, fontWeight: 700 }}>Top skill gaps right now</span>
           </div>
-          {SNAPSHOT.map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ fontSize: 13, flex: 1, height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.06)' }} />
               <div style={{ width: 80, height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.06)' }} />
@@ -105,7 +145,8 @@ function DesktopWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; v
   );
 }
 
-function MobileWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
+function MobileWorkforcePublic({ signInUrl, verifyUrl, snapshot }: { signInUrl: string; verifyUrl?: string; snapshot: WorkforceSnapshot | null }) {
+  const max = snapshotMax(snapshot);
   return (
     <div style={{ width: '100%', minHeight: '100dvh', background: BG, display: 'flex', flexDirection: 'column', fontFamily: FONT_FAMILY, color: TEXT }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -116,17 +157,25 @@ function MobileWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
         <span style={{ padding: '3px 12px', borderRadius: 20, background: COLOR + '20', border: `1px solid ${COLOR}40`, fontSize: 11, color: COLOR, fontWeight: 600, width: 'fit-content' }}>5M survivor goal</span>
         <p style={{ margin: 0, fontSize: 14, color: '#9CA3AF', lineHeight: 1.5 }}>Real-time skills distribution, employment gaps, and personalized pathways across our growing network.</p>
 
-        {/* Snapshot — empty bars (no fabricated distribution) */}
+        {/* Live snapshot — real network-wide aggregate counts (no per-member data). */}
         <div style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', padding: '14px 16px', background: 'rgba(255,255,255,0.02)' }}>
           <div style={{ fontSize: 11, color: SUBTLE, marginBottom: 10 }}>Live snapshot</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {SNAPSHOT.map(({ label }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 65, fontSize: 11, color: '#9CA3AF' }}>{label}</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.05)' }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: SUBTLE, width: 28, textAlign: 'right' }}>—</span>
-              </div>
-            ))}
+            {SNAPSHOT_ROWS.map(({ key, label, color }) => {
+              const value = snapshot ? snapshot[key] : null;
+              const pct = snapshot ? Math.round((snapshot[key] / max) * 100) : 0;
+              return (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 78, fontSize: 11, color: '#9CA3AF' }}>{label}</span>
+                  <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: color, transition: 'width 0.3s ease' }} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: value != null ? TEXT : SUBTLE, minWidth: 40, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {value != null ? value.toLocaleString() : '—'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join the Hub — Free'}</a>
@@ -149,16 +198,20 @@ function MobileWorkforcePublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
  * (desktop) and MobileWorkforcePublic (phone) design mockups, with every
  * sign-in, join, and call-to-action pointing at the real hosted sign-in URL.
  *
- * Real-data-only deviation (no session = no private/fabricated data): the
- * mockup hardcoded a live snapshot (37/25/20/18% bars), a "4.9M survivors
- * tracked" count, and a blurred skill-gap table with invented unmet-demand
- * numbers and trends. The snapshot bars render empty with neutral dashes, the
- * fabricated survivor count is dropped (the badge keeps only the stated "5M
- * survivor goal"), and the gap table keeps the same blurred lock layout with
- * neutral placeholder rows instead of invented figures. The simulated phone
- * status bar is dropped because the real app renders inside the browser chrome.
+ * The "Live snapshot" shows real network-wide aggregate counts — Recruited,
+ * Not Recruited (the unfilled headcount target), and Sector Gaps — fetched from
+ * the public `/api/workforce/public-snapshot` endpoint (the same three figures
+ * the signed-in dashboard exposes, no per-member or identifying data). The bars
+ * scale to the largest of the three; while the snapshot is loading or if the
+ * endpoint is unavailable, they degrade to neutral dashes rather than showing a
+ * fabricated distribution. The per-survivor skill-gap table stays locked behind
+ * sign-in. The mockup's invented figures (37/25/20/18% bars, a "4.9M survivors
+ * tracked" count, fabricated gap rows) are not used.
  */
 export function WorkforcePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileWorkforcePublic signInUrl={signInUrl} verifyUrl={verifyUrl} /> : <DesktopWorkforcePublic signInUrl={signInUrl} verifyUrl={verifyUrl} />;
+  const snapshot = useWorkforceSnapshot();
+  return isMobile
+    ? <MobileWorkforcePublic signInUrl={signInUrl} verifyUrl={verifyUrl} snapshot={snapshot} />
+    : <DesktopWorkforcePublic signInUrl={signInUrl} verifyUrl={verifyUrl} snapshot={snapshot} />;
 }

@@ -512,6 +512,26 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
   };
 }
 
+// Public, signed-out snapshot for the Workforce landing page. Returns only the three coarse aggregate
+// counts the signed-in dashboard already exposes (Recruited / Not Recruited / Sector Gaps), all
+// derived from the same projection model — no per-member rows, no identifying data — so it is safe to
+// serve without authentication. "Not Recruited" is the unfilled headcount target; "Sector Gaps" is the
+// number of active sectors with demand to fill.
+export async function getWorkforcePublicSnapshot(): Promise<{
+  recruited: number;
+  notRecruited: number;
+  sectorGaps: number;
+  generatedAtIso: string;
+}> {
+  const dashboard = await getDashboard();
+  return {
+    recruited: dashboard.recruitedTotal,
+    notRecruited: Math.max(0, dashboard.totalHeadcountTarget - dashboard.recruitedTotal),
+    sectorGaps: dashboard.sectorsTotal,
+    generatedAtIso: dashboard.generatedAtIso,
+  };
+}
+
 export async function fetchSummaryReport(): Promise<WorkforceSummaryReport> {
   const model = await computeWorkforceModel();
   return {
