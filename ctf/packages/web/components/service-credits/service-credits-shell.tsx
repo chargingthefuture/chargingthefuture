@@ -15,6 +15,7 @@ import { ServiceCreditsEarnTab } from "./sc-earn-tab";
 import { ServiceCreditsCirculationTab } from "./sc-circulation-tab";
 import { ServiceCreditsSendPanel } from "./sc-send-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 function CenteredNote({ color, children }: { color: string; children: React.ReactNode }) {
   return (
@@ -99,6 +100,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>ServiceCredits</span>
             <Badge style={{ background: `${t.ACCENT}20`, color: t.ACCENT, border: `1px solid ${t.ACCENT}35`, fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>{fmtCredits(balance)}</Badge>
             <PluginAdminButton href="/admin/service-credits" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
             {tabs.map(({ key, label }) => (

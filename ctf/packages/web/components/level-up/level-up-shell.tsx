@@ -15,6 +15,7 @@ import { LevelUpTrainers } from "./lu-trainers";
 import { LevelUpAchievements } from "./lu-achievements";
 import { LevelUpWallet } from "./lu-wallet";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 const HEADINGS: Record<NavKey, string> = {
   browse: "Browse Cohorts",
@@ -306,6 +307,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
             </Link>
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>LevelUp</span>
             <PluginAdminButton href="/admin/level-up" isAdmin={isAdmin} accent={t.ACCENT} />
+            <MobileTopActions />
           </div>
           <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
             {navItems.map(({ key, label }) => (

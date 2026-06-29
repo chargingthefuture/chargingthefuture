@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ThumbsUp } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { WhatWorksProductStatus } from 'lib/what-works/types';
 import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
@@ -197,6 +198,7 @@ export function WhatWorksAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="WhatWorks Admin" accent={COLOR} icon={<ThumbsUp size={18} color={COLOR} />} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>

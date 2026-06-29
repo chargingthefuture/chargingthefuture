@@ -13,6 +13,7 @@ import { GentlePulseSidebar } from "./gp-sidebar";
 import { GentlePulseSessions } from "./gp-sessions";
 import { GentlePulsePlayer } from "./gp-player";
 import { GentlePulseRightPanel } from "./gp-right-panel";
+import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 
 export function GentlePulseShell() {
   const [loading, setLoading] = useState(true);
@@ -136,6 +137,7 @@ export function GentlePulseShell() {
             </Link>
             <Heart size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>GentlePulse</span>
+            <MobileTopActions />
           </div>
           {tab === "sessions" && (
             <div style={{ display: "flex", gap: 6, padding: "0 12px 10px", overflowX: "auto" }}>

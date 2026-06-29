@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import type { SkillsHuntRound } from "lib/skills-hunt/types";
 import { COLOR } from "./sha-shared";
 import { SkillsHuntModeration } from "./sha-moderation";
@@ -30,6 +32,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
 
   return (
     <div style={{ ...(isMobile ? { minHeight: "100vh" } : { height: "100dvh", overflowY: "auto" }), background: "#0F1117", color: "#E8EAF0", fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
+      <MobileScreenHeader title="SkillsHunt Admin" accent={COLOR} icon={<Search size={18} color={COLOR} />} />
       <header style={{ marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#F9FAFB", margin: 0 }}>SkillsHunt — Admin</h1>

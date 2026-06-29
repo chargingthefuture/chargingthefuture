@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Home, EyeOff, Eye, XCircle } from 'lucide-react';
 import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } from 'lib/lighthouse/types';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 
 // Admin design tokens (shared admin look). LightHouse accent is blue.
 const COLOR = '#60A5FA';
@@ -162,6 +163,7 @@ export function LighthouseAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="LightHouse Admin" accent={COLOR} icon={<Home size={18} color={COLOR} />} />
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Code2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { AssignmentRunResult, PeerProgrammingCohort, PeerProgrammingTopic, SingleOpenCohortMode } from './pp-admin-shared';
 import { ppAdminMutate } from './pp-admin-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
@@ -215,6 +216,7 @@ export function PeerProgrammingAdminShell() {
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="PeerProgramming Admin" accent={COLOR} icon={<Code2 size={18} color={COLOR} />} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div

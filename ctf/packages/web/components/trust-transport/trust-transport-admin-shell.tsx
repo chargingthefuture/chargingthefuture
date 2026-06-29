@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, CheckCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { TrustTransportIncident, TrustTransportMarketConfig } from 'lib/trust-transport/types';
 import { TrustTransportAdminAccounts } from './trust-transport-admin-accounts';
 
@@ -164,6 +165,7 @@ export function TrustTransportAdminShell({
         fontFamily: "'Inter',system-ui,sans-serif",
       }}
     >
+      <MobileScreenHeader title="TrustTransport Admin" accent={COLOR} icon={<ShieldCheck size={18} color={COLOR} />} />
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '24px 16px 48px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderRadius: 12, background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
