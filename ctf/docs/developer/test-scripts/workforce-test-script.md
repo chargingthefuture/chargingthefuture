@@ -71,7 +71,9 @@ breakdown still renders (an even split), never blank.
 **Steps:**
 1. Open the Skill Level distribution.
 **Expected:** The three buckets (Foundational, Intermediate, Advanced) each render, derived live from
-job-title names. No bucket shows a raw code; the bars/numbers add up to the breakdown.
+job-title names. No bucket shows a raw code. Each bar's height shows the number of people **recruited**
+at that level (not the target), so the level with the most people is the tallest bar; the prominent
+green number is the recruited count, with target and gap shown beneath as secondary context.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WF-4 · Top training gaps (per occupation)
