@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { getWorkforcePublicSnapshot } from 'lib/workforce/repository';
 import { reportError } from 'lib/observability/report';
 
-// Public, unauthenticated snapshot for the signed-out Workforce landing page. It returns only three
-// coarse aggregate counts (Recruited / Not Recruited / Sector Gaps) from the same projection model the
-// signed-in dashboard uses — no per-member rows and no identifying data — so it needs no auth gate.
+// Public, unauthenticated snapshot for the signed-out Workforce landing page. It returns two coarse
+// aggregate counts (Recruited / Sector Gaps) from the same projection model the signed-in dashboard
+// uses — no per-member rows and no identifying data — so it needs no auth gate. The unfilled-headcount
+// figure ("Not Recruited") is intentionally not exposed (off-putting multi-million marketing number).
 // force-dynamic keeps it from being statically cached so the landing snapshot reflects current data.
 export const dynamic = 'force-dynamic';
 
