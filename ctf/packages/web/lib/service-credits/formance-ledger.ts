@@ -1,4 +1,5 @@
 import { isDemoMode } from 'lib/feature-flags';
+import { toMinorUnits } from 'lib/service-credits/amounts';
 
 type FormanceTransactionResponse = {
   data?: {
@@ -64,18 +65,6 @@ export async function getFormanceConfigStatus(): Promise<{
   };
 }
 
-function toMinorUnits(amount: number): number {
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error('invalid_payload');
-  }
-
-  const minor = Math.round(amount * 100);
-  if (minor <= 0) {
-    throw new Error('invalid_payload');
-  }
-
-  return minor;
-}
 
 function readTransactionId(payload: FormanceTransactionResponse): string | null {
   const candidate = payload.data?.txid ?? payload.data?.id ?? payload.txid ?? payload.id;
