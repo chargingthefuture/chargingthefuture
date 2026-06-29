@@ -8,7 +8,7 @@ name: Security — Findings Triage
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 13 * * 1"   # Mondays 13:00 UTC
+    - cron: "41 13 * * 1"   # Mondays 13:41 UTC (off the top of the hour)
 
 permissions:
   contents: read

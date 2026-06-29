@@ -11,6 +11,7 @@
     "start": "NEXT_TELEMETRY_DISABLED=1 next start -p ${PORT:-3000}",
     "check:all": "pnpm run lint && pnpm run typecheck && pnpm run build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
     "check:auth-env": "node ./scripts/check-auth-env.mjs",
     "check:clerk-env": "node ./scripts/check-auth-env.mjs",
     "check:formance-env": "node ./scripts/check-formance-env.mjs"
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
+    "vitest": "^3.2.6",
     "@types/node": "^22.0.0",
     "@types/node-cron": "^3.0.0",
     "@types/pg": "^8.15.5",

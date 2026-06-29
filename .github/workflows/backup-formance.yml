@@ -15,7 +15,7 @@ name: Formance — Nightly Backup to Private Repo
 
 on:
   schedule:
-    - cron: '0 3 * * *' # daily at 3am UTC, offset from 2am cleanup
+    - cron: '40 3 * * *' # daily at 03:40 UTC, off the top of the hour and offset from the 02:13 cleanup
   workflow_dispatch:
 
 jobs:

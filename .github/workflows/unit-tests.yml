@@ -1,0 +1,77 @@
+name: Unit Tests (non-blocking)
+
+# Runs the SCOPED unit-test suites — ServiceCredits amount math, economic-models computation, and
+# Trust evidence — and files a GitHub issue if any fail.
+#
+# Deliberately NOT a pull_request check: it never blocks a merge and never adds to PR CI time (CI is
+# already long). It runs AFTER merge (push to main on the relevant paths), on a daily schedule, and
+# on demand. So a regression that lands on main is caught and surfaced as a `test-failure` issue
+# rather than as a blocked PR. See Rule 118 (unit-test scope) and Rule 133.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ctf/packages/web/lib/service-credits/**'
+      - 'ctf/packages/web/lib/trust/**'
+      - 'ctf/packages/economic-models/**'
+      - 'ctf/packages/web/vitest.config.ts'
+      - '.github/workflows/unit-tests.yml'
+  schedule:
+    - cron: "41 7 * * *"   # daily at 07:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  unit-tests:
+    name: Scoped unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Run scoped unit tests
+        id: tests
+        continue-on-error: true
+        run: pnpm --dir ctf -r --if-present run test
+
+      - name: File a test-failure issue
+        if: steps.tests.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Unit tests failed on main"
+          gh label create test-failure --repo "$GITHUB_REPOSITORY" --color b60205 \
+            --description "A scheduled/post-merge unit-test run failed" --force || true
+          body="$(printf 'The scoped unit-test suites (ServiceCredits amount math, economic-models, Trust evidence) failed.\n\nRun: %s\n\nReproduce locally: pnpm --dir ctf -r run test' "$RUN_URL")"
+          # Reuse one open issue instead of piling up duplicates.
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --label test-failure --state open \
+            --search "$title in:title" --json number --jq '.[0].number' || true)"
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --label test-failure --body "$body"
+          fi
+
+      - name: Mark the run failed if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

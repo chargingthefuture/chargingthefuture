@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -296,6 +296,16 @@ export function CommunityShell({ initialPlugins, shellStats, currentUser, trust,
               hosts it) is hidden below 900px, so signed-in members reach the
               "Report a problem" modal from here instead. */}
           {isAuthenticated ? <HelpControl /> : null}
+          {/* Account hub link on the phone-width bar: the desktop icon rail's
+              account button (which leads to /account — identity, trust, profile,
+              data, blocked members) is hidden below 900px, so this gear restores
+              the one tap to the full account page. The avatar's own menu only
+              edits Clerk identity, so it is not a substitute for this link. */}
+          {isAuthenticated ? (
+            <Link href="/account" className={styles.iconRailBtn} aria-label="Account and settings" title="Account and settings">
+              <Settings size={18} aria-hidden="true" />
+            </Link>
+          ) : null}
           {isAuthenticated ? (
             // Clerk's account widget on the phone-width bar too: avatar opens
             // Clerk's menu; "Manage account" edits name, username, and email.

@@ -1,0 +1,93 @@
+name: Manual Test Script — Generate on Demand
+
+# The on-demand half of the manual-testing system. Regenerates the manual test script(s) for one
+# plugin, for every plugin touched since a base ref, or for all plugins, then opens a low-risk
+# auto-merging PR with the result. The auto/rotation half lives in code-review-sweep.yml, which
+# refreshes the rotated plugin's script every day. Both call ctf/scripts/generateManualTestScript.mjs.
+#
+# Run it by hand from the Actions tab. Pick exactly one of: slice, diff_base, or all.
+on:
+  workflow_dispatch:
+    inputs:
+      slice:
+        description: "Generate this one plugin (slug or name, e.g. service-credits)"
+        required: false
+        type: string
+      diff_base:
+        description: "Generate every plugin touched since this ref (e.g. origin/main)"
+        required: false
+        type: string
+      all:
+        description: "Generate all plugins"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    name: Generate manual test script(s)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # ANTHROPIC_API_KEY is a runtime secret; Infisical is the single source of truth (matches the
+      # other AI workflows in this folder).
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Generate
+        env:
+          # ANTHROPIC_API_KEY is injected by the Infisical step above.
+          TEST_SCRIPT_SLICE: ${{ inputs.slice }}
+          TEST_SCRIPT_DIFF: ${{ inputs.diff_base }}
+          TEST_SCRIPT_ALL: ${{ inputs.all && '1' || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TEST_SCRIPT_SLICE}" ] && [ -z "${TEST_SCRIPT_DIFF}" ] && [ "${TEST_SCRIPT_ALL}" != "1" ]; then
+            echo "::error::Choose exactly one input: slice, diff_base, or all."
+            exit 1
+          fi
+          node ctf/scripts/generateManualTestScript.mjs
+
+      # Land the refreshed script(s) via a low-risk, auto-merging PR (main is PR-gated). GH_PAT so the
+      # PR triggers CI and auto-merge can complete.
+      - name: Open an auto-merge PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ctf/docs/developer/test-scripts/; then
+            echo "No manual test script changed; nothing to open."
+            exit 0
+          fi
+          branch="test-script/manual-${GITHUB_RUN_ID}"
+          git config user.name "CTF CI Bot"
+          git config user.email "ci@chargingthefuture.org"
+          git checkout -B "$branch"
+          git add ctf/docs/developer/test-scripts/
+          count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          git commit -m "docs: refresh ${count} manual test script(s)"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${branch}"
+          body=$'Refresh of manual test script(s) generated on demand.\n\nParity Status: web + mobile-responsive + android complete'
+          gh pr create --repo "$GITHUB_REPOSITORY" --head "$branch" --base main \
+            --title "docs: refresh manual test scripts" --body "$body"
+          gh pr merge "$branch" --repo "$GITHUB_REPOSITORY" --auto --squash || \
+            echo "Could not enable auto-merge; leaving the PR open."

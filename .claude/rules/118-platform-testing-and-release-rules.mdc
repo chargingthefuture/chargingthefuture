@@ -12,6 +12,31 @@ Define minimum quality and safety gates before code reaches users.
 - ~~Security/privacy gates must run in GitHub Actions and block promotion on failure.~~ [DEFERRED FOR MVP]
 - Rollout plans must include monitoring, rollback criteria, and owner assignment.
 
+## Unit-test scope during MVP (owner decision, 2026-06-29)
+
+Automated tests are still deferred broadly (above), but a deliberately small set of unit tests is
+kept now, on the principle that a test only pays off when the thing it pins is **settled** and the
+logic is **deterministic and consequential**. Tests are limited to three logic cores until post-MVP
+hardening; do not spread unit tests across the churning UI/CRUD plugins (manual scripts per Rule 133
+and code review cover those).
+
+- **The three covered cores:**
+  - **ServiceCredits amount math** — `ctf/packages/web/lib/service-credits/amounts.ts`
+    (`toMinorUnits`, `ensurePositiveAmount`).
+  - **economic-models computation** — `ctf/packages/economic-models/*.test.ts` (ETL + interdependence).
+  - **Trust evidence** — `buildTrustEvidence` in `ctf/packages/web/lib/trust/`, which encodes the
+    Rule 132 invariants (categorical only, dispute withholds the clean signal, sensitive plugins
+    never surfaced).
+- **Test the logic layer, not the route or screen.** Pure functions survive UI churn; a test bound to
+  a moving surface gets thrown out. When the logic you want to pin is tangled with DB/network code,
+  **extract it to a pure module first** (as `amounts.ts` was), then test that.
+- **Non-blocking by design.** These suites do **not** run on pull requests and never gate a merge (CI
+  is already long). They run after merge (push to `main` on the relevant paths), on a daily schedule,
+  and on demand, via `.github/workflows/unit-tests.yml`. A failure files a `test-failure` GitHub issue
+  rather than blocking anything. Run locally with `pnpm --dir ctf -r run test`.
+- **Adding a core to this list is an owner decision.** Pick the next target by settledness + logic
+  value (e.g. SkillsHunt reward/leaderboard, Skills Taxonomy dependency-impact), not by coverage count.
+
 ## Release Readiness
 - Confirm contract compatibility for web/mobile/backend versions.
 - Confirm observability dashboards and alerting exist for new critical paths.
