@@ -25,14 +25,30 @@ const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
 const STATUS_BG = '#090B0F';
 
-// Known metric keys and their display config.
-// Keys must match values in weekly_performance_metrics.metric_key exactly.
+// Display config for well-known metric keys. Any other key is rendered generically with a
+// humanized label (the web shell does the same), so live engagement numbers show without a
+// hardcoded entry per key.
 const METRIC_CONFIG: Record<string, { label: string; color: string }> = {
   member_count: { label: 'Members', color: '#A78BFA' },
   signups: { label: 'Sign-ups', color: '#22C55E' },
   engagements: { label: 'Engagements', color: BRAND },
   gdp_delta: { label: 'GDP Delta', color: '#06B6D4' },
 };
+
+const METRIC_FALLBACK_COLOR = '#A78BFA';
+
+// Turn a dotted/snake metric key (e.g. "engagement.active_members") into a readable label.
+function humanizeMetricKey(key: string): string {
+  return key
+    .replace(/[._-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function metricConfig(key: string): { label: string; color: string } {
+  return METRIC_CONFIG[key] ?? { label: humanizeMetricKey(key), color: METRIC_FALLBACK_COLOR };
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -165,12 +181,9 @@ function WpEmpty({ weekLabel }: { weekLabel: string }) {
 // ── Metric cards (populated) ─────────────────────────────────────────────────
 
 function WpMetricCards({ metrics }: { metrics: WeekMetric[] }) {
-  const knownMetrics = metrics.filter((m) => m.metricKey in METRIC_CONFIG);
-
-  if (knownMetrics.length === 0) {
+  if (metrics.length === 0) {
     return (
       <Text style={styles.noDataText}>
-        {/* No known metric fields available for this week — daily chart omitted (no backing API field). */}
         No metric data available for this week.
       </Text>
     );
@@ -178,8 +191,8 @@ function WpMetricCards({ metrics }: { metrics: WeekMetric[] }) {
 
   return (
     <View style={styles.metricsGrid}>
-      {knownMetrics.map((m) => {
-        const cfg = METRIC_CONFIG[m.metricKey];
+      {metrics.map((m) => {
+        const cfg = metricConfig(m.metricKey);
         const displayValue =
           m.metricUnit === 'USD'
             ? `$${m.metricValue.toLocaleString()}`
@@ -207,18 +220,21 @@ function WpMetricCards({ metrics }: { metrics: WeekMetric[] }) {
 function WpHistory({
   weeks,
   selectedWeekStartDate,
+  currentWeekStartDate,
   onSelectWeek,
   isAdmin,
 }: {
   weeks: WeekRow[];
   selectedWeekStartDate: string | null;
+  currentWeekStartDate: string | null;
   onSelectWeek: (_w: WeekRow) => void;
   isAdmin: boolean;
 }) {
   return (
     <ScrollView contentContainerStyle={styles.historyList}>
       {weeks.map((w) => {
-        const isActive = w.status === 'open';
+        // The current week is live; every other week is a historical window (no "closed" state).
+        const isCurrent = w.weekStartDate === currentWeekStartDate;
         const isSelected = w.weekStartDate === selectedWeekStartDate;
         return (
           <TouchableOpacity
@@ -231,12 +247,12 @@ function WpHistory({
               <Text style={styles.historyItemLabel}>
                 {w.weekStartDate} – {w.weekEndDate}
               </Text>
-              <Text style={styles.historyItemStatus}>{w.status}</Text>
+              <Text style={styles.historyItemStatus}>{isCurrent ? 'Live' : 'Historical'}</Text>
             </View>
             <Text
-              style={[styles.historyBadge, isActive ? styles.historyBadgeLive : styles.historyBadgeView]}
+              style={[styles.historyBadge, isCurrent ? styles.historyBadgeLive : styles.historyBadgeView]}
             >
-              {isActive ? 'LIVE' : 'View'}
+              {isCurrent ? 'LIVE' : 'View'}
             </Text>
           </TouchableOpacity>
         );
@@ -342,20 +358,23 @@ export const WeeklyPerformance: React.FC = () => {
   if (!hasAccess) return <WpAccessRestricted />;
   if (dataLoading) return <WpLoading />;
 
-  const weekLabel = selectedWeek
-    ? `${selectedWeek.weekStartDate} – ${selectedWeek.weekEndDate} · ${selectedWeek.status}`
-    : currentWeek
-      ? `${currentWeek.weekStartDate} – ${currentWeek.weekEndDate} · ${currentWeek.status}`
-      : '';
+  // The current week is the only live one (its window still contains today). Past weeks are
+  // settled historical windows — there is no "closed" week and we never show a raw status.
+  const currentWeekStartDate = currentWeek?.weekStartDate ?? null;
+  const labelWeek = selectedWeek ?? currentWeek;
+  const labelIsCurrent = !!labelWeek && labelWeek.weekStartDate === currentWeekStartDate;
+  const weekLabel = labelWeek
+    ? `${labelWeek.weekStartDate} – ${labelWeek.weekEndDate}${labelIsCurrent ? ' · Live' : ''}`
+    : '';
 
-  const hasMetrics = metrics.some((m) => m.metricKey in METRIC_CONFIG);
-  const weekIsOpen = selectedWeek?.status === 'open' || currentWeek?.status === 'open';
+  const hasMetrics = metrics.length > 0;
+  const selectedIsCurrent = !!selectedWeek && selectedWeek.weekStartDate === currentWeekStartDate;
 
   if (!dataLoading && !error && weeks.length === 0) {
     return <WpEmpty weekLabel={weekLabel} />;
   }
 
-  if (!dataLoading && !metricsLoading && !error && !hasMetrics && weekIsOpen) {
+  if (!dataLoading && !metricsLoading && !error && !hasMetrics && selectedIsCurrent) {
     return <WpEmpty weekLabel={weekLabel} />;
   }
 
@@ -407,6 +426,7 @@ export const WeeklyPerformance: React.FC = () => {
           <WpHistory
             weeks={weeks}
             selectedWeekStartDate={selectedWeek?.weekStartDate ?? null}
+            currentWeekStartDate={currentWeekStartDate}
             onSelectWeek={(w) => { setSelectedWeek(w); setTab('metrics'); }}
             isAdmin={isAdmin}
           />

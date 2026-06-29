@@ -15,21 +15,6 @@ function mapWeek(row: WeekRow) {
   };
 }
 
-type MetricRow = {
-  metric_key: string;
-  metric_value: string;
-  metric_unit: string;
-  source_plugin: string;
-};
-
-function mapMetric(row: MetricRow) {
-  return {
-    metricKey: row.metric_key,
-    metricValue: Number(row.metric_value),
-    metricUnit: row.metric_unit,
-    sourcePlugin: row.source_plugin,
-  };
-}
 
 // The current week is always shown, even before any metrics have been recorded
 // for it, so the dashboard renders with zero/empty values instead of a bare
@@ -143,24 +128,11 @@ export async function getWeekWindow(weekStartDate: string) {
   };
 }
 
+// Weekly numbers are always live: computed for the selected week window from upstream plugin
+// tables, the same way the V2 dashboard aggregated on read. There is no "close the week" step and
+// no stored snapshot to wait for — every week (the current one or any past one) reports the real
+// counts for its window, and the current week keeps moving as members use the platform.
 export async function getWeekMetrics(weekStartDate: string) {
-  const result = await queryDb<MetricRow>(
-    `SELECT metric_key, metric_value::text, metric_unit, source_plugin
-     FROM weekly_performance_metrics
-     WHERE week_start_date = $1
-     ORDER BY metric_key ASC`,
-    [weekStartDate],
-  );
-
-  // A stored snapshot (a closed/published week) is authoritative and wins.
-  if (result.rows.length > 0) {
-    return result.rows.map(mapMetric);
-  }
-
-  // No snapshot yet — compute the week's numbers live from upstream plugin tables so the
-  // current (open) week auto-populates instead of showing the "appears when the week closes"
-  // placeholder. Scoped to the week window, so past weeks without a snapshot report their
-  // real counts too.
   return computeLiveWeekMetrics(weekStartDate);
 }
 

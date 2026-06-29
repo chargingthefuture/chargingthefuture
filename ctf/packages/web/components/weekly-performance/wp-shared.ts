@@ -70,9 +70,15 @@ export type MetricsResponse = { ok: boolean; metrics: WpMetric[] };
 export type ComparisonResponse = { ok: boolean; comparison?: WpComparison | null };
 export type WeekSelectionResponse = { ok: boolean; selectedWeek?: WpWeek; message?: string };
 
-// A week is "live" while open; locked/published weeks are closed.
-export function isLiveWeek(week: WpWeek | null): boolean {
-  return week?.status === "open";
+// The current week is the only "live" one — its window still contains today, so its numbers keep
+// moving as members use the platform. Every earlier week is a settled historical window. There is no
+// "closed" week: a week is either the current one (live) or a past one (historical). Compare against
+// the current week start the server reports (DATE_TRUNC('week', NOW())), not a client clock.
+export function isCurrentWeek(
+  weekStartDate: string | null | undefined,
+  currentWeekStart: string | null,
+): boolean {
+  return !!weekStartDate && !!currentWeekStart && weekStartDate === currentWeekStart;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
