@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { BugReportForm } from './bug-report-form';
 import { BugReportSuccess, BugReportError, BugReportRateLimit } from './bug-report-result';
@@ -33,6 +34,14 @@ export function BugReportModal({ open, onClose }: BugReportModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<ViewState>('form');
   const [heldForReview, setHeldForReview] = useState(false);
+  // The overlay is portalled to <body>. A sticky header above this component uses
+  // backdrop-filter, which makes that header a containing block for position: fixed —
+  // without the portal the inset:0 overlay is trapped inside the short header bar and only
+  // the bottom action row shows. Gate the portal on a client-mount flag so SSR renders nothing.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Reset to a clean, empty form whenever the modal is opened fresh.
   useEffect(() => {
@@ -134,13 +143,13 @@ export function BugReportModal({ open, onClose }: BugReportModalProps) {
     setView('form');
   }, []);
 
-  if (!open) {
+  if (!open || !mounted) {
     return null;
   }
 
   const isResultView = view !== 'form';
 
-  return (
+  return createPortal(
     <div
       className={styles.overlay}
       role="dialog"
@@ -188,6 +197,7 @@ export function BugReportModal({ open, onClose }: BugReportModalProps) {
 
         {view === 'rate_limited' && <BugReportRateLimit onClose={onClose} />}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
