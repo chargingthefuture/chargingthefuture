@@ -7,7 +7,7 @@ name: Github Workflows — Health Check
 
 on:
   schedule:
-    - cron: '0 5,13,21 * * *'
+    - cron: '9 5,13,21 * * *'   # 05:09, 13:09, 21:09 UTC (off the top of the hour)
   workflow_dispatch:
 
 permissions:
