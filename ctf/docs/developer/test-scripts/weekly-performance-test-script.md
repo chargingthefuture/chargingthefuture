@@ -37,8 +37,11 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 1. **Non-admin cannot reach it.** As a plain member, the plugin is not in navigation, and the admin
    page `/admin/weekly-performance` redirects to `/apps/weekly-performance`; the admin-or-operations
    routes deny with a stable reason. → web ☐ mobile ☐ android ☐
-2. **Current week always shows.** Open the dashboard. The current week renders even with no metrics
-   yet (zero/empty cards), not a blank page. → web ☐ mobile ☐ android ☐
+2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
+   computed from that week's activity (active members, questions, answers, community posts,
+   enrollments) — there is no "metrics appear when the week closes" placeholder and no week status to
+   wait on. The current week is marked **Live**; past weeks are plain historical windows with no
+   "Closed" badge. With no activity yet the cards read zero, which is still a real value. → web ☐ mobile ☐ android ☐
 3. **Week selection is audited.** Set a week active as admin. It writes a
    `weekly-performance.admin.week.select` audit row and requires the `x-ctf-csrf: '1'` header. → web ☐
 4. **Numbers, not a spinner.** Metric cards and the this-week-vs-last-week comparison render real
@@ -79,10 +82,14 @@ The current week is shown even when the weeks table has no stored rows.
 1. Open a week's metric cards (growth, user-state, engagement — non-financial only).
 2. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
-**Expected:** Metric cards render humanized labels from `metric_key` and real values. The
+3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab
+   focus, so the numbers refresh without a manual reload. Past weeks are settled and do not poll.
+**Expected:** Metric cards render humanized labels from `metric_key` and real values computed live
+for the selected week window from upstream tables (every week, current or past — there is no stored
+snapshot and no "closed" state). The current week shows a **Live** marker; past weeks show none. The
 comparison shows per-metric deltas (this week vs last week); a declining metric shows a
 downward-trend indicator. Reads audit `weekly-performance.metrics.get` or `…comparison.get` per
-branch. Loading, empty, missing-metrics, and error states are all distinct.
+branch. Loading, empty, and error states are all distinct.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### WP-A4 · Export gate

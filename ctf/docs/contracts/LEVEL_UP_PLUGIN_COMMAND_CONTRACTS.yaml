@@ -315,3 +315,53 @@ contracts:
     purpose: learner_balance_display
     retentionClass: derived_short_lived
     idempotency: true
+
+  - pluginId: level-up
+    command: cohort.auto_create
+    version: 1.0.0
+    description: Read the Workforce occupation training gaps and stand up LevelUp cohorts for the largest of them, idempotently. Cron-triggered (CRON_SECRET) or admin-triggered. Reads the Workforce/Skills Taxonomy gap signal only; never writes Workforce, Directory, or Skills Taxonomy.
+    inputSchema:
+      source:
+        type: string
+        required: false
+    outputSchema:
+      created:
+        type: array
+      closed:
+        type: array
+    dataAccess:
+      - level_up_auto_cohort_config
+      - level_up_auto_cohort_term_overrides
+      - level_up_cohorts
+      - level_up_curriculum_items
+      - level_up_milestones
+      - level_up_command_idempotency
+      - level_up_audit_events
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_skills
+      - directory_profiles
+      - directory_profile_skills
+      - workforce_config
+    purpose: training_cohort_management
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: level-up
+    command: cohort.claim_trainer
+    version: 1.0.0
+    description: A trainer (or admin) claims an auto-created cohort that has no human trainer yet, becoming its trainer of record.
+    inputSchema:
+      cohortId:
+        type: string
+        required: true
+    outputSchema:
+      cohortId:
+        type: string
+    dataAccess:
+      - level_up_cohorts
+      - level_up_enrollments
+      - level_up_audit_events
+    purpose: training_cohort_management
+    retentionClass: transactional_long_lived
+    idempotency: false

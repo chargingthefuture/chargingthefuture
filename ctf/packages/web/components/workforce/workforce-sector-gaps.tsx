@@ -32,10 +32,10 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
             marginBottom: 8,
           }}
         >
-          <Target size={14} /> Sector Gaps
+          <Target size={14} /> Sector Opportunities
         </div>
         <div style={{ fontSize: 13, color: '#4B5563' }}>
-          No sectors in the Skills Taxonomy yet — sector demand and gaps appear once sectors are defined.
+          No sectors in the Skills Taxonomy yet — sector demand and openings appear once sectors are defined.
         </div>
       </div>
     );
@@ -60,12 +60,12 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
           marginBottom: 16,
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB' }}>Sector Gaps</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#F9FAFB' }}>Sector Opportunities</div>
         <Badge
           style={{
-            background: '#EF444420',
-            color: '#EF4444',
-            border: '1px solid #EF444435',
+            background: 'rgba(255,255,255,0.04)',
+            color: '#9CA3AF',
+            border: '1px solid rgba(255,255,255,0.12)',
             fontSize: 11,
           }}
         >
@@ -74,13 +74,15 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sectorItems.map((g) => (
-          <div key={g.bucket} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div key={g.bucket} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
               style={{
-                width: 200,
+                // Shrinkable (was a fixed 200px that, with the fixed number column, pushed the row
+                // past the card on phone width). Basis 200 on desktop, shrinks to fit on small screens.
+                flex: '0 1 200px',
+                minWidth: 0,
                 fontSize: 13,
                 color: '#E8EAF0',
-                flexShrink: 0,
                 textTransform: 'capitalize',
               }}
             >
@@ -89,7 +91,7 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
                 {g.recruited.toLocaleString()} recruited / {g.target.toLocaleString()} target
               </div>
             </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {/* Supply (recruited) bar */}
               <div
                 style={{
@@ -120,7 +122,7 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
                 <div
                   style={{
                     height: '100%',
-                    background: '#EF4444',
+                    background: COLOR,
                     borderRadius: 3,
                     width: `${Math.round((g.target / maxTotal) * 100)}%`,
                   }}
@@ -129,15 +131,17 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
             </div>
             <div
               style={{
-                width: 90,
+                width: 96,
                 textAlign: 'right',
-                fontSize: 13,
-                color: '#EF4444',
-                fontWeight: 700,
                 flexShrink: 0,
               }}
             >
-              {g.gap > 0 ? `–${g.gap.toLocaleString()}` : '—'}
+              <div style={{ fontSize: 13, fontWeight: 700, color: g.gap > 0 ? COLOR : '#22C55E' }}>
+                {g.gap > 0 ? g.gap.toLocaleString() : '—'}
+              </div>
+              <div style={{ fontSize: 10, color: '#6B7280' }}>
+                {g.gap > 0 ? 'to fill' : 'filled'}
+              </div>
             </div>
           </div>
         ))}
@@ -148,8 +152,8 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
           <span style={{ fontSize: 12, color: '#6B7280' }}>Recruited</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 12, height: 4, background: '#EF4444', borderRadius: 2 }} />
-          <span style={{ fontSize: 12, color: '#6B7280' }}>Target</span>
+          <div style={{ width: 12, height: 4, background: COLOR, borderRadius: 2 }} />
+          <span style={{ fontSize: 12, color: '#6B7280' }}>Target (opportunity)</span>
         </div>
       </div>
     </div>

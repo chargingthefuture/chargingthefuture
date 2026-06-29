@@ -1,0 +1,46 @@
+name: Skills Taxonomy — Seed Promotions (production)
+
+# Applies the curated, owner-approved skill promotions to the LIVE production taxonomy by running
+# ctf/scripts/seedSkillsTaxonomy.mjs. Idempotent: each promotion looks its sector up by name in the
+# live DB (never creating sectors) and upserts the occupation/skill ON CONFLICT no-op, so re-running
+# is safe. There is no legacy backfill — the live database is the source of truth. Manual dispatch
+# only; this is how an owner-approved promotion (e.g. a SkillsHunt skill proposal) is applied to the
+# live taxonomy. The promotion list lives in ctf/scripts/lib/seedSkillsTaxonomyPromotions.mjs.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  seed-promotions:
+    name: Apply skills-taxonomy promotions to production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # DATABASE_URL is a runtime secret; Infisical is the single source of truth (this matches how
+      # skills-proposal-issues.yml and bug-reports-create-issues.yml get the database connection).
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      # The seed needs only the Postgres client. Install it standalone so we do not pay for a full
+      # monorepo install on every run.
+      - name: Install Postgres client
+        run: npm install --no-save pg@8
+
+      - name: Apply skills-taxonomy promotions
+        # DATABASE_URL is injected by the Infisical step above.
+        run: node ctf/scripts/seedSkillsTaxonomy.mjs

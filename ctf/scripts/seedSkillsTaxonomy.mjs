@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 
+// Seeds the skills taxonomy by applying the curated, owner-approved promotions to the LIVE database.
+//
+// The live database taxonomy is the source of truth. The old legacy platform backfill (which loaded
+// `platform/scripts/data/skills-data.ts`) has been removed along with the legacy app, so this seed no
+// longer syncs from a legacy dataset — it only upserts the curated promotions (idempotent), looking
+// each sector up by name in the live DB and never creating sectors. To add a skill, append to
+// APPROVED_SKILL_PROMOTIONS in lib/seedSkillsTaxonomyPromotions.mjs and run this.
+
 import { Pool } from 'pg';
-import { syncSkillsTaxonomyFromLegacy } from './lib/syncSkillsTaxonomyFromLegacy.mjs';
 import { seedSkillsTaxonomyPromotions } from './lib/seedSkillsTaxonomyPromotions.mjs';
 
 function requireEnv(name) {
@@ -19,20 +26,9 @@ const pool = new Pool({
 });
 
 async function main() {
-  const summary = await syncSkillsTaxonomyFromLegacy({ pool, mode: 'backfill' });
-  console.log(
-    [
-      'Skills taxonomy phase-0 backfill applied from legacy dataset.',
-      `sectors=${summary.sectors}`,
-      `jobTitles=${summary.jobTitles}`,
-      `skills=${summary.skills}`,
-      `source=${summary.sourceFile}`,
-    ].join(' '),
-  );
-
-  // Apply curated, owner-approved skill promotions AFTER the legacy sync. The legacy
-  // sync deactivates rows it did not touch, so promotions must run afterwards to keep
-  // promoted occupations/skills active. This step is idempotent.
+  // Apply curated, owner-approved skill promotions against the live taxonomy. Idempotent: each
+  // promotion looks its sector up by name (never creates one), upserts the occupation, then upserts
+  // each skill under it; re-runs are ON CONFLICT no-ops.
   const promotions = await seedSkillsTaxonomyPromotions({ pool });
   console.log(
     [

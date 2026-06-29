@@ -92,8 +92,8 @@ function BucketRow({ kind, item }: { kind: 'sector' | 'skill-level'; item: Workf
         <Text style={styles.bucketChevron}>{open ? '▾' : '▸'}</Text>
         <Text style={styles.bucketName} numberOfLines={1}>{item.bucket}</Text>
         <Text style={styles.rowMeta}>{fmt(item.recruited)} / {fmt(item.target)}</Text>
-        <Text style={[styles.rowGap, { color: item.gap > 0 ? '#EF4444' : '#22C55E' }]}>
-          {item.gap > 0 ? `–${fmt(item.gap)}` : 'met'}
+        <Text style={[styles.rowGap, { color: item.gap > 0 ? '#F97316' : '#22C55E' }]}>
+          {item.gap > 0 ? `${fmt(item.gap)} to fill` : 'filled'}
         </Text>
       </TouchableOpacity>
       {open ? (
@@ -153,7 +153,7 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
         { l: 'Annual training target', v: fmt(occ.annualTrainingTarget) },
         { l: 'Members', v: fmt(occ.members) },
         { l: 'Recruited', v: fmt(occ.recruited) },
-        { l: 'Training gap', v: occ.gap > 0 ? `–${fmt(occ.gap)}` : '—' },
+        { l: 'Roles to fill', v: occ.gap > 0 ? fmt(occ.gap) : '—' },
       ]
     : [];
 
@@ -257,8 +257,8 @@ function OccupationsBrowse() {
                 <Text style={styles.rowSub}>{o.sector} · {o.skillLevel}</Text>
               </View>
               <Text style={styles.rowMeta}>{fmt(o.recruited)} / {fmt(o.target)}</Text>
-              <Text style={[styles.rowGap, { color: o.gap > 0 ? '#EF4444' : '#22C55E' }]}>
-                {o.gap > 0 ? `–${fmt(o.gap)}` : 'met'}
+              <Text style={[styles.rowGap, { color: o.gap > 0 ? '#F97316' : '#22C55E' }]}>
+                {o.gap > 0 ? `${fmt(o.gap)} to fill` : 'filled'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   },
   rowSub: { fontSize: 11, color: '#6B7280' },
   rowMeta: { fontSize: 11, color: '#9CA3AF' },
-  rowGap: { fontSize: 13, fontWeight: '700', textAlign: 'right', minWidth: 60 },
+  rowGap: { fontSize: 13, fontWeight: '700', textAlign: 'right', minWidth: 90 },
   bucketRow: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   bucketHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   bucketChevron: { fontSize: 14, color: '#6B7280', width: 14 },

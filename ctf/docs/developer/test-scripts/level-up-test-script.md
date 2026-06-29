@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:level-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-level-up-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-29 (auto-cohort creation + economic policy/milestone skeleton + trainer-assignment wiring; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -112,6 +112,19 @@ trainer appears with tracks Tech and Finance. No action mutates a trainer.
 learner's escrow and pays the trainer split; both show in the payout ledger.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### LVL-T2 · Claim an auto cohort and get paid on it
+**Role:** trainer · **Surfaces:** backend (API)
+**Precondition:** an auto-created cohort that still shows `needs trainer`, with a deposit set
+(`default_required_credits` > 0) so there is escrow to release.
+**Steps:**
+1. As a trainer, claim the cohort (`POST /api/level-up/cohorts/[cohortId]/claim-trainer`).
+2. Have a member enroll, then validate and release a milestone for that enrollment.
+3. Separately, confirm an enrollment that was made **before** the claim also pays out.
+**Expected:** After the claim, new enrollments carry the trainer as `assigned_trainer_id`, and
+enrollments made before the claim are backfilled with it. Releasing a milestone pays the claiming
+trainer their split (it no longer silently skips the payout for want of an assigned trainer).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough
@@ -146,6 +159,24 @@ open, required deposit, trainer split, and completion bonus. It is read-only.
 adjustment transfer applies. An unrelated trainer is denied with a readable message.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### LVL-A4 · Auto-cohort run from Workforce gaps
+**Role:** admin · **Surfaces:** web (`/admin/level-up`)
+**Precondition:** Skills Taxonomy has at least one sector with a positive `workforce_share` and at
+least one Foundational-level occupation whose gap is at or above the configured minimum.
+**Steps:**
+1. In the "Auto cohorts from Workforce gaps" panel, press **Run now**.
+2. Re-read the cohort overview.
+3. Press **Run now** a second time.
+**Expected:** The first run reports how many cohorts were created/closed and the overview gains
+open cohorts tagged `auto` and `needs trainer` (one per largest Foundational gap, up to the
+concurrency and per-sector caps). The second run creates **no** duplicates for the same occupations.
+If no sector carries a workforce share, the run reports it was skipped rather than creating cohorts.
+Each created cohort carries the configured economic policy (deposit from `default_required_credits`,
+default 0 = free to join; trainer split `default_trainer_split_percent`, default 25%; completion bonus
+`default_completion_bonus_credits`, default 0) and the standard 3-milestone skeleton (40/30/30) — open
+a created cohort's detail and confirm the milestones are present.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
@@ -171,3 +202,6 @@ of these, it is already tracked, not a new bug:
   by role before render; it relies on the server-side admin gate on the grant action.
 - The track/badge management mockup has no backing endpoints, so that surface is not built (tracks are
   a free-text field and there is no badge-editing model).
+- The auto-cohort **Run now** button and the `auto` / `needs trainer` badges are web-only for now; the
+  Android admin screen does not mirror them yet (tracked in #1200). The daily cron runs regardless of
+  platform, so LVL-A4 is a web-only check until then.

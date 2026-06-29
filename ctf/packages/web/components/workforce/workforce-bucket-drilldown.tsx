@@ -67,15 +67,15 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
         </span>
         <span
           style={{
-            width: 84,
+            width: 96,
             textAlign: 'right',
             fontSize: 13,
             fontWeight: 700,
-            color: item.gap > 0 ? '#EF4444' : '#22C55E',
+            color: item.gap > 0 ? '#F97316' : '#22C55E',
             flexShrink: 0,
           }}
         >
-          {item.gap > 0 ? `gap –${item.gap.toLocaleString()}` : 'met'}
+          {item.gap > 0 ? `${item.gap.toLocaleString()} to fill` : 'filled'}
         </span>
       </button>
 

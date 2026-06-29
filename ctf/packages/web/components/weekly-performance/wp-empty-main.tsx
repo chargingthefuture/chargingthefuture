@@ -4,10 +4,9 @@
 // Ported from design/.../survivor-hub/WeeklyPerformanceEmpty.tsx (chrome lives
 // in the dashboard; this is the inner placeholder).
 import { BarChart2, Clock } from "lucide-react";
-import { BORDER, BRAND, SUBTLE, SURFACE, TEXT, type WpWeek, formatWeekRange, isLiveWeek } from "./wp-shared";
+import { BORDER, BRAND, SUBTLE, SURFACE, TEXT, type WpWeek, formatWeekRange } from "./wp-shared";
 
-export function WeeklyPerformanceEmptyMain({ week }: { week: WpWeek | null }) {
-  const inProgress = isLiveWeek(week);
+export function WeeklyPerformanceEmptyMain({ week, isCurrent = false }: { week: WpWeek | null; isCurrent?: boolean }) {
   return (
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "40px 48px" }}>
       <div style={{ padding: "28px 32px", borderRadius: 16, background: SURFACE, border: `1px solid ${BORDER}`, marginBottom: 32 }}>
@@ -16,12 +15,12 @@ export function WeeklyPerformanceEmptyMain({ week }: { week: WpWeek | null }) {
             <BarChart2 size={28} style={{ color: BRAND, opacity: 0.4 }} />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: TEXT }}>
-            {inProgress ? "Metrics appear when the week closes" : "No metrics recorded for this week"}
+            {isCurrent ? "Weekly numbers are loading" : "No activity recorded for this week"}
           </div>
           <div style={{ fontSize: 13, color: SUBTLE, maxWidth: 440, lineHeight: 1.6 }}>
-            {inProgress
-              ? "Engagement data is collected throughout the week. The dashboard populates once the week is marked closed by an admin."
-              : "This week has no recorded metrics."}
+            {isCurrent
+              ? "Numbers update live as members use the platform this week. They'll appear here in a moment."
+              : "No member activity was recorded during this week."}
           </div>
           {week && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>

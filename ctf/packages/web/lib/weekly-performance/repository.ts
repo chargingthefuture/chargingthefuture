@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { computeLiveWeekMetrics } from 'lib/weekly-performance/live-metrics';
 
 type WeekRow = {
   week_start_date: string;
@@ -14,21 +15,6 @@ function mapWeek(row: WeekRow) {
   };
 }
 
-type MetricRow = {
-  metric_key: string;
-  metric_value: string;
-  metric_unit: string;
-  source_plugin: string;
-};
-
-function mapMetric(row: MetricRow) {
-  return {
-    metricKey: row.metric_key,
-    metricValue: Number(row.metric_value),
-    metricUnit: row.metric_unit,
-    sourcePlugin: row.source_plugin,
-  };
-}
 
 // The current week is always shown, even before any metrics have been recorded
 // for it, so the dashboard renders with zero/empty values instead of a bare
@@ -142,16 +128,12 @@ export async function getWeekWindow(weekStartDate: string) {
   };
 }
 
+// Weekly numbers are always live: computed for the selected week window from upstream plugin
+// tables, the same way the V2 dashboard aggregated on read. There is no "close the week" step and
+// no stored snapshot to wait for — every week (the current one or any past one) reports the real
+// counts for its window, and the current week keeps moving as members use the platform.
 export async function getWeekMetrics(weekStartDate: string) {
-  const result = await queryDb<MetricRow>(
-    `SELECT metric_key, metric_value::text, metric_unit, source_plugin
-     FROM weekly_performance_metrics
-     WHERE week_start_date = $1
-     ORDER BY metric_key ASC`,
-    [weekStartDate],
-  );
-
-  return result.rows.map(mapMetric);
+  return computeLiveWeekMetrics(weekStartDate);
 }
 
 export async function getWeekComparison(input: { weekStartDate: string; compareWeekStartDate: string }) {

@@ -1,17 +1,14 @@
 "use client";
 
-import { BookOpen, CheckCircle, Coins, Search, Users } from "lucide-react";
-import { BORDER, GREEN, MUTED, SUBTLE, SURFACE, TEXT, TRACKS, type Cohort } from "./lu-shared";
+import { BookOpen, CheckCircle, Search, Users } from "lucide-react";
+import { BORDER, GREEN, MUTED, SUBTLE, SURFACE, TEXT, type Cohort } from "./lu-shared";
 import { LevelUpCohortCard } from "./lu-cohort-card";
 
 export function LevelUpBrowse({
   cohorts,
   openCount,
   enrolledCount,
-  balance,
   escrow,
-  track,
-  onTrack,
   search,
   onSearch,
   enrollError,
@@ -22,10 +19,7 @@ export function LevelUpBrowse({
   cohorts: Cohort[];
   openCount: number;
   enrolledCount: number;
-  balance: number;
   escrow: number;
-  track: string;
-  onTrack: (track: string) => void;
   search: string;
   onSearch: (value: string) => void;
   enrollError: string | null;
@@ -36,13 +30,12 @@ export function LevelUpBrowse({
   const stats = [
     { label: "Open Cohorts", value: String(openCount), icon: BookOpen, color: GREEN },
     { label: "Enrolled", value: String(enrolledCount), icon: Users, color: "#3B82F6" },
-    { label: "My Balance", value: `${balance.toLocaleString()} SC`, icon: Coins, color: "#A855F7" },
     { label: "In Escrow", value: `${escrow.toLocaleString()} SC`, icon: CheckCircle, color: "#F59E0B" },
   ];
 
   return (
     <>
-      {/* Auto-fit grid so the four stat cards lay out 4-across on desktop and wrap to 2×2 on a phone,
+      {/* Auto-fit grid so the stat cards lay out across the row on desktop and wrap on a phone,
           instead of a fixed flex row that runs off the side of the screen (the app viewport hides
           horizontal overflow, so an off-screen card would be unreachable). */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
@@ -57,14 +50,10 @@ export function LevelUpBrowse({
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-        {TRACKS.map((t) => (
-          <button key={t} type="button" onClick={() => onTrack(t)}
-            style={{ padding: "7px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: track === t ? GREEN : BORDER, color: track === t ? "#000" : SUBTLE }}>
-            {t}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
+      {/* Preset track filter chips were a fixed, hardcoded list (Tech / Finance / Wellness / Life
+          Skills) that did not reflect the cohorts that actually exist, so they are hidden until they
+          can be driven by real cohort data at scale (deferred — see #1197). Search stays. */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", justifyContent: "flex-end" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 12px" }}>
           <Search size={13} color={MUTED} />
           <input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search cohorts…"

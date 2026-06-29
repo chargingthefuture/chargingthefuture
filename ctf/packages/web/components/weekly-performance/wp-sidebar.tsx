@@ -1,17 +1,19 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { BORDER, BRAND, FAINT, SUBTLE, TEXT, type WpWeek, formatWeekRange, isLiveWeek } from "./wp-shared";
+import { BORDER, BRAND, FAINT, SUBTLE, TEXT, type WpWeek, formatWeekRange, isCurrentWeek } from "./wp-shared";
 
 export function WeeklyPerformanceSidebar({
   weeks,
   selectedWeekStart,
+  currentWeekStart,
   onSelect,
   isAdmin,
   onExport,
 }: {
   weeks: WpWeek[];
   selectedWeekStart: string | null;
+  currentWeekStart: string | null;
   onSelect: (weekStartDate: string) => void;
   isAdmin: boolean;
   onExport: () => void;
@@ -29,13 +31,16 @@ export function WeeklyPerformanceSidebar({
         ) : (
           weeks.map((week) => {
             const selected = week.weekStartDate === selectedWeekStart;
-            const live = isLiveWeek(week);
+            const current = isCurrentWeek(week.weekStartDate, currentWeekStart);
             return (
               <button key={week.weekStartDate} onClick={() => onSelect(week.weekStartDate)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 8, cursor: "pointer", background: selected ? `${BRAND}18` : "transparent", borderLeft: selected ? `2px solid ${BRAND}` : "2px solid transparent", marginLeft: 2, marginBottom: 2, border: "none", textAlign: "left" }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: selected ? TEXT : "#9CA3AF", fontWeight: selected ? 600 : 400 }}>{formatWeekRange(week)}</div>
                 </div>
-                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 10, background: live ? `${BRAND}20` : "rgba(255,255,255,0.05)", color: live ? BRAND : SUBTLE, fontWeight: 600 }}>{live ? "LIVE" : "Closed"}</span>
+                {/* Only the current week is live; past weeks are historical and carry no pill. */}
+                {current && (
+                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 10, background: `${BRAND}20`, color: BRAND, fontWeight: 600 }}>LIVE</span>
+                )}
               </button>
             );
           })

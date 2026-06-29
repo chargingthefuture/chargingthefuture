@@ -10,7 +10,7 @@ import {
   releaseEscrow,
 } from 'lib/service-credits/repository';
 import { createTransfer } from 'lib/shared/service-credits/createTransfer';
-import { LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT, LEVEL_UP_PLUGIN_SLUG } from 'lib/level-up/constants';
+import { LEVEL_UP_AUTO_COHORT_ACTOR_ID, LEVEL_UP_DEFAULT_TRAINER_SPLIT_PERCENT, LEVEL_UP_PLUGIN_SLUG } from 'lib/level-up/constants';
 
 function toNumber(value: string | number): number {
   return typeof value === 'number' ? value : Number(value);
@@ -127,9 +127,13 @@ type CohortRow = {
   trainer_split_percent: string;
   completion_bonus_credits: string;
   created_by_user_id: string;
+  auto_created?: boolean;
+  source_job_title_id?: string | null;
+  source_sector?: string | null;
 };
 
 function mapCohort(row: CohortRow) {
+  const autoCreated = row.auto_created ?? false;
   return {
     id: row.id,
     title: row.title,
@@ -146,6 +150,11 @@ function mapCohort(row: CohortRow) {
     trainerSplitPercent: toNumber(row.trainer_split_percent),
     completionBonusCredits: toNumber(row.completion_bonus_credits),
     createdByUserId: row.created_by_user_id,
+    autoCreated,
+    sourceJobTitleId: row.source_job_title_id ?? null,
+    sourceSector: row.source_sector ?? null,
+    // An auto-created cohort still owned by the scheduler has no human trainer yet.
+    needsTrainer: autoCreated && row.created_by_user_id === LEVEL_UP_AUTO_COHORT_ACTOR_ID,
   };
 }
 
@@ -175,6 +184,10 @@ export async function createCohort(input: {
   policyJson?: Record<string, unknown>;
   curriculumItems?: Array<{ title: string; description?: string; required?: boolean }>;
   milestones?: Array<{ name: string; percentRelease: number; requiredTask: string }>;
+  autoCreated?: boolean;
+  sourceJobTitleId?: string | null;
+  sourceSector?: string | null;
+  sourceGapAtCreation?: number | null;
 }) {
   if (!input.title || !input.track || input.seats <= 0) {
     throw new Error('invalid_payload');
@@ -194,10 +207,12 @@ export async function createCohort(input: {
       `INSERT INTO level_up_cohorts
         (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
          trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
-         microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id)
+         microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
+         auto_created, source_job_title_id, source_sector, source_gap_at_creation)
        VALUES
         ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
-         $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23)`,
+         $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23,
+         $24, $25, $26, $27)`,
       [
         cohortId,
         input.title,
@@ -222,6 +237,10 @@ export async function createCohort(input: {
         JSON.stringify(input.payoutPolicyJson ?? {}),
         JSON.stringify(input.policyJson ?? {}),
         input.actorId,
+        input.autoCreated ?? false,
+        input.sourceJobTitleId ?? null,
+        input.sourceSector ?? null,
+        input.sourceGapAtCreation ?? null,
       ],
     );
 
@@ -293,6 +312,9 @@ export async function listCohorts(filter: CohortFilter) {
       c.trainer_split_percent::text,
       c.completion_bonus_credits::text,
       c.created_by_user_id,
+      c.auto_created,
+      c.source_job_title_id::text AS source_job_title_id,
+      c.source_sector,
       COALESCE(e.active_enrollments, 0)::text AS active_enrollments
      FROM level_up_cohorts c
      LEFT JOIN (
@@ -444,8 +466,10 @@ export async function enrollInCohort(input: {
       status: string;
       required_credits: string;
       allow_no_deposit: boolean;
+      created_by_user_id: string;
+      auto_created: boolean;
     }>(
-      `SELECT seats, status, required_credits::text, allow_no_deposit
+      `SELECT seats, status, required_credits::text, allow_no_deposit, created_by_user_id, auto_created
        FROM level_up_cohorts
        WHERE id = $1::uuid
        FOR UPDATE`,
@@ -501,11 +525,22 @@ export async function enrollInCohort(input: {
       throw new Error('invalid_payload');
     }
 
+    // Trainer of record for the enrollment (drives the milestone-release payout). Prefer an explicitly
+    // supplied trainer; otherwise, for an auto-created cohort a trainer has claimed (its
+    // created_by_user_id is no longer the scheduler placeholder), default to that claiming trainer so
+    // their split actually settles on milestone release. Admin/human-built cohorts get null unless a
+    // trainer is passed in (created_by there may be an admin, not the trainer).
+    const claimedAutoTrainer =
+      cohort.rows[0].auto_created && cohort.rows[0].created_by_user_id !== LEVEL_UP_AUTO_COHORT_ACTOR_ID
+        ? cohort.rows[0].created_by_user_id
+        : null;
+    const resolvedTrainerId = input.assignedTrainerId ?? claimedAutoTrainer;
+
     const enrollmentId = randomUUID();
     await client.query(
       `INSERT INTO level_up_enrollments (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
        VALUES ($1, $2::uuid, $3, 'enrolled', $4, $5)`,
-      [enrollmentId, input.cohortId, input.actorId, Math.max(depositRequested, 0), input.assignedTrainerId ?? null],
+      [enrollmentId, input.cohortId, input.actorId, Math.max(depositRequested, 0), resolvedTrainerId],
     );
 
     const milestones = await client.query(

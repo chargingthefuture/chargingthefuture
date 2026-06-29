@@ -58,9 +58,28 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
               borderRadius: 16,
               background: `${color}08`,
               border: `1px solid ${color}20`,
+              // Let the grid track shrink instead of being forced wide by the big number, which was
+              // overflowing the card (and the page) on phone-width 2-column layouts.
+              minWidth: 0,
             }}
           >
-            <div style={{ fontSize: 28, fontWeight: 800, color, marginBottom: 4 }}>{value}</div>
+            <div
+              style={{
+                // Scale the figure down on narrow screens so 7-digit numbers stay inside the card
+                // (caps at 28px on desktop). overflow guards against any residual horizontal bleed.
+                fontSize: 'clamp(16px, 4.8vw, 28px)',
+                fontWeight: 800,
+                color,
+                marginBottom: 4,
+                lineHeight: 1.15,
+                letterSpacing: '-0.01em',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {value}
+            </div>
             <div style={{ fontSize: 13, color: '#F9FAFB', fontWeight: 600, marginBottom: 4 }}>{label}</div>
             <div style={{ fontSize: 12, color: '#6B7280' }}>{delta}</div>
           </div>
