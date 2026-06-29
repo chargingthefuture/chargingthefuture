@@ -95,6 +95,13 @@ jobs:
       - name: Check mobile env contract
         run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
 
+      # Informational only — a release is deliberate, so this never blocks it. It
+      # prints this month's Android build count against the free-tier limits
+      # (ctf/packages/mobile/expo-free-tier-quota.json) so an over-quota release
+      # is visible in the log before EAS itself rejects it.
+      - name: Report Expo build quota
+        run: node ctf/scripts/check-expo-build-quota.mjs report
+
       - name: Build signed production APK on EAS
         working-directory: ctf/packages/mobile
         run: |

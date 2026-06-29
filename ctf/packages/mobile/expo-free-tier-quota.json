@@ -1,0 +1,28 @@
+{
+  "_comment": "Single source of truth for the Expo (EAS) free-tier limits, so no human has to remember them. The guard script ctf/scripts/check-expo-build-quota.mjs and the Expo GitHub Actions workflows read THIS file. If your Expo plan changes, edit the numbers here and every workflow follows. Mirrors how the Stream quota is tracked as one fixed budget.",
+  "plan": "free",
+  "limits": {
+    "androidBuildsPerMonth": {
+      "value": 15,
+      "meter": "eas-build",
+      "spentBy": "every `eas build` for Android (preview test builds + signed releases). NOT spent by OTA updates.",
+      "enforced": true
+    },
+    "ciWorkflowMinutesPerMonth": {
+      "value": 60,
+      "meter": "eas-workflows",
+      "spentBy": "EAS Workflows (Expo's own CI product, jobs under a .eas/workflows dir). This repo orchestrates from GitHub Actions and only calls `eas build`/`eas update`, so it uses ZERO of this. Do not add a .eas/workflows dir without re-checking this budget.",
+      "enforced": false
+    },
+    "updatesMonthlyActiveUsers": {
+      "value": 1000,
+      "meter": "eas-update",
+      "spentBy": "monthly active users who launch the app and pull an OTA update. Not controllable from CI; tracked here for awareness. Watch it on the Expo dashboard as the user base grows.",
+      "enforced": false
+    }
+  },
+  "policy": {
+    "scheduledBuildBudgetPerMonth": 12,
+    "scheduledBuildBudgetNote": "Hard cap on AUTOMATED (cron) Android builds per calendar month. Set below androidBuildsPerMonth (15) on purpose so at least 3 builds are always reserved for manual signed releases. The scheduled workflow skips itself once this month's total Android build count reaches this number."
+  }
+}

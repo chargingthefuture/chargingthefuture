@@ -97,6 +97,25 @@ If `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` or the publishable key is missing, the ap
 - `mobile-v*` tag → signed `production` build attached to a GitHub Release.
 - Pull request touching `ctf/packages/mobile/**` → `preview` channel install APK (same production
   backend).
+- Three times a week (Mon/Wed/Fri) → an automatic `preview` test APK, quota permitting (see below).
+
+## Free-tier quota — hands-free, no numbers to remember
+
+The Expo free plan gives a small, fixed monthly allotment. The numbers live in ONE file,
+`ctf/packages/mobile/expo-free-tier-quota.json`, and every Expo workflow reads them through the guard
+script `ctf/scripts/check-expo-build-quota.mjs`. If the plan ever changes, edit that JSON and the
+workflows follow — no one has to remember the limits.
+
+The three limits and how each is handled:
+
+| Free-tier limit | Spent by | How it is kept safe |
+|---|---|---|
+| **15 Android builds / month** | every `eas build` for Android (preview test builds + signed releases) | **Enforced.** The 3×/week cron is capped to an automated budget (`scheduledBuildBudgetPerMonth`, default 12) that sits below 15, so manual releases always have room. On-demand preview builds block only at the real ceiling of 15. The guard reads how many Android builds ran this calendar month from EAS and skips cleanly when the budget is hit. |
+| **60 min EAS CI/CD Workflows / month** | EAS Workflows (Expo's own CI product) | **Not used → stays at zero.** This repo orchestrates from GitHub Actions and only calls `eas build` / `eas update`; there is no `.eas/workflows` dir. Do not add one without re-checking this budget. |
+| **1,000 update MAUs / month** | monthly active users who pull an OTA update | Tracked in the JSON for awareness; not controllable from CI. Watch it on the Expo dashboard as the user base grows. |
+
+To spend a build on purpose past the guard, run a workflow from the Actions tab with the **force**
+input enabled.
 
 ## Workflows
 
@@ -113,7 +132,24 @@ If `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` or the publishable key is missing, the ap
 
 - `.github/workflows/expo-android-release.yml`
   - Builds a signed production APK and publishes it to GitHub Releases on `mobile-v*` tags.
+  - Reports this month's build count against the free-tier limits (informational; never blocks a
+    deliberate release).
   - Fails fast when `EXPO_TOKEN` is missing.
+
+- `.github/workflows/expo-android-scheduled-build.yml`
+  - Runs on its own three times a week (Mon/Wed/Fri 08:41 UTC) — the hands-free path. You do not have
+    to remember how to deploy the Android app; this builds a `preview` test APK for you.
+  - Checks the free-tier quota first and skips cleanly when this month's automated build budget is
+    used up, so it never pushes you past the free allotment.
+  - On success it writes install links to the run's summary: an Expo "internal distribution" install
+    page (the easy phone path) and the direct `.apk` URL. To install, open the completed run on your
+    Android phone (Actions tab → the run → Summary) and tap the install-page link. The APK itself is
+    hosted by Expo, not attached to the GitHub run.
+  - If the build **fails**, a Claude agent (`anthropics/claude-code-action`) diagnoses it, opens a
+    descriptive `fix/expo-android-build-*` branch, and files a pull request with the smallest fix —
+    low-risk fixes auto-merge after CI; risky ones wait for owner review (the two-lane rule in
+    CLAUDE.md).
+  - Manual "Run workflow" has a **force** input to build even when the budget is reached.
 
 ## Cutting an Android Release (runbook)
 
@@ -162,6 +198,21 @@ Other rules that fall out of immutable releases:
   pushing release tags, so the owner runs the `git push origin mobile-v<X.Y.Z>` step.
 
 ## When to Use EAS Build vs EAS Update
+
+A **build** (EAS Build) compiles the whole native Android app — native code, native dependencies, the
+app icon, permissions, and the JavaScript bundle — into the `.apk` you install on a phone. It is the
+thing that spends one of your **15 monthly Android builds**. Use it for native dependency or
+configuration changes, a new permission, a runtime-version bump, or any signed release.
+
+An **OTA update** (EAS Update) ships only the JavaScript bundle and assets over the air to apps that
+are **already installed**; it does not recompile native code, and an installed app picks it up on next
+launch. It does **not** spend an Android build — it counts toward the **1,000 monthly active users**
+limit instead. Use it for JavaScript/asset-only changes that are compatible with the current runtime
+version. It cannot add a native permission, change a native dependency, or bump the native runtime —
+those need a new build.
+
+Rule of thumb: changed only JavaScript/assets → OTA update (free against the build cap, automatic on
+`main`). Changed anything native, or cutting a release users install → a build.
 
 - Use **EAS Build** for native dependency/configuration changes.
 - Use **EAS Update** for JavaScript and asset-only changes compatible with the current runtime

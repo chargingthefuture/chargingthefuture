@@ -1,0 +1,272 @@
+name: Expo — Scheduled Android Test Build
+
+# Hands-free Android test builds. You do NOT need to remember how to deploy the
+# Android app, and you do NOT need to track the Expo free-tier quota.
+#
+# What it does, on its own, three times a week (Mon/Wed/Fri 08:00 UTC):
+#   1. Checks the Expo free-tier quota (single source of truth:
+#      ctf/packages/mobile/expo-free-tier-quota.json). If this month's automated
+#      build budget is already used up, it SKIPS the build cleanly — it will never
+#      push you past the free allotment.
+#   2. Otherwise builds an installable `preview` test APK on EAS from `main`.
+#   3. If the build FAILS, a Claude agent opens a descriptive branch and a pull
+#      request with a fix (see the `autofix` job below).
+#
+# This builds the `preview` profile — the test build you install to confirm the
+# app works. Signed RELEASES stay a deliberate, manual action: cut them from the
+# "Expo — Android Release" workflow (tag `mobile-v*` or its Run-workflow button).
+#
+# Quota model (all three free-tier limits live in the JSON above):
+#   - 15 Android builds / month  -> ENFORCED here. The cron is capped to an
+#       automated budget below 15 so manual releases always have room.
+#   - 60 min EAS CI/CD Workflows / month -> NOT used. We orchestrate from GitHub
+#       Actions and only call `eas build`/`eas update`, so this stays at zero.
+#   - 1,000 update MAUs / month  -> tracked in the JSON; watch it on the Expo
+#       dashboard as the user base grows.
+
+on:
+  schedule:
+    # 3x a week, spread out: Monday, Wednesday, Friday at 08:41 UTC. Offset to an
+    # odd minute on purpose, per the cron-staggering rule: nothing else fires at
+    # 08:41 (bug-reports runs at 08:26), and the repo convention is to keep crons
+    # off the top of the hour so GitHub does not delay them under load.
+    - cron: "41 8 * * 1,3,5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Build even if this month's automated quota is used up (uses one of your 15 monthly Android builds)."
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: expo-android-scheduled-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Quota-checked preview build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      MOBILE_ENV_TARGET: preview
+      EAS_BUILD_PROFILE: preview
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # Manual "Run workflow" with force=true overrides the quota guard.
+      EXPO_QUOTA_FORCE: ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '1' || '0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Infisical is the single source of truth for app secrets (Clerk keys, app
+      # URL, Expo project id/updates URL). See the other expo-*.yml workflows for
+      # the full explanation of why env-slug is `prod`.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Fail fast when EXPO_TOKEN is missing
+        if: ${{ env.EXPO_TOKEN == '' }}
+        run: |
+          echo "EXPO_TOKEN secret is not set. Add it in repository settings before scheduled builds can run."
+          exit 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install ctf dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      # The quota guard. Reads the free-tier JSON, asks EAS how many Android
+      # builds ran this month, and decides. On the cron it enforces the automated
+      # budget (leaves room for releases); skips cleanly instead of failing so the
+      # autofix agent does NOT fire on a deliberate quota skip.
+      - name: Check Expo build quota
+        id: quota
+        run: node ctf/scripts/check-expo-build-quota.mjs scheduled
+
+      - name: Quota used up — skipping this run
+        if: ${{ steps.quota.outputs.build_allowed != 'true' }}
+        run: |
+          echo "### Android test build skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.quota.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check mobile env contract
+        if: ${{ steps.quota.outputs.build_allowed == 'true' }}
+        run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
+
+      # The build that can fail. `--wait` makes the job fail if the EAS build
+      # fails, which is what triggers the autofix job below. `--json` captures the
+      # finished build so the next step can publish install links.
+      - name: Build preview APK on EAS
+        id: build
+        if: ${{ steps.quota.outputs.build_allowed == 'true' }}
+        working-directory: ctf/packages/mobile
+        run: |
+          set -euo pipefail
+          eas build --platform android --profile preview --non-interactive --wait --json > build.json
+          # Two links from the finished build: the Expo "internal distribution"
+          # install page (the easy phone path — open it on Android and tap
+          # Install) and the direct .apk download URL. Build-page key names vary
+          # by EAS version, so check the known ones in order, like expo-preview.
+          INSTALL_PAGE=$(node -e "
+            const b = JSON.parse(require('fs').readFileSync('build.json','utf8'))[0] || {};
+            const owner = (b.project && b.project.ownerAccount && b.project.ownerAccount.name) || (b.initiatingActor && b.initiatingActor.username);
+            const url = b.buildPageUrl || (owner ? 'https://expo.dev/accounts/' + owner + '/projects/charging-the-future/builds/' + b.id : 'https://expo.dev/builds/' + b.id);
+            process.stdout.write(url);
+          ")
+          APK_URL=$(node -e "
+            const b = JSON.parse(require('fs').readFileSync('build.json','utf8'))[0] || {};
+            process.stdout.write((b.artifacts && b.artifacts.buildUrl) || '');
+          ")
+          echo "install_page=${INSTALL_PAGE}" >> "$GITHUB_OUTPUT"
+          echo "apk_url=${APK_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Record build in summary
+        if: ${{ steps.quota.outputs.build_allowed == 'true' && success() }}
+        run: |
+          {
+            echo "### Android test build finished"
+            echo ""
+            echo "${{ steps.quota.outputs.reason }}"
+            echo ""
+            echo "**Install on your Android phone** — open this run on the phone and tap the link:"
+            echo ""
+            echo "- Install page (recommended): ${{ steps.build.outputs.install_page }}"
+            if [ -n "${{ steps.build.outputs.apk_url }}" ]; then
+              echo "- Direct APK download: ${{ steps.build.outputs.apk_url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # When the build job FAILS, a Claude agent diagnoses the failure, opens a
+  # descriptive branch, and files a pull request with the smallest fix. `needs` +
+  # `if: failure()` means this only runs on a real build failure — a clean quota
+  # skip leaves the build job green, so this never fires for that.
+  autofix:
+    name: Open a fix PR for the failed build
+    needs: build
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      # Gives the agent the app secrets AND the ANTHROPIC_API_KEY it runs on.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Diagnose the failed build and open a fix PR
+        # Pin this to a version you trust before relying on it in production.
+        uses: anthropics/claude-code-action@v1
+        env:
+          # The PAT (not the default token) makes the push and PR trigger CI.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          FAILED_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_PAT }}
+          claude_args: "--dangerously-skip-permissions"
+          prompt: |
+            The scheduled Android test build for the "Charging the Future" app just
+            FAILED. Diagnose it and open ONE pull request with the smallest fix,
+            fully unattended. Follow CLAUDE.md and .claude/rules exactly — including
+            the no-pleasantries / banned-term dictionary. Everything you write to
+            GitHub (PR title, description, commit messages) must obey that
+            dictionary: no thanks/sorry/glad/"hope"/sign-offs, no first-person
+            feeling words, plain factual language only.
+
+            Repo: `${{ github.repository }}`. The failed run is: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}.
+
+            Do this in order:
+            1. Read the failed run's logs to find the error. The build command was
+               `eas build --platform android --profile preview --wait` run from
+               `ctf/packages/mobile`. You can also inspect the most recent failed
+               Android build with `eas build:list --platform android --limit 5 --json --non-interactive`
+               and `eas build:view <id>` (EXPO_TOKEN is set).
+            2. Identify the root cause. Typical causes: a dependency/version
+               mismatch in `ctf/packages/mobile/package.json` or the lockfile, an
+               `app.config.ts` / `eas.json` config error, a missing or wrong env
+               var surfaced by `check:mobile-env`, a native config issue, or a
+               TypeScript/lint error in mobile code.
+            3. If it is NOT a code/config problem this PR can fix (for example an
+               Expo outage, an expired EXPO_TOKEN, or the monthly build quota being
+               exhausted), do NOT open a PR — there is nothing to merge. Stop after
+               writing the diagnosis to the job log.
+            4. Otherwise make the SMALLEST change in `ctf/packages/mobile` (or the
+               relevant workflow/config) that fixes the build. Do not refactor
+               beyond the fix. If the change alters a route, the data model, a
+               contract, or delivery status, update the plugin feature inventory too.
+            5. Create a DESCRIPTIVE branch named `fix/expo-android-build-<short-kebab-summary>`
+               (never the opaque session slug, never random words). Commit with a
+               clear Conventional-Commit message.
+            6. Run `pnpm --dir ctf --filter @ctf/mobile run typecheck` and
+               `pnpm --dir ctf --filter @ctf/mobile run lint`; fix anything they
+               flag before pushing.
+            7. Push the branch and open a pull request on `${{ github.repository }}`
+               with a Conventional-Commit title (`fix: ...`) and a description that
+               includes exactly the line
+               `Parity Status: web + mobile-responsive + android complete`
+               and a short note that it was opened automatically for the failed
+               scheduled Android build, linking the failed run URL above.
+            8. Apply the two-lane rule from CLAUDE.md: if the fix is low-risk
+               (dependency bump, config/lockfile, lint/type fix) enable auto-merge
+               with `gh pr merge <pr-number> --repo ${{ github.repository }} --auto --squash`
+               so CI gates it and it lands hands-free. If it touches anything risky
+               (money/ServiceCredits, auth, CSRF, data deletion, schema/migrations,
+               a new/changed API contract, or brand-new stateful logic), leave it
+               for owner review — open it ready for review but do NOT enable
+               auto-merge.
+
+            Open exactly one PR. If anything blocks you, write the blocker to the
+            job log and stop — do not open a half-finished PR.

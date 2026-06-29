@@ -58,6 +58,31 @@ name: GitHub Pages — Deploy Blog
 When you **create** a new workflow or **rename** an existing one, set its `name:` in this shape, and
 update the Workflow Index ([`.github/workflows/README.md`](../workflows/README.md)) to match.
 
+## Scheduled Workflows — Cron Staggering (Critical — all agents)
+Whenever you add a `schedule:` cron, or edit an existing one, **stagger it against the schedules
+already in the repo.** GitHub delays scheduled runs that land on a busy minute (especially the top of
+the hour) when the platform is under load, so two jobs set to the same minute can both slip — and they
+also compete for the same runner capacity. The repo convention is to spread schedules out.
+
+Before you set a cron time, do this:
+
+1. **List the existing schedules.** Search every workflow for its cron lines, e.g.
+   `if command -v rg >/dev/null 2>&1; then rg -n "cron:" .github/workflows; else grep -RIn "cron:" .github/workflows; fi`.
+   Expand each one mentally to the actual UTC times it fires (e.g. `0 */8 * * *` → 00:00, 08:00,
+   16:00; `7,27,47 * * * *` → every hour at :07/:27/:47).
+2. **Pick an unused, off-the-hour minute.** Never use minute `:00`. Avoid the minutes the frequent
+   hourly/every-few-hours jobs already occupy (today: `:07`, `:15`, `:17`, `:23`, `:27`, `:30`, `:47`).
+   Choose an odd minute that nothing else uses at the hour(s) your job runs, so your run has its own
+   slot.
+3. **Avoid hour collisions too.** If several daily jobs already fire in a given hour, move yours to a
+   quieter hour or clearly off their minute — do not pile onto an hour that is already crowded.
+4. **Write the chosen time and the reason in a comment** next to the `cron:` line (the actual UTC
+   times it fires and a short note that it is offset to avoid a same-minute stampede), matching the
+   existing cron comments.
+
+This applies to every agent and every scheduled workflow — new or edited. A cron that is not staggered
+against the existing schedules is a defect, the same as a failing check.
+
 ## Workflow Rules
 - Separate workflows for pull requests, main branch, and release promotion.
 - Use least-privilege GitHub tokens and scoped secrets.
