@@ -1,0 +1,135 @@
+# Unlock — Manual Test Script
+
+> Walk these steps on a real device to confirm the plugin works end to end. This script is
+> generated from the plugin's feature inventory and contracts — those files are the source of
+> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
+> bug; fix the code (or the inventory) and regenerate.
+>
+> **How to regenerate:** `pnpm --dir ctf test-script:generate -- unlock`
+
+| | |
+|---|---|
+| **Plugin** | Unlock (`unlock`) |
+| **Visibility** | Internal — verification queue, hidden from member plugin navigation |
+| **Roles to test** | admin / internal reviewer |
+| **Surfaces** | web (internal admin surface) |
+| **Seed first** | `pnpm --dir ctf seed:demo` |
+| **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-unlock-feature-inventory.md` |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+
+## How to run this
+
+- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
+- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
+- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
+  next run knows it's already filed.
+- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
+  plugin or on a pre-release sweep.
+- This plugin has no member-facing screen for the verification queue. Test it as an admin /
+  internal reviewer on the admin surface only.
+
+---
+
+## Core smoke (every session)
+
+Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewer role.
+
+1. **Admin queue loads.** Open `/admin/unlock`. The pending verification queue renders with
+   submission rows (or a clean empty state), not a spinner or error. → web ☐
+2. **Non-admin is shut out.** Hit `/admin/unlock` (or `GET /api/unlock/admin/submissions`) as a
+   plain member. It is denied — the queue and its actions are admin-only. → web ☐
+3. **A decision sticks.** Approve one pending submission and reload. The row moves out of pending
+   and shows its new status; the decision did not silently revert. → web ☐
+4. **Denied action is readable.** Trigger a denied action (e.g. a non-admin review attempt). The
+   message is plain-language, not a raw error code. → web ☐
+
+---
+
+## Admin walkthrough
+
+### UNLOCK-A1 · Queue loads and filters by status
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) · **Seed:** `seed:demo`
+**Precondition:** the demo seed has pending, approved, rejected, and spam submissions.
+**Steps:**
+1. Open `/admin/unlock`.
+2. Read the snapshot counts at the top.
+3. Switch between the Pending and All views.
+**Expected:** The queue lists submissions; the Pending view shows only pending rows, the All view
+shows every status. Each row shows the submitter's Quora profile link and its review status. A
+non-admin cannot reach this page (`requireUnlockAdminAccess`).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2 · Review decision — approve / reject / spam
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** at least one pending submission.
+**Steps:**
+1. On a pending submission, choose **Approve**.
+2. On another, choose **Reject**.
+3. Confirm a third can be marked **spam** (the route accepts `approved`, `rejected`, `spam`).
+**Expected:** Each decision posts to the review route, records the reviewer, and refreshes the row
+to its new status. Approve moves the account to full access; reject/spam drop it out of pending.
+The decision is audited (`unlock.admin.submission.review`).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A3 · Approval reward — granted or pending, never double
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** a freshly approved submission.
+**Steps:**
+1. Approve a submission and read its reward status on the card.
+2. If it shows "Reward pending", click **Retry pending rewards**.
+3. Click **Retry pending rewards** a second time.
+**Expected:** Approval grants a one-time 100 service-credit reward; the card shows "Reward granted"
+or "Reward pending" with the stated arrival window. Retry drains any approved-but-uncredited reward
+and is idempotent — a second retry never grants a second reward (the reconcile returns
+`{ scanned, granted, alreadyGranted, failed }`).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A4 · Edit a submission's Quora URL
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Steps:**
+1. On a submission, use the pencil/Edit control next to the URL.
+2. Save a corrected Quora profile URL.
+**Expected:** The URL is re-validated and re-normalized with the same rules as the member submit
+path; the stored normalized form updates. Review status, access tier, and the verification window
+are unchanged. A missing/invalid URL is rejected (400); no matching submission returns 404. Audited
+as `unlock.admin.submission.url.edit`.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A5 · Duplicate-identity determination — grant winner, revoke loser
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** two accounts that submitted the **same** normalized Quora URL.
+**Steps:**
+1. Find the rows that share a URL — the queue marks them "Shared by N".
+2. On the account you choose to keep, use **Grant reward**.
+3. On the other account, use **Revoke reward**.
+**Expected:** When a second account claims a URL whose reward is already held, the reward is
+**withheld** (not auto-minted twice) for an admin to decide. Grant clears the hold and pays the
+chosen account; it returns 409 (`unlock_reward_still_held`, with the current holder) if another
+account still holds it. Revoke claws the reward back, locks the account to rejected /
+support-only, and stamps `reward_revoked_at` so reconcile never re-grants it. Both verbs are
+admin-gated, CSRF-guarded (`x-ctf-csrf: '1'`), and audited.
+**Result:** web ☐ — notes:
+
+---
+
+## Parity check (web ↔ android)
+
+Unlock has no member-facing android surface for this internal verification queue — there is no web
+↔ android parity row to check here. (An android admin screen exists for the review queue; the
+grant/revoke determination actions are an android follow-up per the inventory's Gaps section.)
+
+---
+
+## Known gaps — do not file these as bugs
+
+Carried from the inventory's "Gaps and Known Debt" section. If you hit one of these, it is already
+tracked, not a new bug:
+
+- Expiry transition for pending submissions past their window: the reminder scheduler / cadence
+  delivery worker is pending implementation.
+- The duplicate-identity guard's holder check and mint are not wrapped in a per-URL advisory lock,
+  so two brand-new accounts with the same URL approved in the same instant could in theory both be
+  granted before either is recorded as holder; the admin revoke path cleans up any stray.
+- The duplicate-identity guard is web + backend only; the android admin screen has status tabs and
+  shows withheld/error counts but does not yet surface the per-row withheld/revoked badges or the
+  grant/revoke determination actions.

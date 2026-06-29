@@ -350,6 +350,24 @@ jobs:
       - name: Enforce feature-inventory coverage of tables and routes
         run: node ctf/scripts/check-inventory-drift.mjs
 
+  test-script-drift-gate:
+    name: Test Script Drift Gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch the base branch
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
+
+      - name: Flag any inventory that changed without its manual test script
+        env:
+          TEST_SCRIPT_DRIFT_BASE: origin/${{ github.event.pull_request.base.ref }}
+        run: node ctf/scripts/check-test-script-drift.mjs
+
   pr-parity-status:
     name: PR Parity Status
     runs-on: ubuntu-latest

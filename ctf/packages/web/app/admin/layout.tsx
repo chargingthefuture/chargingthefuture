@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { isDemoMode } from 'lib/feature-flags/system';
 import { AdminDemoBanner } from '@/components/shared/admin-demo-banner';
-import { MobileBackButton } from '@/components/shared/mobile-back-button';
 
 // Applies to every /admin/* screen. When the signed-in operator is a demo participant, getActivePool
 // routes their admin actions to the demo schema, which is easy to miss and makes operations like
@@ -20,7 +19,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <>
       {demo ? <AdminDemoBanner /> : null}
-      <MobileBackButton />
       {children}
     </>
   );

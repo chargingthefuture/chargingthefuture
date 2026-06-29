@@ -13,6 +13,7 @@ import {
   postTransferToFormance,
   postTreasuryFeeToFormance,
 } from 'lib/service-credits/formance-ledger';
+import { ensurePositiveAmount } from 'lib/service-credits/amounts';
 
 type WalletRow = {
   user_id: string;
@@ -29,12 +30,6 @@ function mapWallet(row: WalletRow) {
 }
 
 const SERVICE_CREDITS_RECLAIM_WINDOW_DAYS = 7;
-
-function ensurePositiveAmount(amount: number) {
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error('invalid_payload');
-  }
-}
 
 // --- Monetary policy helpers (per the ServiceCredits monetary policy spec) ---
 // Treasury policy is the single tunable store: the per-period mint budget and the mutual-credit

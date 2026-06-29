@@ -27,6 +27,7 @@ on:
 permissions:
   issues: write
   contents: write
+  pull-requests: write
 
 jobs:
   sweep:
@@ -137,3 +138,48 @@ jobs:
           git add ctf/config/code-review-ledger.json
           git commit -m "chore: advance code-review sweep ledger"
           git push --force "https://x-access-token:${GH_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:code-review-ledger
+
+      # One rotation, two artifacts: regenerate the MANUAL test script for the SAME plugin the
+      # review above just completed (it reads the most-recently-reviewed slice from the ledger that
+      # the review step already updated in the working tree). This is the auto/rotation half of the
+      # manual-testing system; the on-demand half is .github/workflows/manual-test-script.yml.
+      # Skipped on a dry run. No-ops cleanly if the rotation landed on a non-plugin slice.
+      - name: Refresh the rotated plugin's manual test script
+        if: ${{ inputs.dry_run != true }}
+        env:
+          # ANTHROPIC_API_KEY is injected by the Infisical step above.
+          TEST_SCRIPT_FROM_REVIEW: '1'
+        run: node ctf/scripts/generateManualTestScript.mjs
+
+      # Land the refreshed script via a low-risk, auto-merging PR (main is PR-gated by a ruleset, so a
+      # scheduled job can't push to it directly). Uses GH_PAT so the PR triggers CI and auto-merge can
+      # complete. No change -> no PR. Reuses a stable per-plugin branch so a re-run updates the same PR.
+      - name: Open an auto-merge PR for the refreshed script
+        if: ${{ inputs.dry_run != true }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          changed="$(git status --porcelain -- ctf/docs/developer/test-scripts/ | awk '{print $2}')"
+          if [ -z "$changed" ]; then
+            echo "No manual test script changed this run; nothing to open."
+            exit 0
+          fi
+          slug="$(basename "$(echo "$changed" | head -n1)" -test-script.md)"
+          branch="test-script/auto-${slug}"
+          git config user.name "CTF CI Bot"
+          git config user.email "ci@chargingthefuture.org"
+          git checkout -B "$branch"
+          git add ctf/docs/developer/test-scripts/
+          git commit -m "docs: refresh ${slug} manual test script"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${branch}"
+          body=$'Auto-refresh of the manual test script for the plugin the code-review sweep just covered.\n\nParity Status: web + mobile-responsive + android complete'
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "PR already open for ${branch}; the force-push updated it."
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --head "$branch" --base main \
+              --title "docs: refresh ${slug} manual test script" --body "$body"
+            gh pr merge "$branch" --repo "$GITHUB_REPOSITORY" --auto --squash || \
+              echo "Could not enable auto-merge (it may already be enabled or not permitted); leaving the PR open."
+          fi
