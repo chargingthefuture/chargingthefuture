@@ -86,15 +86,15 @@ state, not a spinner stuck forever or a raw error.
 
 ### TAX-5 · Promoted skill appears under its occupation
 **Role:** member · **Surfaces:** all
-**Precondition:** the curated promotions seed (`seedSkillsTaxonomyPromotions.mjs`) has run against the
-live DB.
+**Precondition:** the taxonomy seed (`pnpm --dir ctf seed:skills-taxonomy`, i.e. `seedSkillsTaxonomy.mjs`,
+which applies the curated promotions) has run against the live DB.
 **Steps:**
 1. Browse to **Retail & Services › Supply Managers › Skills**.
 2. Read the skills listed.
 **Expected:** The occupation shows **Merchandising** (promoted from skill proposal #1180) alongside the
-occupation's other skills (Inventory control, Supplier negotiation, Demand forecasting). Promotions are
-added by appending to the curated list against the **live** taxonomy (the legacy dataset is deprecated
-and removed), so a reseed keeps the skill.
+occupation's other skills (Inventory control, Supplier negotiation, Demand forecasting). Skills are added
+by appending to the curated promotions list and reseeding against the **live** taxonomy (there is no
+legacy backfill — the legacy dataset and its sync were removed), so a reseed keeps the skill.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

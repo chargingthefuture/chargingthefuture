@@ -2,21 +2,20 @@
 // canonical skills taxonomy (sector -> occupation/job title -> skill).
 //
 // Source of truth: the LIVE database taxonomy (`skills_taxonomy_sectors` / `_job_titles` /
-// `_skills`). The old legacy platform dataset is deprecated and removed (see
-// `syncSkillsTaxonomyFromLegacy.mjs`); do not look for or rebuild it. This curated list is the
-// durable, repeatable way owner-approved skills are added to the live taxonomy — append here and run
-// the seed; the sector is looked up by name in the live DB (never created) and the occupation/skill
-// are upserted under it.
+// `_skills`). The old legacy platform dataset and its sync are gone (removed with the legacy app);
+// do not look for or rebuild them. This curated list is the durable, repeatable way owner-approved
+// skills are added to the live taxonomy — append here and run the seed (`seedSkillsTaxonomy.mjs`);
+// the sector is looked up by name in the live DB (never created) and the occupation/skill are
+// upserted under it.
 //
-// Background: the taxonomy is normally synced from the legacy platform dataset by
-// syncSkillsTaxonomyFromLegacy.mjs. Free-text skills nominated through SkillsHunt
-// that are not yet in the taxonomy are tracked in skills_hunt_proposed_skill_promotions
-// and surfaced as GitHub "skill proposal" issues by proposeSkillPromotions.mjs. When the
-// owner approves a proposal, the skill must be added to the taxonomy in a durable,
-// repeatable way so that every reseed keeps it. This module is that durable home.
+// Background: free-text skills nominated through SkillsHunt that are not yet in the taxonomy are
+// tracked in skills_hunt_proposed_skill_promotions and surfaced as GitHub "skill proposal" issues by
+// proposeSkillPromotions.mjs. When the owner approves a proposal, the skill must be added to the
+// taxonomy in a durable, repeatable way so that every reseed keeps it. This module is that durable
+// home, and the only path that writes the taxonomy from the seeds.
 //
-// It mirrors the upsert helpers in syncSkillsTaxonomyFromLegacy.mjs:
-//   - look up the sector by name (it must already exist; this never creates sectors)
+// Each entry is applied by:
+//   - look up the sector by name (it must already exist in the live DB; this never creates sectors)
 //   - upsert the occupation (job title) under that sector
 //   - upsert each skill under that occupation
 // Every write is ON CONFLICT no-op on re-run, so running it repeatedly is safe.
@@ -31,7 +30,7 @@
 // The promotions list below is the single source of truth for owner-approved promotions.
 // Add a new approved promotion by appending an entry; keep it small and curated.
 
-import { normalizeTaxonomyName } from './loadLegacySkillsData.mjs';
+import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 
 // Curated, owner-approved promotions. Each entry names an EXISTING sector (looked up by
 // name, never created), one occupation to upsert under it, and the skills to upsert under
