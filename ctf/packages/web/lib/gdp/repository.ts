@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
 import { countActiveUsersLastDays, countTotalMembers } from 'lib/engagement/login-activity';
+import { countActiveDirectoryProfiles } from 'lib/directory/repository';
 import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
 
 type PublicationRow = {
@@ -105,17 +106,20 @@ export async function upsertPublication(input: {
 }
 
 export async function getGdpShellStats(): Promise<{ memberCount: number | null; gdpValueUsd: number | null }> {
-  // Member count is the total number of people signed up (every account), read directly from the
-  // identity table — independent of whether a weekly GDP report has been published. The GDP value
-  // still comes from the latest published report. The two are fetched together but kept separate so
-  // a missing report never blanks the member count, and a member-count read error never blanks GDP.
-  const [memberCount, report] = await Promise.all([
+  // Member count is the number of community members — the count of active Directory profiles, the same
+  // definition the Workforce dashboard uses. (The older login_events count undercounted: it only saw
+  // members who had logged in since activity tracking began, so the signed-out shell read low.) The GDP
+  // value still comes from the latest published report. The reads are kept separate so a missing report
+  // never blanks the member count, and a member-count read error never blanks GDP. Falls back to the
+  // login-activity count only if the Directory read fails, so the number never blanks.
+  const [directoryCount, loginCount, report] = await Promise.all([
+    countActiveDirectoryProfiles().catch(() => null),
     countTotalMembers().catch(() => null),
     getLatestPublication().catch(() => null),
   ]);
   const gdpMetric = report?.metrics.find((m) => m.metricKey === 'gdp_total_revenue') ?? null;
   return {
-    memberCount,
+    memberCount: directoryCount ?? loginCount,
     gdpValueUsd: gdpMetric ? gdpMetric.metricValue : null,
   };
 }
@@ -174,12 +178,16 @@ async function getLatestPublicationNarrative() {
 }
 
 export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
-  const [breakdown, totalMembers, activeMembers, narrative] = await Promise.all([
+  const [breakdown, directoryMembers, loginMembers, activeMembers, narrative] = await Promise.all([
     recognizeCommunityValueIndex(),
+    countActiveDirectoryProfiles().catch(() => null),
     countTotalMembers().catch(() => null),
     countActiveUsersLastDays(7).catch(() => null),
     getLatestPublicationNarrative().catch(() => null),
   ]);
+  // Members = active Directory profiles (same definition as the shell stat and the Workforce
+  // dashboard); fall back to the login-activity count only if the Directory read fails.
+  const totalMembers = directoryMembers ?? loginMembers;
 
   // Community Value Index is the headline: a normalized, weighted estimate (no currency symbol), so it
   // carries is_estimate = true exactly like the weekly pipeline writes it.

@@ -56,6 +56,17 @@ spinner, or a raw metric key. If no report is published, an honest empty caption
 invented number.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### GDP-1b · Member count matches active Directory profiles
+**Role:** anonymous (signed out) + admin · **Surfaces:** web + mobile-responsive
+**Steps:**
+1. On the signed-out home/launcher, read the "Members" stat.
+2. Compare it to the number of active Directory profiles (the Workforce dashboard's member/recruited
+   count, or `SELECT COUNT(*) FROM directory_profiles WHERE is_active = TRUE AND deleted_at IS NULL`).
+**Expected:** The two match. The count is the number of active Directory profiles — not the (lower)
+count of members who have logged in since activity tracking began. If the Directory read fails the
+stat may fall back to the login-activity count rather than blanking.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### GDP-2 · Estimate treatment
 **Role:** member · **Surfaces:** all
 **Steps:**
