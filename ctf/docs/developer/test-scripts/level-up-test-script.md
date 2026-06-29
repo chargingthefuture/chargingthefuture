@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:level-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-level-up-feature-inventory.md` |
-| **Generated** | 2026-06-29 (auto-cohort creation + economic policy/milestone skeleton added; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-29 (auto-cohort creation + economic policy/milestone skeleton + trainer-assignment wiring; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -110,6 +110,19 @@ trainer appears with tracks Tech and Finance. No action mutates a trainer.
 3. Release the validated milestone.
 **Expected:** Validation records against the right enrollment and cohort. Release settles the
 learner's escrow and pays the trainer split; both show in the payout ledger.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### LVL-T2 · Claim an auto cohort and get paid on it
+**Role:** trainer · **Surfaces:** backend (API)
+**Precondition:** an auto-created cohort that still shows `needs trainer`, with a deposit set
+(`default_required_credits` > 0) so there is escrow to release.
+**Steps:**
+1. As a trainer, claim the cohort (`POST /api/level-up/cohorts/[cohortId]/claim-trainer`).
+2. Have a member enroll, then validate and release a milestone for that enrollment.
+3. Separately, confirm an enrollment that was made **before** the claim also pays out.
+**Expected:** After the claim, new enrollments carry the trainer as `assigned_trainer_id`, and
+enrollments made before the claim are backfilled with it. Releasing a milestone pays the claiming
+trainer their split (it no longer silently skips the payout for want of an assigned trainer).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
