@@ -227,6 +227,20 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
   };
 }
 
+// The canonical count of community members is the number of active Directory profiles (claimed or
+// community-generated), the same definition the Workforce dashboard uses for "members". Excludes
+// soft-deleted profiles. Returns null on a read error so a caller can fall back rather than blank the
+// number.
+export async function countActiveDirectoryProfiles(): Promise<number | null> {
+  const result = await queryDb<{ total: string }>(
+    `SELECT COUNT(*)::text AS total
+     FROM directory_profiles
+     WHERE is_active = TRUE AND deleted_at IS NULL`,
+  );
+  const total = Number.parseInt(result.rows[0]?.total ?? '', 10);
+  return Number.isFinite(total) ? total : null;
+}
+
 export function parsePaginationParams(url: string): { page: number; pageSize: number } {
   const params = new URL(url).searchParams;
   const pageRaw = Number.parseInt(params.get('page') ?? '', 10);
