@@ -1,3 +1,15 @@
+// DEPRECATED — legacy is gone; the LIVE taxonomy is the source of truth.
+//
+// This module backfilled the canonical taxonomy from the old platform dataset at
+// `platform/scripts/data/skills-data.ts`. That legacy app has been removed, so the dataset file no
+// longer exists and this sync is no longer the source of taxonomy data. The authoritative skills
+// taxonomy now lives ONLY in the live database (`skills_taxonomy_sectors` / `_job_titles` / `_skills`).
+//
+// To ADD a skill (e.g. promoting a SkillsHunt proposal), do NOT look for or re-create the legacy
+// dataset — append an entry to the curated promotions list in `seedSkillsTaxonomyPromotions.mjs` (it
+// looks the sector up by name in the live DB and upserts the occupation/skill) and run that seed.
+// Treat the live DB taxonomy as canonical; do not relitigate the legacy path.
+
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { loadLegacySkillsData, normalizeTaxonomyName } from './loadLegacySkillsData.mjs';

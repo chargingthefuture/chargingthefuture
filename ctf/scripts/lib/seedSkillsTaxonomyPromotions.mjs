@@ -1,6 +1,13 @@
 // Idempotent promotion of curated, owner-approved free-text skills into the
 // canonical skills taxonomy (sector -> occupation/job title -> skill).
 //
+// Source of truth: the LIVE database taxonomy (`skills_taxonomy_sectors` / `_job_titles` /
+// `_skills`). The old legacy platform dataset is deprecated and removed (see
+// `syncSkillsTaxonomyFromLegacy.mjs`); do not look for or rebuild it. This curated list is the
+// durable, repeatable way owner-approved skills are added to the live taxonomy — append here and run
+// the seed; the sector is looked up by name in the live DB (never created) and the occupation/skill
+// are upserted under it.
+//
 // Background: the taxonomy is normally synced from the legacy platform dataset by
 // syncSkillsTaxonomyFromLegacy.mjs. Free-text skills nominated through SkillsHunt
 // that are not yet in the taxonomy are tracked in skills_hunt_proposed_skill_promotions
@@ -67,6 +74,17 @@ export const APPROVED_SKILL_PROMOTIONS = [
       'Playtesting & QA',
     ],
     proposalNormalizedSkills: [],
+  },
+  {
+    // Approved from skill proposal #1180 (SkillsHunt nomination). "Supply Managers" under
+    // "Retail & Services" already exists in the live taxonomy with skills Inventory control,
+    // Supplier negotiation, and Demand forecasting; Merchandising joins them.
+    sectorName: 'Retail & Services',
+    occupationName: 'Supply Managers',
+    skills: [
+      'Merchandising',
+    ],
+    proposalNormalizedSkills: ['merchandising'],
   },
 ];
 
