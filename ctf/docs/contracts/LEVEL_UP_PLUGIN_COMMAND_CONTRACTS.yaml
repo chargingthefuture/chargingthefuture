@@ -360,6 +360,7 @@ contracts:
         type: string
     dataAccess:
       - level_up_cohorts
+      - level_up_enrollments
       - level_up_audit_events
     purpose: training_cohort_management
     retentionClass: transactional_long_lived

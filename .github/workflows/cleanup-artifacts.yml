@@ -52,7 +52,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issues = await github.issues.listForRepo({
+            const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
@@ -69,13 +69,13 @@ jobs:
             const issueNumbers = process.env.ISSUE_NUMBERS || '';
             if (!issueNumbers) return;
             for (const num of issueNumbers.split(',')) {
-              await github.issues.createComment({
+              await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: Number(num),
                 body: 'Artifacts cleaned up automatically. Closing issue.'
               });
-              await github.issues.update({
+              await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: Number(num),
