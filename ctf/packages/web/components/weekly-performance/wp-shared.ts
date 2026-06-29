@@ -99,10 +99,12 @@ export function formatWeekRange(week: WpWeek): string {
   return `${startLabel}–${endLabel}, ${end.year}`;
 }
 
-// Turn a snake/camel metric key into a readable label (no label column exists).
+// Turn a dotted/snake/camel metric key into a readable label (no label column exists).
+// The namespace dot is treated as a separator too, so "engagement.active_members" reads as
+// "Engagement Active Members" rather than "Engagement.Active Members".
 export function humanizeMetricKey(key: string): string {
   return key
-    .replace(/[_-]+/g, " ")
+    .replace(/[._-]+/g, " ")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim()

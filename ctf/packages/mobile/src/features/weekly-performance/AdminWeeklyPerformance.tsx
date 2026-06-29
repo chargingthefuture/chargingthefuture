@@ -12,16 +12,13 @@ import {
   fetchCurrentWeek,
   fetchWeekMetrics,
   fetchWeeks,
-  selectActiveWeek,
   WeekMetric,
   WeekRow,
 } from './api';
 
-// Admin surface for Weekly Performance, aligned to
-// design/.../survivor-hub/MobileWeeklyPerformanceAdminView.tsx.
-// Real endpoints only: the mockup's fabricated plugin-breakdown and daily bar
-// chart are omitted (no backing API field). Tabs: Metrics, History.
-// Actions: set the active week (PUT /api/weekly-performance/admin/week-selection).
+// Admin surface for Weekly Performance. Real endpoints only. Tabs: Metrics, History.
+// Numbers are always live (there is no "close the week" step), so this is a read/review tool:
+// pick a week in History, see its live metrics. It does not mark a week "active".
 
 const BRAND = '#6366F1';
 const BG = '#0F1117';
@@ -38,15 +35,21 @@ const METRIC_CONFIG: Record<string, { label: string; color: string }> = {
   gdp_delta: { label: 'GDP Delta', color: '#06B6D4' },
 };
 
-type Tab = 'metrics' | 'history';
+const METRIC_FALLBACK_COLOR = '#A78BFA';
 
-type Feedback = { kind: 'success' | 'error'; text: string } | null;
-
-function statusColor(status: WeekRow['status']): string {
-  if (status === 'open') return '#22C55E';
-  if (status === 'published') return '#06B6D4';
-  return SUBTLE;
+function humanizeMetricKey(key: string): string {
+  return key
+    .replace(/[._-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+function metricConfig(key: string): { label: string; color: string } {
+  return METRIC_CONFIG[key] ?? { label: humanizeMetricKey(key), color: METRIC_FALLBACK_COLOR };
+}
+
+type Tab = 'metrics' | 'history';
 
 function NotAdmin() {
   return (
@@ -71,8 +74,6 @@ export const AdminWeeklyPerformance: React.FC = () => {
   const [dataLoading, setDataLoading] = useState(false);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<Feedback>(null);
-  const [selecting, setSelecting] = useState(false);
 
   const loadWeeks = useCallback(() => {
     setDataLoading(true);
@@ -118,21 +119,6 @@ export const AdminWeeklyPerformance: React.FC = () => {
     };
   }, [selectedWeek]);
 
-  function onSelectActiveWeek() {
-    if (!selectedWeek || selecting) return;
-    setSelecting(true);
-    setFeedback(null);
-    selectActiveWeek(selectedWeek.weekStartDate)
-      .then((res) => {
-        setFeedback({ kind: 'success', text: `Active week set to ${res.selectedWeek?.weekStartDate ?? selectedWeek.weekStartDate}.` });
-        return loadWeeks();
-      })
-      .catch((e: unknown) => {
-        setFeedback({ kind: 'error', text: e instanceof Error ? e.message : 'Could not set the active week.' });
-      })
-      .finally(() => setSelecting(false));
-  }
-
   if (authLoading) {
     return (
       <View style={styles.centerRoot}>
@@ -141,8 +127,6 @@ export const AdminWeeklyPerformance: React.FC = () => {
     );
   }
   if (!isAuthenticated || !isAdmin) return <NotAdmin />;
-
-  const knownMetrics = metrics.filter((m) => m.metricKey in METRIC_CONFIG);
 
   return (
     <View style={styles.root}>
@@ -179,30 +163,16 @@ export const AdminWeeklyPerformance: React.FC = () => {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
-        {/* Active-week selection control (shown on both tabs) */}
+        {/* Review-week summary (shown on both tabs). Pick a week in the History tab. */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Active week</Text>
+          <Text style={styles.cardTitle}>Review week</Text>
           <Text style={styles.cardSub}>
             Current week: {currentWeekStart ?? 'not set'} · Tracked weeks: {weeks.length}
           </Text>
           {selectedWeek ? (
             <Text style={styles.selectedLabel}>
-              Selected: {selectedWeek.weekStartDate} – {selectedWeek.weekEndDate}
-            </Text>
-          ) : null}
-          <TouchableOpacity
-            style={[styles.primaryBtn, (selecting || !selectedWeek) && styles.primaryBtnDisabled]}
-            onPress={onSelectActiveWeek}
-            disabled={selecting || !selectedWeek}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryBtnText}>
-              {selecting ? 'Setting…' : 'Set selected week as active'}
-            </Text>
-          </TouchableOpacity>
-          {feedback ? (
-            <Text style={[styles.feedbackText, feedback.kind === 'success' ? styles.feedbackOk : styles.feedbackErr]}>
-              {feedback.text}
+              Viewing: {selectedWeek.weekStartDate} – {selectedWeek.weekEndDate}
+              {selectedWeek.weekStartDate === currentWeekStart ? ' · Live' : ''}
             </Text>
           ) : null}
         </View>
@@ -214,12 +184,12 @@ export const AdminWeeklyPerformance: React.FC = () => {
         ) : tab === 'metrics' ? (
           metricsLoading ? (
             <ActivityIndicator size="large" color={BRAND} style={styles.spinner} />
-          ) : knownMetrics.length === 0 ? (
+          ) : metrics.length === 0 ? (
             <Text style={styles.noDataText}>No metric data available for this week.</Text>
           ) : (
             <View style={styles.metricsGrid}>
-              {knownMetrics.map((m) => {
-                const cfg = METRIC_CONFIG[m.metricKey];
+              {metrics.map((m) => {
+                const cfg = metricConfig(m.metricKey);
                 const displayValue =
                   m.metricUnit === 'USD'
                     ? `$${m.metricValue.toLocaleString()}`
@@ -246,7 +216,6 @@ export const AdminWeeklyPerformance: React.FC = () => {
                   style={[styles.historyItem, isSelected && styles.historyItemSelected]}
                   onPress={() => {
                     setSelectedWeek(w);
-                    setFeedback(null);
                     setTab('metrics');
                   }}
                   accessibilityRole="button"
@@ -255,7 +224,9 @@ export const AdminWeeklyPerformance: React.FC = () => {
                     <Text style={styles.historyItemLabel}>
                       {w.weekStartDate} – {w.weekEndDate}
                     </Text>
-                    <Text style={[styles.historyItemStatus, { color: statusColor(w.status) }]}>{w.status}</Text>
+                    <Text style={[styles.historyItemStatus, { color: isCurrent ? '#22C55E' : SUBTLE }]}>
+                      {isCurrent ? 'Live' : 'Historical'}
+                    </Text>
                   </View>
                   {isCurrent ? <Text style={styles.currentBadge}>CURRENT</Text> : null}
                 </TouchableOpacity>
@@ -341,18 +312,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 13, fontWeight: '700', color: TEXT, marginBottom: 4 },
   cardSub: { fontSize: 12, color: SUBTLE, marginBottom: 8 },
-  selectedLabel: { fontSize: 12, color: TEXT, marginBottom: 10 },
-  primaryBtn: {
-    paddingVertical: 11,
-    borderRadius: 8,
-    backgroundColor: BRAND,
-    alignItems: 'center',
-  },
-  primaryBtnDisabled: { backgroundColor: `${BRAND}60` },
-  primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#0F1117' },
-  feedbackText: { fontSize: 12, marginTop: 10 },
-  feedbackOk: { color: '#22C55E' },
-  feedbackErr: { color: '#EF4444' },
+  selectedLabel: { fontSize: 12, color: TEXT, marginBottom: 2 },
 
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metricCard: {

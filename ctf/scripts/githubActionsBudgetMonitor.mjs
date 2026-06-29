@@ -378,9 +378,14 @@ function buildSummaryMarkdown({
   lines.push("");
   lines.push("| Metric | Used | Budget | Percent | Level |");
   lines.push("|---|---:|---:|---:|---|");
-  lines.push(
-    `| Minutes | ${formatUsageValue(usage.minutesUsed, "minutes")} | ${formatUsageValue(usage.minutesBudget, "minutes")} | ${classes.minutes.percentUsed ?? "unknown"}% | ${classes.minutes.level} |`,
-  );
+  // Only show the Minutes row when minutes were actually measured. When the billing/timing APIs are
+  // unavailable (degraded auth) there is no real number to report, so an "unknown / unknown% / unknown"
+  // row is noise — omit it entirely. The "Data Notes" section still records why minutes are absent.
+  if (usage.minutesUsed !== null && usage.minutesUsed !== undefined) {
+    lines.push(
+      `| Minutes | ${formatUsageValue(usage.minutesUsed, "minutes")} | ${formatUsageValue(usage.minutesBudget, "minutes")} | ${classes.minutes.percentUsed ?? "unknown"}% | ${classes.minutes.level} |`,
+    );
+  }
   lines.push(
     `| Artifact storage | ${formatUsageValue(usage.artifactStorageMbUsed, "mb")} | ${formatUsageValue(usage.artifactStorageMbBudget, "mb")} | ${classes.artifacts.percentUsed ?? "unknown"}% | ${classes.artifacts.level} |`,
   );
