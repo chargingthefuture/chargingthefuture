@@ -15,9 +15,9 @@ import {
   formatMetricValue,
   formatWeekRange,
   humanizeMetricKey,
+  isCurrentWeek,
   type CurrentWeekResponse,
   type MetricsResponse,
-  type WeekSelectionResponse,
   type WeeksResponse,
   type WpMetric,
   type WpWeek,
@@ -28,16 +28,10 @@ import {
 //   GET  /api/weekly-performance/weeks          — tracked weeks
 //   GET  /api/weekly-performance/current-week    — current week + active-user count
 //   GET  /api/weekly-performance/metrics         — metrics for a week
-//   PUT  /api/weekly-performance/admin/week-selection (CSRF) — mark a week active
 //   GET  /api/weekly-performance/export          — export gate (admin, env-flagged)
-
-type Feedback = { kind: "success" | "error"; text: string } | null;
-
-function statusColor(status: WpWeek["status"]): string {
-  if (status === "open") return "#22C55E";
-  if (status === "published") return "#06B6D4";
-  return SUBTLE;
-}
+//
+// Numbers are always live (there is no "close the week" step), so the admin surface is a read/review
+// tool: pick a week, see its live metrics, export. It does not mark a week "active".
 
 export function WeeklyPerformanceAdminShell() {
   const isMobile = useIsMobile();
@@ -48,8 +42,6 @@ export function WeeklyPerformanceAdminShell() {
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<Feedback>(null);
-  const [selecting, setSelecting] = useState(false);
 
   const loadWeeks = useCallback(async () => {
     setLoading(true);
@@ -101,29 +93,7 @@ export function WeeklyPerformanceAdminShell() {
   }, [selectedWeekStart]);
 
   const selectedWeek = weeks.find((w) => w.weekStartDate === selectedWeekStart) ?? null;
-
-  async function selectActiveWeek() {
-    if (!selectedWeekStart || selecting) return;
-    setSelecting(true);
-    setFeedback(null);
-    try {
-      const res = await fetch("/api/weekly-performance/admin/week-selection", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ weekStartDate: selectedWeekStart }),
-      });
-      const data = (await res.json()) as WeekSelectionResponse;
-      if (!res.ok || !data.ok) {
-        throw new Error(data.message ?? "Could not set the active week.");
-      }
-      setFeedback({ kind: "success", text: `Active week set to ${data.selectedWeek ? formatWeekRange(data.selectedWeek) : selectedWeekStart}.` });
-      await loadWeeks();
-    } catch (e) {
-      setFeedback({ kind: "error", text: e instanceof Error ? e.message : "Could not set the active week." });
-    } finally {
-      setSelecting(false);
-    }
-  }
+  const selectedIsCurrent = isCurrentWeek(selectedWeekStart, currentWeekStart);
 
   function exportSelected() {
     if (selectedWeekStart) {
@@ -138,7 +108,9 @@ export function WeeklyPerformanceAdminShell() {
     border: `1px solid ${BORDER}`,
   };
 
-  const header = (
+  // Desktop-only header. On mobile, MobileScreenHeader (below) already renders the back button,
+  // brand icon, and title, so rendering this too would duplicate the header.
+  const header = isMobile ? null : (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
       <Link
         href="/apps/weekly-performance"
@@ -151,8 +123,8 @@ export function WeeklyPerformanceAdminShell() {
         <BarChart2 size={18} color={BRAND} />
       </div>
       <div style={{ flex: 1 }}>
-        <h1 style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, margin: 0, color: TEXT }}>Weekly Performance Admin</h1>
-        <div style={{ fontSize: 12, color: SUBTLE }}>Set the active week and review its metrics.</div>
+        <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: TEXT }}>Weekly Performance Admin</h1>
+        <div style={{ fontSize: 12, color: SUBTLE }}>Review weekly metrics and export.</div>
       </div>
       <span style={{ padding: "3px 8px", borderRadius: 6, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", fontSize: 11, color: "#818CF8", fontWeight: 700, flexShrink: 0 }}>ADMIN</span>
     </div>
@@ -168,39 +140,25 @@ export function WeeklyPerformanceAdminShell() {
   } else {
     body = (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Week selection control */}
+        {/* Review-week picker. Numbers are always live, so this only chooses which week to review and
+            export — it does not mark a week "active". */}
         <section style={cardStyle}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: TEXT }}>Active week</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: TEXT }}>Review week</div>
           <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 12 }}>
             Current week: {currentWeekStart ? currentWeekStart : "not set"}. Tracked weeks: {weeks.length}.
           </div>
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 10, alignItems: isMobile ? "stretch" : "center" }}>
-            <select
-              value={selectedWeekStart ?? ""}
-              onChange={(e) => {
-                setSelectedWeekStart(e.target.value);
-                setFeedback(null);
-              }}
-              style={{ flex: 1, padding: "9px 11px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT, fontSize: 13 }}
-            >
-              {weeks.map((w) => (
-                <option key={w.weekStartDate} value={w.weekStartDate}>
-                  {formatWeekRange(w)} · {w.status}
-                  {w.weekStartDate === currentWeekStart ? " (current)" : ""}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => void selectActiveWeek()}
-              disabled={selecting || !selectedWeekStart}
-              style={{ padding: "9px 16px", borderRadius: 8, background: selecting ? `${BRAND}60` : BRAND, border: "none", color: "#0F1117", fontSize: 13, fontWeight: 700, cursor: selecting ? "default" : "pointer", flexShrink: 0 }}
-            >
-              {selecting ? "Setting…" : "Set as active week"}
-            </button>
-          </div>
-          {feedback && (
-            <div style={{ marginTop: 10, fontSize: 12, color: feedback.kind === "success" ? "#22C55E" : "#F87171" }}>{feedback.text}</div>
-          )}
+          <select
+            value={selectedWeekStart ?? ""}
+            onChange={(e) => setSelectedWeekStart(e.target.value)}
+            style={{ width: "100%", padding: "9px 11px", background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`, borderRadius: 8, color: TEXT, fontSize: 13 }}
+          >
+            {weeks.map((w) => (
+              <option key={w.weekStartDate} value={w.weekStartDate}>
+                {formatWeekRange(w)}
+                {w.weekStartDate === currentWeekStart ? " (current · live)" : ""}
+              </option>
+            ))}
+          </select>
         </section>
 
         {/* Selected week summary + export */}
@@ -209,7 +167,9 @@ export function WeeklyPerformanceAdminShell() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{formatWeekRange(selectedWeek)}</div>
-                <div style={{ fontSize: 12, color: statusColor(selectedWeek.status), fontWeight: 600, textTransform: "capitalize" }}>{selectedWeek.status}</div>
+                {selectedIsCurrent && (
+                  <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>Live</div>
+                )}
               </div>
               <button
                 onClick={exportSelected}
@@ -222,7 +182,7 @@ export function WeeklyPerformanceAdminShell() {
             {metricsLoading ? (
               <div style={{ fontSize: 13, color: SUBTLE }}>Loading metrics…</div>
             ) : metrics.length === 0 ? (
-              <div style={{ fontSize: 13, color: SUBTLE }}>No metrics recorded for this week yet.</div>
+              <div style={{ fontSize: 13, color: SUBTLE }}>No metric data available for this week.</div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
                 {metrics.map((m) => (
