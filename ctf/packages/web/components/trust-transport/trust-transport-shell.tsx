@@ -12,6 +12,7 @@ import { TrustTransportIconRail } from "./tt-icon-rail";
 import { TrustTransportSidebar } from "./tt-sidebar";
 import { TrustTransportBookTab } from "./tt-book-tab";
 import { TrustTransportTrackingTab } from "./tt-tracking-tab";
+import { TrustTransportHelpTab } from "./tt-help-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
@@ -215,6 +216,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       {tab === "tracking" && (
         <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} />
       )}
+      {tab === "help" && <TrustTransportHelpTab />}
       {tab === "chat" && (
         <TrustTransportChatTab
           requests={requests}
@@ -233,6 +235,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     const tabs: { key: Tab; label: string }[] = [
       { key: "book", label: "Book" },
       { key: "tracking", label: "Tracking" },
+      { key: "help", label: "Help" },
       { key: "chat", label: "Direct Line" },
     ];
     return (
