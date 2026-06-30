@@ -197,6 +197,49 @@ export async function searchProviders(input: {
   };
 }
 
+// Fetch one Foundation provider by directory-profile id. A provider is the same thing search
+// returns: a claimed, active directory profile that has opted in to offer at least one skill. Backs
+// the auth-gated deep-link page (/apps/foundation/provider/[id]) so a shared link opens that
+// provider for a signed-in member. Returns null when the id matches no active provider (e.g. the
+// profile was deactivated, unclaimed, or has stopped offering any skill). Behind the same read
+// gate as search — never exposed to unauthenticated visitors.
+export async function getProviderById(profileId: string): Promise<FoundationProviderSearchItem | null> {
+  const id = typeof profileId === 'string' ? profileId.trim() : '';
+  if (id.length === 0) return null;
+
+  const result = await queryDb<FoundationProviderRow>(
+    `
+      SELECT
+        dp.id::text AS profile_id,
+        dp.claimed_by_user_id AS provider_user_id,
+        TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) AS display_name,
+        dp.headline,
+        dp.bio,
+        0 AS score,
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object('id', s.id::text, 'name', s.name) ORDER BY s.name)
+          FROM foundation_provider_skills fps
+          JOIN skills_taxonomy_skills s ON s.id = fps.skill_id
+          WHERE fps.user_id = dp.claimed_by_user_id
+        ), '[]'::jsonb) AS offered_skills,
+        fue.instant_call_enabled,
+        fue.instant_call_rate_credits,
+        fue.instant_call_interval_minutes
+      FROM directory_profiles dp
+      LEFT JOIN foundation_user_extension fue ON fue.user_id = dp.claimed_by_user_id
+      WHERE dp.id::text = $1
+        AND dp.is_active = TRUE
+        AND dp.claimed_by_user_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
+      LIMIT 1
+    `,
+    [id],
+  );
+
+  const row = result.rows[0];
+  return row ? mapProviderRow(row) : null;
+}
+
 // The skills a member could offer through Foundation: the skills on their own claimed Directory
 // profile, each marked whether they have currently opted in to be contacted about it. The picker
 // uses this so a provider can only offer skills they actually list in the Directory.

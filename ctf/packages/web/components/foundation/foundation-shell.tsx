@@ -56,7 +56,7 @@ function Centered({ color, children }: { color: string; children: React.ReactNod
   );
 }
 
-export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
+export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: boolean; initialProviderId?: string } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<ProviderView[]>([]);
@@ -123,6 +123,28 @@ export function FoundationShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       active = false;
     };
   }, [searchTerm, skillId, loadQuotes]);
+
+  // Deep-link open: when the page was reached via /apps/foundation/provider/[id] (a shared link),
+  // fetch that one provider and open its profile. The id may not be on the current search page, so
+  // this fetches it directly rather than matching the loaded list. Unauthenticated visitors never
+  // get here — the route redirects them to the Foundation landing.
+  useEffect(() => {
+    if (!initialProviderId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(`/api/foundation/providers/${encodeURIComponent(initialProviderId)}`, { signal: controller.signal });
+        if (!res.ok || controller.signal.aborted) return;
+        const data = (await res.json()) as { provider?: ProviderView; viewerUserId?: string };
+        if (controller.signal.aborted) return;
+        if (data.viewerUserId) setViewerUserId(data.viewerUserId);
+        if (data.provider) setSelected(data.provider);
+      } catch {
+        // Aborted or unavailable: the browse view stays open instead of the deep-linked profile.
+      }
+    })();
+    return () => controller.abort();
+  }, [initialProviderId]);
 
   // Real quote creation is two steps: open a connection thread, then request a quote on it.
   const requestQuote = useCallback(async (provider: ProviderView) => {

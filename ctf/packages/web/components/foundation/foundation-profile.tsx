@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Shield } from "lucide-react";
 import { COLOR, FONT, initials, type ProviderView } from "./foundation-ui";
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls, isOwnProfile } from "./foundation-connect-now";
+import { ShareLink } from "@/components/shared/share-link";
 
 export function ProviderProfile({
   provider, viewerUserId = null, submitting, quoteError, quoteSuccess, onBack, onRequestQuote,
@@ -24,6 +25,12 @@ export function ProviderProfile({
           ← Back
         </button>
         <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: "#F9FAFB" }}>Provider Profile</div>
+        {/* Share this provider — the one app-wide control (rule 130). The link opens the auth-gated
+            deep-link page: a signed-in member lands on this provider, an unauthenticated visitor is
+            redirected to the Foundation landing. */}
+        <div style={{ color: COLOR, fontSize: 14, fontWeight: 700 }}>
+          <ShareLink url={`/apps/foundation/provider/${provider.profileId}`} title="Share this provider" />
+        </div>
       </div>
       <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", display: "flex", gap: 32, flexWrap: "wrap" }}>
         <div style={{ flex: 2, minWidth: 320 }}>
