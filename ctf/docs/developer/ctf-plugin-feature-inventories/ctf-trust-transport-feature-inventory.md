@@ -15,7 +15,7 @@ TrustTransport is a trauma-informed, safety-first logistics marketplace plugin f
 1. request and fulfill rides,
 2. request and fulfill package delivery,
 3. request and fulfill food delivery,
-4. earn income through verified provider participation,
+4. earn income by helping fulfill requests,
 5. build reputation and trust through transparent completion history.
 
 The plugin must provide equivalent core behavior across web and Android.
@@ -183,7 +183,7 @@ Single-profile rule is enforced:
 
 Extension entity:
 
-- `trust_transport_user_extension` — mode preferences, trust/safety settings, payout preference metadata, provider eligibility flags, linked by `user_id`.
+- `trust_transport_user_extension` — mode preferences, trust/safety settings, payout preference metadata, linked by `user_id`.
 
 ### 4.2 Domain Entities
 
@@ -251,6 +251,18 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Removed the unbuilt "verified provider" role/tier (owner directive). There was never any
+  in-app verification or a way to grant the `provider` role — it was only a role string read from the
+  Clerk identity, gating two payout routes and nothing else. Deleted `ensureTrustTransportProviderRole`,
+  the `requireTrustTransportProviderAccess` gate, and the `TRUST_TRANSPORT_PROVIDER_REQUIRED` error code.
+  The payout routes (`GET /payouts`, `POST /payouts/requests`) now use member read access — payouts are
+  already scoped to the caller's own earnings ledger by user id, so any member who has earned can request
+  one. Dropped `provider` from the `requiredRoles` of the request.create, offer.create, trip.status.update,
+  and payout.request access policies (the payout deny condition `actor_not_provider` → `actor_not_authenticated`),
+  and removed "verified provider participation" / "provider eligibility flags" wording from the inventory.
+  "Provider" remains only as a neutral domain term for whoever fulfils a request (the `provider_user_id`
+  columns, the `provider_region`, the `provider_payouts` purpose) — not a gated, verified status.
 
 - 2026-06-30: Added offer creation — the foundation of the provider/matching flow, which previously had
   no write path (offers existed only from seed data). New `POST /api/trust-transport/requests/:requestId/offers`

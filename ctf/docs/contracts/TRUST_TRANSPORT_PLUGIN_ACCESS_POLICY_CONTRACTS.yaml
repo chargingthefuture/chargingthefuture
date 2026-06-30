@@ -4,7 +4,6 @@ policies:
     version: 1.0.0
     requiredRoles:
       - member
-      - provider
     attributePolicies:
       tenancy: same_workspace
       modeValidation: required
@@ -32,7 +31,6 @@ policies:
     version: 1.0.0
     requiredRoles:
       - member
-      - provider
     attributePolicies:
       tenancy: same_workspace
       actorMustNotOwnRequest: true
@@ -83,7 +81,6 @@ policies:
     version: 1.0.0
     requiredRoles:
       - member
-      - provider
       - admin
     attributePolicies:
       tenancy: same_workspace
@@ -109,7 +106,7 @@ policies:
     command: trust-transport.payout.request
     version: 1.0.0
     requiredRoles:
-      - provider
+      - member
     attributePolicies:
       tenancy: same_workspace
       actorMustOwnLedger: true
@@ -126,6 +123,6 @@ policies:
       containsPHI: false
       requiresAdditionalAudit: true
     denyConditions:
-      - actor_not_provider
+      - actor_not_authenticated
       - insufficient_available_balance
       - payout_channel_not_verified
