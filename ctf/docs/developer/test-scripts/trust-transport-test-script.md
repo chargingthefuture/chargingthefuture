@@ -1,194 +1,509 @@
 # TrustTransport — Manual Test Script
 
-> Walk these steps on a real device to confirm the plugin works end to end. This script is
-> generated from the plugin's feature inventory and contracts — those files are the source of
-> truth, this is the runnable checklist derived from them. Do not edit a step here to match a
-> bug; fix the code (or the inventory) and regenerate.
->
-> **How to regenerate:** `pnpm --dir ctf test-script:generate -- trust-transport`
+> Generated from the feature inventory and contracts for `trust-transport`; this is the runnable checklist for hand-testing on a real device. Regenerate with:
+> `pnpm --dir ctf test-script:generate -- trust-transport`
 
-| | |
+| Field | Value |
 |---|---|
-| **Plugin** | TrustTransport (`trust-transport`) |
-| **Visibility** | Member-facing |
+| **Plugin** | TrustTransport |
+| **Visibility** | Member |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
+| **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-29 (modes auth gate + ServiceCredits transfer self-transfer/audit; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-30 (commit 6f320290) |
+
+---
 
 ## How to run this
 
-- Each case is **precondition → steps → expected**. Do it on each surface listed for the case.
-- Mark each surface box: ✅ pass · ❌ fail · ⛔ blocked/can't reach.
-- A ❌ becomes a row in the **Bug Reporting** plugin. Put the bug link in the notes line so the
-  next run knows it's already filed.
-- Run the **Core smoke** block every session. Run the full walkthrough when you changed this
-  plugin or on a pre-release sweep.
+- ✅ pass — behavior matches the expected result exactly
+- ❌ fail — behavior differs; open a Bug Reporting row with the case ID, surface, steps, and what you actually saw
+- ⛔ blocked — can't reach this step (note the blocker); do not mark pass or fail
+- Run **Core smoke** at the start of every session before any other section.
+- Run the seed command before your first session. If data looks wrong mid-session, re-seed and restart.
 
 ---
 
 ## Core smoke (every session)
 
-TrustTransport is a rides / package / food logistics board. Member role unless noted.
+**1. Plugin loads for a signed-in member**
+Open `/apps/trust-transport` (web) or the TrustTransport screen (android). You should see the booking surface — mode selector, origin/destination fields, and your existing requests listed. No crash, no blank screen.
+web ☐ android ☐
 
-1. **Surface loads.** Open TrustTransport. The booking surface and the request list render real
-   data — no crash, spinner, or error page. → web ☐ mobile ☐ android ☐
-2. **Modes are real.** The mode picker offers the modes the backend returns (ride / package / food),
-   not a hardcoded mockup list. The mode list requires a signed-in member — an unauthenticated call to
-   `/api/trust-transport/modes` is refused, not served. → web ☐ mobile ☐ android ☐
-3. **Create a request.** Submit a request for one mode. It is created and shows in the request list.
-   → web ☐ mobile ☐ android ☐
-4. **No fabricated safety claims.** Confirm the panel shows the "Good to know" reminders (share your
-   trip, meet in public), not "Background Checked / Identity Verified / Real-time Tracking". Tracking
-   is manual status updates, not a live map. → web ☐ mobile ☐ android ☐
+**2. Plugin is auth-gated — unauthenticated users cannot access it**
+Sign out, then navigate directly to `/apps/trust-transport` (web) or open TrustTransport while not signed in (android). You should see a public/unauthenticated state — a landing notice or sign-in prompt — not the booking surface.
+web ☐ android ☐
+
+**3. Mode list loads from the real API**
+On the booking surface, confirm that at least one transport mode (ride, package, or food) appears. The list must come from `/api/trust-transport/modes`. There must be no "nearby drivers" count, no driver ratings, and no vehicle info displayed anywhere on the screen.
+web ☐ android ☐
+
+**4. Admin surface loads for an admin and is blocked for a member**
+Sign in as an admin and open `/admin/trust-transport` (web) or the `trust-transport-admin` feature (android). The admin shell must load with stat blocks and tabs (Incidents, Market controls, Audit). Then sign in as a plain member and attempt the same URL/screen — you must see an "available to admins only" notice, not the admin UI.
+web ☐ android ☐
 
 ---
 
 ## Member walkthrough
 
-### TT-1 · Create a request
-**Role:** member · **Surfaces:** all · **Seed:** `seed:trust-transport`
-**Precondition:** signed in.
-**Steps:**
-1. Pick a mode (ride / package / food) and fill the booking form, including a settlement type
-   (default Free, or ServiceCredits / fiat / Barter).
-2. For a priced type, leave the amount blank, then set a positive amount.
-3. Submit and find the request in the list.
-**Expected:** Request is created for the chosen mode. A priced type with a missing/non-positive amount
-is blocked with an inline error and a disabled button; a valid request submits. Settlement shows by
-its label, never a ServiceCredits fiat equivalent.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+### TT-1 — Book a ride request (free / mutual-aid settlement)
 
-### TT-2 · Offers and accepting one
-**Role:** member · **Surfaces:** all
-**Precondition:** a request you own that has at least one seeded offer.
-**Steps:**
-1. Open your request and list its offers.
-2. Accept one offer.
-3. As a different member who does not own the request, try to accept an offer.
-**Expected:** Accepting an offer opens a trip. Only the request owner can accept — a non-owner is
-refused.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** member · **Surfaces:** web, android
 
-### TT-3 · Trip status updates
-**Role:** member · **Surfaces:** all
-**Precondition:** an accepted trip from TT-2.
-**Steps:**
-1. As a trip participant, move the trip through its status transitions (e.g. pickup → dropoff →
-   complete).
-2. Attempt an out-of-order transition.
-**Expected:** Valid transitions are recorded with a clear non-technical status label and an
-append-only event entry. An invalid transition is refused. A non-participant cannot update the trip.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Precondition:** Signed in as a member. Seed data loaded.
 
-### TT-4 · Trip chat (opens with the trip)
-**Role:** member · **Surfaces:** all
-**Precondition:** an accepted trip (TT-2) and, separately, a request with no accepted trip yet.
 **Steps:**
-1. Open chat on the accepted trip and send a message.
-2. Open the chat tab on a request that has no trip yet.
-**Expected:** Chat on an accepted trip connects to the real trip thread (text only, no video) between
-exactly the two parties. With no trip yet, the chat tab shows "Chat opens once a driver accepts this
-request." rather than a 404. After a terminal trip state the chat is read-only.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Open the booking surface.
+2. Select the **Ride** mode.
+3. Enter an origin and a destination.
+4. Leave settlement type as **Free** (the default).
+5. Submit the request.
 
-### TT-5 · Delivery proof capture
-**Role:** member · **Surfaces:** all
-**Precondition:** a trip in a state that accepts proof.
-**Steps:**
-1. Capture pickup proof, then delivery proof (photo/code as the form allows).
-**Expected:** Each proof is stored against the trip and shows on its event trail; this supports later
-dispute review.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere. The booking subtitle refers to drivers as community members, not vetted professionals.
 
-### TT-6 · Cancel and rate
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Cancel an order (confirm the explicit prompt).
-2. On a completed trip, submit a rating.
-**Expected:** Cancel asks for explicit confirmation before it runs. A rating is recorded as a
-dual-sided review.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+Result: web ☐ android ☐
 
-### TT-7 · Earnings and payout request
-**Role:** member (provider) · **Surfaces:** all
-**Precondition:** a provider account with earnings from a completed task.
-**Steps:**
-1. Open payout history.
-2. Request a payout for an amount within the available balance, then try one above it.
-**Expected:** Payout history lists earnings entries. A payout within the balance is accepted; one
-above the available balance, or a non-positive amount, is refused with a readable error.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+---
 
-### TT-8 · Send ServiceCredits for a trip
-**Role:** member · **Surfaces:** all
-**Precondition:** signed in with a ServiceCredits balance, plus a second member to receive.
+### TT-2 — Book a ride request with ServiceCredits settlement
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member.
+
 **Steps:**
-1. Send a positive amount of ServiceCredits to the second member.
-2. Try to send to yourself.
-3. Try a zero / negative / non-numeric amount.
-**Expected:** A valid transfer to another member completes and records a
-`trust-transport.service-credits.transfer` audit row. Sending to yourself is refused with "Cannot
-transfer credits to yourself." A zero/negative/non-numeric amount is refused with a readable error.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Open the booking surface, select **Ride**.
+2. Enter origin and destination.
+3. Change the settlement type to **ServiceCredits**.
+4. Enter a positive numeric amount.
+5. Submit.
+
+**Expected:** Request is created. The settlement badge shows the ServiceCredits label (never a bare `SC` code). No fiat equivalent is displayed alongside the ServiceCredits amount.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-3 — Booking validation: priced request without an amount is blocked
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Open the booking surface, select **Ride**.
+2. Enter origin and destination.
+3. Set settlement type to **ServiceCredits** (or any priced type).
+4. Clear the amount field so it is empty.
+5. Try to submit.
+
+**Expected:** The submit button is disabled or shows an inline error. The request is not sent. No generic server error appears.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-4 — View offers on a request and accept one
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. Seed has at least one request with at least one offer on it.
+
+**Steps:**
+1. Open your request list and tap/click a seeded request that has offers.
+2. View the offers listed for that request.
+3. Accept one offer.
+
+**Expected:** The offer is accepted and a trip is created. The UI transitions to a trip/tracking view for that trip. The trip ID is now visible (the sidebar or detail shows it, not "— → —").
+
+Result: web ☐ android ☐
+
+---
+
+### TT-5 — Tracking tab shows manual status updates, not a live GPS map
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. A trip exists (use seeded data or from TT-4).
+
+**Steps:**
+1. Open a trip from your request list.
+2. Navigate to the **Tracking** tab (labeled "Tracking", not "Live Tracking").
+
+**Expected:** The tab shows the current trip status as a text/state label derived from manual status updates. There is no "live map" copy. There is no claim of real-time GPS tracking.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-6 — Trip chat opens only after a driver accepts; shows text only
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. Have one request with no accepted offer, and one seeded trip with an accepted offer.
+
+**Steps:**
+1. Open the request that has no accepted offer yet.
+2. Navigate to its **Chat** tab.
+3. Observe the message shown.
+4. Now open the seeded accepted trip and navigate to its Chat tab.
+5. Attempt to send a text message.
+
+**Expected:**
+- Step 3: The chat tab shows "Chat opens once a driver accepts this request." — no input field.
+- Step 5: A text chat input is available. Sending a message works. There is no video call button or video room.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-7 — Chat is read-only after the trip reaches a terminal state
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. Seed includes a completed (terminal) trip with chat history.
+
+**Steps:**
+1. Open the completed/cancelled trip.
+2. Navigate to the Chat tab.
+
+**Expected:** Chat messages are visible (read-only). There is no text input field — no new messages can be sent.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-8 — Trip status update (provider/driver side)
+
+**Role:** member acting as provider · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member who is a provider. Seed has a trip assigned to this provider that is not yet complete.
+
+**Steps:**
+1. Open the active trip.
+2. Apply a status update (e.g. advance from accepted to "picked up" or equivalent).
+
+**Expected:** The trip status changes and the new state is reflected in the tracking view. The previous state is still in the event log (status transitions are append-only — you cannot revert to the previous state by re-selecting it).
+
+Result: web ☐ android ☐
+
+---
+
+### TT-9 — Proof capture on delivery
+
+**Role:** member acting as provider · **Surfaces:** web, android
+
+**Precondition:** Signed in as a provider. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
+
+**Steps:**
+1. Open the active delivery trip.
+2. Submit proof (photo reference, code, or signature as the UI allows).
+
+**Expected:** Proof is captured and the trip status advances. The proof artifact is associated with this trip. No crash or generic error.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-10 — Emergency stop
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. An active trip exists.
+
+**Steps:**
+1. Open an active trip.
+2. Locate and activate the emergency help / emergency-stop control.
+3. Confirm any confirmation prompt.
+
+**Expected:** The emergency-stop action is sent. A clear, non-technical confirmation or status change is shown. No crash.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-11 — Cancel an order
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. A cancellable trip/order exists (seeded).
+
+**Steps:**
+1. Open a cancellable order.
+2. Initiate cancellation.
+3. Confirm the explicit confirmation prompt.
+
+**Expected:** The order transitions to a cancelled terminal state. The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
+
+Result: web ☐ android ☐
+
+---
+
+### TT-12 — Submit a rating after completion
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member. Seed has a completed trip eligible for rating.
+
+**Steps:**
+1. Open a completed trip.
+2. Submit a rating (and optionally a review).
+
+**Expected:** Rating is submitted and confirmed. No crash. Dual-sided — the UI makes clear the rating applies to the counterparty.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-13 — Earnings ledger and payout request
+
+**Role:** member acting as provider · **Surfaces:** web, android
+
+**Precondition:** Signed in as a provider. Seed has completed tasks with earnings entries.
+
+**Steps:**
+1. Navigate to the earnings/payout surface.
+2. View payout history.
+3. Submit a payout request with a positive amount within available balance.
+
+**Expected:** Payout request is created and appears in payout history with a status. The amount uses the `price_currency` field (a known currency code); no fiat equivalent is shown alongside ServiceCredits amounts.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-14 — Payout request rejected for zero or negative amount
+
+**Role:** member acting as provider · **Surfaces:** web, android
+
+**Precondition:** Signed in as a provider with an earnings balance.
+
+**Steps:**
+1. Navigate to the payout request surface.
+2. Enter `0` as the amount and submit.
+3. Repeat with a negative amount.
+
+**Expected:** Both attempts are rejected with a clear error. No payout request is created in either case.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-15 — ServiceCredits self-transfer is rejected
+
+**Role:** member · **Surfaces:** web (API-level check)
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Trigger a ServiceCredits transfer (via the trip economics surface or directly via `POST /api/trust-transport/service-credits`) where `toUserId` equals your own user ID.
+
+**Expected:** The server returns a 400 error. No transfer is created. No audit event for a successful transfer is emitted.
+
+Result: web ☐
+
+---
+
+### TT-16 — Sidebar trip cards show origin and destination city
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member. Seeded trips have `pickupCity`/`dropoffCity` values.
+
+**Steps:**
+1. Open `/apps/trust-transport`.
+2. Look at the "My Trips" list in the sidebar.
+
+**Expected:** Each trip card shows the pickup city and dropoff city (e.g. "Portland → Salem"). No card shows "— → —".
+
+Result: web ☐
+
+---
+
+### TT-17 — Right panel shows honest "Good to know" content, no fabricated safety claims
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a member on the booking surface.
+
+**Steps:**
+1. Look at the right panel / info section visible on the booking surface.
+
+**Expected:** The panel contains community reminders (e.g. "share your trip", "meet in public"). There is no "Background Checked", "Identity Verified", "Real-time Tracking", or "All drivers background-checked" claim. The community label reads "Community", not "Safety-First".
+
+Result: web ☐ android ☐
 
 ---
 
 ## Admin walkthrough
 
-### TT-A1 · Incident queue and resolve
-**Role:** admin · **Surfaces:** web (admin surface) · android (admin screen)
-**Steps:**
-1. Open the TrustTransport admin dashboard and read the incident queue.
-2. Resolve an open incident (confirm the prompt).
-**Expected:** The incident queue renders from real data. Resolve persists, is CSRF-guarded, and writes
-an audit row. A non-admin sees an "available to admins only" notice.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+### TT-A1 — Incident queue loads and an incident can be resolved
 
-### TT-A2 · Market controls
-**Role:** admin · **Surfaces:** web (admin surface) · android
-**Steps:**
-1. Change a market control (max concurrent trips, require-proof-on-delivery, or the emergency
-   freeze) and save.
-**Expected:** The setting saves through the market-config update with the CSRF guard and is reflected
-on reload.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Role:** admin · **Surfaces:** web, android
 
-### TT-A3 · Account restrict / restore
-**Role:** admin · **Surfaces:** web (admin surface) · android
-**Steps:**
-1. Restrict an account by user ID with a reason (confirm the prompt), then restore it.
-**Expected:** Restrict/restore both work with confirmation and CSRF. A restriction applies
-platform-wide (it also blocks ServiceCredits spending), not only inside TrustTransport.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+**Precondition:** Signed in as an admin. Seed has at least one open incident.
 
-### TT-A4 · Audit trail
-**Role:** admin · **Surfaces:** web (admin surface) · android
 **Steps:**
-1. After TT-A1–TT-A3, open the admin audit-events list.
-**Expected:** The audit list shows rows for the admin and member mutations (request create, offer
-accept, trip status update, payout request, plus the admin actions) with allow/deny status.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
+1. Open `/admin/trust-transport` (web) or the `trust-transport-admin` feature (android).
+2. Navigate to the **Incidents** tab/section.
+3. Select an open incident and choose Resolve.
+4. Confirm the confirmation prompt (native Alert on android, modal/dialog on web).
+
+**Expected:** The incident moves to a resolved state and is no longer in the open queue. No crash.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-A2 — Market config can be updated
+
+**Role:** admin · **Surfaces:** web, android
+
+**Precondition:** Signed in as an admin.
+
+**Steps:**
+1. Open the admin surface and navigate to **Market controls**.
+2. Change one value — e.g. toggle **Require proof on delivery** or change **Max concurrent trips**.
+3. Confirm the confirmation prompt.
+4. Save.
+
+**Expected:** The change is saved. On reload the updated value persists. No crash.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-A3 — Emergency freeze can be toggled
+
+**Role:** admin · **Surfaces:** web, android
+
+**Precondition:** Signed in as an admin.
+
+**Steps:**
+1. Open Market controls.
+2. Toggle the **Emergency freeze** setting on.
+3. Confirm and save.
+4. Toggle it back off and save.
+
+**Expected:** Both state changes save successfully. The current freeze state is clearly visible after each save.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-A4 — Account restrict and restore
+
+**Role:** admin · **Surfaces:** web, android
+
+**Precondition:** Signed in as an admin. Have a test member user ID available (copy from a seeded incident).
+
+**Steps:**
+1. Navigate to the **Accounts** section of the admin surface.
+2. Enter the test user ID and a reason.
+3. Click/tap **Restrict** and confirm.
+4. Verify the account shows as restricted (or no error is returned).
+5. Now click/tap **Restore** for the same user ID and confirm.
+
+**Expected:** Restrict succeeds and emits a restriction (the platform-wide `account_restrictions` signal is written). Restore succeeds. Both actions require explicit confirmation before sending. The restriction applies platform-wide (not just to TrustTransport).
+
+Result: web ☐ android ☐
+
+---
+
+### TT-A5 — Admin audit trail is read-only and shows recent events
+
+**Role:** admin · **Surfaces:** web, android
+
+**Precondition:** Signed in as an admin. At least one admin action has been taken (from TT-A1 or TT-A2).
+
+**Steps:**
+1. Navigate to the **Audit** tab/section.
+2. Review the list of audit events.
+
+**Expected:** Recent admin actions (resolve, market-config update, restrict/restore) appear as entries. There is no edit or delete control — the list is read-only.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-A6 — Member-facing mutations appear in the audit trail
+
+**Role:** admin reviewing member actions · **Surfaces:** web
+
+**Precondition:** Signed in as admin. A member has completed TT-1 (request.create), TT-4 (offer.accept), TT-8 (trip.status.update), and TT-13 (payout.request) in this session.
+
+**Steps:**
+1. Open the admin audit trail.
+2. Look for audit entries for `trust-transport.request.create`, `trust-transport.offer.accept`, `trust-transport.trip.status.update`, and `trust-transport.payout.request`.
+
+**Expected:** All four member-facing command types appear as audit rows. Each row has a timestamp, actor ID, command name, and result status.
+
+Result: web ☐
+
+---
+
+### TT-A7 — Non-admin member cannot access the admin surface
+
+**Role:** member · **Surfaces:** web, android
+
+**Precondition:** Signed in as a plain member (not admin).
+
+**Steps:**
+1. Navigate directly to `/admin/trust-transport` (web) or open the `trust-transport-admin` feature screen (android).
+
+**Expected:** You see an "available to admins only" notice. The incident queue, market controls, and audit trail are not visible.
+
+Result: web ☐ android ☐
+
+---
+
+### TT-A8 — Admin state-changing actions require CSRF header
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Signed in as admin.
+
+**Steps:**
+1. Using browser devtools, watch the network request when you resolve an incident (TT-A1).
+2. Confirm the outgoing request includes the `x-ctf-csrf: '1'` header.
+
+**Expected:** The `x-ctf-csrf: '1'` header is present on the resolve, market-config update, restrict, and restore requests.
+
+Result: web ☐
 
 ---
 
 ## Parity check (web ↔ android)
 
-For TT-1, TT-3, and TT-A1, the android app and the mobile-responsive web layout must behave the same:
-same created request, same status-transition rules, same admin incident queue. Note any drift here
-rather than filing three separate bugs.
+These cases must produce the same observable outcome on both surfaces. Run both columns before marking either checkbox.
 
-**Result:** matches ☐ — drift notes:
+| Case | What must match |
+|---|---|
+| TT-1 | Ride request created; Free settlement badge shown; no fabricated driver claims |
+| TT-2 | ServiceCredits settlement badge shown; no fiat equivalent |
+| TT-3 | Submit blocked with inline error when priced amount is missing |
+| TT-5 | Tracking tab label and copy; no live-GPS claim |
+| TT-6 | Chat gating message before accept; text-only chat after accept; no video |
+| TT-7 | Read-only chat after terminal state |
+| TT-11 | Explicit confirmation prompt before cancel |
+| TT-12 | Rating submission succeeds |
+| TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
+| TT-A1 | Incident resolved after native/web confirmation prompt |
+| TT-A2 | Market config update persists after reload |
+| TT-A4 | Restrict and restore require confirmation; platform-wide signal written |
+| TT-A7 | Non-admin sees "admins only" notice |
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at generation time. If you hit one
-of these, it is already tracked, not a new bug:
+The following are documented limitations from the inventory's "Gaps and Known Technical Debt" section. Do not open Bug Reporting rows for them.
 
-- Status vocabulary across the three modes (ride/package/food) may still be refined against real
-  operational needs.
-- Event and audit storage growth will need an archival/retention policy once deployed at scale.
-- Command contract complexity should be watched so it does not drift from the UI flow logic.
+1. **Status vocabulary across three modes** — the canonical status names for ride, package, and food trips may be inconsistent or incomplete. This is a known open design question, not a defect.
+2. **Audit storage growth** — the `trust_transport_admin_audit_trail` has no archival or retention policy yet. High event volume in seeded or load-test environments is expected and not a bug.
+3. **Command contract drift** — the contract schemas are authoritative but UI flows may not yet fully mirror every contract field. Drift between UI and contract is tracked separately, not a manual-test finding.
+4. **Nearby Drivers list absent** — no backend endpoint exists for available driver discovery; this data is intentionally omitted from both web and android per the real-data-only rule. The missing list is not a bug.
+5. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior.
+6. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders.
+7. **Service delete endpoint not yet live** — `DELETE /api/account/trust-transport-profile` is listed as planned in the deletion contract; its absence is not a bug to file now.
