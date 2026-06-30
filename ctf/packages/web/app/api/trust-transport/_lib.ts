@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
-import { ensureTrustTransportAdmin, ensureTrustTransportProviderRole } from 'lib/trust-transport/policy';
+import { ensureTrustTransportAdmin } from 'lib/trust-transport/policy';
 import { reportError } from 'lib/observability/report';
 
 export type TrustTransportApiGate =
@@ -16,20 +16,6 @@ export async function requireTrustTransportReadAccess(): Promise<TrustTransportA
   }
 
   return { allowed: true, auth: decision };
-}
-
-export async function requireTrustTransportProviderAccess(): Promise<TrustTransportApiGate> {
-  const gate = await requireTrustTransportReadAccess();
-  if (!gate.allowed) {
-    return gate;
-  }
-
-  const deny = ensureTrustTransportProviderRole(gate.auth);
-  if (deny) {
-    return { allowed: false, response: NextResponse.json(deny, { status: deny.status }) };
-  }
-
-  return gate;
 }
 
 export async function requireTrustTransportAdminAccess(): Promise<TrustTransportApiGate> {
@@ -126,10 +112,6 @@ export function trustTransportErrorResponse(error: unknown, fallbackMessage: str
 
   if (code === 'account_restricted') {
     return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.accountRestricted, message: 'Account is restricted.' }, { status: 403 });
-  }
-
-  if (code === 'provider_required') {
-    return NextResponse.json({ ok: false, code: TRUST_TRANSPORT_ERROR_CODE.providerRequired, message: 'Provider role required.' }, { status: 403 });
   }
 
   if (code === 'invalid_payload') {

@@ -8,11 +8,3 @@ export function ensureTrustTransportAdmin(decision: AllowDecision): PluginDenyRe
 
   return pluginAuthDeny.forbiddenRole(['admin', 'operations']);
 }
-
-export function ensureTrustTransportProviderRole(decision: AllowDecision): PluginDenyResponse | null {
-  if (decision.isAdmin || decision.role === 'provider') {
-    return null;
-  }
-
-  return pluginAuthDeny.forbiddenRole(['provider']);
-}

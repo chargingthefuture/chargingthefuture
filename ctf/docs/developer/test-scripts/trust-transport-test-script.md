@@ -176,9 +176,9 @@ Result: web ☐ android ☐
 
 ### TT-8 — Trip status update (provider/driver side)
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a member who is a provider. Seed has a trip assigned to this provider that is not yet complete.
+**Precondition:** Signed in as the member assigned to fulfil a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfil a trip.
 
 **Steps:**
 1. Open the active trip.
@@ -192,9 +192,9 @@ Result: web ☐ android ☐
 
 ### TT-9 — Proof capture on delivery
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a provider. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
+**Precondition:** Signed in as the member fulfilling the trip. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
 
 **Steps:**
 1. Open the active delivery trip.
@@ -242,9 +242,9 @@ Result: web ☐ android ☐
 
 ### TT-13 — Earnings ledger and payout request
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a provider. Seed has completed tasks with earnings entries.
+**Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
 
 **Steps:**
 1. Navigate to the earnings/payout surface.
@@ -259,9 +259,9 @@ Result: web ☐ android ☐
 
 ### TT-14 — Payout request rejected for zero or negative amount
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a provider with an earnings balance.
+**Precondition:** Signed in as a member with an earnings balance.
 
 **Steps:**
 1. Navigate to the payout request surface.
