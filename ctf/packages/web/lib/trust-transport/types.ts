@@ -102,11 +102,6 @@ export type TrustTransportPayoutRequest = {
   decisionReason: string | null;
 };
 
-export type TrustTransportRatingInput = {
-  score: number;
-  feedback: string | null;
-};
-
 export type TrustTransportMarketConfig = {
   maxConcurrentTrips: number;
   requireProofOnDelivery: boolean;

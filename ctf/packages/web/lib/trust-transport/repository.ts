@@ -9,7 +9,6 @@ import {
   TRUST_TRANSPORT_DEFAULT_PAGE,
   TRUST_TRANSPORT_DEFAULT_PAGE_SIZE,
   TRUST_TRANSPORT_MAX_DETAILS_LENGTH,
-  TRUST_TRANSPORT_MAX_FEEDBACK_LENGTH,
   TRUST_TRANSPORT_MAX_PAGE_SIZE,
   TRUST_TRANSPORT_MAX_PROOF_LENGTH,
   TRUST_TRANSPORT_MAX_TITLE_LENGTH,
@@ -21,7 +20,6 @@ import type {
   TrustTransportMode,
   TrustTransportOffer,
   TrustTransportPayoutRequest,
-  TrustTransportRatingInput,
   TrustTransportRequest,
   TrustTransportRequestInput,
   TrustTransportTrip,
@@ -316,15 +314,6 @@ export function validateTripProof(artifactType: string, artifactRedacted: string
   return normalized.length > 0 && normalized.length <= TRUST_TRANSPORT_MAX_PROOF_LENGTH;
 }
 
-export function validateRatingInput(input: TrustTransportRatingInput): boolean {
-  const feedback = normalizeNullableText(input.feedback);
-
-  return Number.isInteger(input.score)
-    && input.score >= 1
-    && input.score <= 5
-    && (!feedback || feedback.length <= TRUST_TRANSPORT_MAX_FEEDBACK_LENGTH);
-}
-
 async function ensureUserNotRestricted(userId: string): Promise<void> {
   // Reads the platform-wide restriction signal ('trading' scope), not the retired per-plugin column.
   const restriction = await getAccountRestrictionStatus(userId, 'trading');
@@ -443,9 +432,16 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
+    // LATERAL with LIMIT 1 so a request with more than one trip row (data anomaly) cannot duplicate the
+    // request in the page and diverge from the COUNT above — at most one trip id per request.
     `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at, t.id AS trip_id
      FROM trust_transport_requests r
-     LEFT JOIN trust_transport_trips t ON t.request_id = r.id
+     LEFT JOIN LATERAL (
+       SELECT id FROM trust_transport_trips
+       WHERE request_id = r.id
+       ORDER BY created_at
+       LIMIT 1
+     ) t ON TRUE
      WHERE ($1::text IS NULL OR r.requester_user_id = $1)
      ORDER BY r.created_at DESC
      OFFSET $2 LIMIT $3`,
@@ -654,7 +650,9 @@ export async function updateTripStatus(
 
     const nextRequestStatus = mapRequestStatusFromTrip(nextStatus);
 
-    if (!(REQUEST_TRANSITIONS[nextRequestStatus] || REQUEST_TRANSITIONS.open)) {
+    // Guard against an unmapped request status. The previous `|| REQUEST_TRANSITIONS.open` fallback was
+    // always truthy, so the check could never fire; drop it so a missing key is actually caught.
+    if (!REQUEST_TRANSITIONS[nextRequestStatus]) {
       throw new Error('invalid_transition');
     }
 
@@ -788,45 +786,6 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   // Best-effort presence clear after the request is durably set to cancelled. The requester (rider)
   // owns the request regardless of whether an admin performed the cancel. Never breaks the cancel.
   await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
-}
-
-export async function submitOrderRating(orderId: string, actorUserId: string, isAdmin: boolean, input: TrustTransportRatingInput) {
-  if (!validateRatingInput(input)) {
-    throw new Error('invalid_payload');
-  }
-
-  const request = await getRequestById(orderId);
-  if (!request) {
-    throw new Error('request_not_found');
-  }
-
-  if (request.requesterUserId !== actorUserId && !isAdmin) {
-    throw new Error('policy_denied');
-  }
-
-  const tripResult = await queryDb<TripRow>(
-    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at
-     FROM trust_transport_trips
-     WHERE request_id = $1::uuid
-     LIMIT 1`,
-    [orderId],
-  );
-
-  if ((tripResult.rowCount ?? 0) === 0) {
-    throw new Error('trip_not_found');
-  }
-
-  const trip = tripResult.rows[0];
-
-  await queryDb(
-    `INSERT INTO trust_transport_ratings (trip_id, requester_user_id, provider_user_id, score, feedback)
-     VALUES ($1::uuid, $2, $3, $4, $5)
-     ON CONFLICT (trip_id)
-     DO UPDATE SET
-       score = EXCLUDED.score,
-       feedback = EXCLUDED.feedback`,
-    [trip.id, actorUserId, trip.provider_user_id, input.score, normalizeNullableText(input.feedback)],
-  );
 }
 
 async function getProviderAvailableBalance(providerUserId: string): Promise<number> {

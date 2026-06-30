@@ -41,6 +41,20 @@ function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
   return 'pending';
 }
 
+// "early Commons access" experiment (parity with web's UnlockCommonsHelp). Shown only to a
+// treatment-bucket member (status.earlyCommonsAccess) so someone stuck — e.g. unable to find their
+// Quora profile URL — can jump into the Commons (the Hub home) to ask for help instead of being
+// confined to the Unlock screen. A control member never sees it. Renders nothing without a
+// navigation handler, so it can't become a dead link.
+function CommonsHelpLink({ onNavigateToCommons }: { onNavigateToCommons?: () => void }) {
+  if (!onNavigateToCommons) return null;
+  return (
+    <TouchableOpacity onPress={onNavigateToCommons} style={s.commonsHelp} accessibilityRole="link">
+      <Text style={s.commonsHelpText}>💬  Trouble finding your Quora URL? Ask in the Commons</Text>
+    </TouchableOpacity>
+  );
+}
+
 // Loading state
 function LoadingView() {
   return (
@@ -86,7 +100,15 @@ function PublicView() {
 }
 
 // Submission form (no previous submission)
-function SubmissionView({ onSubmitted }: { onSubmitted: () => void }) {
+function SubmissionView({
+  onSubmitted,
+  earlyCommonsAccess,
+  onNavigateToCommons,
+}: {
+  onSubmitted: () => void;
+  earlyCommonsAccess?: boolean;
+  onNavigateToCommons?: () => void;
+}) {
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +152,7 @@ function SubmissionView({ onSubmitted }: { onSubmitted: () => void }) {
         />
       </View>
       <Text style={s.hint}>Make sure your Quora profile is set to public before submitting.</Text>
+      {earlyCommonsAccess ? <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} /> : null}
       {error ? <Text style={s.errorText}>{error}</Text> : null}
       <TouchableOpacity
         onPress={handleSubmit}
@@ -171,7 +194,15 @@ function SubmissionView({ onSubmitted }: { onSubmitted: () => void }) {
 }
 
 // Status view (has submission — pending / approved / rejected)
-function StatusView({ status, onResubmitted }: { status: UnlockStatus; onResubmitted: () => void }) {
+function StatusView({
+  status,
+  onResubmitted,
+  onNavigateToCommons,
+}: {
+  status: UnlockStatus;
+  onResubmitted: () => void;
+  onNavigateToCommons?: () => void;
+}) {
   const display = toDisplayStatus(status.reviewStatus);
   const cfg = STATUS_CFG[display];
   const [resubUrl, setResubUrl] = useState('');
@@ -229,6 +260,10 @@ function StatusView({ status, onResubmitted }: { status: UnlockStatus; onResubmi
         )}
       </View>
 
+      {status.earlyCommonsAccess ? (
+        <CommonsHelpLink onNavigateToCommons={onNavigateToCommons} />
+      ) : null}
+
       {/* Re-submit form on rejection */}
       {display === 'rejected' && (
         <View style={s.resubCard}>
@@ -271,7 +306,12 @@ function StatusView({ status, onResubmitted }: { status: UnlockStatus; onResubmi
 // Root screen — orchestrates state transitions.
 // `onStatusChanged` (optional) fires after each status reload so a host gate
 // (e.g. the app-wide Unlock wall) can re-evaluate access without a restart.
-export const Unlock: React.FC<{ onStatusChanged?: () => void }> = ({ onStatusChanged }) => {
+// `onNavigateToCommons` (optional) lets the "early Commons access" treatment-bucket
+// help link jump to the Commons (Hub home); omit it and the link does not render.
+export const Unlock: React.FC<{
+  onStatusChanged?: () => void;
+  onNavigateToCommons?: () => void;
+}> = ({ onStatusChanged, onNavigateToCommons }) => {
   const [phase, setPhase] = useState<'loading' | 'public' | 'submit' | 'status'>('loading');
   const [unlockStatus, setUnlockStatus] = useState<UnlockStatus | null>(null);
 
@@ -293,9 +333,22 @@ export const Unlock: React.FC<{ onStatusChanged?: () => void }> = ({ onStatusCha
 
   if (phase === 'loading') return <LoadingView />;
   if (phase === 'public') return <PublicView />;
-  if (phase === 'submit') return <SubmissionView onSubmitted={() => void loadStatus()} />;
+  if (phase === 'submit')
+    return (
+      <SubmissionView
+        onSubmitted={() => void loadStatus()}
+        earlyCommonsAccess={unlockStatus?.earlyCommonsAccess}
+        onNavigateToCommons={onNavigateToCommons}
+      />
+    );
   if (phase === 'status' && unlockStatus) {
-    return <StatusView status={unlockStatus} onResubmitted={() => void loadStatus()} />;
+    return (
+      <StatusView
+        status={unlockStatus}
+        onResubmitted={() => void loadStatus()}
+        onNavigateToCommons={onNavigateToCommons}
+      />
+    );
   }
   return <LoadingView />;
 };
@@ -341,4 +394,16 @@ const s = StyleSheet.create({
   rejectedBox: { padding: 12, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', width: '100%' },
   rejectedLabel: { fontSize: 12, fontWeight: '600', color: '#EF4444', marginBottom: 4 },
   resubCard: { padding: 16, borderRadius: 14, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, marginBottom: 14 },
+  commonsHelp: {
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: BRAND + '10',
+    borderWidth: 1,
+    borderColor: BRAND + '33',
+    alignSelf: 'flex-start',
+  },
+  commonsHelpText: { fontSize: 13, fontWeight: '600', color: BRAND },
 });

@@ -1,4 +1,532 @@
 {
   "_comment": "Rotation state for the scheduled code-review sweep. A slice is one plugin (a folder name shared across the app/api, components, lib, and mobile layers, reviewed together) or one standalone module (a folder name in just one layer). Each run reviews an in-progress slice first, then any never-reviewed slice, then the least-recently-reviewed one, so every slice gets at least one pass. `cursor`/`partial` carry a too-big slice across runs so nothing is dropped. New slices start unreviewed (lastReviewedAt: null); slices whose folders are gone are pruned. Maintained by ctf/scripts/reviewCodebaseSlice.mjs and committed back by .github/workflows/code-review-sweep.yml. Safe to edit by hand.",
-  "slices": []
+  "slices": [
+    {
+      "name": "account",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "account-data",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "admin",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "announcements",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "auth",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "beacon",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "blocks",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "bug-reporting",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "bug-reports",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "chatbot",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "chyme",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "click-log",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-27T02:26:34.545Z",
+      "lastRunIssues": 7,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/click-log",
+        "ctf/packages/web/app/api/click-log",
+        "ctf/packages/web/components/click-log",
+        "ctf/packages/web/lib/click-log"
+      ]
+    },
+    {
+      "name": "comic",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "community",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "community-shell",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "concierge",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "contributions",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "currencies",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "currency",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "db",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "directory",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-27T04:13:20.881Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/directory",
+        "ctf/packages/web/app/api/directory",
+        "ctf/packages/web/components/directory",
+        "ctf/packages/web/lib/directory"
+      ]
+    },
+    {
+      "name": "engagement",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "feature-flags",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "feed",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "feed-announcements",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "foundation",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "gdp",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "gentle-pulse",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "health",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "hooks",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "hub",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "identity",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "integrations",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "internal",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "level-up",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "lighthouse",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-27T02:28:12.465Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/lighthouse",
+        "ctf/packages/web/app/api/lighthouse",
+        "ctf/packages/web/components/lighthouse",
+        "ctf/packages/web/lib/lighthouse"
+      ]
+    },
+    {
+      "name": "mood",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-26T15:08:10.962Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/mood",
+        "ctf/packages/web/app/api/mood",
+        "ctf/packages/web/components/mood",
+        "ctf/packages/web/lib/mood"
+      ]
+    },
+    {
+      "name": "notifications",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "observability",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "peer-programming",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "plugin",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "plugins",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "presence",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "questions",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "safety",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "service-credits",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "shared",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "skills-hunt",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "skills-taxonomy",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-27T02:29:37.457Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/skills-taxonomy",
+        "ctf/packages/web/app/api/skills-taxonomy",
+        "ctf/packages/web/components/skills-taxonomy",
+        "ctf/packages/web/lib/skills-taxonomy"
+      ]
+    },
+    {
+      "name": "socket-relay",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "theme",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "trust",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "trust-transport",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-30T10:05:29.205Z",
+      "lastRunIssues": 6,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/trust-transport",
+        "ctf/packages/web/app/api/trust-transport",
+        "ctf/packages/web/components/trust-transport",
+        "ctf/packages/web/lib/trust-transport"
+      ]
+    },
+    {
+      "name": "ui",
+      "type": "module",
+      "lastReviewedAt": "2026-06-28T09:38:47.942Z",
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/components/ui"
+      ]
+    },
+    {
+      "name": "unlock",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-26T12:38:54.509Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/unlock",
+        "ctf/packages/web/app/api/unlock",
+        "ctf/packages/web/components/unlock",
+        "ctf/packages/web/lib/unlock"
+      ]
+    },
+    {
+      "name": "weekly-performance",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-27T09:09:24.899Z",
+      "lastRunIssues": 5,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/weekly-performance",
+        "ctf/packages/web/app/api/weekly-performance",
+        "ctf/packages/web/components/weekly-performance",
+        "ctf/packages/web/lib/weekly-performance"
+      ]
+    },
+    {
+      "name": "what-works",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-27T02:41:07.460Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/what-works",
+        "ctf/packages/web/app/api/what-works",
+        "ctf/packages/web/components/what-works",
+        "ctf/packages/web/lib/what-works"
+      ]
+    },
+    {
+      "name": "workforce",
+      "type": "plugin",
+      "lastReviewedAt": "2026-06-26T10:10:07.990Z",
+      "lastRunIssues": 7,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/mobile/src/features/workforce",
+        "ctf/packages/web/app/api/workforce",
+        "ctf/packages/web/components/workforce",
+        "ctf/packages/web/lib/workforce"
+      ]
+    }
+  ]
 }

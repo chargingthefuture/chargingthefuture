@@ -13,6 +13,7 @@ import {
   adjustMemberCredits,
   fetchAdminCohorts,
   makeIdempotencyKey,
+  runAutoCohorts,
 } from './admin-api';
 import type { Cohort } from './api';
 
@@ -42,6 +43,9 @@ export const AdminLevelUp = () => {
   const [governanceTicketId, setGovernanceTicketId] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-cohort manual run (issue #904).
+  const [autoRunning, setAutoRunning] = useState(false);
 
   const load = useCallback(async () => {
     if (!auth?.isAuthenticated || !auth.userId) return;
@@ -115,6 +119,29 @@ export const AdminLevelUp = () => {
     setGovernanceTicketId('');
   }, [auth, targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
+  const onRunAutoCohorts = useCallback(async () => {
+    setAutoRunning(true);
+    setError(null);
+    setNotice(null);
+    const result = await runAutoCohorts();
+    setAutoRunning(false);
+    if (result.ok !== true) {
+      setError(result.message);
+      return;
+    }
+    const summary = result.summary;
+    if (summary.skipped === 'disabled') {
+      setNotice('Auto-cohort creation is turned off in config — nothing was created.');
+    } else if (summary.skipped === 'no_workforce_share') {
+      setNotice('Skipped: no sector carries a workforce share yet, so the gap ranking is not meaningful.');
+    } else {
+      const createdCount = summary.created?.length ?? 0;
+      const closedCount = summary.closed?.length ?? 0;
+      setNotice(`Run complete: ${createdCount} cohort(s) created, ${closedCount} closed (term ended).`);
+    }
+    await load();
+  }, [load]);
+
   if (authLoading || (loading && !forbidden && error === null)) {
     return (
       <View style={styles.center}>
@@ -146,6 +173,27 @@ export const AdminLevelUp = () => {
       {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
       {notice ? <Text style={styles.noticeBanner}>{notice}</Text> : null}
 
+      {/* Auto cohorts from Workforce gaps (issue #904) */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Auto cohorts from Workforce gaps</Text>
+        <Text style={styles.cardMeta}>
+          The daily run reads the Workforce talent gaps and opens cohorts for the largest of them. Run
+          it now to apply the current gaps right away. It is safe to run more than once — a cohort is
+          never created twice for the same occupation, and cohorts past their term are closed.
+        </Text>
+        <Pressable
+          style={[styles.primaryBtn, autoRunning ? styles.btnBusy : null]}
+          onPress={onRunAutoCohorts}
+          disabled={autoRunning}
+        >
+          {autoRunning ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Text style={styles.primaryBtnText}>Run now</Text>
+          )}
+        </Pressable>
+      </View>
+
       {/* Cohort overview */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Cohorts</Text>
@@ -159,6 +207,20 @@ export const AdminLevelUp = () => {
                   <Text style={styles.cohortTitle}>{cohort.title}</Text>
                   <Text style={styles.cohortStatus}>{cohort.status}</Text>
                 </View>
+                {cohort.autoCreated || cohort.needsTrainer ? (
+                  <View style={styles.badgeRow}>
+                    {cohort.autoCreated ? (
+                      <View style={styles.autoBadge}>
+                        <Text style={styles.autoBadgeText}>auto</Text>
+                      </View>
+                    ) : null}
+                    {cohort.needsTrainer ? (
+                      <View style={styles.needsTrainerBadge}>
+                        <Text style={styles.needsTrainerBadgeText}>needs trainer</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
                 <Text style={styles.cohortMeta}>
                   {cohort.track} · {cohort.seatsAvailable} of {cohort.seats} seats open
                 </Text>
@@ -327,6 +389,25 @@ const styles = StyleSheet.create({
   cohortHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cohortTitle: { fontSize: 14, fontWeight: '700', color: TEXT, flex: 1 },
   cohortStatus: { fontSize: 11, color: SUBTLE, textTransform: 'capitalize' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  autoBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(99,102,241,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.3)',
+  },
+  autoBadgeText: { fontSize: 11, fontWeight: '700', color: '#6366F1' },
+  needsTrainerBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(245,158,11,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.4)',
+  },
+  needsTrainerBadgeText: { fontSize: 11, fontWeight: '700', color: '#FBBF24' },
   cohortMeta: { fontSize: 11, color: SUBTLE, lineHeight: 16 },
   label: { fontSize: 12, fontWeight: '600', color: '#D1D5DB', marginTop: 4 },
   input: {

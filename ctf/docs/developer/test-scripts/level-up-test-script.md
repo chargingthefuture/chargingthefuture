@@ -160,7 +160,7 @@ adjustment transfer applies. An unrelated trainer is denied with a readable mess
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### LVL-A4 · Auto-cohort run from Workforce gaps
-**Role:** admin · **Surfaces:** web (`/admin/level-up`)
+**Role:** admin · **Surfaces:** web (`/admin/level-up`), android (admin screen)
 **Precondition:** Skills Taxonomy has at least one sector with a positive `workforce_share` and at
 least one Foundational-level occupation whose gap is at or above the configured minimum.
 **Steps:**
@@ -174,7 +174,8 @@ If no sector carries a workforce share, the run reports it was skipped rather th
 Each created cohort carries the configured economic policy (deposit from `default_required_credits`,
 default 0 = free to join; trainer split `default_trainer_split_percent`, default 25%; completion bonus
 `default_completion_bonus_credits`, default 0) and the standard 3-milestone skeleton (40/30/30) — open
-a created cohort's detail and confirm the milestones are present.
+a created cohort's detail and confirm the milestones are present. On android, the same "Run now" action
+and the `auto` / `needs trainer` badges on the cohort overview must behave the same (#1200).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -183,8 +184,9 @@ a created cohort's detail and confirm the milestones are present.
 
 For LVL-1, LVL-3, LVL-4, and LVL-5, the android app and the mobile-responsive web layout must behave
 the same: same cohort list, same grant-only wallet, same earned badges, same trainer directory. The
-Android admin screen mirrors the cohort overview and the grant action (it has no KPI cards — see Known
-gaps). Note any drift here rather than filing separate bugs.
+Android admin screen mirrors the cohort overview, the grant action, and (since #1200) the auto-cohort
+**Run now** action plus the `auto` / `needs trainer` badges (it has no KPI cards — see Known gaps).
+Note any drift here rather than filing separate bugs.
 
 **Result:** matches ☐ — drift notes:
 
@@ -202,6 +204,3 @@ of these, it is already tracked, not a new bug:
   by role before render; it relies on the server-side admin gate on the grant action.
 - The track/badge management mockup has no backing endpoints, so that surface is not built (tracks are
   a free-text field and there is no badge-editing model).
-- The auto-cohort **Run now** button and the `auto` / `needs trainer` badges are web-only for now; the
-  Android admin screen does not mirror them yet (tracked in #1200). The daily cron runs regardless of
-  platform, so LVL-A4 is a web-only check until then.

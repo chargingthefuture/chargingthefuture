@@ -15,10 +15,13 @@ const DialogClose = DialogPrimitive.Close
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className = "", ...props }, ref) => (
+>(({ className = "", style, ...props }, ref) => (
+  // The app does not define the shadcn `--background` token, so the old `bg-background/80` resolved
+  // to nothing (no dim — the page showed through). Set an explicit translucent-black dim here.
   <DialogPrimitive.Overlay
     ref={ref}
-    className={`fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 ${className}`}
+    className={`fixed inset-0 z-50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 ${className}`}
+    style={{ backgroundColor: "rgba(0,0,0,0.7)", ...style }}
     {...props}
   />
 ))
@@ -27,12 +30,21 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className = "", children, ...props }, ref) => (
+>(({ className = "", children, style, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
+    {/* The shadcn `bg-background`/`border-border` tokens are not defined in this app (Tailwind config
+        has no custom colors), so they rendered transparent and the panel looked broken. Use the app's
+        own --ctf-* tokens (with hardcoded fallbacks) for a solid, theme-correct panel. */}
     <DialogPrimitive.Content
       ref={ref}
-      className={`fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg ${className}`}
+      className={`fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] ${className}`}
+      style={{
+        backgroundColor: "var(--ctf-panel, #0D0F14)",
+        borderColor: "var(--ctf-border, #1E2A3A)",
+        color: "var(--ctf-text, #F9FAFB)",
+        ...style,
+      }}
       {...props}
     >
       {children}
@@ -82,10 +94,11 @@ DialogTitle.displayName = DialogPrimitive.Title.displayName
 const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className = "", ...props }, ref) => (
+>(({ className = "", style, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={`text-sm text-muted-foreground ${className}`}
+    className={`text-sm ${className}`}
+    style={{ color: "var(--ctf-text-secondary, #9CA3AF)", ...style }}
     {...props}
   />
 ))
