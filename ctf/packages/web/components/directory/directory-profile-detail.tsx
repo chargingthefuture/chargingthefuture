@@ -11,6 +11,7 @@ import { getDirectoryTokens, initials, type Member } from "./shared";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
+import { ShareLink } from "@/components/shared/share-link";
 import type { TrustUserExtension } from "@/lib/trust/types";
 
 // One cross-plugin presence entry returned by GET /api/presence/user/[userId].
@@ -162,6 +163,12 @@ export function DirectoryProfileDetail({
           <ChevronLeft size={20} />
         </button>
         <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Provider profile</div>
+        {/* Share this profile — the one app-wide control (rule 130). The link opens the auth-gated
+            deep-link page; a signed-in member lands on this profile, an unauthenticated visitor is
+            redirected to the directory landing. */}
+        <div style={{ marginLeft: "auto", color: t.ACCENT, fontSize: 13, fontWeight: 700 }}>
+          <ShareLink url={`/apps/directory/profile/${p.id}`} title="Share this profile" />
+        </div>
       </header>
 
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>

@@ -43,7 +43,7 @@ type DirectoryListItem = {
   invitedByUsername: string | null;
 };
 
-export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
+export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: string; isAdmin: boolean; initialProfileId?: string }) {
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -156,6 +156,41 @@ export function DirectoryShell({ userId, isAdmin }: { userId: string; isAdmin: b
     void fetchMembers();
     return () => controller.abort();
   }, [activeFilter, debouncedQuery, sectors, refreshKey]);
+
+  // Deep-link open: when the page was reached via /apps/directory/profile/[id] (a shared link), fetch
+  // that one profile and open its detail. The id may not be on the current filtered/paginated browse
+  // page, so this fetches it directly rather than matching the list. Unauthenticated visitors never
+  // get here — the route redirects them to the directory landing.
+  useEffect(() => {
+    if (!initialProfileId) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(`/api/directory/profiles/${encodeURIComponent(initialProfileId)}`, { signal: controller.signal });
+        if (!res.ok || controller.signal.aborted) return;
+        const data = (await res.json()) as { member?: DirectoryListItem };
+        const item = data.member;
+        if (!item) return;
+        setSelected({
+          id: item.id,
+          name: [item.firstName, item.lastName].filter(Boolean).join(" ").trim(),
+          sector: item.sectorName ?? "",
+          jobTitle: item.jobTitleName ?? "",
+          skills: item.skills.map((s) => s.name),
+          pendingSkills: item.pendingSkills ?? [],
+          claimedByUserId: item.claimedByUserId ?? null,
+          profileUrl: item.profileUrl ?? null,
+          headline: item.headline ?? null,
+          bio: item.bio ?? null,
+          source: item.source ?? null,
+          invitedByUsername: item.invitedByUsername ?? null,
+        });
+      } catch {
+        // Aborted or unavailable: the browse view stays open instead of the deep-linked detail.
+      }
+    })();
+    return () => controller.abort();
+  }, [initialProfileId]);
 
   const sectorFilters = ["All", ...sectors.map((s) => s.name)];
   const isFiltered = activeFilter !== "All" || query.trim().length > 0;

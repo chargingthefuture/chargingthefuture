@@ -98,6 +98,19 @@ yet.
 hardcoded rows.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### DIR-6 · Share a profile and open the deep link (auth-gated)
+**Role:** member · **Surfaces:** web + mobile-responsive
+**Steps:**
+1. Open a profile, press the "Share" control in the header, copy the link (`/apps/directory/profile/<id>`).
+2. While signed in, open that link in a new tab.
+3. Sign out (or open the link in a private window), then open the same link.
+**Expected:** The Share popup shows the full absolute URL with Copy ("Copied!" feedback) and Open. While
+signed in, the link opens the Directory with that profile's detail already open (it loads by id even if
+the profile is not on the current filtered/paginated browse page). While signed out, the link redirects to
+the directory landing `/apps/directory` — no profile data is shown. A bad/inactive id shows the browse
+view, not the detail (the fetch 404s and is ignored).
+**Result:** web ☐ mobile ☐ android ⛔ — notes:
+
 ---
 
 ## Admin walkthrough

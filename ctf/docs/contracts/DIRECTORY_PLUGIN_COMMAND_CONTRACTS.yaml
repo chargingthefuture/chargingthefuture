@@ -53,6 +53,25 @@ contracts:
     idempotency: true
 
   - pluginId: directory
+    command: directory.profile.get
+    version: 1.0.0
+    description: Fetch one active directory profile by id behind the same read-access gate as the list. Backs the auth-gated deep-link page so a shared profile link opens that profile for a signed-in member.
+    inputSchema:
+      id:
+        type: string
+        required: true
+    outputSchema:
+      member:
+        type: object
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - directory_profile_proposed_skills
+    purpose: directory_discovery
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
     command: directory.admin.announcement.upsert
     version: 1.0.0
     description: Create or update a directory announcement from the role-gated admin controls.
