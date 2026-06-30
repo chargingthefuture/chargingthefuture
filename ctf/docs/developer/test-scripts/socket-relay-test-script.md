@@ -125,6 +125,19 @@ clock. A claim on an expired post is refused (`request_expired`).
 keeps no ledger of its own). A non-positive amount is refused with a readable error.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### SR-8 · Share a request
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. In the feed, press the "Share" control on a request card (on web it sits in the card meta row; on
+   android it sits under the card meta line).
+2. Copy the link, then open it on a signed-in device.
+**Expected:** The Share control opens the one app-wide popup (web) or OS share sheet (android) with the
+full absolute link `…/apps/socket-relay?request=<id>` and a copy affordance. Opening it on a signed-in
+device lands on the SocketRelay feed (auth-gated). On android, if `APP_URL` is unset the share control
+is simply absent (no crash). Note: the link opening the feed rather than scrolling straight to the one
+request is a known follow-up, not a bug.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough
