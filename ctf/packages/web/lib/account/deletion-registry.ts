@@ -231,10 +231,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'trust-transport',
     name: 'TrustTransport',
-    dataSummary: 'Your ride/package requests, offers, trips, ratings, and profile.',
+    dataSummary: 'Your ride/package requests, offers, trips, and profile.',
     serviceScopeSupported: true,
     tables: [
-      del('trust_transport_ratings', 'requester_user_id', 'Ratings you left.'),
       del('trust_transport_trips', 'requester_user_id', 'Trips you requested.'),
       del('trust_transport_offers', 'provider_user_id', 'Offers you made.'),
       del('trust_transport_requests', 'requester_user_id', 'Your ride/package requests.'),

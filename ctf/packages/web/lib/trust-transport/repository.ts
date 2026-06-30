@@ -9,7 +9,6 @@ import {
   TRUST_TRANSPORT_DEFAULT_PAGE,
   TRUST_TRANSPORT_DEFAULT_PAGE_SIZE,
   TRUST_TRANSPORT_MAX_DETAILS_LENGTH,
-  TRUST_TRANSPORT_MAX_FEEDBACK_LENGTH,
   TRUST_TRANSPORT_MAX_PAGE_SIZE,
   TRUST_TRANSPORT_MAX_PROOF_LENGTH,
   TRUST_TRANSPORT_MAX_TITLE_LENGTH,
@@ -21,7 +20,6 @@ import type {
   TrustTransportMode,
   TrustTransportOffer,
   TrustTransportPayoutRequest,
-  TrustTransportRatingInput,
   TrustTransportRequest,
   TrustTransportRequestInput,
   TrustTransportTrip,
@@ -314,15 +312,6 @@ export function validateTripProof(artifactType: string, artifactRedacted: string
 
   const normalized = normalizeText(artifactRedacted);
   return normalized.length > 0 && normalized.length <= TRUST_TRANSPORT_MAX_PROOF_LENGTH;
-}
-
-export function validateRatingInput(input: TrustTransportRatingInput): boolean {
-  const feedback = normalizeNullableText(input.feedback);
-
-  return Number.isInteger(input.score)
-    && input.score >= 1
-    && input.score <= 5
-    && (!feedback || feedback.length <= TRUST_TRANSPORT_MAX_FEEDBACK_LENGTH);
 }
 
 async function ensureUserNotRestricted(userId: string): Promise<void> {
@@ -797,51 +786,6 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   // Best-effort presence clear after the request is durably set to cancelled. The requester (rider)
   // owns the request regardless of whether an admin performed the cancel. Never breaks the cancel.
   await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
-}
-
-export async function submitOrderRating(orderId: string, actorUserId: string, isAdmin: boolean, input: TrustTransportRatingInput) {
-  if (!validateRatingInput(input)) {
-    throw new Error('invalid_payload');
-  }
-
-  const request = await getRequestById(orderId);
-  if (!request) {
-    throw new Error('request_not_found');
-  }
-
-  if (request.requesterUserId !== actorUserId && !isAdmin) {
-    throw new Error('policy_denied');
-  }
-
-  const tripResult = await queryDb<TripRow>(
-    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, created_at, updated_at
-     FROM trust_transport_trips
-     WHERE request_id = $1::uuid
-     LIMIT 1`,
-    [orderId],
-  );
-
-  if ((tripResult.rowCount ?? 0) === 0) {
-    throw new Error('trip_not_found');
-  }
-
-  const trip = tripResult.rows[0];
-
-  // A rating only makes sense once the trip has finished; reject one on a trip that has not reached its
-  // terminal completed state (maps to 409). This also stops a rating being recorded mid-trip.
-  if (trip.status !== 'completed') {
-    throw new Error('invalid_transition');
-  }
-
-  await queryDb(
-    `INSERT INTO trust_transport_ratings (trip_id, requester_user_id, provider_user_id, score, feedback)
-     VALUES ($1::uuid, $2, $3, $4, $5)
-     ON CONFLICT (trip_id)
-     DO UPDATE SET
-       score = EXCLUDED.score,
-       feedback = EXCLUDED.feedback`,
-    [trip.id, actorUserId, trip.provider_user_id, input.score, normalizeNullableText(input.feedback)],
-  );
 }
 
 async function getProviderAvailableBalance(providerUserId: string): Promise<number> {
