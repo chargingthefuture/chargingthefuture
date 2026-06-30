@@ -49,6 +49,27 @@ contracts:
     idempotency: true
 
   - pluginId: foundation
+    command: foundation.provider.get
+    version: 1.0.0
+    description: Fetch one Foundation provider by directory-profile id, behind the same read gate as search. Backs the auth-gated deep-link page so a shared provider link opens that provider for a signed-in member.
+    inputSchema:
+      providerId:
+        type: string
+        required: true
+    outputSchema:
+      provider:
+        type: object
+      viewerUserId:
+        type: string
+    dataAccess:
+      - directory_provider_profiles_read_model
+      - foundation_provider_skills
+      - foundation_user_extension
+    purpose: survivor_provider_matching
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: foundation
     command: foundation.connection.thread.create
     version: 1.0.0
     description: Create or return the survivor-provider 1:1 Stream text channel for initial connection handoff.

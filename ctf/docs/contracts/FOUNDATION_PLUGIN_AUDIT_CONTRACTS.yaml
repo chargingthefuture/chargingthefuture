@@ -33,6 +33,35 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: foundation
+    command: foundation.provider.get
+    commandVersion: 1.0.0
+    purpose: survivor_provider_matching
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        consentCheck: pass_or_fail
+        regionCheck: pass_or_fail
+        directoryReadOnlyCheck: pass_or_fail
+    dataClassesAccessed:
+      - provider_public_profile
+      - provider_service_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      actorScope: survivor
+      targetType: provider_profile
+      targetId: directory_profile_id
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: foundation
     command: foundation.connection.thread.create
     commandVersion: 1.0.0
     purpose: secure_initial_connection

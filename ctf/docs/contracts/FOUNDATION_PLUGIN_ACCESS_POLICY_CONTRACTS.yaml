@@ -30,6 +30,34 @@ policies:
       - rate_limit_exceeded
 
   - pluginId: foundation
+    command: foundation.provider.get
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      directoryDataAccess: read_only_projection
+      providerVisibility: policy_allowed
+    consentRequirements:
+      scopes:
+        - connection_matchmaking
+      fallbackLawfulBasis: vital_interest_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+      allowedRegions:
+        - requester_region
+        - provider_region
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - directory_write_attempt_detected
+      - cross_workspace_access
+      - region_not_permitted
+
+  - pluginId: foundation
     command: foundation.connection.thread.create
     version: 1.0.0
     requiredRoles:
