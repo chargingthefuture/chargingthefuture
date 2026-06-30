@@ -28,6 +28,35 @@ contracts:
     idempotency: true
 
   - pluginId: trust-transport
+    command: trust-transport.offer.create
+    version: 1.0.0
+    description: Make an offer to fulfill an open trust-transport request.
+    inputSchema:
+      requestId:
+        type: string
+        required: true
+      note:
+        type: string
+        required: false
+      proposedAmount:
+        type: number
+        required: false
+    outputSchema:
+      offerId:
+        type: string
+      status:
+        type: string
+      createdAt:
+        type: string
+    dataAccess:
+      - trust_transport_offers
+      - trust_transport_requests
+      - trust_transport_admin_audit_trail
+    purpose: marketplace_offer_creation
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: trust-transport
     command: trust-transport.offer.accept
     version: 1.0.0
     description: Accept an offer and initialize trip/order execution lifecycle.

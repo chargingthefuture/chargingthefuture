@@ -15,7 +15,7 @@ TrustTransport is a trauma-informed, safety-first logistics marketplace plugin f
 1. request and fulfill rides,
 2. request and fulfill package delivery,
 3. request and fulfill food delivery,
-4. earn income through verified provider participation,
+4. earn income by helping fulfill requests,
 5. build reputation and trust through transparent completion history.
 
 The plugin must provide equivalent core behavior across web and Android.
@@ -130,15 +130,16 @@ Command groups in scope:
 
 1. `trust-transport.request.create`
 2. `trust-transport.offer.list`
-3. `trust-transport.offer.accept`
-4. `trust-transport.trip.status.update`
-5. `trust-transport.delivery.proof.capture`
-6. `trust-transport.order.cancel`
-7. `trust-transport.chat.message.send`
-8. `trust-transport.payout.request`
-9. `trust-transport.admin.dispute.resolve`
-10. `trust-transport.admin.account.restrict`
-11. `trust-transport.admin.market.config.update`
+3. `trust-transport.offer.create`
+4. `trust-transport.offer.accept`
+5. `trust-transport.trip.status.update`
+6. `trust-transport.delivery.proof.capture`
+7. `trust-transport.order.cancel`
+8. `trust-transport.chat.message.send`
+9. `trust-transport.payout.request`
+10. `trust-transport.admin.dispute.resolve`
+11. `trust-transport.admin.account.restrict`
+12. `trust-transport.admin.market.config.update`
 
 ## HTTP Projection Routes
 
@@ -148,6 +149,7 @@ User routes:
 - `POST /api/trust-transport/requests` — Create a request.
 - `GET /api/trust-transport/requests/:requestId` — Request detail.
 - `GET /api/trust-transport/requests/:requestId/offers` — Offers on a request.
+- `POST /api/trust-transport/requests/:requestId/offers` — Make an offer on an open request (one pending offer per provider per request; re-offering updates it).
 - `POST /api/trust-transport/offers/:offerId/accept` — Accept an offer, opening a trip.
 - `POST /api/trust-transport/trips/:tripId/status` — Update trip status.
 - `POST /api/trust-transport/trips/:tripId/proof` — Capture pickup/delivery proof.
@@ -181,7 +183,7 @@ Single-profile rule is enforced:
 
 Extension entity:
 
-- `trust_transport_user_extension` — mode preferences, trust/safety settings, payout preference metadata, provider eligibility flags, linked by `user_id`.
+- `trust_transport_user_extension` — mode preferences, trust/safety settings, payout preference metadata, linked by `user_id`.
 
 ### 4.2 Domain Entities
 
@@ -249,6 +251,28 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Removed the unbuilt "verified provider" role/tier (owner directive). There was never any
+  in-app verification or a way to grant the `provider` role — it was only a role string read from the
+  Clerk identity, gating two payout routes and nothing else. Deleted `ensureTrustTransportProviderRole`,
+  the `requireTrustTransportProviderAccess` gate, and the `TRUST_TRANSPORT_PROVIDER_REQUIRED` error code.
+  The payout routes (`GET /payouts`, `POST /payouts/requests`) now use member read access — payouts are
+  already scoped to the caller's own earnings ledger by user id, so any member who has earned can request
+  one. Dropped `provider` from the `requiredRoles` of the request.create, offer.create, trip.status.update,
+  and payout.request access policies (the payout deny condition `actor_not_provider` → `actor_not_authenticated`),
+  and removed "verified provider participation" / "provider eligibility flags" wording from the inventory.
+  "Provider" remains only as a neutral domain term for whoever fulfils a request (the `provider_user_id`
+  columns, the `provider_region`, the `provider_payouts` purpose) — not a gated, verified status.
+
+- 2026-06-30: Added offer creation — the foundation of the provider/matching flow, which previously had
+  no write path (offers existed only from seed data). New `POST /api/trust-transport/requests/:requestId/offers`
+  with a `createOffer` repository function and `validateOfferInput`: a provider (or member) makes an offer
+  (optional note + optional positive `proposedAmount`) on an **open** request they do not own. One pending
+  offer per provider per request — re-offering updates the existing row rather than stacking duplicates.
+  Restricted accounts are blocked; the route is CSRF-guarded and emits a `trust-transport.offer.create`
+  audit event. Added the command to the command/access-policy/audit contracts. No schema change — the
+  existing `trust_transport_offers` table is used. UI for browsing requests and making an offer follows in
+  a later pass.
 
 - 2026-06-30: Removed ratings entirely (owner directive: rating of people is not allowed). The feature
   was backend-only and never surfaced in the web or mobile app. Deleted: the `trust_transport_ratings`

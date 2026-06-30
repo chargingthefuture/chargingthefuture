@@ -4,7 +4,6 @@ policies:
     version: 1.0.0
     requiredRoles:
       - member
-      - provider
     attributePolicies:
       tenancy: same_workspace
       modeValidation: required
@@ -26,6 +25,31 @@ policies:
       - actor_not_authenticated
       - invalid_mode
       - region_not_permitted
+
+  - pluginId: trust-transport
+    command: trust-transport.offer.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustNotOwnRequest: true
+      requestMustBeOpen: true
+    consentRequirements:
+      scopes:
+        - trust_transport_marketplace
+      fallbackLawfulBasis: contract_preparation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: true
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_owns_request
+      - request_not_open
+      - account_restricted
 
   - pluginId: trust-transport
     command: trust-transport.offer.accept
@@ -57,7 +81,6 @@ policies:
     version: 1.0.0
     requiredRoles:
       - member
-      - provider
       - admin
     attributePolicies:
       tenancy: same_workspace
@@ -83,7 +106,7 @@ policies:
     command: trust-transport.payout.request
     version: 1.0.0
     requiredRoles:
-      - provider
+      - member
     attributePolicies:
       tenancy: same_workspace
       actorMustOwnLedger: true
@@ -100,6 +123,6 @@ policies:
       containsPHI: false
       requiresAdditionalAudit: true
     denyConditions:
-      - actor_not_provider
+      - actor_not_authenticated
       - insufficient_available_balance
       - payout_channel_not_verified

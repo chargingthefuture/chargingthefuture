@@ -5,6 +5,7 @@ export const TRUST_TRANSPORT_MAX_PAGE_SIZE = 100;
 export const TRUST_TRANSPORT_MAX_TITLE_LENGTH = 160;
 export const TRUST_TRANSPORT_MAX_DETAILS_LENGTH = 5000;
 export const TRUST_TRANSPORT_MAX_PROOF_LENGTH = 500;
+export const TRUST_TRANSPORT_MAX_OFFER_NOTE_LENGTH = 1000;
 
 export const TRUST_TRANSPORT_MODES = ['ride', 'package', 'food'] as const;
 
@@ -22,5 +23,4 @@ export const TRUST_TRANSPORT_ERROR_CODE = {
   insufficientBalance: 'TRUST_TRANSPORT_INSUFFICIENT_BALANCE',
   accountRestricted: 'TRUST_TRANSPORT_ACCOUNT_RESTRICTED',
   mutualBlock: 'TRUST_TRANSPORT_MUTUAL_BLOCK',
-  providerRequired: 'TRUST_TRANSPORT_PROVIDER_REQUIRED',
 } as const;

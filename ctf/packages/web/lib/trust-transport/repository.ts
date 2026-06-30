@@ -9,6 +9,7 @@ import {
   TRUST_TRANSPORT_DEFAULT_PAGE,
   TRUST_TRANSPORT_DEFAULT_PAGE_SIZE,
   TRUST_TRANSPORT_MAX_DETAILS_LENGTH,
+  TRUST_TRANSPORT_MAX_OFFER_NOTE_LENGTH,
   TRUST_TRANSPORT_MAX_PAGE_SIZE,
   TRUST_TRANSPORT_MAX_PROOF_LENGTH,
   TRUST_TRANSPORT_MAX_TITLE_LENGTH,
@@ -19,6 +20,7 @@ import type {
   TrustTransportMarketConfig,
   TrustTransportMode,
   TrustTransportOffer,
+  TrustTransportOfferInput,
   TrustTransportPayoutRequest,
   TrustTransportRequest,
   TrustTransportRequestInput,
@@ -466,6 +468,83 @@ export async function listOffersForRequest(requestId: string): Promise<TrustTran
   );
 
   return result.rows.map(mapOfferRow);
+}
+
+export function validateOfferInput(input: TrustTransportOfferInput): boolean {
+  const note = normalizeNullableText(input.note);
+  if (note && note.length > TRUST_TRANSPORT_MAX_OFFER_NOTE_LENGTH) {
+    return false;
+  }
+
+  if (input.proposedAmount !== null) {
+    if (!Number.isInteger(input.proposedAmount) || input.proposedAmount <= 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// A provider offers to fulfill an open request. One offer per provider per request: re-offering updates
+// the existing row (note/amount) and keeps it pending, rather than stacking duplicate offers.
+export async function createOffer(
+  requestId: string,
+  providerUserId: string,
+  input: TrustTransportOfferInput,
+): Promise<TrustTransportOffer> {
+  if (!validateOfferInput(input)) {
+    throw new Error('invalid_payload');
+  }
+
+  await ensureUserNotRestricted(providerUserId);
+
+  const request = await getRequestById(requestId);
+  if (!request) {
+    throw new Error('request_not_found');
+  }
+
+  // You cannot make an offer on your own request, and you can only offer while it is still open.
+  if (request.requesterUserId === providerUserId) {
+    throw new Error('policy_denied');
+  }
+
+  if (request.status !== 'open') {
+    throw new Error('invalid_transition');
+  }
+
+  const note = normalizeNullableText(input.note);
+
+  return withDbTransaction(async (client) => {
+    const existing = await client.query<OfferRow>(
+      `SELECT id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at
+       FROM trust_transport_offers
+       WHERE request_id = $1::uuid AND provider_user_id = $2
+       LIMIT 1
+       FOR UPDATE`,
+      [requestId, providerUserId],
+    );
+
+    if ((existing.rowCount ?? 0) > 0) {
+      const updated = await client.query<OfferRow>(
+        `UPDATE trust_transport_offers
+         SET note = $2, proposed_amount = $3, status = 'pending', updated_at = NOW()
+         WHERE id = $1::uuid
+         RETURNING id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at`,
+        [existing.rows[0].id, note, input.proposedAmount],
+      );
+
+      return mapOfferRow(updated.rows[0]);
+    }
+
+    const created = await client.query<OfferRow>(
+      `INSERT INTO trust_transport_offers (request_id, provider_user_id, note, proposed_amount, status)
+       VALUES ($1::uuid, $2, $3, $4, 'pending')
+       RETURNING id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at`,
+      [requestId, providerUserId, note, input.proposedAmount],
+    );
+
+    return mapOfferRow(created.rows[0]);
+  });
 }
 
 export async function acceptOffer(requestId: string, offerId: string, actorUserId: string, idempotencyKey: string): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {

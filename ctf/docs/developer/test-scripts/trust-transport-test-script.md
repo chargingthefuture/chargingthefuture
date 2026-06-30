@@ -176,9 +176,9 @@ Result: web ☐ android ☐
 
 ### TT-8 — Trip status update (provider/driver side)
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a member who is a provider. Seed has a trip assigned to this provider that is not yet complete.
+**Precondition:** Signed in as the member assigned to fulfil a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfil a trip.
 
 **Steps:**
 1. Open the active trip.
@@ -192,9 +192,9 @@ Result: web ☐ android ☐
 
 ### TT-9 — Proof capture on delivery
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a provider. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
+**Precondition:** Signed in as the member fulfilling the trip. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
 
 **Steps:**
 1. Open the active delivery trip.
@@ -242,9 +242,9 @@ Result: web ☐ android ☐
 
 ### TT-13 — Earnings ledger and payout request
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a provider. Seed has completed tasks with earnings entries.
+**Precondition:** Signed in as a member who has fulfilled trips and has earnings entries. Any member with earnings can request a payout — there is no provider role.
 
 **Steps:**
 1. Navigate to the earnings/payout surface.
@@ -259,9 +259,9 @@ Result: web ☐ android ☐
 
 ### TT-14 — Payout request rejected for zero or negative amount
 
-**Role:** member acting as provider · **Surfaces:** web, android
+**Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as a provider with an earnings balance.
+**Precondition:** Signed in as a member with an earnings balance.
 
 **Steps:**
 1. Navigate to the payout request surface.
@@ -490,3 +490,4 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 5. **Driver ratings, ETAs, and vehicle info absent** — none of these fields are returned by any `trust-transport` API endpoint; their absence from the UI is correct behavior.
 6. **No admin trip-approval queue** — the design mockup shows an "approve/reject trip request queue" but no admin trip-approval route exists; the incident queue is what the API exposes and is what the admin surface renders.
 7. **Service delete endpoint not yet live** — `DELETE /api/account/trust-transport-profile` is listed as planned in the deletion contract; its absence is not a bug to file now.
+8. **Offer creation is API-only for now** — `POST /api/trust-transport/requests/:requestId/offers` exists (a provider makes an offer on an open request), but the provider-facing UI to browse open requests and submit an offer ships in a later pass. Until then, exercise offers through seed data or the API directly; the absence of an in-app "make an offer" button is expected, not a bug.
