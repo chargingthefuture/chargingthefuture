@@ -214,7 +214,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         />
       )}
       {tab === "tracking" && (
-        <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} />
+        <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} onAccepted={() => void fetchRequests()} />
       )}
       {tab === "help" && <TrustTransportHelpTab />}
       {tab === "chat" && (
