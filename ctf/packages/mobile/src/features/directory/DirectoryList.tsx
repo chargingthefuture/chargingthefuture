@@ -30,6 +30,8 @@ import {
   fetchMemberTrust,
 } from './api';
 import { TrustEvidencePanel } from '../trust/TrustEvidencePanel';
+import { ShareLink } from '../../components/shared/ShareLink';
+import { getApiBaseUrl } from '../../auth/authedFetch';
 
 const COLOR = '#93C5FD';
 const COMMUNITY_COLOR = '#FBBF24';
@@ -104,6 +106,17 @@ function ProfileDetail({
   // review" chips so a community-generated profile's Skills section is never empty.
   const pendingSkills = profile.pendingSkills ?? [];
 
+  // Absolute deep link to this profile, the destination a shared ShareLink points at. The web page
+  // (/apps/directory/profile/[id]) is auth-gated: a signed-in member opens that profile, an
+  // unauthenticated visitor is redirected to the directory landing. Built from the same APP_URL the
+  // API calls resolve against; if it is unset we render no share control rather than crash.
+  let shareUrl: string | null = null;
+  try {
+    shareUrl = `${getApiBaseUrl()}/apps/directory/profile/${encodeURIComponent(profile.id)}`;
+  } catch {
+    shareUrl = null;
+  }
+
   // Cross-plugin presence + trust — only for a claimed profile. Presence shows where else this
   // member is active; the trust card sits below as peer social proof. Both are best-effort reads.
   const claimedUserId = profile.claimedByUserId;
@@ -145,7 +158,13 @@ function ProfileDetail({
           <Text style={styles.backBtnText}>&#8592; Back</Text>
         </TouchableOpacity>
         <Text style={styles.detailNavTitle}>Profile</Text>
-        <View style={styles.detailNavSpacer} />
+        {shareUrl ? (
+          <View style={styles.detailNavShare}>
+            <ShareLink url={shareUrl} title="Share this profile" color={COLOR} />
+          </View>
+        ) : (
+          <View style={styles.detailNavSpacer} />
+        )}
       </View>
       <ScrollView style={styles.detailScroll}>
         <View style={styles.detailContent}>
@@ -673,6 +692,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   detailNavSpacer: { width: 40 },
+  detailNavShare: { minWidth: 40, alignItems: 'flex-end' },
 
   detailScroll: { flex: 1 },
   detailContent: { padding: 24 },
