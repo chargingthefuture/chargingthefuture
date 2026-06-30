@@ -124,7 +124,7 @@ export function ShareLink({
     background: "transparent",
     border: "none",
     borderRadius: 8,
-    color: "#E8EAF0",
+    color: "var(--ctf-text, #E8EAF0)",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -167,8 +167,8 @@ export function ShareLink({
             width: 280,
             maxWidth: "80vw",
             padding: 12,
-            background: "#161B27",
-            border: "1px solid #1E2A3A",
+            background: "var(--ctf-panel, #161B27)",
+            border: "1px solid var(--ctf-border, #1E2A3A)",
             borderRadius: 12,
             boxShadow: "0 12px 28px rgba(0,0,0,0.45)",
             display: "flex",
@@ -176,14 +176,14 @@ export function ShareLink({
             gap: 8,
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#9CA3AF" }}>{title}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ctf-text-secondary, #9CA3AF)" }}>{title}</div>
           <input
             ref={urlRef}
             readOnly
             value={absolute}
             aria-label="Link URL"
             onFocus={(e) => e.currentTarget.select()}
-            style={{ width: "100%", padding: "8px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12, color: "#E8EAF0", outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "8px 10px", background: "var(--ctf-surface, rgba(255,255,255,0.04))", border: "1px solid var(--ctf-border, rgba(255,255,255,0.08))", borderRadius: 8, fontSize: 12, color: "var(--ctf-text, #E8EAF0)", outline: "none", boxSizing: "border-box" }}
           />
           <button type="button" onClick={() => void onCopy()} style={itemStyle}>
             {copied ? <Check size={15} /> : <Copy size={15} />}
