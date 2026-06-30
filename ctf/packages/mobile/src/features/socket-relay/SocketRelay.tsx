@@ -29,6 +29,19 @@ import { SocketRelayDirectLines } from './SocketRelayDirectLines';
 import { CurrencySelect } from '../currency';
 import type { Currency } from '../currency';
 import { useAuth } from '../../auth/auth-context';
+import { ShareLink } from '../../components/shared/ShareLink';
+import { getApiBaseUrl } from '../../auth/authedFetch';
+
+// Absolute deep link to one request, the destination a shared ShareLink points at. Mirrors the web
+// feed's share target (/apps/socket-relay?request=<id>). Built from the same APP_URL the API calls
+// resolve against; returns null if it is unset so the card renders no share control rather than crash.
+function requestShareUrl(requestId: string): string | null {
+  try {
+    return `${getApiBaseUrl()}/apps/socket-relay?request=${encodeURIComponent(requestId)}`;
+  } catch {
+    return null;
+  }
+}
 
 // Design color — from MobileSocketRelay.tsx mockup
 const COLOR = '#FB923C';
@@ -302,6 +315,17 @@ export function SocketRelay() {
                   {r.city ? `📍 ${r.city} · ` : ''}
                   {new Date(r.createdAtIso).toLocaleDateString()}
                 </Text>
+
+                {/* Share this request — the one app-wide control (rule 130), matching the web feed.
+                    The link opens SocketRelay (auth-gated) on the destination device. */}
+                {(() => {
+                  const shareUrl = requestShareUrl(r.id);
+                  return shareUrl ? (
+                    <View style={styles.cardShareRow}>
+                      <ShareLink url={shareUrl} title="Share this request" color={COLOR} />
+                    </View>
+                  ) : null;
+                })()}
 
                 {myRequestIds.includes(r.id) ? (
                   r.isExpired ? (
@@ -670,6 +694,7 @@ const styles = StyleSheet.create({
   cardDetails: { fontSize: 12, color: '#9CA3AF', marginBottom: 6, lineHeight: 18 },
   cardPoster: { fontSize: 12, color: COLOR, fontWeight: '600', marginBottom: 4 },
   cardMeta: { fontSize: 11, color: '#6B7280', marginBottom: 10 },
+  cardShareRow: { flexDirection: 'row', marginBottom: 10 },
   helpBtn: {
     paddingVertical: 8,
     borderRadius: 8,
