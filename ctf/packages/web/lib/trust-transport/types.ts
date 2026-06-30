@@ -70,6 +70,13 @@ export type TrustTransportOffer = {
   updatedAtIso: string;
 };
 
+export type TrustTransportOfferInput = {
+  // Optional free-text note from the provider (e.g. "Can pick up in 20 min"); redacted/normalized.
+  note: string | null;
+  // Optional settlement amount the provider proposes, as a positive integer; null means "no counter".
+  proposedAmount: number | null;
+};
+
 export type TrustTransportTrip = {
   id: string;
   requestId: string;

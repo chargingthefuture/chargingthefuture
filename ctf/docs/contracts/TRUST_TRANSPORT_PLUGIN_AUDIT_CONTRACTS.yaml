@@ -30,6 +30,33 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: trust-transport
+    command: trust-transport.offer.create
+    commandVersion: 1.0.0
+    purpose: marketplace_offer_creation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        ownershipCheck: pass_or_fail
+        requestOpenCheck: pass_or_fail
+    dataClassesAccessed:
+      - offer_metadata
+      - transport_request_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      requestId: request_identifier
+      offerId: offer_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: trust-transport
     command: trust-transport.offer.accept
     commandVersion: 1.0.0
     purpose: marketplace_fulfillment_start
