@@ -157,6 +157,31 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: directory
+    command: directory.profile.get
+    commandVersion: 1.0.0
+    purpose: directory_discovery
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        visibilityFilterCheck: pass_or_fail
+    dataClassesAccessed:
+      - directory_public_projection_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: directory_profile
+      targetId: directory_profile_id
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: directory
     command: directory.admin.announcement.upsert
     commandVersion: 1.0.0
     purpose: admin_communications
