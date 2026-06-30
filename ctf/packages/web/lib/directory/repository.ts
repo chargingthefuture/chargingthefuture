@@ -638,6 +638,51 @@ function normalizeListFilters(filters: ListFilters): {
   };
 }
 
+// Fetch one active directory profile by id, in the same full shape the browse list returns, for the
+// auth-gated deep-link page (/apps/directory/profile/[id]). Returns null when no active profile
+// matches. Behind the same read-access gate as the list — never exposed to unauthenticated visitors.
+export async function getDirectoryProfileForMember(profileId: string): Promise<DirectoryProfile | null> {
+  const id = typeof profileId === 'string' ? profileId.trim() : '';
+  if (id.length === 0) {
+    return null;
+  }
+  return withDbTransaction(async (client) => {
+    const rows = await client.query<DirectoryProfileRow>(
+      `
+        SELECT
+          p.id,
+          p.claimed_by_user_id,
+          p.first_name,
+          p.last_name,
+          p.headline,
+          p.bio,
+          p.profile_url,
+          p.sector_id,
+          s.name AS sector_name,
+          p.job_title_id,
+          jt.name AS job_title_name,
+          p.is_active,
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
+          p.created_at,
+          p.updated_at
+        FROM directory_profiles p
+        LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
+        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
+        WHERE p.id::text = $1 AND p.is_active = true
+        LIMIT 1
+      `,
+      [id],
+    );
+    const row = rows.rows[0];
+    if (!row) {
+      return null;
+    }
+    return mapProfileRow(client, row);
+  });
+}
+
 export async function listDirectoryForMember(
   pagination: { page: number; pageSize: number },
   filters: ListFilters,
