@@ -70,6 +70,17 @@ export type TrustTransportOffer = {
   updatedAtIso: string;
 };
 
+// What a member browsing open requests to help with is allowed to see (discovery model B). Deliberately
+// omits the pickup/drop-off text and the title (which embeds the locations) — those are revealed to a
+// provider only once the requester accepts their offer.
+export type TrustTransportAvailableRequest = {
+  id: string;
+  mode: TrustTransportMode;
+  priceCurrency: string | null;
+  priceAmount: number | null;
+  createdAtIso: string;
+};
+
 export type TrustTransportOfferInput = {
   // Optional free-text note from the provider (e.g. "Can pick up in 20 min"); redacted/normalized.
   note: string | null;

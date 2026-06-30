@@ -147,6 +147,7 @@ User routes:
 
 - `GET /api/trust-transport/modes` — Available transport modes (requires member read access).
 - `POST /api/trust-transport/requests` — Create a request.
+- `GET /api/trust-transport/requests/available` — Open requests a member can offer to help with: everyone's open requests except the caller's own, returning **only mode + settlement + age** (no pickup/drop-off, no title) per discovery model B. Location is shared with a provider only after the requester accepts their offer.
 - `GET /api/trust-transport/requests/:requestId` — Request detail.
 - `GET /api/trust-transport/requests/:requestId/offers` — Offers on a request.
 - `POST /api/trust-transport/requests/:requestId/offers` — Make an offer on an open request (one pending offer per provider per request; re-offering updates it).
@@ -251,6 +252,15 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Provider discovery + make-an-offer surface (web), discovery model B (owner decision). New
+  `GET /api/trust-transport/requests/available` lists everyone's OPEN requests except the caller's own,
+  returning **only mode + settlement + age** — never the pickup/drop-off text or the title (which embeds
+  the locations). A survivor's whereabouts are not exposed to open browsing; the location reaches a
+  provider only once the requester accepts their offer. The web shell gains a "Help out" tab
+  (`tt-help-tab.tsx`) that lists available requests and submits an offer (optional note + optional amount)
+  via the slice-1 `POST /requests/:requestId/offers`. No schema change. **Android parity deferred** —
+  tracked for a follow-up pass.
 
 - 2026-06-30: Removed the unbuilt "verified provider" role/tier (owner directive). There was never any
   in-app verification or a way to grant the `provider` role — it was only a role string read from the

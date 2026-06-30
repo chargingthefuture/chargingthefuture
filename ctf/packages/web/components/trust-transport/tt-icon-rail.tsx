@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, MapPin, Navigation, MessageCircle } from "lucide-react";
+import { Car, MapPin, Navigation, MessageCircle, HandHeart } from "lucide-react";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
 import { COLOR, type Tab } from "./tt-shared";
 
@@ -8,6 +8,7 @@ import { COLOR, type Tab } from "./tt-shared";
 const TABS: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: MapPin, key: "book", label: "Book a ride" },
   { icon: Navigation, key: "tracking", label: "Tracking" },
+  { icon: HandHeart, key: "help", label: "Help out" },
   { icon: MessageCircle, key: "chat", label: "Direct Line" },
 ];
 
