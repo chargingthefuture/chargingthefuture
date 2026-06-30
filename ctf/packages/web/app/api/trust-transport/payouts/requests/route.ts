@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireTrustTransportProviderAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
+import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { insertTrustTransportAudit, requestPayout } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
@@ -10,7 +10,9 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireTrustTransportProviderAccess();
+  // A payout draws from the caller's own earnings ledger (keyed by user id), so any signed-in member
+  // who has earnings can request one. There is no separate provider role.
+  const gate = await requireTrustTransportReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
