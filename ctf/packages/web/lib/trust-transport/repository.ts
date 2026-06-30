@@ -443,9 +443,16 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
 
   const result = await queryDb<RequestRow>(
+    // LATERAL with LIMIT 1 so a request with more than one trip row (data anomaly) cannot duplicate the
+    // request in the page and diverge from the COUNT above — at most one trip id per request.
     `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at, t.id AS trip_id
      FROM trust_transport_requests r
-     LEFT JOIN trust_transport_trips t ON t.request_id = r.id
+     LEFT JOIN LATERAL (
+       SELECT id FROM trust_transport_trips
+       WHERE request_id = r.id
+       ORDER BY created_at
+       LIMIT 1
+     ) t ON TRUE
      WHERE ($1::text IS NULL OR r.requester_user_id = $1)
      ORDER BY r.created_at DESC
      OFFSET $2 LIMIT $3`,
@@ -654,7 +661,9 @@ export async function updateTripStatus(
 
     const nextRequestStatus = mapRequestStatusFromTrip(nextStatus);
 
-    if (!(REQUEST_TRANSITIONS[nextRequestStatus] || REQUEST_TRANSITIONS.open)) {
+    // Guard against an unmapped request status. The previous `|| REQUEST_TRANSITIONS.open` fallback was
+    // always truthy, so the check could never fire; drop it so a missing key is actually caught.
+    if (!REQUEST_TRANSITIONS[nextRequestStatus]) {
       throw new Error('invalid_transition');
     }
 
@@ -817,6 +826,12 @@ export async function submitOrderRating(orderId: string, actorUserId: string, is
   }
 
   const trip = tripResult.rows[0];
+
+  // A rating only makes sense once the trip has finished; reject one on a trip that has not reached its
+  // terminal completed state (maps to 409). This also stops a rating being recorded mid-trip.
+  if (trip.status !== 'completed') {
+    throw new Error('invalid_transition');
+  }
 
   await queryDb(
     `INSERT INTO trust_transport_ratings (trip_id, requester_user_id, provider_user_id, score, feedback)
