@@ -18,6 +18,7 @@ import {
 import type {
   TrustTransportIncident,
   TrustTransportMarketConfig,
+  TrustTransportAvailableRequest,
   TrustTransportMode,
   TrustTransportOffer,
   TrustTransportOfferInput,
@@ -468,6 +469,57 @@ export async function listOffersForRequest(requestId: string): Promise<TrustTran
   );
 
   return result.rows.map(mapOfferRow);
+}
+
+// Discovery for members who want to help (model B). Lists OPEN requests the caller does not own, but
+// returns only mode + settlement + age — never the pickup/drop-off text or the title (which embeds the
+// locations). A provider learns the location only after the requester accepts their offer (the trip
+// then carries the full request). This protects a survivor's whereabouts from open browsing.
+export async function listAvailableRequests(options: {
+  excludeUserId: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ items: TrustTransportAvailableRequest[]; page: number; pageSize: number; total: number }> {
+  const page = normalizePage(options.page);
+  const pageSize = normalizePageSize(options.pageSize);
+  const offset = (page - 1) * pageSize;
+  const excludeUserId = options.excludeUserId;
+
+  const count = await queryDb<CountRow>(
+    `SELECT COUNT(*)::text AS total
+     FROM trust_transport_requests
+     WHERE status = 'open' AND requester_user_id <> $1`,
+    [excludeUserId],
+  );
+  const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
+
+  const result = await queryDb<{
+    id: string;
+    mode: TrustTransportMode;
+    price_amount: string | number | null;
+    price_currency: string | null;
+    created_at: Date;
+  }>(
+    `SELECT id, mode, price_amount, price_currency, created_at
+     FROM trust_transport_requests
+     WHERE status = 'open' AND requester_user_id <> $1
+     ORDER BY created_at DESC
+     OFFSET $2 LIMIT $3`,
+    [excludeUserId, offset, pageSize],
+  );
+
+  return {
+    items: result.rows.map((row) => ({
+      id: row.id,
+      mode: row.mode,
+      priceCurrency: row.price_currency,
+      priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+      createdAtIso: toIso(row.created_at),
+    })),
+    page,
+    pageSize,
+    total,
+  };
 }
 
 export function validateOfferInput(input: TrustTransportOfferInput): boolean {

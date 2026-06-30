@@ -77,7 +77,17 @@ export interface ChatCreds {
   message?: string;
 }
 
-export type Tab = "book" | "tracking" | "chat";
+export type Tab = "book" | "tracking" | "chat" | "help";
+
+// A request shown on the "Help out" tab (discovery model B): mode + settlement + age only. The pickup
+// and drop-off are deliberately absent — they're shared with a provider only after the requester accepts.
+export interface AvailableRequest {
+  id: string;
+  mode?: string;
+  priceCurrency?: string | null;
+  priceAmount?: number | null;
+  createdAtIso?: string;
+}
 
 export interface RideType {
   id: string;
