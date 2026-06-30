@@ -253,6 +253,13 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-06-30: Requester can accept an offer in-app (web). The Tracking tab now loads the offers on each
+  of your own open requests (`GET /requests/:requestId/offers`) and shows an Accept button per pending
+  offer; accepting calls the existing `POST /offers/:offerId/accept`, which opens a trip. This is the
+  point where — per discovery model B — the chosen provider gains the pickup/drop-off (the trip carries
+  the full request). Previously offer acceptance was reachable only via the API/seed. Web only; Android
+  parity tracked in #1250. No schema/route/contract change.
+
 - 2026-06-30: Provider discovery + make-an-offer surface (web), discovery model B (owner decision). New
   `GET /api/trust-transport/requests/available` lists everyone's OPEN requests except the caller's own,
   returning **only mode + settlement + age** — never the pickup/drop-off text or the title (which embeds

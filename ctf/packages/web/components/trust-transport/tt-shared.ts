@@ -79,6 +79,17 @@ export interface ChatCreds {
 
 export type Tab = "book" | "tracking" | "chat" | "help";
 
+// An offer shown to the requester on their own request's Tracking card, so they can accept one.
+export interface TtOffer {
+  id: string;
+  requestId?: string;
+  providerUserId?: string;
+  note?: string | null;
+  proposedAmount?: number | null;
+  status?: string;
+  createdAtIso?: string;
+}
+
 // A request shown on the "Help out" tab (discovery model B): mode + settlement + age only. The pickup
 // and drop-off are deliberately absent — they're shared with a provider only after the requester accepts.
 export interface AvailableRequest {

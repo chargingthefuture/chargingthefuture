@@ -111,11 +111,11 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as a member. Seed has at least one request with at least one offer on it.
 
 **Steps:**
-1. Open your request list and tap/click a seeded request that has offers.
-2. View the offers listed for that request.
-3. Accept one offer.
+1. Open the Tracking tab. On one of your own open requests, click "View offers".
+2. Confirm the offers list shows pending offers (a community member, optional note, optional proposed amount).
+3. Accept one offer. (On web; on Android this still runs via API/seed until the parity pass — issue #1250.)
 
-**Expected:** The offer is accepted and a trip is created. The UI transitions to a trip/tracking view for that trip. The trip ID is now visible (the sidebar or detail shows it, not "— → —").
+**Expected:** The offer is accepted and a trip is created. The request moves to an accepted state and the Direct Line opens for that trip. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —").
 
 Result: web ☐ android ☐
 
