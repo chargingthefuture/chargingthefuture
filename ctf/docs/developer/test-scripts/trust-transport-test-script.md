@@ -181,10 +181,10 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as the member assigned to fulfil a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfil a trip.
 
 **Steps:**
-1. Open the active trip.
-2. Apply a status update (e.g. advance from accepted to "picked up" or equivalent).
+1. On web, open the **Help out** tab → "Trips you're helping with"; find your active trip. (On Android this runs via API/seed until the parity pass — issue #1250.)
+2. Tap the forward action (Start trip → Mark picked up → Mark delivered → Mark complete) to advance one step.
 
-**Expected:** The trip status changes and the new state is reflected in the tracking view. The previous state is still in the event log (status transitions are append-only — you cannot revert to the previous state by re-selecting it).
+**Expected:** The trip status changes one step forward and the new state shows on the card. Transitions are forward-only and append-only — there is no control to revert to the previous state. An out-of-order transition (via the API) is refused.
 
 Result: web ☐ android ☐
 

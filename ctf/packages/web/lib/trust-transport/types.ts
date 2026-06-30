@@ -70,6 +70,20 @@ export type TrustTransportOffer = {
   updatedAtIso: string;
 };
 
+// A trip the caller is fulfilling (they are the provider). Once they accepted, the request location is
+// theirs to see (model B reveal), so pickup/drop-off are included here.
+export type TrustTransportProviderTrip = {
+  tripId: string;
+  requestId: string;
+  status: TrustTransportTripStatus;
+  mode: TrustTransportMode;
+  pickupCity: string | null;
+  dropoffCity: string | null;
+  priceCurrency: string | null;
+  priceAmount: number | null;
+  createdAtIso: string;
+};
+
 // What a member browsing open requests to help with is allowed to see (discovery model B). Deliberately
 // omits the pickup/drop-off text and the title (which embeds the locations) — those are revealed to a
 // provider only once the requester accepts their offer.
