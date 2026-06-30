@@ -1217,7 +1217,11 @@ ALTER TABLE IF EXISTS trusttransport_offers RENAME TO trust_transport_offers;
 ALTER TABLE IF EXISTS trusttransport_trips RENAME TO trust_transport_trips;
 ALTER TABLE IF EXISTS trusttransport_risk_signals RENAME TO trust_transport_risk_signals;
 ALTER TABLE IF EXISTS trusttransport_disputes RENAME TO trust_transport_disputes;
-ALTER TABLE IF EXISTS trusttransport_ratings RENAME TO trust_transport_ratings;
+-- Ratings removed (owner directive: rating of people is not allowed). Drop the table on any database
+-- that still carries it, under either the legacy or current name. This deletes stored rating rows by
+-- design; the feature was backend-only and never surfaced in the app.
+DROP TABLE IF EXISTS trust_transport_ratings;
+DROP TABLE IF EXISTS trusttransport_ratings;
 ALTER TABLE IF EXISTS trusttransport_market_config RENAME TO trust_transport_market_config;
 ALTER TABLE IF EXISTS trusttransport_user_extension RENAME TO trust_transport_user_extension;
 ALTER TABLE IF EXISTS trusttransport_proof_artifacts RENAME TO trust_transport_proof_artifacts;
@@ -1343,16 +1347,6 @@ CREATE TABLE IF NOT EXISTS trust_transport_disputes (
   opened_by_user_id TEXT NOT NULL,
   reason TEXT NOT NULL,
   status TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE TABLE IF NOT EXISTS trust_transport_ratings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES trust_transport_trips(id) ON DELETE CASCADE,
-  requester_user_id TEXT NOT NULL,
-  provider_user_id TEXT NOT NULL,
-  score INTEGER NOT NULL,
-  feedback TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

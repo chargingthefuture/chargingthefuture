@@ -11,7 +11,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin) |
 
 ---
 
@@ -235,22 +235,6 @@ Result: web ☐ android ☐
 3. Confirm the explicit confirmation prompt.
 
 **Expected:** The order transitions to a cancelled terminal state. The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
-
-Result: web ☐ android ☐
-
----
-
-### TT-12 — Submit a rating after completion
-
-**Role:** member · **Surfaces:** web, android
-
-**Precondition:** Signed in as a member. Seed has a completed trip eligible for rating.
-
-**Steps:**
-1. Open a completed trip.
-2. Submit a rating (and optionally a review).
-
-**Expected:** Rating is submitted and confirmed. No crash. Dual-sided — the UI makes clear the rating applies to the counterparty.
 
 Result: web ☐ android ☐
 
@@ -487,7 +471,6 @@ These cases must produce the same observable outcome on both surfaces. Run both 
 | TT-6 | Chat gating message before accept; text-only chat after accept; no video |
 | TT-7 | Read-only chat after terminal state |
 | TT-11 | Explicit confirmation prompt before cancel |
-| TT-12 | Rating submission succeeds |
 | TT-17 | Right panel shows "Good to know" reminders; no fabricated safety claims |
 | TT-A1 | Incident resolved after native/web confirmation prompt |
 | TT-A2 | Market config update persists after reload |

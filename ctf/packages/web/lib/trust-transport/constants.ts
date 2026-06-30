@@ -5,7 +5,6 @@ export const TRUST_TRANSPORT_MAX_PAGE_SIZE = 100;
 export const TRUST_TRANSPORT_MAX_TITLE_LENGTH = 160;
 export const TRUST_TRANSPORT_MAX_DETAILS_LENGTH = 5000;
 export const TRUST_TRANSPORT_MAX_PROOF_LENGTH = 500;
-export const TRUST_TRANSPORT_MAX_FEEDBACK_LENGTH = 1500;
 
 export const TRUST_TRANSPORT_MODES = ['ride', 'package', 'food'] as const;
 

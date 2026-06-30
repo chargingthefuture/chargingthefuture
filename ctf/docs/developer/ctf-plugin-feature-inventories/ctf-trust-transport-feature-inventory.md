@@ -39,7 +39,7 @@ The plugin must provide equivalent core behavior across web and Android.
    - request ride,
    - choose offer,
    - track driver,
-   - complete and rate.
+   - complete.
 2. Driver flow:
    - accept/decline requests,
    - pickup/dropoff confirmation,
@@ -84,12 +84,11 @@ The plugin must provide equivalent core behavior across web and Android.
 2. In-context communication channel scoped to each order/trip between exactly the two parties (rider and driver). The chat opens with the trip and closes when the trip reaches a terminal state (completed, cancelled, disputed): no new messages may be sent, both parties keep read-only access for a limited window, and messages are retained server-side for moderation/abuse evidence per the deletion contract. No 1:1 messaging exists outside an active trip (platform rule 100, "Messaging Scope and Lifecycle").
 3. Clear non-technical status and failure messaging.
 
-### 1.6 Earnings, Payouts, and Reputation
+### 1.6 Earnings, Payouts, and Completion History
 
 1. Provider earnings ledger per completed task.
 2. Payout request and payout status visibility.
-3. Dual-sided ratings/reviews with abuse-report capability.
-4. Reliability badges based on completion, cancellation, and dispute outcomes.
+3. Reputation is transparent completion history only — the record of whether each trip was successfully completed or not, and a count of completed trips. There are no ratings, reviews, star scores, written feedback, or reliability badges of any kind. (Owner directive: rating of people is not allowed.)
 
 ---
 
@@ -136,11 +135,10 @@ Command groups in scope:
 5. `trust-transport.delivery.proof.capture`
 6. `trust-transport.order.cancel`
 7. `trust-transport.chat.message.send`
-8. `trust-transport.rating.submit`
-9. `trust-transport.payout.request`
-10. `trust-transport.admin.dispute.resolve`
-11. `trust-transport.admin.account.restrict`
-12. `trust-transport.admin.market.config.update`
+8. `trust-transport.payout.request`
+9. `trust-transport.admin.dispute.resolve`
+10. `trust-transport.admin.account.restrict`
+11. `trust-transport.admin.market.config.update`
 
 ## HTTP Projection Routes
 
@@ -156,7 +154,6 @@ User routes:
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
 - `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
 - `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order.
-- `POST /api/trust-transport/orders/:orderId/rating` — Submit a rating.
 - `GET /api/trust-transport/payouts` — Payout history.
 - `POST /api/trust-transport/payouts/requests` — Request a payout.
 - `POST /api/trust-transport/service-credits` — Cross-user ServiceCredits transfer for trip economics (rejects self-transfer; emits a `trust-transport.service-credits.transfer` audit event).
@@ -196,12 +193,11 @@ Tables owned by this plugin:
 4. `trust_transport_status_events` — Append-only event log for status transitions.
 5. `trust_transport_proof_artifacts` — Pickup/delivery proof captures (photo, code, signature references).
 6. `trust_transport_disputes` — Dispute records and adjudication state.
-7. `trust_transport_ratings` — Dual-sided ratings/reviews.
-8. `trust_transport_earnings_ledger` — Earnings entries per completed task.
-9. `trust_transport_payout_requests` — Provider payout requests and status.
-10. `trust_transport_risk_signals` — Fraud/risk signals captured for monitoring.
-11. `trust_transport_market_config` — Region/service-zone/fee/commission/capacity configuration.
-12. `trust_transport_admin_audit_trail` — Admin mutation audit log.
+7. `trust_transport_earnings_ledger` — Earnings entries per completed task.
+8. `trust_transport_payout_requests` — Provider payout requests and status.
+9. `trust_transport_risk_signals` — Fraud/risk signals captured for monitoring.
+10. `trust_transport_market_config` — Region/service-zone/fee/commission/capacity configuration.
+11. `trust_transport_admin_audit_trail` — Admin mutation audit log.
 
 Multi-currency (issue #120): `trust_transport_payout_requests` and `trust_transport_earnings_ledger` gain
 `price_currency` (FK → `currencies.code`), the admin-curated, referenced settlement currency that supersedes
@@ -242,7 +238,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Seed Coverage Status
 
-`ctf/scripts/seedTrustTransport.mjs` seeds deterministic request/offer/trip/proof/dispute/rating data for dev validation.
+`ctf/scripts/seedTrustTransport.mjs` seeds deterministic request/offer/trip/proof/dispute data for dev validation.
 
 ---
 
@@ -253,6 +249,16 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Removed ratings entirely (owner directive: rating of people is not allowed). The feature
+  was backend-only and never surfaced in the web or mobile app. Deleted: the `trust_transport_ratings`
+  table (dropped in `schema.sql` and `schema.demo.sql`), the `POST /api/trust-transport/orders/:orderId/rating`
+  route, `submitOrderRating` and `validateRatingInput` and the `TrustTransportRatingInput` type, the
+  unused `TRUST_TRANSPORT_MAX_FEEDBACK_LENGTH` constant, and the `trust_transport_ratings` entry in the
+  account-deletion registry. Reputation is now transparent completion history only — a trip is recorded
+  as successfully completed or not (its existing terminal trip status); there are no ratings, reviews,
+  star scores, written feedback, or reliability badges anywhere. No rating command exists in the
+  contract files, so no contract change was needed.
 
 - 2026-06-29: Code-review findings pass (issues #1113, #1204–#1208). (1) `GET /api/trust-transport/modes`
   now runs `requireTrustTransportReadAccess()` like every other read route — the mode list is no longer
@@ -362,7 +368,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
     - No duplicate standalone profile table; extension keyed by `user_id`.
 - [ ] Implement core domain tables and relationships.
   - Acceptance criteria:
-    - Requests/offers/trips/deliveries/orders/events/proofs/disputes/ratings/ledger/payouts exist with constraints.
+    - Requests/offers/trips/deliveries/orders/events/proofs/disputes/ledger/payouts exist with constraints.
 - [ ] Add migration SQL under `ctf/migrations/`.
   - Acceptance criteria:
     - Migration replay and rollback plan validated.
@@ -378,7 +384,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 - [ ] Implement lifecycle status updates and proof capture.
   - Acceptance criteria:
     - State transitions are valid, auditable, and recoverable on failure.
-- [ ] Implement cancellation, ratings, and payout request flows.
+- [ ] Implement cancellation and payout request flows.
   - Acceptance criteria:
     - Policy rules and edge-case errors are deterministic.
 - [ ] Implement admin dispute/risk/market-config APIs.
@@ -396,9 +402,9 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 - [ ] Build tracking/status and communication surfaces.
   - Acceptance criteria:
     - Real-time or near-real-time updates with clear state labels.
-- [ ] Build earnings/payout and reputation surfaces.
+- [ ] Build earnings/payout and completion-history surfaces.
   - Acceptance criteria:
-    - Earnings, payout requests, ratings, and reliability indicators visible.
+    - Earnings, payout requests, and completion history visible. No ratings, reviews, scores, or reliability indicators.
 
 ### �� Android Delivery
 
