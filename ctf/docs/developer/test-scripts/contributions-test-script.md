@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (banner Contribute-button navigation coverage; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (banner: Contribute navigation + hidden "Not now" button; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -88,15 +88,15 @@ out — honest retries still work.
 plain language. An empty history shows the empty state, not an error.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### CON-5 · Fundraiser banner — Contribute and dismiss
+### CON-5 · Fundraiser banner — Contribute (dismiss button hidden)
 **Role:** member · **Surfaces:** all
 **Steps:**
 1. With the banner showing in the Hub, press **Contribute**.
-2. Go back to the Hub, then dismiss the banner with **Not now**.
+2. Look for a "Not now" / dismiss control on the banner.
 **Expected:** **Contribute** opens the drive at `/apps/contributions` — the page renders (it is
-**not** a 404; the plugin registry row is visible, `is_visible = TRUE`). Dismiss silently hides the
-banner with no guilt copy and no countdown; it stays snoozed for six months (an internal config knob,
-not shown to the member). Dismissing is not audited.
+**not** a 404; the plugin registry row is visible, `is_visible = TRUE`). There is **no** "Not now"
+button on the banner — it is currently hidden by owner request (the `SHOW_DISMISS_BUTTON` flag is
+off). The server-side snooze endpoint still exists but has no UI entry point for now.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
