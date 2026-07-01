@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import {
   listMyFulfillments,
+  listMyRequests,
   resolveFulfillment,
   type SocketRelayFulfillment,
+  type SocketRelayRequest,
   type SocketRelayResolveOutcome,
 } from './api';
 import { SocketRelayLoading } from './SocketRelayLoading';
@@ -93,10 +95,28 @@ function DirectLineCard({
   );
 }
 
-// The Direct Lines tab: lists the signed-in member's fulfillments and surfaces requester-only
-// resolve controls. `currentUserId` decides requester-vs-helper (from useAuth().user.id).
+// A pending request card: a request the member posted that no helper has claimed yet. There is no
+// helper to chat with, so it explains what happens next instead of showing resolve actions.
+function PendingRequestCard({ request }: { request: SocketRelayRequest }) {
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{request.title}</Text>
+      <Text style={styles.cardRole}>Your request · Waiting for a helper</Text>
+      <Text style={styles.note}>
+        This request is still open on the feed. As soon as someone offers to help, your Direct Line
+        opens here and you can talk it through.
+      </Text>
+    </View>
+  );
+}
+
+// The Direct Lines tab: one row per request the member is currently waiting on or talking through —
+// active fulfillments (live conversations) plus the member's own still-open requests as pending
+// placeholders. Cancelled/closed fulfillments drop out. `currentUserId` decides requester-vs-helper
+// (from useAuth().user.id) and surfaces requester-only resolve controls.
 export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: string }) {
   const [fulfillments, setFulfillments] = useState<SocketRelayFulfillment[]>([]);
+  const [myRequests, setMyRequests] = useState<SocketRelayRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
@@ -105,8 +125,11 @@ export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: stri
   const load = useCallback((showLoading = true) => {
     if (showLoading) setLoading(true);
     setError(null);
-    listMyFulfillments()
-      .then((res) => setFulfillments(res.items))
+    Promise.all([listMyFulfillments(), listMyRequests()])
+      .then(([fulRes, reqRes]) => {
+        setFulfillments(fulRes.items);
+        setMyRequests(reqRes.items);
+      })
       .catch(() => setError('Failed to load your Direct Lines.'))
       .finally(() => {
         if (showLoading) setLoading(false);
@@ -151,13 +174,17 @@ export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: stri
     );
   }
 
-  if (fulfillments.length === 0) {
+  // Active fulfillments are live conversations; pending requests are the member's own still-open,
+  // non-expired posts with no helper yet. Together they are the Direct Line list (active first).
+  const activeFulfillments = fulfillments.filter((f) => f.status === 'active');
+  const pendingRequests = myRequests.filter((r) => r.status === 'open' && !r.isExpired);
+
+  if (activeFulfillments.length === 0 && pendingRequests.length === 0) {
     return (
       <View style={styles.centeredMsg}>
         <Text style={styles.emptyTitle}>No Direct Lines yet</Text>
         <Text style={styles.emptyBody}>
-          When you offer to help on a request — or someone offers to help with yours — a private
-          Direct Line opens here.
+          Post a request or offer to help on one, and it shows up here as a private Direct Line.
         </Text>
       </View>
     );
@@ -173,7 +200,7 @@ export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: stri
           </View>
         ) : null}
         {resolveError ? <Text style={styles.errorText}>{resolveError}</Text> : null}
-        {fulfillments.map((f) => (
+        {activeFulfillments.map((f) => (
           <DirectLineCard
             key={f.id}
             fulfillment={f}
@@ -181,6 +208,9 @@ export function SocketRelayDirectLines({ currentUserId }: { currentUserId?: stri
             resolving={resolving}
             onResolve={(id, outcome) => void handleResolve(id, outcome)}
           />
+        ))}
+        {pendingRequests.map((r) => (
+          <PendingRequestCard key={`pending:${r.id}`} request={r} />
         ))}
       </View>
     </ScrollView>

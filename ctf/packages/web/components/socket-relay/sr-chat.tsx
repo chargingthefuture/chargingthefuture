@@ -1,8 +1,8 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { Clock, MessageCircle } from "lucide-react";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
-import { COLOR, FAINT, SUBTLE, type SrChatCredentials, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
+import { COLOR, FAINT, SUBTLE, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
 
 const RESOLVE_ACTIONS: { outcome: SrResolveOutcome; label: string; color: string }[] = [
   { outcome: "successful", label: "Mark successful", color: "#22C55E" },
@@ -57,6 +57,28 @@ function ResolveBar({
   );
 }
 
+// The right pane for a pending request: it has no helper yet, so there is nothing to chat on. Explain
+// what happens next instead of showing an empty chat.
+function PendingPane({ title }: { title: string }) {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#F0FDF4" }}>{title}</div>
+        <div style={{ fontSize: 12, color: SUBTLE }}>Waiting for a helper to offer.</div>
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32, textAlign: "center" }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${COLOR}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Clock size={20} style={{ color: `${COLOR}99` }} />
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No helper yet</div>
+        <div style={{ fontSize: 13, color: FAINT, maxWidth: 320, lineHeight: 1.5 }}>
+          This request is still open on the feed. As soon as someone offers to help, your Direct Line opens here and you can talk it through.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChatPane({
   selected,
   isRequester,
@@ -103,8 +125,44 @@ function ChatPane({
   );
 }
 
+// A single row in the left conversation list. A fulfillment row is a live conversation; a pending row
+// is a request you posted that no one has claimed yet (shown with a muted "waiting" sub-label).
+function DirectLineRow({
+  line,
+  active,
+  currentUserId,
+  onSelect,
+}: {
+  line: SrDirectLine;
+  active: boolean;
+  currentUserId?: string;
+  onSelect: (line: SrDirectLine) => void;
+}) {
+  const title = line.kind === "fulfillment" ? fulfillmentTitle(line.fulfillment) : line.request.title;
+  const isRequester = line.kind === "fulfillment" && Boolean(currentUserId && line.fulfillment.requesterUserId === currentUserId);
+  const sub =
+    line.kind === "pending" ? (
+      "Your request · Waiting for a helper"
+    ) : (
+      <>
+        {isRequester ? "Your request" : "You're helping"} · <span style={{ textTransform: "capitalize" }}>{line.fulfillment.status}</span>
+      </>
+    );
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={() => onSelect(line)}
+      style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: active ? `${COLOR}18` : "transparent", border: active ? `1px solid ${COLOR}30` : "1px solid transparent", marginBottom: 4 }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#E8EAF0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+      <div style={{ fontSize: 11, color: SUBTLE }}>{sub}</div>
+    </button>
+  );
+}
+
 export function SocketRelayChat({
-  fulfillments,
+  directLines,
   selected,
   currentUserId,
   resolving = false,
@@ -114,56 +172,55 @@ export function SocketRelayChat({
   chatError,
   chatCredentials,
 }: {
-  fulfillments: SrFulfillment[];
-  selected: SrFulfillment | null;
+  directLines: SrDirectLine[];
+  selected: SrDirectLine | null;
   currentUserId?: string;
   resolving?: boolean;
-  onSelect: (fulfillment: SrFulfillment) => void;
+  onSelect: (line: SrDirectLine) => void;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
   chatLoading: boolean;
   chatError: string | null;
   chatCredentials: SrChatCredentials | null;
 }) {
-  if (fulfillments.length === 0) {
+  if (directLines.length === 0) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
         <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${COLOR}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <MessageCircle size={20} style={{ color: `${COLOR}66` }} />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No conversations yet</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#9CA3AF" }}>No Direct Lines yet</div>
         <div style={{ fontSize: 13, color: FAINT, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
-          When you offer to help on a request — or someone offers to help with yours — a private Direct Line opens here.
+          Post a request or offer to help on one, and it shows up here as a private Direct Line.
         </div>
       </div>
     );
   }
 
-  const selectedIsRequester = Boolean(selected && currentUserId && selected.requesterUserId === currentUserId);
+  const selectedFulfillment = selected?.kind === "fulfillment" ? selected.fulfillment : null;
+  const selectedIsRequester = Boolean(selectedFulfillment && currentUserId && selectedFulfillment.requesterUserId === currentUserId);
 
   return (
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
       <div style={{ width: 240, borderRight: "1px solid rgba(255,255,255,0.06)", padding: "12px 8px", overflowY: "auto" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 8px", marginBottom: 8 }}>Conversations</div>
-        {fulfillments.map((f) => {
-          const isRequester = Boolean(currentUserId && f.requesterUserId === currentUserId);
-          return (
-            <button key={f.id} type="button" aria-pressed={selected?.id === f.id} onClick={() => onSelect(f)} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: selected?.id === f.id ? `${COLOR}18` : "transparent", border: selected?.id === f.id ? `1px solid ${COLOR}30` : "1px solid transparent", marginBottom: 4 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#E8EAF0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fulfillmentTitle(f)}</div>
-              <div style={{ fontSize: 11, color: SUBTLE }}>{isRequester ? "Your request" : "You're helping"} · <span style={{ textTransform: "capitalize" }}>{f.status}</span></div>
-            </button>
-          );
-        })}
+        {directLines.map((line) => (
+          <DirectLineRow key={line.key} line={line} active={selected?.key === line.key} currentUserId={currentUserId} onSelect={onSelect} />
+        ))}
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <ChatPane
-          selected={selected}
-          isRequester={selectedIsRequester}
-          resolving={resolving}
-          onResolve={onResolve}
-          chatLoading={chatLoading}
-          chatError={chatError}
-          chatCredentials={chatCredentials}
-        />
+        {selected?.kind === "pending" ? (
+          <PendingPane title={selected.request.title} />
+        ) : (
+          <ChatPane
+            selected={selectedFulfillment}
+            isRequester={selectedIsRequester}
+            resolving={resolving}
+            onResolve={onResolve}
+            chatLoading={chatLoading}
+            chatError={chatError}
+            chatCredentials={chatCredentials}
+          />
+        )}
       </div>
     </div>
   );
