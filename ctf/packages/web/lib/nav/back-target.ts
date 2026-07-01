@@ -6,10 +6,11 @@ export type BackTarget = { href: string; label: string };
 // place:
 //   - an admin area page (/admin/<area>, any depth) goes up to the admin directory (/admin)
 //   - the admin directory (/admin) goes up to the home hub (/)
-//   - everything else (member plugin screens) goes up to all apps (the caller's fallback, /apps)
+//   - an account sub-page (/account/<section>) goes up to the account hub (/account)
+//   - everything else (the account hub and member plugin screens) goes up to all apps (the fallback)
 //
-// `fallbackHref` is the destination for non-admin screens; callers that already have a sensible
-// default (the member shells use /apps) pass it through so this function only special-cases admin.
+// `fallbackHref` is the destination for non-hierarchical screens; callers that already have a sensible
+// default (the member shells use /apps) pass it through so this function only special-cases the trees.
 export function resolveBackTarget(
   pathname: string | null | undefined,
   fallbackHref = '/apps',
@@ -19,6 +20,9 @@ export function resolveBackTarget(
   }
   if (pathname && pathname.startsWith('/admin/')) {
     return { href: '/admin', label: 'Back to admin' };
+  }
+  if (pathname && pathname.startsWith('/account/')) {
+    return { href: '/account', label: 'Back to your account' };
   }
   return { href: fallbackHref, label: 'Back to all apps' };
 }

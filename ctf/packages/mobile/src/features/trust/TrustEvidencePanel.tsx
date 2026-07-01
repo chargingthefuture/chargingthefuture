@@ -1,19 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { TrustVisibilityBadge } from './TrustVisibilityBadge';
-
-export interface TrustEvidenceItem {
-  type: string;
-  summary: string;
-  details?: string;
-  createdAt: string;
-}
-
-export interface TrustUserExtension {
-  trustStatus: 'verified' | 'unverified' | 'flagged';
-  trustVisibility: 'public' | 'private' | 'restricted';
-  trustEvidence: TrustEvidenceItem[];
-}
+// Single source of truth for the mobile trust types lives in ./api — do not re-declare here.
+import type { TrustEvidenceItem, TrustUserExtension } from './api';
 
 export interface TrustEvidencePanelProps {
   trust: TrustUserExtension;
@@ -38,8 +27,8 @@ export const TrustEvidencePanel: React.FC<TrustEvidencePanelProps> = ({ trust, c
           <Text style={styles.emptyDesc}>Visible to: {trust.trustVisibility.charAt(0).toUpperCase() + trust.trustVisibility.slice(1)}</Text>
         </View>
       ) : (
-        trust.trustEvidence.map((item: TrustEvidenceItem) => (
-          <View style={styles.evidenceItem}>
+        trust.trustEvidence.map((item: TrustEvidenceItem, index: number) => (
+          <View key={`${item.type}-${index}`} style={styles.evidenceItem}>
             <Text style={styles.evidenceType}>{item.type}</Text>
             <Text style={styles.evidenceSummary}>{item.summary}</Text>
             {item.details ? <Text style={styles.evidenceDetails}>{item.details}</Text> : null}

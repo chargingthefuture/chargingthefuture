@@ -94,6 +94,17 @@ string. Trailing whitespace on a note is trimmed before the length check.
 is logged; deleting a row that is already gone is logged as a failure result, not a server error.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
+### CL-A2 · Left icon-rail chrome has no dead controls
+**Role:** member · **Surfaces:** web (desktop)
+**Steps:**
+1. Open ClickLog and look at the left icon rail.
+2. Try clicking each icon top to bottom.
+**Expected:** Below the brand mark the rail shows only the shared footer controls — back to all apps,
+account and settings, and the account menu — and every one of them navigates. There are no decorative
+clock/document glyphs that look like buttons but do nothing. (This rail is desktop-only; the
+mobile-responsive layout uses its own header.)
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)

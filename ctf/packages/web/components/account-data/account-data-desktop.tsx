@@ -9,6 +9,7 @@ import {
 } from './account-data-shared';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemeToggle } from '../theme/theme-toggle';
+import { AccountIconRail } from '@/components/account/account-icon-rail';
 
 type View = 'data' | 'danger';
 
@@ -37,6 +38,9 @@ export function AccountDataDesktop({
 
   return (
     <div style={{ display: 'flex', height: '100dvh', background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, overflow: 'hidden' }}>
+      {/* Uniform left icon rail (brand mark + shared footer: back to your account, settings, avatar). */}
+      <AccountIconRail brand={BRAND} bg="#0D0F14" border={BORDER} />
+
       {/* Left sidebar */}
       <aside style={{ width: 240, background: '#0D0F14', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '20px 16px 12px' }}>
