@@ -441,6 +441,9 @@
 
 .chatBubbleGroup {
   max-width: 70%;
+  /* Let the group shrink below its content's intrinsic width inside the flex row, so a long word or
+     URL wraps instead of pushing the bubble past the screen edge. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -451,6 +454,9 @@
   font-size: 14px;
   line-height: 1.6;
   color: var(--ctf-text-shell);
+  /* Break long unbroken strings (e.g. a pasted URL) so a message always fits the bubble/frame. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Chat bubble color convention: your own messages are gray; everyone else's use the hub's color
@@ -1996,6 +2002,16 @@
  * Stack them full-width instead so each button has even padding and room.
  */
 @media (max-width: 767px) {
+  /* On a phone the 70% cap wastes horizontal space and forces more wrapping than needed; give the
+     bubble more of the frame, and trim the message padding so long posts read comfortably. */
+  .chatBubbleGroup {
+    max-width: 85%;
+  }
+
+  .chatMessages {
+    padding: 16px 14px;
+  }
+
   /* Compact the hero on phones so it doesn't dominate the screen and crowd out
      the chat / AI Assistant area below it. */
   .heroBanner {
