@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getTrustUserExtension, refreshTrustSignalSnapshot } from 'lib/trust/repository';
+import type { TrustUserExtension } from 'lib/trust/types';
+import { logTrustAuditEvent } from 'lib/trust/audit';
+import { resolveRequestId } from 'lib/trust/_lib';
 import { reportError } from 'lib/observability/report';
 
-export async function GET() {
+export async function GET(request: Request) {
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
     return NextResponse.json(decision, { status: decision.status });
   }
+
+  const requestId = resolveRequestId(request);
 
   // Recompute the caller's trust signals from their current participation before returning, so the
   // panel reflects what they have actually done instead of a frozen snapshot that nothing ever
@@ -16,12 +21,29 @@ export async function GET() {
   // Resilience: if the recompute throws (an upstream table is briefly unavailable, the DB hiccups,
   // etc.) fall back to the last stored extension so the panel still renders the most recent good
   // evidence instead of erroring. A failed refresh must never break the member's own read.
+  let extension: TrustUserExtension;
   try {
-    const { extension } = await refreshTrustSignalSnapshot(decision.userId);
-    return NextResponse.json(extension, { status: 200 });
+    ({ extension } = await refreshTrustSignalSnapshot(decision.userId));
   } catch (error) {
     reportError(error, { area: 'trust', op: 'self_refresh' });
-    const extension = await getTrustUserExtension(decision.userId);
-    return NextResponse.json(extension, { status: 200 });
+    extension = await getTrustUserExtension(decision.userId);
   }
+
+  // Record the trust.summary.read audit event required by the audit contract. A failed audit write
+  // must never break the member's own read, so log-and-continue on error.
+  try {
+    await logTrustAuditEvent({
+      actorUserId: decision.userId,
+      targetUserId: decision.userId,
+      command: 'trust.summary.read',
+      policyStatus: 'allow',
+      reason: 'self_summary_read',
+      requestId,
+      metadata: { viewerUserId: decision.userId, subjectUserId: decision.userId, surface: 'self' },
+    });
+  } catch (error) {
+    reportError(error, { area: 'trust', op: 'self_summary_read_audit' });
+  }
+
+  return NextResponse.json(extension, { status: 200 });
 }

@@ -59,6 +59,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - `trustEvidence` is an array; if the seeded admin has upstream activity, at least one item is present (e.g. `"Active on N days"`).
 - No field named `score`, `trustScore`, or any numeric rank appears in the response.
 - A new `trust_signal_snapshot` row was written (recompute-on-read behaviour) — confirm by calling the route a second time and checking `updatedAt` is equal to or newer than a timestamp you noted before the first call.
+- A `trust.summary.read` row is written to `trust_admin_audit_trail` for this read (`policy_status = allow`, reason `self_summary_read`; metadata carries `viewerUserId`/`subjectUserId`/`surface`). A failed audit write is reported but never changes the response.
 - If the recompute had thrown internally the route would still return 200 using the last stored extension (fallback); a crash/500 here is a bug.
 
 **Result:** web ☐ android ☐
@@ -100,6 +101,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - HTTP 200.
 - Response contains `trustStatus`, `trustEvidence`, `trustVisibility`.
 - No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
+- A `trust.summary.read` row is written to `trust_admin_audit_trail` (`policy_status = allow`, reason `admin_summary_read` or `public_summary_read`).
 
 **Result:** web ☐
 
@@ -118,6 +120,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 **Expected:**
 - Non-owner, non-admin caller: HTTP 403.
 - Admin caller: HTTP 200 with full panel.
+- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail`: the blocked non-owner read as `policy_status = deny` (reason `forbidden_visibility`), the admin read as `policy_status = allow` (reason `admin_summary_read`).
 
 **Result:** web ☐
 
@@ -322,6 +325,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - At minimum three rows exist from this session: one for the visibility update, one for the snapshot refresh, one for the admin verification.
+- Reads are audited too: the panel reads in TR-A1/TR-A3/TR-A4 add `trust.summary.read` rows (allow on a permitted read, deny on a blocked cross-user read), so this session also has read rows alongside the three mutation rows.
 - Each row has a non-null `id` (UUID), `actor_user_id`, `command`, `policy_status`, `target_user_id`, `request_id`, and `created_at`.
 - No row contains raw sensitive payloads (no credit amounts, no per-row SocketRelay detail, no PHI).
 
