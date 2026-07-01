@@ -62,6 +62,11 @@ export type FundraiserResponse = {
   };
   signalInstructions: string;
   ownerSignalUrl: string | null;
+  // Live thank-you valuations from the admin config, so member copy always matches the settings
+  // screen. creditsPerUsd is SC per dollar (gift cards); creditsPerActionSc is the resulting SC for
+  // one confirmed comment or star (nonMonetaryUnitValueUsd × creditsPerUsd).
+  creditsPerUsd: number;
+  creditsPerActionSc: number;
 };
 
 export type SubmissionsResponse = {

@@ -44,14 +44,16 @@ flow is one-way, like gas-station reward points.
 
 - Submit a contribution claim of one of three kinds:
   - **Gift card** (`amazon`, `apple`, or `dennys`): the member states the amount (over 0, at most
-    500 USD) and their own Signal contact (URL or phone number — reduces fraud). The gift-card
-    **code is never collected or stored anywhere** — the member sends the code to the owner over
-    Signal, outside the app. After submitting, the member sees the owner-authored Signal
-    instructions (codes go to the owner on Signal; everything else belongs in the public Hub
-    support channel).
-  - **Quora comment**: the post URL is optional, because much of the user base struggles with
-    URLs; the owner finds the comment via notifications and pastes the URL in during review.
-  - **GitHub star**: profile URL likewise optional, same reason.
+    500 USD) and their own Signal contact (URL or phone number — reduces fraud). It can be a physical
+    or a digital gift card. The gift-card **code is never collected or stored anywhere** — the member
+    sends the code to the owner over Signal, outside the app. The member is warned, on both the form
+    and the post-submit confirmation, to **never post the code in the Commons** (the single public
+    group chat): doing so means no ServiceCredits and the owner never receives the gift. Questions and
+    anything other than the code belong in the Commons.
+  - **Quora comment**: the member pastes the link to their comment — **required**, because the owner
+    needs it to find and confirm the contribution. If the member cannot find the link, the form points
+    them to the Commons (the group chat) to ask for help rather than submitting an untrackable claim.
+  - **GitHub star**: the member pastes their GitHub profile link — **required**, same reason.
 - See their own claim history and statuses (pending / confirmed / rejected).
 - See the current fundraiser cycle and collective progress (USD raised, comments, stars,
   contributor count) toward the owner-set goals.
@@ -88,7 +90,9 @@ flow is one-way, like gas-station reward points.
   the viewer, the member-safe Signal instructions copy, `githubStarAlreadyCredited` (true when the
   viewer already holds a confirmed, credit-earning github_star — the UI greys out that path), and
   `ownerSignalUrl` (the owner's Signal contact from the server-only `CONTRIBUTIONS_OWNER_SIGNAL_URL`
-  env var, or null to fall back to the instructions copy).
+  env var, or null to fall back to the instructions copy), and the live thank-you valuations
+  `creditsPerUsd` (SC per dollar) and `creditsPerActionSc` (SC for one confirmed comment or star,
+  = `nonMonetaryUnitValueUsd × creditsPerUsd`), so member copy always matches the admin settings.
 - `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
 - `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
 - `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
@@ -265,11 +269,10 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## 10. Gaps and Known Technical Debt
 
-- The member surfaces show the credit valuations (10 SC/dollar, 50 SC/action) as copy using the
-  seeded defaults; the member fundraiser route does not expose the live config, so if the owner
-  tunes those knobs the member copy can lag until that route also returns the valuations. The admin
-  settings screen is the source of truth for the live values. (Low priority — the figures are
-  framed as a thank-you, not a contract.)
+- (Resolved 2026-07-01) The member surfaces previously showed hardcoded credit valuations (10 SC per
+  dollar, 50 SC per action) that could drift from the admin config. The fundraiser route now returns
+  the live `creditsPerUsd` and `creditsPerActionSc`, and the member cards/disclaimer render those, so
+  member copy always matches the settings screen.
 - The mobile admin screen mirrors the day-to-day review path (confirm/reject) and shows drive and
   settings as read-only summaries; creating/editing a drive and editing the config knobs is done on
   the web admin dashboard. The GitHub-star brand icon is rendered with lucide's `Star` (the brand
@@ -286,6 +289,42 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-01: Member credit valuations now come from the live config (owner-reported bug). The member
+  cards and disclaimer showed a hardcoded "50 SC" per comment/star while the admin "Credits per comment
+  or star" setting was 10. The fundraiser route (`GET /api/contributions/fundraiser`) now returns
+  `creditsPerUsd` and `creditsPerActionSc` (= `nonMonetaryUnitValueUsd × creditsPerUsd`), and the web
+  and Android member surfaces render those instead of hardcoded defaults, so the copy always matches
+  the settings screen. Fundraiser command contract `outputSchema` updated. No schema change.
+- 2026-07-01: Trackability + Commons safety pass (owner feedback). (1) The Quora comment link and the
+  GitHub profile link are now **required** on submit (web + Android) — without them the owner cannot
+  find and confirm the contribution. Each field shows a help line: if you cannot find the link, ask in
+  the Commons (the group chat). (2) Corrected copy that pointed members to a non-existent "#support
+  channel in the Hub": there is one channel, the Commons. The post-submit confirmation now points
+  questions to the Commons and carries a prominent warning to **never post a gift card code in the
+  Commons** (it is a public group chat — doing so means no ServiceCredits and the owner never receives
+  the gift; codes go only to the owner on Signal). The gift-card form carries the same warning. (3) On
+  desktop, removed the "My contributions" left-nav item — the member's contributions already show
+  permanently in the right rail, so the item only scrolled to something already on screen. The mobile
+  "My history" tab is unchanged. Presentation/copy only — no route, schema, or contract change.
+- 2026-07-01: Contribute-flow copy and cleanup pass (owner feedback). (1) Fixed "50SC" running
+  together in the credits disclaimer — the inline JSX interpolation dropped the space where the card
+  template literals did not, so both amounts are now built as template literals (`{`${creditsPerUsd} SC`}` /
+  `{`${creditsPerAction} SC`}`) and render "10 SC" / "50 SC". (2) Added a line to the gift-card form
+  (web + Android) stating the card can be physical or digital and that the card details go to the owner
+  in the Signal chat, never in the form. (3) Removed the "Choose one of the three ways above…"
+  placeholder box under the cards — it read as confusing; the form now simply opens when a card is
+  chosen (the cards' own "Choose this" cue is the prompt). Presentation/copy only — no route, schema,
+  or contract change.
+- 2026-07-01: Made the contribute action discoverable. The three path cards ("How would you like to
+  help?") were click-to-expand `role="button"` divs with no visual cue that they open anything, and on
+  web the chosen path's form rendered at the very bottom of the section — below the credits
+  disclaimer — so it read as disconnected from the card and easy to miss. Added a one-line instruction
+  under the heading, a per-card "Choose this ⌄ / Selected" affordance (`components/contributions/contributions-paths.tsx`),
+  moved the form to render directly under the cards (above the disclaimer), and added a dashed
+  placeholder prompt when no path is selected so the screen never looks like a dead end. Mirrored the
+  instruction and the "Choose this" cue on the Android app (`packages/mobile/src/features/contributions/Contributions.tsx`),
+  which already rendered each form directly under its card. Presentation only — no route, schema, or
+  contract change.
 - 2026-07-01: Hid the fundraiser banner's "Not now" dismiss button on web (owner request). Gated both
   layouts (desktop and phone-width) behind a new `SHOW_DISMISS_BUTTON` flag in
   `components/contributions/contributions-banner.tsx`, defaulting to hidden. The button markup and the

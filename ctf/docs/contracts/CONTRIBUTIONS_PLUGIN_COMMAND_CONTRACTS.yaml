@@ -87,6 +87,12 @@ contracts:
       ownerSignalUrl:
         type: string
         note: The owner's Signal contact URL/number, read from the server-only CONTRIBUTIONS_OWNER_SIGNAL_URL env var, shown inline on the confirmation screen. Null when the env var is unset/empty; the UI then falls back to signalInstructions. Never logged.
+      creditsPerUsd:
+        type: number
+        note: Live thank-you SC granted per USD (gift cards), from the runtime config, so member copy matches the admin settings screen.
+      creditsPerActionSc:
+        type: number
+        note: Live thank-you SC for one confirmed comment or star, computed as nonMonetaryUnitValueUsd × creditsPerUsd (rounded). Replaces a previously hardcoded member-side default.
     dataAccess:
       - contributions_cycles
       - contributions_submissions

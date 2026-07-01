@@ -199,6 +199,45 @@
   color: #E5E7EB;
 }
 
+/* Empty conversation state (ChatEmptyState in stream-chat-panel.tsx). Replaces Stream's default
+ * "No chats here yet…" for a fresh Direct Line with an on-brand card: a dashed accent ring around the
+ * message icon, a short heading, and a one-line nudge. Uses the plugin accent variable when present
+ * and neutral dark tones otherwise, so it matches the rest of the panel across every plugin. */
+.ctf-chat-empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.ctf-chat-empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px dashed var(--str-chat__primary-color, rgba(255, 255, 255, 0.3));
+  color: var(--str-chat__primary-color, #9CA3AF);
+}
+
+.ctf-chat-empty__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #E5E7EB;
+}
+
+.ctf-chat-empty__body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9CA3AF;
+  max-width: 320px;
+}
+
 /* Polls (default stream-chat-react 12.16 Poll components, created from the composer's attachment menu
  * and rendered in the MessageList). The defaults already inherit Stream's dark theme; these rules
  * only tint the create-poll affordance and the poll card's primary accents to the plugin color so a

@@ -419,7 +419,7 @@ function NotificationInbox({
   if (notifications.length === 0) {
     return (
       <View style={styles.inboxEmpty}>
-        <Text style={styles.muted}>No notifications yet.</Text>
+        <Text style={styles.muted}>No status updates yet.</Text>
       </View>
     );
   }
@@ -505,8 +505,6 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
     })();
   }, [round]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   async function markRead(id: string) {
     try {
       await SkillsHuntApi.markNotificationRead(id);
@@ -551,14 +549,9 @@ export function SkillsHunt({ userId }: { userId?: string } = {}) {
           <TouchableOpacity
             style={styles.bellBtn}
             onPress={() => setInboxOpen(o => !o)}
-            accessibilityLabel="Notifications"
+            accessibilityLabel="Status"
           >
             <Text style={styles.bellGlyph}>🔔</Text>
-            {unreadCount > 0 && (
-              <View style={styles.bellDot}>
-                <Text style={styles.bellDotText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -729,21 +722,8 @@ const styles = StyleSheet.create({
   },
   ptsScore: { fontSize: 14, fontWeight: '800', color: COLOR },
   ptsLabel: { fontSize: 9, color: '#6B7280' },
-  bellBtn: { padding: 6, position: 'relative' },
+  bellBtn: { padding: 6 },
   bellGlyph: { fontSize: 18 },
-  bellDot: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  bellDotText: { color: '#fff', fontSize: 10, fontWeight: '800' },
 
   // Inbox
   inboxList: {

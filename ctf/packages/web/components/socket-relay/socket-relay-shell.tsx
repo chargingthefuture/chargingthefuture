@@ -8,11 +8,13 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import {
   BG,
+  buildDirectLines,
   deriveCategories,
   getSocketRelayTokens,
   requestTags,
   suggestTags,
   type SrChatCredentials,
+  type SrDirectLine,
   type SrFulfillment,
   type SrFulfillmentsResponse,
   type SrListResponse,
@@ -40,14 +42,17 @@ async function getJson<T>(url: string): Promise<T | null> {
 
 // Load all three feed datasets at once, normalizing missing payloads to empties.
 // Kept out of the component so the loader stays within the rule-116 complexity limit.
-async function loadSocketRelayData(): Promise<{ requests: SrRequest[]; myRequestCount: number; fulfillments: SrFulfillment[] }> {
+// My-requests is fetched at the max page size so the Direct Line list can show every open request as a
+// pending line (a member realistically has far fewer than 100 open at once).
+async function loadSocketRelayData(): Promise<{ requests: SrRequest[]; myRequests: SrRequest[]; myRequestCount: number; fulfillments: SrFulfillment[] }> {
   const [reqData, myReqData, fulData] = await Promise.all([
     getJson<SrListResponse>("/api/socket-relay/requests"),
-    getJson<SrListResponse>("/api/socket-relay/my-requests"),
+    getJson<SrListResponse>("/api/socket-relay/my-requests?pageSize=100"),
     getJson<SrFulfillmentsResponse>("/api/socket-relay/my-fulfillments"),
   ]);
   return {
     requests: reqData?.items ?? [],
+    myRequests: myReqData?.items ?? [],
     myRequestCount: myReqData?.total ?? 0,
     fulfillments: fulData?.items ?? [],
   };
@@ -63,6 +68,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requests, setRequests] = useState<SrRequest[]>([]);
+  const [myRequests, setMyRequests] = useState<SrRequest[]>([]);
   const [myRequestCount, setMyRequestCount] = useState(0);
   const [fulfillments, setFulfillments] = useState<SrFulfillment[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -73,7 +79,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postError, setPostError] = useState<string | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
-  const [selectedFulfillment, setSelectedFulfillment] = useState<SrFulfillment | null>(null);
+  const [selectedLine, setSelectedLine] = useState<SrDirectLine | null>(null);
   const [chatCredentials, setChatCredentials] = useState<SrChatCredentials | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
@@ -88,6 +94,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     try {
       const data = await loadSocketRelayData();
       setRequests(data.requests);
+      setMyRequests(data.myRequests);
       setMyRequestCount(data.myRequestCount);
       setFulfillments(data.fulfillments);
     } catch (e) {
@@ -213,13 +220,19 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     }
   }
 
-  async function openFulfillmentChat(fulfillment: SrFulfillment) {
-    setSelectedFulfillment(fulfillment);
+  // Select a Direct Line row. A pending request (no helper yet) has no chat to open — it just shows the
+  // "waiting for a helper" pane — so only a fulfillment row fetches chat credentials.
+  async function handleSelectLine(line: SrDirectLine) {
+    setSelectedLine(line);
     setChatCredentials(null);
     setChatError(null);
+    if (line.kind !== "fulfillment") {
+      setChatLoading(false);
+      return;
+    }
     setChatLoading(true);
     try {
-      const res = await fetch(`/api/socket-relay/fulfillments/${fulfillment.id}/chat`, {
+      const res = await fetch(`/api/socket-relay/fulfillments/${line.fulfillment.id}/chat`, {
         method: "POST",
         headers: { "x-ctf-csrf": "1" },
       });
@@ -249,7 +262,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
         const payload = (await res.json().catch(() => null)) as { message?: string } | null;
         throw new Error(payload?.message ?? "Couldn't resolve this request. Please try again.");
       }
-      setSelectedFulfillment(null);
+      setSelectedLine(null);
       setChatCredentials(null);
       await fetchData(false);
     } catch (e) {
@@ -292,6 +305,10 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     return true;
   });
 
+  // The Direct Line list: active conversations plus your own still-open requests as pending
+  // placeholders. Cancelled/closed lines drop out — one row per request you're waiting on or talking through.
+  const directLines = buildDirectLines(fulfillments, myRequests);
+
   const content = (
     <>
       {tab === "feed" && (
@@ -320,11 +337,11 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
       )}
       {tab === "chat" && (
         <SocketRelayChat
-          fulfillments={fulfillments}
-          selected={selectedFulfillment}
+          directLines={directLines}
+          selected={selectedLine}
           currentUserId={userId}
           resolving={resolving}
-          onSelect={(f) => void openFulfillmentChat(f)}
+          onSelect={(line) => void handleSelectLine(line)}
           onResolve={(id, outcome) => void handleResolve(id, outcome)}
           chatLoading={chatLoading}
           chatError={chatError}
