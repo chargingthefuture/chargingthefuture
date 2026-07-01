@@ -69,12 +69,10 @@ function deriveShellState(args: {
   serverCurrentUserEntry: SkillsHuntLeaderboardItem | null;
   userId?: string;
   rounds: SkillsHuntRound[];
-  notifications: SkillsHuntNotification[];
 }) {
   return {
     currentUserEntry: args.leaderboard.find((item) => item.userId === args.userId) ?? args.serverCurrentUserEntry,
     noActiveRound: args.rounds.length === 0,
-    unreadCount: args.notifications.filter((n) => !n.isRead).length,
   };
 }
 
@@ -242,7 +240,7 @@ export function SkillsHuntShell({
   if (loadingRounds) return <AppLoading />;
   if (globalError) return <CenteredNote t={t} color="#EF4444">{globalError}</CenteredNote>;
 
-  const { currentUserEntry, noActiveRound, unreadCount } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds, notifications });
+  const { currentUserEntry, noActiveRound } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds });
   const showModeratorTools = isAdmin || isModerator;
 
   const content = (
@@ -267,7 +265,6 @@ export function SkillsHuntShell({
             <PluginAdminButton href="/admin/skills-hunt" isAdmin={showModeratorTools} accent={t.ACCENT} />
             <button type="button" onClick={() => setNotifOpen((o) => !o)} aria-label="Status" style={{ position: "relative", width: 38, height: 38, borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={18} />
-              {unreadCount > 0 && <span style={{ position: "absolute", top: 5, right: 5, width: 8, height: 8, borderRadius: "50%", background: "#EF4444" }} />}
             </button>
             <MobileTopActions />
           </div>
@@ -287,7 +284,7 @@ export function SkillsHuntShell({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex" }}>
-      <SkillsHuntIconRail tab={tab} onTab={setTab} notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((o) => !o)} unreadCount={unreadCount} />
+      <SkillsHuntIconRail tab={tab} onTab={setTab} notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((o) => !o)} />
       {notifOpen && (
         <SkillsHuntNotifications notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
       )}

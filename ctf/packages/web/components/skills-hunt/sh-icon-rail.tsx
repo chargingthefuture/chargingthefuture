@@ -9,13 +9,11 @@ export function SkillsHuntIconRail({
   onTab,
   notifOpen,
   onToggleNotif,
-  unreadCount,
 }: {
   tab: Tab;
   onTab: (tab: Tab) => void;
   notifOpen: boolean;
   onToggleNotif: () => void;
-  unreadCount: number;
 }) {
   return (
     <aside style={{ width: 72, background: "#090B0F", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
@@ -29,13 +27,8 @@ export function SkillsHuntIconRail({
         </button>
       ))}
       <button type="button" aria-label="Status" aria-expanded={notifOpen} onClick={onToggleNotif}
-        style={{ position: "relative", width: 44, height: 44, borderRadius: 12, background: notifOpen ? `${COLOR}20` : "transparent", border: notifOpen ? `1px solid ${COLOR}40` : "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: notifOpen ? COLOR : "#6B7280" }}>
+        style={{ width: 44, height: 44, borderRadius: 12, background: notifOpen ? `${COLOR}20` : "transparent", border: notifOpen ? `1px solid ${COLOR}40` : "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: notifOpen ? COLOR : "#6B7280" }}>
         <Bell size={18} />
-        {unreadCount > 0 && (
-          <span style={{ position: "absolute", top: 6, right: 6, minWidth: 18, height: 18, borderRadius: 9, background: "#EF4444", color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
       </button>
       <PluginRailFooter />
     </aside>
