@@ -1,7 +1,19 @@
 // All calls go through authedFetch so the Clerk bearer token is attached and the
 // base URL comes from runtime config (APP_URL).
 import { authedFetchJson } from '../../auth/authedFetch';
-import type { TrustTransportRequest, TrustTransportRequestInput, TrustTransportOffer, TrustTransportTrip, TrustTransportMode } from './types';
+import type {
+  TrustTransportRequest,
+  TrustTransportRequestInput,
+  TrustTransportOffer,
+  TrustTransportOfferInput,
+  TrustTransportTrip,
+  TrustTransportMode,
+  TrustTransportAvailableRequest,
+  TrustTransportProviderTrip,
+  TrustTransportPayoutRequest,
+  TrustTransportEarningsBalance,
+  TrustTransportTripStatus,
+} from './types';
 
 const BASE = '/api/trust-transport';
 
@@ -46,14 +58,89 @@ export async function listOffersForRequest(requestId: string): Promise<TrustTran
   return data.items ?? [];
 }
 
-export async function acceptOffer(offerId: string): Promise<TrustTransportTrip> {
-  const data = await authedFetchJson<{ ok: boolean; item: TrustTransportTrip }>(
+// Accept an offer on your own request. The route requires the requestId in the body and returns the
+// opened trip as `trip` (the previous implementation sent an empty body and read the wrong field).
+export async function acceptOffer(requestId: string, offerId: string): Promise<TrustTransportTrip> {
+  const data = await authedFetchJson<{ ok: boolean; trip: TrustTransportTrip }>(
     `${BASE}/offers/${offerId}/accept`,
     {
       method: 'POST',
       headers: MUTATION_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify({ requestId }),
     },
   );
-  return data.item;
+  return data.trip;
+}
+
+// Discovery model B: open requests you can offer to help with — mode + settlement + age only.
+export async function listAvailableRequests(page = 1): Promise<TrustTransportAvailableRequest[]> {
+  const data = await authedFetchJson<{ ok: boolean; items: TrustTransportAvailableRequest[] }>(
+    `${BASE}/requests/available?page=${page}`,
+  );
+  return data.items ?? [];
+}
+
+// Make (or update) your offer on an open request. One pending offer per provider per request.
+export async function createOffer(requestId: string, input: TrustTransportOfferInput): Promise<TrustTransportOffer> {
+  const data = await authedFetchJson<{ ok: boolean; offer: TrustTransportOffer }>(
+    `${BASE}/requests/${requestId}/offers`,
+    {
+      method: 'POST',
+      headers: MUTATION_HEADERS,
+      body: JSON.stringify(input),
+    },
+  );
+  return data.offer;
+}
+
+// Trips you are fulfilling (provider side), with the now-revealed pickup/drop-off.
+export async function listProviderTrips(): Promise<TrustTransportProviderTrip[]> {
+  const data = await authedFetchJson<{ ok: boolean; items: TrustTransportProviderTrip[] }>(`${BASE}/trips`);
+  return data.items ?? [];
+}
+
+// Advance a trip one step (forward-only, enforced server-side).
+export async function updateTripStatus(tripId: string, nextStatus: TrustTransportTripStatus, note: string | null = null): Promise<TrustTransportTrip> {
+  const data = await authedFetchJson<{ ok: boolean; trip: TrustTransportTrip }>(
+    `${BASE}/trips/${tripId}/status`,
+    {
+      method: 'POST',
+      headers: MUTATION_HEADERS,
+      body: JSON.stringify({ nextStatus, note }),
+    },
+  );
+  return data.trip;
+}
+
+// Capture pickup/delivery proof as a redacted reference (no raw images).
+export async function captureProof(tripId: string, artifactType: 'photo' | 'code' | 'note', artifactRedacted: string): Promise<void> {
+  await authedFetchJson<{ ok: boolean }>(`${BASE}/trips/${tripId}/proof`, {
+    method: 'POST',
+    headers: MUTATION_HEADERS,
+    body: JSON.stringify({ artifactType, artifactRedacted }),
+  });
+}
+
+// Your available earnings balance per currency (only currencies with a nonzero balance).
+export async function getEarningsBalances(): Promise<TrustTransportEarningsBalance[]> {
+  const data = await authedFetchJson<{ ok: boolean; balances: TrustTransportEarningsBalance[] }>(`${BASE}/earnings`);
+  return data.balances ?? [];
+}
+
+export async function listPayouts(): Promise<TrustTransportPayoutRequest[]> {
+  const data = await authedFetchJson<{ ok: boolean; items: TrustTransportPayoutRequest[] }>(`${BASE}/payouts`);
+  return data.items ?? [];
+}
+
+// Request a payout against a specific currency's balance.
+export async function requestPayout(amount: number, currency: string): Promise<TrustTransportPayoutRequest> {
+  const data = await authedFetchJson<{ ok: boolean; payout: TrustTransportPayoutRequest }>(
+    `${BASE}/payouts/requests`,
+    {
+      method: 'POST',
+      headers: MUTATION_HEADERS,
+      body: JSON.stringify({ amount, currency }),
+    },
+  );
+  return data.payout;
 }
