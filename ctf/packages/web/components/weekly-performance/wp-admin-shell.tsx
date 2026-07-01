@@ -213,7 +213,9 @@ export function WeeklyPerformanceAdminShell() {
         padding: isMobile ? 16 : 32,
       }}
     >
-      <MobileScreenHeader title="Weekly Performance Admin" accent={BRAND} icon={<BarChart2 size={18} color={BRAND} />} />
+      {/* This shell renders its own desktop header (with a back chevron) above, so the shared header
+          only supplies the mobile bar here — opt out of its desktop back to avoid a duplicate. */}
+      <MobileScreenHeader title="Weekly Performance Admin" accent={BRAND} icon={<BarChart2 size={18} color={BRAND} />} desktopBack={false} />
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
         {header}
         {body}
