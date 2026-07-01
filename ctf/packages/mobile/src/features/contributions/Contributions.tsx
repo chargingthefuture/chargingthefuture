@@ -101,6 +101,7 @@ function GiftCardForm({ submitting, error, onSubmit, onCancel }: { submitting: b
   const [signal, setSignal] = useState('');
   return (
     <View style={st.formCard}>
+      <Text style={[st.hint, { marginBottom: 12 }]}>Your gift card can be physical or digital. Don't enter the card number or code here — after you submit, share the card details with the platform owner in your Signal chat.</Text>
       <Text style={st.fieldLabel}>Card type</Text>
       <View style={st.chipRow}>
         {CARD_TYPES.map((c) => (

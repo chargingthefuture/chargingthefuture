@@ -91,7 +91,11 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
 
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: 20, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 16 }}>Gift card details</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>Gift card details</div>
+      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, margin: '0 0 16px' }}>
+        Your gift card can be physical or digital. Don&apos;t enter the card number or code here — after you
+        submit, share the card details with the platform owner in your Signal chat.
+      </p>
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>Card type</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -242,17 +246,8 @@ export function ContributionPaths({
         })}
       </div>
 
-      {/* The chosen path's form opens here, directly under the cards, so it is obviously connected
-          to the card just selected. Until a card is chosen, a short prompt stands in its place so
-          the screen never looks like a dead end. */}
-      {activePath === null && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', background: t.SURFACE, borderRadius: 10, border: `1px dashed ${t.BORDER_SOLID}`, marginBottom: 20 }}>
-          <ChevronDown size={14} color={t.MUTED} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
-            Choose one of the three ways above and its form will open here.
-          </span>
-        </div>
-      )}
+      {/* The chosen path's form opens here, directly under the cards. Nothing shows until a card is
+          selected — the cards' own "Choose this" cue is the prompt. */}
       {activePath === 'gift_card' && (
         <GiftCardForm t={t} submitting={submitting} error={error} onSubmit={onSubmitGiftCard} onCancel={() => setActivePath(null)} />
       )}
@@ -286,7 +281,7 @@ export function ContributionPaths({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: `${t.ACCENT}08`, borderRadius: 8, border: `1px solid ${t.ACCENT}20`, marginTop: 4 }}>
         <AlertCircle size={13} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
         <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
-          Confirmed contributions earn ServiceCredits as a thank-you — {creditsPerUsd} SC per dollar for gift cards, and {creditsPerAction} SC for a comment or star. Credits are a thank-you; they can&apos;t be turned back into cash.
+          Confirmed contributions earn ServiceCredits as a thank-you — {`${creditsPerUsd} SC`} per dollar for gift cards, and {`${creditsPerAction} SC`} for a comment or star. Credits are a thank-you; they can&apos;t be turned back into cash.
         </span>
       </div>
     </div>

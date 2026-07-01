@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-07-01 (discoverable contribute cards + form placement; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (contribute copy pass: gift-card physical/digital + Signal, credits spacing, no placeholder; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -37,9 +37,11 @@ Voluntary fundraiser drives; thank-you credits, never money. Member role unless 
    stuck, no error. → web ☐ mobile ☐ android ☐
 2. **Contributing is obvious.** Under "How would you like to help?" each of the three cards (gift
    card, Quora comment, GitHub star) shows a clear "Choose this" cue, and a one-line instruction says
-   a form opens underneath. Click a card: its form opens **directly below the cards** (not at the
-   bottom of the page), the card reads "Selected", and there is a working Submit. Before any card is
-   chosen a short placeholder prompt sits where the form will appear. → web ☐ mobile ☐ android ☐
+   a form opens underneath. Before any card is chosen, nothing shows under the cards (no placeholder
+   box). Click a card: its form opens **directly below the cards** (not at the bottom of the page),
+   the card reads "Selected", and there is a working Submit. The gift-card form states the card can be
+   physical or digital and that the card details go to the owner in the Signal chat (never in the
+   form). Credit amounts read "10 SC" / "50 SC" with a space. → web ☐ mobile ☐ android ☐
 3. **No gift-card code is ever asked for.** Start a gift-card claim. There is **no** field for the
    gift-card code anywhere; the screen instead points the member to send the code to the owner over
    Signal, outside the app. → web ☐ mobile ☐ android ☐

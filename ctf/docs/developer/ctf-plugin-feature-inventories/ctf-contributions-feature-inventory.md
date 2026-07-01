@@ -286,6 +286,15 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-01: Contribute-flow copy and cleanup pass (owner feedback). (1) Fixed "50SC" running
+  together in the credits disclaimer — the inline JSX interpolation dropped the space where the card
+  template literals did not, so both amounts are now built as template literals (`{`${creditsPerUsd} SC`}` /
+  `{`${creditsPerAction} SC`}`) and render "10 SC" / "50 SC". (2) Added a line to the gift-card form
+  (web + Android) stating the card can be physical or digital and that the card details go to the owner
+  in the Signal chat, never in the form. (3) Removed the "Choose one of the three ways above…"
+  placeholder box under the cards — it read as confusing; the form now simply opens when a card is
+  chosen (the cards' own "Choose this" cue is the prompt). Presentation/copy only — no route, schema,
+  or contract change.
 - 2026-07-01: Made the contribute action discoverable. The three path cards ("How would you like to
   help?") were click-to-expand `role="button"` divs with no visual cue that they open anything, and on
   web the chosen path's form rendered at the very bottom of the section — below the credits
