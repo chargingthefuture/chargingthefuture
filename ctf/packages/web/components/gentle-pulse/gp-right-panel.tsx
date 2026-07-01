@@ -3,8 +3,6 @@
 import { Play } from "lucide-react";
 import { COLOR, FAINT, TEXT, type Session } from "./gp-shared";
 
-const DESIGNERS = ["Certified Trauma Therapists", "EMDR Specialists", "Somatic Coaches"];
-
 export function GentlePulseRightPanel({ sessions, onPlay }: { sessions: Session[]; onPlay: (id: string) => void }) {
   return (
     <aside style={{ width: 280, borderLeft: "1px solid rgba(20,184,166,0.08)", background: "#080D0C", padding: "20px 16px", flexShrink: 0 }}>
@@ -25,12 +23,6 @@ export function GentlePulseRightPanel({ sessions, onPlay }: { sessions: Session[
       <div style={{ marginTop: 16, padding: "16px", borderRadius: 12, background: `${COLOR}08`, border: `1px solid ${COLOR}18` }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: COLOR, marginBottom: 8 }}>Today&apos;s Affirmation</div>
         <div style={{ fontSize: 13, color: "#9CA3AF", lineHeight: 1.7, fontStyle: "italic" }}>&quot;You did not choose what happened to you. You DO choose what happens next.&quot;</div>
-      </div>
-      <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: FAINT, textTransform: "uppercase", marginBottom: 8 }}>Designed By</div>
-        {DESIGNERS.map((p) => (
-          <div key={p} style={{ fontSize: 12, color: "#6B7280", marginBottom: 4 }}>• {p}</div>
-        ))}
       </div>
     </aside>
   );
