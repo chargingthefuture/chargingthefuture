@@ -1,6 +1,6 @@
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { callOllamaChat, isOllamaConfigured, OLLAMA_MODEL, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
+import { callOllamaChat, describeOllamaFailure, isOllamaConfigured, OLLAMA_MODEL, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
 import {
   COMIC_ANSWER_RATINGS,
   COMIC_ASKER_STREAM_LIMIT,
@@ -277,6 +277,10 @@ type OllamaDraft = {
   latencyMs: number;
   promptTokenCount: number;
   completionTokenCount: number;
+  // Why the model draft failed, when it fell back to the `template` engine (timeout, model-not-found,
+  // auth, network, or not configured). Null on a real draft. Surfaced by the admin "Generate draft"
+  // action so the reviewer sees the real cause instead of a blanket "unreachable".
+  failureReason: string | null;
 };
 
 // Draft an answer via Ollama, reusing the shared survivor guidance. The draft is captured but,
@@ -284,6 +288,9 @@ type OllamaDraft = {
 async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
   const startedAt = Date.now();
 
+  // Captured on failure so the caller can report WHY drafting fell back to the template (timeout,
+  // model-not-found, auth, network) rather than a blanket "unreachable".
+  let failureReason: string | null = null;
   if (isOllamaConfigured()) {
     try {
       const result = await callOllamaChat([
@@ -299,10 +306,14 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
         // token counts are length-based estimates for logging only, not billing
         promptTokenCount: Math.max(24, Math.ceil(questionBody.length / 4)),
         completionTokenCount: Math.max(48, Math.ceil(result.content.length / 4)),
+        failureReason: null,
       };
     } catch (err) {
       console.error('[comic/repository] Ollama draft failed, using template fallback', err);
+      failureReason = describeOllamaFailure(err);
     }
+  } else {
+    failureReason = describeOllamaFailure(new Error('ollama_not_configured'));
   }
 
   // Deterministic template fallback when Ollama is unavailable. This is a holding draft for the
@@ -315,6 +326,7 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
     latencyMs: Math.max(1, Date.now() - startedAt),
     promptTokenCount: Math.max(24, Math.ceil(questionBody.length / 4)),
     completionTokenCount: Math.max(24, Math.ceil(body.length / 4)),
+    failureReason,
   };
 }
 
@@ -489,13 +501,14 @@ async function generateAndAttachDraft(input: {
 
 // Admin "Regenerate draft": re-run the model for a still-pending review and (re)attach its draft.
 // Unlike the background draft at ask time, this is synchronous so the dashboard learns the outcome.
-// Returns whether a real draft was attached; when the engine is unreachable (template fallback),
-// nothing is attached and { attached: false } is returned so the UI can say it is still down. Used
-// to clear a backlog of draftless questions once the engine (e.g. the RunPod endpoint) is healthy.
+// Returns whether a real draft was attached; when drafting fails (template fallback), nothing is
+// attached and { attached: false, reason } is returned — `reason` names the real cause (timeout,
+// model-not-found, auth, network) so the UI can say WHY instead of a blanket "unreachable". Used to
+// clear a backlog of draftless questions once the engine (e.g. the RunPod endpoint) is healthy.
 export async function regenerateComicDraft(
   actorId: string,
   reviewId: string,
-): Promise<{ attached: boolean }> {
+): Promise<{ attached: boolean; reason: string | null }> {
   const reviewRes = await queryDb<{ id: string; turn_id: string; status: string }>(
     `SELECT id, turn_id, status FROM comic_review_queue WHERE id = $1::uuid LIMIT 1`,
     [reviewId],
@@ -518,10 +531,10 @@ export async function regenerateComicDraft(
   }
 
   const draft = await generateComicDraft(turn.body);
-  // Engine unreachable -> template fallback. Leave the item human-first rather than attaching a
-  // placeholder, exactly as the background path does.
+  // Drafting failed -> template fallback. Leave the item human-first rather than attaching a
+  // placeholder, exactly as the background path does, but pass back the real reason it failed.
   if (draft.engine === 'template') {
-    return { attached: false };
+    return { attached: false, reason: draft.failureReason };
   }
 
   await logComicInference({ actorId, draft });
@@ -547,7 +560,7 @@ export async function regenerateComicDraft(
       [reviewId, draftTurnId],
     );
   });
-  return { attached: true };
+  return { attached: true, reason: null };
 }
 
 function clampPage(value: number | undefined): number {

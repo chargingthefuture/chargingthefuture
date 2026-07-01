@@ -159,6 +159,46 @@ export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaR
   }
 }
 
+// Turn an error thrown by callOllamaChat into a short, admin-facing reason, so a failed draft can
+// say WHY (timeout / model-not-found / auth / engine error) instead of a blanket "unreachable".
+// Plain language for the review dashboard note; the raw code is still logged server-side. This is
+// why the health probe (pingOllama) and a real draft can disagree: the probe only checks the
+// endpoint is alive, while a draft must load and run the model, which can 404 (model not pulled) or
+// time out on a cold start even though the endpoint answers the probe.
+export function describeOllamaFailure(err: unknown): string {
+  if (err instanceof Error && err.name === 'AbortError') {
+    return `The engine did not respond within ${Math.round(OLLAMA_TIMEOUT_MS / 1000)}s — the model may still be loading (a cold start). Try again in a moment.`;
+  }
+  const code = err instanceof Error ? err.message : '';
+  if (code === 'ollama_not_configured') {
+    return 'The drafting engine is not configured (OLLAMA_BASE_URL is not set).';
+  }
+  if (code.startsWith('ollama_http_error:')) {
+    const status = Number(code.slice('ollama_http_error:'.length));
+    if (status === 404) {
+      return 'The engine returned 404 — the model or endpoint was not found. Check the model is pulled on the endpoint (OLLAMA_MODEL) and OLLAMA_BASE_URL.';
+    }
+    if (status === 401 || status === 403) {
+      return 'The engine rejected the request (auth) — check OLLAMA_API_KEY.';
+    }
+    if (status >= 500) {
+      return `The engine returned an error (HTTP ${status}). Try again shortly.`;
+    }
+    return `The engine returned HTTP ${Number.isFinite(status) ? status : 'error'}.`;
+  }
+  if (code === 'ollama_empty_response') {
+    return 'The engine returned an empty response. Try again.';
+  }
+  if (code === 'ollama_runpod_no_job_id') {
+    return 'The engine did not start a job. Try again.';
+  }
+  if (code.startsWith('ollama_runpod_')) {
+    const state = code.slice('ollama_runpod_'.length).replace(/_/g, ' ');
+    return `The engine job did not complete (${state}). Try again.`;
+  }
+  return 'Could not reach the engine (network error). Try again once it is back up.';
+}
+
 // Shape of RunPod's job-status payload (only the fields we read). The worker
 // handler — in the dedicated RunPod worker repo (ctf/Runpod), see
 // ctf/docs/developer/OLLAMA.md — returns { content, model } as the job output.
