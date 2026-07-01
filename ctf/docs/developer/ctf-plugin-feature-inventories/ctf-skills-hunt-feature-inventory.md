@@ -362,7 +362,7 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
   - [x] `leaderboard-top-ten` — `reviewSubmission` captures the pre-rebuild top-10 user_ids, diffs after `rebuildLeaderboard`, and emits to anyone newly inside the cap.
   - [x] `mission-complete` — `recomputeMissionProgressForUser` returns the `newlyCompleted` set; the accept branch fans out one notification per newly-completed mission.
   - [x] `round-ending-soon` — `notifyRoundsEndingSoon()` cron entry point at `POST /api/skills-hunt/admin/notifications/round-ending-soon` (admin-gated, CSRF). Idempotent per `(user, round)`; wire a daily scheduler to invoke.
-- [x] **Wave 2 — notification center UI** (web + mobile) with unread badge. Web: bell icon in the icon rail toggles a popover anchored above the secondary sidebar, with a red `unreadCount` badge and per-row mark-read on click. Mobile: top-bar bell with the same badge opens an inline inbox above the tabbar. Both poll `/api/skills-hunt/notifications` every 30s.
+- [x] **Wave 2 — status panel UI** (web + mobile). Labeled "Status", not "Notifications", and carries **no** unread dot/count badge — per the app-wide no-notifications policy (the only exception is Foundation calls), the typical notification dot does not carry over here. Read/unread status is still kept: unread rows are visually accented and per-row mark-read on click remains. Web: bell icon in the icon rail toggles a popover anchored above the secondary sidebar. Mobile: top-bar bell opens an inline inbox above the tabbar. Both poll `/api/skills-hunt/notifications` every 30s.
 
 ### �� Directory Projection and Safety
 
@@ -422,7 +422,7 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
   - [x] Replace `SkillsHunt.tsx` hardcoded mock with a 4-tab (Scout / Leaderboard / Missions / My Finds) API-driven view.
   - [x] New `SkillsHuntApi.ts` client wrapping `/api/skills-hunt/*` (rounds, leaderboard, achievements, my finds, missions, submit). Same envelope as the web shell so the route layer is reusable.
   - [x] API-driven Rounds, Leaderboard, Submit screens — single round auto-selected from the active list.
-  - [x] Notification center mirroring the web `/api/skills-hunt/notifications` polling. `SkillsHuntApi.listNotifications` + `markNotificationRead`; inbox bar above the tabbar with the red unread badge.
+  - [x] Status panel mirroring the web `/api/skills-hunt/notifications` polling. `SkillsHuntApi.listNotifications` + `markNotificationRead`; inbox bar above the tabbar. No unread dot/count badge (no-notifications policy); unread rows are accented and mark-read on tap remains.
 - [x] **Android pixel pass** (`packages/mobile/src/features/skills-hunt/`) — 2026-05-31.
   - [x] Rewrote `SkillsHunt.tsx` to match `MobileSkillsHunt.tsx` / `MobileSkillsHuntEmpty.tsx` / `MobileSkillsHuntLoading.tsx` mockup. Exact brand color `#D946EF`, dark `#0F1117` bg, per-mockup spacing/typography in RN primitives.
   - [x] Loading state: `EXIT THEIR ECONOMY / EXIT THE PSYOP` centered text per mockup.

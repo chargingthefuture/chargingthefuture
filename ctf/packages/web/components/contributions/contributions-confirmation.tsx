@@ -14,7 +14,8 @@ export type ConfirmationProps = {
 };
 
 // Render the owner's Signal URL inline as a tappable link, or fall back to the editable
-// instructions text. The surrounding copy and the #support-channel line are always shown.
+// instructions text. The surrounding copy — the never-in-the-Commons warning and the "ask in the
+// Commons" line — is always shown.
 function SignalLine({ ownerSignalUrl, signalInstructions, t }: { ownerSignalUrl: string | null; signalInstructions: string; t: ContributionsTokens }) {
   if (ownerSignalUrl) {
     return (
@@ -44,9 +45,17 @@ function SignalBox({ ownerSignalUrl, signalInstructions, t, compact }: { ownerSi
         <span style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>Send the code on Signal</span>
       </div>
       <SignalLine ownerSignalUrl={ownerSignalUrl} signalInstructions={signalInstructions} t={t} />
+      <div style={{ padding: '10px 14px', background: '#EF44440F', borderRadius: 8, border: '1px solid #EF444440', marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: '#EF4444', fontWeight: 600, marginBottom: 4 }}>Send the code only on Signal — never in the Commons</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+          The Commons is a public group chat. If you post your gift card code or details there, you will not receive
+          ServiceCredits and the owner will not receive the gift. The code goes only to the owner on Signal, using the
+          link above.
+        </div>
+      </div>
       <div style={{ padding: '10px 14px', background: t.BG, borderRadius: 8, border: `1px solid ${t.BORDER_SOLID}` }}>
-        <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4 }}>Questions or anything else?</div>
-        <div style={{ fontSize: 12, color: SIGNAL_BLUE }}>Post in the #support channel in the Hub — that&apos;s the right place for anything other than sending the code.</div>
+        <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 4 }}>Questions or need help?</div>
+        <div style={{ fontSize: 12, color: SIGNAL_BLUE }}>Ask in the Commons — the group chat. It&apos;s the place for anything other than sending the code.</div>
       </div>
     </div>
   );

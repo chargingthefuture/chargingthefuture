@@ -87,14 +87,16 @@ Rank, accepted count, and rare-skill bonus impact are shown. The board refreshes
 outcomes (polled). If the viewer is outside the top 100, their own rank still shows.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
-### SH-5 · Achievements and notifications
+### SH-5 · Achievements and status panel
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Open the achievements view and the notifications list.
-2. Mark a notification as read.
+1. Open the achievements view and the status panel (the bell, labelled "Status").
+2. Mark a status item as read.
 **Expected:** Named badges (First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor,
-Leaderboard Champion) show when earned. Notifications fire on status transitions and awards; marking
-one read updates it and only affects the member's own notifications.
+Leaderboard Champion) show when earned. Status items fire on status transitions and awards; marking
+one read updates it and only affects the member's own items. The panel is titled "Status", not
+"Notifications", and shows **no** unread dot or count badge on the bell (per the no-notifications
+policy); unread rows are still visually accented until read.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### SH-6 · Feature reward card

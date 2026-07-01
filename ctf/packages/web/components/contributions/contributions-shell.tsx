@@ -22,11 +22,6 @@ import { ContributionPaths, type SubmitGiftCardInput } from './contributions-pat
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
 import { ContributionsConfirmation } from './contributions-confirmation';
 
-// Default credit valuations shown in copy until the fundraiser response (which the member route
-// does not expose config on) is available. These mirror the seeded defaults; the admin surface is
-// the source of truth for the live values.
-const DEFAULT_CREDITS_PER_USD = 10;
-const DEFAULT_CREDITS_PER_ACTION = 50;
 
 type View = 'main' | 'confirmation';
 type MobileTab = 'drive' | 'contribute' | 'history';
@@ -184,8 +179,8 @@ export function ContributionsShell() {
 
   const pathsProps = {
     t,
-    creditsPerUsd: DEFAULT_CREDITS_PER_USD,
-    creditsPerAction: DEFAULT_CREDITS_PER_ACTION,
+    creditsPerUsd: fundraiser.creditsPerUsd,
+    creditsPerAction: fundraiser.creditsPerActionSc,
     githubStarAlreadyCredited,
     submitting,
     error: submitError,
@@ -311,10 +306,12 @@ function ContributionsSidebar({
   active: 'drive' | 'contribute' | 'history';
   onNavigate?: (key: 'drive' | 'contribute' | 'history') => void;
 }) {
+  // Desktop shows the member's contributions permanently in the right rail ("My Contributions"), so a
+  // "My contributions" nav item would only scroll to something already on screen — omit it here. The
+  // mobile layout keeps a real "My history" tab (its history is a separate tab, not a rail).
   const items: { key: 'drive' | 'contribute' | 'history'; label: string }[] = [
     { key: 'drive', label: 'Drive progress' },
     { key: 'contribute', label: 'Contribute' },
-    { key: 'history', label: 'My contributions' },
   ];
   return (
     <div style={{ width: 200, background: t.SURFACE, borderRight: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>

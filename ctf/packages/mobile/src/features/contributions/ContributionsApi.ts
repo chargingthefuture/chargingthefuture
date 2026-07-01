@@ -60,6 +60,9 @@ export type FundraiserResponse = {
   fundraiser: FundraiserSnapshot;
   signalInstructions: string;
   ownerSignalUrl: string | null;
+  // Live thank-you valuations from the admin config, so member copy matches the settings screen.
+  creditsPerUsd: number;
+  creditsPerActionSc: number;
 };
 
 export type ContributionsRuntimeConfig = {

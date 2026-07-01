@@ -1,24 +1,22 @@
 "use client";
 
-import { AlertTriangle, Clock, FileText } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { PluginRailFooter } from "@/components/shared/plugin-rail-footer";
-import { BORDER, BRAND, SUBTLE } from "./click-log-shared";
+import { BORDER, BRAND } from "./click-log-shared";
 
-// The hub icon-rail chrome. ClickLog is a single-view tool, so the nav glyphs
-// are presentational (matching the mockup); the brand mark anchors the rail.
-const NAV = [AlertTriangle, Clock, FileText];
-
+// ClickLog is a single-view tool, not a multi-view hub. The old rail filled the space below the
+// brand mark with decorative, non-clickable glyphs (a clock, a document) that went nowhere — they
+// look like buttons but do nothing, which reads as broken. Keep the rail minimal: the brand mark,
+// plus the shared footer (back to all apps, account and settings, account menu), all of which link
+// somewhere real.
 export function ClickLogIconRail() {
   return (
     <aside style={{ width: 72, background: "#090B0F", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, gap: 8, flexShrink: 0 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${BRAND}25`, border: `1px solid ${BRAND}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+      {/* Brand mark only — a single alert glyph, not a button. */}
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${BRAND}25`, border: `1px solid ${BRAND}50`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }} aria-hidden="true">
         <AlertTriangle size={20} color={BRAND} />
       </div>
-      {NAV.map((Icon, i) => (
-        <div key={i} style={{ width: 44, height: 44, borderRadius: 12, background: i === 0 ? `${BRAND}20` : "transparent", border: i === 0 ? `1px solid ${BRAND}40` : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", color: i === 0 ? BRAND : SUBTLE }}>
-          <Icon size={20} />
-        </div>
-      ))}
+
       <PluginRailFooter />
     </aside>
   );
