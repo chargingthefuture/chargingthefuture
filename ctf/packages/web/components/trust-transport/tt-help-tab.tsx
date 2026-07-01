@@ -24,6 +24,98 @@ function tripStatusLabel(s: string | undefined): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
 }
 
+const PROOF_TYPES: { key: "photo" | "code" | "note"; label: string; placeholder: string }[] = [
+  { key: "photo", label: "Photo", placeholder: "Photo reference or short description" },
+  { key: "code", label: "Code", placeholder: "Confirmation code" },
+  { key: "note", label: "Note", placeholder: "Short note" },
+];
+
+// Capture pickup/delivery proof as a redacted reference (no raw images) for dispute evidence.
+function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
+  const [type, setType] = useState<"photo" | "code" | "note">("photo");
+  const [value, setValue] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (!value.trim()) {
+      setError("Add a short reference, code, or note.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/trust-transport/trips/${tripId}/proof`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ artifactType: type, artifactRedacted: value.trim() }),
+      });
+      if (!res.ok) throw new Error("Could not add proof.");
+      onDone();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not add proof.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const active = PROOF_TYPES.find((p) => p.key === type) ?? PROOF_TYPES[0];
+
+  return (
+    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        {PROOF_TYPES.map((p) => (
+          <button key={p.key} type="button" onClick={() => setType(p.key)} style={{ flex: 1, padding: "6px 8px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", background: type === p.key ? `${COLOR}20` : "rgba(255,255,255,0.04)", border: `1px solid ${type === p.key ? COLOR + "40" : "rgba(255,255,255,0.10)"}`, color: type === p.key ? COLOR : "#9CA3AF" }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <input value={value} maxLength={500} onChange={(e) => setValue(e.target.value)} placeholder={active.placeholder} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.10)", color: "#E8EAF0", fontSize: 13 }} />
+      <div style={{ fontSize: 11, color: "#6B7280" }}>Stored as a redacted reference for dispute evidence — don&apos;t paste sensitive personal detail.</div>
+      {error && <div style={{ fontSize: 12, color: "#EF4444" }}>{error}</div>}
+      <button type="button" onClick={() => void submit()} disabled={submitting} style={{ padding: "9px 12px", borderRadius: 8, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        {submitting && <Loader2 size={14} className="animate-spin" />} Save proof
+      </button>
+    </div>
+  );
+}
+
+function ProviderTripCard({ trip, busyId, onAdvance }: { trip: ProviderTrip; busyId: string | null; onAdvance: (tripId: string, next: string) => void }) {
+  const [proofOpen, setProofOpen] = useState(false);
+  const [proofDone, setProofDone] = useState(false);
+  const step = NEXT_STEP[trip.status ?? ""];
+  const route = `${trip.pickupCity ?? "—"} → ${trip.dropoffCity ?? "—"}`;
+  const terminal = ["completed", "cancelled", "disputed", "emergency_frozen"].includes(trip.status ?? "");
+
+  return (
+    <div style={{ padding: "14px 16px", borderRadius: 14, background: `${COLOR}08`, border: `1px solid ${COLOR}25`, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: COLOR, background: `${COLOR}1A`, border: `1px solid ${COLOR}33`, borderRadius: 20, padding: "2px 10px" }}>{tripStatusLabel(trip.status)}</span>
+      </div>
+      <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>{modeLabel(trip.mode)} · {ttSettlementLabel(trip.priceCurrency, trip.priceAmount)}</div>
+      {step ? (
+        <button type="button" onClick={() => onAdvance(trip.tripId, step.next)} disabled={busyId !== null} style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== trip.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {busyId === trip.tripId ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {step.label}
+        </button>
+      ) : (
+        <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</div>
+      )}
+      {!terminal && (
+        proofDone ? (
+          <div style={{ marginTop: 10, fontSize: 12, color: COLOR, fontWeight: 600 }}>Proof saved.</div>
+        ) : proofOpen ? (
+          <ProofForm tripId={trip.tripId} onDone={() => { setProofDone(true); setProofOpen(false); }} />
+        ) : (
+          <button type="button" onClick={() => setProofOpen(true)} style={{ marginTop: 8, width: "100%", padding: "8px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            Add pickup/delivery proof
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
 // Trips the member is fulfilling, with controls to advance the lifecycle one step at a time. Renders
 // nothing until loaded and nothing when the member has no trips, so it stays out of the way otherwise.
 function ProviderTripsSection() {
@@ -73,31 +165,9 @@ function ProviderTripsSection() {
     <div style={{ marginBottom: 28 }}>
       <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9CA3AF", marginBottom: 12 }}>Trips you&apos;re helping with</div>
       {error && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      {trips.map((t) => {
-        const step = NEXT_STEP[t.status ?? ""];
-        const route = `${t.pickupCity ?? "—"} → ${t.dropoffCity ?? "—"}`;
-        return (
-          <div key={t.tripId} style={{ padding: "14px 16px", borderRadius: 14, background: `${COLOR}08`, border: `1px solid ${COLOR}25`, marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#F9FAFB" }}>{route}</div>
-              <span style={{ marginLeft: "auto", fontSize: 12, color: COLOR, background: `${COLOR}1A`, border: `1px solid ${COLOR}33`, borderRadius: 20, padding: "2px 10px" }}>{tripStatusLabel(t.status)}</span>
-            </div>
-            <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>{modeLabel(t.mode)} · {ttSettlementLabel(t.priceCurrency, t.priceAmount)}</div>
-            {step ? (
-              <button
-                type="button"
-                onClick={() => void advance(t.tripId, step.next)}
-                disabled={busyId !== null}
-                style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${COLOR}1F`, border: `1px solid ${COLOR}40`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== t.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-              >
-                {busyId === t.tripId ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} {step.label}
-              </button>
-            ) : (
-              <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>No further action — this trip is {tripStatusLabel(t.status).toLowerCase()}.</div>
-            )}
-          </div>
-        );
-      })}
+      {trips.map((t) => (
+        <ProviderTripCard key={t.tripId} trip={t} busyId={busyId} onAdvance={(id, next) => void advance(id, next)} />
+      ))}
     </div>
   );
 }

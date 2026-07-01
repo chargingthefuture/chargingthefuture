@@ -197,10 +197,10 @@ Result: web ☐ android ☐
 **Precondition:** Signed in as the member fulfilling the trip. Seed has a trip in a state that requires proof (package or food delivery pickup/dropoff).
 
 **Steps:**
-1. Open the active delivery trip.
-2. Submit proof (photo reference, code, or signature as the UI allows).
+1. On web, open the **Help out** tab → "Trips you're helping with" → your active trip → "Add pickup/delivery proof". (On Android this runs via API/seed until the parity pass — issue #1250.)
+2. Pick a proof type (Photo / Code / Note), enter a short redacted reference, and Save.
 
-**Expected:** Proof is captured and the trip status advances. The proof artifact is associated with this trip. No crash or generic error.
+**Expected:** The proof saves ("Proof saved") and is associated with this trip. The value is a redacted reference (no raw image). An empty value is rejected with an inline message. No crash or generic error.
 
 Result: web ☐ android ☐
 
