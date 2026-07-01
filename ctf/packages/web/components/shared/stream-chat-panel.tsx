@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { StreamChat } from 'stream-chat';
 import {
   Chat,
@@ -286,6 +287,24 @@ function useReminderActions(
   return { customMessageActions, toast };
 }
 
+// Replaces Stream's built-in empty state (a plain "No chats here yet…") for a fresh conversation with
+// on-brand copy that matches the dark panel and its plugin accent. Stream renders this for a message
+// list, a thread, or a channel list; only the message-list case is a member-facing empty conversation,
+// so the branded card shows there and the other list types fall back to rendering nothing. `listType`
+// is the only prop read, so it is narrowed locally rather than importing Stream's generic props type.
+const ChatEmptyState: React.FC<{ listType?: 'channel' | 'message' | 'thread' }> = ({ listType }) => {
+  if (listType && listType !== 'message') return null;
+  return (
+    <div className="ctf-chat-empty" role="status">
+      <div className="ctf-chat-empty__icon" aria-hidden>
+        <MessageCircle size={22} />
+      </div>
+      <div className="ctf-chat-empty__title">No messages yet</div>
+      <div className="ctf-chat-empty__body">Send the first message to get the conversation going.</div>
+    </div>
+  );
+};
+
 // The live conversation under <Channel>: search bar, message list, composer, and thread panel, plus
 // the reminder action wired into the message-action menu and its floating toast. It is a child of
 // <Channel> so the Stream contexts (state, action) are available to ChannelSearchBar; it takes the
@@ -412,7 +431,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
             (Card) draws as a preview card in the MessageList — so pasted links get preview cards both
             while composing and in the conversation. The messaging channel type already permits URL
             enrichment in the dashboard, so no dashboard change is needed. */}
-        <Channel channel={channel} enrichURLForPreview>
+        <Channel channel={channel} enrichURLForPreview EmptyStateIndicator={ChatEmptyState}>
           <ConversationBody channel={channel} />
         </Channel>
       </Chat>
