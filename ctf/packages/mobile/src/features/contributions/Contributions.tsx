@@ -323,6 +323,7 @@ export const Contributions: React.FC = () => {
             <View style={st.noteBox}>
               <Text style={st.noteText}>Confirmed contributions earn ServiceCredits as a thank-you. Credits can't be turned back into cash.</Text>
             </View>
+            <Text style={[st.bodyText, { marginBottom: 12 }]}>Pick one of the three ways below. A short form opens under the one you choose.</Text>
             {paths.map((p) => {
               const disabled = p.key === 'github_star' && alreadyCredited;
               const active = activePath === p.key;
@@ -338,6 +339,11 @@ export const Contributions: React.FC = () => {
                       {disabled ? ALREADY_CREDITED_NOTE : `${p.sub} · `}
                       {!disabled && <Text style={{ color: COLOR, fontWeight: '600' }}>+{p.credits}</Text>}
                     </Text>
+                    {!disabled && (
+                      <Text style={{ marginTop: 6, fontSize: 12, fontWeight: '600', color: active ? COLOR : SUBTLE }}>
+                        {active ? 'Selected — form below ▴' : 'Choose this ▾'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
 
                   {active && p.key === 'gift_card' && (
