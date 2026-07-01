@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:what-works` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-what-works-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (updated by hand for the admin edit-tool feature; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -131,6 +131,22 @@ returns when reactivated.
 **Expected:** Deleting a tool removes it and its endorsements. Deleting a problem removes that
 problem and cascades to its tools and their endorsements. Both deletes use an inline two-step
 confirm.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+### WW-A4 · Edit an approved tool's details
+**Role:** admin · **Surfaces:** web (admin surface)
+**Precondition:** at least one `approved` tool with a non-zero verified count (approve a seeded
+suggestion first, and mark it Helpful as a member so its count is > 0).
+**Steps:**
+1. Open `/admin/what-works` and find an approved tool.
+2. Click **Edit**, change the name, the note, and the purchase link, then **Save**.
+3. Reopen the member list `/apps/what-works` and find the same tool.
+4. Back in the admin, click **Edit** again and paste a non-http(s) link (e.g. `ftp://x`), then Save.
+**Expected:** The edit form is seeded with the tool's current values. Saving updates the tool's
+name/note/link **without** unpublishing it — it stays `approved`, keeps its verified count, and the
+change shows on the member list. The tool's problem, status, and verified count are unchanged, and no
+submitter identity appears. The non-http(s) link is rejected server-side with an error, and the tool
+keeps its previous link.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
