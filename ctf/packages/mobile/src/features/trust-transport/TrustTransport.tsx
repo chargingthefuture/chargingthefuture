@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useAuth } from './auth-context';
 import { TrustTransportLoadingState } from './TrustTransportLoadingState';
+import { TrustTransportOffersSection } from './TrustTransportOffersSection';
 import {
   createRequest,
   listRequests,
@@ -293,6 +294,9 @@ function TrackTab({
               <Text style={styles.safetyItem}>🛡️ Background checked</Text>
               <Text style={styles.safetyItem}>✅ ID verified</Text>
             </View>
+            {req.status === 'open' ? (
+              <TrustTransportOffersSection requestId={req.id} onAccepted={onRefresh} />
+            ) : null}
           </View>
         </React.Fragment>
       ))}

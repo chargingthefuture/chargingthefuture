@@ -252,8 +252,18 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 1. Status vocabulary design across three modes (ride/package/food) may need refinement based on real operational needs.
 2. Event volume and audit storage growth will require archival/retention policy once deployed at scale.
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
+4. Android has no chat screen wired up: `TrustTransportStreamTab.tsx` exists in the mobile feature directory but is not imported or registered anywhere in the app, so there is no navigation path to it and a trip cannot be chatted with on Android today. Predates and is separate from the #1250 provider-marketplace parity work; needs its own fix.
 
 ## Change Log
+
+- 2026-07-01: Android view-offers + accept (parity with web slice 3, issue #1250). New
+  `TrustTransportOffersSection.tsx` — shown on each of the caller's own **open** requests in the Track
+  tab; loads pending offers via the mobile `listOffersForRequest` and accepts one via the fixed
+  `acceptOffer(requestId, offerId)`. No schema/route/contract change (both endpoints already existed and
+  are reviewed). Discovered and documented a separate, pre-existing gap while wiring this up: Android has
+  no chat screen registered anywhere in the app (`TrustTransportStreamTab.tsx` is orphaned scaffold) — see
+  "Gaps and Known Technical Debt". Trip progression, proof capture, and earnings/payouts screens for
+  Android remain open follow-ups under #1250.
 
 - 2026-06-30: Fiat/crypto earnings on completion + currency-aware payouts; closes issue #1233. (1) Money
   precision migration: `trust_transport_earnings_ledger.amount` and `trust_transport_payout_requests.amount`
