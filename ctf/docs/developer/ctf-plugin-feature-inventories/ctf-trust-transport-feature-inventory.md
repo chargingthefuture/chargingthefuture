@@ -158,6 +158,7 @@ User routes:
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
 - `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
 - `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order.
+- `GET /api/trust-transport/earnings` — The caller's own available earnings balance (a currency-blind ledger sum; see issue #1233) that a payout can be requested against.
 - `GET /api/trust-transport/payouts` — Payout history.
 - `POST /api/trust-transport/payouts/requests` — Request a payout.
 - `POST /api/trust-transport/service-credits` — Cross-user ServiceCredits transfer for trip economics (rejects self-transfer; emits a `trust-transport.service-credits.transfer` audit event).
@@ -253,6 +254,15 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 3. Command contract complexity should be monitored to prevent drift from UI flow logic.
 
 ## Change Log
+
+- 2026-06-30: Earnings + payouts surface (web). New `GET /api/trust-transport/earnings` returns the
+  caller's own available earnings balance (`getMyEarningsBalance`, wrapping the existing ledger sum). A
+  new "Earnings" tab shows the available balance, a "Request a payout" form (posts to the existing
+  `POST /payouts/requests`; blocked when the balance is zero and client-validated to the balance), and
+  the payout history with per-row status (`GET /payouts`). The balance is shown as a plain number and no
+  currency is asserted — the known payout-currency issue (#1233, `USD` hard-coded while the ledger can
+  hold other currencies) is left for the owner as a separate ledger decision. No schema or contract
+  change. Web only; Android parity tracked in #1250.
 
 - 2026-06-30: Proof capture UI for the provider (web). Each active trip card in the "Help out" tab's
   "Trips you're helping with" section gains an "Add pickup/delivery proof" control: pick a type
