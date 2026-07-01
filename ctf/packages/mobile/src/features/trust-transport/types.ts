@@ -86,3 +86,43 @@ export type TrustTransportTrip = {
   createdAtIso: string;
   updatedAtIso: string;
 };
+
+export type TrustTransportOfferInput = {
+  note: string | null;
+  proposedAmount: number | null;
+};
+
+// Discovery model B: a member browsing open requests sees only mode + settlement + age (no location).
+export type TrustTransportAvailableRequest = {
+  id: string;
+  mode: TrustTransportMode;
+  priceCurrency: string | null;
+  priceAmount: number | null;
+  createdAtIso: string;
+};
+
+// A trip the member is fulfilling (provider side), with the now-revealed pickup/drop-off.
+export type TrustTransportProviderTrip = {
+  tripId: string;
+  requestId: string;
+  status: TrustTransportTripStatus;
+  mode: TrustTransportMode;
+  pickupCity: string | null;
+  dropoffCity: string | null;
+  priceCurrency: string | null;
+  priceAmount: number | null;
+  createdAtIso: string;
+};
+
+export type TrustTransportPayoutRequest = {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  requestedAtIso: string;
+};
+
+export type TrustTransportEarningsBalance = {
+  currency: string;
+  balance: number;
+};
