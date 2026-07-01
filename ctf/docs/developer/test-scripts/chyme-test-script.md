@@ -124,6 +124,24 @@ is not live, there is no listen audio.
 
 ---
 
+### CH-8 · Live audio with WebRTC disabled (Safari Lockdown Mode)
+**Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive)
+**Precondition:** a browser with WebRTC turned off — easiest is iOS/iPadOS Safari with **Lockdown
+Mode** on (Settings → Privacy & Security → Lockdown Mode), or a desktop browser where
+`RTCPeerConnection` is blocked.
+**Steps:**
+1. In that browser, open the Chyme plugin route and enter the room (as a signed-in member).
+2. Also try the signed-out listen path (CH-7) in the same browser.
+**Expected:** No raw error like `Can't find variable: RTCPeerConnection`. Instead the room shows a
+clear message that live audio isn't available because the browser has WebRTC turned off, names Safari
+Lockdown Mode, and tells you how to turn it off for the site (address bar → aA → Website Settings) or
+use another browser. **Chat still loads and works.** The guest listen path shows the same explanation
+(not a misleading "try refreshing"). Turning Lockdown Mode off for the site and reloading lets the
+audio room connect normally.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared
