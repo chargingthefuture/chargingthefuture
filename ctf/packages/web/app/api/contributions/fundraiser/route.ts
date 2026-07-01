@@ -19,11 +19,18 @@ export async function GET() {
     // ownerSignalUrl is read from a server-only env var (CONTRIBUTIONS_OWNER_SIGNAL_URL); it is
     // shown inline on the confirmation screen. When unset it is null and the UI falls back to the
     // editable signalInstructions copy. The value is never logged.
+    // Resulting thank-you SC for one confirmed comment or star = USD-equivalent unit value ×
+    // credits-per-dollar. Exposed so member copy matches the admin settings instead of a hardcoded
+    // default.
+    const creditsPerActionSc = Math.round(config.nonMonetaryUnitValueUsd * config.creditsPerUsd);
+
     return NextResponse.json({
       ok: true,
       fundraiser: snapshot,
       signalInstructions: config.signalInstructions,
       ownerSignalUrl: getOwnerSignalUrl(),
+      creditsPerUsd: config.creditsPerUsd,
+      creditsPerActionSc,
     });
   } catch (error) {
     return contributionsErrorResponse(error, 'Fundraiser status unavailable.', 'fundraiser_get');
