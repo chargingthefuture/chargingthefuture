@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (hand-updated for the right-rail "Browse All Providers" clear-filters fix; regenerate via CI to stamp the commit) |
 
 ## How to run this
 
@@ -54,9 +54,13 @@ checks. Member role unless noted.
 **Role:** member · **Surfaces:** all · **Seed:** `seed:foundation`
 **Steps:**
 1. Open Foundation and browse providers; filter by an offered skill chip.
+2. On desktop, set a filter (pick a trade in the sidebar, type a search term, or tap a skill chip),
+   then press "Browse All Providers" in the right rail.
 **Expected:** Only providers who opted in to offer at least one skill appear. Each card shows name,
 headline, bio, and offered-skill chips; tapping a chip filters the list by that skill with a
-clear-filter banner. The viewer's own card does not offer "Connect now".
+clear-filter banner. The viewer's own card does not offer "Connect now". Pressing "Browse All
+Providers" always returns to the full, unfiltered list — it clears the trade, search text, and skill
+filters and opens the Browse tab (never a no-op, even when Browse is already the open tab).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### FND-2 · Offer skills (provider opt-in)
