@@ -3,16 +3,35 @@
 // Moderation queue (functional admin surface, dark admin design system — accent lime).
 // Submitter identity is never shown; admins moderate content.
 import { useState } from 'react';
-import { CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { Check, CheckCircle, Pencil, XCircle, Trash2, X } from 'lucide-react';
 import type { WhatWorksProductStatus } from 'lib/what-works/types';
-import { MAX_PRODUCT_NOTE_LENGTH } from 'lib/what-works/constants';
+import {
+  MAX_EMOJI_LENGTH,
+  MAX_PRODUCT_KIND_LENGTH,
+  MAX_PRODUCT_NAME_LENGTH,
+  MAX_PRODUCT_NOTE_LENGTH,
+  MAX_PURCHASE_URL_LENGTH,
+} from 'lib/what-works/constants';
 import type { AdminProduct } from './ww-admin-shared';
 
 const COLOR = '#84CC16';
+const PANEL = '#0D0F14';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
 const TEXT = '#F9FAFB';
 const SUBTLE = '#6B7280';
+
+const editInputStyle: React.CSSProperties = {
+  borderRadius: 8,
+  background: PANEL,
+  border: `1px solid ${BORDER}`,
+  color: TEXT,
+  padding: '9px 12px',
+  fontSize: 13,
+  fontFamily: 'inherit',
+};
+
+export type ProductEditDraft = { emoji: string; name: string; kind: string; note: string; purchaseUrl: string };
 
 type Props = {
   products: AdminProduct[];
@@ -20,6 +39,7 @@ type Props = {
   statusFilter: WhatWorksProductStatus | 'all';
   onChangeFilter: (status: WhatWorksProductStatus | 'all') => void;
   onReview: (id: string, action: 'approve' | 'reject', rejectionReason?: string) => void;
+  onEdit: (id: string, patch: ProductEditDraft) => void;
   onDelete: (id: string) => void;
 };
 
@@ -36,13 +56,17 @@ const STATUS_STYLE: Record<WhatWorksProductStatus, { bg: string; color: string; 
   rejected: { bg: 'rgba(239,68,68,0.12)', color: '#EF4444', border: 'rgba(239,68,68,0.3)' },
 };
 
-export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChangeFilter, onReview, onDelete }: Props) {
+export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChangeFilter, onReview, onEdit, onDelete }: Props) {
   // Which row's inline reject form is open, and the reason text being typed. Replaces the old
   // blocking window.prompt with a themable, testable inline textarea.
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   // Inline two-step delete confirmation (replaces window.confirm).
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  // Inline edit of an approved (or any) tool's own details. editingId marks the open card; the
+  // draft is seeded from the product and saved through the same route's field-edit PATCH.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ProductEditDraft>({ emoji: '', name: '', kind: '', note: '', purchaseUrl: '' });
 
   function openReject(id: string): void {
     setRejectingId(id);
@@ -58,6 +82,28 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
     const trimmed = reason.trim();
     onReview(id, 'reject', trimmed.length > 0 ? trimmed : undefined);
     closeReject();
+  }
+
+  function openEdit(product: AdminProduct): void {
+    setEditingId(product.id);
+    setDraft({
+      emoji: product.emoji ?? '',
+      name: product.name,
+      kind: product.kind ?? '',
+      note: product.note ?? '',
+      purchaseUrl: product.purchaseUrl,
+    });
+  }
+
+  function saveEdit(id: string): void {
+    onEdit(id, {
+      emoji: draft.emoji.trim(),
+      name: draft.name.trim(),
+      kind: draft.kind.trim(),
+      note: draft.note.trim(),
+      purchaseUrl: draft.purchaseUrl.trim(),
+    });
+    setEditingId(null);
   }
 
   return (
@@ -119,6 +165,9 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                     <XCircle size={13} /> {product.status === 'approved' ? 'Unpublish' : 'Reject'}
                   </button>
                 ) : null}
+                <button type="button" disabled={busy} onClick={() => (editingId === product.id ? setEditingId(null) : openEdit(product))} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+                  <Pencil size={13} /> Edit
+                </button>
                 {confirmingDeleteId === product.id ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 12, color: SUBTLE }}>Delete permanently?</span>
@@ -159,6 +208,32 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
                     </button>
                   </div>
                 </div>
+              ) : null}
+              {editingId === product.id ? (
+                (() => {
+                  const canSave = Boolean(draft.name.trim()) && Boolean(draft.purchaseUrl.trim()) && !busy;
+                  return (
+                    <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: `${COLOR}08`, border: `1px solid ${COLOR}35` }}>
+                      <div style={{ fontSize: 12, color: SUBTLE, marginBottom: 10 }}>Correct this tool&apos;s details. Its status and verified count are unchanged.</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        <input value={draft.emoji} onChange={(event) => setDraft((prev) => ({ ...prev, emoji: event.target.value.slice(0, MAX_EMOJI_LENGTH) }))} maxLength={MAX_EMOJI_LENGTH} placeholder="Emoji" aria-label="Edit emoji" style={{ ...editInputStyle, width: 80, flexShrink: 0 }} />
+                        <input value={draft.name} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value.slice(0, MAX_PRODUCT_NAME_LENGTH) }))} maxLength={MAX_PRODUCT_NAME_LENGTH} placeholder="Product name" aria-label="Edit product name" style={{ ...editInputStyle, flex: 1, minWidth: 180 }} />
+                      </div>
+                      <input value={draft.kind} onChange={(event) => setDraft((prev) => ({ ...prev, kind: event.target.value.slice(0, MAX_PRODUCT_KIND_LENGTH) }))} maxLength={MAX_PRODUCT_KIND_LENGTH} placeholder="Type (e.g. Headphones)" aria-label="Edit product type" style={{ ...editInputStyle, width: '100%', marginTop: 8, boxSizing: 'border-box' }} />
+                      <input value={draft.purchaseUrl} onChange={(event) => setDraft((prev) => ({ ...prev, purchaseUrl: event.target.value.slice(0, MAX_PURCHASE_URL_LENGTH) }))} maxLength={MAX_PURCHASE_URL_LENGTH} placeholder="https://…" aria-label="Edit purchase link" inputMode="url" style={{ ...editInputStyle, width: '100%', marginTop: 8, boxSizing: 'border-box' }} />
+                      <textarea value={draft.note} onChange={(event) => setDraft((prev) => ({ ...prev, note: event.target.value.slice(0, MAX_PRODUCT_NOTE_LENGTH) }))} maxLength={MAX_PRODUCT_NOTE_LENGTH} rows={2} placeholder="Why it works (optional)" aria-label="Edit note" style={{ ...editInputStyle, width: '100%', marginTop: 8, resize: 'vertical', boxSizing: 'border-box' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                        <span style={{ fontSize: 11, color: SUBTLE, marginRight: 'auto' }}>{draft.note.length}/{MAX_PRODUCT_NOTE_LENGTH}</span>
+                        <button type="button" onClick={() => setEditingId(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: SURFACE, border: `1px solid ${BORDER}`, color: SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          <X size={13} /> Cancel
+                        </button>
+                        <button type="button" disabled={!canSave} onClick={() => saveEdit(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, color: COLOR, fontSize: 13, fontWeight: 600, cursor: canSave ? 'pointer' : 'not-allowed', opacity: canSave ? 1 : 0.6 }}>
+                          <Check size={13} /> {busy ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
               ) : null}
             </div>
           );

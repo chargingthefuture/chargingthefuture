@@ -118,3 +118,13 @@ export type ReviewProductInput = {
   reviewerId: string;
   rejectionReason?: string;
 };
+
+// Admin correction of a suggested tool's own details (name, link, note, etc.). Never touches
+// status, endorsements, or the identity columns — those are governed by review/delete.
+export type UpdateProductInput = {
+  emoji?: string;
+  name?: string;
+  kind?: string;
+  note?: string;
+  purchaseUrl?: string;
+};

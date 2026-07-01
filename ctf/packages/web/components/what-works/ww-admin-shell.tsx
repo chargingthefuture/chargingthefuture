@@ -106,6 +106,19 @@ export function WhatWorksAdminShell() {
     });
   }
 
+  // Correct an entry's own details (name, link, note, emoji, kind) after it is already approved,
+  // without unpublishing it. Sends no `action`, so the products route takes its field-edit path.
+  function editProduct(id: string, patch: { emoji: string; name: string; kind: string; note: string; purchaseUrl: string }): void {
+    void run(id, async () => {
+      const result = await adminMutate(`/api/what-works/admin/products/${id}`, 'PATCH', patch);
+      if (!result.ok) {
+        setError(result.message ?? 'Could not update the tool.');
+        return;
+      }
+      await Promise.all([loadProducts(statusFilter), loadProblems()]);
+    });
+  }
+
   // Delete confirmation is now an inline step inside the products/problems lists (themable and
   // testable), not a blocking window.confirm.
   function deleteProduct(id: string): void {
@@ -239,6 +252,7 @@ export function WhatWorksAdminShell() {
               statusFilter={statusFilter}
               onChangeFilter={changeFilter}
               onReview={reviewProduct}
+              onEdit={editProduct}
               onDelete={deleteProduct}
             />
             <WhatWorksAdminProblems

@@ -19,6 +19,7 @@ const WHAT_WORKS_COMMAND_VERSIONS: Record<string, string> = {
   'what-works.admin.problem.delete': '1.0.0',
   'what-works.admin.product.list': '1.0.0',
   'what-works.admin.product.review': '1.0.0',
+  'what-works.admin.product.update': '1.0.0',
   'what-works.admin.product.delete': '1.0.0',
 };
 
@@ -37,6 +38,7 @@ const WHAT_WORKS_COMMAND_DATA_CLASSES: Record<string, string[]> = {
   'what-works.admin.problem.delete': ['community_content', 'user_event'],
   'what-works.admin.product.list': ['community_content'],
   'what-works.admin.product.review': ['community_content'],
+  'what-works.admin.product.update': ['community_content'],
   'what-works.admin.product.delete': ['community_content', 'user_event'],
 };
 

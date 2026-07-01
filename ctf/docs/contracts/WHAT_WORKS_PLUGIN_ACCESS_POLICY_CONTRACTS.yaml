@@ -77,6 +77,12 @@ policies:
     attributePolicies: []
     consentRequirements: []
   - pluginId: what-works
+    command: what-works.admin.product.update
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
     command: what-works.admin.product.delete
     version: 1.0.0
     requiredRoles: [admin]

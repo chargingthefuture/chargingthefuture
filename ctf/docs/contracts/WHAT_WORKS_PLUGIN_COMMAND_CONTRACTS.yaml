@@ -268,6 +268,37 @@ commands:
     purpose: Approve or reject a suggested tool
     retentionClass: community_content
   - pluginId: what-works
+    command: what-works.admin.product.update
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        purchaseUrl:
+          type: string
+        emoji:
+          type: string
+        kind:
+          type: string
+        note:
+          type: string
+      required: [id, name, purchaseUrl]
+    outputSchema:
+      type: object
+      properties:
+        status:
+          type:
+            - string
+            - 'null'
+    dataAccess:
+      - what_works_products (select)
+      - what_works_products (update)
+    purpose: Correct a suggested tool's own details (name, link, note, emoji, kind) without changing its status, endorsements, or submitter identity
+    retentionClass: community_content
+  - pluginId: what-works
     command: what-works.admin.product.delete
     version: 1.0.0
     inputSchema:
