@@ -254,6 +254,12 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+- 2026-06-30: Proof capture UI for the provider (web). Each active trip card in the "Help out" tab's
+  "Trips you're helping with" section gains an "Add pickup/delivery proof" control: pick a type
+  (Photo / Code / Note) and enter a short **redacted reference** (no raw images), which posts to the
+  existing `POST /trips/:tripId/proof`. Copy makes clear it's stored as redacted dispute evidence. No
+  schema, route, or contract change. Web only; Android parity tracked in #1250.
+
 - 2026-06-30: Trip progression for the provider (web). New `GET /api/trust-transport/trips` lists the
   trips the caller is fulfilling (joined to the request for the now-revealed pickup/drop-off — they
   accepted, so model B allows it) via `listProviderTrips`. The "Help out" tab gains a "Trips you're
