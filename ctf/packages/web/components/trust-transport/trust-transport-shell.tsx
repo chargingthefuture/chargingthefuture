@@ -13,6 +13,7 @@ import { TrustTransportSidebar } from "./tt-sidebar";
 import { TrustTransportBookTab } from "./tt-book-tab";
 import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportHelpTab } from "./tt-help-tab";
+import { TrustTransportEarningsTab } from "./tt-earnings-tab";
 import { TrustTransportChatTab } from "./tt-chat-tab";
 import { TrustTransportRightPanel } from "./tt-right-panel";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
@@ -217,6 +218,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} onAccepted={() => void fetchRequests()} />
       )}
       {tab === "help" && <TrustTransportHelpTab />}
+      {tab === "earnings" && <TrustTransportEarningsTab />}
       {tab === "chat" && (
         <TrustTransportChatTab
           requests={requests}
@@ -236,6 +238,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       { key: "book", label: "Book" },
       { key: "tracking", label: "Tracking" },
       { key: "help", label: "Help" },
+      { key: "earnings", label: "Earnings" },
       { key: "chat", label: "Direct Line" },
     ];
     return (
