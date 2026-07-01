@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Gift, MessageSquare, Star, AlertCircle } from 'lucide-react';
+import { Gift, MessageSquare, Star, AlertCircle, ChevronDown } from 'lucide-react';
 import type { GiftCardMethod } from '@/lib/contributions/types';
 import {
   ALREADY_CREDITED_NOTE,
@@ -193,7 +193,10 @@ export function ContributionPaths({
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <h2 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 600, color: t.TITLE }}>How would you like to help?</h2>
+      <h2 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: t.TITLE }}>How would you like to help?</h2>
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+        Pick one of the three ways below. A short form opens right underneath so you can submit your gift card, Quora comment, or GitHub star.
+      </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
         {paths.map(({ key, Icon, label, sub, credits }) => {
           const disabled = key === 'github_star' && githubStarAlreadyCredited;
@@ -228,18 +231,28 @@ export function ContributionPaths({
               </div>
               <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{disabled ? ALREADY_CREDITED_NOTE : sub}</div>
               {!disabled && <div style={{ fontSize: 11, color: t.ACCENT, fontWeight: 500 }}>As a thank-you: {credits}</div>}
+              {!disabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 12, fontSize: 11, fontWeight: 600, color: active ? t.ACCENT : t.MUTED }}>
+                  {active ? 'Selected — form below' : 'Choose this'}
+                  <ChevronDown size={12} style={{ transform: active ? 'rotate(180deg)' : 'none', transition: 'transform 120ms' }} />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: `${t.ACCENT}08`, borderRadius: 8, border: `1px solid ${t.ACCENT}20`, marginBottom: 20 }}>
-        <AlertCircle size={13} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
-        <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
-          Confirmed contributions earn ServiceCredits as a thank-you — {creditsPerUsd} SC per dollar for gift cards, and {creditsPerAction} SC for a comment or star. Credits are a thank-you; they can&apos;t be turned back into cash.
-        </span>
-      </div>
-
+      {/* The chosen path's form opens here, directly under the cards, so it is obviously connected
+          to the card just selected. Until a card is chosen, a short prompt stands in its place so
+          the screen never looks like a dead end. */}
+      {activePath === null && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', background: t.SURFACE, borderRadius: 10, border: `1px dashed ${t.BORDER_SOLID}`, marginBottom: 20 }}>
+          <ChevronDown size={14} color={t.MUTED} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+            Choose one of the three ways above and its form will open here.
+          </span>
+        </div>
+      )}
       {activePath === 'gift_card' && (
         <GiftCardForm t={t} submitting={submitting} error={error} onSubmit={onSubmitGiftCard} onCancel={() => setActivePath(null)} />
       )}
@@ -269,6 +282,13 @@ export function ContributionPaths({
           onCancel={() => setActivePath(null)}
         />
       )}
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: `${t.ACCENT}08`, borderRadius: 8, border: `1px solid ${t.ACCENT}20`, marginTop: 4 }}>
+        <AlertCircle size={13} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
+        <span style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+          Confirmed contributions earn ServiceCredits as a thank-you — {creditsPerUsd} SC per dollar for gift cards, and {creditsPerAction} SC for a comment or star. Credits are a thank-you; they can&apos;t be turned back into cash.
+        </span>
+      </div>
     </div>
   );
 }

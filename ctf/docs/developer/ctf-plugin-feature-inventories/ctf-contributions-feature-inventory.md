@@ -286,6 +286,16 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-07-01: Made the contribute action discoverable. The three path cards ("How would you like to
+  help?") were click-to-expand `role="button"` divs with no visual cue that they open anything, and on
+  web the chosen path's form rendered at the very bottom of the section — below the credits
+  disclaimer — so it read as disconnected from the card and easy to miss. Added a one-line instruction
+  under the heading, a per-card "Choose this ⌄ / Selected" affordance (`components/contributions/contributions-paths.tsx`),
+  moved the form to render directly under the cards (above the disclaimer), and added a dashed
+  placeholder prompt when no path is selected so the screen never looks like a dead end. Mirrored the
+  instruction and the "Choose this" cue on the Android app (`packages/mobile/src/features/contributions/Contributions.tsx`),
+  which already rendered each form directly under its card. Presentation only — no route, schema, or
+  contract change.
 - 2026-07-01: Hid the fundraiser banner's "Not now" dismiss button on web (owner request). Gated both
   layouts (desktop and phone-width) behind a new `SHOW_DISMISS_BUTTON` flag in
   `components/contributions/contributions-banner.tsx`, defaulting to hidden. The button markup and the
