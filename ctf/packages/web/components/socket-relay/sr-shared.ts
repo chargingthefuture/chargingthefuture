@@ -68,6 +68,31 @@ export type SrFulfillment = {
 export type SrListResponse = { ok: boolean; items: SrRequest[]; page: number; pageSize: number; total: number };
 export type SrFulfillmentsResponse = { ok: boolean; items: SrFulfillment[] };
 
+// One row in the Direct Line list. Either a live conversation (an active fulfillment you can chat on)
+// or a pending request you posted that no helper has claimed yet (a placeholder — no chat until it is
+// claimed). Modelled as a discriminated union so the list can render both and only the fulfillment
+// kind opens a chat.
+export type SrDirectLine =
+  | { kind: "fulfillment"; key: string; fulfillment: SrFulfillment }
+  | { kind: "pending"; key: string; request: SrRequest };
+
+// Build the unified Direct Line list: one row per request you are currently waiting on or talking
+// through. Active fulfillments (you posted it and a helper claimed it, or you offered to help) come
+// first as live conversations; then your own still-open, non-expired requests as "waiting for a
+// helper" placeholders. Cancelled/closed fulfillments and claimed/closed requests are left out — a
+// claimed request is already represented by its active fulfillment, so there is no double row.
+export function buildDirectLines(fulfillments: SrFulfillment[], myRequests: SrRequest[]): SrDirectLine[] {
+  const active: SrDirectLine[] = fulfillments
+    .filter((f) => f.status === "active")
+    .sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso))
+    .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
+  const pending: SrDirectLine[] = myRequests
+    .filter((r) => r.status === "open" && !r.isExpired)
+    .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
+    .map((r) => ({ kind: "pending", key: `pending:${r.id}`, request: r }));
+  return [...active, ...pending];
+}
+
 export type SrChatCredentials = {
   ok?: boolean;
   message?: string;
