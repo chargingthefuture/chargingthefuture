@@ -1,5 +1,7 @@
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
+import { createTransfer } from 'lib/service-credits/repository';
+import { reportError } from 'lib/observability/report';
 import {
   getAccountRestrictionStatus,
   restrictAccount as setSharedRestriction,
@@ -872,7 +874,62 @@ export async function updateTripStatus(
     result.request.status,
   );
 
+  // Settlement (owner decision): when a trip completes and the requester chose ServiceCredits, move the
+  // credits requester -> provider. Runs after the completion is durably committed.
+  await settleServiceCreditsOnCompletion(result.trip, result.request, nextStatus);
+
   return result;
+}
+
+// Move ServiceCredits from the requester to the provider when a trip completes with SC settlement.
+// Best-effort and idempotent by trip id: the trip is already completed and the work done, so a failure
+// here (e.g. the requester lacks balance) is logged for reconciliation rather than reverting the trip,
+// and the trip-id idempotency key means a retry can never double-pay. Only SC settlement moves value
+// here; fiat/crypto earnings and Free/Barter are out of scope for this path.
+async function settleServiceCreditsOnCompletion(
+  trip: TrustTransportTrip,
+  request: TrustTransportRequest,
+  nextStatus: TrustTransportTripStatus,
+): Promise<void> {
+  if (nextStatus !== 'completed') {
+    return;
+  }
+  if (request.priceCurrency !== 'SC') {
+    return;
+  }
+  const amount = request.priceAmount;
+  if (amount === null || !(amount > 0)) {
+    return;
+  }
+
+  try {
+    const tx = await createTransfer({
+      senderUserId: request.requesterUserId,
+      recipientUserId: trip.providerUserId,
+      amount,
+      idempotencyKey: `trust-transport-settlement-${trip.id}`,
+      originPlugin: 'trust-transport',
+      reasonCode: 'trust-transport.trip.settlement',
+    });
+
+    await insertTrustTransportAudit({
+      actorId: trip.providerUserId,
+      command: 'trust-transport.trip.settlement',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'trip',
+      targetId: trip.id,
+      metadata: {
+        rail: 'service_credits',
+        amount,
+        fromUserId: request.requesterUserId,
+        toUserId: trip.providerUserId,
+        transferId: (tx as { id?: string }).id ?? null,
+      },
+    });
+  } catch (error) {
+    reportError(error, { area: 'trust-transport', op: 'trip_settlement' });
+  }
 }
 
 export async function triggerEmergencyStop(tripId: string, actorUserId: string, isAdmin: boolean, notes: string | null) {
