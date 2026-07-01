@@ -42,6 +42,9 @@ the problem categories and review every suggestion before it joins the shared li
 ## 4. Target Admin Features
 
 - Review queue: approve or reject (with an admin-only reason) each suggested tool; delete tools.
+- Edit a tool's own details (emoji, name, type, note, purchase link) at any status — including after
+  it is approved — to fix a typo or a broken link without unpublishing it. Status, verified count,
+  and submitter identity are left untouched.
 - Status filter across pending / approved / rejected / all.
 - Curate problems: create, rename, re-emoji, reorder, deactivate/reactivate, and delete (cascading
   to that problem's tools and endorsements).
@@ -62,7 +65,7 @@ the problem categories and review every suggestion before it joins the shared li
 - `PATCH /api/what-works/admin/problems/[id]` — Admin: edit/reorder/deactivate a problem.
 - `DELETE /api/what-works/admin/problems/[id]` — Admin: delete a problem (cascade).
 - `GET /api/what-works/admin/products` — Admin: moderation queue (optional `?status=`).
-- `PATCH /api/what-works/admin/products/[id]` — Admin: approve/reject a tool.
+- `PATCH /api/what-works/admin/products/[id]` — Admin: with `action` (`approve`/`reject`), moderate the tool; without `action`, correct its own details (name, purchase link, note, emoji, type). The edit path never changes status, endorsements, or the identity columns.
 - `DELETE /api/what-works/admin/products/[id]` — Admin: delete a tool (cascade).
 
 All mutating routes require the `x-ctf-csrf: 1` confirmation header (same-origin enforced).
@@ -114,7 +117,8 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 - Audit: every command emits one structured audit line via `logWhatWorksAudit`
   (`lib/what-works/audit.ts`) on its success path — reads (`what-works.list.read`,
   `what-works.public.read`, `what-works.problems.list`, the two admin list reads), mutations
-  (suggest/endorse/unendorse), and all admin curation/moderation commands — matching every event
+  (suggest/endorse/unendorse), and all admin curation/moderation commands — including
+  `what-works.admin.product.update` (an admin editing a tool's details) — matching every event
   declared in the audit contract. The public read records `anonymous` as the actor.
 - Input validation: lengths and `http(s)`-only purchase URLs are enforced server-side.
 - Contracts: see
@@ -159,6 +163,15 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-07-01: Admins can now edit a suggested tool's own details after the fact. Added a
+  `what-works.admin.product.update` command (command/access/audit contracts), a repository
+  `updateProduct` (COALESCE update of emoji/name/kind/note/purchase_url; status, endorsements, and
+  identity columns untouched), and a field-edit branch on `PATCH /api/what-works/admin/products/[id]`
+  taken when the body carries no `action` (same server-side length + `http(s)`-link validation as the
+  suggest form). The admin moderation UI (`ww-admin-products`) gains an inline Edit form per tool,
+  wired through `ww-admin-shell`. Closes the gap where an approved entry with a typo or broken link
+  could only be deleted and re-created. Web-only admin surface (no Android admin for this plugin);
+  the shell is mobile-responsive.
 - 2026-06-27: Code-review batch (issues #1127–#1136). (1) `listAdminProblems` now selects an explicit
   column list instead of `SELECT pr.*`, so a future identity column added to `what_works_problems` is
   never auto-included in the admin response; output is unchanged (#1127). (2) The endorse/un-endorse
